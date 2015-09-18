@@ -112,7 +112,9 @@ class LibraryCommanderImpl @Inject() (
         db.readOnlyReplica { implicit s =>
           val userHasPermissionToCreateInSpace = targetSpace match {
             case OrganizationSpace(orgId) =>
-              orgMembershipCommander.getPermissionsHelper(orgId, Some(ownerId)).contains(OrganizationPermission.ADD_LIBRARIES)
+              val permissions = orgMembershipCommander.getPermissionsHelper(orgId, Some(ownerId))
+              permissions.contains(OrganizationPermission.ADD_LIBRARIES) &&
+                (libCreateReq.visibility != LibraryVisibility.PUBLISHED || permissions.contains(OrganizationPermission.PUBLISH_LIBRARIES))
             case UserSpace(userId) =>
               userId == ownerId // Right now this is guaranteed to be correct, could replace with true
           }
@@ -217,13 +219,24 @@ class LibraryCommanderImpl @Inject() (
       }
     }
 
+    def validateMovePermissions(newVisibilityOpt: Option[LibraryVisibility], newSpace: LibrarySpace): Option[LibraryFail] = {
+      newVisibilityOpt.flatMap { newVisibility =>
+        (newVisibility, newSpace) match {
+          case (LibraryVisibility.PUBLISHED, space: OrganizationSpace) if !orgMembershipCommander.getPermissions(space.id, Some(userId)).contains(OrganizationPermission.PUBLISH_LIBRARIES) =>
+            Some(LibraryFail(FORBIDDEN, "insufficient_org_permissions"))
+          case _ => None
+        }
+      }
+    }
+
     val newSpace = modifyReq.space.getOrElse(library.space)
     val errorOpts = Stream(
       validateUserWritePermission,
       validateSpace(modifyReq.space),
       validateName(modifyReq.name, newSpace),
       validateSlug(modifyReq.slug, newSpace),
-      validateVisibility(modifyReq.visibility, newSpace)
+      validateVisibility(modifyReq.visibility, newSpace),
+      validateMovePermissions(modifyReq.visibility, newSpace)
     )
     errorOpts.flatten.headOption
   }
