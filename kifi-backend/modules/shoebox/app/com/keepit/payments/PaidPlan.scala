@@ -59,6 +59,9 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
     val NORMAL = Kind("normal")
     val GRANDFATHERED = Kind("grandfathered")
     val CUSTOM = Kind("custom")
+    val FREE = Kind("free")
+    val STANDARD = Kind("standard")
+    val ENTERPRISE = Kind("enterprise")
   }
 }
 
