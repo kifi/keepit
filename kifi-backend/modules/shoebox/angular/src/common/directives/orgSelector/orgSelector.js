@@ -7,7 +7,7 @@ angular.module('kifi')
     return {
       restrict: 'A',
       templateUrl: 'common/directives/orgSelector/orgSelector.tpl.html',
-      scope: { 
+      scope: {
         libraryProps: '=',
         library: '=',
         space: '=?'
@@ -21,7 +21,7 @@ angular.module('kifi')
           $scope.space.destination = $scope.me;
         };
 
-        $scope.setOrg = function(id) { 
+        $scope.setOrg = function(id) {
           // Give preference to (1) id from args, (2) current page, (3) First organization in list.
           var orgId = id || ($scope.library.org || $scope.me.orgs[0]).id;
           $scope.libraryProps.selectedOrgId = orgId;
@@ -42,7 +42,7 @@ angular.module('kifi')
         $scope.$watch('space.destination', function(newValue, oldValue) {
           var oldIsOrg = $scope.spaceIsOrg(oldValue);
           var newIsOrg = $scope.spaceIsOrg(newValue);
-          
+
           if (oldIsOrg !== newIsOrg) {
             if (oldIsOrg) {
               if ($scope.library.visibility === 'organization') {
@@ -63,6 +63,14 @@ angular.module('kifi')
             $scope.library.visibility = 'secret';
           }
         });
+
+        $scope.onClickUpsellRelocate = function () {
+
+        };
+
+        $scope.onHoverUpsellRelocate = function () {
+
+        };
       }
     };
   }

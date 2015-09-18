@@ -27,6 +27,14 @@ angular.module('kifi')
           // This binds the UI.
           $scope.orgMemberAccessWrite = !$scope.orgMemberAccessWrite;
         };
+
+        $scope.onClickUpsellPublic = function () {
+
+        };
+
+        $scope.onHoverUpsellPublic = function () {
+
+        };
       }
     };
   }

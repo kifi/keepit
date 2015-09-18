@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('orgProfileService', [
-  '$http', '$rootScope', 'profileService', 'routeService', '$q', '$analytics', 'net', 'ml',
-  function ($http, $rootScope, profileService, routeService, $q, $analytics, net, ml) {
+  '$window', '$http', '$rootScope', 'profileService', 'routeService', '$q', '$analytics', 'net', 'ml',
+  function ($window, $http, $rootScope, profileService, routeService, $q, $analytics, net, ml) {
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
@@ -49,18 +49,9 @@ angular.module('kifi')
       transferOrgMemberOwnership: function (orgId, newOwner) {
         return net.transferOrgMemberOwnership(orgId, newOwner);
       },
-      getOrgSettings: function(initialSettings, orgId) {
-
-        var settingsSpec = new ml.Spec([
-          new ml.Expect('Settings keys mirrored on server and local', function(settings) {
-            return Object.keys(settings).length === Object.keys(initialSettings).length;
-          }),
-          new ml.Expect('Settings is non-empty', function(settings) {
-            return JSON.stringify(settings).length > 2;
-          })
-        ]);
+      getOrgSettings: function(orgId) {
         return net.getOrgSettings(orgId).then(function(response) {
-          settingsSpec.respond(response, response);
+          return response.data;
         });
       },
       setOrgSettings: function(orgId, data) {

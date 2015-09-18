@@ -1,11 +1,19 @@
 <div class="org-selector" >
-  <div 
-    class="org-selector-org" 
+  <div
+    class="org-selector-org"
     ng-click="unsetOrg()"
     ng-class="{'selected': !libraryProps.selectedOrgId}"
   >
     <img ng-src="{{ me|pic:100 }}" />
     <h1>{{ me|name }}</h1>
+    <span
+      kf-upsell
+      position="right"
+      on-click="onClickUpsellRelocate()"
+      on-hover="onHoverUpsellRelocate()"
+    >
+      Restrict who can move libraries outside of your team by <a class="kf-link" href="#">Upgrading to Premium</a>.
+    </span>
   </div>
   <div
     class="org-selector-org"
