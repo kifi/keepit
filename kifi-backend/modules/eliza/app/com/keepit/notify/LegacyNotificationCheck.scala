@@ -37,7 +37,7 @@ class LegacyNotificationCheck @Inject() (
       case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
         case None =>
           shoeboxServiceClient.getUserExperiments(id).map { experiments =>
-            val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM)
+            val enabled = experiments.contains(UserExperimentType.NEW_NOTIFS_SYSTEM) || experiments.contains(UserExperimentType.ADMIN)
             val enabledFlipped = if (flipResults) !enabled else enabled
             LegacyNotificationCheck.Result(enabledFlipped, u.copy(experimentEnabled = Some(enabledFlipped)))
           }

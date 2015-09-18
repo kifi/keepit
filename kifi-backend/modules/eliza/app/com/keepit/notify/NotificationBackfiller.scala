@@ -19,6 +19,7 @@ import play.api.{ Application, Play }
 import play.api.libs.json.{ JsValue, Json }
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
+import scala.util.Random
 
 @ImplementedBy(classOf[NotificationBackfillerPluginImpl])
 trait NotificationBackfillerPlugin extends SchedulerPlugin {
@@ -33,7 +34,7 @@ class NotificationBackfillerPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (2 minutes, 2 minutes)
+    val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (2 minutes, 0.2 minutes)
     log.info(s"[onStart] NotificationBackfillerPlugin started with initDelay=$initDelay freq=$freq")
     scheduleTaskOnOneMachine(actor.system, initDelay, freq, actor.ref, BackfillNotifications, BackfillNotifications.getClass.getName)
   }
@@ -50,13 +51,13 @@ class NotificationBackfiller @Inject() (
 
   def backfillHead(seq: Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])]): Unit =
     if (seq.nonEmpty) {
-      context.system.scheduler.scheduleOnce(0.2 seconds) {
+      context.system.scheduler.scheduleOnce(0.02 seconds) {
         backfillHead(seq.tail)
       }
 
       seq.head match {
         case (userThreadId, userId, lastNotif, pending, uriId) =>
-          val rawNotif = (lastNotif, pending, uriId)
+          val rawNotif = (userThreadId, lastNotif, pending, uriId)
           val backfilled = notificationCommander.backfillLegacyNotificationsFor(userId, Seq(rawNotif))
           val backfilledIds = backfilled.map(_.notification.id.get).mkString(":")
           log.info(s"Just backfilled $userThreadId -> $backfilledIds")
@@ -65,10 +66,13 @@ class NotificationBackfiller @Inject() (
 
   override def receive: Receive = {
     case BackfillNotifications =>
+      log.info(s"Running backfilling query")
       val needBackfilling = db.readOnlyMaster { implicit session =>
         userThreadRepo.getThreadsThatNeedBackfilling()
       }
-      backfillHead(needBackfilling)
+      val actuallyBackfill = Random.shuffle(needBackfilling)
+      log.info(s"Need backfilling: ${actuallyBackfill.map(_._1.id).mkString(", ")}")
+      backfillHead(actuallyBackfill)
   }
 }
 

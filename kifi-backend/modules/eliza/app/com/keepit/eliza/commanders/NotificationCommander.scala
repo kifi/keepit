@@ -12,7 +12,7 @@ import com.keepit.notify.info.{ NotificationKindInfoRequests, LegacyNotification
 import com.keepit.notify.model.event.{ NewMessage, LegacyNotification }
 import com.keepit.notify.model.{ Recipient, NotificationKind }
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsObject, Json }
+import play.api.libs.json.{ JsValue, JsObject, Json }
 import com.keepit.common.core._
 import com.keepit.common.time._
 
@@ -57,40 +57,37 @@ class NotificationCommander @Inject() (
     }
   }
 
-  def backfillLegacyNotificationsFor(userId: Id[User], rawNotifs: Seq[RawNotification]): Seq[NotificationWithItems] = {
+  def backfillLegacyNotificationsFor(userId: Id[User], rawNotifs: Seq[(Id[UserThread], JsValue, Boolean, Option[Id[NormalizedURI]])]): Seq[NotificationWithItems] = {
     val recipient = Recipient(userId)
     db.readWrite { implicit session =>
       rawNotifs.map {
-        case (json, unread, uri) =>
+        case (userThreadId, json, unread, uri) =>
           val time = (json \ "time").as[DateTime]
-          val id = (json \ "id").as[String]
-
+          val id = userThreadId.id.toString
+          // no longer technically works according to original use, just optimized a bit for current use case
           notificationRepo.getByGroupIdentifier(recipient, LegacyNotification, id).fold {
             val threadId = (json \ "thread").as[String]
-            val messageThread = messageThreadRepo.get(ExternalId[MessageThread](threadId))
-            val userThread = userThreadRepo.getUserThread(userId, messageThread.id.get)
-            if (!messageThread.replyable) {
-              val notif = notificationRepo.save(Notification(
+            val notif = notificationRepo.save(Notification(
+              recipient = recipient,
+              kind = LegacyNotification,
+              lastEvent = time,
+              groupIdentifier = Some(id),
+              backfilledFor = Some(userThreadId)
+            ))
+            val item = notificationItemRepo.save(NotificationItem(
+              notificationId = notif.id.get,
+              kind = LegacyNotification,
+              event = LegacyNotification(
                 recipient = recipient,
-                kind = LegacyNotification,
-                lastEvent = time,
-                groupIdentifier = Some(userThread.id.get.id.toString)
-              ))
-              val item = notificationItemRepo.save(NotificationItem(
-                notificationId = notif.id.get,
-                kind = LegacyNotification,
-                event = LegacyNotification(
-                  recipient = recipient,
-                  time = time,
-                  json = json,
-                  uriId = uri
-                ),
-                eventTime = time
-              ))
-              Some(NotificationWithItems(notif, Set(item)))
-            } else None
+                time = time,
+                json = json,
+                uriId = uri
+              ),
+              eventTime = time
+            ))
+            Some(NotificationWithItems(notif, Set(item)))
           } { notif =>
-            Some(NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet))
+            Some(NotificationWithItems(notif, Set()))
           }
       }.collect { case Some(notif) => notif }
     }
