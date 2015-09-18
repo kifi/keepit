@@ -112,7 +112,6 @@ object LibraryPermission {
   case object EDIT_OTHER_KEEPS extends LibraryPermission("edit_other_keeps")
   case object REMOVE_OWN_KEEPS extends LibraryPermission("remove_own_keeps")
   case object REMOVE_OTHER_KEEPS extends LibraryPermission("remove_other_keeps")
-  case object PUBLISH_LIBRARY extends LibraryPermission("publish_library")
   case object EXPORT_KEEPS extends LibraryPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends LibraryPermission("create_slack_integration")
 
@@ -135,6 +134,7 @@ object LibraryPermission {
       case EDIT_OTHER_KEEPS.value => EDIT_OTHER_KEEPS
       case REMOVE_OWN_KEEPS.value => REMOVE_OWN_KEEPS
       case REMOVE_OTHER_KEEPS.value => REMOVE_OTHER_KEEPS
+      case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
       // TODO(ryan): should we have a `case _ => ???` here, and what should ??? be
     }

@@ -31,7 +31,7 @@ class PaymentsController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     Ok(Json.obj(
       "credit" -> planCommander.getCurrentCredit(request.orgId).cents,
       "users" -> orgMembershipCommander.getMemberIds(request.orgId).size,
@@ -39,7 +39,7 @@ class PaymentsController @Inject() (
     ))
   }
 
-  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     planCommander.getActivePaymentMethods(request.orgId).find(_.default).map { pm =>
       Ok(Json.obj(
         "token" -> pm.stripeToken.token
@@ -49,7 +49,7 @@ class PaymentsController @Inject() (
     }
   }
 
-  def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
+  def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
       case Some(token) => {
         stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").map { realToken =>
@@ -63,11 +63,11 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     Ok(Json.toJson(planCommander.getSimpleContactInfos(request.orgId)))
   }
 
-  def setAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN)(parse.tolerantJson) { request =>
+  def setAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
     request.body.validate[Seq[SimpleAccountContactSettingRequest]] match {
       case JsSuccess(contacts, _) => {
         val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
@@ -80,12 +80,12 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     val accountFeatureSettingsResponse = planCommander.getAccountFeatureSettings(request.orgId)
     Ok(Json.toJson(accountFeatureSettingsResponse))
   }
 
-  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN)(parse.tolerantJson) { request =>
+  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
     request.body.validate[AccountFeatureSettingsRequest] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
       case JsSuccess(settings, _) =>
@@ -94,7 +94,7 @@ class PaymentsController @Inject() (
     }
   }
 
-  def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     PaidPlan.decodePublicId(planPubId) match {
       case Success(planId) => {
         val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
@@ -108,12 +108,12 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     val infos = planCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
     Ok(Json.obj("events" -> infos))
   }
 
-  def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     AccountEvent.decodePublicId(beforePubId) match {
       case Success(beforeId) => {
         val infos = planCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)

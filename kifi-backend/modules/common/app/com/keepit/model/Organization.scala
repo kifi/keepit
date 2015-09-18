@@ -92,11 +92,11 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       Some(OrganizationRole.ADMIN) -> Set(
         VIEW_ORGANIZATION,
         EDIT_ORGANIZATION,
-        VIEW_MEMBERS,
         INVITE_MEMBERS,
         MODIFY_MEMBERS,
         REMOVE_MEMBERS,
         ADD_LIBRARIES,
+        VIEW_MEMBERS,
         REMOVE_LIBRARIES,
         GROUP_MESSAGING,
         MOVE_ORG_LIBRARIES,
@@ -106,8 +106,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         VIEW_ORGANIZATION,
         ADD_LIBRARIES,
         REMOVE_LIBRARIES,
-        VIEW_MEMBERS,
         INVITE_MEMBERS,
+        VIEW_MEMBERS,
         GROUP_MESSAGING,
         MOVE_ORG_LIBRARIES,
         PUBLISH_LIBRARIES
