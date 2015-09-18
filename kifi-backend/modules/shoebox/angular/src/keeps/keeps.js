@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .directive('kfKeeps', [
   '$window', '$timeout', '$injector', 'KeepSelection', 'keepActionService', 'libraryService',
-  'modalService', 'undoService', 'profileService', '$rootScope',
+  'modalService', 'undoService', 'profileService', '$rootScope', 'util',
   function (
     $window, $timeout, $injector, KeepSelection, keepActionService, libraryService,
-    modalService, undoService, profileService, $rootScope) {
+    modalService, undoService, profileService, $rootScope, util) {
 
     return {
       restrict: 'A',
@@ -45,6 +45,7 @@ angular.module('kifi')
         // Scope data.
         //
         scope.me = profileService.me;
+        scope.getYoutubeId = util.getYoutubeIdFromUrl;
         scope.availableKeeps = [];
         scope.scrollDistance = '100%';
         scope.selection = new KeepSelection();
@@ -197,6 +198,16 @@ angular.module('kifi')
           } else {
             editor.focus();
           }
+        };
+
+
+        scope.removeImage = function (event, keep) {
+          var keepEl = angular.element(event.target).closest('.kf-keep');
+          keepEl.find('.kf-keep-image').remove();
+          delete keep.summary.imageUrl;
+          delete keep.summary.imageWidth;
+          delete keep.summary.imageHeight;
+          keepActionService.removeKeepImage(keep.libraryId, keep.id);
         };
 
         //

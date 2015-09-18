@@ -13,10 +13,12 @@ import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time.Clock
 import com.keepit.common.util.Paginator
+import com.keepit.controllers.ext.ExtLibraryController
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
@@ -54,6 +56,8 @@ class LibraryController @Inject() (
   relatedLibraryCommander: RelatedLibraryCommander,
   suggestedSearchCommander: LibrarySuggestedSearchCommander,
   airbrake: AirbrakeNotifier,
+  keepImageRequestRepo: KeepImageRequestRepo,
+  keepImageCommander: KeepImageCommander,
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryMembershipCommander: LibraryMembershipCommander,
@@ -763,6 +767,36 @@ class LibraryController @Inject() (
           case Left(fail) => Status(fail.status)(Json.obj("error" -> fail.message))
           case Right(_) => NoContent
         }
+    }
+  }
+
+  def changeKeepImage(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], size: Option[String]) = UserAction.async(parse.tolerantJson) { request =>
+    db.readOnlyMaster { implicit session =>
+      Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
+    } map { keep =>
+      request.body \ "image" match {
+        case v if v.isFalsy =>
+          keepImageCommander.removeKeepImageForKeep(keep.id.get)
+          Future.successful(Ok(Json.obj("image" -> JsNull)))
+        case JsString(imageUrl @ URI(scheme, _, _, _, _, _, _)) if scheme.exists(_.startsWith("http")) =>
+          val imageRequest = db.readWrite { implicit session =>
+            keepImageRequestRepo.save(KeepImageRequest(keepId = keep.id.get, source = ImageSource.UserUpload))
+          }
+          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserUpload, imageRequest.id) map {
+            case fail: ImageStoreFailure =>
+              InternalServerError(Json.obj("error" -> fail.reason))
+            case _: ImageProcessSuccess =>
+              val idealSize = size.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(ExtLibraryController.defaultImageSize)
+              Ok(Json.obj("image" -> keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(idealSize)).flatten.map(keepImageCommander.getUrl)))
+          }
+        case JsString(badUrl) =>
+          log.info(s"rejecting image url: $badUrl")
+          Future.successful(BadRequest(Json.obj("error" -> "bad_image_url")))
+        case _ =>
+          Future.successful(BadRequest(Json.obj("error" -> "no_image_url")))
+      }
+    } getOrElse {
+      Future.successful(NotFound(Json.obj("error" -> "keep_not_found")))
     }
   }
 
