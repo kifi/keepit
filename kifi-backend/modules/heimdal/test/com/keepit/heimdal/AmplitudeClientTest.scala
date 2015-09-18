@@ -52,6 +52,13 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val userRegistered = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("registered")), UserEventTypes.JOINED, now)
       val userInstalled = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("installed")), UserEventTypes.JOINED, now)
 
+      val userViewedPane = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("libraryChooser")), UserEventTypes.VIEWED_PANE, now)
+      val userViewedPage1 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/josh")), UserEventTypes.VIEWED_PAGE, now)
+      val userViewedPage2 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/settings")), UserEventTypes.VIEWED_PAGE, now)
+
+      val visitorViewedPane1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("login")), UserEventTypes.VIEWED_PANE, now)
+      val visitorViewedPage1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("signupLibrary")), UserEventTypes.VIEWED_PAGE, now)
+
       // any future that doesn't return the type we expect will throw an exception
       val eventsFList = List(
         // testing 2 events for the same user recorded at the same time
@@ -74,7 +81,46 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
         amplitude.track(userInstalled) map {
           case dat: AmplitudeEventSent =>
             dat.eventData \ "event_type" === JsString("user_installed")
-        }
+        },
+        amplitude.track(userViewedPane) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_viewed_page")
+            dat.eventData \\ "page_type" === Seq(JsString("pane"))
+            dat.eventData \\ "type" === Seq(JsString("libraryChooser"))
+        },
+        amplitude.track(userViewedPage1) map { case dat: AmplitudeEventSkipped => () },
+        amplitude.track(userViewedPage2) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_viewed_page")
+            dat.eventData \\ "page_type" === Seq(JsString("page"))
+            dat.eventData \\ "type" === Seq(JsString("settings"))
+        },
+        amplitude.track(userViewedPane) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_viewed_page")
+            dat.eventData \\ "page_type" === Seq(JsString("pane"))
+            dat.eventData \\ "type" === Seq(JsString("libraryChooser"))
+        },
+        amplitude.track(visitorViewedPane1) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("visitor_viewed_page")
+            dat.eventData \\ "page_type" === Seq(JsString("pane"))
+            dat.eventData \\ "type" === Seq(JsString("login"))
+        },
+        amplitude.track(visitorViewedPane1) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("visitor_viewed_page")
+            dat.eventData \\ "page_type" === Seq(JsString("pane"))
+            dat.eventData \\ "type" === Seq(JsString("login"))
+        },
+        amplitude.track(visitorViewedPage1) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("visitor_viewed_page")
+            dat.eventData \\ "page_type" === Seq(JsString("modal"))
+            dat.eventData \\ "type" === Seq(JsString("signupLibrary"))
+        },
+        amplitude.track(userViewedPage1) map { case _: AmplitudeEventSkipped => () },
+        amplitude.track(userViewedPage2) map { case _: AmplitudeEventSent => () }
       )
 
       val eventsF = Future.sequence(eventsFList)
