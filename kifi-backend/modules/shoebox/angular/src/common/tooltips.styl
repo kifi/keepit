@@ -6,6 +6,8 @@
 
 tooltip-parent()
   position: relative
+  z-index: 10
+  cursor: pointer
   white-space: normal
 
 tooltip-body()
@@ -106,8 +108,8 @@ tooltip-hover-slide-right()
 tooltip-arrow-right()
   transform: rotate(90deg)
   top: 50%
-  margin-top: -6px
-  margin-left: 4px
+  margin-top: -4px
+  margin-left: 3px
   bottom: auto
   left: 100%
   right: auto
@@ -183,6 +185,7 @@ tooltip-arrow-right()
 //    ...
 // </div>
 //------------------------------------------------------------------------------
+
 .kf-tooltip-parent
   tooltip-parent()
 

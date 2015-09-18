@@ -52,31 +52,45 @@
               ></svg>
               <span>Invite new member</span>
             </a>
-            <span class="kf-upsell kf-tooltip-parent kf-tooltip-parent-noclose" data-kf-tooltip-position="left">
-              <div class="kf-tooltip-body" style="width: 176px;">Restrict who can invite by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.</div>
-              <svg kf-symbol-sprite icon="trophy"></svg>
+            <span
+              kf-upsell
+              position="bottom"
+              on-click="onClickUpsellInvite()"
+              on-hover="onHoverUpsellInvite()"
+              class="kf-oph-upsell-invite"
+            >
+              Restrict who can invite by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
             </span>
           </div>
         </div>
         <nav class="kf-oph-stats">
-          <a
-            class="kf-oph-stats-a"
+          <button
+            class="kf-oph-stats-a kf-button-textonly"
             ui-sref="orgProfile.libraries"
             ng-click="onClickTrack($event, 'clickedProfileLibraries')"
             ng-class="{ 'active': state.current.activetab === 'libraries' }"
           >
             <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
             <div class="kf-oph-stats-name">Libraries</div>
-          </a>
-          <a
-            class="kf-oph-stats-a"
+          </button>
+          <button
+            class="kf-oph-stats-a kf-button-textonly"
             ui-sref="orgProfile.members"
             ng-click="onClickTrack($event, 'clickedProfileMembers')"
             ng-class="{ 'active': state.current.activetab === 'members' }"
           >
             <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
             <div class="kf-oph-stats-name">Members</div>
-          </a>
+            <span
+              kf-upsell
+              position="right"
+              on-click="onClickUpsellMembers()"
+              on-hover="onHoverUpsellMembers()"
+              class="kf-oph-upsell-invite"
+            >
+              Restrict who can view your team’s members by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
+            </span>
+          </button>
         </nav>
         </table>
       </div>

@@ -148,6 +148,22 @@ angular.module('kifi')
           }
         }
       ];
+
+      scope.onClickUpsellMembers = function () {
+
+      };
+
+      scope.onHoverUpsellMembers = function () {
+
+      };
+
+      scope.onClickUpsellInvite = function () {
+
+      };
+
+      scope.onHoverUpsellInvite = function () {
+
+      };
     }
   };
 }]);
