@@ -1,7 +1,8 @@
 package com.keepit.model
 
+import scala.collection.mutable
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps }
+import com.keepit.commanders.{ KeepVisibilityCount, LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -35,7 +36,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getCountManualByUserInLastDays(userId: Id[User], days: Int)(implicit session: RSession): Int
   def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def getCountByUsersAndSource(userIds: Set[Id[User]], sources: Set[KeepSource])(implicit session: RSession): Map[Id[User], Int]
-  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
+  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): KeepVisibilityCount
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getAllCountsByTimeAndSource(from: DateTime, to: DateTime)(implicit session: RSession): Seq[(KeepSource, Int)]
@@ -410,10 +411,18 @@ class KeepRepoImpl @Inject() (
     }.run
   }.map { case (userId, count) => userId -> count }.toMap
 
-  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
+  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): KeepVisibilityCount = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
-    sql.as[(Int, Int)].first
+    val sql = sql"select l.visibility, count(*) from keep_to_library ktl, library l, bookmark b where b.id = ktl.keep_id and ktl.library_id = l.id and b.user_id = 1 and b.state='active' and l.state='active' and ktl.state='active' group by l.visibility"
+    val counts = mutable.Map[LibraryVisibility, Int]().withDefaultValue(0)
+    sql.as[(String, Int)].list foreach {
+      case (name, count) => counts(LibraryVisibility(name)) = count
+    }
+    KeepVisibilityCount(
+      secret = counts(LibraryVisibility.SECRET),
+      published = counts(LibraryVisibility.PUBLISHED),
+      organization = counts(LibraryVisibility.ORGANIZATION),
+      discoverable = counts(LibraryVisibility.DISCOVERABLE))
   }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {

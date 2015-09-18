@@ -47,10 +47,10 @@ class UserPropertyUpdateActor @Inject() (
       }
 
       if (instruction.has(KeepCounts)) {
-        val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(userId)
-        builder += ("keeps", privateKeeps + publicKeeps)
-        builder += ("publicKeeps", publicKeeps)
-        builder += ("privateKeeps", privateKeeps)
+        val keepVisibilityCount = keepRepo.getPrivatePublicCountByUser(userId)
+        builder += ("keeps", keepVisibilityCount.all)
+        builder += ("publicKeeps", keepVisibilityCount.discoverable + keepVisibilityCount.organization + keepVisibilityCount.published)
+        builder += ("privateKeeps", keepVisibilityCount.secret)
       }
 
       if (instruction.has(TagCount)) {
