@@ -112,6 +112,7 @@ class UserStatisticsCommander @Inject() (
     clock: Clock,
     kifiInstallationRepo: KifiInstallationRepo,
     keepRepo: KeepRepo,
+    keepToLibraryRepo: KeepToLibraryRepo,
     emailRepo: UserEmailAddressRepo,
     elizaClient: ElizaServiceClient,
     libraryRepo: LibraryRepo,
@@ -140,7 +141,7 @@ class UserStatisticsCommander @Inject() (
 
   def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
-    val keepVisibilityCount = keepRepo.getPrivatePublicCountByUser(user.id.get)
+    val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
     val emailAddress = Try(emailRepo.getByUser(user.id.get)).toOption
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
@@ -171,7 +172,7 @@ class UserStatisticsCommander @Inject() (
   def membersStatistics(userIds: Set[Id[User]])(implicit session: RSession): Future[Map[Id[User], MemberStatistics]] = {
     val membersStatsFut = userIds.map { userId =>
       val numChatsFut = elizaClient.getUserThreadStats(userId)
-      val keepVisibilityCount = keepRepo.getPrivatePublicCountByUser(userId)
+      val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
       val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
       val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
       val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
