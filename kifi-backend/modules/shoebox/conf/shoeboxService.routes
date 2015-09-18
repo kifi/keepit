@@ -528,8 +528,8 @@ POST    /site/user/resend-verification @com.keepit.controllers.website.UserContr
 GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 POST    /site/sms                   @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
 
-GET           /site/user/:id/organizations                      @com.keepit.controllers.website.OrganizationController.getOrganizationsForUser(id: ExternalId[User])
 POST          /site/organizations/create                        @com.keepit.controllers.website.OrganizationController.createOrganization()
+GET           /site/user/:id/organizations                      @com.keepit.controllers.website.OrganizationController.getOrganizationsForUser(id: ExternalId[User])
 GET           /site/organizations/:id                           @com.keepit.controllers.website.OrganizationController.getOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/modify                    @com.keepit.controllers.website.OrganizationController.modifyOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/transfer                  @com.keepit.controllers.website.OrganizationController.transferOrganization(id: PublicId[Organization])
