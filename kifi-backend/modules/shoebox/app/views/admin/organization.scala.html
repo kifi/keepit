@@ -138,7 +138,7 @@ orgStats: OrganizationStatistics
             <th>Role</th>
             <th class="sorter-mmddyy">Last Keep</th>
             <th>Libs</th>
-            <th>Keeps PRV/PUB</th>
+            <th>Keeps PRV/PUB/ORG/DISC</th>
             <th>Chats</th>
             <th>Remove</th>
             <th>Make an owner</th>
@@ -151,7 +151,7 @@ orgStats: OrganizationStatistics
                 <td>@membership.role</td>
                 <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
-                <td>@orgStats.membersStatistics(membership.userId).numPrivateKeeps / @orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
+                <td>@orgStats.membersStatistics(membership.userId).keepVisibilityCount.secret / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.published / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.organization / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.discoverable</td>
                 <td>@orgStats.membersStatistics(membership.userId).numChats</td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                     <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default btn-xs">Remove</button></form></td>
@@ -169,7 +169,7 @@ orgStats: OrganizationStatistics
             <th>Candidate Name</th>
             <th class="sorter-mmddyy">Last Keep</th>
             <th>Boards</th>
-            <th>Keeps PRV/PUB</th>
+            <th>Keeps PRV/PUB/ORG/DISC</th>
             <th>Chats</th>
             <th>Remove</th>
             <th>Make member</th>
@@ -183,7 +183,7 @@ orgStats: OrganizationStatistics
                 <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
                 <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
-                <td>@orgStats.membersStatistics(candidate.userId).numPrivateKeeps / @orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
+                <td>@orgStats.membersStatistics(candidate.userId).keepVisibilityCount.secret / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.published / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.organization / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.discoverable</td>
                 <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                     <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Remove</button></form></td>

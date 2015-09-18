@@ -199,21 +199,14 @@ class LibraryInfoCommanderImpl @Inject() (
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
-          val ownerHasAllKeepsViewExperiment = experimentCommander.userHasExperiment(library.ownerId, UserExperimentType.ALL_KEEPS_VIEW)
           val keeps = db.readOnlyMaster { implicit session =>
             library.kind match {
               case LibraryKind.SYSTEM_MAIN =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                if (ownerHasAllKeepsViewExperiment) {
-                  //cached
-                  keepRepo.getNonPrivate(library.ownerId, 0, maxKeepsShown) //not cached
-                } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
+                keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown)
               case LibraryKind.SYSTEM_SECRET =>
                 assume(library.ownerId == viewerUserIdOpt.get, s"viewer ${viewerUserIdOpt.get} can't view a system library they do not own: $library")
-                if (ownerHasAllKeepsViewExperiment) {
-                  //cached
-                  keepRepo.getPrivate(library.ownerId, 0, maxKeepsShown) //not cached
-                } else keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
+                keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
               case _ =>
                 val oldWay = keepRepo.getByLibrary(library.id.get, 0, maxKeepsShown) //not cached
                 val newWay = ktlRepo.getByLibraryIdSorted(library.id.get, Offset(0), Limit(maxKeepsShown)) |> keepCommander.idsToKeeps
@@ -252,21 +245,11 @@ class LibraryInfoCommanderImpl @Inject() (
           val mainLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_MAIN)
           val owner = privateLibOpt.map(_.ownerId).orElse(mainLibOpt.map(_.ownerId)).getOrElse(
             throw new Exception(s"no main or secret libs in ${libraries.size} libs while userLibs counts for $userLibs is $userLibCounts. Libs are ${libraries.mkString("\n")}"))
-          if (experimentCommander.userHasExperiment(owner, UserExperimentType.ALL_KEEPS_VIEW)) {
-            val (privateCount, publicCount) = keepRepo.getPrivatePublicCountByUser(owner)
-            privateLibOpt foreach { privateLib =>
-              userLibCounts = userLibCounts + (privateLib.id.get -> privateCount)
-            }
-            mainLibOpt foreach { mainLib =>
-              userLibCounts = userLibCounts + (mainLib.id.get -> publicCount)
-            }
-          } else {
-            privateLibOpt foreach { privateLib =>
-              userLibCounts = userLibCounts + (privateLib.id.get -> privateLib.keepCount)
-            }
-            mainLibOpt foreach { mainLib =>
-              userLibCounts = userLibCounts + (mainLib.id.get -> mainLib.keepCount)
-            }
+          privateLibOpt foreach { privateLib =>
+            userLibCounts = userLibCounts + (privateLib.id.get -> privateLib.keepCount)
+          }
+          mainLibOpt foreach { mainLib =>
+            userLibCounts = userLibCounts + (mainLib.id.get -> mainLib.keepCount)
           }
         }
         userLibCounts
