@@ -9,7 +9,9 @@ import play.api.http.Status._
 
 import scala.util.control.NoStackTrace
 
-case class AccountFeatureSettingsRequest(featureSettings: Set[FeatureSetting])
+sealed abstract class PaymentRequest
+
+case class AccountFeatureSettingsRequest(featureSettings: Set[FeatureSetting]) extends PaymentRequest
 object AccountFeatureSettingsRequest {
   implicit val reads = new Reads[AccountFeatureSettingsRequest] {
     def reads(json: JsValue): JsResult[AccountFeatureSettingsRequest] = {
@@ -23,7 +25,7 @@ object AccountFeatureSettingsRequest {
   }
 }
 
-case class AccountFeatureSettingsResponse(clientFeatures: Set[ClientFeature], planKind: PaidPlan.Kind)
+case class AccountFeatureSettingsResponse(clientFeatures: Set[ClientFeature], planKind: PaidPlan.Kind) extends PaymentRequest
 object AccountFeatureSettingsResponse {
   def apply(features: Set[PlanFeature], featureSettings: Set[FeatureSetting], planKind: PaidPlan.Kind): AccountFeatureSettingsResponse = {
     val clientFeatures = features.map {
@@ -45,7 +47,7 @@ object AccountFeatureSettingsResponse {
 }
 
 @json
-case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boolean)
+case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boolean) extends PaymentRequest
 
 sealed abstract class PaymentFail(val status: Int, val message: String) extends Exception(message) with NoStackTrace {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
