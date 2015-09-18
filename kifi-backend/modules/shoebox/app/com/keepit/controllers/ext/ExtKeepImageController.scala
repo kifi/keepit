@@ -12,8 +12,9 @@ import com.keepit.common.net.URI
 import com.keepit.common.store.ImageSize
 import com.keepit.model._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{ JsNull, JsString, Json }
+import play.api.libs.json._
 import play.api.mvc.{ Result, Action, Controller }
+import com.keepit.common.core._
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -92,8 +93,8 @@ class ExtKeepImageController @Inject() (
     db.readOnlyMaster { implicit session =>
       Library.decodePublicId(libraryPubId).toOption.flatMap(libId => keepRepo.getByExtIdandLibraryId(keepExtId, libId))
     } map { keep =>
-      (request.body \ "image") match {
-        case JsNull =>
+      request.body \ "image" match {
+        case v if v.isFalsy =>
           keepImageCommander.removeKeepImageForKeep(keep.id.get)
           Future.successful(Ok(Json.obj("image" -> JsNull)))
         case JsString(imageUrl @ URI(scheme, _, _, _, _, _, _)) if scheme.exists(_.startsWith("http")) =>

@@ -44,7 +44,8 @@ trait KeepImageCommander {
   def setKeepImageFromUrl(imageUrl: String, keepId: Id[Keep], source: ImageSource, requestId: Option[Id[KeepImageRequest]] = None): Future[ImageProcessDone]
   def setKeepImageFromFile(image: File, keepId: Id[Keep], source: ImageSource, requestId: Option[Id[KeepImageRequest]] = None): Future[ImageProcessDone]
 
-  // Returns true if images were removed, false otherwise
+  // This explicitly sets the keep image as no image. If no image exists (yet), creates a dummy record to serve as an inactive marker.
+  // Return value is whether there was a real image already that we set as inactive.
   def removeKeepImageForKeep(keepId: Id[Keep]): Boolean
 }
 
@@ -256,9 +257,25 @@ class KeepImageCommanderImpl @Inject() (
 
   def removeKeepImageForKeep(keepId: Id[Keep]): Boolean = {
     val images = db.readWrite { implicit session =>
-      keepImageRepo.getForKeepId(keepId).map { keepImage =>
+      val saved = keepImageRepo.getForKeepId(keepId).map { keepImage =>
         keepImageRepo.save(keepImage.copy(state = KeepImageStates.INACTIVE))
       }
+      if (saved.isEmpty) {
+        // Create a dummy marker image. This is a real 1x1 transparent png, storing as a 0x0 to clearly differentiate it.
+        keepImageRepo.save(KeepImage(
+          state = KeepImageStates.INACTIVE,
+          keepId = keepId,
+          imagePath = ImagePath("keep/ca1dba98f5e46c0e7a1549b3d8af9b93_1x1_o.png"),
+          format = ImageFormat.PNG,
+          width = 0,
+          height = 0,
+          sourceFileHash = ImageHash("ca1dba98f5e46c0e7a1549b3d8af9b93"),
+          sourceImageUrl = None,
+          source = ImageSource.DummyPlaceholder,
+          isOriginal = true,
+          kind = ProcessImageOperation.Original))
+      }
+      saved
     }
     images.nonEmpty
   }
