@@ -2,10 +2,11 @@
 
 # --- !Ups
 
-ALTER TABLE paid_plan ADD COLUMN features text NOT NULL;
+ALTER TABLE account_event DROP COLUMN processing_stage;
+ALTER TABLE account_event ADD COLUMN charge_id text DEFAULT NULL;
 
-ALTER TABLE paid_account ADD COLUMN feature_settings text NOT NULL;
+ALTER TABLE paid_account ADD COLUMN billing_cycle_start DATETIME;
 
-insert into evolutions(name, description) values('396.sql', 'add features to paid_plan, add feature_settings to paid_account');
+insert into evolutions (name, description) values('396.sql', 'dropping proccessing_stage from account_event and adding charge_id, adding billing_cycle_start to paid_account');
 
 # --- !Downs

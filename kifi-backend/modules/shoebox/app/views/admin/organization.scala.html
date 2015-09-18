@@ -42,7 +42,10 @@ orgStats: OrganizationStatistics
         </form>
         </td></tr>
     <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
-    <tr><td>Credit</td><td>@orgStats.credit</td></tr>
+    <tr><td>Plan</td><td>@orgStats.plan.id (Price per User per Cycle: @orgStats.plan.pricePerCyclePerUser, Cycle Length: @orgStats.plan.billingCycle.month month)<button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
+    <tr><td>Billing Cycle Start</td><td>@adminHelper.dateTimeDisplay(orgStats.billingCycleStart)</td></tr>
+    <tr><td>Credit</td><td>@orgStats.credit<button id="process-billing-now" class="btn btn-default btn-xs">Process Payments Now</button></td></tr>
+    <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>)</td></tr>
     <tr><td>Extra credit</td><td>
         Amount (cents)? <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
         Passphrase: <input id="extra-credit-pass" type="text"></input>
@@ -138,7 +141,7 @@ orgStats: OrganizationStatistics
             <th>Role</th>
             <th class="sorter-mmddyy">Last Keep</th>
             <th>Libs</th>
-            <th>Keeps PRV/PUB</th>
+            <th>Keeps PRV/PUB/ORG/DISC</th>
             <th>Chats</th>
             <th>Remove</th>
             <th>Make an owner</th>
@@ -151,7 +154,7 @@ orgStats: OrganizationStatistics
                 <td>@membership.role</td>
                 <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
-                <td>@orgStats.membersStatistics(membership.userId).numPrivateKeeps / @orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
+                <td>@orgStats.membersStatistics(membership.userId).keepVisibilityCount.secret / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.published / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.organization / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.discoverable</td>
                 <td>@orgStats.membersStatistics(membership.userId).numChats</td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                     <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default btn-xs">Remove</button></form></td>
@@ -169,7 +172,7 @@ orgStats: OrganizationStatistics
             <th>Candidate Name</th>
             <th class="sorter-mmddyy">Last Keep</th>
             <th>Boards</th>
-            <th>Keeps PRV/PUB</th>
+            <th>Keeps PRV/PUB/ORG/DISC</th>
             <th>Chats</th>
             <th>Remove</th>
             <th>Make member</th>
@@ -183,7 +186,7 @@ orgStats: OrganizationStatistics
                 <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
                 <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
                 <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
-                <td>@orgStats.membersStatistics(candidate.userId).numPrivateKeeps / @orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
+                <td>@orgStats.membersStatistics(candidate.userId).keepVisibilityCount.secret / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.published / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.organization / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.discoverable</td>
                 <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
                 <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
                     <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Remove</button></form></td>
@@ -406,6 +409,39 @@ orgStats: OrganizationStatistics
         })
     });
 
+    $("#process-billing-now").click(function () {
+        if ("@orgStats.stripeToken" === "N/A") {
+            alert("There seems to be no active credit card on file");
+            return;
+        }
+        if (confirm("Are you sure?")) {
+            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.processOrgNow(orgStats.orgId)", {});
+            deffered.done( function (data) {
+                alert(data);
+                location.reload();
+            });
+            deffered.fail (function () {
+                console.log("FAIL:", arguments);
+                alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+            })
+        }
+    });
+
+
+    $("#edit-plan").click(function () {
+        var newPlanId = prompt("Enter New Plan Id")
+        if (newPlanId != null) {
+            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.changePlanForOrg(orgStats.orgId)", {planId: newPlanId});
+            deffered.done( function (data) {
+                alert(data);
+                location.reload();
+            });
+            deffered.fail (function () {
+                console.log("FAIL:", arguments);
+                alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+            })
+        }
+    });
 
 </script>
 }

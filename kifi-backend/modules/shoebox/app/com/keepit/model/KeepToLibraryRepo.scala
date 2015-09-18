@@ -1,8 +1,10 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.KeepVisibilityCount
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
+import scala.collection.mutable
 import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber, State }
 import com.keepit.common.logging.Logging
@@ -37,6 +39,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def publishedLibrariesWithMostKeepsSince(limit: Limit, since: DateTime)(implicit session: RSession): Map[Id[Library], Int]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def recentKeepNotes(libId: Id[Library], limit: Int)(implicit session: RSession): Seq[String]
+  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): KeepVisibilityCount
 }
 
 @Singleton
@@ -218,4 +221,19 @@ class KeepToLibraryRepoImpl @Inject() (
                   limit $limit"""
     q.as[String].list
   }
+
+  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): KeepVisibilityCount = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    val sql = sql"select ktl.visibility, count(*) from keep_to_library ktl where ktl.added_by = $userId and ktl.state='active' group by ktl.visibility"
+    val counts = mutable.Map[LibraryVisibility, Int]().withDefaultValue(0)
+    sql.as[(String, Int)].list foreach {
+      case (name, count) => counts(LibraryVisibility(name)) = count
+    }
+    KeepVisibilityCount(
+      secret = counts(LibraryVisibility.SECRET),
+      published = counts(LibraryVisibility.PUBLISHED),
+      organization = counts(LibraryVisibility.ORGANIZATION),
+      discoverable = counts(LibraryVisibility.DISCOVERABLE))
+  }
+
 }

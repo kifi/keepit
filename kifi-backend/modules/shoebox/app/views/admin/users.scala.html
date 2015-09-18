@@ -110,7 +110,7 @@
               <th>Messages all/active/started</th>
               <th>Lib create/follow</th>
               <th>Network</th>
-              <th>Keeps PRV/PUB</th>
+              <th>Keeps PRV/PUB/ORG/DISC</th>
               <th>Email Address</th>
               <th>Version</th>
               <th class="sorter-mmddyy">Date Joined</th>
@@ -130,7 +130,7 @@
               <td>@{userData.getUserThreadStats(userStatistics.user).all}/@{userData.getUserThreadStats(userStatistics.user).active}/@{userData.getUserThreadStats(userStatistics.user).started}</td>
               <td>@{userStatistics.librariesCreated}/@{userStatistics.librariesFollowed}</td>
               <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
-              <td>@userStatistics.privateKeeps / @userStatistics.publicKeeps</td>
+              <td>@userStatistics.keepVisibilityCount.secret / @userStatistics.keepVisibilityCount.published / @userStatistics.keepVisibilityCount.organization / @userStatistics.keepVisibilityCount.discoverable</td>
               <td>@userStatistics.emailAddress.map(_.address).getOrElse("n/a")</td>
               <td>@formatKifiInstallations(userStatistics.kifiInstallations)</td>
               <td>@adminHelper.dateTimeDisplay(userStatistics.user.createdAt)</td>

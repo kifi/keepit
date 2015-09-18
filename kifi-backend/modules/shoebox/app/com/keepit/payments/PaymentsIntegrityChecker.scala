@@ -25,10 +25,11 @@ class PaymentsIntegrityChecker @Inject() (
     organizationMembershipRepo: OrganizationMembershipRepo,
     accountLockHelper: AccountLockHelper,
     accountEventRepo: AccountEventRepo,
-    paidAccountRepo: PaidAccountRepo) extends Logging {
+    paidAccountRepo: PaidAccountRepo,
+    planManagementCommander: PlanManagementCommander) extends Logging {
 
   private def freezeAccount(orgId: Id[Organization]): Unit = {
-    //TODO: once things are stable and eveything is backfilled this should email whoever is repsonsible for checking and unfreezin accounts
+    //TODO: once things are stable and eveything is backfilled this should email whoever is repsonsible for checking and unfreezing accounts
     db.readWrite { implicit session =>
       paidAccountRepo.save(paidAccountRepo.getByOrgId(orgId).freeze)
     }
@@ -42,7 +43,8 @@ class PaymentsIntegrityChecker @Inject() (
         val memberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.ACTIVE).map(_.userId).toSet
         val exMemberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.INACTIVE).map(_.userId).toSet
 
-        val accountId = paidAccountRepo.getAccountId(orgId)
+        val account = paidAccountRepo.getByOrgId(orgId)
+        val accountId = account.id.get
         val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMemebershipEventsInOrder(accountId).groupBy { event =>
           event.action match {
             case AccountEventAction.UserAdded(userId) => userId
@@ -76,26 +78,18 @@ class PaymentsIntegrityChecker @Inject() (
         val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
         val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
 
-        //TODO: one things are stable and everything is backfilled, the two code blocks below should airbake instead of logging
+        //TODO: one things are stable and everything is backfilled, the three code blocks below should airbake instead of logging
         perceivedActiveButActuallyInactive.foreach { userId =>
           log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
-          accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-            eventTime = clock.now,
-            accountId = accountId,
-            attribution = ActionAttribution(None, None),
-            action = AccountEventAction.UserRemoved(userId),
-            pending = true
-          ))
+          planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
         }
         perceivedInactiveButActuallyActive.foreach { userId =>
           log.info(s"[AEIC] Events show user $userId as an inactive member of $orgId, which is not correct. Creating new UserAdded event.")
-          accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-            eventTime = clock.now,
-            accountId = accountId,
-            attribution = ActionAttribution(None, None),
-            action = AccountEventAction.UserAdded(userId),
-            pending = true
-          ))
+          planManagementCommander.registerNewUserHelper(orgId, userId, ActionAttribution(None, None))
+        }
+        if (account.activeUsers != memberIds.size) {
+          log.info(s"[AEIC] Total active user count on account for org $orgId not correct. Is: ${account.activeUsers}. Should: ${memberIds.size}. Fixing.")
+          paidAccountRepo.save(account.copy(activeUsers = memberIds.size))
         }
 
         perceivedInactiveButActuallyActive.size + perceivedActiveButActuallyInactive.size

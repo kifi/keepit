@@ -1,0 +1,29 @@
+@(orgId: Id[Organization])
+
+Submitting this form will add the entered credit card as the default card for org @orgId
+
+<form action="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCard(orgId)" method="post" autocomplete="off">
+    <div>
+        <label for="cardholderName">Cardholder Name:</label>
+        <input type="text" name="cardholderName" />
+    </div>
+    <div>
+        <label for="number">Card Number</label>
+        <input type="text" name="number" />
+    </div>
+    <div>
+        <label for="expMonth">Exp. Month (MM)</label>
+        <input type="text" name="expMonth" />
+    </div>
+    <div>
+        <label for="expYear">Exp. Year (YYYY)</label>
+        <input type="text" name="expYear" />
+    </div>
+    <div>
+        <label for="cvc">CVC</label>
+        <input type="text" name="cvc" />
+    </div>
+    <div>
+        <button type="submit">Do it!</button>
+    </div>
+</form>

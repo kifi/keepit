@@ -11,16 +11,18 @@ import play.api.libs.json._
 
 // OrganizationView should ONLY contain public information. No internal ids.
 case class OrganizationInfo(
-  orgId: PublicId[Organization],
-  ownerId: ExternalId[User],
-  handle: OrganizationHandle,
-  name: String,
-  description: Option[String],
-  site: Option[String],
-  avatarPath: ImagePath,
-  members: Seq[BasicUser],
-  numMembers: Int,
-  numLibraries: Int)
+    orgId: PublicId[Organization],
+    ownerId: ExternalId[User],
+    handle: OrganizationHandle,
+    name: String,
+    description: Option[String],
+    site: Option[String],
+    avatarPath: ImagePath,
+    members: Seq[BasicUser],
+    numMembers: Int,
+    numLibraries: Int) {
+  def toBasicOrganization: BasicOrganization = BasicOrganization(this.orgId, this.ownerId, this.handle, this.name, this.description, this.avatarPath)
+}
 object OrganizationInfo {
   implicit val defaultWrites: Writes[OrganizationInfo] = (
     (__ \ 'id).write[PublicId[Organization]] and
@@ -61,6 +63,13 @@ object OrganizationMembershipInfo {
     (__ \ 'permissions).write[Set[OrganizationPermission]] and
     (__ \ 'role).writeNullable[OrganizationRole]
   )(unlift(OrganizationMembershipInfo.unapply))
+
+  val testReads: Reads[OrganizationMembershipInfo] = (
+    (__ \ 'isInvited).read[Boolean] and
+    (__ \ 'invite).readNullable[OrganizationInviteInfo](OrganizationInviteInfo.testReads) and
+    (__ \ 'permissions).read[Set[OrganizationPermission]] and
+    (__ \ 'role).readNullable[OrganizationRole]
+  )(OrganizationMembershipInfo.apply _)
 }
 
 case class OrganizationInviteInfo(
@@ -70,6 +79,10 @@ object OrganizationInviteInfo {
   implicit val defaultWrites: Writes[OrganizationInviteInfo] = (
     (__ \ 'inviter).write[BasicUser] and
     (__ \ 'lastInvited).write[DateTime])(unlift(OrganizationInviteInfo.unapply))
+  val testReads: Reads[OrganizationInviteInfo] = (
+    (__ \ 'inviter).read[BasicUser] and
+    (__ \ 'lastInvited).read[DateTime]
+  )(OrganizationInviteInfo.apply _)
   def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
     OrganizationInviteInfo(inviter, invite.updatedAt)
   }

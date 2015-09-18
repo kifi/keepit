@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, BenchmarkResults }
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType, ServiceUri }
 import com.keepit.common.db.Id
-import com.keepit.common.net.{ ClientResponse, HttpClient }
+import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
 import com.keepit.model._
 import com.keepit.search.index.{ IndexInfo }
@@ -250,9 +250,10 @@ class SearchServiceClientImpl(
 
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]] = {
     val url = Search.internal.indexInfoList()
+    val longTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(1000), maxJsonParseTime = Some(10000))
     serviceCluster.allMembers.collect {
       case instance if instance.isHealthy =>
-        callUrl(url, new ServiceUri(instance, protocol, port, url.url), JsNull).map { r => (instance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
+        callUrl(url, new ServiceUri(instance, protocol, port, url.url), JsNull, true, longTimeout).map { r => (instance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
     }
   }
 

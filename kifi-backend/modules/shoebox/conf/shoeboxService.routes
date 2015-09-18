@@ -911,6 +911,11 @@ GET           /admin/goodies/externalIdsByPublicId                              
 
 GET           /admin/payments/backfillAccounts             @com.keepit.controllers.admin.AdminPaymentsController.backfillPaidAccounts()
 POST          /admin/payments/grantExtraCredit             @com.keepit.controllers.admin.AdminPaymentsController.grantExtraCredit(orgId: Id[Organization])
+POST          /admin/payments/processOrgNow                @com.keepit.controllers.admin.AdminPaymentsController.processOrgNow(orgId: Id[Organization])
+POST          /admin/payments/changePlanForOrg             @com.keepit.controllers.admin.AdminPaymentsController.changePlanForOrg(orgId: Id[Organization])
+GET           /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCardView(orgId: Id[Organization])
+POST          /admin/payments/addCreditCard               @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
+
 
 ##########################################
 # Common Healthcheck / service routes

@@ -36,9 +36,10 @@ object AccountFeatureSettingsResponse {
 
   implicit val writes = new Writes[AccountFeatureSettingsResponse] {
     def writes(o: AccountFeatureSettingsResponse): JsValue = {
-      JsObject(o.clientFeatures.map {
+      val settingsJson = JsObject(o.clientFeatures.map {
         case ClientFeature(name, setting, editable) => name -> Json.obj("setting" -> setting, "editable" -> editable)
       }.toSeq)
+      Json.obj("kind" -> o.planKind, "settings" -> settingsJson)
     }
   }
 }

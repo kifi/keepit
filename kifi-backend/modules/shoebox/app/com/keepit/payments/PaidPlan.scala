@@ -53,7 +53,8 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
 
   val DEFAULT = Id[PaidPlan](1L)
 
-  case class Kind(name: String)
+  @json
+  case class Kind(name: String) extends AnyVal
   object Kind {
     val NORMAL = Kind("normal")
     val GRANDFATHERED = Kind("grandfathered")
@@ -108,7 +109,7 @@ case object MoveOrganizationLibraries extends OrganizationPermissionFeature(Orga
 case object CreateSlackIntegration extends OrganizationPermissionFeature(OrganizationPermission.CREATE_SLACK_INTEGRATION) {
   val roleOptions = Map("disabled" -> Seq.empty, "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
 }
-case object EditOrganization extends OrganizationPermissionFeature(OrganizationPermission.MANAGE_PLAN) {
+case object EditOrganization extends OrganizationPermissionFeature(OrganizationPermission.EDIT_ORGANIZATION) {
   val roleOptions = Map("member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
 }
 
