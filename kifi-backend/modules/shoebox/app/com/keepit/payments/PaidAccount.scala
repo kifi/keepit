@@ -56,8 +56,9 @@ case class PaidAccount(
   }
   def withMoreActiveUsers(howMany: Int): PaidAccount = this.copy(activeUsers = activeUsers + howMany)
   def withFewerActiveUsers(howMany: Int): PaidAccount = {
-    assert(activeUsers - howMany >= 0)
-    this.copy(activeUsers = activeUsers - howMany)
+    //assert(activeUsers - howMany >= 0)
+    val newActiveUsers = activeUsers - howMany
+    this.copy(activeUsers = if (newActiveUsers < 0) 0 else newActiveUsers)
   }
 
   def withNewPlan(newPlanId: Id[PaidPlan]): PaidAccount = this.copy(planId = newPlanId)
