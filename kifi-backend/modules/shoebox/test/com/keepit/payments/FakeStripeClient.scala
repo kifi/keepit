@@ -25,7 +25,7 @@ class FakeStripeClientImpl extends StripeClient {
     val num = chargeCounter.getAndIncrement()
     val trans = FakeTransaction(s"faketransaction_$num", amount, token, description)
     transactions(token).append(trans)
-    StripeChargeSuccess(trans.id)
+    StripeChargeSuccess(amount, trans.id)
   }
 
   def getPermanentToken(token: String, description: String): Future[StripeToken] = newToken()

@@ -16,6 +16,12 @@ case class DollarAmount(cents: Int) extends AnyVal {
   override def toString = s"$$${(cents.toFloat / 100.0)}"
 }
 
+object DollarAmount {
+  def wholeDollars(dollars: Int): DollarAmount = DollarAmount(dollars * 100)
+
+  val ZERO = DollarAmount(0)
+}
+
 @json
 case class SimpleAccountContactInfo(who: BasicUser, enabled: Boolean)
 
@@ -32,12 +38,31 @@ case class PaidAccount(
     lockedForProcessing: Boolean = false,
     frozen: Boolean = false,
     modifiedSinceLastIntegrityCheck: Boolean = true,
-    activeUsers: Int) extends ModelWithState[PaidAccount] {
+    activeUsers: Int,
+    billingCycleStart: DateTime) extends ModelWithState[PaidAccount] {
 
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
+
+  def withReducedCredit(reduction: DollarAmount): PaidAccount = {
+    val newCredit = DollarAmount(credit.cents - reduction.cents)
+    this.copy(credit = newCredit)
+  }
+  def withIncreasedCredit(increase: DollarAmount): PaidAccount = {
+    val newCredit = DollarAmount(credit.cents + increase.cents)
+    this.copy(credit = newCredit)
+  }
+  def withMoreActiveUsers(howMany: Int): PaidAccount = this.copy(activeUsers = activeUsers + howMany)
+  def withFewerActiveUsers(howMany: Int): PaidAccount = {
+    assert(activeUsers - howMany >= 0)
+    this.copy(activeUsers = activeUsers - howMany)
+  }
+
+  def withNewPlan(newPlanId: Id[PaidPlan]): PaidAccount = this.copy(planId = newPlanId)
+
+  def withCycleStart(newCycleStart: DateTime): PaidAccount = this.copy(billingCycleStart = newCycleStart)
 }
 
 object PaidAccountStates extends States[PaidAccount]

@@ -20,7 +20,7 @@ case class CardDetails(number: String, expMonth: Int, expYear: Int, cvc: String,
 
 trait StripeChargeResult
 
-case class StripeChargeSuccess(chargeId: String) extends StripeChargeResult
+case class StripeChargeSuccess(amount: DollarAmount, chargeId: String) extends StripeChargeResult
 
 case class StripeChargeFailure(code: String, message: String) extends StripeChargeResult
 
@@ -35,12 +35,14 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
   val lock = new ReactiveLock(2)
 
   Stripe.apiKey = if (mode == Mode.Prod) {
-    "sk_live_ZHRnZXBRKuRqupqRme17ZSry" //this is the live token that will cause stripe to actually process charges
+    //"sk_live_ZHRnZXBRKuRqupqRme17ZSry" //this is the live token that will cause stripe to actually process charges
+    "sk_test_ljj7nL3XLgIlwxefGVRrRpqg" //this is the stripe test token, which lets us make call to them without actually charging anyone.
   } else {
     "sk_test_ljj7nL3XLgIlwxefGVRrRpqg" //this is the stripe test token, which lets us make call to them without actually charging anyone.
   };
 
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult] = lock.withLock {
+    require(amount.cents > 0)
     val chargeParams: Map[String, java.lang.Object] = Map(
       "amount" -> new java.lang.Integer(amount.cents),
       "currency" -> "usd",
@@ -50,7 +52,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     )
     try {
       val charge = Charge.create(chargeParams.asJava)
-      StripeChargeSuccess(charge.getId())
+      StripeChargeSuccess(DollarAmount(charge.getAmount()), charge.getId())
     } catch {
       case ex: CardException => {
         StripeChargeFailure(ex.getCode(), ex.getMessage())
@@ -79,7 +81,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
       "name" -> cardDetails.cardholderName
     )
     val customerParams: Map[String, java.lang.Object] = Map(
-      "source" -> cardDetailsMap,
+      "source" -> cardDetailsMap.asJava,
       "description" -> description //This is for us. It will show up in the stripe dashboard
     )
     val customer = Customer.create(customerParams.asJava);
