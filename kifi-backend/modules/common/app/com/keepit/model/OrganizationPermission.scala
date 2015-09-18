@@ -39,7 +39,6 @@ object OrganizationPermission {
   )
 
   def orgPermissionsToLibraryPermissions: Map[OrganizationPermission, LibraryPermission] = Map(
-    PUBLISH_LIBRARIES -> LibraryPermission.PUBLISH_LIBRARY,
     REMOVE_LIBRARIES -> LibraryPermission.DELETE_LIBRARY,
     MOVE_ORG_LIBRARIES -> LibraryPermission.MOVE_LIBRARY,
     FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY
