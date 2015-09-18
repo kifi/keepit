@@ -114,13 +114,18 @@ angular.module('kifi')
       return net.removeManyKeepsFromLibrary(libraryId, data);
     }
 
+    function removeKeepImage(libraryId, keepId) {
+      return net.changeKeepImage(libraryId, keepId, { image: null });
+    }
+
     var api = {
       keepToLibrary: keepToLibrary,
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,
       fetchFullKeepInfo: fetchFullKeepInfo,
       unkeepFromLibrary: unkeepFromLibrary,
-      unkeepManyFromLibrary: unkeepManyFromLibrary
+      unkeepManyFromLibrary: unkeepManyFromLibrary,
+      removeKeepImage: removeKeepImage
     };
 
     return api;

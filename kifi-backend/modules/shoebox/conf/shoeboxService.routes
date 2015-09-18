@@ -447,6 +447,7 @@ POST    /site/libraries/:id/keeps/:k/update       @com.keepit.controllers.websit
 POST    /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 DELETE  /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 POST    /site/libraries/:id/keeps/:k/note         @com.keepit.controllers.website.LibraryController.editKeepNote(id: PublicId[Library], k: ExternalId[Keep])
+POST    /site/libraries/:id/keeps/:k/image        @com.keepit.controllers.website.LibraryController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
 
 GET     /site/libraries/:id/related                @com.keepit.controllers.website.LibraryController.relatedLibraries(id: PublicId[Library])
 
