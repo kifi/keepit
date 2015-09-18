@@ -56,7 +56,7 @@ object ImageSource {
   case object DummyPlaceholder extends ImageSource("dummy")
   case class RoverArticle[A <: Article](kind: ArticleKind[A]) extends SystemInitiated(s"${kind.typeCode}_article")
 
-  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync) ++ ArticleKind.all.map(RoverArticle(_))
+  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync, DummyPlaceholder) ++ ArticleKind.all.map(RoverArticle(_))
   def apply(name: String) = all.find(_.name == name).getOrElse(throw new Exception(s"Can't find ImageSource for $name"))
 
   implicit val format = new Format[ImageSource] {
