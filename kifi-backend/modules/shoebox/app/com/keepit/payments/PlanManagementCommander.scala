@@ -510,7 +510,7 @@ class PlanManagementCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session =>
       val account = paidAccountRepo.getByOrgId(orgId)
       val plan = paidPlanRepo.get(account.planId)
-      AccountFeatureSettingsResponse(plan.features, account.featureSettings)
+      AccountFeatureSettingsResponse(plan.features, account.featureSettings, plan.kind)
     }
   }
 
@@ -527,7 +527,7 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.save(updatedAccount)
 
     val plan = paidPlanRepo.get(updatedAccount.planId)
-    AccountFeatureSettingsResponse(plan.features, updatedAccount.featureSettings)
+    AccountFeatureSettingsResponse(plan.features, updatedAccount.featureSettings, plan.kind)
   }
 
   private def updateOrganizationPermissions(orgId: Id[Organization], oldFeatureSettings: Set[FeatureSetting], newFeatureSettings: Set[FeatureSetting])(implicit session: RWSession): Unit = {

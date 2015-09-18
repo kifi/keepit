@@ -108,6 +108,9 @@ case object MoveOrganizationLibraries extends OrganizationPermissionFeature(Orga
 case object CreateSlackIntegration extends OrganizationPermissionFeature(OrganizationPermission.CREATE_SLACK_INTEGRATION) {
   val roleOptions = Map("disabled" -> Seq.empty, "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
 }
+case object EditOrganization extends OrganizationPermissionFeature(OrganizationPermission.MANAGE_PLAN) {
+  val roleOptions = Map("member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
+}
 
 @json
 case class PlanFeature(name: String, default: String, editable: Boolean) // Stored in db for PaidPlan
@@ -117,7 +120,7 @@ case class ClientFeature(name: String, setting: String, editable: Boolean) // Se
 case class FeatureSetting(name: String, setting: String) // Received from clients, stored in db for PaidAccount
 
 object FeatureSetting {
-  def alterSetting(featureSettings: Set[FeatureSetting], toChange: FeatureSetting) = {
+  def alterSetting(featureSettings: Set[FeatureSetting], toChange: FeatureSetting): Set[FeatureSetting] = {
     featureSettings - featureSettings.find(_.name == toChange.name).get + toChange
   }
 }

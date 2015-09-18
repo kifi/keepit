@@ -1,6 +1,5 @@
 package com.keepit.model
 
-import com.keepit.model.OrganizationPermission
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
@@ -21,6 +20,7 @@ object OrganizationPermission {
   case object MOVE_ORG_LIBRARIES extends OrganizationPermission("move_org_libraries")
   case object EXPORT_KEEPS extends OrganizationPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends OrganizationPermission("create_slack_integration")
+  case object MANAGE_PLAN extends OrganizationPermission("manage_plan")
 
   def all: Set[OrganizationPermission] = Set(
     VIEW_ORGANIZATION,
@@ -36,7 +36,8 @@ object OrganizationPermission {
     GROUP_MESSAGING,
     MOVE_ORG_LIBRARIES,
     EXPORT_KEEPS,
-    CREATE_SLACK_INTEGRATION
+    CREATE_SLACK_INTEGRATION,
+    MANAGE_PLAN
   )
 
   def orgPermissionsToLibraryPermissions: Map[OrganizationPermission, LibraryPermission] = Map(
@@ -73,6 +74,7 @@ object OrganizationPermission {
       case MOVE_ORG_LIBRARIES.value => MOVE_ORG_LIBRARIES
       case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
+      case MANAGE_PLAN.value => MANAGE_PLAN
     }
   }
 
