@@ -74,7 +74,7 @@ sealed trait Feature {
 }
 object Feature {
   def get(name: String): Option[Feature] = ALL.find(_.name == name)
-  val ALL: Set[Feature] = Set(PublishLibraries, InviteMembers, GroupMessaging, EditLibrary, ViewMembers, MoveOrganizationLibraries, CreateSlackIntegration)
+  val ALL: Set[Feature] = Set(PublishLibraries, InviteMembers, GroupMessaging, EditLibrary, ViewMembers, MoveOrganizationLibraries, CreateSlackIntegration, EditOrganization)
 }
 sealed abstract class OrganizationPermissionFeature(val permission: OrganizationPermission) extends Feature {
   def roleOptions: Map[String, Seq[Option[OrganizationRole]]]
