@@ -428,12 +428,12 @@ var socketHandlers = {
     log('[socket:flush]', t);
     if (t === 'full') {
       clearSession();
-      authenticate(function () {
-        log('[socket:flush] we\'re back');
-      });
     } else {
       lightFlush();
     }
+    authenticate(function () {
+      log('[socket:flush] we\'re back');
+    });
   },
   experiments: function (exp) {
     log('[socket:experiments]', exp);

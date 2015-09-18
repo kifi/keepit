@@ -62,8 +62,8 @@ object PushNotificationExperiment {
 
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
-  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
-  def sendToUser(userId: Id[User], data: JsArray): Unit
+  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit]
+  def sendToUser(userId: Id[User], data: JsArray): Future[Unit]
   def sendToAllUsers(data: JsArray): Unit
 
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
@@ -137,16 +137,16 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {
+  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "data" -> data)
-    broadcast(Eliza.internal.sendToUserNoBroadcast, payload)
+    Future.sequence(broadcast(Eliza.internal.sendToUserNoBroadcast, payload).values).map(_ => ())
   }
 
-  def sendToUser(userId: Id[User], data: JsArray): Unit = {
+  def sendToUser(userId: Id[User], data: JsArray): Future[Unit] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "data" -> data)
-    call(Eliza.internal.sendToUser, payload)
+    call(Eliza.internal.sendToUser, payload).map(_ => ())
   }
 
   def sendToAllUsers(data: JsArray): Unit = {
