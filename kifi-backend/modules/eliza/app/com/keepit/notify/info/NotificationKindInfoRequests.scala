@@ -40,7 +40,7 @@ class NotificationKindInfoRequests @Inject() () {
       case LibraryNewFollowInvite => genericInfoFn(infoForLibraryNewFollowInvite)
       case DepressedRobotGrumble => genericInfoFn(infoForDepressedRobotGrumble)
       case OrgNewInvite => genericInfoFn(infoForOrgNewInvite)
-      case OrgInviteAccepted => genericInfoFn(infoForOrgNewInvite)
+      case OrgInviteAccepted => genericInfoFn(infoForOrgInviteAccepted)
       case OwnedLibraryNewCollabInvite => genericInfoFn(infoForOwnedLibraryNewCollabInvite)
       case OwnedLibraryNewFollowInvite => genericInfoFn(infoForOwnedLibraryNewFollowInvite)
       case OwnedLibraryNewFollower => genericInfoFn(infoForOwnedLibraryNewFollower)
