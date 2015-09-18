@@ -1,7 +1,8 @@
 package com.keepit.model
 
+import scala.collection.mutable
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps }
+import com.keepit.commanders.{ KeepVisibilityCount, LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -35,7 +36,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getCountManualByUserInLastDays(userId: Id[User], days: Int)(implicit session: RSession): Int
   def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def getCountByUsersAndSource(userIds: Set[Id[User]], sources: Set[KeepSource])(implicit session: RSession): Map[Id[User], Int]
-  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getAllCountsByTimeAndSource(from: DateTime, to: DateTime)(implicit session: RSession): Seq[(KeepSource, Int)]
@@ -409,12 +409,6 @@ class KeepRepoImpl @Inject() (
       case (userId, keeps) => (userId, keeps.length)
     }.run
   }.map { case (userId, count) => userId -> count }.toMap
-
-  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
-    sql.as[(Int, Int)].first
-  }
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation

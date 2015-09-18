@@ -66,7 +66,6 @@ object UserExperimentType {
   val PLAIN_EMAIL = UserExperimentType("plain_email")
 
   val ACTIVITY_EMAIL = UserExperimentType("activity_email")
-  val ALL_KEEPS_VIEW = UserExperimentType("all_keeps_view")
   val EXPLICIT_SOCIAL_POSTING = UserExperimentType("explicit_social_posting")
   val RELATED_PAGE_INFO = UserExperimentType("related_page_info")
   val NEXT_GEN_RECOS = UserExperimentType("next_gen_recos")
@@ -82,7 +81,7 @@ object UserExperimentType {
     DEMO :: EXTENSION_LOGGING :: SHOW_HIT_SCORES :: SHOW_DISCUSSIONS ::
     MOBILE_REDIRECT :: DELIGHTED_SURVEY_PERMANENT :: SPECIAL_CURATOR ::
     GRAPH_BASED_PEOPLE_TO_INVITE :: CORTEX_NEW_MODEL :: CURATOR_DIVERSE_TOPIC_RECOS ::
-    ACTIVITY_EMAIL :: ALL_KEEPS_VIEW :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
+    ACTIVITY_EMAIL :: EXPLICIT_SOCIAL_POSTING :: RELATED_PAGE_INFO :: NEXT_GEN_RECOS ::
     RECO_FASTLANE :: RECO_SUBSAMPLE :: APPLY_RECO_FEEDBACK :: PLAIN_EMAIL :: SEARCH_LAB ::
     NEW_NOTIFS_SYSTEM :: KEEP_MULTILIB :: Nil
 
