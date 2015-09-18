@@ -17,7 +17,8 @@ object PaidPlanFactory {
       PlanFeature(Feature.get("force_edit_libraries").get.name, Feature.get("force_edit_libraries").get.options.find(_ == "disabled").get, editable = true),
       PlanFeature(Feature.get("view_members").get.name, Feature.get("view_members").get.options.find(_ == "anyone").get, editable = true),
       PlanFeature(Feature.get("move_org_libraries").get.name, Feature.get("move_org_libraries").get.options.find(_ == "member").get, editable = true),
-      PlanFeature(Feature.get("create_slack_integration").get.name, Feature.get("create_slack_integration").get.options.find(_ == "disabled").get, editable = true)
+      PlanFeature(Feature.get("create_slack_integration").get.name, Feature.get("create_slack_integration").get.options.find(_ == "disabled").get, editable = true),
+      PlanFeature(Feature.get("edit_organization").get.name, Feature.get("edit_organization").get.options.find(_ == "admin").get, editable = true)
     )
 
   def paidPlan(): PartialPaidPlan = {
