@@ -713,4 +713,11 @@ class UserCommander @Inject() (
       }
     }
   }
+
+  def liveFlushRemoteClientCache(userId: Id[User], flushEverything: Boolean = false): Future[Unit] = {
+    // This sends a simple socket message to any connected clients to tell them to flush their local caches. It's
+    // most useful when something big changed about a user, like if they're now in an organization.
+    // Clients may not respect this, it's a hint only.
+    elizaServiceClient.sendToUser(userId, Json.arr("flush"))
+  }
 }

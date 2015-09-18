@@ -434,8 +434,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
         val basicUserById = db.readOnlyReplica { implicit session => basicUserRepo.loadAllActive(nonMembers.toSet) }
 
-        val suggestedUsers = nonMembers.map { userId =>
-          MaybeOrganizationMember(Left(basicUserById(userId)), OrganizationRole.MEMBER, lastInvitedAt = None)
+        val suggestedUsers = nonMembers.collect {
+          case uid if basicUserById.get(uid).isDefined =>
+            MaybeOrganizationMember(Left(basicUserById(uid)), OrganizationRole.MEMBER, lastInvitedAt = None)
         }
 
         val suggestedEmailAddresses = uniqueEmailsWithName.map { contact =>

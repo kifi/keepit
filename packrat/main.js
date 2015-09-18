@@ -424,6 +424,17 @@ var socketHandlers = {
       api.requestUpdateCheck();
     }
   },
+  flush: function (t) {
+    log('[socket:flush]', t);
+    if (t === 'full') {
+      clearSession();
+    } else {
+      lightFlush();
+    }
+    authenticate(function () {
+      log('[socket:flush] we\'re back');
+    });
+  },
   experiments: function (exp) {
     log('[socket:experiments]', exp);
     experiments = exp;
@@ -2698,13 +2709,18 @@ function authenticate(callback, retryMs) {
   });
 }
 
-function clearSession() {
+function lightFlush() {
   if (me) {
     storeDrafts({});
     storeLibraries([]);
     unstore('recent_libraries');
-    unstore('recent_tags');  // TODO: remove after a few weeks
-    unstore('recent_tag_times');
+  }
+  clearDataCache();
+}
+
+function clearSession() {
+  lightFlush();
+  if (me) {
     unstore('user_id');
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/url_gray.png');
@@ -2716,15 +2732,15 @@ function clearSession() {
     });
   }
   me = mySysLibIds = prefs = experiments = eip = null;
-  if (socket) {
-    socket.close();
-    socket = null;
-  }
+
   if (silence) {
     api.timers.clearTimeout(silence.timeout);
     silence = null;
   }
-  clearDataCache();
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
 }
 
 function deauthenticate() {
