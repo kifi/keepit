@@ -47,7 +47,7 @@
         <menu class="kf-dropdown-menu">
           <button class="kf-dropdown-menu-item" ng-click="editKeepNote($event, keep)">{{keep.note ? 'Edit note' : 'Add a note'}}</button>
           <button class="kf-dropdown-menu-item" ng-click="deleteKeep($event, keep)">Delete Keep</button>
-          <button class="kf-dropdown-menu-item" ng-click="removeImage($event, keep)" ng-if="keep.summary.imageUrl">Remove Image</button>
+          <button class="kf-dropdown-menu-item" ng-click="removeImage($event, keep)" ng-if="keep.summary.imageUrl && !getYoutubeId(keep.url)">Remove Image</button>
         </menu>
       </div>
 
