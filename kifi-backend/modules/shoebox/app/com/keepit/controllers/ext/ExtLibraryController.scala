@@ -72,7 +72,9 @@ class ExtLibraryController @Inject() (
         val orgAvatarPath = lib.organizationId.map { orgId =>
           orgAvatarsById.get(orgId).map(_.imagePath).getOrElse(throw new Exception(s"No avatar for org of lib $lib"))
         }
+
         val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(request.userId)) }
+
         LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -126,6 +128,7 @@ class ExtLibraryController @Inject() (
               }
               val membership = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
               val permissionsFromOrg = libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(request.userId))
+
               LibraryData(
                 id = Library.publicId(lib.id.get),
                 name = lib.name,

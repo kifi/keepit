@@ -100,7 +100,7 @@ object OrganizationView {
 
   val mobileWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++
-      Json.obj("membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
+      Json.obj("membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject])
   }
 }
 

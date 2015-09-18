@@ -360,6 +360,7 @@ class LibraryController @Inject() (
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((lib, mem)) =>
             val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(mem.userId)) }
+
             Ok(Json.obj("membership" -> lib.createMembershipInfo(mem, permissionsFromOrg)))
         }
     }

@@ -2,7 +2,7 @@ package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.time._
-import com.keepit.model.{ Organization, User }
+import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.BasicUser
 
@@ -39,11 +39,13 @@ case class PaidAccount(
     frozen: Boolean = false,
     modifiedSinceLastIntegrityCheck: Boolean = true,
     activeUsers: Int,
-    billingCycleStart: DateTime) extends ModelWithState[PaidAccount] {
+    billingCycleStart: DateTime,
+    featureSettings: Set[FeatureSetting]) extends ModelWithState[PaidAccount] {
 
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
+  def withFeatureSettings(featureSettings: Set[FeatureSetting]): PaidAccount = this.copy(featureSettings = featureSettings)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 
   def withReducedCredit(reduction: DollarAmount): PaidAccount = {

@@ -11,8 +11,9 @@ import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.payments.{ PlanManagementCommander, PaidPlan, DollarAmount, BillingCycle }
+import com.keepit.payments._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -33,9 +34,10 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val orgCommander = inject[OrganizationCommander]
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-          inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
-
-          val user = db.readWrite { implicit session => UserFactory.user().withName("Teeny", "Tiny").saved }
+          val user = db.readWrite { implicit session =>
+            PaidPlanFactory.paidPlan().saved
+            UserFactory.user().withName("Teeny", "Tiny").saved
+          }
 
           val createRequest = OrganizationCreateRequest(requesterId = user.id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)
@@ -61,7 +63,6 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
       "not hide valid exceptions" in {
         withDb(modules: _*) { implicit injector =>
-          inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
           val createRequest = OrganizationCreateRequest(requesterId = Id[User](42), OrganizationInitialValues(name = "Kifi"))
           Try(inject[OrganizationCommander].createOrganization(createRequest)) must beFailedTry
         }
@@ -103,9 +104,10 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val orgCommander = inject[OrganizationCommander]
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-          inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
-
-          val users = db.readWrite { implicit session => UserFactory.users(3).saved }
+          val users = db.readWrite { implicit session =>
+            PaidPlanFactory.paidPlan().saved
+            UserFactory.users(3).saved
+          }
 
           val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)
@@ -184,9 +186,10 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val orgCommander = inject[OrganizationCommander]
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-          inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
-
-          val users = db.readWrite { implicit session => UserFactory.users(4).saved }
+          val users = db.readWrite { implicit session =>
+            PaidPlanFactory.paidPlan().saved
+            UserFactory.users(4).saved
+          }
 
           val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)
@@ -270,9 +273,9 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val orgCommander = inject[OrganizationCommander]
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-          inject[PlanManagementCommander].createNewPlan(Name[PaidPlan]("Test"), BillingCycle(1), DollarAmount(0))
-
-          val users = db.readWrite { implicit session => UserFactory.users(5).saved }
+          val users = db.readWrite { implicit session =>
+            UserFactory.users(5).saved
+          }
 
           val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
           val createResponse = orgCommander.createOrganization(createRequest)

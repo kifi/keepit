@@ -465,7 +465,7 @@ class AdminOrganizationController @Inject() (
     val (permissionsDiff, confirmation) = request.body.as[(PermissionsDiff, String)]
     assert(confirmation == "i swear i know what i am doing", "admin does not know what they are doing")
     val orgIds = db.readOnlyMaster { implicit session => orgRepo.all.filter(_.isActive).map(_.id.get) }
-    println(permissionsDiff)
+
     for (orgId <- orgIds) {
       orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(permissionsDiff = Some(permissionsDiff)))
     }

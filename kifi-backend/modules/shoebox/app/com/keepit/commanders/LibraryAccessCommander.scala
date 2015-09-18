@@ -21,7 +21,7 @@ class LibraryAccessCommander @Inject() (
       val lib = libraryRepo.get(libraryId)
       val libMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
       def canDirectlyEditLibrary = libMembershipOpt.exists(_.canWrite)
-      def canIndirectlyEditLibrary = libMembershipOpt.isDefined && lib.organizationId.exists { orgId =>
+      def canIndirectlyEditLibrary = lib.organizationId.exists { orgId =>
         orgMembershipCommander.getPermissionsHelper(orgId, Some(userId)).contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
       }
       canDirectlyEditLibrary || canIndirectlyEditLibrary

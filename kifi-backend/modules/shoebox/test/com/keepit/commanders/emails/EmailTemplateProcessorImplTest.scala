@@ -36,9 +36,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
     "replaces placeholders with real values" in {
       withDb(modules: _*) { implicit injector =>
         val testFactory = inject[ShoeboxTestFactory]
-        val (user1, user2, user3, user4) = db.readWrite { implicit rw =>
-          testFactory.setupUsers()
-        }
+        val (user1, user2, user3, user4) = testFactory.setupUsers()
 
         val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (library, keep) = db.readWrite { implicit rw =>

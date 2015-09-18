@@ -656,6 +656,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val permissionsFromOrg = getLibraryPermissionsFromOrgPermissions(lib.organizationId, viewerOpt.flatMap(_.id))
+
       val membershipInfoOpt = membershipOpt.map { libMem => lib.createMembershipInfo(libMem, permissionsFromOrg) }
 
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {

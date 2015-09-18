@@ -4,9 +4,10 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, UserActionsHelper }
 import com.keepit.common.db.ExternalId
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.model.{ Organization, OrganizationPermission, User }
+import com.keepit.model.{ OrganizationPermission, Organization }
 import com.keepit.commanders.{ OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
+import com.keepit.payments.AccountFeatureSettingsRequest
 
 import com.kifi.macros.json
 
@@ -30,9 +31,7 @@ class PaymentsController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  private val PLAN_MANAGEMENT_PERMISSION = OrganizationPermission.EDIT_ORGANIZATION
-
-  def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
+  def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     Ok(Json.obj(
       "credit" -> planCommander.getCurrentCredit(request.orgId).cents,
       "users" -> orgMembershipCommander.getMemberIds(request.orgId).size,
@@ -40,8 +39,8 @@ class PaymentsController @Inject() (
     ))
   }
 
-  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
-    planCommander.getActivePaymentMethods(request.orgId).filter(_.default).headOption.map { pm =>
+  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
+    planCommander.getActivePaymentMethods(request.orgId).find(_.default).map { pm =>
       Ok(Json.obj(
         "token" -> pm.stripeToken.token
       ))
@@ -50,7 +49,7 @@ class PaymentsController @Inject() (
     }
   }
 
-  def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION).async(parse.tolerantJson) { request =>
+  def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
       case Some(token) => {
         stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").map { realToken =>
@@ -64,14 +63,11 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
+  def getAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     Ok(Json.toJson(planCommander.getSimpleContactInfos(request.orgId)))
   }
 
-  @json
-  case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boolean)
-
-  def setAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request =>
+  def setAccountContacts(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
     request.body.validate[Seq[SimpleAccountContactSettingRequest]] match {
       case JsSuccess(contacts, _) => {
         val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
@@ -84,27 +80,21 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request => //ZZZ TODO: This is currently a dummy
-    val dummyFeatureOne = PlanFeature(name = "keeping", displayName = "Users can keep things", editable = false, default = true)
-    val dummyFeatureTwo = PlanFeature(name = "messaging", displayName = "Users can send messages", editable = true, default = true)
-    val settings = Seq(
-      PlanFeatureSetting(dummyFeatureOne, enabled = true),
-      PlanFeatureSetting(dummyFeatureTwo, enabled = false)
-    )
-    Ok(Json.obj("settings" -> settings))
+  def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
+    val accountFeatureSettingsResponse = planCommander.getAccountFeatureSettings(request.orgId)
+    Ok(Json.toJson(accountFeatureSettingsResponse))
   }
 
-  @json
-  case class SimplePlanFeaureSettingRequest(name: String, enabled: Boolean)
-
-  def setPlanFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION)(parse.tolerantJson) { request => //ZZZ TODO: This is currently a dummy (just does request format validation)
-    request.body.validate[Seq[SimplePlanFeaureSettingRequest]] match {
-      case JsSuccess(settings, _) => Ok
+  def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION)(parse.tolerantJson) { request =>
+    request.body.validate[AccountFeatureSettingsRequest] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
+      case JsSuccess(settings, _) =>
+        val response = planCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings.featureSettings)
+        Ok(Json.toJson(response))
     }
   }
 
-  def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request => //ZZZ TODO: depending on what we decide to do with people who downgrade their plan this might have to do a lot more
+  def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     PaidPlan.decodePublicId(planPubId) match {
       case Success(planId) => {
         val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
@@ -118,12 +108,12 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
+  def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     val infos = planCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
     Ok(Json.obj("events" -> infos))
   }
 
-  def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, PLAN_MANAGEMENT_PERMISSION) { request =>
+  def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.EDIT_ORGANIZATION) { request =>
     AccountEvent.decodePublicId(beforePubId) match {
       case Success(beforeId) => {
         val infos = planCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
