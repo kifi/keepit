@@ -6,7 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal.{ ContextData, HeimdalContextBuilder, HeimdalServiceClient }
-import com.keepit.model.{ CollectionRepo, KeepRepo, User, UserConnectionRepo }
+import com.keepit.model.{ CollectionRepo, KeepToLibraryRepo, User, UserConnectionRepo }
 
 abstract sealed class UserPropertyUpdateInstruction(val v: Int) {
   def has(other: UserPropertyUpdateInstruction): Boolean = (this.v & other.v) == other.v
@@ -23,7 +23,7 @@ object UserPropertyUpdateInstruction {
 class UserPropertyUpdateActor @Inject() (
     airbrake: AirbrakeNotifier,
     heimdalServiceClient: HeimdalServiceClient,
-    keepRepo: KeepRepo,
+    keepToLibraryRepo: KeepToLibraryRepo,
     userConnectionRepo: UserConnectionRepo,
     collectionRepo: CollectionRepo,
     db: Database) extends FortyTwoActor(airbrake) {
@@ -47,7 +47,7 @@ class UserPropertyUpdateActor @Inject() (
       }
 
       if (instruction.has(KeepCounts)) {
-        val keepVisibilityCount = keepRepo.getPrivatePublicCountByUser(userId)
+        val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
         builder += ("keeps", keepVisibilityCount.all)
         builder += ("publicKeeps", keepVisibilityCount.discoverable + keepVisibilityCount.organization + keepVisibilityCount.published)
         builder += ("privateKeeps", keepVisibilityCount.secret)

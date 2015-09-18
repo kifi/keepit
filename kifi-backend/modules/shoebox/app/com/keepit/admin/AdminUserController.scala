@@ -79,6 +79,7 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
+    keepToLibraryRepo: KeepToLibraryRepo,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -774,7 +775,7 @@ class AdminUserController @Inject() (
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
 
-        val keepVisibilityCount = keepRepo.getPrivatePublicCountByUser(userId)
+        val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
         val keeps = keepVisibilityCount.all
         properties += ("keeps", keeps)
         properties += ("publicKeeps", keepVisibilityCount.published + keepVisibilityCount.discoverable + keepVisibilityCount.organization)

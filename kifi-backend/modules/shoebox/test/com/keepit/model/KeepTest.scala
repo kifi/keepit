@@ -134,8 +134,6 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           keepRepo.getCountByUser(user1.id.get) === 3
           keepRepo.getCountByUser(user2.id.get) === 1
-          keepRepo.getPrivatePublicCountByUser(user1.id.get) === (1, 2)
-          keepRepo.getPrivatePublicCountByUser(user2.id.get) === (0, 1)
         }
       }
     }
