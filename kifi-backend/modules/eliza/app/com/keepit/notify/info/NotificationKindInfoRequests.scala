@@ -127,7 +127,7 @@ class NotificationKindInfoRequests @Inject() () {
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       StandardNotificationInfo(
-        url = libraryKept.url.encode.absolute,
+        url = libraryKept.url.absolute,
         image = UserImage(keeper),
         title = s"New Keep in ${libraryKept.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
@@ -195,7 +195,7 @@ class NotificationKindInfoRequests @Inject() () {
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       StandardNotificationInfo(
-        url = invitedLib.url.encode.absolute,
+        url = invitedLib.url.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
         body = s"Help ${inviter.firstName} by sharing your knowledge in the library ${invitedLib.name}.",
@@ -218,7 +218,7 @@ class NotificationKindInfoRequests @Inject() () {
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       StandardNotificationInfo(
-        url = invitedLib.url.encode.absolute,
+        url = invitedLib.url.absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a library!",
         body = s"Browse keeps in ${invitedLib.name} to find some interesting gems kept by ${inviter.firstName}.", //same
@@ -256,7 +256,7 @@ class NotificationKindInfoRequests @Inject() () {
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedOrg = RequestOrganization(event.orgId).lookup(batched)
       StandardNotificationInfo(
-        url = Path(invitedOrg.handle.value).encode.absolute,
+        url = Path(invitedOrg.handle.value).absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
         body = s"Help ${invitedOrg.abbreviatedName} by sharing your knowledge with them.",
@@ -274,7 +274,7 @@ class NotificationKindInfoRequests @Inject() () {
       val accepter = RequestUser(event.accepterId).lookup(batched)
       val acceptedOrg = RequestOrganization(event.orgId).lookup(batched)
       StandardNotificationInfo(
-        url = Path(acceptedOrg.handle.value).encode.absolute,
+        url = Path(acceptedOrg.handle.value).absolute,
         image = UserImage(accepter),
         title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.abbreviatedName}!",
         body = s"You invited ${accepter.firstName} to join ${acceptedOrg.abbreviatedName}",
