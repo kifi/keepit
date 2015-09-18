@@ -22,8 +22,6 @@ import scala.concurrent.duration.Duration
 
 class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector {
 
-  args(skipAll = true)
-
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule()
@@ -34,43 +32,20 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       val owner = UserFactory.user().withName("Elon", "Musk").saved
       val member = UserFactory.user().withName("Sergey", "Brin").saved
       val admin = UserFactory.user().withName("Larry", "Page").saved
-      val org = OrganizationFactory.organization().withName("Tesla").withOwner(owner).withMembers(Seq(member, admin)).saved
-      val paidPlan = PaidPlanFactory.paidPlan().saved
-      val paidAccount = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(paidPlan.id.get).saved
-      (org, owner, admin, member, paidPlan, paidAccount)
+      val org = OrganizationFactory.organization().withName("Tesla").withOwner(owner).withMembers(Seq(member)).withAdmins(Seq(admin)).saved
+      (org, owner, admin, member)
     }
   }
 
-  "library creation permissions" should {
+  "publish library permissions" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
-
-        val (org, owner, admin, member, paidPlan, paidAccount) = setup()
-
-        val planManagementCommander = inject[PlanManagementCommander]
+        val planManager = inject[PlanManagementCommander]
+        val (org, owner, admin, member) = setup()
 
         val (plan, account) = db.readWrite { implicit session =>
-          val plan = PaidPlanFactory.paidPlan().withFeatures(
-            Set(
-              PermissionFeature(
-                PermissionFeatureNames.PUBLISH_LIBRARIES,
-                editable = true,
-                options = Seq(PermissionSetting(Some(OrganizationRole.MEMBER)), PermissionSetting(Some(OrganizationRole.ADMIN))),
-                default = PermissionSetting(Some(OrganizationRole.MEMBER))
-              )
-            )
-          ).saved
-          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSettings(
-            Set(
-              PermissionFeatureSetting(name = PermissionFeatureNames.PUBLISH_LIBRARIES, setting = PermissionSetting(Some(OrganizationRole.ADMIN)))
-            )
-          ).saved
-
-          val newPermissions = FeatureSetting.toBasePermissions(account.featureSettings)
-
-          val orgModifyRequest = OrganizationModifyRequest(owner.id.get, org.id.get, OrganizationModifications(permissionsDiff = Some(PermissionsDiff())))
-
-          inject[OrganizationCommander].modifyOrganization(OrganizationModifyRequest(owner.id.get, org.id.get, OrganizationModifications(permissionsDiff = Some(PermissionsDiff()))))
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("publish_libraries", "admin")).saved
           (plan, account)
         }
 
@@ -78,17 +53,34 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val libraryCommander = inject[LibraryCommander]
         val ownerCreateRequest = LibraryCreateRequest(name = "Alphabet Soup", slug = "alphabet", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
         val ownerLibResponse = libraryCommander.createLibrary(ownerCreateRequest, owner.id.get)
-        ownerLibResponse.isRight === true
+        ownerLibResponse must beRight
 
         // admin can create public libraries
         val adminCreateRequest = LibraryCreateRequest(name = "Alphabetter Soup", slug = "alphabetter", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(admin.id.get, org.id)))
         val adminLibResponse = libraryCommander.createLibrary(adminCreateRequest, admin.id.get)
-        adminLibResponse.isRight === true
+        adminLibResponse must beRight
 
         // member cannot create public libraries
-        val memberCreateRequest = LibraryCreateRequest(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(member.id.get, org.id)))
-        val memberLibResponse = libraryCommander.createLibrary(memberCreateRequest, member.id.get)
-        memberLibResponse.isRight === false
+        val memberCreateRequest1 = LibraryCreateRequest(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(member.id.get, org.id)))
+        val memberLibResponse1 = libraryCommander.createLibrary(memberCreateRequest1, member.id.get)
+        memberLibResponse1 must beLeft
+
+        val memberCreateRequest2 = LibraryCreateRequest(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.SECRET, space = Some(LibrarySpace(member.id.get, org.id)))
+        val memberLibResponse2 = libraryCommander.createLibrary(memberCreateRequest2, member.id.get)
+        memberLibResponse2 must beRight
+        val library = memberLibResponse2.right.get
+
+        // member cannot modify an org library to be public
+        val memberModifyRequest1 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
+        val memberLibResponse3 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest1)
+        memberLibResponse3 must beLeft
+
+        // admins can alter feature settings
+        planManager.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("publish_libraries", "member")))
+
+        val memberModifyRequest2 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
+        val memberLibResponse4 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest2)
+        memberLibResponse4 must beRight
       }
     }
   }
@@ -96,12 +88,14 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
   "invite member permissions" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
+        val planManager = inject[PlanManagementCommander]
+        val (org, owner, admin, member) = setup()
 
-        //
-        // configure PaidFeature set and PaidFeatureSettings
-        //
-
-        val (org, owner, admin, member, paidPlan, paidAccount) = setup()
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("invite_members", "admin")).saved
+          (plan, account)
+        }
 
         val invitees = db.readWrite { implicit session => UserFactory.users(3).saved }
 
@@ -114,9 +108,16 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val adminInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(adminInviteRequest), Duration(5, "seconds"))
         adminInviteResponse must beRight
 
-        val memberInviteRequest = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
-        val memberInviteResponse = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest), Duration(5, "seconds"))
-        memberInviteResponse must beRight
+        val memberInviteRequest1 = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
+        val memberInviteResponse1 = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest1), Duration(5, "seconds"))
+        memberInviteResponse1 must beLeft
+
+        // admins can alter feature settings
+        planManager.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("invite_members", "member")))
+
+        val memberInviteRequest2 = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
+        val memberInviteResponse2 = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest2), Duration(5, "seconds"))
+        memberInviteResponse2 must beRight
       }
     }
   }
@@ -126,11 +127,14 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
       withDb(modules: _*) { implicit injector =>
 
-        //
-        // configure PaidFeature set and PaidFeatureSettings
-        //
+        val planManager = inject[PlanManagementCommander]
+        val (org, owner, admin, member) = setup()
 
-        val (org, owner, admin, member, paidPlan, paidAccount) = setup()
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("force_edit_libraries", "admin")).saved
+          (plan, account)
+        }
 
         val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withOrganization(org).saved }
 
@@ -142,7 +146,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
-        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
       }
     }
   }

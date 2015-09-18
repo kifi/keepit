@@ -63,7 +63,8 @@ trait PlanManagementCommander {
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
 
   def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsResponse
-  def setAccountFeatureSettings(orgId: Id[Organization], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse
+  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse
+  def setAccountFeatureSettingsHelper(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting])(implicit session: RWSession): AccountFeatureSettingsResponse
 
   def applyNewBasePermissionsToMembers(orgId: Id[Organization], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession)
 
@@ -513,41 +514,44 @@ class PlanManagementCommanderImpl @Inject() (
     }
   }
 
-  def setAccountFeatureSettings(orgId: Id[Organization], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse = {
-    val oldAccount = db.readOnlyReplica { implicit session => paidAccountRepo.getByOrgId(orgId) }
+  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse = {
+    db.readWrite { implicit session => setAccountFeatureSettingsHelper(orgId, userId, settings) }
+  }
+
+  def setAccountFeatureSettingsHelper(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting])(implicit session: RWSession): AccountFeatureSettingsResponse = {
+    val oldAccount = paidAccountRepo.getByOrgId(orgId)
+
     val updatedAccount = oldAccount.withFeatureSettings(settings)
 
-    val plan = db.readWrite { implicit session =>
-      updateOrganizationPermissions(orgId, oldAccount.featureSettings, updatedAccount.featureSettings)
-      paidAccountRepo.save(updatedAccount) // only saved if organization permissions are successfully updated (i.e. no exceptions)
-      paidPlanRepo.get(updatedAccount.planId)
-    }
+    updateOrganizationPermissions(orgId, oldAccount.featureSettings, updatedAccount.featureSettings)
+    paidAccountRepo.save(updatedAccount)
 
+    val plan = paidPlanRepo.get(updatedAccount.planId)
     AccountFeatureSettingsResponse(plan.features, updatedAccount.featureSettings)
   }
 
   private def updateOrganizationPermissions(orgId: Id[Organization], oldFeatureSettings: Set[FeatureSetting], newFeatureSettings: Set[FeatureSetting])(implicit session: RWSession): Unit = {
-    assert(oldFeatureSettings.map(_.featureName) == newFeatureSettings.map(_.featureName))
+    assert(oldFeatureSettings.map(_.name) == newFeatureSettings.map(_.name))
 
-    val permissionFeaturesByName = oldFeatureSettings.flatMap(featureSetting => Feature.get(featureSetting.featureName)).collect {
+    val permissionFeaturesByName = oldFeatureSettings.flatMap(featureSetting => Feature.get(featureSetting.name)).collect {
       case feature: OrganizationPermissionFeature => feature.name -> feature
     }.toMap
 
-    def featureSettingsToPermissionsByRole(featureSettings: Set[FeatureSetting]): Map[Option[OrganizationRole], Set[OrganizationPermission]] = {
+    def featureSettingsToPermissionsByRole(featureSettings: Set[FeatureSetting]): PermissionsMap = {
       val settingsByName = featureSettings.map { case FeatureSetting(name, setting) => name -> setting }.toMap
 
-      settingsByName.foldLeft(Map.empty[Option[OrganizationRole], Set[OrganizationPermission]]) {
+      settingsByName.foldLeft(PermissionsMap.empty) {
         case (acc, (name, setting)) =>
           val permissionsByRole = permissionFeaturesByName(name).permissionsByRoleBySetting(setting)
-          acc.map { case (role, permissions) => role -> (permissions ++ permissionsByRole(role)) }
+          acc ++ permissionsByRole
       }
     }
 
     val oldPermissionsByRole = featureSettingsToPermissionsByRole(oldFeatureSettings)
     val newPermissionsByRole = featureSettingsToPermissionsByRole(newFeatureSettings)
 
-    val addedPermissions = PermissionsMap(newPermissionsByRole) -- PermissionsMap(oldPermissionsByRole)
-    val removedPermissions = PermissionsMap(oldPermissionsByRole) -- PermissionsMap(newPermissionsByRole)
+    val addedPermissions = newPermissionsByRole -- oldPermissionsByRole
+    val removedPermissions = oldPermissionsByRole -- newPermissionsByRole
 
     val permissionsDiff = PermissionsDiff(addedPermissions, removedPermissions)
 
@@ -556,6 +560,7 @@ class PlanManagementCommanderImpl @Inject() (
     val updatedOrg = org.applyPermissionsDiff(permissionsDiff)
 
     orgRepo.save(updatedOrg)
+
     applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, updatedOrg.basePermissions)
   }
 
@@ -569,7 +574,6 @@ class PlanManagementCommanderImpl @Inject() (
         // If the member is currently MISSING some permissions that normally come with their role
         // it means those permissions were explicitly revoked. We do not give them those back.
         val explicitlyRevoked = oldBasePermissions.forRole(role) -- membership.permissions
-
         val newPermissions = ((membership.permissions ++ beingAdded) -- beingRemoved) -- explicitlyRevoked
         orgMembershipRepo.save(membership.withPermissions(newPermissions))
       }

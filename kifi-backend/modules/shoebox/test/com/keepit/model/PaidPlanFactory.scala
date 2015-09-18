@@ -9,11 +9,19 @@ import org.apache.commons.lang3.RandomStringUtils.random
 object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
-  val testPlanFeatures: Set[PlanFeature] = PermissionFeatureNames.ALL.map { name =>
-    PermissionFeature(name, editable = true, options = Seq(PermissionSetting(None), PermissionSetting(Some(OrganizationRole.MEMBER)), PermissionSetting(Some(OrganizationRole.ADMIN))), default = PermissionSetting(Some(OrganizationRole.MEMBER)))
-  }
+  val testPlanFeatures: Set[PlanFeature] =
+    Set( // very fragile way to create a plan feature set to ensure that our testing feature set matches existing features
+      PlanFeature(Feature.get("publish_libraries").get.name, Feature.get("publish_libraries").get.options.find(_ == "member").get, editable = true),
+      PlanFeature(Feature.get("invite_members").get.name, Feature.get("invite_members").get.options.find(_ == "member").get, editable = true),
+      PlanFeature(Feature.get("group_messaging").get.name, Feature.get("group_messaging").get.options.find(_ == "member").get, editable = true),
+      PlanFeature(Feature.get("force_edit_libraries").get.name, Feature.get("force_edit_libraries").get.options.find(_ == "disabled").get, editable = true),
+      PlanFeature(Feature.get("view_members").get.name, Feature.get("view_members").get.options.find(_ == "anyone").get, editable = true),
+      PlanFeature(Feature.get("move_org_libraries").get.name, Feature.get("move_org_libraries").get.options.find(_ == "member").get, editable = true),
+      PlanFeature(Feature.get("create_slack_integration").get.name, Feature.get("create_slack_integration").get.options.find(_ == "disabled").get, editable = true)
+    )
 
   def paidPlan(): PartialPaidPlan = {
+    assert(testPlanFeatures.map(_.name) == Feature.ALL.map(_.name))
     new PartialPaidPlan(PaidPlan(id = Some(Id[PaidPlan](idx.incrementAndGet())), kind = PaidPlan.Kind.NORMAL, name = Name(random(5)),
       pricePerCyclePerUser = DollarAmount(10000), billingCycle = BillingCycle(month = 1), features = testPlanFeatures))
   }

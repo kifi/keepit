@@ -90,8 +90,8 @@ class PaymentsController @Inject() (
     request.body.validate[SimpleAccountFeatureSettingRequest] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
       case JsSuccess(settings, _) =>
-        val accountFeatureSettingsResponse = planCommander.setAccountFeatureSettings(request.orgId, settings.featureSettings)
-        Ok(Json.toJson(accountFeatureSettingsResponse))
+        val response = planCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings.featureSettings)
+        Ok(Json.toJson(response))
     }
   }
 

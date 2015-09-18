@@ -66,7 +66,6 @@ object PaidPlanStates extends States[PaidPlan]
 sealed trait Feature {
   def name: String
   def options: Seq[String]
-  def testDefault: String
   def verify(setting: String) = options.contains(setting)
 }
 object Feature {
@@ -77,47 +76,48 @@ sealed abstract class OrganizationPermissionFeature(val permission: Organization
   def roleOptions: Map[String, Seq[Option[OrganizationRole]]]
   def name = permission.value
   def options = roleOptions.keys.toSeq
-  def permissionsByRoleBySetting: Map[String, Map[Option[OrganizationRole], Set[OrganizationPermission]]] = {
+  def permissionsByRoleBySetting: Map[String, PermissionsMap] = {
     roleOptions.map {
-      case (setting, roles) => setting -> roles.map { role => role -> this.permission }
-        .groupBy { _._1 }.map {
-          case (role, roleAndPermissions) => role -> roleAndPermissions.map(_._2).toSet
-        }
+      case (setting, roles) =>
+        val permissionsByRole = roles.map { role => role -> this.permission }
+          .groupBy { _._1 }.map {
+            case (role, roleAndPermissions) => role -> roleAndPermissions.map(_._2).toSet
+          }
+        setting -> PermissionsMap(permissionsByRole)
     }
   }
 }
 case object PublishLibraries extends OrganizationPermissionFeature(OrganizationPermission.PUBLISH_LIBRARIES) {
   val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  val testDefault = "disabled"
 }
 case object InviteMembers extends OrganizationPermissionFeature(OrganizationPermission.INVITE_MEMBERS) {
   val roleOptions = Map("admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  val testDefault = "admin"
 }
 case object GroupMessaging extends OrganizationPermissionFeature(OrganizationPermission.GROUP_MESSAGING) {
   val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  val testDefault = "member"
 }
 case object EditLibrary extends OrganizationPermissionFeature(OrganizationPermission.FORCE_EDIT_LIBRARIES) {
   val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  val testDefault = "disabled"
 }
 case object ViewMembers extends OrganizationPermissionFeature(OrganizationPermission.VIEW_MEMBERS) {
   val roleOptions = Map("anyone" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER), None), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  val testDefault = "anyone"
 }
 case object MoveOrganizationLibraries extends OrganizationPermissionFeature(OrganizationPermission.MOVE_ORG_LIBRARIES) {
   val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)))
-  val testDefault = "member"
 }
 case object CreateSlackIntegration extends OrganizationPermissionFeature(OrganizationPermission.CREATE_SLACK_INTEGRATION) {
   val roleOptions = Map("disabled" -> Seq.empty, "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
-  val testDefault = "disabled"
 }
 
 @json
-case class PlanFeature(featureName: String, default: String, editable: Boolean) // Stored in db for PaidPlan
+case class PlanFeature(name: String, default: String, editable: Boolean) // Stored in db for PaidPlan
 @json
 case class ClientFeature(name: String, setting: String, editable: Boolean) // Sent to clients
 @json
-case class FeatureSetting(featureName: String, setting: String) // Received from clients, stored in db for PaidAccount
+case class FeatureSetting(name: String, setting: String) // Received from clients, stored in db for PaidAccount
+
+object FeatureSetting {
+  def alterSetting(featureSettings: Set[FeatureSetting], toChange: FeatureSetting) = {
+    featureSettings - featureSettings.find(_.name == toChange.name).get + toChange
+  }
+}
