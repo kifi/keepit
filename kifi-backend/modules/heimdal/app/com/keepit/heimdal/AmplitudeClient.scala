@@ -26,6 +26,12 @@ object AmplitudeClient {
   val skipEventFilters: Seq[AmplitudeEventBuilder[_] => Boolean] = Seq(
     (eb: AmplitudeEventBuilder[_]) => eb.eventType.startsWith("anonymous_"),
     (eb: AmplitudeEventBuilder[_]) => eb.heimdalContext.get[String]("userAgent").exists(_.startsWith("Pingdom")),
+    (eb: AmplitudeEventBuilder[_]) => {
+      // drop all _viewed_page events where "type" starts with "/", with a few exceptions
+      eb.eventType.endsWith("_viewed_page") && eb.heimdalContext.get[String]("type").exists { v =>
+        v.head == '/' && !Set("/settings", "/tags/manage").contains(v) && !v.startsWith("/?m=")
+      }
+    },
     (eb: AmplitudeEventBuilder[_]) => AmplitudeClient.killedEvents.contains(eb.eventType)
   )
 
@@ -54,7 +60,9 @@ object AmplitudeClient {
   // rename events with these names
   val simpleEventRenames: Map[String, String] = Map(
     "user_modified_library" -> "user_created_library",
-    "user_changed_setting" -> "user_changed_settings"
+    "user_changed_setting" -> "user_changed_settings",
+    "user_viewed_pane" -> "user_viewed_page",
+    "visitor_viewed_pane" -> "visitor_viewed_page"
   )
 }
 
@@ -212,9 +220,9 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
     case _ => None
   }
 
-  lazy val eventType: String = {
-    val origEventName = s"${companion.typeCode}_${event.eventType.name}"
+  val origEventName = s"${companion.typeCode}_${event.eventType.name}"
 
+  lazy val eventType: String = {
     AmplitudeClient.simpleEventRenames.getOrElse(origEventName, {
       // specific rules for renaming event types
       // TODO(josh) after amplitude is in prod, change these events at their source
@@ -222,6 +230,12 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
       else if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("installed")) "user_installed"
       else origEventName
     })
+  }
+
+
+  override def getUserAndEventProperties(): (Map[String, ContextData], Map[String, ContextData]) = {
+    val (userProperties, eventProperties) = super.getUserAndEventProperties()
+    (userProperties, augmentEventProperties(eventProperties))
   }
 
   def build(): JsObject = {
@@ -243,6 +257,53 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
           "ip" -> getIpAddress()
         )
     }
+  }
+
+  val userViewedPagePaneTypes = Set("libraryChooser", "keepDetails", "messages:all", "composeMessage", "createLibrary",
+    "chat", "messages:unread", "messages:page", "messages:sent")
+
+  val userViewedPageModalTypes = Set("importBrowserBookmarks", "import3rdPartyBookmarks", "addAKeep", "getExtension", "getMobile")
+
+  val visitorViewedPageModalTypes = Set("libraryLandingPopup", "signupLibrary", "signup2Library", "forgotPassword", "resetPassword")
+
+  private def augmentEventProperties(eventProperties: Map[String, ContextData]): Map[String, ContextData] = {
+    val builder = { val b = new HeimdalContextBuilder; b ++= eventProperties; b }
+
+    lazy val typeProperty = eventProperties.get("type").map {
+      case data: ContextStringData => data.value
+      case data => data.toString
+    }
+
+    def isUserViewedPagePaneType = typeProperty.exists(v => userViewedPagePaneTypes.contains(v) || v.startsWith("guide"))
+    def isUserViewedPageModalType = typeProperty.exists(v => userViewedPageModalTypes.contains(v))
+
+    if (origEventName == "user_viewed_pane" || origEventName == "user_viewed_page") {
+      builder += ("page_type", {
+        if (isUserViewedPagePaneType) "pane"
+        else if (isUserViewedPageModalType) "modal"
+        else "page"
+      })
+
+      // spec would like these particular type property values to be renamed
+      typeProperty foreach {
+        case "/settings" => builder += ("type", "settings")
+        case "/tags/manage" => builder += ("type", "manageTags")
+        case _ =>
+      }
+    }
+
+    def isVisitorViewedPagePaneType = typeProperty.contains("login")
+    def isVisitorViewedPageModalType = typeProperty.exists(visitorViewedPageModalTypes.contains)
+
+    if (origEventName == "visitor_viewed_pane" || origEventName == "visitor_viewed_page") {
+      builder += ("page_type", {
+        if (isVisitorViewedPagePaneType) "pane"
+        else if (isVisitorViewedPageModalType) "modal"
+        else "page"
+      })
+    }
+
+    builder.build.data
   }
 
   private def getIpAddress(): Option[String] =
