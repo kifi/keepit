@@ -9,7 +9,6 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-// OrganizationView should ONLY contain public information. No internal ids.
 case class OrganizationInfo(
     orgId: PublicId[Organization],
     ownerId: ExternalId[User],
@@ -88,18 +87,42 @@ object OrganizationInviteInfo {
   }
 }
 
-case class OrganizationView(
+case class BasicOrganizationView(
+  basicOrganization: BasicOrganization,
+  membershipInfo: OrganizationMembershipInfo)
+object BasicOrganizationView {
+  implicit val defaultWrites: Writes[BasicOrganizationView] = new Writes[BasicOrganizationView] {
+    def writes(o: BasicOrganizationView) = Json.toJson(o.basicOrganization).as[JsObject] + ("membership" -> Json.toJson(o.membershipInfo))
+  }
+
+  val testReads = new Reads[BasicOrganizationView] {
+    implicit val orgMemInfoReads = OrganizationMembershipInfo.testReads
+    def reads(json: JsValue): JsResult[BasicOrganizationView] = {
+      val id = (json \ "id").as[PublicId[Organization]]
+      val ownerId = (json \ "ownerId").as[ExternalId[User]]
+      val handle = (json \ "handle").as[OrganizationHandle]
+      val name = (json \ "name").as[String]
+      val description = (json \ "description").as[Option[String]]
+      val avatarPath = (json \ "avatarPath").as[ImagePath]
+      val basicOrg = BasicOrganization(id, ownerId, handle, name, description, avatarPath)
+      val membershipInfo = (json \ "membership").as[OrganizationMembershipInfo](OrganizationMembershipInfo.testReads)
+      JsSuccess(BasicOrganizationView(basicOrg, membershipInfo))
+    }
+  }
+}
+
+case class FullOrganizationView(
   organizationInfo: OrganizationInfo,
   membershipInfo: OrganizationMembershipInfo)
 
-object OrganizationView {
-  val defaultWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
+object FullOrganizationView {
+  val defaultWrites: Writes[FullOrganizationView] = new Writes[FullOrganizationView] {
+    def writes(o: FullOrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
       "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
 
-  val mobileWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++
+  val mobileWrites: Writes[FullOrganizationView] = new Writes[FullOrganizationView] {
+    def writes(o: FullOrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++
       Json.obj("membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject])
   }
 }

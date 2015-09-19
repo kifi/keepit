@@ -718,7 +718,6 @@ class LibraryController @Inject() (
               kind = info.kind,
               path = info.path,
               org = info.org,
-              orgMembership = info.orgMembership,
               orgMemberAccess = info.orgMemberAccess
             )
           }

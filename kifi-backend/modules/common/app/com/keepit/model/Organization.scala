@@ -220,7 +220,7 @@ object BasicOrganization {
     (__ \ 'name).format[String] and
     (__ \ 'description).formatNullable[String] and
     (__ \ 'avatarPath).format[ImagePath]
-  )(BasicOrganization.apply, unlift(BasicOrganization.unapply))
+  )(BasicOrganization.apply _, unlift(BasicOrganization.unapply))
 }
 
 @json

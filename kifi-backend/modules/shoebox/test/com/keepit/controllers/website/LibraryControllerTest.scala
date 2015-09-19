@@ -700,11 +700,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         firstTime.isBefore(secondTime) === true
 
-        implicit val orgMembershipReads = OrganizationMembershipInfo.testReads
+        implicit val basicOrgViewReads = BasicOrganizationView.testReads
 
         val resultJson = contentAsJson(result1)
-        (resultJson \ "library" \ "org").as[Option[BasicOrganization]] must equalTo(Some(BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"))))
-        (resultJson \ "library" \ "orgMembership").as[Option[OrganizationMembershipInfo]] must equalTo(Some(OrganizationMembershipInfo(isInvited = false, invite = None, Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN), Some(OrganizationRole.ADMIN))))
+        (resultJson \ "library" \ "org").as[Option[BasicOrganizationView]] must equalTo(Some(
+          BasicOrganizationView(
+            BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg")),
+            OrganizationMembershipInfo(isInvited = false, invite = None, Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN), Some(OrganizationRole.ADMIN))
+          )
+        ))
         (resultJson \ "library" \ "orgMemberAccess").as[Option[LibraryAccess]] must equalTo(Some(LibraryAccess.READ_WRITE))
       }
     }

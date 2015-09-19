@@ -27,7 +27,7 @@ class OrganizationController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  implicit val organizationViewWrites = OrganizationView.defaultWrites
+  implicit val organizationViewWrites = FullOrganizationView.defaultWrites
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
@@ -39,7 +39,7 @@ class OrganizationController @Inject() (
           case Left(failure) =>
             failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
+            val organizationView = orgCommander.getFullOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
             Ok(Json.toJson(organizationView))
         }
     }
@@ -55,7 +55,7 @@ class OrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt, authTokenOpt = None)
+            val organizationView = orgCommander.getFullOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt, authTokenOpt = None)
             Ok(Json.toJson(organizationView))
         }
     }
@@ -87,7 +87,7 @@ class OrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization], authTokenOpt: Option[String] = None) = OrganizationAction(pubId, authTokenOpt, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt)
+    val organizationView = orgCommander.getFullOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt)
     Ok(Json.toJson(organizationView))
   }
 

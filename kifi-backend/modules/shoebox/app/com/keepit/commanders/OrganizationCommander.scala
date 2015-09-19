@@ -23,8 +23,10 @@ import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
-  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView
-  def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], OrganizationView]
+  def getFullOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): FullOrganizationView
+  def getFullOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], FullOrganizationView]
+  def getBasicOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): BasicOrganizationView
+  def getBasicOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], BasicOrganizationView]
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
@@ -65,18 +67,32 @@ class OrganizationCommanderImpl @Inject() (
     basicOrganizationIdCache: BasicOrganizationIdCache,
     implicit val executionContext: ExecutionContext) extends OrganizationCommander with Logging {
 
-  def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
-    db.readOnlyReplica { implicit session => getOrganizationViewHelper(orgId, viewerIdOpt, authTokenOpt) }
+  def getFullOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): FullOrganizationView = {
+    db.readOnlyReplica { implicit session => getFullOrganizationViewHelper(orgId, viewerIdOpt, authTokenOpt) }
   }
 
-  def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], OrganizationView] = {
-    db.readOnlyReplica { implicit session => orgIds.map(id => id -> getOrganizationViewHelper(id, viewerIdOpt, authTokenOpt)).toMap }
+  def getFullOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], FullOrganizationView] = {
+    db.readOnlyReplica { implicit session => orgIds.map(id => id -> getFullOrganizationViewHelper(id, viewerIdOpt, authTokenOpt)).toMap }
   }
 
-  private def getOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationView = {
+  private def getFullOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): FullOrganizationView = {
     val organizationInfo = getOrganizationInfo(orgId, viewerIdOpt)
     val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
-    OrganizationView(organizationInfo, membershipInfo)
+    FullOrganizationView(organizationInfo, membershipInfo)
+  }
+
+  def getBasicOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): BasicOrganizationView = {
+    db.readOnlyReplica { implicit session => getBasicOrganizationViewHelper(orgId, viewerIdOpt, authTokenOpt) }
+  }
+
+  def getBasicOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], BasicOrganizationView] = {
+    db.readOnlyReplica { implicit session => orgIds.map(id => id -> getBasicOrganizationViewHelper(id, viewerIdOpt, authTokenOpt)).toMap }
+  }
+
+  private def getBasicOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): BasicOrganizationView = {
+    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganization(orgId))
+    val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
+    BasicOrganizationView(basicOrganization, membershipInfo)
   }
 
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
