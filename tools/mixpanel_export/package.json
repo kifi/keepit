@@ -11,6 +11,7 @@
   "dependencies": {
     "async": "^1.4.2",
     "bluebird": "^2.9.34",
+    "line-by-line": "^0.1.4",
     "lodash": "^3.10.1",
     "winston": "^1.0.1"
   }

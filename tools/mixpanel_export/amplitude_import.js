@@ -7,13 +7,13 @@ var async = require('async');
 var crypto = require('crypto');
 var https = require('https');
 var fs = require('fs');
+var LineByLineReader = require('line-by-line');
 var path = require('path');
 var Promise = require('bluebird');
 var querystring = require('querystring');
-var readline = require('readline');
 var winston = require('winston');
 
-var USE_FAKE_API = true;
+var USE_FAKE_API = false;
 var AMPLITUDE_API_KEY = '5a7a940f68887487129b20a4cbf0622d';
 
 var filename = process.argv[2];
@@ -282,7 +282,9 @@ function sendAmplitudeEvent(event) {
 }
 
 function fakeApiWorker(task, done) {
-  done(null, task.event);
+  setTimeout(function() {
+    done(null, task.event);
+  }, 2);
 }
 
 function apiWorker(task, done) {
@@ -326,41 +328,43 @@ function hashString(str) {
 }
 
 // have no more than 50 requests in flight at a time
-var amplitudeApiQueue = async.queue(USE_FAKE_API ? fakeApiWorker : apiWorker, 50);
+var amplitudeApiQueue = async.queue(USE_FAKE_API ? fakeApiWorker : apiWorker, 100);
 var successCounter = 0;
-var failCounter = 0;
+var skipCounter = 0;
+var retryCount = 0;
 var eventsByTypeCounter = {};
+var failedEvents = [];
 
 function printQueueState() {
-  logger.info("[api queue] success=%d fail=%d pending=%d running=%d",
-    successCounter, failCounter, amplitudeApiQueue.length(), amplitudeApiQueue.running());
+  logger.info("[api queue] success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
+    successCounter, failedEvents.length, amplitudeApiQueue.length(), amplitudeApiQueue.running(), skipCounter, retryCount);
   logger.info("[summary]", eventsByTypeCounter);
 }
 
-var failedEvents = [];
+setInterval(printQueueState, 2000);
 
-var rd = readline.createInterface({
-  input: fs.createReadStream(filename),
-  output: process.stdout,
-  terminal: false
-});
+var reader = new LineByLineReader(filename);
 
-setInterval(printQueueState, 1000);
+// used to prevent the entire file from being loaded into memory
+setInterval(function() {
+  if (amplitudeApiQueue.length() > 500) {
+    reader.pause();
+  } else {
+    reader.resume();
+  }
+}, 20);
 
-rd.on('line', function(line) {
-  // TODO throttle reading lines to the pace we're sending API requests, we don't need to hold the whole file in memory
+function handleLine(line, retries) {
+  retries = retries || 0;
 
   var mpEvent = JSON.parse(line);
   if (isSkippedEvent(mpEvent)) {
+    skipCounter += 1;
     return;
   }
 
   var insertId = hashString(line);
   var event = amplitudeEvent(mpEvent, insertId);
-  if (!event) {
-    logger.info('[event skipped] %j', event);
-    return;
-  }
 
   var task = {
     event: event
@@ -368,17 +372,49 @@ rd.on('line', function(line) {
 
   amplitudeApiQueue.push(task, function(err, result) {
     if (err) {
-      // TODO handle and retry on EHOSTUNREACH, ETIMEDOUT errors
-      failedEvents.push(err);
-      logger.error('[api error] %j\n%j', err, mpEvent);
-      failCounter += 1;
+      if (retries === 0) {
+        failedEvents.push([err, mpEvent]);
+      }
+
+      // retry events for these errors up to 5 times
+      if (retries < 5 && (err.errno === 'ECONNREFUSED' || err.errno === 'EHOSTUNREACH')) {
+        retryCount += 1;
+        setTimeout(function() {
+          retries += 1;
+          handleLine(line, retries);
+        }, 1000);
+      }
     } else {
       successCounter += 1;
-      if (eventsByTypeCounter[result.event_type] !== undefined) {
-        eventsByTypeCounter[result.event_type] += 1;
+
+      var eventType = result.event.event_type;
+      if (eventsByTypeCounter[eventType] !== undefined) {
+        eventsByTypeCounter[eventType] += 1;
       } else {
-        eventsByTypeCounter[result.event_type] = 1;
+        eventsByTypeCounter[eventType] = 1;
       }
     }
   });
+}
+
+reader.on('line', handleLine);
+
+reader.on('end', function() {
+  logger.info('file reader done');
+});
+
+process.on('SIGINT', function() {
+  logger.info('SIGINT caught');
+
+  if (failedEvents.length > 0) {
+    failedEvents.forEach(function(arr) {
+      var err = arr[0];
+      logger.info('*************** error:', err.message, err.errno);
+      logger.info(arr[1]);
+    });
+  }
+
+  printQueueState();
+
+  process.exit();
 });
