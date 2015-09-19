@@ -1,2 +1,4 @@
 /node_modules/
 *.pyc
+/logs/*.log
+/exports/
