@@ -102,9 +102,6 @@ class NotificationMessagingCommander @Inject() (
       if (unread) {
         messagingAnalytics.clearedNotification(userId, ExternalId[Message](item.externalId.id), ExternalId[MessageThread](notif.externalId.id), context)
       }
-      val notifs = db.readOnlyMaster { implicit session =>
-        notificationRepo.all()
-      }
       sendUnreadNotificationsWith(notif, Recipient(userId))
     }
   }
