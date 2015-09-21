@@ -93,7 +93,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val planManager = inject[PlanManagementCommander]
         val (org, owner, admin, member) = setup()
 
-        val feature = Feature.get("invite_members").get
+        val feature = OrganizationPermissionFeature.InviteMembers
 
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
@@ -134,7 +134,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val planManager = inject[PlanManagementCommander]
         val (org, owner, admin, member) = setup()
 
-        val feature = Feature.get("force_edit_libraries").get
+        val feature = OrganizationPermissionFeature.EditLibrary
 
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
