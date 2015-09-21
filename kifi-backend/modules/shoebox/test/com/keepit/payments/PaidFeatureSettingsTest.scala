@@ -43,9 +43,11 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val planManager = inject[PlanManagementCommander]
         val (org, owner, admin, member) = setup()
 
+        val feature = OrganizationPermissionFeature.PublishLibraries
+
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
-          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(Feature.get("publish_libraries").get.name, "admin")).saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, feature.options.find(_ == "admin").get)).saved
           (plan, account)
         }
 
@@ -76,7 +78,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberLibResponse3 must beLeft
 
         // admins can alter feature settings
-        planManager.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(Feature.get("publish_libraries").get.name, "member")))
+        planManager.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
 
         val memberModifyRequest2 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse4 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest2)
@@ -161,11 +163,11 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val planManagementCommander = inject[PlanManagementCommander]
         val (org, owner, admin, member) = setup()
 
-        val feature = Feature.get("edit_organization").get
+        val feature = OrganizationPermissionFeature.EditOrganization
 
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
-          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(Feature.get("edit_organization").get.name, "admin")).saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, feature.options.find(_ == "admin").get)).saved
           (plan, account)
         }
 
