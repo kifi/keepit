@@ -2,7 +2,11 @@ package com.keepit.payments
 
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.controller.FakeUserActionsHelper
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
+import com.keepit.controllers.mobile.MobileOrganizationMembershipController
+import com.keepit.controllers.website.OrganizationMembershipController
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.actor.TestKitSupport
@@ -16,32 +20,37 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.heimdal.HeimdalContext
 
 import org.specs2.mutable.SpecificationLike
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
 
 import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
 class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector {
 
-  implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule()
   )
+
+  implicit val context = HeimdalContext.empty
+  implicit def pubIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
+  private def planManagementCommander(implicit injector: Injector) = inject[PlanManagementCommander]
 
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
       val owner = UserFactory.user().withName("Elon", "Musk").saved
       val member = UserFactory.user().withName("Sergey", "Brin").saved
       val admin = UserFactory.user().withName("Larry", "Page").saved
+      val nonMember = UserFactory.user().withName("Jimmy", "John").saved
       val org = OrganizationFactory.organization().withName("Tesla").withOwner(owner).withMembers(Seq(member)).withAdmins(Seq(admin)).saved
-      (org, owner, admin, member)
+      (org, owner, admin, member, nonMember)
     }
   }
 
   "publish library permissions" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
-        val planManager = inject[PlanManagementCommander]
-        val (org, owner, admin, member) = setup()
+        val (org, owner, admin, member, _) = setup()
 
         val feature = OrganizationPermissionFeature.PublishLibraries
 
@@ -78,7 +87,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberLibResponse3 must beLeft
 
         // admins can alter feature settings
-        planManager.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
 
         val memberModifyRequest2 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse4 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest2)
@@ -90,8 +99,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
   "invite member permissions" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
-        val planManager = inject[PlanManagementCommander]
-        val (org, owner, admin, member) = setup()
+        val (org, owner, admin, member, _) = setup()
 
         val feature = OrganizationPermissionFeature.InviteMembers
 
@@ -117,7 +125,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberInviteResponse1 must beLeft
 
         // admins can alter feature settings
-        planManager.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
 
         val memberInviteRequest2 = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
         val memberInviteResponse2 = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest2), Duration(5, "seconds"))
@@ -130,9 +138,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
     "be configurable" in {
 
       withDb(modules: _*) { implicit injector =>
-
-        val planManager = inject[PlanManagementCommander]
-        val (org, owner, admin, member) = setup()
+        val (org, owner, admin, member, _) = setup()
 
         val feature = OrganizationPermissionFeature.EditLibrary
 
@@ -153,6 +159,60 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("force_edit_libraries", "member")))
+
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "view members permissions" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("view_members", "member")).saved
+          (plan, account)
+        }
+
+        val testRoute = com.keepit.controllers.website.routes.OrganizationMembershipController.getMembers(Organization.publicId(org.id.get)).url
+        val organizationMembershipController = inject[OrganizationMembershipController]
+        val mobileOrganizationMembershipController = inject[MobileOrganizationMembershipController]
+
+        // admins can see the org's members
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminRequest = FakeRequest("GET", testRoute)
+        val adminResult = organizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(adminRequest) // 30 is the max limit for this request handler
+        status(adminResult) must equalTo(OK)
+
+        // members can see the org's members
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberRequest = FakeRequest("GET", testRoute)
+        val memberResult = organizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(memberRequest)
+        status(memberResult) must equalTo(OK)
+
+        // non-members cannot see the org's members
+        inject[FakeUserActionsHelper].setUser(nonMember)
+        val nonMemberRequest = FakeRequest("GET", testRoute)
+        val nonMemberResult1 = organizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
+        status(nonMemberResult1) must equalTo(FORBIDDEN)
+        (contentAsJson(nonMemberResult1) \ "error").as[String] must equalTo("insufficient_permissions")
+
+        // testing mobile permissions
+        val nonMemberMobileResult1 = mobileOrganizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
+        status(nonMemberMobileResult1) must equalTo(FORBIDDEN)
+        (contentAsJson(nonMemberMobileResult1) \ "error").as[String] must equalTo("insufficient_permissions")
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("view_members", "anyone")))
+
+        val nonMemberResult2 = organizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
+        status(nonMemberResult2) must equalTo(OK)
+
+        val nonMemberMobileResult2 = mobileOrganizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
+        status(nonMemberMobileResult2) must equalTo(OK)
       }
     }
   }
@@ -161,7 +221,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
         val planManagementCommander = inject[PlanManagementCommander]
-        val (org, owner, admin, member) = setup()
+        val (org, owner, admin, member, nonMember) = setup()
 
         val feature = OrganizationPermissionFeature.EditOrganization
 
