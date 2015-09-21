@@ -116,7 +116,8 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
-    if (!orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION)) {
+    val viewerPermissions = orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt)
+    if (!viewerPermissions.contains(OrganizationPermission.VIEW_ORGANIZATION)) {
       airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
 
@@ -128,10 +129,13 @@ class OrganizationCommanderImpl @Inject() (
     val site = org.site
     val ownerId = userRepo.get(org.ownerId).externalId
 
-    val memberIds = orgMembershipRepo.getSortedMembershipsByOrgId(orgId, Offset(0), Limit(Int.MaxValue)).map(_.userId)
+    val memberIds = {
+      if (viewerPermissions.contains(OrganizationPermission.VIEW_MEMBERS)) orgMembershipRepo.getSortedMembershipsByOrgId(orgId, Offset(0), Limit(Int.MaxValue)).map(_.userId)
+      else Seq.empty
+    }
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
-    val memberCount = orgMembershipRepo.countByOrgId(orgId)
+    val memberCount = members.length
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
 
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
