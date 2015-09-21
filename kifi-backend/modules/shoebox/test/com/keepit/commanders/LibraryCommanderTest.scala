@@ -661,6 +661,16 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
               keep.organizationId === lib4.organizationId
             }
           }
+
+          val res5 = libraryCommander.modifyLibrary(lib4.id.get, user.id.get, LibraryModifyRequest(space = Some(LibrarySpace.fromOrganizationId(org.id.get)))).right.get
+          Await.result(res5.keepChanges, Duration.Inf)
+          val lib5 = res5.modifiedLibrary
+          db.readOnlyMaster { implicit session =>
+            keepRepo.getByLibrary(lib5.id.get, 0, Int.MaxValue).foreach { keep =>
+              keep.visibility === lib5.visibility
+              keep.organizationId === lib5.organizationId
+            }
+          }
           1 === 1
         }
       }

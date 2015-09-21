@@ -313,7 +313,8 @@ class LibraryCommanderImpl @Inject() (
       val (keeps, lib, curViz) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(library.id.get)
         val viz = lib.visibility // It may have changed, re-check
-        val keeps = keepRepo.getByLibraryIdAndExcludingVisibility(lib.id.get, Some(viz), 1000)
+        val keepIds = keepRepo.getByLibraryIdAndExcludingVisibility(lib.id.get, Some(viz), 500).map(_.id.get).toSet ++ keepRepo.getByLibraryWithInconsistentOrgId(lib.id.get, lib.organizationId, Limit(500))
+        val keeps = keepRepo.getByIds(keepIds).values.toSeq
         (keeps, lib, viz)
       }
       if (keeps.nonEmpty && curViz == changedVisibility) {
