@@ -39,7 +39,7 @@ object MaybeOrganizationMember {
 
 @ImplementedBy(classOf[OrganizationMembershipCommanderImpl])
 trait OrganizationMembershipCommander {
-  def getMembersAndUniqueInvitees(orgId: Id[Organization], offset: Offset, limit: Limit, includeInvitees: Boolean): Seq[MaybeOrganizationMember]
+  def getMembersAndUniqueInvitees(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], offset: Offset, limit: Limit, includeInvitees: Boolean): Either[OrganizationFail, Seq[MaybeOrganizationMember]]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
@@ -115,24 +115,27 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  def getMembersAndUniqueInvitees(orgId: Id[Organization], offset: Offset, limit: Limit, includeInvitees: Boolean): Seq[MaybeOrganizationMember] = {
-    db.readOnlyMaster { implicit session =>
-      val members = organizationMembershipRepo.getSortedMembershipsByOrgId(orgId, offset, limit)
-      val invitees = includeInvitees match {
-        case true =>
-          if (members.length < limit.value) {
-            val inviteLimit = Limit(Math.max(limit.value - members.length, 0))
-            val inviteOffset = if (members.isEmpty) {
-              val totalMembers = organizationMembershipRepo.countByOrgId(orgId)
-              Offset(offset.value - totalMembers)
-            } else {
-              Offset(0)
-            }
-            organizationInviteRepo.getByOrganizationAndDecision(orgId, decision = InvitationDecision.PENDING, inviteOffset, inviteLimit, includeAnonymous = false)
-          } else Seq.empty[OrganizationInvite]
-        case false => Seq.empty[OrganizationInvite]
+  def getMembersAndUniqueInvitees(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], offset: Offset, limit: Limit, includeInvitees: Boolean): Either[OrganizationFail, Seq[MaybeOrganizationMember]] = {
+    if (!getPermissions(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_MEMBERS)) Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+    else {
+      db.readOnlyMaster { implicit session =>
+        val members = organizationMembershipRepo.getSortedMembershipsByOrgId(orgId, offset, limit)
+        val invitees = includeInvitees match {
+          case true =>
+            if (members.length < limit.value) {
+              val inviteLimit = Limit(Math.max(limit.value - members.length, 0))
+              val inviteOffset = if (members.isEmpty) {
+                val totalMembers = organizationMembershipRepo.countByOrgId(orgId)
+                Offset(offset.value - totalMembers)
+              } else {
+                Offset(0)
+              }
+              organizationInviteRepo.getByOrganizationAndDecision(orgId, decision = InvitationDecision.PENDING, inviteOffset, inviteLimit, includeAnonymous = false)
+            } else Seq.empty[OrganizationInvite]
+          case false => Seq.empty[OrganizationInvite]
+        }
+        Right(buildMaybeMembers(members, invitees))
       }
-      buildMaybeMembers(members, invitees)
     }
   }
 

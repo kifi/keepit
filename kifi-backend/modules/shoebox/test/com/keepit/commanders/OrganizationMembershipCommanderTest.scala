@@ -23,15 +23,17 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         withDb() { implicit injector =>
           val orgRepo = inject[OrganizationRepo]
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
-          val org = db.readWrite { implicit session =>
+          val (org, owner) = db.readWrite { implicit session =>
             val owner = UserFactory.user().saved
             val users = UserFactory.users(20).saved
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(users).withName("Luther Corp.").saved
-            org
+            (org, owner)
           }
 
           val orgMembershipCommander = inject[OrganizationMembershipCommander]
-          orgMembershipCommander.getMembersAndUniqueInvitees(org.id.get, Offset(0), Limit(50), includeInvitees = true).length === 21
+          val failOrMembers = orgMembershipCommander.getMembersAndUniqueInvitees(org.id.get, owner.id, Offset(0), Limit(50), includeInvitees = true)
+          failOrMembers must beRight
+          failOrMembers.right.get must haveLength(21)
         }
       }
 
@@ -41,22 +43,26 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
           val orgInviteRepo = inject[OrganizationInviteRepo]
 
-          val org = db.readWrite { implicit session =>
+          val (org, owner) = db.readWrite { implicit session =>
             val owner = UserFactory.user().saved
             val users = UserFactory.users(19).saved
             val invitees = Seq.fill(10)(EmailAddress(RandomStringUtils.randomAlphabetic(10) + "@kifi.com"))
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(users).withInvitedEmails(invitees).withName("Luther Corp.").saved
-            org
+            (org, owner)
           }
           val orgId = org.id.get
 
           val orgMembershipCommander = inject[OrganizationMembershipCommander]
           // limit by count
-          val membersLimitedByCount = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(0), Limit(10), includeInvitees = true)
-          membersLimitedByCount.length === 10
+          val failOrMembers1 = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, owner.id, Offset(0), Limit(10), includeInvitees = true)
+          failOrMembers1 must beRight
+          failOrMembers1.right.get must haveLength(10)
 
           // limit with offset
-          val membersLimitedByOffset = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(17), Limit(10), includeInvitees = true)
+          val failOrMembers2 = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, owner.id, Offset(17), Limit(10), includeInvitees = true)
+          failOrMembers2 must beRight
+
+          val membersLimitedByOffset = failOrMembers2.right.get
           membersLimitedByOffset.take(3).foreach(_.member.isLeft === true)
           membersLimitedByOffset.drop(3).take(7).foreach(_.member.isRight === true)
           membersLimitedByOffset.length === 10
@@ -81,10 +87,12 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
           val canonical = memberships.toSeq.sortBy(metric)
           val extToIntMap = users.map(u => u.externalId -> u.id.get).toMap
-          val members = inject[OrganizationMembershipCommander].getMembersAndUniqueInvitees(org.id.get, Offset(10), Limit(50), includeInvitees = false).map(_.member.left.get)
+          val failOrMembers = inject[OrganizationMembershipCommander].getMembersAndUniqueInvitees(org.id.get, users.head.id, Offset(10), Limit(50), includeInvitees = false)
+          failOrMembers must beRight
 
+          val members = failOrMembers.right.get.map(_.member.left.get)
           val expected = canonical.drop(10).take(50)
-          members.map(bu => extToIntMap(bu.externalId)) === expected.map(_.userId)
+          members.map(bu => extToIntMap(bu.externalId)) must equalTo(expected.map(_.userId))
         }
       }
     }
