@@ -255,9 +255,7 @@ class OrganizationCommanderImpl @Inject() (
           val org = orgRepo.get(request.orgId)
 
           val modifiedOrg = organizationWithModifications(org, request.modifications)
-          if (request.modifications.permissionsDiff.isDefined) {
-            planManagementCommander.applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, modifiedOrg.basePermissions)
-          }
+          if (request.modifications.permissionsDiff.isDefined) planManagementCommander.applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, modifiedOrg.basePermissions)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
         case Some(orgFail) => Left(orgFail)

@@ -52,9 +52,11 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       withDb(modules: _*) { implicit injector =>
         val (org, owner, admin, member, _) = setup()
 
+        val feature = OrganizationPermissionFeature.PublishLibraries
+
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
-          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("publish_libraries", "admin")).saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, feature.options.find(_ == "admin").get)).saved
           (plan, account)
         }
 
@@ -85,7 +87,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberLibResponse3 must beLeft
 
         // admins can alter feature settings
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("publish_libraries", "member")))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
 
         val memberModifyRequest2 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse4 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest2)
@@ -99,9 +101,11 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       withDb(modules: _*) { implicit injector =>
         val (org, owner, admin, member, _) = setup()
 
+        val feature = OrganizationPermissionFeature.InviteMembers
+
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
-          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("invite_members", "admin")).saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, feature.options.find(_ == "admin").get)).saved
           (plan, account)
         }
 
@@ -121,7 +125,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberInviteResponse1 must beLeft
 
         // admins can alter feature settings
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("invite_members", "member")))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
 
         val memberInviteRequest2 = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
         val memberInviteResponse2 = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest2), Duration(5, "seconds"))
@@ -136,9 +140,11 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       withDb(modules: _*) { implicit injector =>
         val (org, owner, admin, member, _) = setup()
 
+        val feature = OrganizationPermissionFeature.EditLibrary
+
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
-          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("force_edit_libraries", "admin")).saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, feature.options.find(_ == "admin").get)).saved
           (plan, account)
         }
 
@@ -207,6 +213,39 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val nonMemberMobileResult2 = mobileOrganizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
         status(nonMemberMobileResult2) must equalTo(OK)
+      }
+    }
+  }
+
+  "edit organization permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val feature = OrganizationPermissionFeature.EditOrganization
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, feature.options.find(_ == "admin").get)).saved
+          (plan, account)
+        }
+
+        val organizationCommander = inject[OrganizationCommander]
+
+        val ownerModifyRequest = OrganizationModifyRequest(owner.id.get, org.id.get, OrganizationModifications(name = Some("Tesla Inc.")))
+        val adminModifyRequest = OrganizationModifyRequest(admin.id.get, org.id.get, OrganizationModifications(name = Some("Tesla Enterprises")))
+        val memberModifyRequest = OrganizationModifyRequest(member.id.get, org.id.get, OrganizationModifications(name = Some("Tesla United")))
+
+        organizationCommander.modifyOrganization(ownerModifyRequest) must beRight
+        organizationCommander.modifyOrganization(adminModifyRequest) must beRight
+        val memberResponse = organizationCommander.modifyOrganization(memberModifyRequest)
+        memberResponse must beLeft
+        memberResponse.left.get must equalTo(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, owner.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+
+        organizationCommander.modifyOrganization(memberModifyRequest) must beRight
       }
     }
   }
