@@ -60,7 +60,7 @@ class LegacyNotificationCheckTest extends Specification with ElizaTestInjector w
 
         val result = check.checkUserExperiment(Recipient(Id[User](1)))
 
-        result.experimentEnabled === false
+        result.experimentEnabled === true
         (result.recipient match {
           case UserRecipient(_, Some(false)) => false
           case _ => true
