@@ -281,7 +281,7 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId &&
         row.unread &&
         row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-        !row.replyable
+        row.replyable
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -294,7 +294,7 @@ class UserThreadRepoImpl @Inject() (
         row.unread &&
         row.notificationUpdatedAt < time &&
         row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-        !row.replyable
+        row.replyable
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -363,11 +363,11 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {
-    StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending and not replyable").first
+    StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending and replyable").first
   }
 
   def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = {
-    StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not replyable").first
+    StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and replyable").first
   }
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
