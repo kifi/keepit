@@ -19,10 +19,11 @@ import scala.util.{ Either, Success, Failure, Try }
 @Singleton
 class UserOrOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
-    db: Database,
+    val db: Database,
+    val permissionCommander: PermissionCommander,
     orgCommander: OrganizationCommander,
-    val orgMembershipCommander: OrganizationMembershipCommander,
-    val orgInviteCommander: OrganizationInviteCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     libraryController: LibraryController,
     heimdalContextBuilder: HeimdalContextBuilderFactory,

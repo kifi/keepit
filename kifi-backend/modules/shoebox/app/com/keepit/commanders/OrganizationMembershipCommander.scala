@@ -48,10 +48,6 @@ trait OrganizationMembershipCommander {
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]]
 
   def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership]
-  def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission]
-  def getPermissionsHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission]
-
-  def isValidRequest(request: OrganizationMembershipRequest)(implicit session: RSession): Boolean
 
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
@@ -65,6 +61,7 @@ trait OrganizationMembershipCommander {
 @Singleton
 class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
+    permissionCommander: PermissionCommander,
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
@@ -99,26 +96,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  def getPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]]): Set[OrganizationPermission] = {
-    db.readOnlyReplica { implicit session => getPermissionsHelper(orgId, userIdOpt) }
-  }
-  def getPermissionsHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
-    val org = organizationRepo.get(orgId)
-    userIdOpt match {
-      case None => org.getNonmemberPermissions
-      case Some(userId) =>
-        organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.permissions) getOrElse {
-          val invites = organizationInviteRepo.getByOrgIdAndUserId(orgId, userId)
-          if (invites.isEmpty) org.getNonmemberPermissions
-          else org.getNonmemberPermissions + VIEW_ORGANIZATION
-        }
-    }
-  }
-
   def getMembersAndUniqueInvitees(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], offset: Offset, limit: Limit, includeInvitees: Boolean): Either[OrganizationFail, Seq[MaybeOrganizationMember]] = {
-    if (!getPermissions(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_MEMBERS)) Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-    else {
-      db.readOnlyMaster { implicit session =>
+    db.readOnlyMaster { implicit session =>
+      if (!permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_MEMBERS)) Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      else {
         val members = organizationMembershipRepo.getSortedMembershipsByOrgId(orgId, offset, limit)
         val invitees = includeInvitees match {
           case true =>
@@ -164,7 +145,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
       val allOrgIds = organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
-      allOrgIds.filter(getPermissionsHelper(_, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION))
+      allOrgIds.filter(permissionCommander.getOrganizationPermissions(_, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION))
     }
   }
 

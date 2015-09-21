@@ -1,9 +1,10 @@
 package com.keepit.shoebox.controllers
 
-import com.keepit.commanders.{ OrganizationInviteCommander, OrganizationCommander, OrganizationMembershipCommander }
+import com.keepit.commanders.{ PermissionCommander, OrganizationInviteCommander, OrganizationCommander, OrganizationMembershipCommander }
 import com.keepit.common.controller.{ NonUserRequest, MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -14,10 +15,10 @@ import scala.util.{ Failure, Success }
 trait OrganizationAccessActions {
   self: UserActions with Controller =>
 
+  val db: Database
+  val permissionCommander: PermissionCommander
   val publicIdConfig: PublicIdConfiguration
   implicit private val implicitPublicId = publicIdConfig
-  val orgMembershipCommander: OrganizationMembershipCommander
-  val orgInviteCommander: OrganizationInviteCommander
 
   case class OrganizationRequest[T](request: MaybeUserRequest[T], orgId: Id[Organization], authToken: Option[String], permissions: Set[OrganizationPermission]) extends WrappedRequest[T](request)
   case class OrganizationUserRequest[T](request: UserRequest[T], orgId: Id[Organization], authToken: Option[String], permissions: Set[OrganizationPermission]) extends WrappedRequest[T](request)
@@ -27,7 +28,7 @@ trait OrganizationAccessActions {
       Organization.decodePublicId(pubId) match {
         case Failure(e) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
         case Success(orgId) =>
-          val memberPermissions = orgMembershipCommander.getPermissions(orgId, request.userIdOpt)
+          val memberPermissions = db.readOnlyReplica { implicit session => permissionCommander.getOrganizationPermissions(orgId, request.userIdOpt) }
           val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
           if (requiredPermissionsSet.subsetOf(memberPermissions)) {
             val authTokenOpt = request.getQueryString("authToken")
@@ -44,7 +45,7 @@ trait OrganizationAccessActions {
       Organization.decodePublicId(id) match {
         case Failure(e) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
         case Success(orgId) =>
-          val memberPermissions = orgMembershipCommander.getPermissions(orgId, maybeRequest.userIdOpt)
+          val memberPermissions = db.readOnlyReplica { implicit session => permissionCommander.getOrganizationPermissions(orgId, maybeRequest.userIdOpt) }
           val requiredPermissionsSet = requiredPermissions.toSet + OrganizationPermission.VIEW_ORGANIZATION
           if (requiredPermissionsSet.subsetOf(memberPermissions)) {
             block(OrganizationRequest(maybeRequest, orgId, authTokenOpt, memberPermissions))

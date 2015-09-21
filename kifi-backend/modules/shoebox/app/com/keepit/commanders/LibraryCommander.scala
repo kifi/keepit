@@ -57,7 +57,7 @@ class LibraryCommanderImpl @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     librarySubscriptionCommander: LibrarySubscriptionCommander,
-    orgMembershipCommander: OrganizationMembershipCommander,
+    permissionCommander: PermissionCommander,
     libraryAccessCommander: LibraryAccessCommander,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
@@ -112,7 +112,7 @@ class LibraryCommanderImpl @Inject() (
         db.readOnlyReplica { implicit s =>
           val userHasPermissionToCreateInSpace = targetSpace match {
             case OrganizationSpace(orgId) =>
-              val permissions = orgMembershipCommander.getPermissionsHelper(orgId, Some(ownerId))
+              val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(ownerId))
               permissions.contains(OrganizationPermission.ADD_LIBRARIES) &&
                 (libCreateReq.visibility != LibraryVisibility.PUBLISHED || permissions.contains(OrganizationPermission.PUBLISH_LIBRARIES))
             case UserSpace(userId) =>
@@ -220,11 +220,13 @@ class LibraryCommanderImpl @Inject() (
     }
 
     def validateMovePermissions(newVisibilityOpt: Option[LibraryVisibility], newSpace: LibrarySpace): Option[LibraryFail] = {
-      newVisibilityOpt.flatMap { newVisibility =>
-        (newVisibility, newSpace) match {
-          case (LibraryVisibility.PUBLISHED, space: OrganizationSpace) if !orgMembershipCommander.getPermissions(space.id, Some(userId)).contains(OrganizationPermission.PUBLISH_LIBRARIES) =>
-            Some(LibraryFail(FORBIDDEN, "insufficient_org_permissions"))
-          case _ => None
+      db.readOnlyReplica { implicit session =>
+        newVisibilityOpt.flatMap { newVisibility =>
+          (newVisibility, newSpace) match {
+            case (LibraryVisibility.PUBLISHED, org: OrganizationSpace) if !permissionCommander.getOrganizationPermissions(org.id, Some(userId)).contains(OrganizationPermission.PUBLISH_LIBRARIES) =>
+              Some(LibraryFail(FORBIDDEN, "insufficient_org_permissions"))
+            case _ => None
+          }
         }
       }
     }

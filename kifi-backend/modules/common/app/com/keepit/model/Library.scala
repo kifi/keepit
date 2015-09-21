@@ -63,7 +63,6 @@ case class Library(
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 
-  // TODO(ryan): this is pretty fragile, we should move this type of thing into library creation and store the permissions with the Library
   def permissionsByAccess(access: LibraryAccess): Set[LibraryPermission] = access match {
     case LibraryAccess.READ_ONLY => Set(
       LibraryPermission.VIEW_LIBRARY,
