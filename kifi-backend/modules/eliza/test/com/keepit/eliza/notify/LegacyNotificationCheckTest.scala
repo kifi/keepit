@@ -64,7 +64,7 @@ class LegacyNotificationCheckTest extends Specification with ElizaTestInjector w
         (result.recipient match {
           case UserRecipient(_, Some(false)) => false
           case _ => true
-        }) === false
+        }) === true
       }
 
     }

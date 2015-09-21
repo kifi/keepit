@@ -36,7 +36,7 @@ class LegacyNotificationCheck @Inject() (
     recipient match {
       case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
         case None =>
-            Future.successful(LegacyNotificationCheck.Result(true, u.copy(experimentEnabled = Some(true))))
+          Future.successful(LegacyNotificationCheck.Result(true, u.copy(experimentEnabled = Some(true))))
         case Some(result) => Future.successful(LegacyNotificationCheck.Result(result, u))
       }
       case _: EmailRecipient => Future.successful(LegacyNotificationCheck.Result(false, recipient))
