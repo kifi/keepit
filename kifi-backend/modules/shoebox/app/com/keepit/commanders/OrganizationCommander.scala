@@ -135,7 +135,7 @@ class OrganizationCommanderImpl @Inject() (
     }
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
-    val memberCount = orgMembershipRepo.countByOrgId(orgId)
+    val memberCount = members.length
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
 
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
