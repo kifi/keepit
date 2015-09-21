@@ -207,7 +207,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val nonMemberMobileResult2 = mobileOrganizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
         status(nonMemberMobileResult2) must equalTo(OK)
-
       }
     }
   }

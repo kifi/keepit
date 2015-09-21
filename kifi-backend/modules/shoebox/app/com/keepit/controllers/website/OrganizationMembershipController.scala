@@ -33,8 +33,10 @@ class OrganizationMembershipController @Inject() (
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_organization_id"))
       case Success(orgId) =>
         val showInvitees = request.permissions.contains(OrganizationPermission.INVITE_MEMBERS)
-        val membersAndMaybeInvitees = orgMembershipCommander.getMembersAndUniqueInvitees(orgId, Offset(offset), Limit(limit), includeInvitees = showInvitees)
-        Ok(Json.obj("members" -> membersAndMaybeInvitees))
+        orgMembershipCommander.getMembersAndUniqueInvitees(orgId, request.request.userIdOpt, Offset(offset), Limit(limit), includeInvitees = showInvitees) match {
+          case Left(fail) => fail.asErrorResponse
+          case Right(membersAndMaybeInvitees) => Ok(Json.obj("members" -> membersAndMaybeInvitees))
+        }
     }
   }
 
