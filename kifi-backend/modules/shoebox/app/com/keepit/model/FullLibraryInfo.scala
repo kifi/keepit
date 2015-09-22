@@ -307,15 +307,6 @@ object FullLibraryInfo {
   }
 }
 
-case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
-  override val version = 2
-  val namespace = "library_info_libraryid"
-  def toKey(): String = libraryId.id.toString
-}
-
-class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 sealed trait LibrarySourceAttribution
 
 object LibrarySourceAttribution {
