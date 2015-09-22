@@ -566,7 +566,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), membershipOpt.map(_.permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
   }
 
-  def getPermissionsByOrgId() = Action(parse.tolerantJson) { request =>
+  def getUserPermissionsByOrgId() = Action(parse.tolerantJson) { request =>
     val orgIds = (request.body \ "orgIds").as[Set[Id[Organization]]]
     val userId = (request.body \ "userId").as[Id[User]]
 

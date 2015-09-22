@@ -664,9 +664,7 @@ class MessagingCommander @Inject() (
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
 
-    val permissionsByOrgFut = shoebox.getPermissionsByOrgId(orgIds.toSet, userId)
-
-    val canSendByOrgIdFut = permissionsByOrgFut.map { permissionsByOrgId =>
+    val canSendByOrgIdFut = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
       permissionsByOrgId.map { case (orgId, permissions) => orgId -> permissions.contains(OrganizationPermission.GROUP_MESSAGING) }
     }
 
