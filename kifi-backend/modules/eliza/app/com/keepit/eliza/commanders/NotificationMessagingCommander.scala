@@ -112,6 +112,7 @@ class NotificationMessagingCommander @Inject() (
       recipient match {
         case UserRecipient(id, _) =>
           userThreadRepo.markAllReadAtOrBefore(id, item.eventTime)
+        case _ =>
       }
     }
     sendUnreadNotificationsWith(notif, recipient)
