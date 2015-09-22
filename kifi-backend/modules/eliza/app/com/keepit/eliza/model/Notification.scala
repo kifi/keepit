@@ -6,6 +6,7 @@ import com.keepit.model.User
 import com.keepit.notify.info.NotificationInfo
 import com.keepit.notify.model.event.{ NewMessage, NotificationEvent }
 import com.keepit.notify.model._
+import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -81,6 +82,10 @@ class ExtendedNotification(val notification: Notification, val items: Set[Notifi
 case class NotificationWithItems(
   override val notification: Notification,
   override val items: Set[NotificationItem]) extends ExtendedNotification(notification, items)
+
+object NotificationWithItems {
+  implicit val format = Json.format[NotificationWithItems]
+}
 
 case class NotificationWithInfo(
   override val notification: Notification,

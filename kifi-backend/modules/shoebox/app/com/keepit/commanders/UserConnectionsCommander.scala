@@ -168,28 +168,16 @@ class UserConnectionsCommander @Inject() (
 
     val emailF = emailSender.connectionMade(friend.id.get, myUserId, NotificationCategory.User.FRIEND_ACCEPTED)
 
-    val notifF = elizaServiceClient.sendGlobalNotification( //push sent
-      userIds = Set(friend.id.get),
-      title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect!",
-      body = s"Now you will enjoy ${respondingUser.firstName}’s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-      linkText = s"Visit ${respondingUser.firstName}’s profile",
-      linkUrl = s"https://www.kifi.com/${respondingUser.username.value}",
-      imageUrl = respondingUserImage,
-      sticky = false,
-      category = NotificationCategory.User.FRIEND_ACCEPTED,
-      extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
-    ) map { _ =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(friend.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-        if (canSendPush) {
-          elizaServiceClient.sendUserPushNotification(
-            userId = friend.id.get,
-            message = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect",
-            recipient = respondingUser,
-            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-            category = UserPushNotificationCategory.UserConnectionAccepted)
-        }
-      }
-    elizaServiceClient.sendNotificationEvent(ConnectionInviteAccepted(
+    val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(friend.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+    if (canSendPush) {
+      elizaServiceClient.sendUserPushNotification(
+        userId = friend.id.get,
+        message = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect",
+        recipient = respondingUser,
+        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+        category = UserPushNotificationCategory.UserConnectionAccepted)
+    }
+    val notifF = elizaServiceClient.sendNotificationEvent(ConnectionInviteAccepted(
       Recipient(friend),
       currentDateTime,
       myUserId

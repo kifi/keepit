@@ -50,24 +50,6 @@ class MessagingController @Inject() (
     }
   }
 
-  def sendGlobalNotification() = Action(parse.tolerantJson) { request =>
-    val data: JsObject = request.body.asInstanceOf[JsObject]
-
-    val userIds: Set[Id[User]] = (data \ "userIds").as[JsArray].value.map(v => v.asOpt[Long].map(Id[User](_))).flatten.toSet
-    val title: String = (data \ "title").as[String]
-    val body: String = (data \ "body").as[String]
-    val linkText: String = (data \ "linkText").as[String]
-    val linkUrl: String = (data \ "linkUrl").as[String]
-    val imageUrl: String = (data \ "imageUrl").as[String]
-    val sticky: Boolean = (data \ "sticky").as[Boolean]
-    val category: NotificationCategory = (data \ "category").as[NotificationCategory]
-    val unread: Boolean = (data \ "unread").as[Boolean]
-    val extra = (data \ "extra").asOpt[JsObject]
-
-    Ok(notificationCommander.createGlobalNotification(userIds, title, body, linkText, linkUrl, imageUrl, sticky, category, unread, extra).id.toString)
-
-  }
-
   //The whole code path starting here isn't the best.
   //What we really need is some sort of notion that a notification has a call to action
   //and a marker when that was completed.

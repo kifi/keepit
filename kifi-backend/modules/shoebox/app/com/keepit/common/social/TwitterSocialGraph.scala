@@ -244,64 +244,33 @@ class TwitterSocialGraphImpl @Inject() (
 
   private def notifyUserOnLibraryFollow(user: User, twitterSyncState: TwitterSyncState, library: Library, libOwner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
     val userId = user.id.get
-    elizaServiceClient.sendGlobalNotification( //push sent
-      userIds = Set(userId),
-      title = s"${libOwner.firstName} created a Library",
-      body = s"You're being notified because you're following @${twitterSyncState.twitterHandle} on Twitter",
-      linkText = "Let's take a look!",
-      linkUrl = libLink,
-      imageUrl = ownerImage,
-      sticky = false,
-      category = NotificationCategory.User.LIBRARY_FOLLOWING,
-      extra = Some(Json.obj(
-        "inviter" -> libOwner,
-        "library" -> NotificationInfoModel.library(library, libImageOpt, libOwner)
-      ))
-    ) map { _ =>
-        if (user.createdAt > clock.now.minusMinutes(30)) {
-          //send a push notifications only if the user was created more then 30 minutes ago.
-          val message = s"${libOwner.firstName} created a Twitter Library"
-          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-          if (canSendPush) {
-            elizaServiceClient.sendLibraryPushNotification(
-              userId,
-              message,
-              library.id.get,
-              libLink,
-              PushNotificationExperiment.Experiment1,
-              LibraryPushNotificationCategory.LibraryInvitation)
-          }
-        }
+    if (user.createdAt > clock.now.minusMinutes(30)) {
+      //send a push notifications only if the user was created more then 30 minutes ago.
+      val message = s"${libOwner.firstName} created a Twitter Library"
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+      if (canSendPush) {
+        elizaServiceClient.sendLibraryPushNotification(
+          userId,
+          message,
+          library.id.get,
+          libLink,
+          PushNotificationExperiment.Experiment1,
+          LibraryPushNotificationCategory.LibraryInvitation)
       }
+    }
   }
 
   private def notifyOwnerOnLibraryFollow(follower: User, lib: Library, owner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
     val message = s"${follower.firstName} ${follower.lastName} is following you on Twitter"
-    elizaServiceClient.sendGlobalNotification( //push sent
-      userIds = Set(lib.ownerId),
-      title = "New Library Follower",
-      body = message,
-      linkText = s"See ${follower.firstName}’s profile",
-      linkUrl = s"https://www.kifi.com/${follower.username.value}",
-      imageUrl = s3ImageStore.avatarUrlByUser(follower),
-      sticky = false,
-      category = NotificationCategory.User.LIBRARY_FOLLOWED,
-      unread = false,
-      extra = Some(Json.obj(
-        "follower" -> BasicUser.fromUser(follower),
-        "library" -> NotificationInfoModel.library(lib, libImageOpt, owner)
-      ))
-    ) map { _ =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-        if (canSendPush) {
-          elizaServiceClient.sendUserPushNotification(
-            userId = lib.ownerId,
-            message = message,
-            recipient = follower,
-            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-            category = UserPushNotificationCategory.NewLibraryFollower)
-        }
-      }
+    val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+    if (canSendPush) {
+      elizaServiceClient.sendUserPushNotification(
+        userId = lib.ownerId,
+        message = message,
+        recipient = follower,
+        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+        category = UserPushNotificationCategory.NewLibraryFollower)
+    }
   }
 
   protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterId, resp: WSResponse, params: Any): Unit = {
