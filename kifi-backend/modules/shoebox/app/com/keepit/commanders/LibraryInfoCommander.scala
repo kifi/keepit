@@ -34,7 +34,6 @@ trait LibraryInfoCommander {
   def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Future[FullLibraryInfo]
   def getLibraryMembersAndInvitees(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): Seq[MaybeLibraryMember]
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
-  def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails]
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)]
   def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo]
@@ -104,22 +103,6 @@ class LibraryInfoCommanderImpl @Inject() (
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
     libraryAnalytics.viewedLibrary(viewerId, lib, context)
     createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib, imageSize)
-  }
-
-  def getLibrarySummaries(libraryIds: Seq[Id[Library]]): Seq[LibraryInfo] = {
-    db.readOnlyMaster { implicit session =>
-      val libraries = libraryRepo.getLibraries(libraryIds.toSet).values.toSeq // cached
-      getLibrarySummariesHelper(libraries)
-    }
-  }
-
-  private def getLibrarySummariesHelper(libraries: Seq[Library])(implicit session: RSession): Seq[LibraryInfo] = {
-    val ownersById = basicUserRepo.loadAll(libraries.map(_.ownerId).toSet) // cached
-    libraries.map { lib =>
-      val owner = ownersById(lib.ownerId)
-      val org = lib.organizationId.map(orgRepo.get)
-      LibraryInfo.fromLibraryAndOwner(lib, None, owner, org) // library images are not used, so no need to include
-    }
   }
 
   def getLibraryPath(library: Library): String = {
