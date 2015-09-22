@@ -26,8 +26,8 @@ class NotificationController @Inject() (
         notif foreach { notifWithItems =>
           messagingAnalytics.sentGlobalNotification(
             Set(id),
-            ExternalId[Message](notifWithItems.relevantItem.externalId),
-            ExternalId[MessageThread](notifWithItems.notification.externalId),
+            ExternalId[Message](notifWithItems.relevantItem.externalId.id),
+            ExternalId[MessageThread](notifWithItems.notification.externalId.id),
             NotificationCategory("new_system")
           )
         }

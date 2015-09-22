@@ -56,47 +56,6 @@ case class Notification(
 
 }
 
-/**
- * Represents a notification and its collection of items, along with the guarantees that these objects hold.
- */
-class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
-
-  //  require(items.forall(_.kind == notification.kind), s"Same-kind requirement failed for items $items and notif $notification")
-  //  require(relevantItem.eventTime == notification.lastEvent, s"Most-recent-time requirement failed for items $items and notif $notification")
-
-  def relevantItem = items.maxBy(_.eventTime)
-
-  def unreadMessages: Set[NotificationItem] = items.filter(_.eventTime > notification.lastEvent)
-
-  def unreadAuthors: Set[Recipient] = {
-    // only makes sense if this is a message notification
-    if (notification.kind == NewMessage) {
-      items.map(_.event).collect {
-        case e: NewMessage => e
-      }.map(_.from)
-    } else Set()
-  }
-
-}
-
-case class NotificationWithItems(
-  override val notification: Notification,
-  override val items: Set[NotificationItem]) extends ExtendedNotification(notification, items)
-
-object NotificationWithItems {
-  implicit val format = Json.format[NotificationWithItems]
-}
-
-case class NotificationWithInfo(
-  override val notification: Notification,
-  override val items: Set[NotificationItem], info: NotificationInfo)
-    extends ExtendedNotification(notification, items)
-
-case class NotificationWithJson(
-  override val notification: Notification,
-  override val items: Set[NotificationItem],
-  json: JsObject) extends ExtendedNotification(notification, items)
-
 object Notification {
 
   implicit val format = (
@@ -153,3 +112,44 @@ object Notification {
   )
 
 }
+
+/**
+ * Represents a notification and its collection of items, along with the guarantees that these objects hold.
+ */
+class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
+
+  //  require(items.forall(_.kind == notification.kind), s"Same-kind requirement failed for items $items and notif $notification")
+  //  require(relevantItem.eventTime == notification.lastEvent, s"Most-recent-time requirement failed for items $items and notif $notification")
+
+  def relevantItem = items.maxBy(_.eventTime)
+
+  def unreadMessages: Set[NotificationItem] = items.filter(_.eventTime > notification.lastEvent)
+
+  def unreadAuthors: Set[Recipient] = {
+    // only makes sense if this is a message notification
+    if (notification.kind == NewMessage) {
+      items.map(_.event).collect {
+        case e: NewMessage => e
+      }.map(_.from)
+    } else Set()
+  }
+
+}
+
+case class NotificationWithItems(
+  override val notification: Notification,
+  override val items: Set[NotificationItem]) extends ExtendedNotification(notification, items)
+
+object NotificationWithItems {
+  implicit val format = Json.format[NotificationWithItems]
+}
+
+case class NotificationWithInfo(
+  override val notification: Notification,
+  override val items: Set[NotificationItem], info: NotificationInfo)
+    extends ExtendedNotification(notification, items)
+
+case class NotificationWithJson(
+  override val notification: Notification,
+  override val items: Set[NotificationItem],
+  json: JsObject) extends ExtendedNotification(notification, items)

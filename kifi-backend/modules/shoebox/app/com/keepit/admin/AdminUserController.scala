@@ -691,10 +691,6 @@ class AdminUserController @Inject() (
     Ok
   }
 
-  def notification() = AdminUserPage { implicit request =>
-    Ok(html.admin.notification(request.user.id.get.id))
-  }
-
   def bumpUserSeq() = AdminUserPage { implicit request =>
     db.readWrite { implicit s =>
       userRepo.all.sortBy(_.id.get.id).foreach { u => userRepo.save(u) }

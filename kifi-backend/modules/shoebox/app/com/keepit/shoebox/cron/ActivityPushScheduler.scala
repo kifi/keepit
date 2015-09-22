@@ -161,7 +161,7 @@ class ActivityPusher @Inject() (
       case libMessage: LibraryPushNotificationMessage =>
         log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
         val devices =
-            elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
+          elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
         val owner = db.readOnlyReplica { implicit session =>
           userRepo.get(libMessage.owner.externalId)
         }
