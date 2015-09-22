@@ -109,6 +109,10 @@ class NotificationMessagingCommander @Inject() (
   def setNotificationsUnreadBefore(notif: Notification, recipient: Recipient, item: NotificationItem): Unit = {
     db.readWrite { implicit session =>
       notificationRepo.setAllReadBefore(recipient, item.eventTime)
+      recipient match {
+        case UserRecipient(id, _) =>
+          userThreadRepo.markAllReadAtOrBefore(id, item.eventTime)
+      }
     }
     sendUnreadNotificationsWith(notif, recipient)
     recipient match {
