@@ -34,7 +34,7 @@ class NotificationBackfillerPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (2 minutes, 0.2 minutes)
+    val (initDelay, freq) = if (Play.isDev) (15 seconds, 15 seconds) else (2 minutes, 5 minutes)
     log.info(s"[onStart] NotificationBackfillerPlugin started with initDelay=$initDelay freq=$freq")
     scheduleTaskOnOneMachine(actor.system, initDelay, freq, actor.ref, BackfillNotifications, BackfillNotifications.getClass.getName)
   }
@@ -51,7 +51,7 @@ class NotificationBackfiller @Inject() (
 
   def backfillHead(seq: Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])]): Unit =
     if (seq.nonEmpty) {
-      context.system.scheduler.scheduleOnce(0.02 seconds) {
+      context.system.scheduler.scheduleOnce(0.5 seconds) {
         backfillHead(seq.tail)
       }
 
