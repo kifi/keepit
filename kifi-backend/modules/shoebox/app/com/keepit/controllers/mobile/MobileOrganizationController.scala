@@ -28,7 +28,7 @@ class MobileOrganizationController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  implicit val organizationViewWrites = OrganizationView.mobileWrites
+  implicit val organizationViewWrites = OrganizationView.embeddedMembershipWrites
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
@@ -39,7 +39,7 @@ class MobileOrganizationController @Inject() (
         orgCommander.createOrganization(createRequest) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getFullOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
+            val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
             Ok(Json.toJson(organizationView))
         }
     }
@@ -53,7 +53,7 @@ class MobileOrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getFullOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt, authTokenOpt = None)
+            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt, authTokenOpt = None)
             Ok(Json.toJson(organizationView))
         }
     }
@@ -69,7 +69,7 @@ class MobileOrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val organizationView = orgCommander.getFullOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt = None)
+    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt = None)
     Ok(Json.toJson(organizationView))
   }
 
@@ -82,7 +82,7 @@ class MobileOrganizationController @Inject() (
     val user = userCommander.getByExternalId(extId)
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
 
-    val orgViewsMap = orgCommander.getFullOrganizationViews(visibleOrgs.toSet, request.userIdOpt, authTokenOpt = None)
+    val orgViewsMap = orgCommander.getOrganizationViews(visibleOrgs.toSet, request.userIdOpt, authTokenOpt = None)
 
     val orgViews = visibleOrgs.map(org => orgViewsMap(org))
 
