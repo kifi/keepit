@@ -1,7 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.db.ExternalId
-import com.keepit.model.{ User }
+import com.keepit.model.{ Name, User }
 import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.mvc.Results.Status
@@ -25,15 +25,15 @@ object AccountFeatureSettingsRequest {
   }
 }
 
-case class AccountFeatureSettingsResponse(clientFeatures: Set[ClientFeature], planKind: PaidPlan.Kind) extends PaymentRequest
+case class AccountFeatureSettingsResponse(clientFeatures: Set[ClientFeature], planName: Name[PaidPlan]) extends PaymentRequest
 object AccountFeatureSettingsResponse {
-  def apply(features: Set[PlanFeature], featureSettings: Set[FeatureSetting], planKind: PaidPlan.Kind): AccountFeatureSettingsResponse = {
+  def apply(features: Set[PlanFeature], featureSettings: Set[FeatureSetting], planName: Name[PaidPlan]): AccountFeatureSettingsResponse = {
     val clientFeatures = features.map {
       case PlanFeature(name, _, editable) if featureSettings.exists(_.name == name) =>
         ClientFeature(name, featureSettings.find(_.name == name).get.setting, editable)
       case PlanFeature(name, _, _) => throw new Exception(s"PlanFeature.name=$name not found in FeatureSettings, possible mismatch between PaidPlan and PaidAccount")
     }
-    AccountFeatureSettingsResponse(clientFeatures, planKind)
+    AccountFeatureSettingsResponse(clientFeatures, planName)
   }
 
   implicit val writes = new Writes[AccountFeatureSettingsResponse] {
@@ -41,7 +41,7 @@ object AccountFeatureSettingsResponse {
       val settingsJson = JsObject(o.clientFeatures.map {
         case ClientFeature(name, setting, editable) => name -> Json.obj("setting" -> setting, "editable" -> editable)
       }.toSeq)
-      Json.obj("kind" -> o.planKind, "settings" -> settingsJson)
+      Json.obj("name" -> o.planName.name, "settings" -> settingsJson)
     }
   }
 }
