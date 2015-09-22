@@ -477,13 +477,13 @@ class NotificationDeliveryCommander @Inject() (
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean, filterByReplyable: Option[Boolean] = None): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getLatestRawNotifications(userId, howMany, filterByReplyable)
+      userThreadRepo.getLatestRawNotifications(userId, howMany, Some(true))
     }, includeUriSummary)
   }
 
   def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean, filterByReplyable: Option[Boolean] = None): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getRawNotificationsBefore(userId, time, howMany, filterByReplyable)
+      userThreadRepo.getRawNotificationsBefore(userId, time, howMany, Some(true))
     }, includeUriSummary)
   }
 
