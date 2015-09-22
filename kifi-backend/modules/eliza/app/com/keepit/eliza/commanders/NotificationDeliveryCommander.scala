@@ -40,6 +40,7 @@ class NotificationDeliveryCommander @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     emailCommander: ElizaEmailCommander,
     legacyNotificationCheck: LegacyNotificationCheck,
+    notificationRepo: NotificationRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
@@ -452,6 +453,7 @@ class NotificationDeliveryCommander @Inject() (
     val message = db.readWrite(attempts = 2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)
+      notificationRepo.setAllReadBefore(Recipient(user), message.createdAt)
       message
     }
     notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))

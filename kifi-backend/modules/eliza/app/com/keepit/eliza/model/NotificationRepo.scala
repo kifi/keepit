@@ -126,7 +126,7 @@ class NotificationRepoImpl @Inject() (
 
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit = {
     val q = for (
-      row <- rows if row.recipient === recipient && row.unread && row.lastEvent < time && !row.ofKind(LegacyNotification)
+      row <- rows if row.recipient === recipient && row.hasNewEvent && row.lastEvent <= time && !row.ofKind(LegacyNotification)
     ) yield row.lastChecked
     q.update(Some(clock.now()))
   }
