@@ -1,6 +1,7 @@
 package com.keepit.common.zookeeper
 
-import com.keepit.common.UsefulFunctions.extras
+import com.keepit.common.core.extras
+import scala.concurrent.duration._
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
