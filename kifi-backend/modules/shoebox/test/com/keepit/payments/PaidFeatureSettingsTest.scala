@@ -6,7 +6,7 @@ import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.controllers.mobile.MobileOrganizationMembershipController
-import com.keepit.controllers.website.OrganizationMembershipController
+import com.keepit.controllers.website.{ LibraryController, OrganizationMembershipController }
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.actor.TestKitSupport
@@ -87,7 +87,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberLibResponse3 must beLeft
 
         // admins can alter feature settings
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, feature.options.find(_ == "member").get))))
 
         val memberModifyRequest2 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse4 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest2)
@@ -125,7 +125,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberInviteResponse1 must beLeft
 
         // admins can alter feature settings
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, feature.options.find(_ == "member").get))))
 
         val memberInviteRequest2 = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
         val memberInviteResponse2 = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest2), Duration(5, "seconds"))
@@ -160,7 +160,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
 
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("force_edit_libraries", "member")))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "member"))))
 
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
       }
@@ -172,9 +172,11 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       withDb(modules: _*) { implicit injector =>
         val (org, owner, admin, member, nonMember) = setup()
 
+        val feature = OrganizationPermissionFeature.ViewMembers
+
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
-          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("view_members", "member")).saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, "member")).saved
           (plan, account)
         }
 
@@ -206,7 +208,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         status(nonMemberMobileResult1) must equalTo(FORBIDDEN)
         (contentAsJson(nonMemberMobileResult1) \ "error").as[String] must equalTo("insufficient_permissions")
 
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("view_members", "anyone")))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "anyone"))))
 
         val nonMemberResult2 = organizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
         status(nonMemberResult2) must equalTo(OK)
@@ -243,9 +245,96 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberResponse must beLeft
         memberResponse.left.get must equalTo(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
-        planManagementCommander.setAccountFeatureSettings(org.id.get, owner.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, owner.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, feature.options.find(_ == "member").get))))
 
         organizationCommander.modifyOrganization(memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "move org library permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val feature = OrganizationPermissionFeature.MoveOrganizationLibraries
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, feature.options.find(_ == "disabled").get)).saved
+          (plan, account)
+        }
+
+        val (ownerLibrary, adminLibrary, memberLibrary) = db.readWrite { implicit session =>
+          (LibraryFactory.library().withOwner(owner).withOrganization(org).saved,
+            LibraryFactory.library().withOwner(admin).withOrganization(org).saved,
+            LibraryFactory.library().withOwner(member).withOrganization(org).saved)
+        }
+
+        val libraryCommander = inject[LibraryCommander]
+
+        val ownerModifyRequest = LibraryModifyRequest(space = Some(UserSpace(owner.id.get)))
+        val adminModifyRequest = LibraryModifyRequest(space = Some(UserSpace(admin.id.get)))
+        val memberModifyRequest = LibraryModifyRequest(space = Some(UserSpace(member.id.get)))
+
+        libraryCommander.modifyLibrary(ownerLibrary.id.get, owner.id.get, ownerModifyRequest) must beLeft
+        libraryCommander.modifyLibrary(adminLibrary.id.get, admin.id.get, adminModifyRequest) must beLeft
+        libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beLeft
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "admin"))))
+
+        libraryCommander.modifyLibrary(ownerLibrary.id.get, owner.id.get, ownerModifyRequest) must beRight
+        libraryCommander.modifyLibrary(adminLibrary.id.get, admin.id.get, adminModifyRequest) must beRight
+        libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beLeft
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "member"))))
+
+        libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "create slack integration permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val createSlackIntegration = OrganizationPermissionFeature.CreateSlackIntegration
+        val forceEditLibraries = OrganizationPermissionFeature.EditLibrary
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSettings(Set(
+            FeatureSetting(createSlackIntegration.name, createSlackIntegration.options.find(_ == "admin").get),
+            FeatureSetting(forceEditLibraries.name, forceEditLibraries.options.find(_ == "member").get))
+          ).saved
+          (plan, account)
+        }
+
+        val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withOrganization(org).saved }
+
+        val libraryCommander = inject[LibraryCommander]
+
+        val ownerModifyRequest = LibraryModifyRequest(subscriptions = Some(Seq(LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")))))
+
+        val adminModifyRequest = LibraryModifyRequest(subscriptions = Some(Seq(
+          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")),
+          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok")))))
+
+        val memberModifyRequest = LibraryModifyRequest(subscriptions = Some(Seq(
+          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")),
+          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok")),
+          LibrarySubscriptionKey("#product", SlackInfo("https://hooks.slack.com/services/ko/ko")))))
+
+        libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(createSlackIntegration.name, "member"))))
+
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
       }
     }
   }

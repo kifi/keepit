@@ -59,9 +59,6 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
     val NORMAL = Kind("normal")
     val GRANDFATHERED = Kind("grandfathered")
     val CUSTOM = Kind("custom")
-    val FREE = Kind("free")
-    val STANDARD = Kind("standard")
-    val ENTERPRISE = Kind("enterprise")
   }
 }
 
@@ -135,7 +132,7 @@ case class ClientFeature(name: String, setting: String, editable: Boolean) // Se
 case class FeatureSetting(name: String, setting: String) // Received from clients, stored in db for PaidAccount
 
 object FeatureSetting {
-  def alterSetting(featureSettings: Set[FeatureSetting], toChange: FeatureSetting): Set[FeatureSetting] = {
-    featureSettings - featureSettings.find(_.name == toChange.name).get + toChange
+  def alterSettings(featureSettings: Set[FeatureSetting], toChange: Set[FeatureSetting]): Set[FeatureSetting] = {
+    featureSettings -- toChange.map(newSetting => featureSettings.find(_.name == newSetting.name).get) ++ toChange
   }
 }
