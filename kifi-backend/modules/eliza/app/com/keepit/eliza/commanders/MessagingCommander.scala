@@ -663,6 +663,17 @@ class MessagingCommander @Inject() (
     val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
+
+    val permissionsByOrgFut = shoebox.getPermissionsByOrgId(orgIds.toSet, userId)
+
+    val canSendByOrgIdFut = permissionsByOrgFut.map { permissionsByOrgId =>
+      permissionsByOrgId.map { case (orgId, permissions) => orgId -> permissions.contains(OrganizationPermission.GROUP_MESSAGING) }
+    }
+
+    canSendByOrgIdFut.onSuccess {
+      case canSendByOrgId if canSendByOrgId.exists(!_._2) => airbrake.notify(s"user $userId can't send to org ${canSendByOrgId.find(_._2).get}")
+    }
+
     val moreContext = new HeimdalContextBuilder()
     val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
       shoebox.hasOrganizationMembership(oid, userId).flatMap {

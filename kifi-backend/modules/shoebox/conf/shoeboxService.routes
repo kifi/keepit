@@ -1006,6 +1006,7 @@ POST    /internal/shoebox/database/getOrganizationsForUsers        @com.keepit.c
 GET     /internal/shoebox/database/getOrgTrackingValues            @com.keepit.controllers.internal.ShoeboxController.getOrgTrackingValues(orgId: Id[Organization])
 POST    /internal/shoebox/database/getBasicOrganizationsByIds            @com.keepit.controllers.internal.ShoeboxController.getBasicOrganizationsByIds()
 GET     /internal/shoebox/database/getOrganizationUserRelationship       @com.keepit.controllers.internal.ShoeboxController.getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User])
+POST    /internal/shoebox/database/getPermissionsByOrgId       @com.keepit.controllers.internal.ShoeboxController.getPermissionsByOrgId()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
