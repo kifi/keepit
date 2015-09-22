@@ -4,6 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.json.EitherFormat
@@ -20,15 +21,17 @@ import scala.util.{ Failure, Success }
 @Singleton
 class OrganizationInviteController @Inject() (
     userCommander: UserCommander,
-    val orgCommander: OrganizationCommander,
-    val orgMembershipCommander: OrganizationMembershipCommander,
-    val orgInviteCommander: OrganizationInviteCommander,
+    orgCommander: OrganizationCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     organizationInviteCommander: OrganizationInviteCommander,
     typeaheadCommander: TypeaheadCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     airbrake: AirbrakeNotifier,
     val userActionsHelper: UserActionsHelper,
+    val db: Database,
+    val permissionCommander: PermissionCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 

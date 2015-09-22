@@ -81,8 +81,10 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
 
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
-          inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
-          inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(members.head.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === false
+          db.readOnlyMaster { implicit session =>
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(members.head.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === false
+          }
 
           inject[FakeUserActionsHelper].setUser(members.head)
           val memberRequest = route.getMembers(publicOrgId)
@@ -119,7 +121,9 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
 
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
-          inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
+          db.readOnlyMaster { implicit session =>
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
+          }
 
           inject[FakeUserActionsHelper].setUser(owner)
           val ownerRequest = route.getMembers(publicOrgId)

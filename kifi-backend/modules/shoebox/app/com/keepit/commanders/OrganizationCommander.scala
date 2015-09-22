@@ -41,6 +41,7 @@ trait OrganizationCommander {
 @Singleton
 class OrganizationCommanderImpl @Inject() (
     db: Database,
+    permissionCommander: PermissionCommander,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
@@ -116,9 +117,9 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
-    val viewerPermissions = orgMembershipCommander.getPermissionsHelper(orgId, viewerIdOpt)
+    val viewerPermissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
     if (!viewerPermissions.contains(OrganizationPermission.VIEW_ORGANIZATION)) {
-      airbrake.notify(s"Tried to serve up an organization view for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
+      airbrake.notify(s"Tried to serve up organization info for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org")
     }
 
     val org = orgRepo.get(orgId)
@@ -130,8 +131,10 @@ class OrganizationCommanderImpl @Inject() (
     val ownerId = userRepo.get(org.ownerId).externalId
 
     val memberIds = {
-      if (viewerPermissions.contains(OrganizationPermission.VIEW_MEMBERS)) orgMembershipRepo.getSortedMembershipsByOrgId(orgId, Offset(0), Limit(Int.MaxValue)).map(_.userId)
-      else Seq.empty
+      if (!viewerPermissions.contains(OrganizationPermission.VIEW_MEMBERS)) {
+        airbrake.notify(s"Tried to serve up organization info for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org's members")
+        Seq.empty
+      } else orgMembershipRepo.getSortedMembershipsByOrgId(orgId, Offset(0), Limit(Int.MaxValue)).map(_.userId)
     }
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
@@ -186,7 +189,7 @@ class OrganizationCommanderImpl @Inject() (
       case OrganizationCreateRequest(_, initialValues) => validateModifications(initialValues.asOrganizationModifications)
 
       case OrganizationModifyRequest(requesterId, orgId, modifications) =>
-        val permissions = orgMembershipCommander.getPermissionsHelper(orgId, Some(requesterId))
+        val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(requesterId))
         if (!permissions.contains(EDIT_ORGANIZATION)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         else validateModifications(modifications)
 

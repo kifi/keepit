@@ -67,4 +67,5 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
   def libraryChecker(implicit injector: Injector) = inject[LibraryChecker]
   def keepChecker(implicit injector: Injector) = inject[KeepChecker]
+  def permissionCommander(implicit injector: Injector) = inject[PermissionCommander]
 }

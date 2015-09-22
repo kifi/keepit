@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.{ SquareImageCropRegion, ImageCropRegion, ImageOffset, ImageSize }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
@@ -16,12 +17,10 @@ import scala.concurrent.ExecutionContext
 class OrganizationAvatarController @Inject() (
   orgAvatarCommander: OrganizationAvatarCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  airbrake: AirbrakeNotifier,
   val userActionsHelper: UserActionsHelper,
-  val publicIdConfig: PublicIdConfiguration,
-  val orgMembershipCommander: OrganizationMembershipCommander,
-  val orgInviteCommander: OrganizationInviteCommander,
-  implicit val config: PublicIdConfiguration,
+  val db: Database,
+  val permissionCommander: PermissionCommander,
+  implicit val publicIdConfig: PublicIdConfiguration,
   private implicit val executionContext: ExecutionContext)
     extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
