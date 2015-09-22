@@ -95,20 +95,10 @@ object BasicOrganizationView {
     def writes(o: BasicOrganizationView) = Json.toJson(o.basicOrganization).as[JsObject] + ("membership" -> Json.toJson(o.membershipInfo))
   }
 
-  val testReads = new Reads[BasicOrganizationView] {
-    implicit val orgMemInfoReads = OrganizationMembershipInfo.testReads
-    def reads(json: JsValue): JsResult[BasicOrganizationView] = {
-      val id = (json \ "id").as[PublicId[Organization]]
-      val ownerId = (json \ "ownerId").as[ExternalId[User]]
-      val handle = (json \ "handle").as[OrganizationHandle]
-      val name = (json \ "name").as[String]
-      val description = (json \ "description").as[Option[String]]
-      val avatarPath = (json \ "avatarPath").as[ImagePath]
-      val basicOrg = BasicOrganization(id, ownerId, handle, name, description, avatarPath)
-      val membershipInfo = (json \ "membership").as[OrganizationMembershipInfo](OrganizationMembershipInfo.testReads)
-      JsSuccess(BasicOrganizationView(basicOrg, membershipInfo))
-    }
-  }
+  val testReads: Reads[BasicOrganizationView] = (
+    __.read[BasicOrganization] and
+    (__ \ "membership").read[OrganizationMembershipInfo](OrganizationMembershipInfo.testReads)
+  )(BasicOrganizationView.apply _)
 }
 
 case class OrganizationView(
