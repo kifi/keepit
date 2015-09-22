@@ -256,7 +256,12 @@ class BookmarkImporter @Inject() (
       }
       zip.close()
       isZipped
-    }.getOrElse(None)
+    } match {
+      case Success(f) => f
+      case Failure(ex) =>
+        log.error("Bad zip file. Usually not a problem.", ex)
+        None
+    }
   }
 
 }
