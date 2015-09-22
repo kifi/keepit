@@ -201,7 +201,7 @@ case class LibraryCardInfo(
   invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
   path: String,
   org: Option[BasicOrganizationView],
-  orgMemberAccess: Option[LibraryAccess]) // TODO(cam): (possibly) squash this into LibraryMembershipInfo.access to clean things up, need to confirm with clients that it'd be equivalent in terms of UX
+  orgMemberAccess: Option[LibraryAccess])
 
 object LibraryCardInfo {
   implicit val writes = new Writes[LibraryCardInfo] {
