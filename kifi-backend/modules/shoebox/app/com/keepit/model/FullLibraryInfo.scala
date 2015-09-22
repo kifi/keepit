@@ -200,8 +200,7 @@ case class LibraryCardInfo(
   kind: LibraryKind,
   invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
   path: String,
-  org: Option[BasicOrganization],
-  orgMembership: Option[OrganizationMembershipInfo],
+  org: Option[BasicOrganizationView],
   orgMemberAccess: Option[LibraryAccess]) // TODO(cam): (possibly) squash this into LibraryMembershipInfo.access to clean things up, need to confirm with clients that it'd be equivalent in terms of UX
 
 object LibraryCardInfo {
@@ -230,7 +229,6 @@ object LibraryCardInfo {
       "invite" -> o.invite,
       "path" -> o.path,
       "org" -> o.org,
-      "orgMembership" -> o.orgMembership,
       "orgMemberAccess" -> o.orgMemberAccess).nonNullFields
   }
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
@@ -274,8 +272,7 @@ case class FullLibraryInfo(
   whoCanInvite: LibraryInvitePermissions,
   modifiedAt: DateTime,
   path: String,
-  org: Option[BasicOrganization],
-  orgMembership: Option[OrganizationMembershipInfo],
+  org: Option[BasicOrganizationView],
   orgMemberAccess: Option[LibraryAccess])
 
 object FullLibraryInfo {
@@ -305,7 +302,6 @@ object FullLibraryInfo {
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
       "org" -> o.org,
-      "orgMembership" -> o.orgMembership,
       "orgMemberAccess" -> o.orgMemberAccess
     ).nonNullFields
   }

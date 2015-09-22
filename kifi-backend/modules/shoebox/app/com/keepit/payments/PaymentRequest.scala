@@ -17,7 +17,7 @@ object AccountFeatureSettingsRequest {
     def reads(json: JsValue): JsResult[AccountFeatureSettingsRequest] = {
       json.validate[JsObject].map { obj =>
         val featureSettings = obj.fieldSet.map {
-          case (key, value) if Feature.get(key).isDefined && Feature.get(key).get.verify(value.as[String]) => FeatureSetting(key, value.as[String])
+          case (key: String, value: JsValue) if Feature.get(key).isDefined && Feature.get(key).get.verify(value.as[String]) => FeatureSetting(key, value.as[String])
         }.toSet
         AccountFeatureSettingsRequest(featureSettings)
       }

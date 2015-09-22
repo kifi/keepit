@@ -9,7 +9,6 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-// OrganizationView should ONLY contain public information. No internal ids.
 case class OrganizationInfo(
     orgId: PublicId[Organization],
     ownerId: ExternalId[User],
@@ -86,6 +85,20 @@ object OrganizationInviteInfo {
   def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
     OrganizationInviteInfo(inviter, invite.updatedAt)
   }
+}
+
+case class BasicOrganizationView(
+  basicOrganization: BasicOrganization,
+  membershipInfo: OrganizationMembershipInfo)
+object BasicOrganizationView {
+  implicit val defaultWrites: Writes[BasicOrganizationView] = new Writes[BasicOrganizationView] {
+    def writes(o: BasicOrganizationView) = Json.toJson(o.basicOrganization).as[JsObject] + ("membership" -> Json.toJson(o.membershipInfo))
+  }
+
+  val testReads: Reads[BasicOrganizationView] = (
+    __.read[BasicOrganization] and
+    (__ \ "membership").read[OrganizationMembershipInfo](OrganizationMembershipInfo.testReads)
+  )(BasicOrganizationView.apply _)
 }
 
 case class OrganizationView(
