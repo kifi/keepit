@@ -27,7 +27,7 @@ class OrganizationController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  implicit val organizationViewWrites = FullOrganizationView.defaultWrites
+  implicit val organizationViewWrites = OrganizationView.defaultWrites
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build

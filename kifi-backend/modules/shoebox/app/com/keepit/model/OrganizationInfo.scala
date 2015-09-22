@@ -111,18 +111,18 @@ object BasicOrganizationView {
   }
 }
 
-case class FullOrganizationView(
+case class OrganizationView(
   organizationInfo: OrganizationInfo,
   membershipInfo: OrganizationMembershipInfo)
 
-object FullOrganizationView {
-  val defaultWrites: Writes[FullOrganizationView] = new Writes[FullOrganizationView] {
-    def writes(o: FullOrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
+object OrganizationView {
+  val defaultWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
+    def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
       "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
 
-  val mobileWrites: Writes[FullOrganizationView] = new Writes[FullOrganizationView] {
-    def writes(o: FullOrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++
+  val mobileWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
+    def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++
       Json.obj("membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject])
   }
 }
