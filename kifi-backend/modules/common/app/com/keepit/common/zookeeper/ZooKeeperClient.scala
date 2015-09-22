@@ -347,8 +347,8 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
                 log.debug(s"session event, losing a NodeWatcher on ${node.path}") // session event, we intentionally lose this watch
-              case _ =>
-                debouncedLog(s"session event, keep watching")
+              case state =>
+                debouncedLog(s"session (node) event, keep watching: $state")
                 reregister
             }
         }
@@ -384,8 +384,8 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
                 log.debug(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
-              case _ =>
-                debouncedLog(s"session event, keep watching")
+              case state =>
+                debouncedLog(s"session (parent, internal) event, keep watching $state")
                 updateChildren(getChildren(node, new ParentWatcher()))
             }
         }
@@ -425,8 +425,8 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
                 log.debug(s"session event, losing a ChildWatcher on ${child.path}") // session event, we intentionally lose this watch
-              case _ =>
-                debouncedLog(s"session event, keep watching")
+              case state =>
+                debouncedLog(s"session (child) event, keep watching $state")
                 doWatchChildren(Seq(child))
             }
         }
@@ -446,8 +446,8 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
             event.getState match {
               case KeeperState.Disconnected | KeeperState.Expired =>
                 log.debug(s"session event, losing a ParentWatcher on ${node.path}") // session event, we intentionally lose this watch
-              case _ =>
-                debouncedLog(s"session event, keep watching")
+              case state =>
+                debouncedLog(s"session (parent) event, keep watching: $state")
                 doWatchChildren(getChildren(node, new ParentWatcher()))
             }
         }
