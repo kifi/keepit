@@ -24,6 +24,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
 import scala.util.Try
+import com.keepit.common.core.anyExtensionOps
 
 import org.joda.time.DateTime
 
@@ -664,12 +665,12 @@ class MessagingCommander @Inject() (
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
 
-    val canSendByOrgIdFut = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
-      permissionsByOrgId.map { case (orgId, permissions) => orgId -> permissions.contains(OrganizationPermission.GROUP_MESSAGING) }
-    }
-
-    canSendByOrgIdFut.onSuccess {
-      case canSendByOrgId if canSendByOrgId.exists(!_._2) => airbrake.notify(s"user $userId can't send to org ${canSendByOrgId.find(_._2).get}")
+    val canSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
+      !permissionsByOrgId.exists {
+        case (orgId, permissions) =>
+          !permissions.contains(OrganizationPermission.GROUP_MESSAGING)
+            .tap { _ => airbrake.notify(s"user $userId was able to send to org $orgId without permissions!") }
+      }
     }
 
     val moreContext = new HeimdalContextBuilder()
@@ -686,25 +687,31 @@ class MessagingCommander @Inject() (
 
     val context = moreContext.addExistingContext(initContext).build
 
-    val resFut = for {
-      userRecipients <- userRecipientsFuture
-      nonUserRecipients <- nonUserRecipientsFuture
-      orgParticipants <- orgParticipantsFuture
-      (thread, message) <- sendNewMessage(userId, userRecipients ++ orgParticipants, nonUserRecipients, url, title, text, source)(context)
-      (messageThread, messagesWithBasicUser) <- basicMessageCommander.getThreadMessagesWithBasicUser(userId, thread)
-      threadInfos <- buildThreadInfos(userId, Seq(thread), Some(url))
-    } yield {
-      val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
-        case NonUserEmailParticipant(address) => (Right(address), "message")
+    val resFut =
+      canSendToOrgs.flatMap { canSend =>
+        if (!canSend) throw new Exception("insufficient_org_permissions")
+        else {
+          for {
+            userRecipients <- userRecipientsFuture
+            nonUserRecipients <- nonUserRecipientsFuture
+            orgParticipants <- orgParticipantsFuture
+            (thread, message) <- sendNewMessage(userId, userRecipients ++ orgParticipants, nonUserRecipients, url, title, text, source)(context)
+            (messageThread, messagesWithBasicUser) <- basicMessageCommander.getThreadMessagesWithBasicUser(userId, thread)
+            threadInfos <- buildThreadInfos(userId, Seq(thread), Some(url))
+          } yield {
+            val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
+              case NonUserEmailParticipant(address) => (Right(address), "message")
+            }
+            shoebox.addInteractions(userId, actions)
+
+            val threadInfoOpt = threadInfos.headOption
+
+            val tDiff = currentDateTime.getMillis - tStart.getMillis
+            statsd.timing(s"messaging.newMessage", tDiff, ONE_IN_HUNDRED)
+            (message, threadInfoOpt, messagesWithBasicUser)
+          }
+        }
       }
-      shoebox.addInteractions(userId, actions)
-
-      val threadInfoOpt = threadInfos.headOption
-
-      val tDiff = currentDateTime.getMillis - tStart.getMillis
-      statsd.timing(s"messaging.newMessage", tDiff, ONE_IN_HUNDRED)
-      (message, threadInfoOpt, messagesWithBasicUser)
-    }
     resFut
   }
 
