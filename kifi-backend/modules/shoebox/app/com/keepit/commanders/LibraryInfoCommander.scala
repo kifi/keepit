@@ -348,6 +348,16 @@ class LibraryInfoCommanderImpl @Inject() (
     }
   }
 
+  def getLibraryPermissionsFromOrgPermissions(orgIdOpt: Option[Id[Organization]], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
+    (orgIdOpt, userIdOpt) match {
+      case (Some(orgId), Some(userId)) => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).map { orgMem =>
+        val libraryPermissions = orgMem.permissions.flatMap(OrganizationPermission.toLibraryPermissionsOpt).flatten
+        libraryPermissions
+      }.getOrElse(Set.empty)
+      case _ => Set.empty
+    }
+  }
+
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
     db.readOnlyReplica { implicit s =>
       twitterSyncRepo.getFirstHandleByLibraryId(libId).map {

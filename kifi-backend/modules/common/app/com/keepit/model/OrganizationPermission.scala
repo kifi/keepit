@@ -17,7 +17,6 @@ object OrganizationPermission {
   case object REMOVE_LIBRARIES extends OrganizationPermission("remove_libraries")
   case object FORCE_EDIT_LIBRARIES extends OrganizationPermission("force_edit_libraries")
   case object GROUP_MESSAGING extends OrganizationPermission("group_messaging")
-  case object MOVE_ORG_LIBRARIES extends OrganizationPermission("move_org_libraries")
   case object EXPORT_KEEPS extends OrganizationPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends OrganizationPermission("create_slack_integration")
   case object MANAGE_PLAN extends OrganizationPermission("manage_plan")
@@ -34,22 +33,19 @@ object OrganizationPermission {
     REMOVE_LIBRARIES,
     FORCE_EDIT_LIBRARIES,
     GROUP_MESSAGING,
-    MOVE_ORG_LIBRARIES,
     EXPORT_KEEPS,
     CREATE_SLACK_INTEGRATION,
     MANAGE_PLAN
   )
 
-  def orgPermissionsToLibraryPermissions: Map[OrganizationPermission, LibraryPermission] = Map(
-    REMOVE_LIBRARIES -> LibraryPermission.DELETE_LIBRARY,
-    MOVE_ORG_LIBRARIES -> LibraryPermission.MOVE_LIBRARY,
-    FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY,
-    EXPORT_KEEPS -> LibraryPermission.EXPORT_KEEPS,
-    FORCE_EDIT_LIBRARIES -> LibraryPermission.EDIT_LIBRARY,
-    CREATE_SLACK_INTEGRATION -> LibraryPermission.CREATE_SLACK_INTEGRATION
+  def orgPermissionsToLibraryPermissions: Map[OrganizationPermission, Set[LibraryPermission]] = Map(
+    REMOVE_LIBRARIES -> Set(LibraryPermission.DELETE_LIBRARY, LibraryPermission.MOVE_LIBRARY),
+    FORCE_EDIT_LIBRARIES -> Set(LibraryPermission.EDIT_LIBRARY),
+    EXPORT_KEEPS -> Set(LibraryPermission.EXPORT_KEEPS),
+    CREATE_SLACK_INTEGRATION -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
   )
 
-  def toLibraryPermissionOpt(orgPermission: OrganizationPermission): Option[LibraryPermission] = orgPermissionsToLibraryPermissions.get(orgPermission)
+  def toLibraryPermissionsOpt(orgPermission: OrganizationPermission): Option[Set[LibraryPermission]] = orgPermissionsToLibraryPermissions.get(orgPermission)
 
   implicit val format: Format[OrganizationPermission] =
     Format(__.read[String].map(OrganizationPermission(_)), new Writes[OrganizationPermission] {
@@ -70,7 +66,6 @@ object OrganizationPermission {
       case "edit_libraries" => FORCE_EDIT_LIBRARIES // for temp backwards compatibility
       case FORCE_EDIT_LIBRARIES.value => FORCE_EDIT_LIBRARIES
       case GROUP_MESSAGING.value => GROUP_MESSAGING
-      case MOVE_ORG_LIBRARIES.value => MOVE_ORG_LIBRARIES
       case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
       case MANAGE_PLAN.value => MANAGE_PLAN

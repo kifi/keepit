@@ -77,12 +77,11 @@ class PermissionCommanderImpl @Inject() (
     )
   }
   def libraryPermissionsFromOrgPermissions(lib: Library, orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = orgPermissions.collect {
-    case OrganizationPermission.REMOVE_LIBRARIES => LibraryPermission.DELETE_LIBRARY
-    case OrganizationPermission.MOVE_ORG_LIBRARIES => LibraryPermission.MOVE_LIBRARY
-    case OrganizationPermission.FORCE_EDIT_LIBRARIES => LibraryPermission.EDIT_LIBRARY
-    case OrganizationPermission.EXPORT_KEEPS => LibraryPermission.EXPORT_KEEPS
-    case OrganizationPermission.CREATE_SLACK_INTEGRATION => LibraryPermission.CREATE_SLACK_INTEGRATION
-  }
+    case OrganizationPermission.REMOVE_LIBRARIES => Set(LibraryPermission.DELETE_LIBRARY, LibraryPermission.MOVE_LIBRARY)
+    case OrganizationPermission.FORCE_EDIT_LIBRARIES => Set(LibraryPermission.EDIT_LIBRARY)
+    case OrganizationPermission.EXPORT_KEEPS => Set(LibraryPermission.EXPORT_KEEPS)
+    case OrganizationPermission.CREATE_SLACK_INTEGRATION => Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
+  }.flatten
 
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
     val lib = libraryRepo.get(libId)

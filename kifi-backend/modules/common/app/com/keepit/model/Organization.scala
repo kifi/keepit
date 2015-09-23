@@ -99,7 +99,6 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         VIEW_MEMBERS,
         REMOVE_LIBRARIES,
         GROUP_MESSAGING,
-        MOVE_ORG_LIBRARIES,
         PUBLISH_LIBRARIES,
         MANAGE_PLAN
       ),
@@ -110,7 +109,6 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         INVITE_MEMBERS,
         VIEW_MEMBERS,
         GROUP_MESSAGING,
-        MOVE_ORG_LIBRARIES,
         PUBLISH_LIBRARIES
       )
     )

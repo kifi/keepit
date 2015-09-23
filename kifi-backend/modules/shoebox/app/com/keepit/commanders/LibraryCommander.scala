@@ -211,22 +211,20 @@ class LibraryCommanderImpl @Inject() (
     }
 
     def validateVisibility(newVisibilityOpt: Option[LibraryVisibility], newSpace: LibrarySpace): Option[LibraryFail] = {
-      newVisibilityOpt.flatMap { newVisibility =>
-        newSpace match {
-          case _: UserSpace if newVisibility == LibraryVisibility.ORGANIZATION => Some(LibraryFail(BAD_REQUEST, "invalid_visibility"))
-          case _ => None
-        }
+      (newVisibilityOpt, newSpace) match {
+        case (Some(LibraryVisibility.ORGANIZATION), _: UserSpace) => Some(LibraryFail(BAD_REQUEST, "invalid_visibility"))
+        case (Some(LibraryVisibility.PUBLISHED), OrganizationSpace(orgId)) if db.readOnlyReplica { implicit s => !permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.PUBLISH_LIBRARIES) } =>
+          Some(LibraryFail(FORBIDDEN, "publish_libraries"))
+        case _ => None
       }
     }
 
-    def validateMovePermissions(newVisibilityOpt: Option[LibraryVisibility], newSpace: LibrarySpace): Option[LibraryFail] = {
+    def validateIntegrationPermissions(newSubscriptions: Option[Seq[LibrarySubscriptionKey]], newSpace: LibrarySpace): Option[LibraryFail] = {
       db.readOnlyReplica { implicit session =>
-        newVisibilityOpt.flatMap { newVisibility =>
-          (newVisibility, newSpace) match {
-            case (LibraryVisibility.PUBLISHED, org: OrganizationSpace) if !permissionCommander.getOrganizationPermissions(org.id, Some(userId)).contains(OrganizationPermission.PUBLISH_LIBRARIES) =>
-              Some(LibraryFail(FORBIDDEN, "insufficient_org_permissions"))
-            case _ => None
-          }
+        (newSubscriptions.exists(_.nonEmpty), newSpace) match {
+          case (true, space: OrganizationSpace) if !permissionCommander.getOrganizationPermissions(space.id, Some(userId)).contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) =>
+            Some(LibraryFail(FORBIDDEN, "create_slack_integration"))
+          case _ => None
         }
       }
     }
@@ -238,7 +236,7 @@ class LibraryCommanderImpl @Inject() (
       validateName(modifyReq.name, newSpace),
       validateSlug(modifyReq.slug, newSpace),
       validateVisibility(modifyReq.visibility, newSpace),
-      validateMovePermissions(modifyReq.visibility, newSpace)
+      validateIntegrationPermissions(modifyReq.subscriptions, newSpace)
     )
     errorOpts.flatten.headOption
   }
