@@ -35,7 +35,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait OrganizationInviteCommander {
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
   def cancelOrganizationInvites(request: OrganizationInviteCancelRequest): Either[OrganizationFail, OrganizationInviteCancelResponse]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationMembership]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
@@ -281,11 +281,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit context: HeimdalContext): Either[OrganizationFail, OrganizationMembership] = {
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String])(implicit context: HeimdalContext): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
       val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
-      val universalInvitation = organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
+      val universalInvitation = authTokenOpt.flatMap(organizationInviteRepo.getByOrgIdAndAuthToken(orgId, _))
       val allInvitations = universalInvitation match {
         case Some(invitation) if !userInvitations.contains(invitation) => userInvitations.+:(invitation)
         case _ => userInvitations
@@ -313,7 +313,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization)
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
-          if (authToken.nonEmpty) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
+          if (authTokenOpt.exists(_.nonEmpty)) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
         }
       }
       success
