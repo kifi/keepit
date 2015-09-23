@@ -40,6 +40,7 @@ class NotificationDeliveryCommander @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     emailCommander: ElizaEmailCommander,
     legacyNotificationCheck: LegacyNotificationCheck,
+    notificationRepo: NotificationRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
@@ -452,6 +453,7 @@ class NotificationDeliveryCommander @Inject() (
     val message = db.readWrite(attempts = 2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)
+      notificationRepo.setAllReadBefore(Recipient(user), message.createdAt)
       message
     }
     notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
@@ -475,13 +477,13 @@ class NotificationDeliveryCommander @Inject() (
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean, filterByReplyable: Option[Boolean] = None): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getLatestRawNotifications(userId, howMany, filterByReplyable)
+      userThreadRepo.getLatestRawNotifications(userId, howMany, Some(true))
     }, includeUriSummary)
   }
 
   def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean, filterByReplyable: Option[Boolean] = None): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getRawNotificationsBefore(userId, time, howMany, filterByReplyable)
+      userThreadRepo.getRawNotificationsBefore(userId, time, howMany, Some(true))
     }, includeUriSummary)
   }
 

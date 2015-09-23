@@ -52,7 +52,7 @@ trait LibraryInfoCommander {
   def createLibraryCardInfo(lib: Library, owner: User, viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])]
-  def getLibraryPermissionsFromOrgPermissions(orgIdOpt: Option[Id[Organization]], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission]
+  def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo
 }
 
 class LibraryInfoCommanderImpl @Inject() (
@@ -62,6 +62,7 @@ class LibraryInfoCommanderImpl @Inject() (
     systemValueRepo: SystemValueRepo,
     libraryAliasRepo: LibraryAliasRepo,
     handleCommander: HandleCommander,
+    permissionCommander: PermissionCommander,
     searchClient: SearchServiceClient,
     userRepo: UserRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
@@ -126,6 +127,10 @@ class LibraryInfoCommanderImpl @Inject() (
     libPathCommander.getPathForLibrary(library)
   }
 
+  def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo = {
+    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
+  }
+
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
     db.readOnlyReplica { implicit session =>
 
@@ -137,14 +142,13 @@ class LibraryInfoCommanderImpl @Inject() (
 
       libraryIds.map { libId =>
         val lib = libs(libId)
-        val permissionsFromOrg = getLibraryPermissionsFromOrgPermissions(lib.organizationId, viewerId)
         val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
         val numFollowers = counts.readOnly
         val numCollaborators = counts.readWrite
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
         val membershipOpt = membershipsByLibraryId.get(libId).flatten
         val path = libPathCommander.pathForLibrary(lib)
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(mem => lib.createMembershipInfo(mem, permissionsFromOrg)), lib.ownerId, path)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(createMembershipInfo), lib.ownerId, path)
       }.toMap
     }
   }
@@ -321,24 +325,10 @@ class LibraryInfoCommanderImpl @Inject() (
 
   def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo] = {
     userIdOpt.flatMap { userId =>
-      val (lib, membershipOpt, permissionsFromOrg) = db.readOnlyMaster { implicit s =>
-        val lib = libraryRepo.get(libraryId)
+      db.readOnlyReplica { implicit s =>
         val membershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-        val permissionsFromOrg = getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(userId))
-        (lib, membershipOpt, permissionsFromOrg)
+        membershipOpt.map(createMembershipInfo)
       }
-
-      membershipOpt.map(membership => lib.createMembershipInfo(membership, permissionsFromOrg))
-    }
-  }
-
-  def getLibraryPermissionsFromOrgPermissions(orgIdOpt: Option[Id[Organization]], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
-    (orgIdOpt, userIdOpt) match {
-      case (Some(orgId), Some(userId)) => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).map { orgMem =>
-        val libraryPermissions: Set[LibraryPermission] = orgMem.permissions.flatMap(OrganizationPermission.toLibraryPermissionOpt)
-        libraryPermissions
-      }.getOrElse(Set.empty)
-      case _ => Set.empty
     }
   }
 
@@ -651,9 +641,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val path = LibraryPathHelper.formatLibraryPath(owner, orgViewOpt.map(_.basicOrganization.handle), lib.slug)
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
-      val permissionsFromOrg = getLibraryPermissionsFromOrgPermissions(lib.organizationId, viewerOpt.flatMap(_.id))
-
-      val membershipInfoOpt = membershipOpt.map { libMem => lib.createMembershipInfo(libMem, permissionsFromOrg) }
+      val membershipInfoOpt = membershipOpt.map(createMembershipInfo)
 
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {
         Some(membershipOpt.isDefined)

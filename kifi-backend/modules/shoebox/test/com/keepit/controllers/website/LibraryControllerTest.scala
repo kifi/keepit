@@ -470,7 +470,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               "access" : "owner",
               "listed":true,
               "subscribed":false,
-              "permissions": ${Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))}
+              "permissions": ${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))}
              },
              "invite": null,
              "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
@@ -634,7 +634,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "access":"owner",
                 "listed":false,
                 "subscribed":false,
-                "permissions":${Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))}
+                "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))}
                },
                "invite": null,
                "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
@@ -1044,14 +1044,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val basicUser2 = db.readOnlyMaster { implicit s => basicUserRepo.load(user2.id.get) }
 
-        val expected1 = Json.parse(s"""{"membership": {"access": "read_write", "listed": true, "subscribed": true, "permissions":${Json.toJson(lib1.permissionsByAccess(LibraryAccess.READ_WRITE))}}}""")
+        val expected1 = Json.parse(s"""{"membership": {"access": "read_write", "listed": true, "subscribed": true, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.READ_WRITE))}}}""")
         Json.parse(contentAsString(result1)) must equalTo(expected1)
 
         val result11 = libraryController.joinLibrary(pubLibId1, None, Some(true))(request1)
         status(result11) must equalTo(OK)
         contentType(result11) must beSome("application/json")
 
-        val expected11 = Json.parse(s"""{"membership": {"access": "read_write", "listed": true, "subscribed": true, "permissions":${Json.toJson(lib1.permissionsByAccess(LibraryAccess.READ_WRITE))}}}""")
+        val expected11 = Json.parse(s"""{"membership": {"access": "read_write", "listed": true, "subscribed": true, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.READ_WRITE))}}}""")
         Json.parse(contentAsString(result11)) must equalTo(expected11)
 
         val request2 = FakeRequest("POST", testPathDecline)

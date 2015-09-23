@@ -1,5 +1,7 @@
 package com.keepit.common.zookeeper
 
+import com.keepit.common.core.extras
+import scala.concurrent.duration._
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
@@ -143,10 +145,11 @@ class ServiceDiscoveryImpl(
 
   private def watchServices(zk: ZooKeeperSession): Unit = clusters.values.foreach { cluster => watchService(zk, cluster) }
 
+  private val debouncedLog = extras.debounce(.1.seconds)(log.info)
   private def watchService(zk: ZooKeeperSession, cluster: ServiceCluster): Unit = {
     zk.create(cluster.servicePath)
     zk.watchChildrenWithData[String](cluster.servicePath, { children: Seq[(Node, String)] =>
-      log.info(s"""services in my cluster under ${cluster.servicePath.name} ${children.length}""")
+      debouncedLog(s"""services in my cluster under ${cluster.servicePath.name} ${children.length}""")
       cluster.update(zk, children)
     })
   }

@@ -569,7 +569,11 @@ class MessagingCommander @Inject() (
 
   def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None): Int = {
     db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadUnmutedThreadCount(userId, filterByReplyable) + (filterByReplyable match {
+      val userThreadCount = filterByReplyable match {
+        case Some(false) => 0
+        case _ => userThreadRepo.getUnreadUnmutedThreadCount(userId, Some(true))
+      }
+      userThreadCount + (filterByReplyable match {
         case Some(true) => notificationRepo.getUnreadNotificationsCountForKind(Recipient(userId), NewMessage.name)
         case Some(false) => notificationRepo.getUnreadNotificationsCountExceptKind(Recipient(userId), NewMessage.name)
         case None => notificationRepo.getUnreadNotificationsCount(Recipient(userId))
