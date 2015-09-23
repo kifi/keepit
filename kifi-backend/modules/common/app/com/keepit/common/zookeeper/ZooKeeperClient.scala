@@ -1,6 +1,5 @@
 package com.keepit.common.zookeeper
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.core.extras
 import com.keepit.common.logging.Logging
 import play.api.libs.json.{ JsString, JsValue, Json }
@@ -8,13 +7,11 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import org.apache.zookeeper.{ CreateMode, KeeperException, Watcher, WatchedEvent, ZooKeeper }
-import org.apache.zookeeper.data.{ ACL, Stat, Id }
 import org.apache.zookeeper.ZooDefs.Ids
 import org.apache.zookeeper.Watcher.Event.EventType
 import org.apache.zookeeper.Watcher.Event.KeeperState
 import scala.concurrent._
 import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import java.util.concurrent.atomic.AtomicReference
 import com.keepit.common.strings.fromByteArray
 
@@ -111,16 +108,18 @@ class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
   private[this] val zkSession: AtomicReference[ZooKeeperSessionImpl] = new AtomicReference(null)
   private[this] val onConnectedHandlers = new ArrayBuffer[ZooKeeperSession => Unit]
 
-  private def connect(): Future[ZooKeeperSessionImpl] = {
-    val promise = Promise[Unit]
+  private def connect(): ZooKeeperSessionImpl = {
+    val initialConnection = Promise[Unit]
 
     log.info(s"Attempting to connect to zookeeper servers $servers")
-    val zk = new ZooKeeperSessionImpl(this, promise)
+    val zk = new ZooKeeperSessionImpl(this, initialConnection)
 
-    promise.future.map { _ =>
-      onConnectedHandlers.synchronized { onConnectedHandlers.foreach(handler => zk.execOnConnectHandler(handler)) }
-      zk
-    }
+    Await.result(initialConnection.future, Duration.Inf)
+    log.info(s"Connected to zookeeper servers $servers")
+
+    onConnectedHandlers.synchronized { onConnectedHandlers.foreach(handler => zk.execOnConnectHandler(handler)) }
+
+    zk
   }
 
   def onConnected(handler: ZooKeeperSession => Unit): Unit = onConnectedHandlers.synchronized {
@@ -130,7 +129,7 @@ class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
   }
 
   def refreshSession(): Unit = {
-    val old = zkSession.getAndSet(Await.result(connect(), Duration.Inf))
+    val old = zkSession.getAndSet(connect())
     if (old != null) try { old.close() } catch { case _: Throwable => } // make sure the old session is closed
   }
 
@@ -154,14 +153,14 @@ class ZooKeeperClientImpl(val servers: String, val sessionTimeout: Int,
   }
 
   // establish a zk session
-  zkSession.compareAndSet(null, Await.result(connect(), Duration.Inf))
+  zkSession.compareAndSet(null, connect())
 
   def session[T](f: ZooKeeperSession => T): T = f(zkSession.get)
 
   def close(): Unit = zkSession.get.close()
 }
 
-class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]) extends ZooKeeperSession with Logging {
+class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, initialConnection: Promise[Unit]) extends ZooKeeperSession with Logging {
 
   class SessionWatcher extends Watcher {
     def process(event: WatchedEvent) {
@@ -169,12 +168,12 @@ class ZooKeeperSessionImpl(zkClient: ZooKeeperClientImpl, promise: Promise[Unit]
       event.getState match {
         case KeeperState.SyncConnected => {
           // invoke onConnected handlers by completing the promise
-          val isNewConnection = promise.trySuccess(())
+          val isNewConnection = initialConnection.trySuccess(())
           // if not a new connection, we must have recovered from connection loss
           if (!isNewConnection) ZooKeeperSessionImpl.this.recover()
         }
         case KeeperState.AuthFailed => {
-          promise.tryFailure(new KeeperException.AuthFailedException())
+          initialConnection.tryFailure(new KeeperException.AuthFailedException())
         }
         case _ => // Disconnected, Expired or something else
       }

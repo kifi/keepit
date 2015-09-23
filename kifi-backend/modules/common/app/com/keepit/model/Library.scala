@@ -63,43 +63,6 @@ case class Library(
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 
-  def permissionsByAccess(access: LibraryAccess): Set[LibraryPermission] = access match {
-    case LibraryAccess.READ_ONLY => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.INVITE_FOLLOWERS
-    )
-
-    case LibraryAccess.READ_WRITE => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.INVITE_FOLLOWERS,
-      LibraryPermission.ADD_KEEPS,
-      LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
-    ) ++ (if (!whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
-
-    case LibraryAccess.OWNER if isSystemCreated => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.ADD_KEEPS,
-      LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
-    )
-    case LibraryAccess.OWNER if isUserCreated => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.EDIT_LIBRARY,
-      LibraryPermission.MOVE_LIBRARY,
-      LibraryPermission.DELETE_LIBRARY,
-      LibraryPermission.REMOVE_MEMBERS,
-      LibraryPermission.ADD_KEEPS,
-      LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS,
-      LibraryPermission.REMOVE_OTHER_KEEPS,
-      LibraryPermission.INVITE_FOLLOWERS,
-      LibraryPermission.INVITE_COLLABORATORS
-    )
-  }
-  def createMembershipInfo(mem: LibraryMembership, extraPermissions: Set[LibraryPermission]): LibraryMembershipInfo = {
-    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionsByAccess(mem.access) ++ extraPermissions)
-  }
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {

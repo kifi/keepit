@@ -511,10 +511,9 @@ class MobileLibraryController @Inject() (
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
-            case Right((lib, mem)) => {
-              val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(mem.userId)) }
-              (pubId, Right(lib.createMembershipInfo(mem, permissionsFromOrg)))
-            }
+            case Right((lib, mem)) =>
+              val membershipInfo = db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+              (pubId, Right(membershipInfo))
           }
       }
     }
