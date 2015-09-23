@@ -36,7 +36,7 @@ class LibraryAccessCommander @Inject() (
       val canMoveFromSpace = from match {
         case OrganizationSpace(fromOrg) =>
           val fromPermissions = permissionCommander.getOrganizationPermissions(fromOrg, Some(userId))
-          fromPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES) || (userId == library.ownerId && fromPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES))
+          (fromPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES) || (userId == library.ownerId)) && fromPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES)
         case UserSpace(fromUser) => userId == library.ownerId
       }
       val canMoveToSpace = to match {

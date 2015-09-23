@@ -258,7 +258,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val planManagementCommander = inject[PlanManagementCommander]
         val (org, owner, admin, member, nonMember) = setup()
 
-        val feature = OrganizationPermissionFeature.MoveOrganizationLibraries
+        val feature = OrganizationPermissionFeature.RemoveOrganizationLibraries
 
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
