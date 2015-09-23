@@ -273,7 +273,9 @@ case class FullLibraryInfo(
   modifiedAt: DateTime,
   path: String,
   org: Option[BasicOrganizationView],
-  orgMemberAccess: Option[LibraryAccess])
+  orgMemberAccess: Option[LibraryAccess],
+  membership: Option[LibraryMembershipInfo],
+  invite: Option[LibraryInviteInfo])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
@@ -302,7 +304,9 @@ object FullLibraryInfo {
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
       "org" -> o.org,
-      "orgMemberAccess" -> o.orgMemberAccess
+      "orgMemberAccess" -> o.orgMemberAccess,
+      "membership" -> o.membership,
+      "invite" -> o.invite
     ).nonNullFields
   }
 }
