@@ -339,6 +339,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           db.readOnlyMaster { implicit session =>
             orgRepo.get(org.id.get).ownerId === owner.id.get
             libraryRepo.get(orgGeneralLib.id.get).ownerId === owner.id.get
+            libraryMembershipRepo.getWithLibraryIdAndUserId(orgGeneralLib.id.get, owner.id.get).get.access === LibraryAccess.OWNER
+            libraryMembershipRepo.getWithLibraryIdAndUserId(orgGeneralLib.id.get, member.id.get).get.access === LibraryAccess.READ_WRITE
             orgMembershipRepo.getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.ADMIN
             orgMembershipRepo.getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.MEMBER
           }
@@ -349,6 +351,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           db.readOnlyMaster { implicit session =>
             orgRepo.get(org.id.get).ownerId === member.id.get
             libraryRepo.get(orgGeneralLib.id.get).ownerId === member.id.get
+            libraryMembershipRepo.getWithLibraryIdAndUserId(orgGeneralLib.id.get, owner.id.get).get.access === LibraryAccess.READ_WRITE
+            libraryMembershipRepo.getWithLibraryIdAndUserId(orgGeneralLib.id.get, member.id.get).get.access === LibraryAccess.OWNER
             orgMembershipRepo.getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.ADMIN
             orgMembershipRepo.getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.ADMIN
           }

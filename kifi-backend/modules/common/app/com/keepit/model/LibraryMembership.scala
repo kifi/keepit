@@ -34,6 +34,7 @@ case class LibraryMembership(
   def withState(newState: State[LibraryMembership]): LibraryMembership = this.copy(state = newState)
   def withPriority(newPriority: Long): LibraryMembership = this.copy(priority = newPriority)
   def withListed(newListed: Boolean): LibraryMembership = this.copy(listed = newListed)
+  def withAccess(newAccess: LibraryAccess): LibraryMembership = this.copy(access = newAccess)
 
   override def toString: String = s"LibraryMembership[id=$id,libraryId=$libraryId,userId=$userId,access=$access,state=$state]"
 
