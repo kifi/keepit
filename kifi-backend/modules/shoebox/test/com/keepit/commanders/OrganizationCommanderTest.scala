@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.db.{ ElementWithInternalIdNotFoundException, Id }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.HeimdalContext
@@ -50,6 +50,13 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           memberships.head.userId === Id[User](1)
           memberships.head.role === OrganizationRole.ADMIN
 
+          db.readOnlyMaster { implicit session =>
+            val orgLibs = libraryRepo.getBySpace(org.id.get)
+            orgLibs.size === 1
+            val orgGeneralLib = orgLibs.head
+            libraryMembershipRepo.getWithLibraryId(orgGeneralLib.id.get).map(_.userId) === List(org.ownerId)
+          }
+
           val avatar1 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize)
           avatar1.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
           avatar1.width === 200
@@ -59,10 +66,14 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           avatar2.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"
           avatar2.width === 100
           avatar2.height === 100
+
+          inject[WatchableExecutionContext].drain()
+          1 === 1
         }
       }
       "not hide valid exceptions" in {
         withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session => PaidPlanFactory.paidPlan().saved }
           val createRequest = OrganizationCreateRequest(requesterId = Id[User](42), OrganizationInitialValues(name = "Kifi"))
           Try(inject[OrganizationCommander].createOrganization(createRequest)) must beFailedTry
         }
@@ -221,6 +232,9 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val trueOwnerDeleteResponse = orgCommander.deleteOrganization(trueOwnerDeleteRequest)
           trueOwnerDeleteResponse must beRight
           trueOwnerDeleteResponse.right.get.request === trueOwnerDeleteRequest
+
+          inject[WatchableExecutionContext].drain()
+          1 === 1
         }
       }
       "properly delete an organization" in {
@@ -265,6 +279,8 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
               libraryRepo.getBySpace(u.id.get).map(_.id.get) === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
             }
           }
+
+          inject[WatchableExecutionContext].drain()
           1 === 1
         }
       }
@@ -276,18 +292,10 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val orgCommander = inject[OrganizationCommander]
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-          val users = db.readWrite { implicit session =>
-            UserFactory.users(5).saved
-          }
-
-          val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
-          val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must beRight
-          val org = createResponse.right.get.newOrg
-
-          db.readWrite { implicit session =>
-            orgMembershipRepo.save(org.newMembership(userId = users(1).id.get, role = OrganizationRole.ADMIN))
-            orgMembershipRepo.save(org.newMembership(userId = users(2).id.get, role = OrganizationRole.MEMBER))
+          val (org, users) = db.readWrite { implicit session =>
+            val users = UserFactory.users(5).saved
+            val org = OrganizationFactory.organization().withOwner(users(0)).withAdmins(Seq(users(1))).withMembers(Seq(users(2))).saved
+            (org, users)
           }
 
           // Random non-members shouldn't be able to delete the org
@@ -317,6 +325,36 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           modifiedOrg.state === OrganizationStates.ACTIVE
           modifiedOrg.ownerId === users(2).id.get
           newOwnerMembership.role === OrganizationRole.ADMIN
+        }
+      }
+      "properly transfer an organization" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, member, orgGeneralLib) = db.readWrite { implicit session =>
+            val (owner, member) = (UserFactory.user().saved, UserFactory.user().saved)
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+            val orgGeneralLib = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
+            (org, owner, member, orgGeneralLib)
+          }
+
+          db.readOnlyMaster { implicit session =>
+            orgRepo.get(org.id.get).ownerId === owner.id.get
+            libraryRepo.get(orgGeneralLib.id.get).ownerId === owner.id.get
+            orgMembershipRepo.getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.ADMIN
+            orgMembershipRepo.getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.MEMBER
+          }
+
+          val maybeResponse = orgCommander.transferOrganization(OrganizationTransferRequest(orgId = org.id.get, requesterId = owner.id.get, newOwner = member.id.get))
+          maybeResponse must beRight
+
+          db.readOnlyMaster { implicit session =>
+            orgRepo.get(org.id.get).ownerId === member.id.get
+            libraryRepo.get(orgGeneralLib.id.get).ownerId === member.id.get
+            orgMembershipRepo.getByOrgIdAndUserId(org.id.get, owner.id.get).get.role === OrganizationRole.ADMIN
+            orgMembershipRepo.getByOrgIdAndUserId(org.id.get, member.id.get).get.role === OrganizationRole.ADMIN
+          }
+
+          inject[WatchableExecutionContext].drain()
+          1 === 1
         }
       }
     }
