@@ -124,7 +124,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         status(selfViewer) must equalTo(OK)
         contentType(selfViewer) must beSome("application/json")
         val res3 = contentAsJson(selfViewer)
-        (res3 \ "numLibraries").as[Int] === 4
+        (res3 \ "numLibraries").as[Int] === 4 + 1 // for org general lib
       }
     }
 

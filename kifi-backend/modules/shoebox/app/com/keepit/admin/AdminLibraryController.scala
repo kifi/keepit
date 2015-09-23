@@ -310,7 +310,9 @@ class AdminLibraryController @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val newOwner = Id[User](body.get("user-id").get.toLong)
     val orgIdOpt = body.get("org-id").flatMap(id => Try(id.toLong).toOption).map(id => Id[Organization](id))
-    libraryCommander.unsafeTransferLibrary(libId, newOwner)
+    db.readWrite { implicit session =>
+      libraryCommander.unsafeTransferLibrary(libId, newOwner)
+    }
     val modifyRequest = orgIdOpt match {
       case Some(orgId) => LibraryModifyRequest(space = Some(LibrarySpace.fromOrganizationId(orgId)), visibility = Some(LibraryVisibility.ORGANIZATION))
       case None => LibraryModifyRequest(space = Some(LibrarySpace.fromUserId(newOwner)), visibility = Some(LibraryVisibility.PUBLISHED))

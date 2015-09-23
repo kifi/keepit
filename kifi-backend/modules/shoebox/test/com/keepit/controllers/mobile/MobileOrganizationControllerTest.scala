@@ -70,7 +70,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "name").as[String] === "Forty Two Kifis"
           (jsonResponse \ "handle").as[String] === "kifi"
-          (jsonResponse \ "numLibraries").as[Int] === 10 + 15
+          (jsonResponse \ "numLibraries").as[Int] === 10 + 15 + 1 // for org general lib
         }
       }
     }
@@ -216,7 +216,6 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
                } """.stripMargin
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
-          println(contentAsString(response))
           status(response) === OK
 
           db.readOnlyMaster { implicit session =>

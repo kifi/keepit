@@ -20,7 +20,7 @@ case class OrganizationModifyRequest(requesterId: Id[User], orgId: Id[Organizati
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
 case class OrganizationDeleteRequest(requesterId: Id[User], orgId: Id[Organization]) extends OrganizationRequest
-case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, returningLibsFut: Future[Unit])
+case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, returningLibsFut: Future[Unit], deletingLibsFut: Future[Unit])
 
 case class OrganizationTransferRequest(requesterId: Id[User], orgId: Id[Organization], newOwner: Id[User]) extends OrganizationRequest
 case class OrganizationTransferResponse(request: OrganizationTransferRequest, modifiedOrg: Organization)
