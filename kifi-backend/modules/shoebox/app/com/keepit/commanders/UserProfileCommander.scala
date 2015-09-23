@@ -80,6 +80,7 @@ class UserProfileCommander @Inject() (
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
           following = Some(true),
           membership = membershipInfosByLibrary(lib.id.get),
+          invite = None,
           modifiedAt = lib.updatedAt,
           path = info.path,
           org = info.org,
@@ -128,12 +129,9 @@ class UserProfileCommander @Inject() (
   def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     if (viewer.exists(_.id == user.id)) {
       db.readOnlyMaster { implicit session =>
-        val (libs, invites) = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page).unzip
-        val ownersAndInviters = basicUserRepo.loadAll((libs.map(_.ownerId) ++ invites.map(_.inviterId)).toSet)
-        libraryInfoCommander.createLibraryCardInfos(libs, ownersAndInviters, viewer, false, idealSize) zip invites map {
-          case (card, invite) =>
-            card.copy(invite = Some(LibraryInviteInfo.createInfo(invite, ownersAndInviters(invite.inviterId))))
-        }
+        val libs = libraryInviteRepo.getByUser(user.id.get, excludeStates = LibraryInviteStates.notActive).sortBy(-_._1.createdAt.getMillis).map(_._2).distinct
+        val owners = basicUserRepo.loadAll((libs.map(_.ownerId)).toSet)
+        libraryInfoCommander.createLibraryCardInfos(libs, owners, viewer, false, idealSize)
       }
     } else {
       ParSeq.empty

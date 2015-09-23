@@ -45,7 +45,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library]
   def getOwnerLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getOwnerLibrariesForSelfWithOrdering(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library]
-  def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[(Library, LibraryInvite)]
 
   def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library]
   def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library]
@@ -351,22 +350,6 @@ class LibraryRepoImpl @Inject() (
     }
     val priorityOrdering = if (orderedByPriority) s"""$membershipTable.priority desc,""" else ""
     priorityOrdering + ordering
-  }
-
-  def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[(Library, LibraryInvite)] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    // The technique we use below to ensure we get the desired invite for each library (maximum access level) is from:
-    // http://stackoverflow.com/questions/12102200/get-records-with-max-value-for-each-group-of-grouped-sql-results#answer-28090544
-    // It works right now because 'read_write' > 'read_only'. We'll need to modify the query (e.g. use a case expression) if we start
-    // to allow sending invitations with additional access levels where lexicographical ordering does not match ordinal ordering.
-    sql"""
-      select lib.*, li.id, li.library_id, li.inviter_id, li.user_id, li.email_address, li.access, li.created_at, li.updated_at, li.state, li.auth_token, li.message
-      from library lib,
-        (select v1.* from library_invite v1 left join library_invite v2 on v2.user_id = v1.user_id and v2.library_id = v1.library_id and v2.state = v1.state and (v1.access < v2.access or (v1.access = v2.access and v1.id < v2.id)) where v1.user_id=$userId and v1.state='active' and v2.id is null) li
-      where lib.id = li.library_id and lib.state='active'
-      order by lib.member_count desc, lib.last_kept desc, lib.id desc
-      limit ${page.itemsToDrop}, ${page.size}
-    """.as[(Library, LibraryInvite)].list
   }
 
   def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library] = {
