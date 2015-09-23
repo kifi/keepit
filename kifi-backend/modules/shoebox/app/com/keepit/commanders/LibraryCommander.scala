@@ -46,7 +46,7 @@ trait LibraryCommander {
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit
   def updateSubscribedToLibrary(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership]
-  def unsafeTransferLibrary(libraryId: Id[Library], newOwner: Id[User]): Library
+  def unsafeTransferLibrary(libraryId: Id[Library], newOwner: Id[User])(implicit session: RWSession): Library
   def unsafeAsyncDeleteLibrary(libraryId: Id[Library]): Future[Unit]
 }
 
@@ -425,21 +425,19 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def unsafeTransferLibrary(libId: Id[Library], newOwner: Id[User]): Library = {
-    db.readWrite { implicit s =>
-      val owner = userRepo.get(newOwner)
-      assert(owner.state == UserStates.ACTIVE)
+  def unsafeTransferLibrary(libraryId: Id[Library], newOwner: Id[User])(implicit session: RWSession): Library = {
+    val owner = userRepo.get(newOwner)
+    assert(owner.state == UserStates.ACTIVE)
 
-      val lib = libraryRepo.getNoCache(libId)
+    val lib = libraryRepo.getNoCache(libraryId)
 
-      libraryMembershipRepo.getWithLibraryIdAndUserId(libId, lib.ownerId).foreach { oldOwnerMembership =>
-        libraryMembershipRepo.save(oldOwnerMembership.withState(LibraryMembershipStates.INACTIVE))
-      }
-      val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libId, newOwner)
-      val newMembershipTemplate = LibraryMembership(libraryId = libId, userId = newOwner, access = LibraryAccess.OWNER)
-      libraryMembershipRepo.save(newMembershipTemplate.copy(id = existingMembershipOpt.map(_.id.get)))
-      libraryRepo.save(lib.withOwner(newOwner))
+    libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, lib.ownerId).foreach { oldOwnerMembership =>
+      libraryMembershipRepo.save(oldOwnerMembership.withState(LibraryMembershipStates.INACTIVE))
     }
+    val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, newOwner)
+    val newMembershipTemplate = LibraryMembership(libraryId = libraryId, userId = newOwner, access = LibraryAccess.OWNER)
+    libraryMembershipRepo.save(newMembershipTemplate.copy(id = existingMembershipOpt.map(_.id.get)))
+    libraryRepo.save(lib.withOwner(newOwner))
   }
 
   def createReadItLaterLibrary(userId: Id[User]): Library = db.readWrite(attempts = 3) { implicit s =>

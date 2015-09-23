@@ -13,7 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ NonOKResponseException, DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.heimdal.HeimdalContextBuilder
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model.OrganizationPermission._
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -53,9 +53,8 @@ trait OrganizationMembershipCommander {
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
   def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
 
-  def addMemberships(requests: Seq[OrganizationMembershipAddRequest]): Either[OrganizationFail, Map[OrganizationMembershipAddRequest, OrganizationMembershipAddResponse]]
-  def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Either[OrganizationFail, Map[OrganizationMembershipModifyRequest, OrganizationMembershipModifyResponse]]
-  def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Either[OrganizationFail, Map[OrganizationMembershipRemoveRequest, OrganizationMembershipRemoveResponse]]
+  def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Map[OrganizationMembershipModifyRequest, Either[OrganizationFail, OrganizationMembershipModifyResponse]]
+  def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Map[OrganizationMembershipRemoveRequest, Either[OrganizationFail, OrganizationMembershipRemoveResponse]]
 }
 
 @Singleton
@@ -72,6 +71,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     userRepo: UserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    libraryMembershipCommander: LibraryMembershipCommander,
     basicUserRepo: BasicUserRepo,
     kifiUserTypeahead: KifiUserTypeahead,
     httpClient: HttpClient,
@@ -131,11 +131,13 @@ class OrganizationMembershipCommanderImpl @Inject() (
       organizationMembershipRepo.getByUserId(userId, limit, offset).map(_.organizationId)
     }
   }
+
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
       organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
     }
   }
+
   def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]] = {
     db.readOnlyReplica { implicit session =>
       organizationMembershipRepo.getAllByUserIds(userIds)
@@ -212,35 +214,36 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  private def addMembershipHelper(request: OrganizationMembershipAddRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
-    getValidationError(request) match {
-      case Some(fail) => Left(fail)
-      case None =>
-        val org = organizationRepo.get(request.orgId)
-        val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
-        val newMembership = targetOpt match {
-          case Some(membership) if membership.isActive => organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
-          case inactiveMembershipOpt => {
-            session.onTransactionSuccess {
-              refreshOrganizationMembersTypeahead(request.orgId)
-            }
-            val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
-            val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
-            val savedMembership = organizationMembershipRepo.save(newMembership)
-            organizationMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId) match {
-              case Some(candidate) => organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
-              case None => //whatever
-            }
-            if (!organizationExperimentRepo.hasExperiment(org.id.get, OrganizationExperimentType.FAKE) && !userExperimentRepo.hasExperiment(request.targetId, UserExperimentType.FAKE)) {
-              notifySlackOfNewMember(org, request.targetId)
-            }
-            savedMembership
+  private def unsafeAddMembership(request: OrganizationMembershipAddRequest): OrganizationMembershipAddResponse = {
+    val newMembership = db.readWrite { implicit session =>
+      val org = organizationRepo.get(request.orgId)
+      val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
+      targetOpt match {
+        case Some(membership) if membership.isActive => organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+        case inactiveMembershipOpt =>
+          val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
+          val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
+          val savedMembership = organizationMembershipRepo.save(newMembership)
+          organizationMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId).foreach { candidate =>
+            organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
           }
-        }
-        planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
-        Right(OrganizationMembershipAddResponse(request, newMembership))
+          savedMembership
+      }
     }
+
+    // Fire off a few Futures to take care of low priority tasks
+    maybeNotifySlackOfNewMember(request.orgId, request.targetId)
+    refreshOrganizationMembersTypeahead(request.orgId)
+
+    val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
+    orgGeneralLibrary.foreach { lib =>
+      implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
+      libraryMembershipCommander.joinLibrary(request.targetId, lib.id.get)
+    }
+    planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
+    OrganizationMembershipAddResponse(request, newMembership)
   }
+
   private def modifyMembershipHelper(request: OrganizationMembershipModifyRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipModifyResponse] = {
     getValidationError(request) match {
       case Some(fail) => Left(fail)
@@ -251,34 +254,46 @@ class OrganizationMembershipCommanderImpl @Inject() (
         Right(OrganizationMembershipModifyResponse(request, newMembership))
     }
   }
-  private def removeMembershipHelper(request: OrganizationMembershipRemoveRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
-    getValidationError(request) match {
-      case Some(fail) => Left(fail)
-      case None =>
-        session.onTransactionSuccess { refreshOrganizationMembersTypeahead(request.orgId) }
-        val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-        organizationMembershipRepo.deactivate(membership)
-        planCommander.registerRemovedUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
-        Right(OrganizationMembershipRemoveResponse(request))
+
+  private def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest): OrganizationMembershipRemoveResponse = {
+    db.readWrite { implicit session =>
+      val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+      organizationMembershipRepo.deactivate(membership)
     }
+    planCommander.registerRemovedUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
+    val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
+    orgGeneralLibrary.foreach { lib =>
+      implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
+      libraryMembershipCommander.leaveLibrary(lib.id.get, request.targetId)
+    }
+    refreshOrganizationMembersTypeahead(request.orgId)
+    OrganizationMembershipRemoveResponse(request)
   }
-  private def notifySlackOfNewMember(organization: Organization, userId: Id[User])(implicit session: RSession): Unit = {
-    val channel = "#org-members"
-    val webhookUrl = "https://hooks.slack.com/services/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"
 
-    val user = userRepo.get(userId)
-    val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName}> just joined <http://www.kifi.com/${organization.handle.value}?kma=1|${organization.name}>."
-    val message = BasicSlackMessage(text = text, channel = Some(channel))
+  private def maybeNotifySlackOfNewMember(orgId: Id[Organization], userId: Id[User]): Future[Unit] = db.readOnlyReplicaAsync { implicit session =>
+    val isOrgReal = !organizationExperimentRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE)
+    val isUserReal = !userExperimentRepo.hasExperiment(userId, UserExperimentType.FAKE)
+    val shouldNotifySlack = isOrgReal && isUserReal
+    if (shouldNotifySlack) {
+      val org = organizationRepo.get(orgId)
+      val user = userRepo.get(userId)
 
-    val response = httpLock.withLockFuture(httpClient.postFuture(DirectUrl(webhookUrl), Json.toJson(message)))
+      val channel = "#org-members"
+      val webhookUrl = "https://hooks.slack.com/services/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"
 
-    response.onComplete {
-      case Success(res) =>
-        log.info(s"[notifySlackOfNewMember] Slack message to $channel succeeded.")
-      case Failure(t: NonOKResponseException) =>
-        log.warn(s"[notifySlackOfNewMember] Slack info invalid for channel=$channel. Make sure the webhookUrl matches.")
-      case _ =>
-        log.error(s"[notifySlackOfNewMember] Slack message request failed.")
+      val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName}> just joined <http://www.kifi.com/${org.handle.value}?kma=1|${org.name}>."
+      val message = BasicSlackMessage(text = text, channel = Some(channel))
+
+      val response = httpLock.withLockFuture(httpClient.postFuture(DirectUrl(webhookUrl), Json.toJson(message)))
+
+      response.onComplete {
+        case Success(res) =>
+          log.info(s"[notifySlackOfNewMember] Slack message to $channel succeeded.")
+        case Failure(t: NonOKResponseException) =>
+          log.warn(s"[notifySlackOfNewMember] Slack info invalid for channel=$channel. Make sure the webhookUrl matches.")
+        case _ =>
+          log.error(s"[notifySlackOfNewMember] Slack message request failed.")
+      }
     }
   }
 
@@ -288,46 +303,30 @@ class OrganizationMembershipCommanderImpl @Inject() (
   }
 
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse] = {
-    db.readWrite { implicit session => addMembershipHelper(request) }
+    val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
+    validationError match {
+      case Some(fail) => Left(fail)
+      case None => Right(unsafeAddMembership(request))
+    }
+  }
+  def addMemberships(requests: Seq[OrganizationMembershipAddRequest]): Map[OrganizationMembershipAddRequest, Either[OrganizationFail, OrganizationMembershipAddResponse]] = {
+    requests.map { request => request -> addMembership(request) }.toMap
   }
 
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] =
     db.readWrite { implicit session => modifyMembershipHelper(request) }
-
-  def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] =
-    db.readWrite { implicit session => removeMembershipHelper(request) }
-
-  // Accumulates the A -> B results in a Map. If any of the results fail, throw an exception
-  case class OrganizationFailException(failure: OrganizationFail) extends Exception with NoStackTrace
-  def accumulateWithFail[A, B](f: (A => Either[OrganizationFail, B]), xs: Seq[A]): Map[A, B] = {
-    def g(accum: Map[A, B], x: A) = f(x) match {
-      case Left(failure) => throw OrganizationFailException(failure)
-      case Right(y) => accum + (x -> y)
-    }
-    xs.foldLeft(Map.empty[A, B])(g)
+  def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Map[OrganizationMembershipModifyRequest, Either[OrganizationFail, OrganizationMembershipModifyResponse]] = {
+    requests.map { request => request -> modifyMembership(request) }.toMap
   }
 
-  def addMemberships(requests: Seq[OrganizationMembershipAddRequest]): Either[OrganizationFail, Map[OrganizationMembershipAddRequest, OrganizationMembershipAddResponse]] = {
-    try {
-      db.readWrite { implicit session => Right(accumulateWithFail(addMembershipHelper, requests)) }
-    } catch {
-      case OrganizationFailException(failure) => Left(failure)
+  def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
+    val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
+    validationError match {
+      case Some(fail) => Left(fail)
+      case None => Right(unsafeRemoveMembership(request))
     }
   }
-
-  def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Either[OrganizationFail, Map[OrganizationMembershipModifyRequest, OrganizationMembershipModifyResponse]] = {
-    try {
-      db.readWrite { implicit session => Right(accumulateWithFail(modifyMembershipHelper, requests)) }
-    } catch {
-      case OrganizationFailException(failure) => Left(failure)
-    }
-  }
-
-  def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Either[OrganizationFail, Map[OrganizationMembershipRemoveRequest, OrganizationMembershipRemoveResponse]] = {
-    try {
-      db.readWrite { implicit session => Right(accumulateWithFail(removeMembershipHelper, requests)) }
-    } catch {
-      case OrganizationFailException(failure) => Left(failure)
-    }
+  def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Map[OrganizationMembershipRemoveRequest, Either[OrganizationFail, OrganizationMembershipRemoveResponse]] = {
+    requests.map { request => request -> removeMembership(request) }.toMap
   }
 }

@@ -29,6 +29,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getBySpace(space: LibrarySpace, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def getBySpaceAndName(space: LibrarySpace, name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
@@ -212,6 +213,20 @@ class LibraryRepoImpl @Inject() (
       case UserSpace(userId) => getByUserIdAndSlug(userId, slug, excludeState)
       case OrganizationSpace(orgId) => getByOrgIdAndSlug(orgId, slug, excludeState)
     }
+  }
+
+  private def getByUserIdAndKind(userId: Id[User], kind: LibraryKind, excludeState: Option[State[Library]])(implicit session: RSession) = {
+    for (b <- rows if b.kind === kind && b.ownerId === userId && b.orgId.isEmpty && b.state =!= excludeState.orNull) yield b
+  }
+  private def getByOrgIdAndKind(orgId: Id[Organization], kind: LibraryKind, excludeState: Option[State[Library]])(implicit session: RSession) = {
+    for (b <- rows if b.kind === kind && b.orgId === orgId && b.state =!= excludeState.orNull) yield b
+  }
+  def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library] = {
+    val q = space match {
+      case UserSpace(userId) => getByUserIdAndKind(userId, kind, excludeState)
+      case OrganizationSpace(orgId) => getByOrgIdAndKind(orgId, kind, excludeState)
+    }
+    q.list.toSet
   }
 
   def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryMembership, Library)] = {

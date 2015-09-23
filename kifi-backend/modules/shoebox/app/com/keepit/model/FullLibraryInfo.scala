@@ -81,6 +81,19 @@ case class LibraryCreateRequest(
   space: Option[LibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
 
+object LibraryCreateRequest {
+  def forOrgGeneralLibrary(org: Organization): LibraryCreateRequest = {
+    LibraryCreateRequest(
+      name = "General",
+      visibility = LibraryVisibility.ORGANIZATION,
+      slug = "general",
+      kind = Some(LibraryKind.SYSTEM_ORG_GENERAL),
+      space = Some(LibrarySpace.fromOrganizationId(org.id.get)),
+      orgMemberAccess = Some(LibraryAccess.READ_WRITE)
+    )
+  }
+}
+
 case class ExternalLibraryModifyRequest(
   name: Option[String] = None,
   slug: Option[String] = None,

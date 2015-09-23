@@ -87,11 +87,11 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val randoVisibleLibraries = orgCommander.getOrganizationLibrariesVisibleToUser(org.id.get, Some(nonMember.id.get), offset = Offset(0), limit = Limit(100))
           val nooneVisibleLibraries = orgCommander.getOrganizationLibrariesVisibleToUser(org.id.get, None, offset = Offset(0), limit = Limit(100))
 
-          ownerVisibleLibraries.length === publicLibs.length + orgLibs.length
+          ownerVisibleLibraries.length === publicLibs.length + orgLibs.length + 1 // for the org's General library
           randoVisibleLibraries.length === publicLibs.length
           nooneVisibleLibraries.length === publicLibs.length
           db.readOnlyMaster { implicit session =>
-            inject[LibraryRepo].getBySpace(org.id.get, excludeState = None).size === publicLibs.length + orgLibs.length + deletedLibs.length
+            inject[LibraryRepo].getBySpace(org.id.get, excludeState = None).size === publicLibs.length + orgLibs.length + deletedLibs.length + 1 // for the org's General lib
           }
         }
       }
@@ -225,13 +225,14 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
       "properly delete an organization" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, owner, members, orgLibs, personalLibs) = db.readWrite { implicit session =>
+          val (org, owner, members, orgLibs, personalLibs, orgGeneralLib) = db.readWrite { implicit session =>
             val users = Random.shuffle(UserFactory.users(10).saved)
             val (owner, members) = (users.head, users.tail)
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(members).saved
+            val orgGeneralLib = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
             val orgLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user).withOrganization(org)).saved.toSet }.toMap
             val personalLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user)).saved.toSet }.toMap
-            (org, owner, members, orgLibs, personalLibs)
+            (org, owner, members, orgLibs, personalLibs, orgGeneralLib)
           }
 
           val users = members.toSet + owner
@@ -240,11 +241,13 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             handleCommander.getByHandle(org.handle) must beSome
             orgRepo.get(org.id.get).state === OrganizationStates.ACTIVE
             orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId) === users.map(_.id.get)
-            libraryRepo.getBySpace(org.id.get) === orgLibs.values.flatten.toSet
-            for (u <- users) {
+            libraryRepo.getBySpace(org.id.get) === orgLibs.values.flatten.toSet + orgGeneralLib
+            for (u <- members) {
               libraryRepo.getAllByOwner(u.id.get).map(_.id.get).toSet === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
               libraryRepo.getBySpace(u.id.get).map(_.id.get) === personalLibs(u.id.get).map(_.id.get)
             }
+            libraryRepo.getAllByOwner(owner.id.get).map(_.id.get).toSet === (orgLibs(owner.id.get) ++ personalLibs(owner.id.get) + orgGeneralLib).map(_.id.get)
+            libraryRepo.getBySpace(owner.id.get).map(_.id.get) === personalLibs(owner.id.get).map(_.id.get)
           }
 
           val maybeResponse = orgCommander.deleteOrganization(OrganizationDeleteRequest(orgId = org.id.get, requesterId = owner.id.get))

@@ -136,7 +136,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val ownerRequest = route.getOrganization(publicId)
           val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
           status(ownerResponse) === OK
-          (Json.parse(contentAsString(ownerResponse)) \ "organization" \ "numLibraries").as[Int] === 10 + 15
+          (Json.parse(contentAsString(ownerResponse)) \ "organization" \ "numLibraries").as[Int] === 10 + 15 + 1 // for org general library
 
           inject[FakeUserActionsHelper].setUser(rando)
           inject[FakeUserActionsHelper].setUser(rando)
@@ -239,7 +239,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
 
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "libraries") must haveClass[JsArray]
-          (jsonResponse \ "libraries").as[Seq[JsValue]].length === numPublicLibs + numOrgLibs
+          (jsonResponse \ "libraries").as[Seq[JsValue]].length === numPublicLibs + numOrgLibs + 1 // for org general library
         }
       }
       "give public libraries to a nonmember" in {
@@ -271,7 +271,7 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
 
           val jsonResponse = Json.parse(contentAsString(response))
           (jsonResponse \ "libraries") must haveClass[JsArray]
-          (jsonResponse \ "libraries").as[Seq[JsValue]].length === numPublicLibs + numOrgLibs + numPrivateLibs
+          (jsonResponse \ "libraries").as[Seq[JsValue]].length === numPublicLibs + numOrgLibs + numPrivateLibs + 1
         }
       }
     }

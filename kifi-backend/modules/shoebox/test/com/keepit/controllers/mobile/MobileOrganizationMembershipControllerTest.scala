@@ -194,7 +194,8 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.modifyMembers(publicOrgId)(request)
 
-          status(result) === FORBIDDEN
+          status(result) === OK
+          (contentAsJson(result) \ "modifications").as[Seq[JsValue]] === Seq.empty
         }
       }
       "modify members if the requester has permission" in {
@@ -265,7 +266,8 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
           val result = controller.removeMembers(publicOrgId)(request)
 
-          status(result) === FORBIDDEN
+          status(result) === OK
+          (contentAsJson(result) \ "removals").as[Seq[ExternalId[User]]] === Seq.empty
         }
       }
       "remove members if the requester has permission" in {

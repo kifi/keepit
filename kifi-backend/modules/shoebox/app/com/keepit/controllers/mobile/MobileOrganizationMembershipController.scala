@@ -60,12 +60,9 @@ class MobileOrganizationMembershipController @Inject() (
         val modifyRequests = externalIds.map { extId =>
           OrganizationMembershipModifyRequest(request.orgId, request.request.userId, targetId = userIdMap(extId), newRole = roleMap(extId))
         }
-        orgMembershipCommander.modifyMemberships(modifyRequests) match {
-          case Left(failure) => failure.asErrorResponse
-          case Right(responses) =>
-            val modifications = responses.keys.map(r => (externalIdMap(r.targetId), r.newRole))
-            Ok(Json.obj("modifications" -> modifications))
-        }
+        val modifyResponses = orgMembershipCommander.modifyMemberships(modifyRequests) collect { case (_, Right(success)) => success }
+        val modifications = modifyResponses.map(r => (externalIdMap(r.request.targetId), r.request.newRole)).toMap
+        Ok(Json.obj("modifications" -> modifications))
     }
   }
 
@@ -85,12 +82,9 @@ class MobileOrganizationMembershipController @Inject() (
         val removeRequests = externalIds.map { extId =>
           OrganizationMembershipRemoveRequest(request.orgId, request.request.userId, targetId = userIdMap(extId))
         }
-        orgMembershipCommander.removeMemberships(removeRequests) match {
-          case Left(failure) => failure.asErrorResponse
-          case Right(responses) =>
-            val removals = responses.keys.map(r => externalIdMap(r.targetId))
-            Ok(Json.obj("removals" -> removals))
-        }
+        val removeResponses = orgMembershipCommander.removeMemberships(removeRequests) collect { case (_, Right(success)) => success }
+        val removals = removeResponses.map(r => externalIdMap(r.request.targetId))
+        Ok(Json.obj("removals" -> removals))
     }
   }
 
