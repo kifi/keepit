@@ -129,7 +129,8 @@ class UserProfileCommander @Inject() (
   def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     if (viewer.exists(_.id == user.id)) {
       db.readOnlyMaster { implicit session =>
-        val libs = libraryInviteRepo.getByUser(user.id.get, excludeStates = LibraryInviteStates.notActive).sortBy(-_._1.createdAt.getMillis).map(_._2).distinct
+        val invites = libraryInviteRepo.getByUser(user.id.get, excludeStates = LibraryInviteStates.notActive)
+        val libs = invites.sortBy(-_._1.createdAt.getMillis).map(_._2).distinct.drop(page.offset).take(page.limit)
         val owners = basicUserRepo.loadAll((libs.map(_.ownerId)).toSet)
         libraryInfoCommander.createLibraryCardInfos(libs, owners, viewer, false, idealSize)
       }
