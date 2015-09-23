@@ -59,6 +59,7 @@ class NotificationDeliveryCommander @Inject() (
     db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.setNotification(from, thread.id.get, message, notifJson, false)
     }
+    sendToUser(from, Json.arr("notification", notifJson))
   }
 
   def updateEmailParticipantThreads(thread: MessageThread, newMessage: Message): Unit = {
