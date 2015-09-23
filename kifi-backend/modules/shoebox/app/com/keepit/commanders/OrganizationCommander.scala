@@ -261,8 +261,12 @@ class OrganizationCommanderImpl @Inject() (
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             org
           }
-          val generalLib = libraryCommander.createLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId).right.get
-          Right(OrganizationCreateResponse(request, org))
+
+          val orgGeneralLibrary = libraryCommander.createLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId) match {
+            case Left(fail) => throw fail
+            case Right(orgGenLib) => orgGenLib
+          }
+          Right(OrganizationCreateResponse(request, org, orgGeneralLibrary))
       }
     } match {
       case Success(Left(fail)) => Left(fail)
