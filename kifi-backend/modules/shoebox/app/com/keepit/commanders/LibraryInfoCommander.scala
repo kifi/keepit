@@ -114,6 +114,17 @@ class LibraryInfoCommanderImpl @Inject() (
     LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
   }
 
+  private def createInviteInfo(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String])(implicit session: RSession): Option[LibraryInviteInfo] = {
+    val invites: Seq[LibraryInvite] = userId.toSeq.flatMap(libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, _)) ++ authToken.toSeq.flatMap(libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, _))
+    for {
+      access <- invites.map(_.access).maxOpt
+      (lastInvitedAt, inviter) <- invites.maxByOpt(_.createdAt).map { invite =>
+        val basicInviter = basicUserRepo.load(invite.inviterId)
+        (invite.createdAt, basicInviter)
+      }
+    } yield LibraryInviteInfo(access, lastInvitedAt, inviter)
+  }
+
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
     db.readOnlyReplica { implicit session =>
 
@@ -576,6 +587,7 @@ class LibraryInfoCommanderImpl @Inject() (
               lastKept = info.lastKept,
               following = None,
               membership = None,
+              invite = None,
               caption = extraInfo.caption,
               modifiedAt = lib.updatedAt,
               path = info.path,
@@ -625,13 +637,14 @@ class LibraryInfoCommanderImpl @Inject() (
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val membershipInfoOpt = membershipOpt.map(createMembershipInfo)
+      val inviteInfoOpt = createInviteInfo(lib.id.get, viewerOpt.map(_.id.get), None)
 
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {
         Some(membershipOpt.isDefined)
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, path, orgViewOpt)
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, path, orgViewOpt)
     }
   }
 
@@ -683,6 +696,7 @@ class LibraryInfoCommanderImpl @Inject() (
         lastKept = lib.lastKept.getOrElse(lib.createdAt),
         following = None, // not needed
         membership = None, // not needed
+        invite = None, // not needed
         path = path,
         modifiedAt = lib.updatedAt,
         org = basicOrgViewOpt,
@@ -693,7 +707,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfo")
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], path: String, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], path: String, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -711,6 +725,7 @@ class LibraryInfoCommanderImpl @Inject() (
       lastKept = lib.lastKept.getOrElse(lib.createdAt),
       following = isFollowing,
       membership = membershipInfoOpt,
+      invite = inviteInfoOpt,
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
       path = path,

@@ -195,10 +195,10 @@ case class LibraryCardInfo(
   lastKept: DateTime,
   following: Option[Boolean], // @deprecated use membership object instead!
   membership: Option[LibraryMembershipInfo],
+  invite: Option[LibraryInviteInfo], // currently only for Invited tab on viewer's own user profile
   caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
-  invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
   path: String,
   org: Option[BasicOrganizationView],
   orgMemberAccess: Option[LibraryAccess])
@@ -223,10 +223,10 @@ object LibraryCardInfo {
       "lastKept" -> o.lastKept,
       "following" -> o.following,
       "membership" -> o.membership,
+      "invite" -> o.invite,
       "caption" -> o.caption,
       "modifiedAt" -> o.modifiedAt,
       "kind" -> o.kind,
-      "invite" -> o.invite,
       "path" -> o.path,
       "org" -> o.org,
       "orgMemberAccess" -> o.orgMemberAccess).nonNullFields
