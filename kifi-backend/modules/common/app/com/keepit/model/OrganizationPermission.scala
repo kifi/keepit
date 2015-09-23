@@ -59,6 +59,7 @@ object OrganizationPermission {
       case EDIT_ORGANIZATION.value => EDIT_ORGANIZATION
       case INVITE_MEMBERS.value => INVITE_MEMBERS
       case MODIFY_MEMBERS.value => MODIFY_MEMBERS
+      case "move_org_libraries" => REMOVE_LIBRARIES
       case REMOVE_MEMBERS.value => REMOVE_MEMBERS
       case ADD_LIBRARIES.value => ADD_LIBRARIES
       case PUBLISH_LIBRARIES.value => PUBLISH_LIBRARIES
@@ -69,6 +70,8 @@ object OrganizationPermission {
       case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
       case MANAGE_PLAN.value => MANAGE_PLAN
+      case _ =>
+        VIEW_ORGANIZATION
     }
   }
 
