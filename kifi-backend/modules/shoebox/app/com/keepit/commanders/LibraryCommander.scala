@@ -430,7 +430,7 @@ class LibraryCommanderImpl @Inject() (
     val lib = libraryRepo.getNoCache(libraryId)
 
     libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, lib.ownerId).foreach { oldOwnerMembership =>
-      libraryMembershipRepo.save(oldOwnerMembership.withState(LibraryMembershipStates.INACTIVE))
+      libraryMembershipRepo.save(oldOwnerMembership.withAccess(LibraryAccess.READ_WRITE))
     }
     val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, newOwner)
     val newMembershipTemplate = LibraryMembership(libraryId = libraryId, userId = newOwner, access = LibraryAccess.OWNER)
