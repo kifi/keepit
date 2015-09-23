@@ -19,7 +19,7 @@ import com.keepit.common.store.{ S3ImageStore, ImageSize }
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.notify.NotificationInfoModel
-import com.keepit.notify.model.{ NotificationId, NotificationKind }
+import com.keepit.notify.model.{ NotificationKind }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId

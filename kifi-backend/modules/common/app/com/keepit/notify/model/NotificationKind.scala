@@ -7,29 +7,15 @@ import play.api.libs.json._
 
 import scala.annotation.implicitNotFound
 
-@implicitNotFound("No kind object found for action ${N}")
-trait NotificationKind[N <: NotificationEvent] {
+trait NotificationKind[N <: NotificationEvent, G] {
 
   val name: String
 
   implicit val format: Format[N]
 
-  implicit val selfCompanion: NotificationKind[N] = this
+  implicit val selfCompanion: NotificationKind[N, G] = this
 
-  /**
-   * A shortcut to grouping events quickly. If the group identifier function returns Some for a notification kind,
-   * then a new event of that kind will automatically be grouped with the notification with that identifier.
-   *
-   * Typically grouping is more intelligent and requires reading a couple events from the database and deserializing
-   * JSON. For events like [[NewMessage]], which can be grouped with other events far earlier, deserializing a whole bunch
-   * of events from the database to find the right group can be expensive. In addition, events like these do not require
-   * advanced grouping behavior and only rely on a few external ids. Therefore, using [[groupIdentifier]] only requires
-   * a simple WHERE sql clause on the notification table instead of a whole bunch of deserialization.
-   *
-   * @param event The event to find the identifier for
-   * @return [[Some]] with the identifier if the identifier exists, [[None]] otherwise
-   */
-  def groupIdentifier(event: N): Option[String] = None
+  def groupIdentifier: Option[GroupIdentifier[G]]
 
   /**
    * Defines whether a new event of this kind should be grouped together with existing events in the same notification.
@@ -44,17 +30,17 @@ trait NotificationKind[N <: NotificationEvent] {
 /**
  * Defines a kind of notification that guarantees that it does not group events.
  */
-trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKind[N] {
+trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKind[N, Nothing] {
 
-  override final def groupIdentifier(event: N): Option[String] = None
+  final def groupIdentifier: Option[GroupIdentifier[Nothing]] = None
 
-  override final def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean = false
+  final def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean = false
 
 }
 
 object NotificationKind {
 
-  private val kinds: Set[NKind] = CompanionTypeSystem[NotificationEvent, NotificationKind[_ <: NotificationEvent]]("N")
+  private val kinds: Set[NKind] = CompanionTypeSystem[NotificationEvent, NotificationKind[_ <: NotificationEvent, _]]("N")
 
   private val kindsByName: Map[String, NKind] = kinds.map(kind => kind.name -> kind).toMap
 
