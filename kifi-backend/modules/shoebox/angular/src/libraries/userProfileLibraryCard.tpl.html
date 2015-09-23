@@ -1,5 +1,25 @@
 <div class="kf-upl-card kf-upl-lib-card" ng-style="{'background-color': lib.color}"
      ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
+  <!-- <span
+    ng-if="lib.org.membership.role === 'admin'"
+    kf-upsell
+    position="bottom"
+    on-click="onClickUpsellMembers()"
+    on-hover="onHoverUpsellMembers()"
+    class="kf-upl-card-upsell"
+  >
+    <span ng-if="plan.name.indexOf('Paid') === -1">
+      Enable admins or all team members to edit library settings by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
+    </span>
+    <span ng-if="plan.name.indexOf('Paid') !== -1">
+      <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.ANYONE">
+        Your members page is publicly viewable. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
+      </span>
+      <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.MEMBER">
+        Only members of {{ profile.name }} can view your team's member list. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
+      </span>
+    </span>
+  </span> -->
   <a class="kf-upl-card-setting svg-settings-gear" ng-if="::myProfile && isOwner && lib.kind !== 'system_main' && lib.kind !== 'system_secret'" href="javascript:" ng-click="openModifyLibrary(lib, currentPageOrigin)"></a>
   <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
     <div class="kf-upl-card-icon" ng-class="::{'svg-card-star': lib.kind === 'system_main', 'svg-card-lock': lib.kind === 'system_secret'}" ng-if="::(lib.kind === 'system_main' || lib.kind === 'system_secret')"></div>

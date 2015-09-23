@@ -186,7 +186,7 @@
 
       if (profileService.me && profileService.me.id) {
         trackMe();
-      } else {
+      } else if (profileService.userLoggedIn()) {
         profileService.getMe().then(trackMe);
       }
     }

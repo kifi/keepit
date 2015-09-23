@@ -38,7 +38,7 @@ angular.module('kifi')
       modifyOrgMember: post(shoebox, '/organizations/:id/members/modify'),
       suggestOrgMember: get(shoebox, '/organizations/:id/members/suggest?query=:query&limit=:limit'),
       transferOrgMemberOwnership: post(shoebox, '/organizations/:id/transfer'),
-      getOrgSettings: get(shoebox, '/organizations/:id/featureSettings'),
+      getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 10),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),

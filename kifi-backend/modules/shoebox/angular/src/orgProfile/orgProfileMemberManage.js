@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('OrgProfileMemberManageCtrl', [
   '$rootScope', '$scope', '$stateParams', 'profile', 'profileService',
-  'orgProfileService', 'modalService', 'Paginator', 'net',
+  'orgProfileService', 'modalService', 'Paginator', 'net', 'ORG_PERMISSION',
   function($rootScope, $scope, $stateParams, profile, profileService,
-           orgProfileService, modalService, Paginator, net) {
+           orgProfileService, modalService, Paginator, net, ORG_PERMISSION) {
     function memberPageAnalytics(args) {
       args = _.extend(args, { type: 'orgMembers' });
       orgProfileService.trackEvent('user_clicked_page', organization, args);
@@ -93,7 +93,7 @@ angular.module('kifi')
     $scope.members = null;
     $scope.myMembership = $scope.membership;
     $scope.organization = organization;
-    $scope.canInvite = $scope.myMembership.permissions && $scope.myMembership.permissions.indexOf('invite_members') > -1;
+    $scope.canInvite = $scope.myMembership.permissions && $scope.myMembership.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
     $scope.me = profileService.me;
 
     function resetAndFetch() {

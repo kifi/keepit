@@ -103,6 +103,24 @@ angular.module('kifi')
                   }
                 });
             }
+          ],
+          settings: [
+            'orgProfileService', 'profile', 'messageTicker', 'ORG_PERMISSION',
+            function (orgProfileService, profile, messageTicker, ORG_PERMISSION) {
+              if (profile.membership.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
+                return orgProfileService
+                .getOrgSettings(profile.organization.id)
+                ['catch'](function(response) {
+                  messageTicker({
+                    text: response.statusText + ': Could not retrieve your settings. Please refresh and try again',
+                    type: 'red',
+                    delay: 0
+                  });
+                });
+              } else {
+                return {};
+              }
+            }
           ]
         },
         'abstract': true
