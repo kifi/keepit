@@ -247,28 +247,24 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse] = {
-    Try {
+    val orgCreateTry = Try {
       db.readOnlyMaster { implicit session => getValidationError(request) } match {
         case Some(fail) =>
           Left(fail)
         case None =>
-          val org = db.readWrite { implicit session =>
+          db.readWrite { implicit session =>
             val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
             planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session) //this should get a .get when things are solidified
+            val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId)
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
-            org
+            Right(OrganizationCreateResponse(request, org, orgGeneralLibrary))
           }
-
-          val orgGeneralLibrary = libraryCommander.createLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId) match {
-            case Left(fail) => throw fail
-            case Right(orgGenLib) => orgGenLib
-          }
-          Right(OrganizationCreateResponse(request, org, orgGeneralLibrary))
       }
-    } match {
+    }
+    orgCreateTry match {
       case Success(Left(fail)) => Left(fail)
       case Success(Right(response)) => Right(response)
       case Failure(OrganizationFail.HANDLE_UNAVAILABLE) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
