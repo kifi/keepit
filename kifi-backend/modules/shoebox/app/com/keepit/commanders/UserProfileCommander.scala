@@ -50,15 +50,15 @@ class UserProfileCommander @Inject() (
   }
 
   def getOwnLibrariesForSelf(user: User, page: Paginator, idealSize: ImageSize, ordering: Option[LibraryOrdering], direction: Option[SortDirection], orderedByPriority: Boolean): ParSeq[LibraryCardInfo] = {
-    val (libraryInfos, memberships, permissionsFromOrg) = db.readOnlyMaster { implicit session =>
+    val (libraryInfos, membershipInfosByLibrary) = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelfWithOrdering(user.id.get, page, ordering, direction, orderedByPriority)
       val libOwnerIds = libs.map(_.ownerId).toSet
       val owners = basicUserRepo.loadAll(libOwnerIds)
       val libraryIds = libs.map(_.id.get).toSet
       val memberships = libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, user.id.get)
       val libraryInfos = libraryInfoCommander.createLibraryCardInfos(libs, owners, Some(user), true, idealSize) zip libs
-      val permissionsFromOrg = libs.map(lib => lib.id.get -> libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, user.id)).toMap
-      (libraryInfos, memberships, permissionsFromOrg)
+      val membershipInfos = libs.map { lib => lib.id.get -> memberships(lib.id.get).map(libraryInfoCommander.createMembershipInfo) }.toMap
+      (libraryInfos, membershipInfos)
     }
     libraryInfos map {
       case (info, lib) =>
@@ -79,7 +79,8 @@ class UserProfileCommander @Inject() (
           collaborators = info.collaborators,
           lastKept = lib.lastKept.getOrElse(lib.createdAt),
           following = Some(true),
-          membership = memberships(lib.id.get).map(mem => lib.createMembershipInfo(mem, permissionsFromOrg(lib.id.get))),
+          membership = membershipInfosByLibrary(lib.id.get),
+          invite = None,
           modifiedAt = lib.updatedAt,
           path = info.path,
           org = info.org,
@@ -128,12 +129,9 @@ class UserProfileCommander @Inject() (
   def getInvitedLibraries(user: User, viewer: Option[User], page: Paginator, idealSize: ImageSize): ParSeq[LibraryCardInfo] = {
     if (viewer.exists(_.id == user.id)) {
       db.readOnlyMaster { implicit session =>
-        val (libs, invites) = libraryRepo.getInvitedLibrariesForSelf(user.id.get, page).unzip
-        val ownersAndInviters = basicUserRepo.loadAll((libs.map(_.ownerId) ++ invites.map(_.inviterId)).toSet)
-        libraryInfoCommander.createLibraryCardInfos(libs, ownersAndInviters, viewer, false, idealSize) zip invites map {
-          case (card, invite) =>
-            card.copy(invite = Some(LibraryInviteInfo.createInfo(invite, ownersAndInviters(invite.inviterId))))
-        }
+        val libs = libraryInviteRepo.getByUser(user.id.get, excludeStates = LibraryInviteStates.notActive).sortBy(-_._1.createdAt.getMillis).map(_._2).distinct
+        val owners = basicUserRepo.loadAll((libs.map(_.ownerId)).toSet)
+        libraryInfoCommander.createLibraryCardInfos(libs, owners, viewer, false, idealSize)
       }
     } else {
       ParSeq.empty

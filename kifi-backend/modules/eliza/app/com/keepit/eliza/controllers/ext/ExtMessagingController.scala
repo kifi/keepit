@@ -70,6 +70,9 @@ class ExtMessagingController @Inject() (
           "createdAt" -> message.createdAt,
           "threadInfo" -> threadInfoOpt,
           "messages" -> messages.reverse))
+    }.recover {
+      case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
+        Forbidden(Json.obj("error" -> "insufficient_org_permissions"))
     }
 
   }

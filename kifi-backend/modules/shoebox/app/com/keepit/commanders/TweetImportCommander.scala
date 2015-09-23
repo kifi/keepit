@@ -29,11 +29,17 @@ class TweetImportCommanderImpl @Inject() (urlClassifier: UrlClassifier) extends 
     Try {
       val zip = new ZipFile(file)
       val isZipped = zip.entries().toStream.exists { ze =>
+        require(!ze.getName.endsWith("zip") && ze.getSize < (1024 * 1024 * 10), s"Suspicious zip file. ${ze.getName} ${ze.getSize}") // Protection against zip bombs. If you fail, reject entire file.
         ze.getName.startsWith("data/js/tweets")
       }
       zip.close()
       isZipped
-    }.getOrElse(false)
+    } match {
+      case Success(f) => true
+      case Failure(ex) =>
+        log.error("Bad zip file. Usually not a problem.", ex)
+        false
+    }
   }
 
   // Parses Twitter archives, from https://twitter.com/settings/account (click “Request your archive”)

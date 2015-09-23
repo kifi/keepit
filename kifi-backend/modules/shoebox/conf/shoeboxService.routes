@@ -303,7 +303,7 @@ POST    /m/1/organizations/:id/modify                    @com.keepit.controllers
 DELETE  /m/1/organizations/:id/delete                    @com.keepit.controllers.mobile.MobileOrganizationController.deleteOrganization(id: PublicId[Organization])
 GET     /m/1/organizations/:id/members                   @com.keepit.controllers.mobile.MobileOrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST    /m/1/organizations/:id/members/invite            @com.keepit.controllers.mobile.MobileOrganizationInviteController.inviteUsers(id: PublicId[Organization])
-POST    /m/1/organizations/:id/members/invites/accept    @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: String)
+POST    /m/1/organizations/:id/members/invites/accept    @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: Option[String] ?= None)
 POST    /m/1/organizations/:id/members/invites/decline   @com.keepit.controllers.mobile.MobileOrganizationInviteController.declineInvitation(id: PublicId[Organization])
 POST    /m/1/organizations/:id/members/invites/link      @com.keepit.controllers.mobile.MobileOrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
 POST    /m/1/organizations/:id/members/modify            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.modifyMembers(id: PublicId[Organization])
@@ -538,7 +538,7 @@ DELETE        /site/organizations/:id/delete                    @com.keepit.cont
 GET           /site/organizations/:id/members                   @com.keepit.controllers.website.OrganizationMembershipController.getMembers(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST          /site/organizations/:id/members/invite            @com.keepit.controllers.website.OrganizationInviteController.inviteUsers(id: PublicId[Organization])
 POST          /site/organizations/:id/members/invites/cancel    @com.keepit.controllers.website.OrganizationInviteController.cancelInvites(id: PublicId[Organization])
-POST          /site/organizations/:id/members/invites/accept    @com.keepit.controllers.website.OrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: String)
+POST          /site/organizations/:id/members/invites/accept    @com.keepit.controllers.website.OrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: Option[String] ?= None)
 POST          /site/organizations/:id/members/invites/decline   @com.keepit.controllers.website.OrganizationInviteController.declineInvitation(id: PublicId[Organization])
 POST          /site/organizations/:id/members/invites/link      @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/members/modify            @com.keepit.controllers.website.OrganizationMembershipController.modifyMembers(id: PublicId[Organization])
@@ -1006,6 +1006,7 @@ POST    /internal/shoebox/database/getOrganizationsForUsers        @com.keepit.c
 GET     /internal/shoebox/database/getOrgTrackingValues            @com.keepit.controllers.internal.ShoeboxController.getOrgTrackingValues(orgId: Id[Organization])
 POST    /internal/shoebox/database/getBasicOrganizationsByIds            @com.keepit.controllers.internal.ShoeboxController.getBasicOrganizationsByIds()
 GET     /internal/shoebox/database/getOrganizationUserRelationship       @com.keepit.controllers.internal.ShoeboxController.getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User])
+POST    /internal/shoebox/database/getUserPermissionsByOrgId       @com.keepit.controllers.internal.ShoeboxController.getUserPermissionsByOrgId()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 

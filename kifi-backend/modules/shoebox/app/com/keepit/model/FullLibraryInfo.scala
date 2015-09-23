@@ -195,13 +195,13 @@ case class LibraryCardInfo(
   lastKept: DateTime,
   following: Option[Boolean], // @deprecated use membership object instead!
   membership: Option[LibraryMembershipInfo],
+  invite: Option[LibraryInviteInfo], // currently only for Invited tab on viewer's own user profile
   caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
-  invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
   path: String,
   org: Option[BasicOrganizationView],
-  orgMemberAccess: Option[LibraryAccess]) // TODO(cam): (possibly) squash this into LibraryMembershipInfo.access to clean things up, need to confirm with clients that it'd be equivalent in terms of UX
+  orgMemberAccess: Option[LibraryAccess])
 
 object LibraryCardInfo {
   implicit val writes = new Writes[LibraryCardInfo] {
@@ -223,10 +223,10 @@ object LibraryCardInfo {
       "lastKept" -> o.lastKept,
       "following" -> o.following,
       "membership" -> o.membership,
+      "invite" -> o.invite,
       "caption" -> o.caption,
       "modifiedAt" -> o.modifiedAt,
       "kind" -> o.kind,
-      "invite" -> o.invite,
       "path" -> o.path,
       "org" -> o.org,
       "orgMemberAccess" -> o.orgMemberAccess).nonNullFields
@@ -273,7 +273,9 @@ case class FullLibraryInfo(
   modifiedAt: DateTime,
   path: String,
   org: Option[BasicOrganizationView],
-  orgMemberAccess: Option[LibraryAccess])
+  orgMemberAccess: Option[LibraryAccess],
+  membership: Option[LibraryMembershipInfo],
+  invite: Option[LibraryInviteInfo])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
@@ -302,19 +304,12 @@ object FullLibraryInfo {
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
       "org" -> o.org,
-      "orgMemberAccess" -> o.orgMemberAccess
+      "orgMemberAccess" -> o.orgMemberAccess,
+      "membership" -> o.membership,
+      "invite" -> o.invite
     ).nonNullFields
   }
 }
-
-case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
-  override val version = 2
-  val namespace = "library_info_libraryid"
-  def toKey(): String = libraryId.id.toString
-}
-
-class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 sealed trait LibrarySourceAttribution
 

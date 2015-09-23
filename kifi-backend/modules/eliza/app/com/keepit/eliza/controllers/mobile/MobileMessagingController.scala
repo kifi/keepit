@@ -52,12 +52,6 @@ class MobileMessagingController @Inject() (
   }
 
   def getSystemNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
-    val threadNoticesFuture = before match {
-      case Some(before) =>
-        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
-      case None =>
-        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
-    }
     val noticesFuture = before match {
       case Some(before) =>
         notificationMessagingCommander.getLatestNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, true)
@@ -65,11 +59,10 @@ class MobileMessagingController @Inject() (
         notificationMessagingCommander.getLatestNotifications(request.userId, howMany.toInt, true).map(_.results)
     }
     for {
-      threadNotices <- threadNoticesFuture
       notices <- noticesFuture
     } yield {
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(false))
-      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
+      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(Seq(), notices, Some(howMany)), numUnreadUnmuted))
     }
   }
 
@@ -142,6 +135,9 @@ class MobileMessagingController @Inject() (
           "createdAt" -> message.createdAt,
           "threadInfo" -> threadInfoOpt,
           "messages" -> messages.reverse))
+    }.recover {
+      case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
+        Forbidden(Json.obj("error" -> "insufficient_org_permissions"))
     }
   }
 

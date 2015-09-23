@@ -171,15 +171,9 @@ class LibraryController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryInfoCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
-      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
       val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libraryId).map { sub => LibrarySubscription.toSubKey(sub) } }
-
-      val membershipJson = Json.toJson(membershipOpt)
-      val inviteJson = Json.toJson(inviteOpt)
       val subscriptionJson = Json.toJson(subKeys)
-      val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-      Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
+      Ok(Json.obj("library" -> libInfo, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
     }
   }
 
@@ -208,31 +202,13 @@ class LibraryController @Inject() (
             case _ => false
           }
           if (useMultilibLogic) log.info(s"[KTL-EXP] Serving up library ${library.id.get} using new logic for user ${request.userIdOpt.get}")
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, showKeepCreateTime = true, useMultilibLogic).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, authTokenOpt, showKeepCreateTime = true, useMultilibLogic).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
-            // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
-            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
-              authTokenOpt.flatMap { authToken =>
-                db.readOnlyMaster { implicit s =>
-                  libraryInviteRepo.getByLibraryIdAndAuthToken(library.id.get, authToken).headOption.map { invite =>
-                    val inviter = basicUserRepo.load(invite.inviterId)
-                    (invite, inviter)
-                  }
-                }.map {
-                  case (invite, inviter) =>
-                    LibraryInviteInfo.createInfo(invite, inviter)
-                }
-              }
-            }
             val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(library.id.get).map { sub => LibrarySubscription.toSubKey(sub) } }
 
             libraryCommander.trackLibraryView(request.userIdOpt, library)
-            val membershipJson = Json.toJson(membershipOpt)
-            val inviteJson = Json.toJson(inviteOpt)
             val subscriptionJson = Json.toJson(subKeys)
-            val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-            Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
+            Ok(Json.obj("library" -> libInfo, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
           }
         })
       case Left(fail) => Future.successful {
@@ -278,7 +254,9 @@ class LibraryController @Inject() (
       case (lib, membership, collaboratorsIds) =>
         val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
         val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
-        val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, membership.map(_.userId)) }
+        val membershipInfo = membership.map { mem =>
+          db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+        }
         LibraryData(
           id = Library.publicId(lib.id.get),
           name = lib.name,
@@ -289,7 +267,7 @@ class LibraryController @Inject() (
           subscribedToUpdates = membership.exists(_.subscribedToUpdates),
           collaborators = collabs,
           orgAvatar = lib.organizationId.map(orgId => orgAvatarsById(orgId).imagePath),
-          membership = membership.map(mem => lib.createMembershipInfo(mem, permissionsFromOrg))
+          membership = membershipInfo
         )
     }
     Ok(Json.obj("libraries" -> datas))
@@ -363,9 +341,8 @@ class LibraryController @Inject() (
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((lib, mem)) =>
-            val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(mem.userId)) }
-
-            Ok(Json.obj("membership" -> lib.createMembershipInfo(mem, permissionsFromOrg)))
+            val membershipInfo = db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+            Ok(Json.obj("membership" -> membershipInfo))
         }
     }
   }
@@ -380,8 +357,8 @@ class LibraryController @Inject() (
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
             case Right((lib, mem)) =>
-              val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(mem.userId)) }
-              (pubId, Right(lib.createMembershipInfo(mem, permissionsFromOrg)))
+              val membershipInfo = db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+              (pubId, Right(membershipInfo))
           }
       }
     }
@@ -713,7 +690,8 @@ class LibraryController @Inject() (
               collaborators = LibraryCardInfo.chooseCollaborators(info.collaborators),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
-              membership = None,
+              membership = info.membership,
+              invite = info.invite,
               modifiedAt = info.modifiedAt,
               kind = info.kind,
               path = info.path,

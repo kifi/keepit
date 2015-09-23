@@ -306,18 +306,21 @@ class UserController @Inject() (
       friendRequestRepo.getCountByRecipient(userId)
     }
 
-    val json = Json.toJson(pimpedUser.basicUser).as[JsObject] ++
-      toJson(pimpedUser.info).as[JsObject] ++
-      Json.obj(
-        "notAuthed" -> pimpedUser.notAuthed,
-        "numLibraries" -> pimpedUser.numLibraries,
-        "numConnections" -> pimpedUser.numConnections,
-        "numFollowers" -> pimpedUser.numFollowers,
-        "experiments" -> experiments.map(_.value),
-        "pendingFriendRequests" -> pendingFriendRequests,
-        "orgs" -> pimpedUser.orgs,
-        "pendingOrgs" -> pimpedUser.pendingOrgs
-      )
+    val json = {
+      implicit val orgViewWrites = OrganizationView.embeddedMembershipWrites
+      Json.toJson(pimpedUser.basicUser).as[JsObject] ++
+        toJson(pimpedUser.info).as[JsObject] ++
+        Json.obj(
+          "notAuthed" -> pimpedUser.notAuthed,
+          "numLibraries" -> pimpedUser.numLibraries,
+          "numConnections" -> pimpedUser.numConnections,
+          "numFollowers" -> pimpedUser.numFollowers,
+          "experiments" -> experiments.map(_.value),
+          "pendingFriendRequests" -> pendingFriendRequests,
+          "orgs" -> pimpedUser.orgs,
+          "pendingOrgs" -> pimpedUser.pendingOrgs
+        )
+    }
     Ok(json)
   }
 
