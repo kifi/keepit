@@ -14,7 +14,7 @@ import scala.util.control.NoStackTrace
 sealed abstract class OrganizationRequest
 
 case class OrganizationCreateRequest(requesterId: Id[User], initialValues: OrganizationInitialValues) extends OrganizationRequest
-case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization)
+case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization, orgGeneralLibrary: Library)
 
 case class OrganizationModifyRequest(requesterId: Id[User], orgId: Id[Organization], modifications: OrganizationModifications) extends OrganizationRequest
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)

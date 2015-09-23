@@ -33,7 +33,7 @@ object LibraryError {
   }
 }
 
-case class LibraryFail(status: Int, message: String)
+case class LibraryFail(status: Int, message: String) extends Exception(message)
 
 @json
 case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
