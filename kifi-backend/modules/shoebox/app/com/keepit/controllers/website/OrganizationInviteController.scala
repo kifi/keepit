@@ -103,16 +103,16 @@ class OrganizationInviteController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     orgInviteCommander.createGenericInvite(request.orgId, request.request.userId) match {
       case Right(invite) =>
-        Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
+        Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url)))
       case Left(fail) => fail.asErrorResponse
     }
   }
 
-  def acceptInvitation(pubId: PublicId[Organization], authToken: String) = UserAction { request =>
+  def acceptInvitation(pubId: PublicId[Organization], authTokenOpt: Option[String]) = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
-        orgInviteCommander.acceptInvitation(orgId, request.userId, authToken) match {
+        orgInviteCommander.acceptInvitation(orgId, request.userId, authTokenOpt) match {
           case Right(organizationMembership) => NoContent
           case Left(organizationFail) => organizationFail.asErrorResponse
         }

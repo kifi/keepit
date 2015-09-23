@@ -475,7 +475,7 @@ class AuthCommander @Inject() (
   def autoJoinOrg(userId: Id[User], orgPubId: PublicId[Organization], authToken: String): Boolean = {
     Organization.decodePublicId(orgPubId).map { orgId =>
       implicit val context = HeimdalContext.empty
-      orgInviteCommander.acceptInvitation(orgId, userId, authToken).fold(
+      orgInviteCommander.acceptInvitation(orgId, userId, Some(authToken)).fold(
         { orgFail =>
           airbrake.notify(s"[finishSignup] org-auto-join failed. $orgFail")
           false
