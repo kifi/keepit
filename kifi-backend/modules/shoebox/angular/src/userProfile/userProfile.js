@@ -21,6 +21,10 @@ angular.module('kifi')
 
     $scope.libraryType = $state.current.name.split('.').pop();
 
+    $scope.showInvitedLibraries = function () {
+      return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
+    };
+    
     //
     // Internal functions.
     //
@@ -66,14 +70,12 @@ angular.module('kifi')
 
       $analytics.eventTrack($rootScope.userLoggedIn ? 'user_clicked_page' : 'visitor_clicked_page', profileEventTrackAttributes);
     }
+    
 
     //
     // Watches and listeners.
     //
     
-    $scope.showInvitedLibraries = function () {
-      return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
-    };
  
     [
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
