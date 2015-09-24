@@ -28,10 +28,10 @@
         on-click="onClickUpsellPublic()"
         on-hover="onHoverUpsellPublic()"
       >
-      <span ng-if="space.planName.indexOf('Paid') === -1">
+      <span ng-if="space.planName.toLowerCase().indexOf('paid') === -1">
         Restrict who can make libraries public by <a class="kf-link" href="#">Upgrading to Premium</a>.
       </span>
-      <span ng-if="space.planName.indexOf('Paid') !== -1">
+      <span ng-if="space.planName.toLowerCase().indexOf('paid') !== -1">
         <span ng-if="space.membership.role === 'admin' && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER">
           Any member can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
         </span>

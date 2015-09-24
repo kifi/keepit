@@ -17,7 +17,7 @@
       on-click="onClickUpsellRelocate()"
       on-hover="onHoverUpsellRelocate()"
     >
-      <span ng-if="space.destination.planName.indexOf('Paid') !== -1">
+      <span ng-if="space.destination.planName.toLowerCase().indexOf('paid') !== -1">
         <span ng-if="space.destination.membership.role === 'admin' && space.destination.settings.remove_libraries.setting === ORG_SETTING_VALUE.DISABLED">
           No one can move libraries out of your team. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: library.org.handle })">settings</a>
         </span>
@@ -31,7 +31,7 @@
           Moving team libraries is disabled for {{ library.org.name }}
         </span>
       </span>
-      <span ng-if="space.destination.planName.indexOf('Paid') === -1 && space.destination.membership.role === 'admin'">
+      <span ng-if="space.destination.planName.toLowerCase().indexOf('paid') === -1 && space.destination.membership.role === 'admin'">
         Restrict who can move libraries outside of your team by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
       </span>
     </span>

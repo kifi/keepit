@@ -8,10 +8,10 @@
     on-hover="onHoverUpsellMembers()"
     class="kf-upl-card-upsell"
   >
-    <span ng-if="plan.name.indexOf('Paid') === -1">
+    <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
       Enable admins or all team members to edit library settings by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
     </span>
-    <span ng-if="plan.name.indexOf('Paid') !== -1">
+    <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
       <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.ANYONE">
         Your members page is publicly viewable. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
       </span>

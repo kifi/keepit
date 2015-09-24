@@ -47,10 +47,10 @@
               on-hover="onHoverUpsellInvite()"
               class="kf-oph-upsell-invite"
             >
-              <span ng-if="plan.name.indexOf('Paid') === -1">
+              <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
                 Restrict who can invite new members by <a class="kf-link" href="#">Upgrading to Premium</a>.
               </span>
-              <span ng-if="plan.name.indexOf('Paid') !== -1">
+              <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
                 <span ng-if="membership.role === 'admin' && plan.settings.invite_members.setting === ORG_SETTING_VALUE.MEMBER">
                   All team members are able to invite. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
                 </span>
@@ -88,10 +88,10 @@
               on-hover="onHoverUpsellMembers()"
               class="kf-oph-upsell-invite"
             >
-              <span ng-if="plan.name.indexOf('Paid') === -1">
+              <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
                 Restrict who can view your team's members by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
               </span>
-              <span ng-if="plan.name.indexOf('Paid') !== -1">
+              <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
                 <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.ANYONE">
                   Your members page is publicly viewable. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
                 </span>
