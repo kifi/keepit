@@ -64,18 +64,18 @@
     <button class="kf-uph-bio-add" ng-click="showBiographyModal()" ng-if="viewingOwnProfile && !profile.biography">Add a Bio</button>
     <div class="kf-uph-bio" ng-bind-html="bioHtml"></div>
   </div>
-  <nav class="kf-uph-nav">
-    <a class="kf-uph-nav-a" href="{{profile|profileUrl:'libraries'}}" data-path="libraries">
+  <div class="kf-uph-nav">
+    <a class="kf-uph-nav-a">
       <div class="kf-uph-nav-name">Libraries</div>
       <div class="kf-uph-nav-count">{{profile.numLibraries|num}}</div>
     </a>
-    <a class="kf-uph-nav-a" href="{{profile|profileUrl:'connections'}}" data-path="connections">
+    <a class="kf-uph-nav-a">
       <div class="kf-uph-nav-name">Connections</div>
       <div class="kf-uph-nav-count">{{profile.numConnections|num}}</div>
     </a>
-    <a class="kf-uph-nav-a" href="{{profile|profileUrl:'followers'}}" data-path="followers" ng-if="profile.numFollowers">
+    <a class="kf-uph-nav-a">
       <div class="kf-uph-nav-name">Followers</div>
       <div class="kf-uph-nav-count">{{profile.numFollowers|num}}</div>
     </a>
-  </nav>
+  </div>
 </div>
