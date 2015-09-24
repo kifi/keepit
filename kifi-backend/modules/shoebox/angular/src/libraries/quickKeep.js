@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfQuickKeep', [
-  'util', 'keepActionService', 'installService', 'libraryService', 'modalService', '$rootScope',
-  function (util, keepActionService, installService, libraryService, modalService, $rootScope) {
+  'util', 'keepActionService', 'installService', 'libraryService',
+  'modalService', '$rootScope', 'LIB_PERMISSION',
+  function (util, keepActionService, installService, libraryService,
+            modalService, $rootScope, LIB_PERMISSION) {
     return {
       restrict: 'A',
       replace: true,
@@ -16,8 +18,8 @@ angular.module('kifi')
 
         scope.quickKeep = {};
 
-        scope.isOwnerOrCollaborator = function () {
-          return scope.library && scope.library.membership && (scope.library.membership.access === 'owner' || scope.library.membership.access === 'read_write');
+        scope.hasAddKeepPermission = function () {
+          return scope.library && scope.library.membership && scope.library.membership.permissions.indexOf(LIB_PERMISSION.ADD_KEEPS) !== -1;
         };
 
         scope.doQuickKeep = function () {
