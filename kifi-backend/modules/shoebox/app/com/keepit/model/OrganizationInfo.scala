@@ -83,7 +83,7 @@ object OrganizationInviteInfo {
     (__ \ 'lastInvited).read[DateTime]
   )(OrganizationInviteInfo.apply _)
   def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
-    OrganizationInviteInfo(inviter, invite.updatedAt)
+    OrganizationInviteInfo(inviter, invite.createdAt)
   }
 }
 
