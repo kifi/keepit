@@ -13,7 +13,7 @@ angular.module('kifi')
         var svgElement = element[0];
 
         var paths = angular.element('symbol#' + attrs.icon);
-        svgElement.innerHTML = paths.html();
+        svgElement.appendChild(paths.find('g').clone()[0]);
 
         var className = svgElement.getAttribute('class') || '';
         svgElement.setAttribute('class', className + (className ? ' ' : '') + 'symbol-sprite');
