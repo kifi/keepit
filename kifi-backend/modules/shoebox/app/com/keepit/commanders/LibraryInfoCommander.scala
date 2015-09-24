@@ -232,34 +232,15 @@ class LibraryInfoCommanderImpl @Inject() (
       }
     }
 
-    val futureCountsByLibraryId = {
-      val keepCountsByLibraries: Map[Id[Library], Int] = db.readOnlyMaster { implicit s =>
-        val userLibs = libraries.filter { lib => lib.kind == LibraryKind.USER_CREATED || lib.kind == LibraryKind.SYSTEM_PERSONA || lib.kind == LibraryKind.SYSTEM_READ_IT_LATER || lib.kind == LibraryKind.SYSTEM_GUIDE }.map(_.id.get).toSet
-        var userLibCounts: Map[Id[Library], Int] = libraries.map(lib => lib.id.get -> lib.keepCount).toMap
-        if (userLibs.size < libraries.size) {
-          val privateLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_SECRET)
-          val mainLibOpt = libraries.find(_.kind == LibraryKind.SYSTEM_MAIN)
-          val owner = privateLibOpt.map(_.ownerId).orElse(mainLibOpt.map(_.ownerId)).getOrElse(
-            throw new Exception(s"no main or secret libs in ${libraries.size} libs while userLibs counts for $userLibs is $userLibCounts. Libs are ${libraries.mkString("\n")}"))
-          privateLibOpt foreach { privateLib =>
-            userLibCounts = userLibCounts + (privateLib.id.get -> privateLib.keepCount)
-          }
-          mainLibOpt foreach { mainLib =>
-            userLibCounts = userLibCounts + (mainLib.id.get -> mainLib.keepCount)
-          }
-        }
-        userLibCounts
+    val countsByLibraryId = libraries.map { library =>
+      library.id.get -> {
+        val counts = memberInfosByLibraryId(library.id.get).counts
+        val collaboratorCount = counts.readWrite
+        val followerCount = counts.readOnly
+        val keepCount = library.keepCount
+        (collaboratorCount, followerCount, keepCount)
       }
-      libraries.map { library =>
-        library.id.get -> SafeFuture {
-          val counts = memberInfosByLibraryId(library.id.get).counts
-          val collaboratorCount = counts.readWrite
-          val followerCount = counts.readOnly
-          val keepCount = keepCountsByLibraries.getOrElse(library.id.get, 0)
-          (collaboratorCount, followerCount, keepCount)
-        }
-      }.toMap
-    }
+    }.toMap
 
     val imagesF = libraries.map { library =>
       library.id.get -> SafeFuture {
@@ -291,12 +272,11 @@ class LibraryInfoCommanderImpl @Inject() (
       val libId = lib.id.get
       for {
         keepInfos <- futureKeepInfosByLibraryId(libId)
-        counts <- futureCountsByLibraryId(libId)
         usersById <- usersByIdF
         basicOrgViewById <- basicOrgViewByIdF
         libImageOpt <- imagesF(libId)
       } yield {
-        val (collaboratorCount, followerCount, keepCount) = counts
+        val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(libId)
         val owner = usersById(lib.ownerId)
         val orgViewOpt = lib.organizationId.map(basicOrgViewById.apply)
         val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
