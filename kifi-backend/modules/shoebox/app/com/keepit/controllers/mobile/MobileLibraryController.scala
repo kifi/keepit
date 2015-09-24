@@ -72,7 +72,7 @@ class MobileLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val externalCreateRequestValidated = request.body.validate[ExternalLibraryCreateRequest](ExternalLibraryCreateRequest.readsMobileV1)
+    val externalCreateRequestValidated = request.body.validate[ExternalLibraryInitialValues](ExternalLibraryInitialValues.readsMobileV1)
 
     externalCreateRequestValidated match {
       case JsError(errs) =>
@@ -85,7 +85,7 @@ class MobileLibraryController @Inject() (
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
-          LibraryCreateRequest(
+          LibraryInitialValues(
             name = externalCreateRequest.name,
             slug = slug,
             visibility = externalCreateRequest.visibility,
@@ -121,7 +121,7 @@ class MobileLibraryController @Inject() (
     val newWhoCanInvite = (json \ "newWhoCanInvite").asOpt[LibraryInvitePermissions]
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed, newWhoCanInvite)
+    val modifyRequest = LibraryModifications(newName, newSlug, newVisibility, newDescription, newColor, newListed, newWhoCanInvite)
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
       case Left(fail) => sendFailResponse(fail)
@@ -131,7 +131,7 @@ class MobileLibraryController @Inject() (
 
   def modifyLibraryV2(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
-    val externalModifyRequestValidated = request.body.validate[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.readsMobileV1)
+    val externalModifyRequestValidated = request.body.validate[ExternalLibraryModifications](ExternalLibraryModifications.readsMobileV1)
 
     externalModifyRequestValidated match {
       case JsError(errs) =>
@@ -143,7 +143,7 @@ class MobileLibraryController @Inject() (
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubOrgId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubOrgId).get)
           }
-          LibraryModifyRequest(
+          LibraryModifications(
             name = externalLibraryModifyRequest.name,
             slug = externalLibraryModifyRequest.slug,
             visibility = externalLibraryModifyRequest.visibility,

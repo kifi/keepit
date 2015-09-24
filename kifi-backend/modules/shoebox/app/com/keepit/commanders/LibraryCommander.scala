@@ -33,10 +33,10 @@ object MarketingSuggestedLibrarySystemValue {
 @ImplementedBy(classOf[LibraryCommanderImpl])
 trait LibraryCommander {
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit
-  def createLibrary(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
-  def unsafeCreateLibrary(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit session: RWSession): Library
-  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse]
-  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifyRequest): LibraryModifyResponse
+  def createLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
+  def unsafeCreateLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RWSession): Library
+  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifications)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse]
+  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifications): LibraryModifyResponse
   def deleteLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
   def createReadItLaterLibrary(userId: Id[User]): Library
   def copyKeepsFromCollectionToLibrary(userId: Id[User], libraryId: Id[Library], tagName: Hashtag)(implicit context: HeimdalContext): Either[LibraryFail, (Seq[Keep], Seq[(Keep, LibraryError)])]
@@ -85,7 +85,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def createLibrary(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
+  def createLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library] = {
     val validationError = db.readOnlyReplica { implicit session => validateCreateRequest(libCreateReq, ownerId) }
     validationError match {
       case Some(fail) => Left(fail)
@@ -99,7 +99,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def validateCreateRequest(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit session: RSession): Option[LibraryFail] = {
+  def validateCreateRequest(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RSession): Option[LibraryFail] = {
     val badMessage: Option[String] = {
       if (libCreateReq.name.isEmpty || !Library.isValidName(libCreateReq.name)) {
         log.info(s"[addLibrary] Invalid name ${libCreateReq.name} for $ownerId")
@@ -141,7 +141,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def unsafeCreateLibrary(libCreateReq: LibraryCreateRequest, ownerId: Id[User])(implicit session: RWSession): Library = {
+  def unsafeCreateLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RWSession): Library = {
     val targetSpace = libCreateReq.space.getOrElse(LibrarySpace.fromUserId(ownerId))
     val orgIdOpt = targetSpace match {
       case UserSpace(_) => None
@@ -182,7 +182,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def validateModifyRequest(library: Library, userId: Id[User], modifyReq: LibraryModifyRequest): Option[LibraryFail] = {
+  def validateModifyRequest(library: Library, userId: Id[User], modifyReq: LibraryModifications): Option[LibraryFail] = {
     def validateUserWritePermission: Option[LibraryFail] = {
       if (libraryAccessCommander.canModifyLibrary(library.id.get, userId)) None
       else Some(LibraryFail(FORBIDDEN, "permission_denied"))
@@ -251,7 +251,7 @@ class LibraryCommanderImpl @Inject() (
     )
     errorOpts.flatten.headOption
   }
-  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifyRequest)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse] = {
+  def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifications)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse] = {
     val library = db.readOnlyMaster { implicit s =>
       libraryRepo.get(libraryId)
     }
@@ -279,7 +279,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifyRequest): LibraryModifyResponse = {
+  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifications): LibraryModifyResponse = {
     val currentSpace = library.space
     val newSpace = modifyReq.space.getOrElse(currentSpace)
     val newOrgIdOpt = newSpace match {

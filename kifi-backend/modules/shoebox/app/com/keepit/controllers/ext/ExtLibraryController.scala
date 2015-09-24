@@ -94,7 +94,7 @@ class ExtLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val externalCreateRequestValidated = request.body.validate[ExternalLibraryCreateRequest](ExternalLibraryCreateRequest.reads)
+    val externalCreateRequestValidated = request.body.validate[ExternalLibraryInitialValues](ExternalLibraryInitialValues.reads)
 
     externalCreateRequestValidated match {
       case JsError(errs) =>
@@ -107,7 +107,7 @@ class ExtLibraryController @Inject() (
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
-          LibraryCreateRequest(
+          LibraryInitialValues(
             name = externalCreateRequest.name,
             slug = slug,
             visibility = externalCreateRequest.visibility,

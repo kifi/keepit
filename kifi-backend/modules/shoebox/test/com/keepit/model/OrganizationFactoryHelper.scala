@@ -36,7 +36,7 @@ object OrganizationFactoryHelper {
       }
       val libraryRepo = injector.getInstance(classOf[LibraryRepo])
       val libraryMembershipRepo = injector.getInstance(classOf[LibraryMembershipRepo])
-      val oglCR = LibraryCreateRequest.forOrgGeneralLibrary(org)
+      val oglCR = LibraryInitialValues.forOrgGeneralLibrary(org)
       val lib = libraryRepo.save(Library(ownerId = org.ownerId, name = oglCR.name, slug = LibrarySlug(oglCR.slug), kind = oglCR.kind.get, visibility = oglCR.visibility, organizationId = Some(org.id.get), memberCount = 1 + partialOrganization.admins.length + partialOrganization.members.length))
       libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = org.ownerId, access = LibraryAccess.OWNER))
       (partialOrganization.admins ++ partialOrganization.members).foreach { member =>
