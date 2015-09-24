@@ -89,7 +89,7 @@
               class="kf-oph-upsell-invite"
             >
               <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
-                Restrict who can view your team's members by <button class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</button>.
+                Restrict who can view your team's members by <button class="kf-link" target="_self" href="https://www.kifi.com/teams">Upgrading to Premium</button>.
               </span>
               <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
                 <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.ANYONE">
