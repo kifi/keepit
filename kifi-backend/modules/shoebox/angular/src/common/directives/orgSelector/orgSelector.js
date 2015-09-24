@@ -20,14 +20,14 @@ angular.module('kifi')
         $scope.space = $scope.space || {};
 
         $scope.unsetOrg = function () {
-          if ($scope.space.destination.membership.permissions.indexOf(ORG_PERMISSION.MOVE_ORG_LIBRARIES) !== -1) {
+          if ($scope.space.destination.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1) {
             $scope.libraryProps.selectedOrgId = undefined;
             $scope.space.destination = $scope.me;
           }
         };
 
         $scope.setOrg = function (id) {
-          if ($scope.space.destination.membership.permissions.indexOf(ORG_PERMISSION.MOVE_ORG_LIBRARIES) !== -1) {
+          if ($scope.space.destination.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1) {
             // Give preference to (1) id from args, (2) current page, (3) First organization in list.
             var orgId = id || ($scope.library.org || $scope.me.orgs[0]).id;
             $scope.libraryProps.selectedOrgId = orgId;

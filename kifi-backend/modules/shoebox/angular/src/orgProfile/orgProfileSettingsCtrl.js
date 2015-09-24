@@ -38,7 +38,7 @@ angular.module('kifi')
               'Select who is able to move libraries out of the company' +
               ' and into another location ex. another team.'
             ),
-            fieldKey: 'move_org_libraries',
+            fieldKey: 'remove_libraries',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           }
         ]
