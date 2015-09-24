@@ -62,7 +62,7 @@
           </div>
         </div>
         <nav class="kf-oph-stats">
-          <button
+          <a
             class="kf-oph-stats-a kf-button-textonly"
             ui-sref="orgProfile.libraries"
             ng-click="onClickTrack($event, 'clickedProfileLibraries')"
@@ -70,11 +70,11 @@
           >
             <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
             <div class="kf-oph-stats-name">Libraries</div>
-          </button>
-          <button
+          </a>
+          <a
             ng-if="plan.settings.membership.view_members.setting === ORG_SETTING_VALUE.ANYONE || membership.permissions.indexOf(ORG_PERMISSION.VIEW_MEMBERS) !== -1"
             class="kf-oph-stats-a kf-button-textonly"
-            ui-sref="orgProfile.members"
+            ng-href="{{ '/' + profile.handle + '/members' }}"
             ng-click="onClickTrack($event, 'clickedProfileMembers')"
             ng-class="{ 'active': state.current.activetab === 'members' }"
           >
@@ -89,19 +89,19 @@
               class="kf-oph-upsell-invite"
             >
               <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
-                Restrict who can view your team's members by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
+                Restrict who can view your team's members by <button class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</button>.
               </span>
               <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
                 <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.ANYONE">
-                  Your members page is publicly viewable. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
+                  Your members page is publicly viewable. Edit this in <button class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</button>
                 </span>
                 <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.MEMBER">
-                  Only members of {{ profile.name }} can view your team's member list. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
+                  Only members of {{ profile.name }} can view your team's member list. Edit this in <button class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</button>
                 </span>
               </span>
             </span>
-          </button>
-          <button
+          </a>
+          <a
             class="kf-oph-stats-a kf-button-textonly"
             ui-sref="orgProfile.settings"
             ng-click="onClickTrack($event, 'clickedProfileSettings')"
@@ -109,7 +109,7 @@
             ng-if="!readonly && isAdmin"
           >
             <div class="kf-oph-stats-name">Settings</div>
-          </button>
+          </a>
         </nav>
         </table>
       </div>
