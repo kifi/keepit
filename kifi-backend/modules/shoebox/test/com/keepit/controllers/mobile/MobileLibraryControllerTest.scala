@@ -156,10 +156,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // upload an image
         {
-          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1.file, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
+          val img = fakeImage1
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(img.file, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
-          fakeImage1.clean()
+          img.clean()
         }
 
         val result1 = getLibraryByHandleAndSlug(user1, Handle("spongebob"), LibrarySlug("krabby-patty"))
@@ -217,9 +218,11 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // upload an image
         {
-          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1.file, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
+          val img = fakeImage1
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(img.file, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
+          img.clean()
         }
 
         val result1 = getLibraryById(user1, pubLib1)
