@@ -3,15 +3,21 @@
 angular.module('kifi')
 
 .directive('kfUserProfileLibraryCard', [
-  '$rootScope', '$location', 'profileService', 'libraryService', 'modalService', 'platformService', 'signupService',
-  function ($rootScope, $location, profileService, libraryService, modalService, platformService, signupService) {
+  '$rootScope', '$location', 'profileService', 'libraryService', 'modalService',
+  'platformService', 'signupService', 'LIB_PERMISSION',
+  function ($rootScope, $location, profileService, libraryService, modalService,
+            platformService, signupService, LIB_PERMISSION) {
     // values that are the same for all cards that coexist at any one time
     var currentPageName;
     var currentPageOrigin;
 
     function canModifyCollaborators(lib) {
-      var mem = lib.membership;
-      return mem && (mem.access === 'owner' || mem.access === 'read_write' && lib.whoCanInvite === 'collaborator');
+      return (
+        lib.membership && (
+          lib.membership.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1 ||
+          lib.membership.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) !== -1
+        )
+      );
     }
 
     function updateCollaborators(numCollaborators, ignored, scope) {

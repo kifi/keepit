@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryMembers', [
-  'libraryService', 'profileService', '$timeout', 'net',
-  function (libraryService, profileService, $timeout, net) {
+  'libraryService', 'profileService', '$timeout', 'net', 'LIB_PERMISSION',
+  function (libraryService, profileService, $timeout, net, LIB_PERMISSION) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -177,7 +177,12 @@ angular.module('kifi')
           scope.library = scope.modalData.library;
           scope.collabCanInvite = scope.library.whoCanInvite === collabInviteSetting;
           scope.modalTitle = scope.library.name;
-          scope.canManage = scope.modalData.canManageMembers;
+          scope.canManage = (
+            scope.library.membership && (
+              scope.library.membership.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) ||
+              scope.library.membership.permissions.indexOf(LIB_PERMISSION.INVITE_MEMBERS)
+            )
+          );
           scope.currentPageOrigin = scope.modalData.currentPageOrigin;
           scope.amOwner = scope.modalData.amOwner;
           scope.filterType = scope.modalData.filterType;

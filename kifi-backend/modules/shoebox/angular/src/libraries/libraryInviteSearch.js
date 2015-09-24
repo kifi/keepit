@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .directive('kfLibraryInviteSearch', [
-  'libraryService', 'profileService', 'socialService', '$timeout', 'util', 'KEY', 'net',
-  function (libraryService, profileService, socialService, $timeout, util, KEY, net) {
+  'libraryService', 'profileService', 'socialService', '$timeout', 'util',
+  'LIB_PERMISSION', 'KEY', 'net',
+  function (libraryService, profileService, socialService, $timeout, util,
+            LIB_PERMISSION, KEY, net) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -35,9 +37,7 @@ angular.module('kifi')
         scope.library = scope.modalData.library;
         scope.inviteType = scope.modalData.inviteType;
         scope.currentPageOrigin = scope.modalData.currentPageOrigin;
-        scope.canInviteCollabs = (function (access) {
-          return access === 'owner' || access === 'read_write' && scope.library.whoCanInvite === 'collaborator';
-        }((scope.library.membership || {}).access));
+        scope.canInviteCollabs = scope.library.membership.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1;
 
         function shareLibrary(opts) {
           if (scope.share.message) {
