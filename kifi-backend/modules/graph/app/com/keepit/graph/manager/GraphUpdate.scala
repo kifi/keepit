@@ -33,7 +33,7 @@ object GraphUpdateKind {
   }
   def apply(code: String): GraphUpdateKind[_ <: GraphUpdate] = byCode(code)
 
-  val toBeIngested = all -- Set(SparseLDAGraphUpdate, LDAOldVersionCleanupGraphUpdate)
+  val toBeIngested = all -- Set(SparseLDAGraphUpdate, LDAOldVersionCleanupGraphUpdate, KeepGraphUpdate)
 }
 
 case class UserGraphUpdate(userId: Id[User], state: State[User], userSeq: SequenceNumber[User]) extends GraphUpdate {
