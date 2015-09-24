@@ -48,8 +48,8 @@ trait LibraryInfoCommander {
   def getLibraryWithHandleAndSlug(handle: Handle, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
   def getMarketingSiteSuggestedLibraries: Future[Seq[LibraryCardInfo]]
-  def createLibraryCardInfo(lib: Library, owner: User, viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo
-  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
+  def createLibraryCardInfo(lib: Library, owner: BasicUser, viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo
+  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
   def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])]
   def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo
 }
@@ -612,20 +612,20 @@ class LibraryInfoCommanderImpl @Inject() (
     } getOrElse Future.successful(Seq.empty)
   }
 
-  def createLibraryCardInfo(lib: Library, owner: User, viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo = {
+  def createLibraryCardInfo(lib: Library, owner: BasicUser, viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo = {
     db.readOnlyMaster { implicit session =>
-      createLibraryCardInfos(Seq(lib), Map(owner.id.get -> BasicUser.fromUser(owner)), viewerOpt, withFollowing, idealSize).head
+      createLibraryCardInfos(Seq(lib), Map(lib.ownerId -> owner), viewerOpt, withFollowing, idealSize).head
     }
   }
 
   @AlertingTimer(2 seconds)
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfos")
-  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[User], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet
-    val membershipsToLibsMap = viewerOpt.map { viewer =>
-      libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewer.id.get)
+    val membershipsToLibsMap = viewerOpt.map { viewerId =>
+      libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewerId)
     } getOrElse Map.empty
-    val orgViews = organizationCommander.getBasicOrganizationViews(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerOpt.flatMap(_.id), authTokenOpt = None)
+    val orgViews = organizationCommander.getBasicOrganizationViews(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerOpt, authTokenOpt = None)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -649,7 +649,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val membershipInfoOpt = membershipOpt.map(createMembershipInfo)
-      val inviteInfoOpt = createInviteInfo(lib.id.get, viewerOpt.map(_.id.get), None)
+      val inviteInfoOpt = createInviteInfo(lib.id.get, viewerOpt, None)
 
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {
         Some(membershipOpt.isDefined)

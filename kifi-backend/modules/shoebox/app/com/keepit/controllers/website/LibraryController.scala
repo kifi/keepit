@@ -24,6 +24,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -110,7 +111,7 @@ class LibraryController @Inject() (
               implicit s =>
                 libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
             }
-            val libCardInfo = libraryInfoCommander.createLibraryCardInfo(newLibrary, request.user, viewerOpt = Some(request.user), withFollowing = false, LibraryController.defaultLibraryImageSize)
+            val libCardInfo = libraryInfoCommander.createLibraryCardInfo(newLibrary, BasicUser.fromUser(request.user), viewerOpt = Some(request.userId), withFollowing = false, LibraryController.defaultLibraryImageSize)
             Ok(Json.obj("library" -> Json.toJson(libCardInfo), "listed" -> membership.map(_.listed)))
         }
     }
@@ -179,11 +180,10 @@ class LibraryController @Inject() (
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    val viewerOpt = request.userOpt
     val (lib, info) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(id)
       val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
-      val info = libraryInfoCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+      val info = libraryInfoCommander.createLibraryCardInfos(Seq(lib), owners, request.userIdOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
       (lib, info)
     }
     val path = libPathCommander.getPathForLibraryUrlEncoded(lib)

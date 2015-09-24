@@ -184,8 +184,7 @@ class OrganizationCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session =>
       val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
       val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId).toSet)
-      val viewerOpt = userIdOpt.map(userRepo.get)
-      libraryInfoCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+      libraryInfoCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, userIdOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
     }
   }
 

@@ -239,9 +239,8 @@ class MobileLibraryController @Inject() (
     val libs = libraryInfoCommander.getLibrariesUserCanKeepTo(userId, includeOrgLibraries = true)
     val libOwnerIds = libs.map(_._1.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
     }
 
     val writeableLibraryInfos = libraryCards.map { libraryCard =>
@@ -298,9 +297,8 @@ class MobileLibraryController @Inject() (
     }
     val libOwnerIds = writeableLibraries.map(_._2.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
       libraryCards
     }
 
