@@ -7,15 +7,13 @@ import play.api.libs.json._
 
 import scala.annotation.implicitNotFound
 
-trait NotificationKind[N <: NotificationEvent, G] {
+trait NotificationKind[N <: NotificationEvent] {
 
   val name: String
 
   implicit val format: Format[N]
 
-  implicit val selfCompanion: NotificationKind[N, G] = this
-
-  def groupIdentifier: Option[GroupIdentifier[G]]
+  implicit val selfCompanion: NotificationKind[N] = this
 
   /**
    * Defines whether a new event of this kind should be grouped together with existing events in the same notification.
@@ -27,12 +25,18 @@ trait NotificationKind[N <: NotificationEvent, G] {
   def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean
 }
 
+trait GroupIdentifierNotificationKind[N <: NotificationEvent, G] extends NotificationKind[N] {
+
+  def groupIdentifier: GroupIdentifier[G] = GroupIdentifier[G]
+
+  def
+
+}
+
 /**
  * Defines a kind of notification that guarantees that it does not group events.
  */
-trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKind[N, Nothing] {
-
-  final def groupIdentifier: Option[GroupIdentifier[Nothing]] = None
+trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKind[N] {
 
   final def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean = false
 
@@ -40,7 +44,7 @@ trait NonGroupingNotificationKind[N <: NotificationEvent] extends NotificationKi
 
 object NotificationKind {
 
-  private val kinds: Set[NKind] = CompanionTypeSystem[NotificationEvent, NotificationKind[_ <: NotificationEvent, _]]("N")
+  private val kinds: Set[NKind] = CompanionTypeSystem[NotificationEvent, NotificationKind[_ <: NotificationEvent]]("N")
 
   private val kindsByName: Map[String, NKind] = kinds.map(kind => kind.name -> kind).toMap
 

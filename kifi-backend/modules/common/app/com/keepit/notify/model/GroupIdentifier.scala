@@ -1,6 +1,7 @@
 package com.keepit.notify.model
 
 import com.keepit.common.db.Id
+import play.api.libs.json.{JsString, JsResult, JsValue, Format}
 
 /**
  * A shortcut to grouping events quickly. If the group identifier function returns Some for a notification kind,
@@ -24,7 +25,14 @@ trait GroupIdentifier[A] { self =>
 
 }
 
-object GroupIdentifier {
+trait GroupIdentifierLowPriorityImplicits {
+  implicit def formatForGroupIdentifier[A](gid: GroupIdentifier[A]): Format[A] = new Format[A] {
+    def reads(json: JsValue): JsResult[A] = json.validate[JsString].map(s => gid.deserialize(s.value))
+    def writes(o: A): JsValue = JsString(gid.serialize(o))
+  }
+}
+
+object GroupIdentifier extends GroupIdentifierLowPriorityImplicits {
 
   def apply[A](implicit id: GroupIdentifier[A]): GroupIdentifier[A] = id
 
@@ -40,8 +48,8 @@ object GroupIdentifier {
     }
 
   implicit def longGroupIdentifier: GroupIdentifier[Long] = new GroupIdentifier[Long] {
-    override def serialize(that: Long): String = that.toString
-    override def deserialize(str: String): Long = str.toLong
+    def serialize(that: Long): String = that.toString
+    def deserialize(str: String): Long = str.toLong
   }
 
   implicit def idGroupIdentifier[A]: GroupIdentifier[Id[A]] = GroupIdentifier[Long].inmap(Id(_), _.id)

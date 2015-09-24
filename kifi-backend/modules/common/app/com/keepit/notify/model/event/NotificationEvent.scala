@@ -250,7 +250,7 @@ case class NewMessage(
 
 }
 
-object NewMessage extends NotificationKind[NewMessage, Long] {
+object NewMessage extends GroupIdentifierNotificationKind[NewMessage, Long] {
 
   override val name: String = "new_message"
 
@@ -261,8 +261,6 @@ object NewMessage extends NotificationKind[NewMessage, Long] {
     (__ \ "messageThreadId").format[Long] and
     (__ \ "messageId").format[Long]
   )(NewMessage.apply, unlift(NewMessage.unapply))
-
-  override def groupIdentifier: Option[GroupIdentifier[Long]] = Some(GroupIdentifier[Long])
 
   override def shouldGroupWith(newEvent: NewMessage, existingEvents: Set[NewMessage]): Boolean = {
     val existing = existingEvents.head
@@ -332,7 +330,7 @@ case class OwnedLibraryNewCollabInvite(
 
 }
 
-object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewCollabInvite, Nothing] {
+object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewCollabInvite] {
 
   override val name: String = "owned_library_new_collab_invite"
 
@@ -343,8 +341,6 @@ object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewColla
       (__ \ "inviteeId").format[Id[User]] and
       (__ \ "libraryId").format[Id[Library]]
     )(OwnedLibraryNewCollabInvite.apply, unlift(OwnedLibraryNewCollabInvite.unapply))
-
-  override def groupIdentifier: Option[GroupIdentifier[Nothing]] = None
 
   override def shouldGroupWith(newEvent: OwnedLibraryNewCollabInvite, existingEvents: Set[OwnedLibraryNewCollabInvite]): Boolean = {
     // only check a random event, they should all have the same inviter and library
@@ -366,7 +362,7 @@ case class OwnedLibraryNewFollowInvite(
 
 }
 
-object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollowInvite, Nothing] {
+object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollowInvite] {
 
   override val name: String = "owned_library_new_follow_invite"
 
@@ -377,8 +373,6 @@ object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollo
       (__ \ "inviteeId").format[Id[User]] and
       (__ \ "libraryId").format[Id[Library]]
     )(OwnedLibraryNewFollowInvite.apply, unlift(OwnedLibraryNewFollowInvite.unapply))
-
-  override def groupIdentifier: Option[GroupIdentifier[Nothing]] = None
 
   override def shouldGroupWith(newEvent: OwnedLibraryNewFollowInvite, existingEvents: Set[OwnedLibraryNewFollowInvite]): Boolean = {
     // only check a random event, they should all have the same inviter and library
@@ -495,7 +489,7 @@ case class DepressedRobotGrumble(
 
 }
 
-object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble, Nothing] {
+object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
 
   override val name: String = "depressed_robot_grumble"
 
@@ -506,8 +500,6 @@ object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble, Not
       (__ \ "grumblingAbout").format[String] and
       (__ \ "shouldGroup").formatNullable[Boolean]
     )(DepressedRobotGrumble.apply, unlift(DepressedRobotGrumble.unapply))
-
-  override def groupIdentifier: Option[GroupIdentifier[Nothing]] = None
 
   override def shouldGroupWith(newEvent: DepressedRobotGrumble, existingEvents: Set[DepressedRobotGrumble]): Boolean = newEvent.shouldGroup.getOrElse(false)
 
