@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.eliza.model._
 import com.keepit.notify.delivery.WsNotificationDelivery
 import com.keepit.notify.info.StandardNotificationInfo
-import com.keepit.notify.model.NotificationKind
+import com.keepit.notify.model.{GroupIdentifierNotificationKind, NotificationKind}
 import com.keepit.notify.model.event.NotificationEvent
 
 import scala.concurrent.ExecutionContext
@@ -27,7 +27,10 @@ class NotificationProcessing @Inject() (
   }
 
   private def getGroupIdentifier(event: NotificationEvent): Option[String] = {
-    event.kind.asInstanceOf[NotificationKind[NotificationEvent]].groupIdentifier(event)
+    event.kind match {
+      case kind: GroupIdentifierNotificationKind[event.N, _] => Some(kind.gid.serialize(kind.getIdentifier(event)))
+      case _ => None
+    }
   }
 
   private def saveToExistingNotification(notifId: Id[Notification], event: NotificationEvent): Notification = {
