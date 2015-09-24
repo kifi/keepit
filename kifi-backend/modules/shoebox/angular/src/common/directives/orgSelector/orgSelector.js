@@ -2,32 +2,39 @@
 
 angular.module('kifi')
 
-.directive('kfOrgSelector', ['profileService',
-  function(profileService) {
+.directive('kfOrgSelector', [
+  'profileService', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
+  function(profileService, ORG_PERMISSION, ORG_SETTING_VALUE) {
     return {
       restrict: 'A',
       templateUrl: 'common/directives/orgSelector/orgSelector.tpl.html',
-      scope: { 
+      scope: {
         libraryProps: '=',
         library: '=',
         space: '=?'
       },
-      link: function($scope) {
+      link: function ($scope) {
+        $scope.ORG_PERMISSION = ORG_PERMISSION;
+        $scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
         $scope.me = profileService.me;
         $scope.space = $scope.space || {};
 
-        $scope.unsetOrg = function() {
-          $scope.libraryProps.selectedOrgId = undefined;
-          $scope.space.destination = $scope.me;
+        $scope.unsetOrg = function () {
+          if ($scope.space.destination.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1) {
+            $scope.libraryProps.selectedOrgId = undefined;
+            $scope.space.destination = $scope.me;
+          }
         };
 
-        $scope.setOrg = function(id) { 
-          // Give preference to (1) id from args, (2) current page, (3) First organization in list.
-          var orgId = id || ($scope.library.org || $scope.me.orgs[0]).id;
-          $scope.libraryProps.selectedOrgId = orgId;
-          $scope.space.destination = $scope.me.orgs.filter(function(org) {
-            return org.id === orgId;
-          })[0];
+        $scope.setOrg = function (id) {
+          if ($scope.space.destination.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1) {
+            // Give preference to (1) id from args, (2) current page, (3) First organization in list.
+            var orgId = id || ($scope.library.org || $scope.me.orgs[0]).id;
+            $scope.libraryProps.selectedOrgId = orgId;
+            $scope.space.destination = $scope.me.orgs.filter(function(org) {
+              return org.id === orgId;
+            })[0];
+          }
         };
 
         $scope.spaceIsOrg = function (space) {
@@ -39,10 +46,10 @@ angular.module('kifi')
           org: $scope.library.visibility
         };
 
-        $scope.$watch('space.destination', function(newValue, oldValue) {
+        $scope.$watch('space.destination', function (newValue, oldValue) {
           var oldIsOrg = $scope.spaceIsOrg(oldValue);
           var newIsOrg = $scope.spaceIsOrg(newValue);
-          
+
           if (oldIsOrg !== newIsOrg) {
             if (oldIsOrg) {
               if ($scope.library.visibility === 'organization') {
@@ -63,6 +70,14 @@ angular.module('kifi')
             $scope.library.visibility = 'secret';
           }
         });
+
+        $scope.onClickUpsellRelocate = function () {
+
+        };
+
+        $scope.onHoverUpsellRelocate = function () {
+
+        };
       }
     };
   }

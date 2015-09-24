@@ -1,0 +1,47 @@
+<main class="kf-ops kf-wrapper">
+  <div class="kf-row">
+    <ul class="kf-ops-nav">
+      <li>
+        <a class="kf-link" href="#team-settings">Team Settings</a>
+        <ul class="kf-ops-nav">
+          <li ng-repeat="section in settingsSectionTemplateData">
+            <a
+              class="kf-link"
+              ng-href="{{ '#' + getHeadingAnchor(section.heading) }}"
+              ng-bind="section.heading"
+            ></a>
+          </li>
+        </ul>
+      </li>
+      <li><a class="kf-link" href="#team-plan">Team Plan</a></li>
+      <li><a class="kf-link" href="#team-contacts">Contacts</a></li>
+      <li><a class="kf-link" href="#credit-card">Credit Card</a></li>
+      <li><a class="kf-link" href="#history">History</a></li>
+    </ul>
+    <div class="kf-ops-main">
+      <h1 id="team-settings">Team Settings</h1>
+      <section ng-repeat="section in settingsSectionTemplateData">
+        <h2 id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
+        <div ng-repeat="field in section.fields" class="kf-ops-setting kf-row">
+          <div class="kf-ops-setting-desc kf-main-pane">
+            <h3>{{ field.title }}</h3>
+            <p>{{ field.description }}</p>
+          </div>
+          <select
+            class="kf-ops-setting-select kf-side-pane"
+            ng-model="settings[field.fieldKey].setting"
+            ng-disabled="!settings[field.fieldKey].editable"
+            ng-options="option.value as option.label for option in field.selectOptions"
+            ng-change="updateSettings()"
+          ></select>
+        </div>
+      </section>
+
+      <h1 id="team-plan">Team Plan</h1>
+      <h1 id="team-contacts">Contacts</h1>
+      <h1 id="credit-card">Credit Card</h1>
+      <h1 id="history">History</h1>
+      <div class="kf-ops-push"></div>
+    </div>
+  </div>
+</main>

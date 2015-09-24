@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .factory('profileService', [
-  '$http', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics', '$location', '$window', '$rootScope', 'Clutch', '$rootElement',
-  function ($http, env, $q, util, routeService, socialService, $analytics, $location, $window, $rootScope, Clutch, $rootElement) {
+  '$http', 'net', 'env', '$q', 'util', 'routeService', 'socialService', '$analytics',
+  '$location', '$window', '$rootScope', 'Clutch', '$rootElement',
+  function ($http, net, env, $q, util, routeService, socialService, $analytics,
+            $location, $window, $rootScope, Clutch, $rootElement) {
     var initialized = false;
 
     var me = {};
@@ -29,10 +31,29 @@ angular.module('kifi')
 
     var meService = new Clutch(function () {
       var oldMeId = me.id;
-      return $http.get(routeService.profileUrl).then(function (res) {
+      return $http.get(routeService.profileUrl)
+      .then(function (res) {
         updateMe(res.data);
         updateLoginState(true, me.id !== oldMeId);
         return me;
+      })
+      // TODO(carlos): delete this promise block when the backend returns
+      // settings and plan data.
+      .then(function (me) {
+        return $q.all(me.orgs.map(function (meOrg) {
+          return net
+          .getOrgSettings(meOrg.id)
+          .then(function (response) {
+            var settingsData = response.data;
+            meOrg.planName = settingsData.name;
+            meOrg.settings = settingsData.settings;
+            return me;
+          })['catch'](function () {
+            // If we 403 when getting the featureSettings
+            // we still want to return the `me` object
+            return me;
+          });
+        }));
       })['catch'](function (err) {
         if (err.status === 403) {
           util.replaceObjectInPlace(me, {});
@@ -47,6 +68,7 @@ angular.module('kifi')
       angular.forEach(data, function (val, key) {
         me[key] = val;
       });
+
       me.primaryEmail = getPrimaryEmail(me.emails);
       socialService.setExpiredTokens(me.notAuthed);
       return me;

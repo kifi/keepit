@@ -3,17 +3,24 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService', '$timeout', 'profileService', 'signupService', 'messageTicker',
-  function ($state, $http, $analytics, $location, modalService, orgProfileService, $timeout, profileService, signupService, messageTicker) {
+  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService',
+  '$timeout', 'profileService', 'signupService', 'messageTicker', 'ORG_PERMISSION',
+  'ORG_SETTING_VALUE',
+  function ($state, $http, $analytics, $location, modalService, orgProfileService,
+            $timeout, profileService, signupService, messageTicker, ORG_PERMISSION,
+            ORG_SETTING_VALUE) {
 
   return {
     restrict: 'A',
     scope: {
       profile: '=',
-      membership: '='
+      membership: '=',
+      plan: '='
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
     link: function (scope) {
+      scope.ORG_PERMISSION = ORG_PERMISSION;
+      scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
       scope.state = $state;
 
       var lastSavedInfo = {};
@@ -21,10 +28,10 @@ angular.module('kifi')
       var authToken = $location.search().authToken || '';
       scope.authTokenQueryString = authToken ? 'authToken='+authToken : '';
 
-      scope.readonly = scope.membership.permissions.indexOf('edit_organization') === -1;
+      scope.readonly = scope.membership.permissions.indexOf(ORG_PERMISSION.EDIT_ORGANIZATION) === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
-      scope.showAdminLink = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
+      scope.isAdmin = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
       if (!profileService.userLoggedIn() && scope.profile && scope.membership.invite) {
         signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite});
@@ -112,7 +119,7 @@ angular.module('kifi')
         return !profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !angular.element('#kf-modal').length;
       };
 
-      scope.canInvite = scope.membership.permissions && scope.membership.permissions.indexOf('invite_members') > -1;
+      scope.canInvite = scope.membership.permissions && scope.membership.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
 
       scope.inviteBannerButtons = [
         {
@@ -147,6 +154,22 @@ angular.module('kifi')
           }
         }
       ];
+
+      scope.onClickUpsellMembers = function () {
+
+      };
+
+      scope.onHoverUpsellMembers = function () {
+
+      };
+
+      scope.onClickUpsellInvite = function () {
+
+      };
+
+      scope.onHoverUpsellInvite = function () {
+
+      };
     }
   };
 }]);

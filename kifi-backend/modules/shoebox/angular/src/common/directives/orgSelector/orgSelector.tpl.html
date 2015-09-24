@@ -1,16 +1,48 @@
 <div class="org-selector" >
-  <div 
-    class="org-selector-org" 
+  <div
+    class="org-selector-org"
+    ng-class="{
+      'selected': !libraryProps.selectedOrgId,
+      'disabled': space.destination.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) === -1
+    }"
     ng-click="unsetOrg()"
-    ng-class="{'selected': !libraryProps.selectedOrgId}"
   >
     <img ng-src="{{ me|pic:100 }}" />
     <h1>{{ me|name }}</h1>
+    <!-- show the upsell if the selected space is an org, and not if I'm an org member who has permission to move org libraries. -->
+    <span
+      ng-if="spaceIsOrg(space.destination) && !(space.destination.membership.role === 'member' && space.destination.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1)"
+      kf-upsell
+      position="right"
+      on-click="onClickUpsellRelocate()"
+      on-hover="onHoverUpsellRelocate()"
+    >
+      <span ng-if="space.destination.planName.toLowerCase().indexOf('paid') !== -1">
+        <span ng-if="space.destination.membership.role === 'admin' && space.destination.settings.remove_libraries.setting === ORG_SETTING_VALUE.DISABLED">
+          No one can move libraries out of your team. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: library.org.handle })">settings</a>
+        </span>
+        <span ng-if="space.destination.membership.role=== 'admin' && space.destination.settings.remove_libraries.setting === ORG_SETTING_VALUE.ADMIN">
+          Only admins can move libraries out of your team. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: library.org.handle })">settings</a>
+        </span>
+        <span ng-if="space.destination.membership.role === 'admin' && space.destination.settings.remove_libraries.setting === ORG_SETTING_VALUE.MEMBER">
+          All team members can move libraries out of your team. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: library.org.handle })">settings</a>
+        </span>
+        <span ng-if="space.destination.membership.role === 'member' && space.destination.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) === -1">
+          Moving team libraries is disabled for {{ library.org.name }}
+        </span>
+      </span>
+      <span ng-if="space.destination.planName.toLowerCase().indexOf('paid') === -1 && space.destination.membership.role === 'admin'">
+        Restrict who can move libraries outside of your team by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
+      </span>
+    </span>
   </div>
   <div
     class="org-selector-org"
     ng-repeat="org in me.orgs"
-    ng-class="{'selected': libraryProps.selectedOrgId === org.id}"
+    ng-class="{
+      'selected': libraryProps.selectedOrgId === org.id,
+      'disabled': space.destination.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) === -1
+    }"
     ng-click="setOrg(org.id)"
   >
     <img ng-src="{{ org|pic:100 }}" />

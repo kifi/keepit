@@ -27,37 +27,89 @@
             value="profile.description"
             readonly="readonly"
             ng-if="!(readonly && !profile.description.length)"
-          ></div><div ng-if="showAdminLink"><a class="kf-oph-admin-link" ng-href="https://admin.kifi.com/admin/organization/{{profile.id}}">♡</a></div>
+          ></div><div ng-if="isAdmin"><a class="kf-oph-admin-link" ng-href="https://admin.kifi.com/admin/organization/{{profile.id}}">♡</a></div>
           <p class="kf-oph-url">
             <span kf-click-to-edit on-save="save" readonly="readonly" class-name="'kf-oph-input'" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
           </p>
-          <a ng-if="canInvite" class="kf-link kf-oph-invite-button" ng-click="goToMemberInvite()">
-            <svg
-              kf-symbol-sprite
-              icon="add-member"
-            ></svg>
-            <span>Invite new member</span>
-          </a>
+          <div class="kf-oph-upper-right">
+            <a ng-if="canInvite" class="kf-link kf-oph-invite-button" ng-click="goToMemberInvite()">
+              <svg
+                kf-symbol-sprite
+                icon="add-member"
+              ></svg>
+              <span>Invite new member</span>
+            </a>
+            <span
+              ng-if="membership.role === 'admin'"
+              kf-upsell
+              position="bottom"
+              on-click="onClickUpsellInvite()"
+              on-hover="onHoverUpsellInvite()"
+              class="kf-oph-upsell-invite"
+            >
+              <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
+                Restrict who can invite new members by <a class="kf-link" href="#">Upgrading to Premium</a>.
+              </span>
+              <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
+                <span ng-if="membership.role === 'admin' && plan.settings.invite_members.setting === ORG_SETTING_VALUE.MEMBER">
+                  All team members are able to invite. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
+                </span>
+                <span ng-if="membership.role === 'admin' && plan.settings.invite_members.setting === ORG_SETTING_VALUE.ADMIN">
+                  Only admins are able to invite. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
+                </span>
+              </span>
+            </span>
+          </div>
         </div>
         <nav class="kf-oph-stats">
-          <a 
-            class="kf-oph-stats-a" 
-            ui-sref="orgProfile.libraries" 
+          <button
+            class="kf-oph-stats-a kf-button-textonly"
+            ui-sref="orgProfile.libraries"
             ng-click="onClickTrack($event, 'clickedProfileLibraries')"
             ng-class="{ 'active': state.current.activetab === 'libraries' }"
           >
             <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
             <div class="kf-oph-stats-name">Libraries</div>
-          </a>
-          <a 
-            class="kf-oph-stats-a" 
-            ui-sref="orgProfile.members" 
+          </button>
+          <button
+            ng-if="plan.settings.membership.view_members.setting === ORG_SETTING_VALUE.ANYONE || membership.permissions.indexOf(ORG_PERMISSION.VIEW_MEMBERS) !== -1"
+            class="kf-oph-stats-a kf-button-textonly"
+            ui-sref="orgProfile.members"
             ng-click="onClickTrack($event, 'clickedProfileMembers')"
             ng-class="{ 'active': state.current.activetab === 'members' }"
           >
             <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
             <div class="kf-oph-stats-name">Members</div>
-          </a>
+            <span
+              ng-if="membership.role === 'admin'"
+              kf-upsell
+              position="bottom"
+              on-click="onClickUpsellMembers()"
+              on-hover="onHoverUpsellMembers()"
+              class="kf-oph-upsell-invite"
+            >
+              <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
+                Restrict who can view your team's members by <a class="kf-link" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
+              </span>
+              <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
+                <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.ANYONE">
+                  Your members page is publicly viewable. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
+                </span>
+                <span ng-if="membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.MEMBER">
+                  Only members of {{ profile.name }} can view your team's member list. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: profile.handle })">settings</a>
+                </span>
+              </span>
+            </span>
+          </button>
+          <button
+            class="kf-oph-stats-a kf-button-textonly"
+            ui-sref="orgProfile.settings"
+            ng-click="onClickTrack($event, 'clickedProfileSettings')"
+            ng-class="{ 'active': state.current.activetab ==='settings'}"
+            ng-if="!readonly && isAdmin"
+          >
+            <div class="kf-oph-stats-name">Settings</div>
+          </button>
         </nav>
         </table>
       </div>
