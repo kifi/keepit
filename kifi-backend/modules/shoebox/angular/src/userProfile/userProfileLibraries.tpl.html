@@ -1,12 +1,32 @@
-<div class="kf-upl-nav-container">
-  <nav class="kf-upl-nav">
-    <a class="kf-upl-nav-link" ui-sref=".own" ng-class="{'kf-selected': libraryType === 'own', 'kf-my': viewingOwnProfile}"
-      ng-click="trackLibraryNav('own')">Libraries</a>
-    <a class="kf-upl-nav-link" ui-sref=".following" ng-class="{'kf-selected': libraryType === 'following'}"
-      ng-click="trackLibraryNav('following')">Following</a>
-    <a class="kf-upl-nav-link" ui-sref=".invited" ng-class="{'kf-selected': libraryType === 'invited'}" ng-if="showInvitedLibraries()"
-      ng-click="trackLibraryNav('invited')">Invited</a>
-  </nav>
+<div class="kf-upl-tab-container">
+  <nav class="kf-upl-tab">
+          <button
+            class="kf-upl-tab-a kf-button-textonly"
+            ui-sref=".own"
+            ng-class="{ 'active': libraryType === 'own'}"
+            ng-click="trackLibraryNav('own')"
+          >
+            <div class="kf-upl-tab-name" ng-class="{'kf-my': viewingOwnProfile}">Libraries</div>
+          </button>
+          <button
+          
+            class="kf-upl-tab-a kf-button-textonly"
+            ui-sref=".following"
+            ng-click="trackLibraryNav('following')"
+            ng-class="{ 'active': libraryType === 'following'}"
+          >
+            <div class="kf-upl-tab-name">Following</div>
+          </button>
+          <button
+            class="kf-upl-tab-a kf-button-textonly"
+            ui-sref=".invited"
+            ng-click="onClickTrack($event, 'clickedProfileLibraries')"
+            ng-class="{ 'active': libraryType === 'invited'}"
+            ng-if="showInvitedLibraries()"
+          >
+            <div class="kf-upl-tab-name">Invited</div>
+          </button>
+        </nav>
 </div>
 
 <div class="kf-upl">
