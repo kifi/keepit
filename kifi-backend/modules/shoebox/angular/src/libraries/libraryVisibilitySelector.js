@@ -39,7 +39,7 @@ angular.module('kifi')
         };
 
         $scope.spaceIsOrg = function (space) {
-          return space && !('firstName' in space);
+          return !!space && !('firstName' in space);
         };
 
         $scope.$watch('space', function () {
