@@ -27,13 +27,15 @@
             <h3>{{ field.title }}</h3>
             <p>{{ field.description }}</p>
           </div>
-          <select
-            class="kf-ops-setting-select kf-side-pane"
-            ng-model="settings[field.fieldKey].setting"
-            ng-disabled="!settings[field.fieldKey].editable"
-            ng-options="option.value as option.label for option in field.selectOptions"
-            ng-change="updateSettings()"
-          ></select>
+          <div class="kf-side-pane">
+            <select
+              class="kf-ops-setting-select"
+              ng-model="settings[field.fieldKey].setting"
+              ng-disabled="!settings[field.fieldKey].editable"
+              ng-options="option.value as option.label for option in field.selectOptions"
+              ng-change="updateSettings()"
+            ></select>
+          </div>
         </div>
       </section>
 
