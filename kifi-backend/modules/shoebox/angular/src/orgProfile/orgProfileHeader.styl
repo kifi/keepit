@@ -6,11 +6,9 @@ ophImageWidth = 100px
   color: #fff
   position: relative
 
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    padding-bottom: 12px
-
 .kf-oph-wrapper
   wrapper()
+  padding: 0
   position: relative
 
 .kf-oph-top
@@ -19,14 +17,6 @@ ophImageWidth = 100px
   margin: 0 auto
   display: flex
   flex-direction: column
-
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    padding-top: 12px
-    margin-left: 20px
-    margin-right: 20px
-
-  @media (max-width: appMobileWidth)
-    flex-direction: column
 
   textarea.kf-edit-field
     background: transparent
@@ -86,10 +76,6 @@ ophImageWidth = 100px
   flex: 1
   text-align: left
 
-  @media (max-width: appMobileWidth)
-    margin-right: 25px
-    margin-top: 25px
-
   .kf-oph-input
     width: 100%
     text-align: center
@@ -108,13 +94,6 @@ ophImageWidth = 100px
   color: inherit
   box-sizing: border-box
 
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    line-height: 20px
-    font-size: 14px
-
-  @media screen and (min-width: ophSmallMaxDim)
-    &.kf-click-to-edit .kf-click-to-edit-textarea
-      height: 45px
 
 .kf-oph-description
   color: #d8d8d8
@@ -124,10 +103,6 @@ ophImageWidth = 100px
   word-break: break-word
   width: 100%
   margin-bottom: 10px
-
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    line-height: 16px
-    font-size: 10px
 
   &>a[href]
     color: inherit
@@ -160,21 +135,18 @@ ophImageWidth = 100px
   margin: 10px auto 0
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    margin-top: 2px
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     &::before
       transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
 
 .kf-oph-stats-a
   display: inline-block
-  padding: 6px 10px
+  padding: 6px 14px
   color: #9fa3aa
   background-color: alpha(#fff, 5%)
   border-top-left-radius: 5px
   border-top-right-radius: 5px
-  padding-left: 20px
-  padding-right: 20px
+
+
 
   &:not(.active)[href]:hover
     background-color: alpha(#fff, 10%)
@@ -193,9 +165,6 @@ ophImageWidth = 100px
     .kf-oph-stats-count
       color: inherit
 
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    padding: 3px 5px
-
   .kf-oph-stats-count
   .kf-oph-stats-name
     display: inline-block
@@ -205,19 +174,11 @@ ophImageWidth = 100px
   line-height: 24px
   font-size: 14px
 
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    line-height: 12px
-    font-size: 7px
-
 .kf-oph-stats-count
   color: #fff
   line-height: 24px
   font-size: 14px
   margin-right: 5px
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    line-height: 15px
-    font-size: 11px
 
   :not([href])>&
     color: inherit
@@ -243,8 +204,6 @@ ophImageWidth = 100px
   &:hover
     &:after
       bottom: 0
-
-
 
 .kf-oph-upsell-invite .kf-tooltip-body
   width: 175px
