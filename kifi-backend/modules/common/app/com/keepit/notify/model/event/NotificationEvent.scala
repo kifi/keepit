@@ -262,7 +262,7 @@ object NewMessage extends NotificationKind[NewMessage, Long] {
     (__ \ "messageId").format[Long]
   )(NewMessage.apply, unlift(NewMessage.unapply))
 
-  override def groupIdentifier: Option[GroupIdentifier[Long]] = Some(implicitly[GroupIdentifier[Long]])
+  override def groupIdentifier: Option[GroupIdentifier[Long]] = Some(GroupIdentifier[Long])
 
   override def shouldGroupWith(newEvent: NewMessage, existingEvents: Set[NewMessage]): Boolean = {
     val existing = existingEvents.head

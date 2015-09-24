@@ -1,19 +1,18 @@
-package com.keepit.notify.model.event
+package com.keepit.notify.model
 
 import com.keepit.common.db.Id
-import com.keepit.model.User
 
 /**
  * A shortcut to grouping events quickly. If the group identifier function returns Some for a notification kind,
  * then a new event of that kind will automatically be grouped with the notification with that identifier.
  *
  * Typically grouping is more intelligent and requires reading a couple events from the database and deserializing
- * JSON. For events like [[NewMessage]], which can be grouped with other events far earlier, deserializing a whole bunch
+ * JSON. For events which can be grouped with other events far earlier, deserializing a whole bunch
  * of events from the database to find the right group can be expensive. In addition, events like these do not require
  * advanced grouping behavior and only rely on a few external ids. Therefore, using [[GroupIdentifier]] only requires
  * a simple WHERE sql clause on the notification table instead of a whole bunch of deserialization.
  */
-sealed trait GroupIdentifier[A] { self =>
+trait GroupIdentifier[A] { self =>
 
   def deserialize(str: String): A
   def serialize(that: A): String
@@ -26,6 +25,8 @@ sealed trait GroupIdentifier[A] { self =>
 }
 
 object GroupIdentifier {
+
+  def apply[A](implicit id: GroupIdentifier[A]): GroupIdentifier[A] = id
 
   implicit def tuple2GroupIdentifier[A, B](implicit aGid: GroupIdentifier[A], bGid: GroupIdentifier[B]): GroupIdentifier[(A, B)] =
     new GroupIdentifier[(A, B)] {
@@ -43,6 +44,6 @@ object GroupIdentifier {
     override def deserialize(str: String): Long = str.toLong
   }
 
-  implicit def idGroupIdentifier[A]: GroupIdentifier[Id[A]] = implicitly[GroupIdentifier[Long]].inmap(Id.apply, _.id)
+  implicit def idGroupIdentifier[A]: GroupIdentifier[Id[A]] = GroupIdentifier[Long].inmap(Id(_), _.id)
 
 }
