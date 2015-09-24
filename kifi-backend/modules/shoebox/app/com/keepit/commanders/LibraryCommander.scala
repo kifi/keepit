@@ -100,45 +100,53 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def validateCreateRequest(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RSession): Option[LibraryFail] = {
-    val badMessage: Option[String] = {
-      if (libCreateReq.name.isEmpty || !Library.isValidName(libCreateReq.name)) {
-        log.info(s"[addLibrary] Invalid name ${libCreateReq.name} for $ownerId")
-        Some("invalid_name")
-      } else if (libCreateReq.slug.isEmpty || !LibrarySlug.isValidSlug(libCreateReq.slug)) {
-        log.info(s"[addLibrary] Invalid slug ${libCreateReq.slug} for $ownerId")
-        Some("invalid_slug")
-      } else if (LibrarySlug.isReservedSlug(libCreateReq.slug)) {
-        log.info(s"[addLibrary] Attempted reserved slug ${libCreateReq.slug} for $ownerId")
-        Some("reserved_slug")
-      } else {
-        None
+    val targetSpace = libCreateReq.space.getOrElse(LibrarySpace.fromUserId(ownerId))
+
+    def invalidName = {
+      if (!Library.isValidName(libCreateReq.name)) {
+        Some(LibraryFail(BAD_REQUEST, "invalid_name"))
+      } else None
+    }
+    def invalidSlug = {
+      if (!LibrarySlug.isValidSlug(libCreateReq.slug) || LibrarySlug.isReservedSlug(libCreateReq.slug)) {
+        Some(LibraryFail(BAD_REQUEST, "invalid_slug"))
+      } else None
+    }
+    def slugCollision = {
+      libraryRepo.getBySpaceAndSlug(targetSpace, LibrarySlug(libCreateReq.slug)) match {
+        case Some(existingLibrary) => Some(LibraryFail(BAD_REQUEST, "library_exists_with_given_slug"))
+        case None => None
       }
     }
-    badMessage match {
-      case Some(x) => Some(LibraryFail(BAD_REQUEST, x))
-      case None =>
-        val validSlug = LibrarySlug(libCreateReq.slug)
-        val targetSpace = libCreateReq.space.getOrElse(LibrarySpace.fromUserId(ownerId))
-
-        val userHasPermissionToCreateInSpace = targetSpace match {
-          case OrganizationSpace(orgId) =>
-            val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(ownerId))
-            permissions.contains(OrganizationPermission.ADD_LIBRARIES) &&
-              (libCreateReq.visibility != LibraryVisibility.PUBLISHED || permissions.contains(OrganizationPermission.PUBLISH_LIBRARIES))
-          case UserSpace(userId) =>
-            userId == ownerId // Right now this is guaranteed to be correct, could replace with true
-        }
-        val sameSlugOpt = libraryRepo.getBySpaceAndSlug(targetSpace, validSlug)
-
-        (userHasPermissionToCreateInSpace, sameSlugOpt) match {
-          case (false, _) =>
-            Some(LibraryFail(FORBIDDEN, "cannot_add_library_to_space"))
-          case (_, Some(sameSlug)) =>
-            Some(LibraryFail(BAD_REQUEST, "library_slug_exists"))
-          case (_, None) =>
-            None
-        }
+    def invalidSpace = {
+      val canCreateLibraryInSpace = targetSpace match {
+        case OrganizationSpace(orgId) =>
+          val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(ownerId))
+          permissions.contains(OrganizationPermission.ADD_LIBRARIES) &&
+            (libCreateReq.visibility != LibraryVisibility.PUBLISHED || permissions.contains(OrganizationPermission.PUBLISH_LIBRARIES))
+        case UserSpace(userId) =>
+          userId == ownerId // Right now this is guaranteed to be correct, could replace with true
+      }
+      if (!canCreateLibraryInSpace) Some(LibraryFail(FORBIDDEN, "cannot_add_library_to_space"))
+      else None
     }
+    def invalidVisibility = {
+      (targetSpace, libCreateReq.visibility) match {
+        case (UserSpace(_), LibraryVisibility.ORGANIZATION) =>
+          Some(LibraryFail(BAD_REQUEST, "invalid_visibility"))
+        case (OrganizationSpace(orgId), LibraryVisibility.PUBLISHED) if permissionCommander.getOrganizationPermissions(orgId, Some(ownerId)).contains(OrganizationPermission.PUBLISH_LIBRARIES) =>
+          Some(LibraryFail(FORBIDDEN, "cannot_publish_libraries_in_space"))
+        case _ => None
+      }
+    }
+
+    Stream(
+      invalidName,
+      invalidSlug,
+      slugCollision,
+      invalidSpace,
+      invalidVisibility
+    ).flatten.headOption
   }
 
   def unsafeCreateLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RWSession): Library = {
