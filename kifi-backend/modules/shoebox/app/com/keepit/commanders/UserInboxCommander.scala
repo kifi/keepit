@@ -37,8 +37,8 @@ class UserInboxCommanderImpl @Inject() (
   def getPendingRequests(userId: Id[User], sentBefore: Option[DateTime], limit: Int): Seq[JsValue] = {
     val pendingRequests: Seq[PendingRequest] = db.readOnlyMaster { implicit session =>
       val pendingFriendRequests = friendRequestRepo.getByRecipient(userId).map(PendingConnectionRequest(_))
-      val pendingLibraryInvites = libraryInviteRepo.getByUser(userId, excludeStates = LibraryInviteStates.notActive).map(PendingLibraryInvite.tupled(_))
-      val pendingOrganizationInvites = orgInviteRepo.getByInviteeIdAndDecision(userId, InvitationDecision.PENDING).map(PendingOrganizationInvite(_))
+      val pendingLibraryInvites = libraryInviteRepo.getByUser(userId, excludeStates = LibraryInviteStates.notActive).groupBy(_._1.libraryId).mapValues(_.maxBy(_._1.createdAt)).values.map(PendingLibraryInvite.tupled(_))
+      val pendingOrganizationInvites = orgInviteRepo.getByInviteeIdAndDecision(userId, InvitationDecision.PENDING).groupBy(_.organizationId).mapValues(_.maxBy(_.createdAt)).values.map(PendingOrganizationInvite(_))
       val allPendingRequests = pendingFriendRequests ++ pendingLibraryInvites ++ pendingOrganizationInvites
       sentBefore match {
         case None => allPendingRequests
