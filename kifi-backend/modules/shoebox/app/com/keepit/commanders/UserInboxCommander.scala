@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Singleton, Inject }
+import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -17,6 +17,7 @@ object UserInboxCommander {
   case class PendingOrganizationInvite(invite: OrganizationInvite) extends PendingRequest("org", invite.createdAt)
 }
 
+@ImplementedBy(classOf[UserInboxCommanderImpl])
 trait UserInboxCommander {
   def getPendingRequests(userId: Id[User], sentBefore: Option[DateTime], limit: Int): Seq[JsValue]
 }
