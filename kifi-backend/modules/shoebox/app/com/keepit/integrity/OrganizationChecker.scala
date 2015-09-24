@@ -1,17 +1,18 @@
 package com.keepit.integrity
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.performance.{AlertingTimer, StatsdTiming}
-import com.keepit.common.time.{Clock, _}
+import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
+import com.keepit.common.time.{ Clock, _ }
 import com.keepit.model._
-import com.keepit.payments.{PaidAccountRepo, PaidAccountStates}
+import com.keepit.payments.{ PlanManagementCommander, PaidAccountRepo, PaidAccountStates }
 
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.concurrent.ExecutionContext
 
 @Singleton
@@ -27,6 +28,7 @@ class OrganizationChecker @Inject() (
     orgInviteRepo: OrganizationInviteRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     paidAccountRepo: PaidAccountRepo,
+    planManagementCommander: PlanManagementCommander,
     systemValueRepo: SystemValueRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
@@ -61,13 +63,13 @@ class OrganizationChecker @Inject() (
         zombieMemberships.foreach(orgMembershipRepo.deactivate)
       }
 
-      val zombieCandidates = orgMembershipCandidateRepo.getAllByOrgId(org.id.get, excludeState = Some(OrganizationMembershipStates.INACTIVE))
+      val zombieCandidates = orgMembershipCandidateRepo.getAllByOrgId(org.id.get, states = Set(OrganizationMembershipCandidateStates.ACTIVE))
       if (zombieCandidates.nonEmpty) {
         airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie candidates for these users: ${zombieCandidates.map(_.userId)}")
         zombieCandidates.foreach(orgMembershipCandidateRepo.deactivate)
       }
 
-      val zombieInvites = orgInviteRepo.getAllByOrgId(org.id.get, state = OrganizationMembershipStates.ACTIVE)
+      val zombieInvites = orgInviteRepo.getAllByOrgId(org.id.get, state = OrganizationInviteStates.ACTIVE)
       if (zombieInvites.nonEmpty) {
         airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie invites: ${zombieInvites.map(_.id.get)}")
         zombieInvites.foreach(orgInviteRepo.deactivate)
@@ -96,8 +98,7 @@ class OrganizationChecker @Inject() (
       if (orgGeneralLibrary.isEmpty) {
         log.error(s"[ORG-SYSTEM-LIBS] Org $orgId does not have a general library! Adding one.")
         libraryCommander.unsafeCreateLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId)
-      }
-      else if (orgGeneralLibrary.size > 1) {
+      } else if (orgGeneralLibrary.size > 1) {
         airbrake.notify(s"[ORG-SYSTEM-LIBS] Org $orgId has ${orgGeneralLibrary.size} general libraries! Ahhhhhh!")
       }
     }
