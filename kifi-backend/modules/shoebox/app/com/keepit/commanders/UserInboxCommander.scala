@@ -1,12 +1,11 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.db.{ Model, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.model._
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, JsValue }
@@ -30,9 +29,7 @@ class UserInboxCommanderImpl @Inject() (
     orgInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo,
     libraryInfoCommander: LibraryInfoCommander,
-    organizationCommander: OrganizationCommander,
-    airbrake: AirbrakeNotifier,
-    clock: Clock) extends UserInboxCommander with Logging {
+    organizationCommander: OrganizationCommander) extends UserInboxCommander with Logging {
 
   import UserInboxCommander._
 
