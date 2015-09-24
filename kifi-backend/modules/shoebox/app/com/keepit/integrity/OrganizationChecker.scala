@@ -22,6 +22,7 @@ class OrganizationChecker @Inject() (
     db: Database,
     userRepo: UserRepo,
     libraryRepo: LibraryRepo,
+    libraryMembershipRepo: LibraryMembershipRepo,
     libraryCommander: LibraryCommander,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
@@ -97,7 +98,11 @@ class OrganizationChecker @Inject() (
       val orgGeneralLibrary = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL)
       if (orgGeneralLibrary.isEmpty) {
         log.error(s"[ORG-SYSTEM-LIBS] Org $orgId does not have a general library! Adding one.")
-        libraryCommander.unsafeCreateLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId)
+        val orgGeneralLib = libraryCommander.unsafeCreateLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId)
+        val orgMemberIds = orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId) - org.ownerId
+        orgMemberIds.foreach { userId => // TODO(ryan): you should feel bad about writing this. put the correct `unsafeJoinLibrary` method in LibraryMembershipCommander and call that
+          libraryMembershipRepo.save(LibraryMembership(libraryId = orgGeneralLib.id.get, userId = userId, access = LibraryAccess.READ_WRITE))
+        }
       } else if (orgGeneralLibrary.size > 1) {
         airbrake.notify(s"[ORG-SYSTEM-LIBS] Org $orgId has ${orgGeneralLibrary.size} general libraries! Ahhhhhh!")
       }
