@@ -39,11 +39,11 @@ angular.module('kifi')
         };
 
         $scope.spaceIsOrg = function (space) {
-          return !('firstName' in (space || {}));
+          return !!space && !('firstName' in space);
         };
 
         $scope.$watch('space', function () {
-          var membership = $scope.space.membership;
+          var membership = $scope.space && $scope.space.membership;
 
           // Unset public permissions when moving from an org where we're allowed to publish to one where we are not
           if (membership && membership.permissions.indexOf(ORG_PERMISSION.PUBLISH_LIBRARIES) === -1 && $scope.library.visibility === 'published') {
