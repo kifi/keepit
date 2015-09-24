@@ -15,7 +15,6 @@ angular.module('kifi')
   PUBLISH_LIBRARIES: 'publish_libraries',
   REMOVE_MEMBERS: 'remove_members',
   ADD_LIBRARIES: 'add_libraries',
-  REMOVE_LIBRARIES: 'remove_libraries',
   VIEW_MEMBERS: 'view_members'
 })
 
