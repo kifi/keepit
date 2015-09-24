@@ -9,6 +9,7 @@ import play.api.libs.functional.syntax._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
 import scala.concurrent.duration._
+import scala.util.{ Failure, Success, Try }
 
 package object time {
 
@@ -69,23 +70,12 @@ package object time {
   val ISO_8601_DAY_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd").withZone(DEFAULT_DATE_TIME_ZONE)
 
   implicit object DateTimeJsonFormat extends Format[DateTime] {
-    def reads(json: JsValue) = try {
-      json.asOpt[String] match {
-        case Some(timeStr) => JsSuccess(parseStandardTime(timeStr))
-        case None => JsSuccess(new DateTime(json.as[Long], DEFAULT_DATE_TIME_ZONE))
-      }
-    } catch {
-      case ex: Throwable => JsError(s"Could not deserialize time $json")
-    }
+    def reads(json: JsValue) = json.validate[String].map(parseStandardTime) orElse json.validate[Long].map(new DateTime(_, DEFAULT_DATE_TIME_ZONE))
     def writes(o: DateTime) = JsString(o.toStandardTimeString)
   }
 
   implicit object LocalDateJsonFormat extends Format[LocalDate] {
-    def reads(json: JsValue) = try {
-      JsSuccess(parseStandardDate(json.as[String]))
-    } catch {
-      case ex: Throwable => JsError(s"Could not deserialize time $json")
-    }
+    def reads(json: JsValue) = json.validate[String].map(parseStandardDate)
     def writes(o: LocalDate) = JsString(o.toStandardDateString)
   }
 
@@ -155,15 +145,18 @@ package object time {
     }
   }
 
-  implicit def dateTimePathBinder(implicit pathBindable: PathBindable[Long]) = new PathBindable[DateTime] {
+  implicit def dateTimePathBinder(implicit longBindable: PathBindable[Long]) = new PathBindable[DateTime] {
     override def bind(key: String, value: String): Either[String, DateTime] = {
-      pathBindable.bind(key, value) match {
-        case Right(time) => Right(new DateTime(time))
-        case _ => Left("Unable to bind an DateTime")
+      longBindable.bind(key, value) match {
+        case Right(time) => Right(new DateTime(time, DEFAULT_DATE_TIME_ZONE))
+        case _ => Try(parseStandardTime(value)) match {
+          case Success(dateTime) => Right(dateTime)
+          case Failure(_) => Left("Unable to bind an DateTime")
+        }
       }
     }
     override def unbind(key: String, time: DateTime): String = {
-      pathBindable.unbind(key, time.getMillis)
+      longBindable.unbind(key, time.getMillis)
     }
   }
 
