@@ -43,7 +43,7 @@ angular.module('kifi')
         };
 
         $scope.spaceIsOrg = function (space) {
-          return !('firstName' in (space || {}));
+          return space && !('firstName' in space);
         };
 
         // Store privacy setting when switching between org and user profile
