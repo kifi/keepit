@@ -236,6 +236,7 @@ GET     /m/1/user/settings                      @com.keepit.controllers.mobile.M
 POST    /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.setSettings()
 GET     /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.getAllPersonas()
 POST    /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.selectPersonas()
+GET     /m/1/user/pending                       @com.keepit.controllers.mobile.MobileUserController.getPendingRequests(before: Option[DateTime] ?= None, limit: Int ?= 10)
 
 POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.MobileUserController.setAppsflyerAttribution()
 
