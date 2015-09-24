@@ -335,6 +335,16 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           addResponse must beLeft
         }
       }
+      "fail if a user tries to create nonsensical libraries" in {
+        withDb(modules: _*) { implicit injector =>
+          val user = db.readWrite { implicit session =>
+            UserFactory.user().saved
+          }
+          val addRequest = LibraryInitialValues(name = "Kifi Library", visibility = LibraryVisibility.ORGANIZATION, slug = "kifilib", space = Some(user.id.get))
+          val addResponse = libraryCommander.createLibrary(addRequest, user.id.get)
+          addResponse must beLeft
+        }
+      }
     }
     "when getFullLibraryInfo(s) is called" in {
       "serve up a full library info" in {
