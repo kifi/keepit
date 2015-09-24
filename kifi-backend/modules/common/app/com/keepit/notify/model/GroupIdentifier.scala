@@ -1,7 +1,7 @@
 package com.keepit.notify.model
 
 import com.keepit.common.db.Id
-import play.api.libs.json.{JsString, JsResult, JsValue, Format}
+import play.api.libs.json.{ JsString, JsResult, JsValue, Format }
 
 /**
  * A shortcut to grouping events quickly. If the group identifier function returns Some for a notification kind,

@@ -15,7 +15,7 @@ sealed trait NotificationEvent { self =>
 
   val recipient: Recipient
   val time: DateTime
-  val kind: NotificationKind[N, _]
+  val kind: NotificationKind[N]
 
 }
 
@@ -266,6 +266,8 @@ object NewMessage extends GroupIdentifierNotificationKind[NewMessage, Long] {
     val existing = existingEvents.head
     existing.messageThreadId == newEvent.messageThreadId
   }
+
+  override def getIdentifier(that: NewMessage): Long = that.messageId
 
 }
 
