@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfUserProfileLibraryCard', [
   '$rootScope', '$location', 'profileService', 'libraryService', 'modalService',
-  'platformService', 'signupService', 'LIB_PERMISSION',
+  'platformService', 'signupService', 'LIB_PERMISSION', 'ORG_SETTING_VALUE',
   function ($rootScope, $location, profileService, libraryService, modalService,
-            platformService, signupService, LIB_PERMISSION) {
+            platformService, signupService, LIB_PERMISSION, ORG_SETTING_VALUE) {
     // values that are the same for all cards that coexist at any one time
     var currentPageName;
     var currentPageOrigin;
@@ -154,6 +154,17 @@ angular.module('kifi')
         });
     }
 
+    function hasPermission(permission) {
+      var scope = this;
+      return scope.lib.membership && scope.lib.membership.permissions.indexOf(permission) !== -1;
+    }
+
+    function getMeOrg() {
+      var scope = this;
+      var meOrg = profileService.me.orgs.filter(function (o) { return o.id === scope.lib.org.id; }).pop();
+      return meOrg;
+    }
+
     return {
       restrict: 'A',
       replace: true,
@@ -166,6 +177,8 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/userProfileLibraryCard.tpl.html',
       link: function (scope) {
+        scope.LIB_PERMISSION = LIB_PERMISSION;
+        scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
         // cheaper to stash than to bind functions that need them
         currentPageName = scope.currentPageName;
         currentPageOrigin = scope.currentPageOrigin;
@@ -206,6 +219,8 @@ angular.module('kifi')
         scope.onCollabButtonClick = onCollabButtonClick;
         scope.toggleSubscribed = toggleSubscribed;
         scope.trackUplCardClick = trackUplCardClick;
+        scope.hasPermission = hasPermission;
+        scope.getMeOrg = getMeOrg;
       }
     };
   }
