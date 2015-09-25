@@ -32,7 +32,7 @@ object KeepExportFormat {
   }
 }
 
-case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[String]]) {
+case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[String]], keepLibs: Map[Id[Keep], Seq[Library]]) {
   def formatAsHtml: String = {
     val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
                    |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
@@ -50,7 +50,8 @@ case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[Stri
       val title = keep.title.map(_.replace("&", "&amp;")) getOrElse ""
       val tagString = {
         val tags = keepTags(keep.id.get).map(_.replace("&", "&amp;").replace("\"", ""))
-        s""""${tags.mkString(",")}""""
+        val libNames = keepLibs(keep.id.get).map(_.name.replace("&", "&amp;").replace("\"", ""))
+        s""""${(tags ++ libNames).mkString(",")}""""
       }
       val date = keep.keptAt.getMillis / 1000
       val line = {
@@ -68,7 +69,8 @@ case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[Stri
         "url" -> keep.url,
         "source" -> keep.source.value,
         "note" -> keep.note.getOrElse[String](""),
-        "tags" -> keepTags(keep.id.get)
+        "tags" -> keepTags(keep.id.get),
+        "libraries" -> keepLibs(keep.id.get).map(_.name)
       )
     }
     Json.obj("keeps" -> JsArray(keepJsonArray))

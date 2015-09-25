@@ -102,29 +102,37 @@ class KeepExportCommanderTest extends Specification with ShoeboxTestInjector {
           keeps(0).id.get -> Seq("1a", "1b"),
           keeps(1).id.get -> Seq("2a")
         )
-        KeepExportResponse(keeps, keepTags)
+        val keepLibs = Map(
+          keeps(0).id.get -> Seq(lib),
+          keeps(1).id.get -> Seq(lib)
+        )
+        KeepExportResponse(keeps, keepTags, keepLibs)
       }
 
       "for html exports" in {
         withDb(modules: _*) { implicit injector =>
-          sampleExport().formatAsHtml === """<!DOCTYPE NETSCAPE-Bookmark-file-1>
-                                             |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-                                             |<!--This is an automatically generated file.
-                                             |It will be read and overwritten.
-                                             |Do Not Edit! -->
-                                             |<Title>Kifi Bookmarks Export</Title>
-                                             |<H1>Bookmarks</H1>
-                                             |<DL>
-                                             |<DT><A HREF="http://www.url1.com" ADD_DATE="1404475200" TAGS="1a,1b">title 1</A>
-                                             |<DT><A HREF="http://www.url2.com" ADD_DATE="1404475200" TAGS="2a">title 2</A>
-                                             |</DL>""".stripMargin
+          val export = sampleExport()
+          val libName = export.keepLibs.values.flatten.head.name
+          export.formatAsHtml === s"""<!DOCTYPE NETSCAPE-Bookmark-file-1>
+                                      |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+                                      |<!--This is an automatically generated file.
+                                      |It will be read and overwritten.
+                                      |Do Not Edit! -->
+                                      |<Title>Kifi Bookmarks Export</Title>
+                                      |<H1>Bookmarks</H1>
+                                      |<DL>
+                                      |<DT><A HREF="http://www.url1.com" ADD_DATE="1404475200" TAGS="1a,1b,$libName">title 1</A>
+                                      |<DT><A HREF="http://www.url2.com" ADD_DATE="1404475200" TAGS="2a,$libName">title 2</A>
+                                      |</DL>""".stripMargin
         }
       }
       "for json exports" in {
         withDb(modules: _*) { implicit injector =>
-          sampleExport().formatAsJson === Json.obj("keeps" -> Json.arr(
-            Json.obj("title" -> "title 1", "date" -> 1404475200, "url" -> "http://www.url1.com", "source" -> "keeper", "note" -> "note 1", "tags" -> Json.arr("1a", "1b")),
-            Json.obj("title" -> "title 2", "date" -> 1404475200, "url" -> "http://www.url2.com", "source" -> "keeper", "note" -> "note 2", "tags" -> Json.arr("2a"))
+          val export = sampleExport()
+          val libName = export.keepLibs.values.flatten.head.name
+          export.formatAsJson === Json.obj("keeps" -> Json.arr(
+            Json.obj("title" -> "title 1", "date" -> 1404475200, "url" -> "http://www.url1.com", "source" -> "keeper", "note" -> "note 1", "tags" -> Json.arr("1a", "1b"), "libraries" -> Json.arr(libName)),
+            Json.obj("title" -> "title 2", "date" -> 1404475200, "url" -> "http://www.url2.com", "source" -> "keeper", "note" -> "note 2", "tags" -> Json.arr("2a"), "libraries" -> Json.arr(libName))
           ))
         }
       }
