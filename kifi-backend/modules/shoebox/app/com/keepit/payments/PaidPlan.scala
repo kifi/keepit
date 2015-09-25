@@ -59,9 +59,6 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
     val NORMAL = Kind("normal")
     val GRANDFATHERED = Kind("grandfathered")
     val CUSTOM = Kind("custom")
-    val FREE = Kind("free")
-    val STANDARD = Kind("standard")
-    val ENTERPRISE = Kind("enterprise")
   }
 }
 
@@ -75,7 +72,7 @@ sealed trait Feature {
 object Feature {
   import OrganizationPermissionFeature._
   def get(name: String): Option[Feature] = ALL.find(_.name == name)
-  val ALL: Set[Feature] = Set(PublishLibraries, InviteMembers, GroupMessaging, EditLibrary, ViewMembers, MoveOrganizationLibraries, CreateSlackIntegration, EditOrganization)
+  val ALL: Set[Feature] = Set(PublishLibraries, InviteMembers, GroupMessaging, EditLibrary, ViewMembers, RemoveOrganizationLibraries, CreateSlackIntegration, EditOrganization)
 }
 sealed abstract class OrganizationPermissionFeature(val permission: OrganizationPermission) extends Feature {
   def roleOptions: Map[String, Seq[Option[OrganizationRole]]]
@@ -114,7 +111,7 @@ object OrganizationPermissionFeature {
     val roleOptions = Map("anyone" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER), None), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
   }
 
-  case object MoveOrganizationLibraries extends OrganizationPermissionFeature(OrganizationPermission.MOVE_ORG_LIBRARIES) {
+  case object RemoveOrganizationLibraries extends OrganizationPermissionFeature(OrganizationPermission.REMOVE_LIBRARIES) {
     val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)))
   }
 
@@ -135,7 +132,7 @@ case class ClientFeature(name: String, setting: String, editable: Boolean) // Se
 case class FeatureSetting(name: String, setting: String) // Received from clients, stored in db for PaidAccount
 
 object FeatureSetting {
-  def alterSetting(featureSettings: Set[FeatureSetting], toChange: FeatureSetting): Set[FeatureSetting] = {
-    featureSettings - featureSettings.find(_.name == toChange.name).get + toChange
+  def alterSettings(featureSettings: Set[FeatureSetting], toChange: Set[FeatureSetting]): Set[FeatureSetting] = {
+    featureSettings -- toChange.map(newSetting => featureSettings.find(_.name == newSetting.name).get) ++ toChange
   }
 }

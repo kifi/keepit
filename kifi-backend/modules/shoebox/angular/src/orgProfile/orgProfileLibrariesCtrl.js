@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('OrgProfileLibrariesCtrl', [
   '$rootScope', '$scope', '$stateParams', 'profile', 'profileService',
-  'orgProfileService', 'modalService', 'Paginator',
+  'orgProfileService', 'modalService', 'Paginator', 'ORG_PERMISSION',
   function ($rootScope, $scope, $stateParams, profile, profileService,
-            orgProfileService, modalService, Paginator) {
+            orgProfileService, modalService, Paginator, ORG_PERMISSION) {
     var organization = profile.organization;
     var libraryLazyLoader = new Paginator(librarySource);
     var newLibraryIds = {};
@@ -56,7 +56,7 @@ angular.module('kifi')
     $scope.organization = organization;
 
     $scope.me = profileService.me;
-    $scope.canInvite = $scope.membership.permissions && $scope.membership.permissions.indexOf('invite_members') > -1;
+    $scope.canInvite = $scope.membership.permissions && $scope.membership.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
@@ -95,7 +95,7 @@ angular.module('kifi')
       });
     };
 
-    $scope.canCreateLibraries = ($scope.membership.permissions.indexOf('add_libraries') !== -1);
+    $scope.canCreateLibraries = ($scope.membership.permissions.indexOf(ORG_PERMISSION.ADD_LIBRARIES) !== -1);
 
     $scope.shouldShowMoveCard = function () {
       return $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();

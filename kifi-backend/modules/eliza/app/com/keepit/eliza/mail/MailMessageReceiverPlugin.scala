@@ -85,6 +85,12 @@ class MailDiscussionReceiverActor @Inject() (
           }
         }
         inbox.close(true)
+      } catch {
+        case ex: Throwable =>
+        // There's not a ton we can do here, but javax.mail loves to communicate and share some love by throwing exceptions
+        // Based on my professional experience, it's basically always not an issue. Mailserver problems, bad connection, full moon, etc
+        // So, discarding. This unfortunately means that if something's off, like bad user/pass, we won't know. I'm sure this comment
+        // will give someone a chuckle later if that indeed happened.
       } finally {
         store.close()
       }
@@ -174,7 +180,7 @@ class MailMessageReceiverPluginImpl @Inject() (
     actor.ref ! FetchNewDiscussionReplies
   }
   override def onStart() {
-    scheduleTaskOnOneMachine(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDiscussionReplies, FetchNewDiscussionReplies.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 3 minutes, 55 seconds, actor.ref, FetchNewDiscussionReplies, FetchNewDiscussionReplies.getClass.getSimpleName)
   }
 }
 

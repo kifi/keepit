@@ -263,7 +263,7 @@ class SharedWsMessagingController @Inject() (
           val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
           val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
           val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
-          socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
+          websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
         }
     },
 

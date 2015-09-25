@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfManageLibrary', [
-  '$location', '$state', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'util',
-  function ($location, $state, friendService, libraryService, modalService,
-    profileService, util) {
+  '$window', '$rootScope', '$location', '$state', 'friendService',
+  'libraryService', 'modalService', 'profileService', 'util',
+  function ($window, $rootScope, $location, $state, friendService,
+            libraryService, modalService, profileService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -88,7 +88,7 @@ angular.module('kifi')
         };
 
         scope.spaceIsOrg = function (space) {
-          return !('firstName' in space);
+          return !!space && !('firstName' in space);
         };
 
         var ownerType = function(space) {
@@ -263,7 +263,7 @@ angular.module('kifi')
         //
         // On link.
         //
-        
+
         // Create scope.library
         if (scope.modalData && scope.modalData.library) {
           scope.library = _.cloneDeep(scope.modalData.library);
@@ -340,6 +340,15 @@ angular.module('kifi')
               scope.emptySlug = false;
             }
           }
+        });
+
+        [
+          $rootScope.$on('$stateChangeSuccess', function () {
+            $window.scrollTo(0, 0);
+            scope.close();
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
         });
 
         element.find('.manage-lib-name-input').focus();

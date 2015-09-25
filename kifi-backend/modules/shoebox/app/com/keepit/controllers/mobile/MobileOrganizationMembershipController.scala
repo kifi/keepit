@@ -43,53 +43,46 @@ class MobileOrganizationMembershipController @Inject() (
     }
   }
 
-  def modifyMembers(pubId: PublicId[Organization]) = OrganizationUserAction(pubId)(parse.tolerantJson) { request =>
+  def modifyMember(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MODIFY_MEMBERS)(parse.tolerantJson) { request =>
     implicit val format = KeyFormat.key2Format[ExternalId[User], OrganizationRole]("userId", "newRole")
-    val modifyParamsValidated = (request.body \ "members").validate[Seq[(ExternalId[User], OrganizationRole)]]
+    val modifyParamsValidated = request.body.validate[(ExternalId[User], OrganizationRole)]
 
     modifyParamsValidated match {
       case JsError(errs) =>
-        airbrake.notify(s"Could not json-validate modifyRequests from ${request.request.userId}", new JsResultException(errs))
+        airbrake.notify(s"Could not json-validate modifyRequests from ${request.request.userId}: ${request.body}", new JsResultException(errs))
         BadRequest(Json.obj("error" -> "badly_formatted_request"))
       case JsSuccess(modifyParams, _) =>
-        val (externalIds, roles) = modifyParams.unzip
+        val (externalId, newRole) = modifyParams
 
-        val roleMap = (externalIds, roles).zipped.toMap
-        val userIdMap = userCommander.getByExternalIds(externalIds).mapValues(_.id.get)
-        val externalIdMap = userIdMap.map(_.swap)
-        val modifyRequests = externalIds.map { extId =>
-          OrganizationMembershipModifyRequest(request.orgId, request.request.userId, targetId = userIdMap(extId), newRole = roleMap(extId))
-        }
-        orgMembershipCommander.modifyMemberships(modifyRequests) match {
-          case Left(failure) => failure.asErrorResponse
-          case Right(responses) =>
-            val modifications = responses.keys.map(r => (externalIdMap(r.targetId), r.newRole))
-            Ok(Json.obj("modifications" -> modifications))
+        val targetId = userCommander.getByExternalId(externalId).id.get
+        val modifyRequest = OrganizationMembershipModifyRequest(request.orgId, request.request.userId, targetId = targetId, newRole = newRole)
+        orgMembershipCommander.modifyMembership(modifyRequest) match {
+          case Left(fail) => fail.asErrorResponse
+          case Right(response) =>
+            val modification = externalId -> response.membership.role
+            Ok(Json.obj("modification" -> modification))
         }
     }
   }
 
-  def removeMembers(pubId: PublicId[Organization]) = OrganizationUserAction(pubId)(parse.tolerantJson) { request =>
+  def removeMember(pubId: PublicId[Organization]) = OrganizationUserAction(pubId)(parse.tolerantJson) { request =>
     implicit val format = KeyFormat.key1Format[ExternalId[User]]("userId")
-    val removeParamsValidated = (request.body \ "members").validate[Seq[ExternalId[User]]]
+    val removeParamsValidated = request.body.validate[ExternalId[User]]
 
     removeParamsValidated match {
       case JsError(errs) =>
-        airbrake.notify(s"Could not json-validate removeRequests from ${request.request.userId}", new JsResultException(errs))
+        airbrake.notify(s"Could not json-validate removeRequests from ${request.request.userId}: ${request.body}", new JsResultException(errs))
         BadRequest(Json.obj("error" -> "badly_formatted_request"))
       case JsSuccess(removeParams, _) =>
-        val externalIds = removeParams
+        val externalId = removeParams
 
-        val userIdMap = userCommander.getByExternalIds(externalIds).mapValues(_.id.get)
-        val externalIdMap = userIdMap.map(_.swap)
-        val removeRequests = externalIds.map { extId =>
-          OrganizationMembershipRemoveRequest(request.orgId, request.request.userId, targetId = userIdMap(extId))
-        }
-        orgMembershipCommander.removeMemberships(removeRequests) match {
-          case Left(failure) => failure.asErrorResponse
-          case Right(responses) =>
-            val removals = responses.keys.map(r => externalIdMap(r.targetId))
-            Ok(Json.obj("removals" -> removals))
+        val targetId = userCommander.getByExternalId(externalId).id.get
+        val removeRequest = OrganizationMembershipRemoveRequest(request.orgId, request.request.userId, targetId = targetId)
+        orgMembershipCommander.removeMembership(removeRequest) match {
+          case Left(fail) => fail.asErrorResponse
+          case Right(response) =>
+            val removal = externalId
+            Ok(Json.obj("removal" -> removal))
         }
     }
   }

@@ -1,6 +1,29 @@
 <div class="kf-upl-card kf-upl-lib-card" ng-style="{'background-color': lib.color}"
      ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
-  <a class="kf-upl-card-setting svg-settings-gear" ng-if="::myProfile && isOwner && lib.kind !== 'system_main' && lib.kind !== 'system_secret'" href="javascript:" ng-click="openModifyLibrary(lib, currentPageOrigin)"></a>
+  <span
+    ng-if="lib.org.membership.role === 'admin'"
+    kf-upsell
+    position="bottom"
+    on-click="onClickUpsellMembers()"
+    on-hover="onHoverUpsellMembers()"
+    class="kf-upl-card-upsell"
+  >
+    <span ng-if="getMeOrg().planName.toLowerCase().indexOf('paid') === -1">
+      Enable admins or all team members to edit library settings by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
+    </span>
+    <span ng-if="getMeOrg().planName.toLowerCase().indexOf('paid') !== -1">
+      <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
+        Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: lib.org.handle })">settings</a>
+      </span>
+      <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().settings.force_edit_libraries.setting === ORG_SETTING_VALUE.ADMIN">
+        Admins and the library owner can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: lib.org.handle })">settings</a>
+      </span>
+      <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().settings.force_edit_libraries.setting === ORG_SETTING_VALUE.MEMBER">
+        All team members can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: lib.org.handle })">settings</a>
+      </span>
+    </span>
+  </span>
+  <a class="kf-upl-card-setting svg-settings-gear" ng-if="hasPermission(LIB_PERMISSION.EDIT_LIBRARY)" href="javascript:" ng-click="openModifyLibrary(lib, currentPageOrigin)"></a>
   <a class="kf-upl-card-link" href="{{lib.path}}" ng-click="trackUplCardClick(lib, 'clickedLibraryTitle')">
     <div class="kf-upl-card-icon" ng-class="::{'svg-card-star': lib.kind === 'system_main', 'svg-card-lock': lib.kind === 'system_secret'}" ng-if="::(lib.kind === 'system_main' || lib.kind === 'system_secret')"></div>
     <div class="kf-upl-card-cover">

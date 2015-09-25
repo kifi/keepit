@@ -27,6 +27,8 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit
 
+  def setAllRead(recipient: Recipient)(implicit session: RWSession): Unit
+
   def getNotificationsForPage(recipient: Recipient, nUri: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Seq[Notification]
 
   def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
@@ -127,6 +129,13 @@ class NotificationRepoImpl @Inject() (
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit = {
     val q = for (
       row <- rows if row.recipient === recipient && row.hasNewEvent && row.lastEvent <= time
+    ) yield row.lastChecked
+    q.update(Some(clock.now()))
+  }
+
+  def setAllRead(recipient: Recipient)(implicit session: RWSession): Unit = {
+    val q = for (
+      row <- rows if row.recipient === recipient && row.hasNewEvent
     ) yield row.lastChecked
     q.update(Some(clock.now()))
   }

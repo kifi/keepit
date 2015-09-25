@@ -193,14 +193,8 @@ class MobileLibraryController @Inject() (
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
-
-      val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(userIdOpt, libraryId)
-      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(userIdOpt, libraryId)
-      val accessStr = membershipOpt.map(_.access.value).getOrElse("none")
-      val membershipJson = Json.toJson(membershipOpt)
-      val inviteJson = Json.toJson(inviteOpt)
-      val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-      Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
+      val accessStr = editedLibInfo.membership.map(_.access.value).getOrElse("none")
+      Ok(Json.obj("library" -> editedLibInfo, "membership" -> accessStr)) // todo: remove membership once it's not being used
     }
   }
 
@@ -218,19 +212,13 @@ class MobileLibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize, None).map { libInfo =>
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
-
-            val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
-            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
-            val accessStr = membershipOpt.map(_.access.value).getOrElse("none")
-            val membershipJson = Json.toJson(membershipOpt)
-            val inviteJson = Json.toJson(inviteOpt)
-            val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            val accessStr = editedLibInfo.membership.map(_.access.value).getOrElse("none")
             libraryCommander.trackLibraryView(request.userIdOpt, library)
-            Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
+            Ok(Json.obj("library" -> editedLibInfo, "membership" -> accessStr)) // todo: remove membership once it's not being used
           }
         })
       case Left(fail) =>
@@ -251,9 +239,8 @@ class MobileLibraryController @Inject() (
     val libs = libraryInfoCommander.getLibrariesUserCanKeepTo(userId, includeOrgLibraries = true)
     val libOwnerIds = libs.map(_._1.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
     }
 
     val writeableLibraryInfos = libraryCards.map { libraryCard =>
@@ -310,9 +297,8 @@ class MobileLibraryController @Inject() (
     }
     val libOwnerIds = writeableLibraries.map(_._2.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
       libraryCards
     }
 

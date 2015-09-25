@@ -24,6 +24,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.shoebox.controllers.LibraryAccessActions
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -110,7 +111,7 @@ class LibraryController @Inject() (
               implicit s =>
                 libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
             }
-            val libCardInfo = libraryInfoCommander.createLibraryCardInfo(newLibrary, request.user, viewerOpt = Some(request.user), withFollowing = false, LibraryController.defaultLibraryImageSize)
+            val libCardInfo = libraryInfoCommander.createLibraryCardInfo(newLibrary, BasicUser.fromUser(request.user), viewerOpt = Some(request.userId), withFollowing = false, LibraryController.defaultLibraryImageSize)
             Ok(Json.obj("library" -> Json.toJson(libCardInfo), "listed" -> membership.map(_.listed)))
         }
     }
@@ -171,25 +172,18 @@ class LibraryController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryInfoCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt) map { libInfo =>
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, libraryId)
-      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, libraryId)
       val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libraryId).map { sub => LibrarySubscription.toSubKey(sub) } }
-
-      val membershipJson = Json.toJson(membershipOpt)
-      val inviteJson = Json.toJson(inviteOpt)
       val subscriptionJson = Json.toJson(subKeys)
-      val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-      Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
+      Ok(Json.obj("library" -> libInfo, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
     }
   }
 
   def getLibrarySummaryById(pubId: PublicId[Library]) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
     val id = Library.decodePublicId(pubId).get
-    val viewerOpt = request.userOpt
     val (lib, info) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(id)
       val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
-      val info = libraryInfoCommander.createLibraryCardInfos(Seq(lib), owners, viewerOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+      val info = libraryInfoCommander.createLibraryCardInfos(Seq(lib), owners, request.userIdOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
       (lib, info)
     }
     val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
@@ -208,31 +202,13 @@ class LibraryController @Inject() (
             case _ => false
           }
           if (useMultilibLogic) log.info(s"[KTL-EXP] Serving up library ${library.id.get} using new logic for user ${request.userIdOpt.get}")
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, showKeepCreateTime = true, useMultilibLogic).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, authTokenOpt, showKeepCreateTime = true, useMultilibLogic).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
-            // if viewer, get invite for that viewer. Otherwise, if viewer unknown, use authToken to find invite info
-            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get) orElse {
-              authTokenOpt.flatMap { authToken =>
-                db.readOnlyMaster { implicit s =>
-                  libraryInviteRepo.getByLibraryIdAndAuthToken(library.id.get, authToken).headOption.map { invite =>
-                    val inviter = basicUserRepo.load(invite.inviterId)
-                    (invite, inviter)
-                  }
-                }.map {
-                  case (invite, inviter) =>
-                    LibraryInviteInfo.createInfo(invite, inviter)
-                }
-              }
-            }
             val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(library.id.get).map { sub => LibrarySubscription.toSubKey(sub) } }
 
             libraryCommander.trackLibraryView(request.userIdOpt, library)
-            val membershipJson = Json.toJson(membershipOpt)
-            val inviteJson = Json.toJson(inviteOpt)
             val subscriptionJson = Json.toJson(subKeys)
-            val libraryJson = Json.toJson(libInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-            Ok(Json.obj("library" -> libraryJson, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
+            Ok(Json.obj("library" -> libInfo, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
           }
         })
       case Left(fail) => Future.successful {
@@ -714,7 +690,8 @@ class LibraryController @Inject() (
               collaborators = LibraryCardInfo.chooseCollaborators(info.collaborators),
               lastKept = info.lastKept.getOrElse(new DateTime(0)),
               following = None,
-              membership = None,
+              membership = info.membership,
+              invite = info.invite,
               modifiedAt = info.modifiedAt,
               kind = info.kind,
               path = info.path,

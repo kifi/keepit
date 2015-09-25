@@ -92,7 +92,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             else None
           }
           case OrganizationInviteCancelRequest(orgId, requesterId, targetEmails, targetUsers) => {
-            val existingInvites = organizationInviteRepo.getAllByOrganization(request.orgId)
+            val existingInvites = organizationInviteRepo.getAllByOrgId(request.orgId)
             val doInvitesExist = targetEmails.forall(email => existingInvites.exists(_.emailAddress.contains(email))) &&
               targetUsers.forall(userId => existingInvites.exists(_.userId.contains(userId)))
 
@@ -263,7 +263,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     getValidationError(request) match {
       case Some(fail) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
       case None =>
-        val existingInvites = organizationInviteRepo.getAllByOrganization(request.orgId)
+        val existingInvites = organizationInviteRepo.getAllByOrgId(request.orgId)
         val emailInvitesToCancel = existingInvites.filter { inv =>
           inv.emailAddress.exists { email => request.targetEmails.contains(email) }
         }
@@ -383,7 +383,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite] = {
     db.readOnlyReplica { implicit session =>
-      organizationInviteRepo.getAllByOrganization(orgId)
+      organizationInviteRepo.getAllByOrgId(orgId)
     }
   }
 

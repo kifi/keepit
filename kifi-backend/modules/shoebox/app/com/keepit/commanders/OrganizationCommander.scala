@@ -184,8 +184,7 @@ class OrganizationCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session =>
       val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
       val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId).toSet)
-      val viewerOpt = userIdOpt.map(userRepo.get)
-      libraryInfoCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, viewerOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+      libraryInfoCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, userIdOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
     }
   }
 
@@ -247,23 +246,24 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse] = {
-    Try {
+    val orgCreateTry = Try {
       db.readOnlyMaster { implicit session => getValidationError(request) } match {
         case Some(fail) =>
           Left(fail)
         case None =>
-          val org = db.readWrite { implicit session =>
+          db.readWrite { implicit session =>
             val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
-            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session).get
+            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session)
+            val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId)
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
-            org
+            Right(OrganizationCreateResponse(request, org, orgGeneralLibrary))
           }
-          Right(OrganizationCreateResponse(request, org))
       }
-    } match {
+    }
+    orgCreateTry match {
       case Success(Left(fail)) => Left(fail)
       case Success(Right(response)) => Right(response)
       case Failure(OrganizationFail.HANDLE_UNAVAILABLE) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
@@ -291,7 +291,7 @@ class OrganizationCommanderImpl @Inject() (
     validationError match {
       case Some(orgFail) => Left(orgFail)
       case None =>
-        val libsToReturn = db.readWrite { implicit session =>
+        val (libsToReturn, libsToDelete) = db.readWrite { implicit session =>
           val org = orgRepo.get(request.orgId)
 
           val memberships = orgMembershipRepo.getAllByOrgId(org.id.get)
@@ -300,7 +300,7 @@ class OrganizationCommanderImpl @Inject() (
           val membershipCandidates = organizationMembershipCandidateRepo.getAllByOrgId(org.id.get)
           membershipCandidates.foreach { mc => organizationMembershipCandidateRepo.deactivate(mc) }
 
-          val invites = orgInviteRepo.getAllByOrganization(org.id.get)
+          val invites = orgInviteRepo.getAllByOrgId(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
 
           orgRepo.save(org.sanitizeForDelete)
@@ -310,25 +310,30 @@ class OrganizationCommanderImpl @Inject() (
           val requester = userRepo.get(request.requesterId)
           organizationAnalytics.trackOrganizationEvent(org, requester, request)
 
-          val libsToReturn = libraryRepo.getBySpace(org.id.get, excludeState = None)
-          libsToReturn
+          val libsToDelete = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).map(_.id.get)
+          val libsToReturn = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.USER_CREATED, excludeState = None).map(_.id.get)
+          (libsToReturn, libsToDelete)
         }
+
+        val deletingLibsFut = Future.sequence(libsToDelete.map(libraryCommander.unsafeAsyncDeleteLibrary)).map { _ => }
 
         // Modifying an org opens its own DB session. Do these separately from the rest of the logic
         val returningLibsFut = Future {
-          libsToReturn.foreach { lib =>
+          libsToReturn.foreach { libId =>
+            val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libId) }
             libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
           }
         }
-        Right(OrganizationDeleteResponse(request, returningLibsFut))
+        Right(OrganizationDeleteResponse(request, returningLibsFut, deletingLibsFut))
     }
   }
 
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse] = {
-    db.readWrite { implicit session =>
-      getValidationError(request) match {
-        case Some(orgFail) => Left(orgFail)
-        case None =>
+    val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
+    validationError match {
+      case Some(orgFail) => Left(orgFail)
+      case None =>
+        db.readWrite { implicit session =>
           val org = orgRepo.get(request.orgId)
           orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner, excludeState = None) match {
             case Some(membership) if membership.isActive =>
@@ -337,9 +342,14 @@ class OrganizationCommanderImpl @Inject() (
               orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
+
+          libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL).foreach { lib =>
+            libraryCommander.unsafeTransferLibrary(lib.id.get, request.newOwner)
+          }
+
           organizationAnalytics.trackOrganizationEvent(modifiedOrg, userRepo.get(request.requesterId), request)
           Right(OrganizationTransferResponse(request, modifiedOrg))
-      }
+        }
     }
   }
 

@@ -472,7 +472,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               "subscribed":false,
               "permissions": ${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))}
              },
-             "invite": null,
              "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
            },
            "subscriptions": [],
@@ -521,9 +520,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
              "numCollaborators":0,
              "numFollowers":0,
              "whoCanInvite":"collaborator",
-             "modifiedAt": ${lib1Updated2.updatedAt.getMillis},
-             "membership":null,
+             "modifiedAt":${lib1Updated2.updatedAt.getMillis},
              "invite": {
+              "access":"read_only",
+              "lastInvitedAt":${Json.toJson(t1.plusMinutes(3))},
               "inviter": {
                 "id":"${basicUser1.externalId}",
                 "firstName":"${basicUser1.firstName}",
@@ -531,7 +531,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "pictureName":"${basicUser1.pictureName}",
                 "username":"${basicUser1.username.value}"
               },
-              "access":"read_only",
               "lastInvite":${t1.plusMinutes(3).getMillis}
              },
              "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
@@ -636,7 +635,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "subscribed":false,
                 "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))}
                },
-               "invite": null,
                "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
              },
              "subscriptions": [],

@@ -32,7 +32,7 @@ object ContextList {
 object SimpleContextData {
   implicit val format = new Format[SimpleContextData] {
     def reads(json: JsValue): JsResult[SimpleContextData] = json match {
-      case string: JsString => JsSuccess(string.asOpt[DateTime].map(ContextDate) getOrElse ContextStringData(string.as[String]))
+      case string: JsString => string.validate[DateTime].map(ContextDate) orElse JsSuccess(ContextStringData(string.value))
       case JsNumber(value) => JsSuccess(ContextDoubleData(value.toDouble))
       case JsBoolean(bool) => JsSuccess(ContextBoolean(bool))
       case _ => JsError()

@@ -39,7 +39,6 @@ trait LibraryInviteCommander {
   def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit
   def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit
   def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[ExternalId[User], EmailAddress]): Either[(String, String), String]
-  def getViewerInviteInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryInviteInfo]
 
   type LibraryInviteeUser = { def isCollaborator: Boolean }
 }
@@ -514,19 +513,6 @@ class LibraryInviteCommanderImpl @Inject() (
       }
       case Right(None) => Left("error" -> "library_invite_not_found")
       case Left(error) => Left("error" -> error)
-    }
-  }
-
-  def getViewerInviteInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryInviteInfo] = {
-    userIdOpt.flatMap { userId =>
-      db.readOnlyMaster { implicit s =>
-        val inviteOpt = libraryInviteRepo.getLastSentByLibraryIdAndUserId(libraryId, userId, Set(LibraryInviteStates.ACTIVE))
-        val basicUserOpt = inviteOpt map { inv => basicUserRepo.load(inv.inviterId) }
-        (inviteOpt, basicUserOpt)
-      } match {
-        case (Some(invite), Some(inviter)) => Some(LibraryInviteInfo.createInfo(invite, inviter))
-        case (_, _) => None
-      }
     }
   }
 }

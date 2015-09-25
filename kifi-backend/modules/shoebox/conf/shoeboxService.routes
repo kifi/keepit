@@ -236,6 +236,7 @@ GET     /m/1/user/settings                      @com.keepit.controllers.mobile.M
 POST    /m/1/user/settings                      @com.keepit.controllers.mobile.MobileUserController.setSettings()
 GET     /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.getAllPersonas()
 POST    /m/1/user/personas                      @com.keepit.controllers.mobile.MobileUserPersonaController.selectPersonas()
+GET     /m/1/user/pending                       @com.keepit.controllers.mobile.MobileUserController.getPendingRequests(before: Option[DateTime] ?= None, limit: Int ?= 10)
 
 POST    /m/1/attribution/appsflyer              @com.keepit.controllers.mobile.MobileUserController.setAppsflyerAttribution()
 
@@ -306,8 +307,8 @@ POST    /m/1/organizations/:id/members/invite            @com.keepit.controllers
 POST    /m/1/organizations/:id/members/invites/accept    @com.keepit.controllers.mobile.MobileOrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: Option[String] ?= None)
 POST    /m/1/organizations/:id/members/invites/decline   @com.keepit.controllers.mobile.MobileOrganizationInviteController.declineInvitation(id: PublicId[Organization])
 POST    /m/1/organizations/:id/members/invites/link      @com.keepit.controllers.mobile.MobileOrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
-POST    /m/1/organizations/:id/members/modify            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.modifyMembers(id: PublicId[Organization])
-POST    /m/1/organizations/:id/members/remove            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.removeMembers(id: PublicId[Organization])
+POST    /m/1/organizations/:id/members/modify            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.modifyMember(id: PublicId[Organization])
+POST    /m/1/organizations/:id/members/remove            @com.keepit.controllers.mobile.MobileOrganizationMembershipController.removeMember(id: PublicId[Organization])
 GET     /m/1/organizations/:id/libraries                 @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int, limit: Int)
 
 ##########################################
@@ -541,8 +542,8 @@ POST          /site/organizations/:id/members/invites/cancel    @com.keepit.cont
 POST          /site/organizations/:id/members/invites/accept    @com.keepit.controllers.website.OrganizationInviteController.acceptInvitation(id: PublicId[Organization], authToken: Option[String] ?= None)
 POST          /site/organizations/:id/members/invites/decline   @com.keepit.controllers.website.OrganizationInviteController.declineInvitation(id: PublicId[Organization])
 POST          /site/organizations/:id/members/invites/link      @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
-POST          /site/organizations/:id/members/modify            @com.keepit.controllers.website.OrganizationMembershipController.modifyMembers(id: PublicId[Organization])
-POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMembers(id: PublicId[Organization])
+POST          /site/organizations/:id/members/modify            @com.keepit.controllers.website.OrganizationMembershipController.modifyMember(id: PublicId[Organization])
+POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMember(id: PublicId[Organization])
 GET           /site/organizations/:id/members/suggest            @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
@@ -1006,6 +1007,7 @@ POST    /internal/shoebox/database/getOrganizationsForUsers        @com.keepit.c
 GET     /internal/shoebox/database/getOrgTrackingValues            @com.keepit.controllers.internal.ShoeboxController.getOrgTrackingValues(orgId: Id[Organization])
 POST    /internal/shoebox/database/getBasicOrganizationsByIds            @com.keepit.controllers.internal.ShoeboxController.getBasicOrganizationsByIds()
 GET     /internal/shoebox/database/getOrganizationUserRelationship       @com.keepit.controllers.internal.ShoeboxController.getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User])
+POST    /internal/shoebox/database/getUserPermissionsByOrgId       @com.keepit.controllers.internal.ShoeboxController.getUserPermissionsByOrgId()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
@@ -1083,6 +1085,7 @@ GET     /:handle                   @com.keepit.controllers.website.KifiSiteRoute
 GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:handle/members           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
