@@ -193,15 +193,13 @@ class UserCommander @Inject() (
   }
 
   def updateUserInfo(userId: Id[User], userData: UpdatableUserInfo): Unit = {
-    db.readOnlyMaster { implicit session =>
-      val user = userRepo.getNoCache(userId)
+    val user = db.readOnlyMaster { implicit session => userRepo.getNoCache(userId) }
 
-      userData.emails.foreach(updateEmailAddresses(userId, user.firstName, _))
-      userData.biography.foreach(updateUserBiography(userId, _))
+    userData.emails.foreach(userEmailAddressCommander.updateEmailAddresses(userId, _))
+    userData.biography.foreach(updateUserBiography(userId, _))
 
-      if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
-        updateUserNames(user, userData.firstName.get, userData.lastName.get)
-      }
+    if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
+      updateUserNames(user, userData.firstName.get, userData.lastName.get)
     }
   }
 
@@ -443,32 +441,6 @@ class UserCommander @Inject() (
     import scala.concurrent.duration._
     scheduler.scheduleOnce(5 minutes) {
       f
-    }
-  }
-
-  @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
-  def updateEmailAddresses(userId: Id[User], firstName: String, emails: Seq[EmailInfo]): Unit = {
-    db.readWrite { implicit session =>
-      val uniqueEmails = emails.map(_.address).toSet
-      val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
-
-      // Add new emails
-      val added = (uniqueEmails -- existing.map(_.address)).map { address =>
-        userEmailAddressCommander.intern(userId, address).get._1 tap { addedEmail =>
-          session.onTransactionSuccess(userEmailAddressCommander.sendVerificationEmail(addedEmail))
-        }
-      }
-
-      // Set the correct email as primary
-      (added ++ existing).foreach { emailRecord =>
-        val isPrimary = emails.exists { emailInfo => (emailInfo.address == emailRecord.address) && (emailInfo.isPrimary || emailInfo.isPendingPrimary) }
-        if (isPrimary && !emailRecord.primary) {
-          userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
-        }
-      }
-
-      // Remove missing emails
-      toRemove.foreach(userEmailAddressCommander.deactivate(_))
     }
   }
 

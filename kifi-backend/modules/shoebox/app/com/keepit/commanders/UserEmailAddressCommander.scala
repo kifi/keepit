@@ -29,6 +29,9 @@ trait UserEmailAddressCommander {
   def deactivate(emailAddress: UserEmailAddress, force: Boolean = false)(implicit session: RWSession): Try[Unit]
 
   def addEmail(userId: Id[User], address: EmailAddress): Either[String, Unit]
+
+  @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
+  def updateEmailAddresses(userId: Id[User], emails: Seq[EmailInfo]): Unit
 }
 
 @Singleton
@@ -155,6 +158,31 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       case Success((_, false)) => Left("email_already_added")
       case Failure(_: UnavailableEmailAddressException) => Left("permission_denied")
       case Failure(error) => throw error
+    }
+  }
+
+  def updateEmailAddresses(userId: Id[User], emails: Seq[EmailInfo]): Unit = {
+    db.readWrite { implicit session =>
+      val uniqueEmails = emails.map(_.address).toSet
+      val (existing, toRemove) = userEmailAddressRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
+
+      // Add new emails
+      val added = (uniqueEmails -- existing.map(_.address)).map { address =>
+        intern(userId, address).get._1 tap { addedEmail =>
+          session.onTransactionSuccess(sendVerificationEmail(addedEmail))
+        }
+      }
+
+      // Set the correct email as primary
+      (added ++ existing).foreach { emailRecord =>
+        val isPrimary = emails.exists { emailInfo => (emailInfo.address == emailRecord.address) && (emailInfo.isPrimary || emailInfo.isPendingPrimary) }
+        if (isPrimary && !emailRecord.primary) {
+          setAsPrimaryEmail(emailRecord)
+        }
+      }
+
+      // Remove missing emails
+      toRemove.foreach(deactivate(_))
     }
   }
 }
