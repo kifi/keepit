@@ -4,7 +4,7 @@ import akka.actor.Scheduler
 import com.google.inject.{ Provider, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
-import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender, EmailSenderProvider }
+import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.core._
@@ -21,7 +21,7 @@ import com.keepit.common.usersegment.{ UserSegment, UserSegmentFactory }
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
-import com.keepit.model.{ UserEmailAddress, _ }
+import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.SocialContactJoined
 import com.keepit.search.SearchServiceClient
@@ -134,7 +134,6 @@ class UserCommander @Inject() (
     searchClient: SearchServiceClient,
     s3ImageStore: S3ImageStore,
     heimdalClient: HeimdalServiceClient,
-    userImageUrlCache: UserImageUrlCache,
     libraryMembershipRepo: LibraryMembershipRepo,
     friendStatusCommander: FriendStatusCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
@@ -413,15 +412,6 @@ class UserCommander @Inject() (
     import scala.concurrent.duration._
     scheduler.scheduleOnce(5 minutes) {
       f
-    }
-  }
-
-  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
-    val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
-    val imageName = user.pictureName.getOrElse("0")
-    implicit val txn = TransactionalCaching.Implicits.directCacheAccess
-    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width, imageName)) {
-      s3ImageStore.getPictureUrl(Some(width), user, imageName)
     }
   }
 
