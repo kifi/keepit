@@ -117,7 +117,6 @@ class KeepCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     normalizedURIInterner: NormalizedURIInterner,
     clock: Clock,
-    libraryInfoCommander: LibraryInfoCommander,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     userExperimentRepo: UserExperimentRepo,
@@ -751,20 +750,6 @@ class KeepCommanderImpl @Inject() (
       line
     }
     before + keepExports.map(createExport).mkString("\n") + after
-  }
-
-  // Until we can refactor all clients to use libraries instead of privacy, we need to look up the library.
-  // This should be removed as soon as we can. - Andrew
-  private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
-  private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
-    val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
-      def call() = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
-    })
-    if (isPrivate) {
-      secret
-    } else {
-      main
-    }
   }
 
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
