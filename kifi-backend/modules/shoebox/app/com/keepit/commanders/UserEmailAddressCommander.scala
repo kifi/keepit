@@ -12,7 +12,7 @@ import com.keepit.heimdal.{ HeimdalServiceClient, ContextStringData }
 import com.keepit.model._
 import com.keepit.common.core._
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Success, Failure, Try }
+import scala.util._
 
 class UnavailableEmailAddressException(email: UserEmailAddress, requesterId: Id[User]) extends Exception(s"Email address ${email.address} has already been verified by user ${email.userId}, cannot be claimed by user $requesterId.")
 class LastEmailAddressException(email: UserEmailAddress) extends Exception(s"${email.address} is the last email address of user ${email.userId}, it cannot be removed.")
@@ -29,6 +29,8 @@ trait UserEmailAddressCommander {
   def deactivate(emailAddress: UserEmailAddress, force: Boolean = false)(implicit session: RWSession): Try[Unit]
 
   def addEmail(userId: Id[User], address: EmailAddress): Either[String, Unit]
+  def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit]
+  def removeEmail(userId: Id[User], address: EmailAddress): Either[String, Unit]
 
   @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
   def updateEmailAddresses(userId: Id[User], emails: Seq[EmailInfo]): Unit
@@ -161,6 +163,34 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     }
   }
 
+  def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      userEmailAddressRepo.getByAddressAndUser(userId, address) match {
+        case Some(emailRecord) => Right {
+          if (!emailRecord.primary) {
+            setAsPrimaryEmail(emailRecord)
+          }
+        }
+        case _ => Left("unknown_email")
+      }
+    }
+  }
+
+  def removeEmail(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      userEmailAddressRepo.getByAddressAndUser(userId, address) match {
+        case Some(email) => deactivate(email) match {
+          case Success(_) => Right(())
+          case Failure(_: LastEmailAddressException) => Left("last_email")
+          case Failure(_: LastVerifiedEmailAddressException) => Left("last_verified_email")
+          case Failure(_: PrimaryEmailAddressException) => Left("primary_email")
+          case Failure(unknownError) => throw unknownError
+        }
+        case _ => Left("unknown_email")
+      }
+    }
+  }
+
   def updateEmailAddresses(userId: Id[User], emails: Seq[EmailInfo]): Unit = {
     db.readWrite { implicit session =>
       val uniqueEmails = emails.map(_.address).toSet
@@ -185,4 +215,5 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       toRemove.foreach(deactivate(_))
     }
   }
+
 }

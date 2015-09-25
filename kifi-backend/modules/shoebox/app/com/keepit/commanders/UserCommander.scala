@@ -216,34 +216,6 @@ class UserCommander @Inject() (
     }
   }
 
-  def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
-    db.readWrite { implicit session =>
-      emailRepo.getByAddressAndUser(userId, address) match {
-        case Some(emailRecord) => Right {
-          if (!emailRecord.primary) {
-            userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
-          }
-        }
-        case _ => Left("unknown_email")
-      }
-    }
-  }
-
-  def removeEmail(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
-    db.readWrite { implicit session =>
-      emailRepo.getByAddressAndUser(userId, address) match {
-        case Some(email) => userEmailAddressCommander.deactivate(email) match {
-          case Success(_) => Right(())
-          case Failure(_: LastEmailAddressException) => Left("last email")
-          case Failure(_: LastVerifiedEmailAddressException) => Left("last verified email")
-          case Failure(_: PrimaryEmailAddressException) => Left("trying to remove primary email")
-          case Failure(unknownError) => throw unknownError
-        }
-        case _ => Left("email not found")
-      }
-    }
-  }
-
   def socialNetworkInfo(userId: Id[User]) = db.readOnlyMaster { implicit s =>
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }

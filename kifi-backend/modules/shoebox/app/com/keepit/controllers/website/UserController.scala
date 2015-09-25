@@ -259,7 +259,7 @@ class UserController @Inject() (
       case Failure(e) =>
         BadRequest(e.getMessage)
       case Success(targetEmail) =>
-        userCommander.makeEmailPrimary(request.userId, targetEmail) match {
+        userEmailAddressCommander.makeEmailPrimary(request.userId, targetEmail) match {
           case Left(s) => BadRequest(s)
           case Right(_) => Ok(JsString("success"))
         }
@@ -271,7 +271,7 @@ class UserController @Inject() (
       case Failure(e) =>
         BadRequest(e.getMessage)
       case Success(targetEmail) =>
-        userCommander.removeEmail(request.userId, targetEmail) match {
+        userEmailAddressCommander.removeEmail(request.userId, targetEmail) match {
           case Left(s) => BadRequest(s)
           case Right(_) => Ok(JsString("success"))
         }
