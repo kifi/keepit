@@ -8,6 +8,7 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.notify.model.GroupingNotificationKind
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -88,4 +89,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   }
 
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]] = Future.successful(Set.empty)
+
+  def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G): Future[Boolean] = ???
+
 }

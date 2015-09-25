@@ -199,6 +199,7 @@ class UserConnectionsCommander @Inject() (
     val friendReqF = elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
       Recipient(recipient),
       currentDateTime,
+      recipient.id.get,
       myUser.id.get
     )) map { id =>
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))

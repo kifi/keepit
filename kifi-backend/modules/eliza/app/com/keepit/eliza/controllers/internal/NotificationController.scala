@@ -31,7 +31,7 @@ class NotificationController @Inject() (
             NotificationCategory("new_system")
           )
         }
-
+      case _ =>
     }
     Ok(Json.toJson(notif.map(_.notification)))
   }

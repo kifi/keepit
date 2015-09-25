@@ -10,6 +10,7 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.notify.model.GroupingNotificationKind
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -73,6 +74,8 @@ trait ElizaServiceClient extends ServiceClient {
   def connectedClientCount: Future[Seq[Int]]
 
   def sendNotificationEvent(event: NotificationEvent): Future[Unit]
+
+  def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G): Future[Boolean]
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -164,6 +167,8 @@ class ElizaServiceClientImpl @Inject() (
     val payload = Json.toJson(event)
     call(Eliza.internal.sendNotificationEvent(), payload).imap(_ => ())
   }
+
+  def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G): Future[Boolean] = ???
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
     call(Eliza.internal.getThreadContentForIndexing(sequenceNumber, maxBatchSize), callTimeouts = longTimeout)

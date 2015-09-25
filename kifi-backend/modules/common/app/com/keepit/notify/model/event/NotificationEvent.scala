@@ -53,7 +53,7 @@ case class NewConnectionInvite(
 
 }
 
-object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvite] {
+object NewConnectionInvite extends GroupingNotificationKind[NewConnectionInvite, (Id[User], Id[User])] {
 
   override val name: String = "new_connection_invite"
 
@@ -73,6 +73,11 @@ object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvi
     inviteeFormat and
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
+
+  override def getIdentifier(that: NewConnectionInvite): (Id[User], Id[User]) = that.inviterId -> that.inviteeId
+
+  override def shouldGroupWith(newEvent: NewConnectionInvite, existingEvents: Set[NewConnectionInvite]): Boolean =
+    Set(newEvent.inviterId -> newEvent.inviteeId) == existingEvents.map(evt => evt.inviterId -> evt.inviteeId)
 
 }
 
