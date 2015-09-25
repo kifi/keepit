@@ -196,35 +196,21 @@ class UserConnectionsCommander @Inject() (
 
     val emailF = emailSender.friendRequest(recipient.id.get, myUserId)
 
-    val friendReqF = elizaServiceClient.sendGlobalNotification( //push sent
-      userIds = Set(recipient.id.get),
-      title = s"${requestingUser.firstName} ${requestingUser.lastName} wants to connect with you on Kifi",
-      body = s"Enjoy ${requestingUser.firstName}’s keeps in your search results and message ${requestingUser.firstName} directly.",
-      linkText = s"Respond to ${requestingUser.firstName}’s invitation",
-      linkUrl = s"https://www.kifi.com/${requestingUser.username.value}",
-      imageUrl = requestingUserImage,
-      sticky = false,
-      category = NotificationCategory.User.FRIEND_REQUEST,
-      extra = Some(Json.obj("friend" -> BasicUser.fromUser(requestingUser)))
-    ) map { id =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-        if (canSendPush) {
-          elizaServiceClient.sendUserPushNotification(
-            userId = recipient.id.get,
-            message = s"${myUser.fullName} invited you to connect",
-            recipient = myUser,
-            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-            category = UserPushNotificationCategory.UserConnectionRequest)
-        }
-        db.readWrite { implicit session =>
-          friendRequestRepo.save(request.copy(messageHandle = Some(id)))
-        }
-      }
-    elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
+    val friendReqF = elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
       Recipient(recipient),
       currentDateTime,
       myUser.id.get
-    ))
+    )) map { id =>
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+      if (canSendPush) {
+        elizaServiceClient.sendUserPushNotification(
+          userId = recipient.id.get,
+          message = s"${myUser.fullName} invited you to connect",
+          recipient = myUser,
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+          category = UserPushNotificationCategory.UserConnectionRequest)
+      }
+    }
     emailF flatMap (_ => friendReqF)
   }
 
