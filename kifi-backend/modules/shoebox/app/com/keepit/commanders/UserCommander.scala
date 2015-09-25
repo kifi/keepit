@@ -218,18 +218,11 @@ class UserCommander @Inject() (
     }
   }
 
-  // todo(Léo): this method isn't resilient to intermediate failures, should be made idempotent and atomic (and confirmation email can be sent async)
-  def addEmail(userId: Id[User], address: EmailAddress, isPrimary: Boolean): Future[Either[String, Unit]] = {
+  def addEmail(userId: Id[User], address: EmailAddress): Future[Either[String, Unit]] = {
     db.readWrite { implicit session =>
       userEmailAddressCommander.intern(userId, address)
     } match {
       case Success((emailAddr, true)) =>
-        db.readWrite { implicit session =>
-          if (isPrimary && !emailAddr.primary) {
-            userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
-          }
-        }
-
         if (!emailAddr.verified && !emailAddr.verificationSent) {
           userEmailAddressCommander.sendVerificationEmail(emailAddr).imap(Right(_))
         } else Future.successful(Right(()))

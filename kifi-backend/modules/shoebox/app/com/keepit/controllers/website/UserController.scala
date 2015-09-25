@@ -244,12 +244,11 @@ class UserController @Inject() (
 
   def addEmail() = UserAction.async(parse.tolerantJson) { implicit request =>
     val newAddress = (request.body \ "email").as[String]
-    val isPrimary = (request.body \ "isPrimary").as[Boolean]
     EmailAddress.validate(newAddress) match {
       case Failure(e) =>
         Future.successful(BadRequest(e.getMessage))
       case Success(newEmail) =>
-        userCommander.addEmail(request.userId, newEmail, isPrimary) map {
+        userCommander.addEmail(request.userId, newEmail) map {
           case Left(s) => BadRequest(s)
           case Right(_) => Ok(JsString("success"))
         }
