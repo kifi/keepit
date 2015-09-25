@@ -37,8 +37,16 @@ ophImageWidth = 100px
 
 .kf-oph-upper-right
   position: absolute
-  top: 25px
-  right: 25px
+  top: 15px
+  right: 0
+  left: 0
+  width: 185px
+  margin: auto
+
+  @media (min-width: 480px)
+    right: 25px
+    left: auto
+    margin: 0
 
 .kf-oph-invite-button.kf-link
   color: rgba(255, 255, 255, 0.8)
