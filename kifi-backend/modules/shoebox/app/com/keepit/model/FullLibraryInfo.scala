@@ -38,7 +38,7 @@ case class LibraryFail(status: Int, message: String) extends Exception(message)
 @json
 case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
 
-case class ExternalLibraryCreateRequest(
+case class ExternalLibraryInitialValues(
   name: String,
   visibility: LibraryVisibility,
   slug: Option[String],
@@ -51,8 +51,34 @@ case class ExternalLibraryCreateRequest(
   space: Option[ExternalLibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
 
-object ExternalLibraryCreateRequest {
-  val readsMobileV1: Reads[ExternalLibraryCreateRequest] = (
+case class LibraryInitialValues(
+    name: String,
+    visibility: LibraryVisibility,
+    slug: String,
+    kind: Option[LibraryKind] = None,
+    description: Option[String] = None,
+    color: Option[LibraryColor] = None,
+    listed: Option[Boolean] = None,
+    whoCanInvite: Option[LibraryInvitePermissions] = None,
+    subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+    space: Option[LibrarySpace] = None,
+    orgMemberAccess: Option[LibraryAccess] = None) {
+  def asLibraryModifications: LibraryModifications = LibraryModifications(
+    name = Some(name),
+    visibility = Some(visibility),
+    slug = Some(slug),
+    description = description,
+    color = color,
+    listed = listed,
+    whoCanInvite = whoCanInvite,
+    subscriptions = subscriptions,
+    space = space,
+    orgMemberAccess = orgMemberAccess
+  )
+}
+
+object ExternalLibraryInitialValues {
+  val readsMobileV1: Reads[ExternalLibraryInitialValues] = (
     (__ \ 'name).read[String] and
     (__ \ 'visibility).read[LibraryVisibility] and
     (__ \ 'slug).readNullable[String] and
@@ -64,26 +90,13 @@ object ExternalLibraryCreateRequest {
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace] and
     (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
-  )(ExternalLibraryCreateRequest.apply _)
+  )(ExternalLibraryInitialValues.apply _)
   val reads = readsMobileV1
 }
 
-case class LibraryCreateRequest(
-  name: String,
-  visibility: LibraryVisibility,
-  slug: String,
-  kind: Option[LibraryKind] = None,
-  description: Option[String] = None,
-  color: Option[LibraryColor] = None,
-  listed: Option[Boolean] = None,
-  whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[LibrarySpace] = None,
-  orgMemberAccess: Option[LibraryAccess] = None)
-
-object LibraryCreateRequest {
-  def forOrgGeneralLibrary(org: Organization): LibraryCreateRequest = {
-    LibraryCreateRequest(
+object LibraryInitialValues {
+  def forOrgGeneralLibrary(org: Organization): LibraryInitialValues = {
+    LibraryInitialValues(
       name = "General",
       visibility = LibraryVisibility.ORGANIZATION,
       slug = "general",
@@ -94,7 +107,7 @@ object LibraryCreateRequest {
   }
 }
 
-case class ExternalLibraryModifyRequest(
+case class ExternalLibraryModifications(
   name: Option[String] = None,
   slug: Option[String] = None,
   visibility: Option[LibraryVisibility] = None,
@@ -106,24 +119,7 @@ case class ExternalLibraryModifyRequest(
   externalSpace: Option[ExternalLibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
 
-object ExternalLibraryModifyRequest {
-  val readsMobileV1: Reads[ExternalLibraryModifyRequest] = (
-    (__ \ 'name).readNullable[String] and
-    (__ \ 'slug).readNullable[String] and
-    (__ \ 'visibility).readNullable[LibraryVisibility] and
-    (__ \ 'description).readNullable[String] and
-    (__ \ 'color).readNullable[LibraryColor] and
-    (__ \ 'listed).readNullable[Boolean] and
-    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
-    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
-    (__ \ 'space).readNullable[ExternalLibrarySpace] and
-    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
-  )(ExternalLibraryModifyRequest.apply _)
-
-  val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
-}
-
-case class LibraryModifyRequest(
+case class LibraryModifications(
   name: Option[String] = None,
   slug: Option[String] = None,
   visibility: Option[LibraryVisibility] = None,
@@ -134,6 +130,23 @@ case class LibraryModifyRequest(
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
+
+object ExternalLibraryModifications {
+  val readsMobileV1: Reads[ExternalLibraryModifications] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'slug).readNullable[String] and
+    (__ \ 'visibility).readNullable[LibraryVisibility] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[ExternalLibrarySpace] and
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+  )(ExternalLibraryModifications.apply _)
+
+  val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
+}
 
 case class LibraryModifyResponse(
   modifiedLibrary: Library,

@@ -11,6 +11,19 @@ angular.module('kifi')
 
     $scope.settingsSectionTemplateData = [
       {
+        heading: '',
+        fields: [
+          {
+            title: 'Who can change team settings?',
+            description: (
+              'Select who is able to edit your team name, logo, description, and URL'
+            ),
+            fieldKey: 'edit_organization',
+            selectOptions: getOptions(ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
+          }
+        ]
+      },
+      {
         heading: 'Library settings',
         fields: [
           {
