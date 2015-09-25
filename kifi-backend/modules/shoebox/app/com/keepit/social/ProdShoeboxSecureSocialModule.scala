@@ -41,13 +41,12 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     airbrake: AirbrakeNotifier,
     emailRepo: UserEmailAddressRepo,
     socialGraphPlugin: SocialGraphPlugin,
-    userCommander: UserCommander,
     userCreationCommander: UserCreationCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
     userIdentityHelper: UserIdentityHelper,
     clock: Clock): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userCreationCommander, userExperimentCommander, userEmailAddressCommander, userIdentityHelper, clock
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCreationCommander, userExperimentCommander, userEmailAddressCommander, userIdentityHelper, clock
   )
 
   @Singleton

@@ -21,7 +21,7 @@ import securesocial.core._
 import securesocial.core.IdentityId
 import com.keepit.model.UserEmailAddress
 import securesocial.core.providers.Token
-import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
+import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander, LocalUserExperimentCommander }
 import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.Future
@@ -67,7 +67,6 @@ class SecureSocialUserPluginImpl @Inject() (
   airbrake: AirbrakeNotifier,
   emailRepo: UserEmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
-  userCommander: UserCommander,
   userCreationCommander: UserCreationCommander,
   userExperimentCommander: LocalUserExperimentCommander,
   userEmailAddressCommander: UserEmailAddressCommander,
