@@ -210,7 +210,7 @@ class NetscapeBookmarkParser @Inject() () extends ImportParser with ZipParser {
   def parse(bookmarks: TemporaryFile): Try[(Option[KeepSource], List[Bookmark])] = Try {
     // We support bookmark exports that were zipped. Determining if that's the case here.
     val zipFile = if (containsFileName(bookmarks.file, htmlFile)) {
-      parseZip(bookmarks).map { s => println("\n\n\nZIP!!!!\n\n\n"); s }
+      parseZip(bookmarks)
     } else {
       None
     }
