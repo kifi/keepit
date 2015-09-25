@@ -1,6 +1,7 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
 
@@ -14,7 +15,7 @@ import com.keepit.model._
 import com.keepit.common.akka.SafeFuture
 
 import play.api.libs.json._
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 import org.joda.time.Seconds
 import scala.concurrent.Future
 import com.keepit.commanders.CollectionSaveFail
@@ -34,11 +35,13 @@ class KeepsController @Inject() (
   uriRepo: NormalizedURIRepo,
   collectionCommander: CollectionCommander,
   keepsCommander: KeepCommander,
+  keepExportCommander: KeepExportCommander,
   userValueRepo: UserValueRepo,
   clock: Clock,
   normalizedURIInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryCommander: LibraryCommander,
+  airbrake: AirbrakeNotifier,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
@@ -84,9 +87,31 @@ class KeepsController @Inject() (
       keepRepo.getKeepExports(request.userId)
     }
 
-    Ok(keepsCommander.assembleKeepExport(exports))
+    Ok(keepExportCommander.assembleKeepExport(exports))
       .withHeaders("Content-Disposition" -> "attachment; filename=keepExports.html")
       .as("text/html")
+  }
+
+  def exportOrganizationKeeps() = UserAction.async(parse.tolerantJson) { request =>
+    val format = (request.body \ "format").as[KeepExportFormat]
+    val pubIds = (request.body \ "orgIds").as[Set[PublicId[Organization]]]
+    val orgIds = pubIds.map { pubId => Organization.decodePublicId(pubId).get }
+    keepExportCommander.exportKeeps(OrganizationKeepExportRequest(request.userId, orgIds)).map { response =>
+      format match {
+        case KeepExportFormat.JSON => Ok(response.get.formatAsJson)
+        case KeepExportFormat.HTML => Ok(response.get.formatAsHtml)
+      }
+    }
+  }
+
+  def exportPersonalKeeps() = UserAction.async(parse.tolerantJson) { request =>
+    val format = (request.body \ "format").as[KeepExportFormat]
+    keepExportCommander.exportKeeps(PersonalKeepExportRequest(request.userId)).map { response =>
+      format match {
+        case KeepExportFormat.JSON => Ok(response.get.formatAsJson)
+        case KeepExportFormat.HTML => Ok(response.get.formatAsHtml)
+      }
+    }
   }
 
   def tagKeeps(tagName: String) = UserAction(parse.tolerantJson) { implicit request =>
