@@ -26,7 +26,6 @@ trait UserEmailAddressCommander {
   def intern(userId: Id[User], address: EmailAddress, verified: Boolean = false)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)]
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress
   def setAsPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RWSession): Unit
-  def isPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RSession): Boolean // todo(Léo): remove when refactoring User.primaryEmail
   def deactivate(emailAddress: UserEmailAddress, force: Boolean = false)(implicit session: RWSession): Try[Unit]
 }
 
@@ -127,8 +126,6 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def isPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RSession): Boolean = { emailAddress.primary }
-
   def deactivate(emailAddress: UserEmailAddress, force: Boolean = false)(implicit session: RWSession): Try[Unit] = {
     val allEmails = userEmailAddressRepo.getAllByUser(emailAddress.userId)
     val isLast = !allEmails.exists(em => em.address != emailAddress.address)
@@ -136,7 +133,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
 
     if (!force && isLast) Failure(new LastEmailAddressException(emailAddress))
     else if (!force && isLastVerified) Failure(new LastVerifiedEmailAddressException(emailAddress))
-    else if (!force && isPrimaryEmail(emailAddress)) Failure(new PrimaryEmailAddressException(emailAddress))
+    else if (!force && emailAddress.primary) Failure(new PrimaryEmailAddressException(emailAddress))
     else Success {
       val pendingPrimary = userValueRepo.getValueStringOpt(emailAddress.userId, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
       if (pendingPrimary.exists(_ equalsIgnoreCase emailAddress.address)) {

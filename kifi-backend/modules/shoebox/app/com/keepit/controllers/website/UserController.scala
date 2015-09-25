@@ -208,12 +208,12 @@ class UserController @Inject() (
       emailRepo.getByAddress(email) match {
         case Some(emailRecord) if (emailRecord.userId != request.userId) && emailRecord.verified => Forbidden(Json.obj("error" -> "email_belongs_to_other_user"))
         case Some(emailRecord) if (emailRecord.userId == request.userId) => {
-          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL)
+          val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
           Ok(Json.toJson(EmailInfo(
             address = emailRecord.address,
             isVerified = emailRecord.verified,
-            isPrimary = userEmailAddressCommander.isPrimaryEmail(emailRecord),
-            isPendingPrimary = pendingPrimary.contains(emailRecord.address)
+            isPrimary = emailRecord.primary,
+            isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(emailRecord.address))
           )))
         }
         case _ => Ok(Json.obj("status" -> "available"))

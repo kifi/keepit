@@ -225,7 +225,7 @@ class UserCommander @Inject() (
     } match {
       case Success((emailAddr, true)) =>
         db.readWrite { implicit session =>
-          if (isPrimary && !userEmailAddressCommander.isPrimaryEmail(emailAddr)) {
+          if (isPrimary && !emailAddr.primary) {
             userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
           }
         }
@@ -243,7 +243,7 @@ class UserCommander @Inject() (
     db.readWrite { implicit session =>
       emailRepo.getByAddressAndUser(userId, address) match {
         case Some(emailRecord) => Right {
-          if (!userEmailAddressCommander.isPrimaryEmail(emailRecord)) {
+          if (!emailRecord.primary) {
             userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
           }
         }
@@ -281,7 +281,7 @@ class UserCommander @Inject() (
     val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
-      val emails = emailRepo.getAllByUser(user.id.get).map { e => (e, userEmailAddressCommander.isPrimaryEmail(e)) }
+      val emails = emailRepo.getAllByUser(user.id.get)
       val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
       val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name).filter(_ != "linkedin") // Don't send down LinkedIn anymore
 
@@ -302,13 +302,13 @@ class UserCommander @Inject() (
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews)
     }
 
-    val emailInfos = emails.sortBy { case (e, isPrimary) => (isPrimary, !e.verified, e.id.get.id) }.reverse.map {
-      case (email, isPrimary) =>
+    val emailInfos = emails.sortBy { e => (e.primary, !e.verified, e.id.get.id) }.reverse.map {
+      email =>
         EmailInfo(
           address = email.address,
           isVerified = email.verified,
-          isPrimary = isPrimary,
-          isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
+          isPrimary = email.primary,
+          isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(email.address))
         )
     }
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews)
@@ -483,7 +483,7 @@ class UserCommander @Inject() (
       // Set the correct email as primary
       (added ++ existing).foreach { emailRecord =>
         val isPrimary = emails.exists { emailInfo => (emailInfo.address == emailRecord.address) && (emailInfo.isPrimary || emailInfo.isPendingPrimary) }
-        if (isPrimary && !userEmailAddressCommander.isPrimaryEmail(emailRecord)) {
+        if (isPrimary && !emailRecord.primary) {
           userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
         }
       }
