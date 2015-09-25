@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.emails.EmailConfirmationSender
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
@@ -27,6 +27,8 @@ trait UserEmailAddressCommander {
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress
   def setAsPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RWSession): Unit
   def deactivate(emailAddress: UserEmailAddress, force: Boolean = false)(implicit session: RWSession): Try[Unit]
+
+  def addEmail(userId: Id[User], address: EmailAddress): Either[String, Unit]
 }
 
 @Singleton
@@ -140,6 +142,19 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
         userValueRepo.clearValue(emailAddress.userId, UserValueName.PENDING_PRIMARY_EMAIL)
       }
       userEmailAddressRepo.save(emailAddress.withState(UserEmailAddressStates.INACTIVE))
+    }
+  }
+
+  def addEmail(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
+    db.readWrite { implicit session =>
+      intern(userId, address)
+    } match {
+      case Success((emailAddr, true)) =>
+        if (!emailAddr.verified && !emailAddr.verificationSent) { sendVerificationEmail(emailAddr) }
+        Right(())
+      case Success((_, false)) => Left("email_already_added")
+      case Failure(_: UnavailableEmailAddressException) => Left("permission_denied")
+      case Failure(error) => throw error
     }
   }
 }
