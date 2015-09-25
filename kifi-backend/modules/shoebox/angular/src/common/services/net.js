@@ -22,6 +22,7 @@ angular.module('kifi')
 
       createLibrary: post(shoebox, '/libraries/add'),
       modifyLibrary: post(shoebox, '/libraries/:id/modify'),
+      joinLibraries: post(shoebox, '/libraries/joinMultiple'),
 
       user: get(shoebox, '/user/:id', 30),
       userOrOrg: get(shoebox, '/user-or-org/:handle?authToken=:authToken', 30),
@@ -40,6 +41,7 @@ angular.module('kifi')
       transferOrgMemberOwnership: post(shoebox, '/organizations/:id/transfer'),
       getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 30),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
+      
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId'),
       getBillingContacts: get(shoebox, '/admin/billing/contacts?pubId=:pubId', 30),
@@ -56,6 +58,7 @@ angular.module('kifi')
       removeManyKeepsFromLibrary: post(shoebox, '/libraries/:id/keeps/delete'),
       changeKeepImage: post(shoebox, '/libraries/:id/keeps/:keepId/image'),
       exportOrgKeeps: post(shoebox, '/keeps/organizationExport'),
+      getFtueLibraries: get(shoebox, '/libraries/marketing-suggestions'),
 
       getLibraryShareSuggest: get(shoebox, '/libraries/:id/members/suggest?n=30', 30),
       updateLibraryMembership: post(shoebox, '/libraries/:id/members/:uid/access'),

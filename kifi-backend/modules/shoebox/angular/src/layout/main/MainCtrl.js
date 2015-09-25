@@ -5,10 +5,10 @@ angular.module('kifi')
 .controller('MainCtrl', [
   '$scope', '$rootScope', '$window', '$timeout', '$rootElement', '$q',
   'initParams', 'installService', 'profileService', 'routeService',
-  'modalService', 'libraryService', 'extensionLiaison',
+  'modalService', 'libraryService', 'extensionLiaison', '$state',
   function ($scope, $rootScope, $window, $timeout, $rootElement, $q,
     initParams, installService, profileService, routeService,
-    modalService, libraryService, extensionLiaison) {
+    modalService, libraryService, extensionLiaison, $state) {
 
     var importBookmarksMessageEvent;
     var bannerMessages = {
@@ -212,7 +212,6 @@ angular.module('kifi')
       $scope.importFileStatus = '';
     };
 
-
     $scope.openBookmarkFileSelector = function () {
       // not great, but trying to fix an IE bug
       var bookmarkFileUpload = $rootElement.find('.bookmark-file-upload');
@@ -226,12 +225,20 @@ angular.module('kifi')
     }
 
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
-      return Boolean(installService.installedVersion && profileService.prefs.auto_show_guide);
+      var newInstall = installService.installedVersion && profileService.auto_show_guide;
+      var ftue = profileService.prefs.has_seen_ftue === false;
+      return newInstall || ftue;
     }, function (show) {
       if (show) {
-        extensionLiaison.triggerGuide();
-        profileService.savePrefs({auto_show_guide: null});
-        unregisterAutoShowGuide();
+        if (profileService.prefs.has_seen_ftue === false) {
+          //get started
+          $state.go('getStarted.followLibraries');
+        } else if (profileService.prefs.auto_show_guide) {
+          // guide
+          extensionLiaison.triggerGuide();
+          profileService.savePrefs({auto_show_guide: null});
+          unregisterAutoShowGuide();
+        }
       }
     });
   }

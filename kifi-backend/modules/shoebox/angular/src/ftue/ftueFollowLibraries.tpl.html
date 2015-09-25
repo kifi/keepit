@@ -1,0 +1,70 @@
+<div class="kf-ftue-fl-container">
+  <div class="kf-ftue-fl-container-inner">
+
+    <span class="kf-ftue-fl-message">Follow some libraries you find interesting to see updates</span>
+
+    <div class="kf-ftue-fl-meta-wrap">
+      <div class="kf-ftue-fl-follow-btn-wrap">
+				<span class="kf-ftue-fl-follow-btn " ng-class="{'kf-ftue-fl-follow-btn-enabled': viewState == VIEW_STATES.LOADED,
+					'kf-ftue-fl-follow-btn-disabled': viewState == VIEW_STATES.LOADING || viewState == VIEW_STATES.FOLLOWING}"
+              ng-click="onClickedFollowBtn()">{{
+					viewState == VIEW_STATES.LOADING ? "Loading..." :
+						viewState == VIEW_STATES.FOLLOWING ? "Following..." :
+							(selectedLibraryCount() ? "Follow (" + selectedLibraryCount() + ")" : "Continue")
+					}}</span>
+
+        <div class="kf-ftue-fl-follow-spinner" kf-simple-loading-spinner ng-if="viewState == 'FOLLOWING'"></div>
+      </div>
+
+      <div class="kf-ftue-fl-select-all-checkbox">
+        <span class="kf-ftue-fl-select-all-checkbox-text">Select All</span>
+        <input id="select-all-checkbox" class="kf-ftue-fl-checkbox" type="checkbox" ng-model="selectAll"
+               ng-checked="selectAll" ng-change="onSelectAllChanged(selectAll)"/>
+        <label ng-mouseenter="selectAllHover = true"
+               ng-mouseleave="selectAllHover = false" for="select-all-checkbox"
+               ng-class="{'svg-checkbox_checked': selectAll && !selectAllHover,
+					   'svg-checkbox_checked_active': selectAll && selectAllHover,
+					   'svg-checkbox_unchecked': !selectAll && !selectAllHover,
+					   'svg-checkbox_unchecked_active': !selectAll && selectAllHover,
+					   'kf-ftue-fl-checkbox-bg': true}"></label>
+      </div>
+    </div>
+    <span class="kf-ftue-fl-skip" ng-click="onClickedSkip()">Skip</span>
+
+    <div ng-repeat="lib in libraries">
+
+      <div class="kf-ftue-fl-library-row">
+
+        <a class="kf-ftue-fl-library-row-left" href="{{lib.path}}" target="_blank" >
+          <div class="kf-ftue-lib-card" ng-attr-style="background-color:{{lib.color}}"></div>
+          <div class="kf-ftue-lib-card-data">
+            <div class="kf-ftue-lib-card-library-name">{{lib.name}}</div>
+            <div class="kf-ftue-lib-card-owner-name">{{lib.owner.firstName + " " + lib.owner.lastName}}</div>
+            <div class="kf-ftue-lib-card-updated-at">
+              Updated&nbsp;
+              <time ng-attr-datetime="{{lib.lastKept}}" am-time-ago="lib.lastKept"></time>
+            </div>
+          </div>
+        </a>
+
+        <div class="kf-ftue-fl-checkbox-wrap">
+          <input class="kf-ftue-fl-checkbox" id="cb-{{$index}}" type="checkbox" ng-model="lib.checked"
+                 ng-checked="lib.checked" ng-change="onLibrarySelectionChanged(lib.checked)"/>
+          <label ng-mouseenter="lib.hover = true"
+                 ng-mouseleave="lib.hover = false" for="cb-{{$index}}"
+                 ng-class="{'svg-checkbox_checked': lib.checked && !lib.hover,
+					   'svg-checkbox_checked_active': lib.checked && lib.hover,
+					   'svg-checkbox_unchecked': !lib.checked && !lib.hover,
+					   'svg-checkbox_unchecked_active': !lib.checked && lib.hover,
+					   'kf-ftue-fl-checkbox-bg': true}"></label>
+
+        </div>
+      </div>
+
+      <div class="kf-ftue-fl-library-divider"></div>
+    </div>
+  </div>
+
+  <div class="kf-feed-loading-spinner" kf-loading-spinner ng-if="viewState == VIEW_STATES.LOADING"></div>
+
+</div>
