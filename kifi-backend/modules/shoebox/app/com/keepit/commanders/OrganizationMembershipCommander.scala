@@ -241,6 +241,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
       libraryMembershipCommander.joinLibrary(request.targetId, lib.id.get)
     }
     planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
+    userCommander.liveFlushRemoteClientCache(request.targetId)
+    
     OrganizationMembershipAddResponse(request, newMembership)
   }
 
