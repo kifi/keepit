@@ -75,10 +75,12 @@ class KeepToLibraryRepoImpl @Inject() (
     for (row <- rows if row.keepId.inSet(keepIds) && row.state =!= excludeStateOpt.orNull) yield row
   }
   def countByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Int] = {
-    getByKeepIdsHelper(keepIds, excludeStateOpt).groupBy(_.keepId).map { case (keepId, ktls) => (keepId, ktls.length) }.list.toMap
+    val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).groupBy(_.keepId).map { case (keepId, ktls) => (keepId, ktls.length) }.list.toMap
+    keepIds.map { keepId => keepId -> resultMap.getOrElse(keepId, 0) }.toMap
   }
   def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToLibrary]] = {
-    getByKeepIdsHelper(keepIds, excludeStateOpt).list.groupBy(_.keepId)
+    val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).list.groupBy(_.keepId)
+    keepIds.map { keepId => keepId -> resultMap.getOrElse(keepId, Seq.empty) }.toMap
   }
   def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
     countByKeepIds(Set(keepId), excludeStateOpt).apply(keepId)
