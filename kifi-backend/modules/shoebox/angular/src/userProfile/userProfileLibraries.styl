@@ -23,7 +23,7 @@ cardBorderRadius = 16px
     // is temporarily empty during sub-tab navigations
     min-height: 100vh
     
-.kf-upl-tab-container
+.kf-up-tab-container
   background: pageHeaderColor
   color: #fff
   position: relative
@@ -31,7 +31,7 @@ cardBorderRadius = 16px
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     padding-bottom: 12px
 
-.kf-upl-tab
+.kf-up-tab
   text-align: center
   margin-bottom: 10px auto 0
 
@@ -43,52 +43,6 @@ cardBorderRadius = 16px
       transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
       
  
-
-.kf-upl-tab-a
-  display: inline-block
-  padding: 6px 10px
-  color: #9fa3aa
-  background-color: alpha(#fff, 5%)
-  border-top-left-radius: 5px
-  border-top-right-radius: 5px
-  padding-left: 20px
-  padding-right: 20px
-
-  &:not(.active)[href]:hover
-    background-color: alpha(#fff, 10%)
-
-  &:not([href])
-    color: accentGreen
-    cursor: default
-
-  &:focus
-    outline: none
-
-  &.active
-    background: appBackgroundColor
-    color: textBlackColor
-  
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    padding: 3px 5px
-
-  
-  .kf-upl-tab-name
-    display: inline-block
-    vertical-align: middle
-
-.kf-upl-tab-name
-  line-height: 24px
-  font-size: 14px
-  
-  &.kf-my::before
-    content: 'My '
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    line-height: 12px
-    font-size: 7px
-
-.kf-upl-tab-a-left-space
-  margin-left:25px
 
 .kf-upl-empty
   padding: 30px
