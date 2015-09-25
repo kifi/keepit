@@ -155,5 +155,10 @@ class MessageFormatterTest extends Specification {
       val msg = """[look](x-kifi-sel:r|body|p.a|0:1|p.b|0:4|\\\\\\\)"""
       MessageFormatter.parseMessageSegments(msg) === Seq(TextSegment(msg))
     }
+
+    "parse message text from old look here versions" in {
+      val msg = """[he he :smiley:](x-kifi-sel:body>div.page-cols>aside.left-col.ui-resizable>div.page-col-inner>div.my-identity>a.my-settings-wrapper>span.my-settings-shade)"""
+      MessageFormatter.parseMessageSegments(msg) === Seq(TextLookHereSegment("he he :smiley:", "body>div.page-cols>aside.left-col.ui-resizable>div.page-col-inner>div.my-identity>a.my-settings-wrapper>span.my-settings-shade"))
+    }
   }
 }
