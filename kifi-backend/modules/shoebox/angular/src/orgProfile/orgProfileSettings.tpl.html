@@ -4,7 +4,7 @@
       <li>
         <a class="kf-link" href="#team-settings">Team Settings</a>
         <ul class="kf-ops-nav">
-          <li ng-repeat="section in settingsSectionTemplateData">
+          <li ng-repeat="section in settingsSectionTemplateData" ng-if="section.heading">
             <a
               class="kf-link"
               ng-href="{{ '#' + getHeadingAnchor(section.heading) }}"
@@ -13,10 +13,10 @@
           </li>
         </ul>
       </li>
-      <li><a class="kf-link" href="#team-plan">Team Plan</a></li>
+      <!-- <li><a class="kf-link" href="#team-plan">Team Plan</a></li>
       <li><a class="kf-link" href="#team-contacts">Contacts</a></li>
       <li><a class="kf-link" href="#credit-card">Credit Card</a></li>
-      <li><a class="kf-link" href="#history">History</a></li>
+      <li><a class="kf-link" href="#history">History</a></li> -->
     </ul>
     <div class="kf-ops-main">
       <h1 id="team-settings">Team Settings</h1>
