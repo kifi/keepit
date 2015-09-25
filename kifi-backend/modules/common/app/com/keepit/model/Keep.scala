@@ -285,6 +285,8 @@ object KeepSource {
   val kippt = KeepSource("Kippt")
   val pocket = KeepSource("Pocket")
   val instapaper = KeepSource("Instapaper")
+  val evernote = KeepSource("Evernote")
+  val diigo = KeepSource("Diigo")
   val tagImport = KeepSource("tagImport")
   val emailReco = KeepSource("emailReco")
   val userCopied = KeepSource("userCopied")
@@ -292,13 +294,11 @@ object KeepSource {
   val twitterFileImport = KeepSource("twitterFileImport")
   val twitterSync = KeepSource("twitterSync")
 
-  val valid = Set(keeper, bookmarkImport, site, mobile, email, default, bookmarkFileImport, kippt, pocket, instapaper, emailReco, twitterFileImport)
-
-  val imports = Set(bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport)
+  val imports = Set(bookmarkImport, kippt, pocket, instapaper, evernote, diigo, bookmarkFileImport, twitterFileImport)
 
   // Sources that are from users uploading files, bulk actions, inputting URLs, etc.
   // These may be old links
-  val bulk = Set(site, bookmarkImport, kippt, pocket, instapaper, bookmarkFileImport, twitterFileImport, userCopied, unknown)
+  val bulk = imports ++ Set(userCopied, unknown, evernote)
 
   val discrete = Set(keeper, site, mobile, email, twitterSync)
 
