@@ -21,6 +21,7 @@ import com.keepit.typeahead.{ UserHashtagTypeaheadUserIdKey, UserHashtagTypeahea
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection] {
+  def getByIds(ids: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Collection]
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
   def getUnfortunatelyIncompleteTagSummariesByUser(userId: Id[User])(implicit session: RSession): Seq[CollectionSummary]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
@@ -80,6 +81,10 @@ class CollectionRepoImpl @Inject() (
       keepToCollections.foreach(keepToCollectionRepo.deleteCache)
       bookmarkCountForCollectionCache.remove(KeepCountForCollectionKey(id))
     }
+  }
+
+  def getByIds(ids: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Collection] = {
+    rows.filter(row => row.id.inSet(ids)).list.map { c => c.id.get -> c }.toMap
   }
 
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
