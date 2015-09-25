@@ -603,6 +603,10 @@
 
 .kifi-keep-box-new-lib-visibility-item,
 .kifi-keep-box-new-lib-location-item {
+  input {
+    position: absolute; // take it out of the flow
+  }
+
   &.kifi-selected,
   &:hover{
     background-color: #e8e8e8;
