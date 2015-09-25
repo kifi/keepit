@@ -86,7 +86,7 @@ class OrganizationChecker @Inject() (
       if (zombieLibs.nonEmpty) {
         airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie libraries: ${zombieLibs.map(_.id.get)}")
         zombieLibs.collect {
-          case lib if lib.isUserCreated => libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
+          case lib if lib.isUserCreated => libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(space = Some(lib.ownerId)))
           case lib if lib.isSystemCreated => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get)
         }
       }
@@ -98,7 +98,7 @@ class OrganizationChecker @Inject() (
       val orgGeneralLibrary = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL)
       if (orgGeneralLibrary.isEmpty) {
         log.error(s"[ORG-SYSTEM-LIBS] Org $orgId does not have a general library! Adding one.")
-        val orgGeneralLib = libraryCommander.unsafeCreateLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId)
+        val orgGeneralLib = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
         val orgMemberIds = orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId) - org.ownerId
         orgMemberIds.foreach { userId => // TODO(ryan): you should feel bad about writing this. put the correct `unsafeJoinLibrary` method in LibraryMembershipCommander and call that
           libraryMembershipRepo.save(LibraryMembership(libraryId = orgGeneralLib.id.get, userId = userId, access = LibraryAccess.READ_WRITE))
