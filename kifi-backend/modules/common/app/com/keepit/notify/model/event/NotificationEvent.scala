@@ -250,7 +250,7 @@ case class NewMessage(
 
 }
 
-object NewMessage extends GroupIdentifierNotificationKind[NewMessage, Long] {
+object NewMessage extends GroupingNotificationKind[NewMessage, Long] {
 
   override val name: String = "new_message"
 

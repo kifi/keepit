@@ -25,7 +25,7 @@ trait NotificationKind[N <: NotificationEvent] {
   def shouldGroupWith(newEvent: N, existingEvents: Set[N]): Boolean
 }
 
-abstract class GroupIdentifierNotificationKind[N <: NotificationEvent, G](implicit val gid: GroupIdentifier[G]) extends NotificationKind[N] {
+abstract class GroupingNotificationKind[N <: NotificationEvent, G](implicit val gid: GroupIdentifier[G]) extends NotificationKind[N] {
 
   def getIdentifier(that: N): G
 
