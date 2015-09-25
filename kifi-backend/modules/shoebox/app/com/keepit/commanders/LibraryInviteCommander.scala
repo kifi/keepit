@@ -80,30 +80,15 @@ class LibraryInviteCommanderImpl @Inject() (
         s"${invitee.firstName} is now following ${lib.name}"
       }
       val inviterId = invite.inviterId
-      elizaClient.sendGlobalNotification( //push sent
-        userIds = Set(inviterId),
-        title = title,
-        body = s"You invited ${invitee.fullName} to join ${lib.name}.",
-        linkText = s"See ${invitee.firstName}’s profile",
-        linkUrl = s"https://www.kifi.com/${invitee.username.value}",
-        imageUrl = invaiteeImage,
-        sticky = false,
-        category = NotificationCategory.User.LIBRARY_FOLLOWED,
-        extra = Some(Json.obj(
-          "follower" -> BasicUser.fromUser(invitee),
-          "library" -> NotificationInfoModel.library(lib, libImageOpt, owner)
-        ))
-      ) map { _ =>
-          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-          if (canSendPush) {
-            elizaClient.sendUserPushNotification(
-              userId = inviterId,
-              message = title,
-              recipient = invitee,
-              pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-              category = UserPushNotificationCategory.NewLibraryFollower)
-          }
-        }
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+      if (canSendPush) {
+        elizaClient.sendUserPushNotification(
+          userId = inviterId,
+          message = title,
+          recipient = invitee,
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+          category = UserPushNotificationCategory.NewLibraryFollower)
+      }
       if (invite.access == LibraryAccess.READ_WRITE) {
         elizaClient.sendNotificationEvent(LibraryCollabInviteAccepted(
           Recipient(inviterId),
@@ -315,55 +300,23 @@ class LibraryInviteCommanderImpl @Inject() (
     val collabInviteeSet = collabInvitees.keySet
     val followInviteeSet = followInvitees.keySet
 
-    val collabInvitesF = elizaClient.sendGlobalNotification( //push sent
-      userIds = collabInviteeSet,
-      title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a Library!",
-      body = s"Help ${libOwner.firstName} by sharing your knowledge in the library ${lib.name}.",
-      linkText = "Let's do it!",
-      linkUrl = libLink,
-      imageUrl = userImage,
-      sticky = false,
-      category = NotificationCategory.User.LIBRARY_INVITATION,
-      extra = Some(Json.obj(
-        "inviter" -> inviter,
-        "library" -> NotificationInfoModel.library(lib, libImageOpt, libOwner),
-        "access" -> LibraryAccess.READ_WRITE
-      ))
-    )
-
-    collabInviteeSet.foreach { invitee =>
+    val collabInvitesF = Future.sequence(collabInviteeSet.map { invitee =>
       elizaClient.sendNotificationEvent(LibraryNewCollabInvite(
         Recipient(invitee),
         currentDateTime,
         inviter.id.get,
         lib.id.get
       ))
-    }
+    })
 
-    val followInvitesF = elizaClient.sendGlobalNotification( //push sent
-      userIds = followInviteeSet,
-      title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a Library!",
-      body = s"Browse keeps in ${lib.name} to find some interesting gems kept by ${libOwner.firstName}.",
-      linkText = "Let's take a look!",
-      linkUrl = libLink,
-      imageUrl = userImage,
-      sticky = false,
-      category = NotificationCategory.User.LIBRARY_INVITATION,
-      extra = Some(Json.obj(
-        "inviter" -> inviter,
-        "library" -> NotificationInfoModel.library(lib, libImageOpt, libOwner),
-        "access" -> LibraryAccess.READ_ONLY
-      ))
-    )
-
-    followInviteeSet.foreach { invitee =>
+    val followInvitesF = Future.sequence(followInviteeSet.map { invitee =>
       elizaClient.sendNotificationEvent(LibraryNewFollowInvite(
         Recipient(invitee),
         currentDateTime,
         inviter.id.get,
         lib.id.get
       ))
-    }
+    })
 
     for {
       collabInvites <- collabInvitesF
@@ -405,26 +358,7 @@ class LibraryInviteCommanderImpl @Inject() (
     val followFriendStr = if (followInviteeSet.size > 1) "friends" else "a friend"
 
     val collabInvitesF = if (collabInviteeSet.nonEmpty) {
-      elizaClient.sendGlobalNotification( //push sent
-        userIds = Set(lib.ownerId),
-        title = s"${inviter.firstName} invited someone to contribute to your Library!",
-        body = s"${inviter.fullName} invited $collabFriendStr to contribute to your library, ${lib.name}.",
-        linkText = s"See ${inviter.firstName}’s profile",
-        linkUrl = s"https://www.kifi.com/${inviter.username.value}",
-        imageUrl = userImage,
-        sticky = false,
-        category = NotificationCategory.User.LIBRARY_FOLLOWED,
-        extra = Some(Json.obj(
-          "inviter" -> inviter,
-          "library" -> NotificationInfoModel.library(lib, libImageOpt, libOwner)
-        ))
-      )
-    } else {
-      Future.successful((): Unit)
-    }
-
-    if (collabInviteeSet.nonEmpty) {
-      collabInviteeSet.foreach { userId =>
+      Future.sequence(collabInviteeSet.map { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewCollabInvite(
           Recipient(lib.ownerId),
           currentDateTime,
@@ -432,30 +366,11 @@ class LibraryInviteCommanderImpl @Inject() (
           userId,
           lib.id.get
         ))
-      }
-    }
+      })
+    } else Future.successful(())
 
     val followInvitesF = if (followInviteeSet.nonEmpty) {
-      elizaClient.sendGlobalNotification( //push sent
-        userIds = Set(lib.ownerId),
-        title = s"${inviter.firstName} invited someone to follow your Library!",
-        body = s"${inviter.fullName} invited $followFriendStr to follow your library, ${lib.name}.",
-        linkText = s"See ${inviter.firstName}’s profile",
-        linkUrl = s"https://www.kifi.com/${inviter.username.value}",
-        imageUrl = userImage,
-        sticky = false,
-        category = NotificationCategory.User.LIBRARY_FOLLOWED,
-        extra = Some(Json.obj(
-          "inviter" -> inviter,
-          "library" -> NotificationInfoModel.library(lib, libImageOpt, libOwner)
-        ))
-      )
-    } else {
-      Future.successful((): Unit)
-    }
-
-    if (followInviteeSet.nonEmpty) {
-      followInviteeSet.foreach { userId =>
+      Future.sequence(followInviteeSet.map { userId =>
         elizaClient.sendNotificationEvent(OwnedLibraryNewFollowInvite(
           Recipient(lib.ownerId),
           currentDateTime,
@@ -463,8 +378,8 @@ class LibraryInviteCommanderImpl @Inject() (
           userId,
           lib.id.get
         ))
-      }
-    }
+      })
+    } else Future.successful(())
 
     for {
       collabInvites <- collabInvitesF

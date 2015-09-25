@@ -154,7 +154,10 @@ cardBorderRadius = 16px
   z-index: 10
 
   &.kf-upsell:not(:hover) svg
-    fill: #fff
+    fill: rgba(255, 255, 255, .5)
+
+  &.kf-upsell:hover svg
+    fill: rgba(255, 255, 255, 1)
 
 .kf-upl-card-upsell + .kf-upl-card-setting
   right: 25px

@@ -139,7 +139,6 @@ class OrganizationRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select id from organization where state='active' and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
   }
-
 }
 
 trait OrganizationSequencingPlugin extends SequencingPlugin

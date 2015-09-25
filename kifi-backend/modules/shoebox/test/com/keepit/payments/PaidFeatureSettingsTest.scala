@@ -61,35 +61,34 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         }
 
         // owner can create public libraries
-        val libraryCommander = inject[LibraryCommander]
-        val ownerCreateRequest = LibraryCreateRequest(name = "Alphabet Soup", slug = "alphabet", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
+        val ownerCreateRequest = LibraryInitialValues(name = "Alphabet Soup", slug = "alphabet", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
         val ownerLibResponse = libraryCommander.createLibrary(ownerCreateRequest, owner.id.get)
         ownerLibResponse must beRight
 
         // admin can create public libraries
-        val adminCreateRequest = LibraryCreateRequest(name = "Alphabetter Soup", slug = "alphabetter", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(admin.id.get, org.id)))
+        val adminCreateRequest = LibraryInitialValues(name = "Alphabetter Soup", slug = "alphabetter", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(admin.id.get, org.id)))
         val adminLibResponse = libraryCommander.createLibrary(adminCreateRequest, admin.id.get)
         adminLibResponse must beRight
 
         // member cannot create public libraries
-        val memberCreateRequest1 = LibraryCreateRequest(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(member.id.get, org.id)))
+        val memberCreateRequest1 = LibraryInitialValues(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(member.id.get, org.id)))
         val memberLibResponse1 = libraryCommander.createLibrary(memberCreateRequest1, member.id.get)
         memberLibResponse1 must beLeft
 
-        val memberCreateRequest2 = LibraryCreateRequest(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.SECRET, space = Some(LibrarySpace(member.id.get, org.id)))
+        val memberCreateRequest2 = LibraryInitialValues(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.SECRET, space = Some(LibrarySpace(member.id.get, org.id)))
         val memberLibResponse2 = libraryCommander.createLibrary(memberCreateRequest2, member.id.get)
         memberLibResponse2 must beRight
         val library = memberLibResponse2.right.get
 
         // member cannot modify an org library to be public
-        val memberModifyRequest1 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
+        val memberModifyRequest1 = LibraryModifications(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse3 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest1)
         memberLibResponse3 must beLeft
 
         // admins can alter feature settings
         planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, feature.options.find(_ == "member").get))))
 
-        val memberModifyRequest2 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
+        val memberModifyRequest2 = LibraryModifications(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse4 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest2)
         memberLibResponse4 must beRight
       }
@@ -152,9 +151,9 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val libraryCommander = inject[LibraryCommander]
 
-        val ownerModifyRequest = LibraryModifyRequest(name = Some("Elon's Main Library"))
-        val adminModifyRequest = LibraryModifyRequest(name = Some("Larry's Main Library"))
-        val memberModifyRequest = LibraryModifyRequest(name = Some("Sergey's Main Library"))
+        val ownerModifyRequest = LibraryModifications(name = Some("Elon's Main Library"))
+        val adminModifyRequest = LibraryModifications(name = Some("Larry's Main Library"))
+        val memberModifyRequest = LibraryModifications(name = Some("Sergey's Main Library"))
 
         libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
@@ -274,9 +273,9 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val libraryCommander = inject[LibraryCommander]
 
-        val ownerModifyRequest = LibraryModifyRequest(space = Some(UserSpace(owner.id.get)))
-        val adminModifyRequest = LibraryModifyRequest(space = Some(UserSpace(admin.id.get)))
-        val memberModifyRequest = LibraryModifyRequest(space = Some(UserSpace(member.id.get)))
+        val ownerModifyRequest = LibraryModifications(space = Some(UserSpace(owner.id.get)))
+        val adminModifyRequest = LibraryModifications(space = Some(UserSpace(admin.id.get)))
+        val memberModifyRequest = LibraryModifications(space = Some(UserSpace(member.id.get)))
 
         libraryCommander.modifyLibrary(ownerLibrary.id.get, owner.id.get, ownerModifyRequest) must beLeft
         libraryCommander.modifyLibrary(adminLibrary.id.get, admin.id.get, adminModifyRequest) must beLeft
@@ -317,13 +316,13 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val libraryCommander = inject[LibraryCommander]
 
-        val ownerModifyRequest = LibraryModifyRequest(subscriptions = Some(Seq(LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")))))
+        val ownerModifyRequest = LibraryModifications(subscriptions = Some(Seq(LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")))))
 
-        val adminModifyRequest = LibraryModifyRequest(subscriptions = Some(Seq(
+        val adminModifyRequest = LibraryModifications(subscriptions = Some(Seq(
           LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")),
           LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok")))))
 
-        val memberModifyRequest = LibraryModifyRequest(subscriptions = Some(Seq(
+        val memberModifyRequest = LibraryModifications(subscriptions = Some(Seq(
           LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")),
           LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok")),
           LibrarySubscriptionKey("#product", SlackInfo("https://hooks.slack.com/services/ko/ko")))))

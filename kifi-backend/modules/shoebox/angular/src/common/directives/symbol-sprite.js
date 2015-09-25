@@ -10,14 +10,21 @@ angular.module('kifi')
     restrict :'A',
     compile: function () {
       return function (scope, element, attrs) {
-        var svgElement = element[0];
-
         var paths = angular.element('symbol#' + attrs.icon);
-        svgElement.appendChild(paths.find('g').clone()[0]);
+        var path = paths.children('g').clone()[0];
+        var svgElement;
+        var className;
 
-        var className = svgElement.getAttribute('class') || '';
-        svgElement.setAttribute('class', className + (className ? ' ' : '') + 'symbol-sprite');
-        svgElement.setAttribute('viewBox', '0 0 512 512');
+        if (path) {
+          svgElement = element[0];
+          className = svgElement.getAttribute('class') || '';
+
+          svgElement.appendChild(path);
+          svgElement.setAttribute('class', className + (className ? ' ' : '') + 'symbol-sprite');
+          svgElement.setAttribute('viewBox', '0 0 512 512');
+        } else {
+          element.remove();
+        }
       };
     }
   };

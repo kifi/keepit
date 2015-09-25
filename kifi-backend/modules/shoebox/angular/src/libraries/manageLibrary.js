@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfManageLibrary', [
   '$window', '$rootScope', '$location', '$state', 'friendService',
-  'libraryService', 'modalService', 'profileService', 'util',
+  'libraryService', 'modalService', 'profileService', 'util', 'LIB_PERMISSION',
   function ($window, $rootScope, $location, $state, friendService,
-            libraryService, modalService, profileService, util) {
+            libraryService, modalService, profileService, util, LIB_PERMISSION) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -30,6 +30,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
+        scope.LIB_PERMISSION = LIB_PERMISSION;
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -258,6 +259,10 @@ angular.module('kifi')
         scope.hideFollowersPanel = function () {
           scope.viewFollowersFirst = false;
           scope.showFollowers = false;
+        };
+
+        scope.hasPermission = function (permission) {
+          return scope.library.membership && scope.library.membership.permissions.indexOf(permission) !== -1;
         };
 
         //

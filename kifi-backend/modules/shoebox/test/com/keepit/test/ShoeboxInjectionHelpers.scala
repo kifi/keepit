@@ -2,7 +2,7 @@ package com.keepit.test
 
 import com.keepit.commanders._
 import com.keepit.common.db.slick.SlickSessionProvider
-import com.keepit.integrity.{ KeepChecker, LibraryChecker }
+import com.keepit.integrity.{ OrganizationChecker, KeepChecker, LibraryChecker }
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.FakeSlickSessionProvider
@@ -67,5 +67,6 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
   def libraryChecker(implicit injector: Injector) = inject[LibraryChecker]
   def keepChecker(implicit injector: Injector) = inject[KeepChecker]
+  def organizationChecker(implicit injector: Injector) = inject[OrganizationChecker]
   def permissionCommander(implicit injector: Injector) = inject[PermissionCommander].asInstanceOf[PermissionCommanderImpl]
 }

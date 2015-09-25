@@ -355,28 +355,17 @@ class UserCommander @Inject() (
             log.info("sending new user contact notifications to: " + toNotify)
             val emailsF = toNotify.map { userId => contactJoinedEmailSender.get.apply(userId, newUserId) }
 
-            elizaServiceClient.sendGlobalNotification( //push sent
-              userIds = toNotify,
-              title = s"${newUser.firstName} ${newUser.lastName} joined Kifi!",
-              body = s"To discover ${newUser.firstName}’s public keeps while searching, get connected! Invite ${newUser.firstName} to connect on Kifi »",
-              linkText = s"Invite ${newUser.firstName} to connect",
-              linkUrl = s"https://www.kifi.com/${newUser.username.value}?intent=connect",
-              imageUrl = s3ImageStore.avatarUrlByUser(newUser),
-              sticky = false,
-              category = NotificationCategory.User.CONTACT_JOINED
-            ) map { _ =>
-                toNotify.foreach { userId =>
-                  val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-                  if (canSendPush) {
-                    elizaServiceClient.sendUserPushNotification(
-                      userId = userId,
-                      message = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
-                      recipient = newUser,
-                      pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-                      category = UserPushNotificationCategory.ContactJoined)
-                  }
-                }
+            toNotify.foreach { userId =>
+              val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+              if (canSendPush) {
+                elizaServiceClient.sendUserPushNotification(
+                  userId = userId,
+                  message = s"${newUser.firstName} ${newUser.lastName} just joined Kifi!",
+                  recipient = newUser,
+                  pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+                  category = UserPushNotificationCategory.ContactJoined)
               }
+            }
             toNotify.foreach { userId =>
               elizaServiceClient.sendNotificationEvent(SocialContactJoined(
                 Recipient(userId),

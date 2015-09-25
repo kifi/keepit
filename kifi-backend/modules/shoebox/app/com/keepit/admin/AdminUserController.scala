@@ -461,7 +461,7 @@ class AdminUserController @Inject() (
 
     (nameOpt, visibilityOpt, slugOpt) match {
       case (Some(name), Some(visibility), Some(slug)) => {
-        val libraryAddRequest = LibraryCreateRequest(name, visibility, slug)
+        val libraryAddRequest = LibraryInitialValues(name, visibility, slug)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         val result: Either[LibraryFail, Library] = libraryCommander.createLibrary(libraryAddRequest, userId)
@@ -689,43 +689,6 @@ class AdminUserController @Inject() (
   def updateUserPicture(userId: Id[User]) = AdminUserPage { request =>
     imageStore.forceUpdateSocialPictures(userId)
     Ok
-  }
-
-  def notification() = AdminUserPage { implicit request =>
-    Ok(html.admin.notification(request.user.id.get.id))
-  }
-
-  def sendNotificationToAllUsers() = AdminUserPage { implicit request =>
-    implicit val playRequest = request.request
-    val notifyForm = Form(tuple(
-      "title" -> text,
-      "bodyHtml" -> text,
-      "linkText" -> text,
-      "url" -> optional(text),
-      "image" -> text,
-      "sticky" -> optional(text),
-      "users" -> optional(text),
-      "category" -> optional(text)
-    ))
-
-    val (title, bodyHtml, linkText, url, image, sticky, whichUsers, categoryOpt) = notifyForm.bindFromRequest.get
-    val category = categoryOpt.map(NotificationCategory.apply) getOrElse NotificationCategory.User.ANNOUNCEMENT
-
-    val usersOpt: Option[Seq[Id[User]]] = whichUsers.flatMap(s => if (s == "") None else Some(s)).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
-    val isSticky: Boolean = sticky.isDefined
-
-    log.info("Sending global notification via Eliza!")
-    usersOpt.map {
-      users =>
-        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category) //push needed?
-    } getOrElse {
-      val users = db.readOnlyReplica {
-        implicit session => userRepo.getAllIds()
-      } //Note: Need to revisit when we have >50k users.
-      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category) //push needed?
-    }
-
-    Redirect(routes.AdminUserController.notification())
   }
 
   def bumpUserSeq() = AdminUserPage { implicit request =>

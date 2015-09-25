@@ -28,7 +28,7 @@ import com.keepit.common.json.TupleFormat._
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo: mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
   protected def httpClient: com.keepit.common.net.HttpClient = ???
-  var inbox = List.empty[(Id[User], NotificationCategory, String, String)]
+  var inbox = List.empty[NotificationEvent]
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray) = Future.successful((): Unit)
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = Future.successful(1)
@@ -41,14 +41,6 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def connectedClientCount: Future[Seq[Int]] = {
     val p = Promise.successful(Seq[Int](1))
-    p.future
-  }
-
-  def sendGlobalNotification(userIds: Set[Id[User]], title: String, body: String, linkText: String, linkUrl: String, imageUrl: String, sticky: Boolean, category: NotificationCategory, unread: Boolean = true, extra: Option[JsObject]): Future[Id[MessageHandle]] = {
-    userIds.map { id =>
-      inbox = (id, category, linkUrl, imageUrl) +: inbox
-    }
-    val p = Promise.successful(Id[MessageHandle](42.toLong))
     p.future
   }
 
@@ -96,5 +88,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   override def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = Future.successful(0)
 
-  override def sendNotificationEvent(event: NotificationEvent): Future[Unit] = Future.successful(())
+  override def sendNotificationEvent(event: NotificationEvent): Future[Unit] = {
+    inbox = event +: inbox
+    Future.successful(())
+  }
 }

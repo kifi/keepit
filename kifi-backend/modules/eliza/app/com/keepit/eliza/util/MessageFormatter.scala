@@ -1,5 +1,8 @@
 package com.keepit.eliza.util
 
+import com.keepit.common.logging.Logging
+
+import scala.util.{ Try, Failure, Success }
 import scala.util.matching.Regex.Match
 import java.net.URLDecoder
 
@@ -8,7 +11,7 @@ case class TextLookHereSegment(override val txt: String, pageText: String) exten
 case class ImageLookHereSegment(override val txt: String, imgUrl: String) extends MessageSegment("ilh", txt)
 case class TextSegment(override val txt: String) extends MessageSegment("txt", txt)
 
-object MessageFormatter {
+object MessageFormatter extends Logging {
 
   private[this] val lookHereRe = """\[([^\]\\]*(?:\\[\]\\][^\]\\]*)*)\]\(x-kifi-sel:([^\)\\]*(?:\\[\)\\][^\)\\]*)*)\)""".r
   private[this] val escapedBackslashOrRightBracketRe = """\\([\]\\])""".r
@@ -25,7 +28,7 @@ object MessageFormatter {
   /**
    * Parses message segments from [[com.keepit.eliza.model.Message.messageText]] (in a markdown-based format)
    */
-  def parseMessageSegments(msg: String): Seq[MessageSegment] = {
+  def parseMessageSegments(msg: String): Seq[MessageSegment] = Try {
 
     def parseSegment(m: Match) = {
       val segments = m.group(2).split('|')
@@ -34,8 +37,7 @@ object MessageFormatter {
       val text = escapedBackslashOrRightBracketRe.replaceAllIn(m.group(1), "$1")
       kind match {
         case "i" => ImageLookHereSegment(text, payload)
-        case "r" => TextLookHereSegment(text, payload)
-        case _ => throw new Exception(s"Unknown look-here type in ${m.matched}")
+        case "r" | _ => TextLookHereSegment(text, payload)
       }
     }
 
@@ -53,5 +55,10 @@ object MessageFormatter {
     }
     val ending = TextSegment(msg.substring(position))
     if (ending.txt.length > 0) segments :+ ending else segments
+  } match {
+    case Success(segments) => segments
+    case Failure(ex) =>
+      log.error(s"Couldn't parse message: $msg. ${ex.getMessage}")
+      Seq(TextSegment(msg))
   }
 }

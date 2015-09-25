@@ -198,7 +198,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           status(result) === OK
 
           val allInvitations = db.readOnlyMaster { implicit s =>
-            inject[OrganizationInviteRepo].getAllByOrganization(org.id.get)
+            inject[OrganizationInviteRepo].getAllByOrgId(org.id.get)
           }
           allInvitations.size === 1
           val onlyInvitation = allInvitations.head

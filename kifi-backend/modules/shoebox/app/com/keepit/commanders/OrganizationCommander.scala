@@ -257,7 +257,7 @@ class OrganizationCommanderImpl @Inject() (
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
             planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session) //this should get a .get when things are solidified
-            val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryCreateRequest.forOrgGeneralLibrary(org), org.ownerId)
+            val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             Right(OrganizationCreateResponse(request, org, orgGeneralLibrary))
           }
@@ -300,7 +300,7 @@ class OrganizationCommanderImpl @Inject() (
           val membershipCandidates = organizationMembershipCandidateRepo.getAllByOrgId(org.id.get)
           membershipCandidates.foreach { mc => organizationMembershipCandidateRepo.deactivate(mc) }
 
-          val invites = orgInviteRepo.getAllByOrganization(org.id.get)
+          val invites = orgInviteRepo.getAllByOrgId(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
 
           orgRepo.save(org.sanitizeForDelete)
@@ -321,7 +321,7 @@ class OrganizationCommanderImpl @Inject() (
         val returningLibsFut = Future {
           libsToReturn.foreach { libId =>
             val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libId) }
-            libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
+            libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(space = Some(lib.ownerId)))
           }
         }
         Right(OrganizationDeleteResponse(request, returningLibsFut, deletingLibsFut))
