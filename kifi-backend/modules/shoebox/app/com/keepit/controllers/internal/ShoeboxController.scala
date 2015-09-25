@@ -410,7 +410,7 @@ class ShoeboxController @Inject() (
   }
 
   def getUserImageUrl(id: Id[User], width: Int) = Action.async { request =>
-    userCommander.getUserImageUrl(id, width).map { url =>
+    s3ImageStore.getPictureUrl(width, id).map { url =>
       Ok(Json.toJson(url))
     }
   }

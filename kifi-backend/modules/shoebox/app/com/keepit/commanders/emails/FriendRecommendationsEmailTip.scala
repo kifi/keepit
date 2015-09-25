@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.{ EmailToSend, TipTemplate }
+import com.keepit.common.store.S3ImageStore
 import com.keepit.model.User
 import com.keepit.common.mail.template.helpers.toHttpsUrl
 import play.twirl.api.Html
@@ -30,7 +31,7 @@ case class FriendReco(userId: Id[User], avatarUrl: String, mutualFriendsCount: I
 
 class FriendRecommendationsEmailTip @Inject() (
     abook: ABookServiceClient,
-    userCommander: UserCommander,
+    s3ImageStore: S3ImageStore,
     userMutualConnectionsCommander: UserMutualConnectionsCommander,
     implicit val executionContext: ExecutionContext,
     private val airbrake: AirbrakeNotifier) extends Logging {
@@ -71,7 +72,7 @@ class FriendRecommendationsEmailTip @Inject() (
   }
 
   private def getManyUserImageUrls(userIds: Id[User]*): Future[Map[Id[User], String]] = {
-    val seqF = userIds.map { userId => userId -> userCommander.getUserImageUrl(userId, 100) }
+    val seqF = userIds.map { userId => userId -> s3ImageStore.getPictureUrl(100, userId) }
     Future.traverse(seqF) { case (userId, urlF) => urlF.map(userId -> _) } map (_.toMap) recover {
       case e =>
         airbrake.notify(s"[getManyUserImageUrls $userIds] failed", e)
