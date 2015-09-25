@@ -103,7 +103,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
 
     val hasPrimaryEmail = userEmailAddressRepo.getPrimaryByUser(emailAddress.userId).isDefined
 
-    if (hasPrimaryEmail || isPendingPrimaryEmail) {
+    if (!hasPrimaryEmail || isPendingPrimaryEmail) {
       updatePrimaryEmailForUser(verifiedEmail)
     } else {
       verifiedEmail
