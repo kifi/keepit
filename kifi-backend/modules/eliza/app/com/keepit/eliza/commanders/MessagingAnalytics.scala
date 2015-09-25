@@ -189,6 +189,8 @@ class MessagingAnalytics @Inject() (
       thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
 
+      contextBuilder.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => s"[OrgMessageTracking] successfully tracked messagedWholeOrgId=${orgId.value}" }
+
       sender match {
         case MessageSender.User(userId) => {
           val uriId = thread.uriId.get
@@ -246,7 +248,8 @@ class MessagingAnalytics @Inject() (
     val orgIdsByUserIdFut = shoebox.getOrganizationsForUsers(participants.allUsers)
     orgIdsByUserIdFut.foreach { orgIdsByUserId =>
       val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
-      commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", orgId.id.toString) }
+      log.info(s"[OrgMessageTracking] commonOrgs=${commonOrgs.map(_.mkString(","))}")
+      commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", ContextStringData(orgId.toString)) }
     }
   }
 }
