@@ -5,6 +5,7 @@ import com.keepit.model._
 import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
+import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
@@ -44,6 +45,7 @@ object NotificationEvent {
 case class NewConnectionInvite(
   recipient: Recipient,
   time: DateTime,
+  inviteeId: Id[User],
   inviterId: Id[User]) extends NotificationEvent {
 
   type N = NewConnectionInvite
@@ -55,9 +57,20 @@ object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvi
 
   override val name: String = "new_connection_invite"
 
+  // For compatibility with previous connection invites without invitee
+  val inviteeFormat: OFormat[Id[User]] = OFormat(
+    js =>
+      (js \ "inviteeId").validate[Id[User]]
+        .orElse((js \ "recipient").validate[Recipient].collect(ValidationError("expected recipient to be a user")) {
+          case UserRecipient(id, _) => id
+        }),
+    id => Json.obj("inviteeId" -> id)
+  )
+
   override implicit val format = (
     (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
+    inviteeFormat and
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
 
