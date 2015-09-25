@@ -298,7 +298,7 @@ object KeepSource {
 
   // Sources that are from users uploading files, bulk actions, inputting URLs, etc.
   // These may be old links
-  val bulk = imports ++ Set(userCopied, unknown, evernote)
+  val bulk = imports ++ Set(userCopied, unknown)
 
   val discrete = Set(keeper, site, mobile, email, twitterSync)
 

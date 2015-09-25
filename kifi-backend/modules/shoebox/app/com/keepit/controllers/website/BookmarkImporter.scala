@@ -309,8 +309,9 @@ class EvernoteParser @Inject() () extends ImportParser {
         val href = Option(elem.attr("href"))
         val text = Option(elem.text()).filterNot(href.contains)
 
-        href.collect { case h if h.length > 11 =>
-          Bookmark(text, h, List.empty, createdAt, Some(Json.obj("href" -> elem.html())))
+        href.collect {
+          case h if h.length > 11 =>
+            Bookmark(text, h, List.empty, createdAt, Some(Json.obj("href" -> elem.html())))
         }
       }
       links
