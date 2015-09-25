@@ -68,7 +68,7 @@
           </div>
 
 
-          <div ng-if="modifyingExistingLibrary" class="manage-lib-input-wrapper">
+          <div ng-if="modifyingExistingLibrary && hasPermission(LIB_PERMISSION.CREATE_SLACK_INTEGRATION)" class="manage-lib-input-wrapper">
             <div class="manage-lib-integrations-title-wrapper" href="javascript:" ng-click="toggleIntegrations()">
               <div class="manage-lib-integrations-arrow" ng-class="{'active':showIntegrations}"></div>
               <span class="manage-lib-integrations-title" ng-class="{'active':showIntegrations}">Integrations</span>
