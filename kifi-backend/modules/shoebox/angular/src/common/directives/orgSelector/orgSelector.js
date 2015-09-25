@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgSelector', [
-  'profileService', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function(profileService, ORG_PERMISSION, ORG_SETTING_VALUE) {
+  'profileService', 'LIB_PERMISSION', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
+  function(profileService, LIB_PERMISSION, ORG_PERMISSION, ORG_SETTING_VALUE) {
     return {
       restrict: 'A',
       templateUrl: 'common/directives/orgSelector/orgSelector.tpl.html',
@@ -15,6 +15,7 @@ angular.module('kifi')
       },
       link: function ($scope) {
         $scope.ORG_PERMISSION = ORG_PERMISSION;
+        $scope.LIB_PERMISSION = LIB_PERMISSION;
         $scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
         $scope.me = profileService.me;
         $scope.space = $scope.space || {};
@@ -22,8 +23,7 @@ angular.module('kifi')
         $scope.unsetOrg = function () {
           // Allow moving if...
           if (!$scope.library.id || // we're creating a new library
-              !$scope.spaceIsOrg($scope.space.current) || // or we're moving out of the personal space
-              $scope.space.current.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1) { // or we have permission
+              $scope.hasPermission(LIB_PERMISSION.MOVE_LIBRARY)) { // or we have permission to move the existing library
             $scope.libraryProps.selectedOrgId = undefined;
             $scope.space.destination = $scope.me;
           }
@@ -31,8 +31,7 @@ angular.module('kifi')
 
         $scope.setOrg = function (id) {
           if (!$scope.library.id ||
-              !$scope.spaceIsOrg($scope.space.current) ||
-              $scope.space.current.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1) {
+              $scope.hasPermission(LIB_PERMISSION.MOVE_LIBRARY)) {
             // Give preference to (1) id from args, (2) current page, (3) First organization in list.
             var orgId = id || ($scope.library.org || $scope.me.orgs[0]).id;
             $scope.libraryProps.selectedOrgId = orgId;
@@ -75,6 +74,10 @@ angular.module('kifi')
             $scope.library.visibility = 'secret';
           }
         });
+
+        $scope.hasPermission = function (permission) {
+          return $scope.library.membership && $scope.library.membership.permissions.indexOf(permission) !== -1;
+        };
 
         $scope.onClickUpsellRelocate = function () {
 
