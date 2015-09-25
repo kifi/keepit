@@ -4,7 +4,7 @@ import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ OrganizationMembershipRepo, OrganizationRepo, UserExperimentType, Library }
+import com.keepit.model._
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -16,6 +16,7 @@ class ExtUserController @Inject() (
   typeAheadCommander: TypeaheadCommander,
   libPathCommander: PathCommander,
   userPersonaCommander: UserPersonaCommander,
+  permissionCommander: PermissionCommander,
   orgMemberRepo: OrganizationMembershipRepo,
   orgRepo: OrganizationRepo,
   orgCommander: OrganizationCommander,
@@ -28,7 +29,12 @@ class ExtUserController @Inject() (
     val typeaheadF = typeAheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit)
 
     val orgsToInclude = {
-      val orgsUserIsIn = db.readOnlyReplica(implicit s => orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId))
+      val orgsUserIsIn = db.readOnlyReplica { implicit s =>
+        orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId)
+          .filter { orgId =>
+            permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
+          }
+      }
       val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
       val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs

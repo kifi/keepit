@@ -11,7 +11,7 @@ class MobileContactsControllerTest extends Specification {
 
   "MobileContactsController" should {
     "serialize a contact with a name" in {
-      new MobileContactsController(null, null, null, null, null).serializeContact( // this is so weird
+      new MobileContactsController(null, null, null, null, null, null).serializeContact( // this is so weird
         RichContact(
           email = EmailAddress("jim@davis.name"),
           name = Some("James R. Davis"),
@@ -22,7 +22,7 @@ class MobileContactsControllerTest extends Specification {
     }
 
     "serialize a contact with no name" in {
-      new MobileContactsController(null, null, null, null, null).serializeContact(
+      new MobileContactsController(null, null, null, null, null, null).serializeContact(
         RichContact(
           email = EmailAddress("bill@wattersons.org")
         )
