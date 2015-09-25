@@ -67,6 +67,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     organizationExperimentRepo: OrganizationExperimentRepo,
+    userCommander: UserCommander,
     userExperimentRepo: UserExperimentRepo,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
@@ -242,7 +243,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
     planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
     userCommander.liveFlushRemoteClientCache(request.targetId)
-    
+
     OrganizationMembershipAddResponse(request, newMembership)
   }
 
