@@ -160,26 +160,8 @@ class ActivityPusher @Inject() (
     val res: Future[Int] = message match {
       case libMessage: LibraryPushNotificationMessage =>
         log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
-        val devices = elizaServiceClient.sendGlobalNotification( //no need for push
-          userIds = Set(activity.userId),
-          title = s"New Keep in ${libMessage.lib.name}",
-          body = s"${libMessage.owner.firstName} has just kept ${libMessage.newKeep.title.getOrElse("a new item")}",
-          linkText = "Go to Library",
-          linkUrl = libMessage.libraryUrl,
-          imageUrl = s3ImageStore.avatarUrlByUser(libMessage.owner),
-          sticky = false,
-          category = NotificationCategory.User.NEW_KEEP,
-          extra = Some(Json.obj(
-            "keeper" -> libMessage.owner,
-            "library" -> NotificationInfoModel.library(libMessage.lib, libMessage.libImageOpt, libMessage.owner),
-            "keep" -> Json.obj(
-              "id" -> libMessage.newKeep.externalId,
-              "url" -> libMessage.newKeep.url
-            )
-          ))
-        ) map { _ =>
-            elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
-          }
+        val devices =
+          elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
         val owner = db.readOnlyReplica { implicit session =>
           userRepo.get(libMessage.owner.externalId)
         }
@@ -190,7 +172,7 @@ class ActivityPusher @Inject() (
           libMessage.newKeep.id.get,
           libMessage.lib.id.get
         ))
-        devices.flatten
+        devices
       case personaMessage: PersonaActivityPushNotificationMessage =>
         log.info(s"pushing general persona activity update to ${activity.userId} [$experimant]: $message")
         elizaServiceClient.sendGeneralPushNotification(activity.userId, personaMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate, activity.state == ActivityPushTaskStates.NO_DEVICES)

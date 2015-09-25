@@ -456,9 +456,6 @@ object NewSocialConnection extends NonGroupingNotificationKind[NewSocialConnecti
 
 }
 
-// todo missing, social new library through twitter (unused?)
-// todo missing, social new follower through twitter (unused?)
-
 case class SocialContactJoined(
   recipient: Recipient,
   time: DateTime,

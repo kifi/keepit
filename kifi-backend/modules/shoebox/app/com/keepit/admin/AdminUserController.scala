@@ -691,43 +691,6 @@ class AdminUserController @Inject() (
     Ok
   }
 
-  def notification() = AdminUserPage { implicit request =>
-    Ok(html.admin.notification(request.user.id.get.id))
-  }
-
-  def sendNotificationToAllUsers() = AdminUserPage { implicit request =>
-    implicit val playRequest = request.request
-    val notifyForm = Form(tuple(
-      "title" -> text,
-      "bodyHtml" -> text,
-      "linkText" -> text,
-      "url" -> optional(text),
-      "image" -> text,
-      "sticky" -> optional(text),
-      "users" -> optional(text),
-      "category" -> optional(text)
-    ))
-
-    val (title, bodyHtml, linkText, url, image, sticky, whichUsers, categoryOpt) = notifyForm.bindFromRequest.get
-    val category = categoryOpt.map(NotificationCategory.apply) getOrElse NotificationCategory.User.ANNOUNCEMENT
-
-    val usersOpt: Option[Seq[Id[User]]] = whichUsers.flatMap(s => if (s == "") None else Some(s)).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
-    val isSticky: Boolean = sticky.isDefined
-
-    log.info("Sending global notification via Eliza!")
-    usersOpt.map {
-      users =>
-        eliza.sendGlobalNotification(users.toSet, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category) //push needed?
-    } getOrElse {
-      val users = db.readOnlyReplica {
-        implicit session => userRepo.getAllIds()
-      } //Note: Need to revisit when we have >50k users.
-      eliza.sendGlobalNotification(users, title, bodyHtml, linkText, url.getOrElse(""), image, isSticky, category) //push needed?
-    }
-
-    Redirect(routes.AdminUserController.notification())
-  }
-
   def bumpUserSeq() = AdminUserPage { implicit request =>
     db.readWrite { implicit s =>
       userRepo.all.sortBy(_.id.get.id).foreach { u => userRepo.save(u) }

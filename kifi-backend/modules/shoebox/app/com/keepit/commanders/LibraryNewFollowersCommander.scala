@@ -46,46 +46,27 @@ class LibraryNewFollowersCommander @Inject() (
       if (toBeNotified.nonEmpty) {
         val keeper = usersById(newKeep.userId)
         val basicKeeper = BasicUser.fromUser(keeper)
-        elizaClient.sendGlobalNotification(
-          userIds = toBeNotified,
-          title = s"New Keep in ${library.name}",
-          body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
-          linkText = "Go to Page",
-          linkUrl = newKeep.url,
-          imageUrl = s3ImageStore.avatarUrlByUser(keeper),
-          sticky = false,
-          category = NotificationCategory.User.NEW_KEEP,
-          extra = Some(Json.obj(
-            "keeper" -> basicKeeper,
-            "library" -> NotificationInfoModel.library(library, libImageOpt, basicKeeper),
-            "keep" -> Json.obj(
-              "id" -> newKeep.externalId,
-              "url" -> newKeep.url
-            )
-          ))
-        ).foreach { _ =>
-            if (toBeNotified.size > 100) {
-              airbrake.notify("Warning: Library with lots of subscribers. Time to make the code better!")
-            }
-            val libTrunc = if (library.name.length > 30) { library.name.take(30) + "…" } else { library.name }
-            val message = newKeep.title match {
-              case Some(title) =>
-                val trunc = if (title.length > 30) { title.take(30) + "…" } else { title }
-                s"“$trunc” added to $libTrunc"
-              case None =>
-                s"New keep added to $libTrunc"
-            }
-            FutureHelpers.sequentialExec(toBeNotified) { userId =>
-              elizaClient.sendLibraryPushNotification(
-                userId,
-                message = message,
-                libraryId = library.id.get,
-                libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibrary(library),
-                pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-                category = LibraryPushNotificationCategory.LibraryChanged
-              )
-            }
-          }
+        if (toBeNotified.size > 100) {
+          airbrake.notify("Warning: Library with lots of subscribers. Time to make the code better!")
+        }
+        val libTrunc = if (library.name.length > 30) { library.name.take(30) + "…" } else { library.name }
+        val message = newKeep.title match {
+          case Some(title) =>
+            val trunc = if (title.length > 30) { title.take(30) + "…" } else { title }
+            s"“$trunc” added to $libTrunc"
+          case None =>
+            s"New keep added to $libTrunc"
+        }
+        FutureHelpers.sequentialExec(toBeNotified) { userId =>
+          elizaClient.sendLibraryPushNotification(
+            userId,
+            message = message,
+            libraryId = library.id.get,
+            libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibrary(library),
+            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+            category = LibraryPushNotificationCategory.LibraryChanged
+          )
+        }
         toBeNotified foreach { userId =>
           elizaClient.sendNotificationEvent(LibraryNewKeep(
             Recipient(userId),
