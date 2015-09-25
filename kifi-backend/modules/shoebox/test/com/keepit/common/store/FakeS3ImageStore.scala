@@ -11,7 +11,7 @@ import scala.util.{ Success, Try }
 
 case class FakeS3ImageStore(val config: S3ImageConfig) extends S3ImageStore {
   def getPictureUrl(w: Int, userId: Id[User]) =
-    Promise[String]().success(s"//cloudfront/${userId}_${w}x${w}").future
+    Promise[String]().success(s"//cloudfront/users/${userId}/pics/${w}/0.jpg").future
   def getPictureUrl(width: Option[Int], user: User, picVersion: String): Future[String] =
     Promise[String]().success(s"//cloudfront/users/${user.id.get}/pics/${width.getOrElse(100)}/$picVersion.jpg").future
 

@@ -49,8 +49,9 @@ class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
       UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
     }
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/data/%s".format(jsonFilename)), UTF8).mkString)
-    val email = inject[FacebookSocialGraph].extractEmails(json)
-      .map(em => inject[UserCommander].importSocialEmail(user.id.get, em)).head
+    val email = inject[FacebookSocialGraph].extractEmails(json).map { em =>
+      db.readWrite { implicit session => userEmailAddressCommander.intern(user.id.get, em, verified = true).get._1 }
+    }.head
     email.address === emailAddress
     db.readOnlyMaster { implicit session =>
       userEmailAddressRepo.get(email.id.get).address == emailAddress
