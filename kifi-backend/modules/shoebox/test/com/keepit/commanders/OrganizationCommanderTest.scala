@@ -274,6 +274,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
           val users = db.readWrite { implicit session =>
+            PaidPlanFactory.paidPlan().saved
             UserFactory.users(5).saved
           }
 
