@@ -45,19 +45,26 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PlanManagementCommander]
         val accountRepo = inject[PaidAccountRepo]
-        val userId = Id[User](1)
-        val userIdToo = Id[User](2)
-        val orgId = Id[Organization](1)
-        val accountId = Id[PaidAccount](1)
         val planPrice = DollarAmount.wholeDollars(10)
         val billingCycle = BillingCycle(1)
         val actionAttribution = ActionAttribution(None, None)
+        val accountId = Id[PaidAccount](1)
+
+        val (userId, userIdToo) = db.readWrite { implicit session =>
+          val user = UserFactory.user().saved
+          val userToo = UserFactory.user().saved
+          (user.id.get, userToo.id.get)
+        }
+
+        //not using a factory here because I want manual control over the account initialization (a few lines down)
+        val orgId = Id[Organization](1)
+
         val (account, plan) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(planPrice).withBillingCycle(billingCycle).saved
           commander.createAndInitializePaidAccountForOrganization(orgId, plan.id.get, userId, session)
           val account = accountRepo.get(accountId)
-          account.credit === computePartialCost(planPrice, account.billingCycleStart, billingCycle).negative
           account.activeUsers === 1
+          account.credit === computePartialCost(planPrice, account.billingCycleStart, billingCycle).negative
           account.lockedForProcessing === false
 
           //"fast forward" to test proration
@@ -84,7 +91,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount.credit
         }
 
-        currentCredit.cents < 0
+        currentCredit.cents must be_<(0)
         commander.grantSpecialCredit(orgId, currentCredit.negative, None, None)
 
         db.readOnlyMaster { implicit session =>
