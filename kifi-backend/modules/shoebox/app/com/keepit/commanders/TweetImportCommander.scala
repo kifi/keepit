@@ -47,11 +47,11 @@ class TweetImportCommanderImpl @Inject() (urlClassifier: UrlClassifier) extends 
     val zip = new ZipFile(archive)
     val filesInArchive = zip.entries().toList
 
-    val links = filesInArchive.filter(_.getName.startsWith("data/js/tweets/")).map { ze =>
+    val links = filesInArchive.filter(_.getName.startsWith("data/js/tweets/")).flatMap { ze =>
       twitterEntryToJson(zip, ze).collect {
         case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
       }.flatten
-    }.flatten
+    }
 
     (Option(KeepSource.twitterFileImport), links)
   }
@@ -71,14 +71,14 @@ class TweetImportCommanderImpl @Inject() (urlClassifier: UrlClassifier) extends 
   }
 
   private def twitterJsonToRawTweets(jsons: Seq[JsValue]): Seq[RawTweet] = {
-    jsons.map { rawTweetJson =>
+    jsons.flatMap { rawTweetJson =>
       Json.fromJson[RawTweet](rawTweetJson) match {
         case JsError(fail) =>
           log.warn(s"Couldn't parse a raw tweet: $fail\n$rawTweetJson")
           None
         case JsSuccess(rt, _) => Some(rt)
       }
-    }.flatten
+    }
   }
 
   private def twitterEntryToJson(zip: ZipFile, entry: ZipEntry): Seq[RawTweet] = {

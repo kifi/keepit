@@ -15,13 +15,11 @@ case class RawKeep(
     updatedAt: DateTime = currentDateTime,
     url: String,
     title: Option[String] = None,
-    isPrivate: Boolean = true,
     importId: Option[String] = None,
     source: KeepSource,
     installationId: Option[ExternalId[KifiInstallation]] = None,
     originalJson: Option[JsValue] = None,
     state: State[RawKeep] = RawKeepStates.ACTIVE,
-    tagIds: Option[String] = None, // deprecated - use hashtags instead!
     libraryId: Option[Id[Library]],
     createdDate: Option[DateTime] = None,
     keepTags: Option[JsArray] = None) extends Model[RawKeep] {
@@ -38,6 +36,28 @@ object RawKeep extends Logging {
         attrOpt
       case _ => None
     }
+  }
+
+  def applyFromDbRow(id: Option[Id[RawKeep]],
+    userId: Id[User],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    url: String,
+    title: Option[String],
+    isPrivate: Boolean,
+    importId: Option[String],
+    source: KeepSource,
+    installationId: Option[ExternalId[KifiInstallation]],
+    originalJson: Option[JsValue],
+    state: State[RawKeep],
+    libraryId: Option[Id[Library]],
+    createdDate: Option[DateTime],
+    keepTags: Option[JsArray]): RawKeep = {
+    RawKeep(id, userId, createdAt, updatedAt, url, title, importId, source, installationId, originalJson, state, libraryId, createdDate, keepTags)
+  }
+
+  def unapplyToDbRow(r: RawKeep) = {
+    Some((r.id, r.userId, r.createdAt, r.updatedAt, r.url, r.title, true, r.importId, r.source, r.installationId, r.originalJson, r.state, r.libraryId, r.createdDate, r.keepTags))
   }
 }
 
@@ -56,7 +76,6 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
   def toRawKeep(userId: Id[User], source: KeepSource, value: JsValue, importId: Option[String] = None, installationId: Option[ExternalId[KifiInstallation]] = None, libraryId: Option[Id[Library]]): Seq[RawKeep] = getBookmarkJsonObjects(value) map { json =>
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").asOpt[String].getOrElse(throw new Exception(s"json $json did not have a url"))
-    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
     val addedAt = (json \ "addedAt").asOpt[DateTime]
     val pathOpt = (json \ "path").asOpt[Seq[String]]
     val tagsOpt = (json \ "tags").asOpt[Seq[String]]
@@ -70,7 +89,7 @@ class RawKeepFactory @Inject() (airbrake: AirbrakeNotifier) {
 
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawKeep(userId = userId, title = title, url = url, isPrivate = isPrivate, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, keepTags = keepTags, createdDate = addedAt)
+    RawKeep(userId = userId, title = title, url = url, importId = importId, source = source, originalJson = Some(json), installationId = installationId, libraryId = libraryId, keepTags = keepTags, createdDate = addedAt)
   }
 }
 

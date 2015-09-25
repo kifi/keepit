@@ -90,8 +90,8 @@ private class RawKeepImporterActor @Inject() (
   private def processBatch(rawKeeps: Seq[RawKeep], reason: String): Unit = {
     log.info(s"[RawKeepImporterActor] Processing ($reason) ${rawKeeps.length} keeps")
 
-    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.isPrivate, rk.libraryId)).foreach {
-      case ((userId, importIdOpt, source, installationId, isPrivate, libraryId), rawKeepGroup) =>
+    rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.libraryId)).foreach {
+      case ((userId, importIdOpt, source, installationId, libraryId), rawKeepGroup) =>
 
         val context = importIdOpt.flatMap(importId => getHeimdalContext(userId, importId)).getOrElse(HeimdalContext.empty)
 
@@ -106,13 +106,8 @@ private class RawKeepImporterActor @Inject() (
           }.distinctBy(_.url)
         }
 
-        def internKeeps(userId: Id[User], rawBookmarks: Seq[RawBookmarkRepresentation], isPrivate: Boolean) = {
-          val library = db.readWrite { implicit s =>
-            if (libraryId.isEmpty)
-              getLibFromPrivacy(isPrivate, userId)(s)
-            else
-              libraryRepo.get(libraryId.get)
-          }
+        def internKeeps(userId: Id[User], rawBookmarks: Seq[RawBookmarkRepresentation]) = {
+          val library = db.readWrite { implicit s => libraryRepo.get(libraryId.get) }
           val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(context)
           val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
 
@@ -169,7 +164,7 @@ private class RawKeepImporterActor @Inject() (
         //------------------------ main method ----------------------
 
         val rawBookmarks = parseRawBookmarksFromJson(rawKeepGroup)
-        val (successes, successesRawKeep) = internKeeps(userId, rawBookmarks, isPrivate)
+        val (successes, successesRawKeep) = internKeeps(userId, rawBookmarks)
 
         if (successes.nonEmpty) {
           //process tags: create collections, put keeps into collections.
@@ -198,16 +193,6 @@ private class RawKeepImporterActor @Inject() (
         Json.fromJson[HeimdalContext](Json.parse(jsonStr)).asOpt
       }
     }.toOption.flatten
-  }
-
-  // Until we can refactor this intern API to use libraries instead of privacy, we need to look up the library.
-  // This should be removed as soon as we can. - Andrew
-  private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
-  private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
-    val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
-      def call() = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
-    })
-    if (isPrivate) secret else main
   }
 
 }
@@ -290,9 +275,6 @@ class KeepTagImportHelper @Inject() (
 
     successes.foreach { keep =>
       val allTagIdsForThisKeep = rawKeepByUrl.get(keep.url).flatMap { rk =>
-        val tagIdsFromTags = rk.tagIds.map { tags =>
-          tags.split(",").toSeq.filter(_.length > 0).flatMap { c => Try(c.toLong).map(Id[Collection]).toOption }
-        }
 
         val tagIdsFromKeepTags = rk.keepTags.map { tagArray =>
           tagArray.as[Seq[String]].flatMap { tagName =>
@@ -300,10 +282,7 @@ class KeepTagImportHelper @Inject() (
           }
         }
 
-        (tagIdsFromTags, tagIdsFromKeepTags) match {
-          case (Some(tagIds), Some(keepTagIds)) => Some(tagIds ++ keepTagIds)
-          case _ => tagIdsFromTags.orElse(tagIdsFromKeepTags)
-        }
+        tagIdsFromKeepTags
 
       }.getOrElse(Seq.empty)
 
