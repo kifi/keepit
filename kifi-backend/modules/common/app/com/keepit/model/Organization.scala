@@ -100,7 +100,8 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
         REMOVE_LIBRARIES,
         GROUP_MESSAGING,
         PUBLISH_LIBRARIES,
-        MANAGE_PLAN
+        MANAGE_PLAN,
+        EXPORT_KEEPS
       ),
       Some(OrganizationRole.MEMBER) -> Set(
         VIEW_ORGANIZATION,

@@ -10,7 +10,7 @@ import com.keepit.controllers.website.{ LibraryController, OrganizationMembershi
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.commanders.{ OrganizationInviteCommander, LibraryCommander, OrganizationCommander }
+import com.keepit.commanders.{ KeepExportCommander, OrganizationInviteCommander, LibraryCommander, OrganizationCommander }
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.PaidPlanFactoryHelper._
@@ -24,7 +24,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector {
 
@@ -334,6 +334,39 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(createSlackIntegration.name, "member"))))
 
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "export keeps permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val exportKeeps = OrganizationPermissionFeature.ExportKeeps
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(
+            FeatureSetting(exportKeeps.name, exportKeeps.options.find(_ == "admin").get)
+          ).saved
+          (plan, account)
+        }
+
+        val keepExportCommander = inject[KeepExportCommander]
+
+        val ownerExportRequest = OrganizationKeepExportRequest(owner.id.get, Set(org.id.get))
+        val adminExportRequest = OrganizationKeepExportRequest(admin.id.get, Set(org.id.get))
+        val memberExportRequest = OrganizationKeepExportRequest(member.id.get, Set(org.id.get))
+
+        Await.result(keepExportCommander.exportKeeps(ownerExportRequest), Duration(3, SECONDS)) must beSuccessfulTry
+        Await.result(keepExportCommander.exportKeeps(adminExportRequest), Duration(3, SECONDS)) must beSuccessfulTry
+        Await.result(keepExportCommander.exportKeeps(memberExportRequest), Duration(3, SECONDS)) must beFailedTry
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(exportKeeps.name, "member"))))
+
+        Await.result(keepExportCommander.exportKeeps(memberExportRequest), Duration(3, SECONDS)) must beSuccessfulTry
       }
     }
   }
