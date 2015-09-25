@@ -25,7 +25,8 @@ class DataIntegrityPluginImpl @Inject() (
     scheduleTaskOnOneMachine(actor.system, 7 minutes, EVERY_N_MINUTE minutes, actor.ref, SystemLibraryCheck, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 1 minutes, 1 minutes, actor.ref, LibrariesCheck, getClass.getSimpleName)
     scheduleTaskOnOneMachine(actor.system, 10 minutes, 24 hours, actor.ref, PaymentsMembershipCheck, getClass.getSimpleName)
-    scheduleTaskOnOneMachine(actor.system, 1 minutes, 15 seconds, actor.ref, KeepsCheck, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 1 minutes, 30 seconds, actor.ref, KeepsCheck, getClass.getSimpleName)
+    scheduleTaskOnOneMachine(actor.system, 5 minutes, 5 minutes, actor.ref, OrganizationsCheck, getClass.getSimpleName)
   }
 }
 
@@ -34,17 +35,18 @@ private[integrity] case object Cron
 private[integrity] case object SequenceNumberCheck
 private[integrity] case object LibrariesCheck
 private[integrity] case object KeepsCheck
+private[integrity] case object OrganizationsCheck
 private[integrity] case object SystemLibraryCheck
 private[integrity] case object PaymentsMembershipCheck
 
 private[integrity] class DataIntegrityActor @Inject() (
-  airbrake: AirbrakeNotifier,
-  orphanCleaner: OrphanCleaner,
-  elizaSequenceNumberChecker: ElizaSequenceNumberChecker,
-  libraryChecker: LibraryChecker,
-  paymentsChecker: PaymentsIntegrityChecker,
-  keepChecker: KeepChecker)
-    extends FortyTwoActor(airbrake) with Logging {
+    airbrake: AirbrakeNotifier,
+    orphanCleaner: OrphanCleaner,
+    elizaSequenceNumberChecker: ElizaSequenceNumberChecker,
+    libraryChecker: LibraryChecker,
+    paymentsChecker: PaymentsIntegrityChecker,
+    keepChecker: KeepChecker,
+    organizationChecker: OrganizationChecker) extends FortyTwoActor(airbrake) with Logging {
 
   def receive() = {
     case CleanOrphans =>
@@ -55,6 +57,8 @@ private[integrity] class DataIntegrityActor @Inject() (
       libraryChecker.check()
     case KeepsCheck =>
       keepChecker.check()
+    case OrganizationsCheck =>
+      organizationChecker.check()
     case SystemLibraryCheck =>
       libraryChecker.checkSystemLibraries()
     case PaymentsMembershipCheck =>

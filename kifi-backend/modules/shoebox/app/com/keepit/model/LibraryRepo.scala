@@ -76,6 +76,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
 
   // one-time admin cleanup endpoint
   def getLibrariesWithInactiveOwner()(implicit session: RSession): Seq[Id[Library]]
+
+  def deactivate(model: Library)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -528,6 +530,10 @@ class LibraryRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select lib.id from library lib inner join user u on lib.owner_id = u.id where lib.state = 'active' and u.state = 'inactive'"""
     q.as[Id[Library]].list
+  }
+
+  def deactivate(model: Library)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }
 
