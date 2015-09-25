@@ -121,9 +121,7 @@ class LibraryCommanderImpl @Inject() (
     def invalidSpace = {
       val canCreateLibraryInSpace = targetSpace match {
         case OrganizationSpace(orgId) =>
-          val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(ownerId))
-          permissions.contains(OrganizationPermission.ADD_LIBRARIES) &&
-            (libCreateReq.visibility != LibraryVisibility.PUBLISHED || permissions.contains(OrganizationPermission.PUBLISH_LIBRARIES))
+          permissionCommander.getOrganizationPermissions(orgId, Some(ownerId)).contains(OrganizationPermission.ADD_LIBRARIES)
         case UserSpace(userId) =>
           userId == ownerId // Right now this is guaranteed to be correct, could replace with true
       }
@@ -134,7 +132,7 @@ class LibraryCommanderImpl @Inject() (
       (targetSpace, libCreateReq.visibility) match {
         case (UserSpace(_), LibraryVisibility.ORGANIZATION) =>
           Some(LibraryFail(BAD_REQUEST, "invalid_visibility"))
-        case (OrganizationSpace(orgId), LibraryVisibility.PUBLISHED) if permissionCommander.getOrganizationPermissions(orgId, Some(ownerId)).contains(OrganizationPermission.PUBLISH_LIBRARIES) =>
+        case (OrganizationSpace(orgId), LibraryVisibility.PUBLISHED) if !permissionCommander.getOrganizationPermissions(orgId, Some(ownerId)).contains(OrganizationPermission.PUBLISH_LIBRARIES) =>
           Some(LibraryFail(FORBIDDEN, "cannot_publish_libraries_in_space"))
         case _ => None
       }
