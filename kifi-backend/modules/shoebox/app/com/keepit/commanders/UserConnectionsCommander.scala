@@ -168,28 +168,16 @@ class UserConnectionsCommander @Inject() (
 
     val emailF = emailSender.connectionMade(friend.id.get, myUserId, NotificationCategory.User.FRIEND_ACCEPTED)
 
-    val notifF = elizaServiceClient.sendGlobalNotification( //push sent
-      userIds = Set(friend.id.get),
-      title = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect!",
-      body = s"Now you will enjoy ${respondingUser.firstName}’s keeps in your search results and you can message ${respondingUser.firstName} directly.",
-      linkText = s"Visit ${respondingUser.firstName}’s profile",
-      linkUrl = s"https://www.kifi.com/${respondingUser.username.value}",
-      imageUrl = respondingUserImage,
-      sticky = false,
-      category = NotificationCategory.User.FRIEND_ACCEPTED,
-      extra = Some(Json.obj("friend" -> BasicUser.fromUser(respondingUser)))
-    ) map { _ =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(friend.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-        if (canSendPush) {
-          elizaServiceClient.sendUserPushNotification(
-            userId = friend.id.get,
-            message = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect",
-            recipient = respondingUser,
-            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-            category = UserPushNotificationCategory.UserConnectionAccepted)
-        }
-      }
-    elizaServiceClient.sendNotificationEvent(ConnectionInviteAccepted(
+    val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(friend.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+    if (canSendPush) {
+      elizaServiceClient.sendUserPushNotification(
+        userId = friend.id.get,
+        message = s"${respondingUser.firstName} ${respondingUser.lastName} accepted your invitation to connect",
+        recipient = respondingUser,
+        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+        category = UserPushNotificationCategory.UserConnectionAccepted)
+    }
+    val notifF = elizaServiceClient.sendNotificationEvent(ConnectionInviteAccepted(
       Recipient(friend),
       currentDateTime,
       myUserId
@@ -208,35 +196,21 @@ class UserConnectionsCommander @Inject() (
 
     val emailF = emailSender.friendRequest(recipient.id.get, myUserId)
 
-    val friendReqF = elizaServiceClient.sendGlobalNotification( //push sent
-      userIds = Set(recipient.id.get),
-      title = s"${requestingUser.firstName} ${requestingUser.lastName} wants to connect with you on Kifi",
-      body = s"Enjoy ${requestingUser.firstName}’s keeps in your search results and message ${requestingUser.firstName} directly.",
-      linkText = s"Respond to ${requestingUser.firstName}’s invitation",
-      linkUrl = s"https://www.kifi.com/${requestingUser.username.value}",
-      imageUrl = requestingUserImage,
-      sticky = false,
-      category = NotificationCategory.User.FRIEND_REQUEST,
-      extra = Some(Json.obj("friend" -> BasicUser.fromUser(requestingUser)))
-    ) map { id =>
-        val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-        if (canSendPush) {
-          elizaServiceClient.sendUserPushNotification(
-            userId = recipient.id.get,
-            message = s"${myUser.fullName} invited you to connect",
-            recipient = myUser,
-            pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-            category = UserPushNotificationCategory.UserConnectionRequest)
-        }
-        db.readWrite { implicit session =>
-          friendRequestRepo.save(request.copy(messageHandle = Some(id)))
-        }
-      }
-    elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
+    val friendReqF = elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
       Recipient(recipient),
       currentDateTime,
       myUser.id.get
-    ))
+    )) map { id =>
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+      if (canSendPush) {
+        elizaServiceClient.sendUserPushNotification(
+          userId = recipient.id.get,
+          message = s"${myUser.fullName} invited you to connect",
+          recipient = myUser,
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+          category = UserPushNotificationCategory.UserConnectionRequest)
+      }
+    }
     emailF flatMap (_ => friendReqF)
   }
 

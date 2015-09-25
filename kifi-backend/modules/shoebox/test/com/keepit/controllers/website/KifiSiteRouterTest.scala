@@ -180,7 +180,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         // Libraries
         val libraryCommander = inject[LibraryCommander]
         val Right(library) = {
-          val libraryRequest = LibraryCreateRequest(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
+          val libraryRequest = LibraryInitialValues(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
           libraryCommander.createLibrary(libraryRequest, user1.id.get)
         }
         actionsHelper.unsetUser
@@ -191,7 +191,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/abeZ1234/awesome-lib?auth=abcdefghiklmnop")) must beRedirect(303, "/abe.z1234/awesome-lib?auth=abcdefghiklmnop")
         route(FakeRequest("GET", "/abeZ1234/awesome-lib/find?q=weee")) must beRedirect(303, "/abe.z1234/awesome-lib/find?q=weee")
 
-        libraryCommander.modifyLibrary(library.id.get, library.ownerId, LibraryModifyRequest(slug = Some("most-awesome-lib")))
+        libraryCommander.modifyLibrary(library.id.get, library.ownerId, LibraryModifications(slug = Some("most-awesome-lib")))
         route(FakeRequest("GET", "/abe.z1234/awesome-lib")) must beRedirect(301, "/abe.z1234/most-awesome-lib")
         route(FakeRequest("GET", "/abe.z1234/most-awesome-lib")) must beWebApp
 

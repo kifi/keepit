@@ -75,7 +75,7 @@ class LibraryController @Inject() (
   }
 
   def addLibrary() = UserAction(parse.tolerantJson) { request =>
-    val externalCreateRequestValidated = request.body.validate[ExternalLibraryCreateRequest](ExternalLibraryCreateRequest.reads)
+    val externalCreateRequestValidated = request.body.validate[ExternalLibraryInitialValues](ExternalLibraryInitialValues.reads)
 
     externalCreateRequestValidated match {
       case JsError(errs) =>
@@ -88,7 +88,7 @@ class LibraryController @Inject() (
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
-          LibraryCreateRequest(
+          LibraryInitialValues(
             name = externalCreateRequest.name,
             slug = slug,
             visibility = externalCreateRequest.visibility,
@@ -119,14 +119,14 @@ class LibraryController @Inject() (
 
   def modifyLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
-    val externalLibraryModifyRequest = request.body.as[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.reads)
+    val externalLibraryModifyRequest = request.body.as[ExternalLibraryModifications](ExternalLibraryModifications.reads)
 
     val libModifyRequest = db.readOnlyReplica { implicit session =>
       val space = externalLibraryModifyRequest.externalSpace map {
         case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
         case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
       }
-      LibraryModifyRequest(
+      LibraryModifications(
         name = externalLibraryModifyRequest.name,
         slug = externalLibraryModifyRequest.slug,
         visibility = externalLibraryModifyRequest.visibility,

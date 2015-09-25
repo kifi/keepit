@@ -230,16 +230,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     val userImage = s3ImageStore.avatarUrlByUser(inviter)
     val orgLink = s"""https://www.kifi.com/${org.handle.value}"""
 
-    elizaClient.sendGlobalNotification( //push sent
-      userIds = invitees,
-      title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${org.abbreviatedName}!",
-      body = s"Join the ${org.abbreviatedName} team, so you can access and build your team's knowledge",
-      linkText = "Let's do it!",
-      linkUrl = orgLink,
-      imageUrl = userImage,
-      sticky = false,
-      category = NotificationCategory.User.ORGANIZATION_INVITATION
-    )
     invitees.foreach { invitee =>
       elizaClient.sendNotificationEvent(OrgNewInvite(
         Recipient(invitee),
@@ -326,26 +316,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     invitesToAlert foreach { invite =>
       val title = s"${invitee.firstName} accepted your invitation to join ${org.abbreviatedName}!"
       val inviterId = invite.inviterId
-      elizaClient.sendGlobalNotification( //push sent
-        userIds = Set(inviterId),
-        title = title,
-        body = s"Click here to view ${org.abbreviatedName}’s libraries.",
-        linkText = s"See ${org.abbreviatedName}’s libraries",
-        linkUrl = s"https://www.kifi.com/${org.handle.value}",
-        imageUrl = inviteeImage,
-        sticky = false,
-        category = NotificationCategory.User.ORGANIZATION_JOINED,
-        extra = Some(Json.obj(
-          "member" -> BasicUser.fromUser(invitee),
-          "organization" -> NotificationInfoModel.organization(org, orgImageOpt))
-        )
-      )
-      elizaClient.sendNotificationEvent(OrgInviteAccepted(
-        Recipient(inviterId),
-        currentDateTime,
-        invitee.id.get,
-        org.id.get
-      ))
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
         elizaClient.sendUserPushNotification(

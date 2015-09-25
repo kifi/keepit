@@ -110,7 +110,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
 
     (entryOpt, suiOpt, syncOpt) match {
       case (Some(entry), Some(sui), None) if entry.state == TwitterWaitlistEntryStates.ACTIVE && sui.credentials.isDefined && sui.userId.isDefined =>
-        val addRequest = LibraryCreateRequest(
+        val addRequest = LibraryInitialValues(
           name = s"Interesting links from @$handle",
           visibility = LibraryVisibility.PUBLISHED,
           slug = s"interesting-links-from-$handle",

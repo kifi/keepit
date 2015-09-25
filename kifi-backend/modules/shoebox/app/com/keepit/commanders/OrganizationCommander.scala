@@ -321,7 +321,7 @@ class OrganizationCommanderImpl @Inject() (
         val returningLibsFut = Future {
           libsToReturn.foreach { libId =>
             val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libId) }
-            libraryCommander.unsafeModifyLibrary(lib, LibraryModifyRequest(space = Some(lib.ownerId)))
+            libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(space = Some(lib.ownerId)))
           }
         }
         Right(OrganizationDeleteResponse(request, returningLibsFut, deletingLibsFut))
