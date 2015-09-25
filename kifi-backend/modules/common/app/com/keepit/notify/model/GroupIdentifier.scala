@@ -39,10 +39,10 @@ object GroupIdentifier extends GroupIdentifierLowPriorityImplicits {
   implicit def tuple2GroupIdentifier[A, B](implicit aGid: GroupIdentifier[A], bGid: GroupIdentifier[B]): GroupIdentifier[(A, B)] =
     new GroupIdentifier[(A, B)] {
       def serialize(that: (A, B)): String = that match {
-        case (a, b) => aGid.serialize(a) + ":" + bGid.serialize(b)
+        case (a, b) => aGid.serialize(a) + ":::" + bGid.serialize(b)
       }
       def deserialize(str: String): (A, B) = {
-        val Array(a, b) = str.split(":")
+        val Array(a, b) = str.split(":::")
         (aGid.deserialize(a), bGid.deserialize(b))
       }
     }
