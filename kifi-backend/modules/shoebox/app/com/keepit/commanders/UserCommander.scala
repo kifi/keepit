@@ -526,15 +526,6 @@ class UserCommander @Inject() (
     }
   }
 
-  def importSocialEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
-    db.readWrite { implicit s =>
-      userEmailAddressCommander.intern(userId, emailAddress, verified = true) match {
-        case Success((email, _)) => email
-        case Failure(error) => throw error
-      }
-    }
-  }
-
   def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]] = {
     val futureRecommendedUsers = abookServiceClient.getFriendRecommendations(userId, offset, limit)
     val futureRelatedUsers = graphServiceClient.getSociallyRelatedEntitiesForUser(userId)
