@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import java.io.File
+import java.security.SecureRandom
 
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -33,16 +34,18 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
     FakeWebServiceModule()
   )
 
-  def fakeFile1 = {
-    val tf = TemporaryFile(new File("test/data/image1-" + Math.random() + ".png"))
-    tf.file.deleteOnExit()
-    FileUtils.copyFile(new File("test/data/image1.png"), tf.file)
+  private val random = new SecureRandom()
+
+  def genNewFakeFile1 = {
+    val tf = File.createTempFile("tst1", ".png")
+    tf.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image1.png"), tf)
     tf
   }
-  def fakeFile2 = {
-    val tf = TemporaryFile(new File("test/data/image2-" + Math.random() + ".png"))
-    tf.file.deleteOnExit()
-    FileUtils.copyFile(new File("test/data/image2.png"), tf.file)
+  def genNewFakeFile2 = {
+    val tf = File.createTempFile("tst2", ".png")
+    tf.deleteOnExit()
+    FileUtils.copyFile(new File("test/data/image2.png"), tf)
     tf
   }
   def setup()(implicit injector: Injector) = {
@@ -53,11 +56,11 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
       val uri = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
       val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
 
-      val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user.id.get, url = url.url, urlId = url.id.get,
+      val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user.id.get, url = url.url,
         uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
 
-      val keep2 = keepRepo.save(Keep(title = Some("G2"), userId = user.id.get, url = url.url, urlId = url.id.get,
+      val keep2 = keepRepo.save(Keep(title = Some("G2"), userId = user.id.get, url = url.url,
         uriId = uri.id.get, source = KeepSource.keeper, state = KeepStates.ACTIVE,
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib.id.get)))
       (user, lib, uri, keep1, keep2)
@@ -71,15 +74,19 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val (user, lib, uri, keep1, keep2) = setup()
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
+          val file = genNewFakeFile1
+          val savedF = commander.setKeepImageFromFile(file, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
           // if this test fails, make sure imagemagick is installed. Use `brew install imagemagick`
+          file.delete()
         }
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
+          val file = genNewFakeFile1
+          val savedF = commander.setKeepImageFromFile(file, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
+          file.delete()
         }
 
         inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.size === 1
@@ -103,9 +110,11 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         bulk2.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage2.get.id))
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile2, keep2.id.get, ImageSource.UserUpload)
+          val file = genNewFakeFile2
+          val savedF = commander.setKeepImageFromFile(file, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
+          file.delete()
         }
 
         val keys = inject[RoverImageStore].asInstanceOf[InMemoryRoverImageStoreImpl].all.keySet.map(_.path)
@@ -123,9 +132,11 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         bulk3.mapValues(_.map(_.id)) === Map(keep1.id.get -> Some(keepImage1.get.id), keep2.id.get -> Some(keepImage3.get.id))
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep2.id.get, ImageSource.UserUpload)
+          val file = genNewFakeFile1
+          val savedF = commander.setKeepImageFromFile(file, keep2.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
+          file.delete()
         }
 
         val keepImage4 = commander.getBestImageForKeep(keep2.id.get, ScaleImageRequest(100, 100)).flatten
@@ -159,9 +170,11 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val (user, lib, uri, keep1, _) = setup()
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile1, keep1.id.get, ImageSource.UserUpload)
+          val file = genNewFakeFile1
+          val savedF = commander.setKeepImageFromFile(file, keep1.id.get, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
+          file.delete()
         }
 
         {
@@ -183,6 +196,8 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
     "patiently create missing image sizes" in {
       withDb(modules: _*) { implicit injector =>
         val kiRepo = inject[KeepImageRepo]
+        val file = genNewFakeFile2
+        val file2 = genNewFakeFile2
 
         val ws = inject[WebService].asInstanceOf[FakeWebService]
         ws.setGlobalStreamResponse { url =>
@@ -190,7 +205,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
             override def status: Int = 200
             override def headers: Map[String, Seq[String]] = Map("Content-Type" -> Seq("image/png"))
           }
-          val content: Array[Byte] = FileUtils.readFileToByteArray(fakeFile2.file)
+          val content: Array[Byte] = FileUtils.readFileToByteArray(file2)
           (headers, Enumerator(content))
         }
 
@@ -199,7 +214,7 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
         val keepId = keep1.id.get
 
         {
-          val savedF = commander.setKeepImageFromFile(fakeFile2, keepId, ImageSource.UserUpload)
+          val savedF = commander.setKeepImageFromFile(file, keepId, ImageSource.UserUpload)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(400, 482), 73259)
 
@@ -239,6 +254,9 @@ class KeepImageCommanderTest extends Specification with ShoeboxTestInjector with
           val keepImages = Await.result(keepImagesF, Duration("10 seconds"))
           keepImages(keepId).get.isOriginal must beTrue
         }
+
+        file.delete()
+        file2.delete()
       }
     }
   }

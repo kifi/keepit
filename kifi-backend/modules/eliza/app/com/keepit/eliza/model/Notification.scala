@@ -3,7 +3,8 @@ package com.keepit.eliza.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
-import com.keepit.notify.model.event.NotificationEvent
+import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.model.event.{ NewMessage, NotificationEvent }
 import com.keepit.notify.model._
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -30,11 +31,23 @@ case class Notification(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     recipient: Recipient,
-    lastChecked: DateTime = START_OF_TIME,
+    lastChecked: Option[DateTime] = None,
     kind: NKind,
-    groupIdentifier: Option[String] = None,
-    lastEvent: DateTime = currentDateTime,
-    disabled: Boolean = false) extends Model[Notification] {
+    groupIdentifier: Option[String],
+    lastEvent: DateTime,
+    disabled: Boolean = false,
+    externalId: ExternalId[Notification] = ExternalId(),
+    backfilledFor: Option[Id[UserThread]] = None) extends ModelWithExternalId[Notification] {
+
+  def hasNewEvent: Boolean = lastChecked.fold(true) { checked =>
+    lastEvent > checked
+  }
+
+  def unread: Boolean = !disabled && hasNewEvent
+
+  def withUnread(unread: Boolean) = if (unread) copy(lastChecked = None) else copy(lastChecked = Some(lastEvent))
+
+  def withDisabled(disabled: Boolean) = copy(disabled = disabled)
 
   override def withId(id: Id[Notification]): Notification = copy(id = Some(id))
 
@@ -42,30 +55,71 @@ case class Notification(
 
 }
 
+/**
+ * Represents a notification and its collection of items, along with the guarantees that these objects hold.
+ */
+class ExtendedNotification(val notification: Notification, val items: Set[NotificationItem]) {
+
+  //  require(items.forall(_.kind == notification.kind), s"Same-kind requirement failed for items $items and notif $notification")
+  //  require(relevantItem.eventTime == notification.lastEvent, s"Most-recent-time requirement failed for items $items and notif $notification")
+
+  def relevantItem = items.maxBy(_.eventTime)
+
+  def unreadMessages: Set[NotificationItem] = items.filter(_.eventTime > notification.lastEvent)
+
+  def unreadAuthors: Set[Recipient] = {
+    // only makes sense if this is a message notification
+    if (notification.kind == NewMessage) {
+      items.map(_.event).collect {
+        case e: NewMessage => e
+      }.map(_.from)
+    } else Set()
+  }
+
+}
+
+case class NotificationWithItems(
+  override val notification: Notification,
+  override val items: Set[NotificationItem]) extends ExtendedNotification(notification, items)
+
+case class NotificationWithInfo(
+  override val notification: Notification,
+  override val items: Set[NotificationItem], info: NotificationInfo)
+    extends ExtendedNotification(notification, items)
+
+case class NotificationWithJson(
+  override val notification: Notification,
+  override val items: Set[NotificationItem],
+  json: JsObject) extends ExtendedNotification(notification, items)
+
 object Notification {
 
   implicit val format = (
     (__ \ "id").formatNullable[Id[Notification]] and
     (__ \ "createdAt").format[DateTime] and
     (__ \ "updatedAt").format[DateTime] and
-    (__ \ "lastChecked").format[DateTime] and
+    (__ \ "lastChecked").formatNullable[DateTime] and
     (__ \ "kind").format[String] and
     (__ \ "groupIdentifier").formatNullable[String] and
     (__ \ "recipient").format[Recipient] and
     (__ \ "lastEvent").format[DateTime] and
-    (__ \ "disabled").format[Boolean]
+    (__ \ "disabled").format[Boolean] and
+    (__ \ "externalId").format[ExternalId[Notification]] and
+    (__ \ "backfilledFor").formatNullable[Id[UserThread]]
   )(Notification.applyFromDbRow, unlift(Notification.unapplyToDbRow))
 
   def applyFromDbRow(
     id: Option[Id[Notification]],
     createdAt: DateTime,
     updatedAt: DateTime,
-    lastChecked: DateTime,
+    lastChecked: Option[DateTime],
     kind: String,
     groupIdentifier: Option[String],
     recipient: Recipient,
     lastEvent: DateTime,
-    disabled: Boolean): Notification = Notification(
+    disabled: Boolean,
+    externalId: ExternalId[Notification],
+    backfilledFor: Option[Id[UserThread]]): Notification = Notification(
     id,
     createdAt,
     updatedAt,
@@ -74,10 +128,12 @@ object Notification {
     NotificationKind.getByName(kind).get,
     groupIdentifier,
     lastEvent,
-    disabled
+    disabled,
+    externalId,
+    backfilledFor
   )
 
-  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, DateTime, String, Option[String], Recipient, DateTime, Boolean)] = Some(
+  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Option[DateTime], String, Option[String], Recipient, DateTime, Boolean, ExternalId[Notification], Option[Id[UserThread]])] = Some(
     notification.id,
     notification.createdAt,
     notification.updatedAt,
@@ -86,7 +142,9 @@ object Notification {
     notification.groupIdentifier,
     notification.recipient,
     notification.lastEvent,
-    notification.disabled
+    notification.disabled,
+    notification.externalId,
+    notification.backfilledFor
   )
 
 }

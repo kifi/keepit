@@ -11,7 +11,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
 import com.keepit.test.ShoeboxTestInjector
@@ -33,8 +32,7 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
     FakeKeepImportsModule(),
-    FakeCryptoModule(),
-    FakeCuratorServiceClientModule()
+    FakeCryptoModule()
   )
 
   def setup()(implicit injector: Injector) = {
@@ -72,16 +70,16 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
 
       val hover = KeepSource.keeper
 
-      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
         uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url,
         uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
+      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusDays(1),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
 

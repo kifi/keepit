@@ -1,7 +1,14 @@
 package com.keepit.common.db.slick
 
+import java.sql.{ Clob, Timestamp }
+import javax.sql.rowset.serial.SerialClob
+
+import com.keepit.classify.{ DomainTagName, NormalizedHostname }
 import com.keepit.common.db._
 import com.keepit.common.service.IpAddress
+import com.keepit.common.mail.{ EmailAddress, _ }
+import com.keepit.common.math.ProbabilityDensity
+import com.keepit.common.net.UserAgent
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
 import com.keepit.cortex.models.lda.LDATopic
@@ -19,18 +26,13 @@ import com.keepit.classify.{ NormalizedHostname, DomainTagName }
 import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
+import com.keepit.notify.model.Recipient
+import com.keepit.search.{ ArticleSearchResult, Lang, SearchConfig }
 import com.keepit.serializer.SocialUserSerializer
-import com.keepit.search.{ SearchConfig, Lang }
-import javax.sql.rowset.serial.SerialClob
-import com.keepit.model.UrlHash
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsString
-import play.api.libs.json.JsObject
-import com.keepit.common.mail.EmailAddress
-import com.keepit.social.SocialId
-import com.keepit.model.DeepLocator
-import com.keepit.search.ArticleSearchResult
-import com.keepit.common.math.ProbabilityDensity
+import com.keepit.social.{ SocialId, SocialNetworkType }
+import org.joda.time.{ DateTime, LocalTime }
+import securesocial.core.SocialUser
+
 import scala.concurrent.duration._
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
@@ -102,8 +104,15 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val imageSourceMapper = MappedColumnType.base[ImageSource, String](_.name, ImageSource.apply)
   implicit val imageStoreKeyMapper = MappedColumnType.base[ImagePath, String](_.path, ImagePath.apply)
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
+  implicit val keepLibrariesHashMapper = MappedColumnType.base[LibrariesHash, Int](_.value, LibrariesHash.apply)
+  implicit val keepParticipantsHashMapper = MappedColumnType.base[ParticipantsHash, Int](_.value, ParticipantsHash.apply)
 
-  implicit val recipientMapper = MappedColumnType.base[Recipient, String](recip => Recipient.unapply(recip).get, Recipient.apply)
+  implicit val recipientMapper = MappedColumnType.base[Recipient, String](
+    {recip =>
+      val result = Recipient.unapply(recip).get
+    result}, {str =>
+  val result = Recipient.apply(str)
+  result})
 
   implicit val notificationEventMapper = MappedColumnType.base[NotificationEvent, String]({ event =>
     Json.stringify(Json.toJson(event))
@@ -211,6 +220,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val setSocialNetworkTypeParameter = setParameterFromMapper[SocialNetworkType]
   implicit val setEmailAddressParameter = setParameterFromMapper[EmailAddress]
   implicit val setHashtagParameter = setParameterFromMapper[Hashtag]
+  implicit val setLibraryVisibilityParameter = setParameterFromMapper[LibraryVisibility]
 
   // GetResult mappers to be used for interpolated query results
 
@@ -249,8 +259,11 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val getEmailAddressResult = getResultFromMapper[EmailAddress]
   implicit val getLibraryVisiblityResult = getResultFromMapper[LibraryVisibility]
   implicit val getOptLibraryVisiblityResult = getResultOptionFromMapper[LibraryVisibility]
+  implicit val getOptLibraryAccessResult = getResultOptionFromMapper[LibraryAccess]
+  implicit val getLibraryAccessResult = getResultFromMapper[LibraryAccess]
   implicit val getHashtagResult = getResultFromMapper[Hashtag]
   implicit def getOptVersionNumberResult[T] = getResultOptionFromMapper[VersionNumber[T]]
   implicit val getOptDurationResult = getResultOptionFromMapper[Duration]
   implicit val getUrlHashResult = getResultFromMapper[UrlHash]
+  implicit val getJsValueResult = getResultFromMapper[JsValue]
 }

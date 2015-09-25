@@ -334,6 +334,7 @@ followerPicDiam = 2.2em
 
 .kf-lh-subscribe-btn-wrap
   display: inline-block
+  margin-left: 16px
   vertical-align: top
   position: relative // for .kf-lh-subscribed-msg
   opacity: .7
@@ -376,6 +377,7 @@ followerPicDiam = 2.2em
 
 .kf-lh-private
 .kf-lh-public
+.kf-lh-org-private
   display: inline-block
   vertical-align: middle
   margin-right: 1em
@@ -400,6 +402,12 @@ followerPicDiam = 2.2em
   svg
     fill: white
     margin-right: 5px
+
+.kf-lh-org-private
+  background: readableYellowColor
+
+  &::after
+    content: 'Organization Private'
 
 .kf-lh-public
   padding: 0

@@ -32,7 +32,7 @@ class UserProfileController @Inject() (
     librarySubscriptionRepo: LibrarySubscriptionRepo,
     userConnectionRepo: UserConnectionRepo,
     abookServiceClient: ABookServiceClient,
-    userConnectionsCommander: UserConnectionsCommander,
+    userMutualConnectionsCommander: UserMutualConnectionsCommander,
     collectionCommander: CollectionCommander,
     userProfileCommander: UserProfileCommander,
     val userActionsHelper: UserActionsHelper,
@@ -40,6 +40,7 @@ class UserProfileController @Inject() (
     libraryCommander: LibraryCommander,
     orgMembershipRepo: OrganizationMembershipRepo,
     organizationCommander: OrganizationCommander,
+    orgInviteRepo: OrganizationInviteRepo,
     libraryRepo: LibraryRepo,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
@@ -58,12 +59,15 @@ class UserProfileController @Inject() (
   def getProfileHelper(username: Username, viewer: Option[User]): Option[JsValue] = {
     userCommander.profile(username, viewer) map { profile =>
       val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-      val (numConnections, userBiography, orgCards) = db.readOnlyMaster { implicit s =>
+      val (numConnections, userBiography, orgInfos, pendingOrgs) = db.readOnlyMaster { implicit s =>
         val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
         val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
         val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
-        val orgCards = orgMemberships.map { orgMembership => organizationCommander.getOrganizationCardHelper(orgMembership.organizationId, viewer.flatMap(_.id)) }
-        (numConnections, userBio, orgCards)
+        val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
+          organizationCommander.getOrganizationInfo(orgId, viewer.flatMap(_.id))
+        }
+        val orgInfos = orgMemberships.map { orgMembership => organizationCommander.getOrganizationInfo(orgMembership.organizationId, viewer.flatMap(_.id)) }
+        (numConnections, userBio, orgInfos, pendingOrgs)
       }
 
       val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
@@ -77,7 +81,8 @@ class UserProfileController @Inject() (
         numTags = collectionCommander.getCount(profile.userId),
         numInvitedLibraries = numInvitedLibs,
         biography = userBiography,
-        orgs = orgCards
+        orgs = orgInfos,
+        pendingOrgs = pendingOrgs.toSet
       )).as[JsObject]
       jsonFriendInfo ++ jsonProfileInfo
     }
@@ -347,7 +352,7 @@ class UserProfileController @Inject() (
       userRepo.getOpt(extUserId)
     } match {
       case Some(user) if user.id.get != request.userId =>
-        val userIds = userConnectionsCommander.getMutualFriends(request.userId, user.id.get)
+        val userIds = userMutualConnectionsCommander.getMutualFriends(request.userId, user.id.get)
         val (userMap, countMap) = userCommander.loadBasicUsersAndConnectionCounts(userIds, userIds)
         val userJsonObjs = userIds.flatMap { id =>
           userMap.get(id).map { basicUser =>

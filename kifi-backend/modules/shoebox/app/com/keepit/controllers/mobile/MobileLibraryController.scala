@@ -7,6 +7,7 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.json
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.mail.EmailAddress
@@ -17,6 +18,7 @@ import com.keepit.common.util.Paginator
 import com.keepit.controllers.mobile.ImplicitHelper._
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilderFactory }
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model._
 import com.keepit.normalizer.NormalizedURIInterner
 import com.keepit.shoebox.controllers.LibraryAccessActions
@@ -24,7 +26,7 @@ import com.keepit.social.BasicUser
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import com.keepit.common.core._
-import play.api.mvc.AnyContent
+import play.api.mvc.{ Action, AnyContent }
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -34,13 +36,14 @@ class MobileLibraryController @Inject() (
   db: Database,
   fortyTwoConfig: FortyTwoConfig,
   libraryRepo: LibraryRepo,
+  libraryMembershipRepo: LibraryMembershipRepo,
   keepRepo: KeepRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   librarySubscriptionRepo: LibrarySubscriptionRepo,
-  keepsCommander: KeepsCommander,
+  keepsCommander: KeepCommander,
   pageCommander: PageCommander,
   keepDecorator: KeepDecorator,
   userCommander: UserCommander,
@@ -51,7 +54,11 @@ class MobileLibraryController @Inject() (
   normalizedUriInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
+  airbrake: AirbrakeNotifier,
+  val libraryInfoCommander: LibraryInfoCommander,
+  val libraryAccessCommander: LibraryAccessCommander,
   val libraryCommander: LibraryCommander,
+  val libraryMembershipCommander: LibraryMembershipCommander,
   val libraryInviteCommander: LibraryInviteCommander,
   val userActionsHelper: UserActionsHelper,
   val publicIdConfig: PublicIdConfiguration,
@@ -65,19 +72,40 @@ class MobileLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val jsonBody = request.body
-    val name = (jsonBody \ "name").as[String]
-    val description = (jsonBody \ "description").asOpt[String]
-    val visibility = (jsonBody \ "visibility").as[LibraryVisibility]
-    val color = (jsonBody \ "color").asOpt[LibraryColor]
-    val whoCanInvite = (jsonBody \ "whoCanInvite").asOpt[LibraryInvitePermissions]
-    val slug = LibrarySlug.generateFromName(name)
-    val addRequest = LibraryAddRequest(name = name, visibility = visibility, description = description, slug = slug, color = color, whoCanInvite = whoCanInvite)
+    val externalCreateRequestValidated = request.body.validate[ExternalLibraryCreateRequest](ExternalLibraryCreateRequest.readsMobileV1)
 
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    libraryCommander.addLibrary(addRequest, request.userId) match {
-      case Left(fail) => sendFailResponse(fail)
-      case Right(lib) => Ok(Json.toJson(constructLibraryInfo(lib)))
+    externalCreateRequestValidated match {
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate addLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
+        BadRequest(Json.obj("error" -> "badly_formatted_request"))
+      case JsSuccess(externalCreateRequest, _) =>
+        val libCreateRequest = db.readOnlyReplica { implicit session =>
+          val slug = externalCreateRequest.slug.getOrElse(LibrarySlug.generateFromName(externalCreateRequest.name))
+          val space = externalCreateRequest.space map {
+            case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+            case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
+          }
+          LibraryCreateRequest(
+            name = externalCreateRequest.name,
+            slug = slug,
+            visibility = externalCreateRequest.visibility,
+            description = externalCreateRequest.description,
+            color = externalCreateRequest.color,
+            listed = externalCreateRequest.listed,
+            whoCanInvite = externalCreateRequest.whoCanInvite,
+            subscriptions = externalCreateRequest.subscriptions,
+            space = space,
+            orgMemberAccess = externalCreateRequest.orgMemberAccess
+          )
+        }
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        libraryCommander.createLibrary(libCreateRequest, request.userId) match {
+          case Left(fail) =>
+            Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right(newLibrary) =>
+            Ok(Json.toJson(constructLibraryInfo(newLibrary)))
+        }
     }
   }
 
@@ -101,10 +129,48 @@ class MobileLibraryController @Inject() (
     }
   }
 
+  def modifyLibraryV2(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
+    val id = Library.decodePublicId(pubId).get
+    val externalModifyRequestValidated = request.body.validate[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.readsMobileV1)
+
+    externalModifyRequestValidated match {
+      case JsError(errs) =>
+        airbrake.notify(s"Could not json-validate modifyLibRequest from ${request.userId}: ${request.body}", new JsResultException(errs))
+        BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
+      case JsSuccess(externalLibraryModifyRequest, _) =>
+        val libModifyRequest = db.readOnlyReplica { implicit session =>
+          val space: Option[LibrarySpace] = externalLibraryModifyRequest.externalSpace map {
+            case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
+            case ExternalOrganizationSpace(pubOrgId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubOrgId).get)
+          }
+          LibraryModifyRequest(
+            name = externalLibraryModifyRequest.name,
+            slug = externalLibraryModifyRequest.slug,
+            visibility = externalLibraryModifyRequest.visibility,
+            description = externalLibraryModifyRequest.description,
+            color = externalLibraryModifyRequest.color,
+            listed = externalLibraryModifyRequest.listed,
+            whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
+            subscriptions = externalLibraryModifyRequest.subscriptions,
+            space = space,
+            orgMemberAccess = externalLibraryModifyRequest.orgMemberAccess
+          )
+        }
+
+        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
+        libraryCommander.modifyLibrary(id, request.userId, libModifyRequest) match {
+          case Left(fail) =>
+            Status(fail.status)(Json.obj("error" -> fail.message))
+          case Right(response) =>
+            Ok(Json.obj("library" -> Json.toJson(constructLibraryInfo(response.modifiedLibrary))))
+        }
+    }
+  }
+
   def deleteLibrary(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId)) { request =>
     val libId = Library.decodePublicId(pubId).get
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    libraryCommander.removeLibrary(libId, request.userId) match {
+    libraryCommander.deleteLibrary(libId, request.userId) match {
       case Some(fail) => sendFailResponse(fail)
       case _ => NoContent
     }
@@ -123,18 +189,12 @@ class MobileLibraryController @Inject() (
   private def getLibraryById(userIdOpt: Option[Id[User]], pubId: PublicId[Library], imageSize: Option[String] = None, v1: Boolean, viewerId: Option[Id[User]])(implicit context: HeimdalContext) = {
     val libraryId = Library.decodePublicId(pubId).get
     val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-    libraryCommander.getLibraryById(userIdOpt, false, libraryId, idealSize, viewerId) map { libInfo =>
+    libraryInfoCommander.getLibraryById(userIdOpt, false, libraryId, idealSize, viewerId) map { libInfo =>
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
-
-      val membershipOpt = libraryCommander.getViewerMembershipInfo(userIdOpt, libraryId)
-      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(userIdOpt, libraryId)
-      val accessStr = membershipOpt.map(_.access).getOrElse("none")
-      val membershipJson = Json.toJson(membershipOpt)
-      val inviteJson = Json.toJson(inviteOpt)
-      val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-      Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
+      val accessStr = editedLibInfo.membership.map(_.access.value).getOrElse("none")
+      Ok(Json.obj("library" -> editedLibInfo, "membership" -> accessStr)) // todo: remove membership once it's not being used
     }
   }
 
@@ -147,30 +207,74 @@ class MobileLibraryController @Inject() (
 
   private def getLibraryByPath(request: MaybeUserRequest[AnyContent], handle: Handle, slug: LibrarySlug, imageSize: Option[String] = None, v1: Boolean) = {
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    libraryCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
+    libraryInfoCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {
       case Right(library) =>
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-          libraryCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize, None).map { libInfo =>
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
-
-            val membershipOpt = libraryCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
-            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
-            val accessStr = membershipOpt.map(_.access).getOrElse("none")
-            val membershipJson = Json.toJson(membershipOpt)
-            val inviteJson = Json.toJson(inviteOpt)
-            val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            val accessStr = editedLibInfo.membership.map(_.access.value).getOrElse("none")
             libraryCommander.trackLibraryView(request.userIdOpt, library)
-            Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
+            Ok(Json.obj("library" -> editedLibInfo, "membership" -> accessStr)) // todo: remove membership once it's not being used
           }
         })
       case Left(fail) =>
         Future.successful(sendFailResponse(fail))
     }
   }
+
+  def getWriteableLibrariesWithUrlV3 = UserAction(parse.tolerantJson) { request =>
+    val urlOpt = (request.body \ "url").asOpt[String]
+    getLibrariesUserCanKeepToWithUrl(request.userId, urlOpt)
+  }
+
+  private def getLibrariesUserCanKeepToWithUrl(userId: Id[User], urlOpt: Option[String]) = {
+    val parseUrl = urlOpt.map { url =>
+      pageCommander.getUrlInfo(url, userId)
+    }
+
+    val libs = libraryInfoCommander.getLibrariesUserCanKeepTo(userId, includeOrgLibraries = true)
+    val libOwnerIds = libs.map(_._1.ownerId).toSet
+    val libraryCards = db.readOnlyReplica { implicit session =>
+      val libOwners = basicUserRepo.loadAll(libOwnerIds)
+      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+    }
+
+    val writeableLibraryInfos = libraryCards.map { libraryCard =>
+      val access = libraryCard.membership.map(_.access).getOrElse(LibraryAccess.READ_WRITE)
+      val memInfo = Json.obj("access" -> access)
+      val shortDesc = Json.obj("shortDescription" -> libraryCard.description.getOrElse("").take(100))
+
+      Json.toJson(libraryCard).as[JsObject] ++ memInfo ++ shortDesc
+    }.toList
+
+    val libsResponse = Json.obj("libraries" -> writeableLibraryInfos)
+    val keepResponse = parseUrl.collect {
+      case Left(error) =>
+        Json.obj("error" -> error)
+      case Right(keepDataList) if keepDataList.nonEmpty =>
+        val completeKeepData = db.readOnlyMaster { implicit s =>
+          val allKeepExtIds = keepDataList.map(_.id).toSet
+          val keepMap = keepRepo.getByExtIds(allKeepExtIds)
+
+          keepDataList.map { keepData =>
+            keepMap(keepData.id) match {
+              case Some(keep) =>
+                val keepImageUrl = keepImageCommander.getBestImageForKeep(keep.id.get, ScaleImageRequest(MobileLibraryController.defaultKeepImageSize)).flatten.map(keepImageCommander.getUrl)
+                Json.obj("id" -> keep.externalId, "title" -> keep.title, "note" -> Hashtags.formatMobileNote(keep.note, false), "imageUrl" -> keepImageUrl, "libraryId" -> keepData.libraryId)
+              case _ => Json.obj()
+            }
+          }
+        }
+        Json.obj("alreadyKept" -> completeKeepData)
+    }.getOrElse(Json.obj())
+    Ok(libsResponse ++ keepResponse)
+  }
+
+  // Next 3 methods can be removed when everyone's on org mobile clients (Sept 14 2015)
 
   def getWriteableLibrariesWithUrlV1 = UserAction(parse.tolerantJson) { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
@@ -186,16 +290,15 @@ class MobileLibraryController @Inject() (
       pageCommander.getUrlInfo(url, userId)
     }
 
-    val (librariesWithMemberships, _) = libraryCommander.getLibrariesByUser(userId)
+    val (librariesWithMemberships, _) = libraryInfoCommander.getLibrariesByUser(userId)
     val writeableLibraries = librariesWithMemberships.filter {
       case (membership, _) =>
         membership.canWrite
     }
     val libOwnerIds = writeableLibraries.map(_._2.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      val libraryCards = libraryCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
       libraryCards
     }
 
@@ -243,11 +346,11 @@ class MobileLibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction { request =>
-    val (librariesWithMemberships, librariesWithInvites) = libraryCommander.getLibrariesByUser(request.userId)
+    val (librariesWithMemberships, librariesWithInvites) = libraryInfoCommander.getLibrariesByUser(request.userId)
     // rule out invites that are not duplicate invites to same library (only show library invite with highest access)
     val invitesToShow = librariesWithInvites.groupBy(x => x._2).map { lib =>
       val invites = lib._2.unzip._1
-      val highestInvite = invites.sorted.last
+      val highestInvite = invites.maxBy(_.access)
       (highestInvite, lib._1)
     }.toSeq
 
@@ -375,7 +478,7 @@ class MobileLibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(libId) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        val res = libraryCommander.joinLibrary(request.userId, libId)
+        val res = libraryMembershipCommander.joinLibrary(request.userId, libId)
         res match {
           case Left(fail) => sendFailResponse(fail)
           case Right((lib, _)) =>
@@ -383,6 +486,27 @@ class MobileLibraryController @Inject() (
             Ok(Json.toJson(LibraryInfo.fromLibraryAndOwner(lib, None, owner, org)))
         }
     }
+  }
+
+  def joinLibraries() = UserAction(parse.tolerantJson) { request =>
+    val libIds = request.body.as[Seq[PublicId[Library]]]
+    val results: Seq[(PublicId[Library], Either[LibraryFail, LibraryMembershipInfo])] = libIds.map { pubId =>
+      Library.decodePublicId(pubId) match {
+        case Failure(ex) => (pubId, Left(LibraryFail(BAD_REQUEST, "invalid_public_id")))
+        case Success(libId) =>
+          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+          libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
+            case Left(libFail) => (pubId, Left(libFail))
+            case Right((lib, mem)) =>
+              val membershipInfo = db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+              (pubId, Right(membershipInfo))
+          }
+      }
+    }
+    val errorsJson = results.collect { case (id, Left(fail)) => Json.obj("id" -> id.id, "error" -> fail.message) }
+    val successesJson = results.collect { case (id, Right(membership)) => Json.obj("id" -> id.id, "membership" -> membership) }
+
+    Ok(Json.obj("errors" -> errorsJson, "successes" -> successesJson))
   }
 
   def declineLibrary(pubId: PublicId[Library]) = UserAction { request =>
@@ -403,7 +527,7 @@ class MobileLibraryController @Inject() (
         BadRequest(Json.obj("error" -> "invalid_id"))
       case Success(id) =>
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        libraryCommander.leaveLibrary(id, request.userId) match {
+        libraryMembershipCommander.leaveLibrary(id, request.userId) match {
           case Left(fail) => sendFailResponse(fail)
           case Right(_) => Ok(JsString("success"))
         }
@@ -430,7 +554,7 @@ class MobileLibraryController @Inject() (
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
         for {
-          keeps <- libraryCommander.getKeeps(libraryId, offset, limit)
+          keeps <- libraryInfoCommander.getKeeps(libraryId, offset, limit)
           keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, withKeepTime = true)
         } yield {
           val editedKeepInfos = keepInfos.map { kInfo =>
@@ -520,7 +644,7 @@ class MobileLibraryController @Inject() (
         val recordsToDrop = if (!v1 && offset != 0) offset - 1 else offset
         val library = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
         val showInvites = userIdOpt.contains(library.ownerId)
-        val maybeMembers = libraryCommander.getLibraryMembersAndInvitees(libraryId, recordsToDrop, recordsToTake, fillInWithInvites = showInvites)
+        val maybeMembers = libraryInfoCommander.getLibraryMembersAndInvitees(libraryId, recordsToDrop, recordsToTake, fillInWithInvites = showInvites)
         val membersList = if (v1 || offset != 0) {
           maybeMembers
         } else {
@@ -531,13 +655,17 @@ class MobileLibraryController @Inject() (
     }
   }
 
+  def marketingSiteSuggestedLibraries() = Action.async {
+    libraryInfoCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
+  }
+
   def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryViewAction(pubId)).async { request =>
     request match {
       case req: UserRequest[_] => {
         if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
         else Library.decodePublicId(pubId) match {
           case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
-          case Success(libraryId) => libraryCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
+          case Success(libraryId) => libraryMembershipCommander.suggestMembers(req.userId, libraryId, query, Some(limit)).map { members => Ok(Json.obj("members" -> members)) }
         }
       }
       case _ => Future.successful(Forbidden)
@@ -567,11 +695,11 @@ class MobileLibraryController @Inject() (
         val access = (request.body \ "access").as[String]
         val result = access.toLowerCase match {
           case "none" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, None)
           case "read_only" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_ONLY))
           case "read_write" =>
-            libraryCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
+            libraryMembershipCommander.updateLibraryMembershipAccess(request.userId, libraryId, targetUser.id.get, Some(LibraryAccess.READ_WRITE))
           case _ =>
             Left(LibraryFail(BAD_REQUEST, "invalid_access_request"))
         }

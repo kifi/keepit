@@ -1,7 +1,7 @@
 package com.keepit.common
 
 import com.keepit.common.concurrent.ExecutionContext
-import play.api.libs.json.{ JsNull, JsObject }
+import play.api.libs.json._
 
 import scala.collection.IterableLike
 import scala.collection.generic.CanBuildFrom
@@ -80,6 +80,16 @@ final class JsObjectExtensionOps(x: JsObject) {
   def nonNullFields: JsObject = JsObject(x.fields.filter { case (_, b) => b != JsNull })
 }
 
+final class JsValueExtensionOps(x: JsValue) {
+  private val zero = BigDecimal(0)
+  def isFalsy = {
+    x match {
+      case JsNull | JsString("") | JsUndefined() | JsBoolean(false) | JsNumber(`zero`) => true
+      case _ => false
+    }
+  }
+}
+
 trait Implicits {
   implicit def anyExtensionOps[A](x: A): AnyExtensionOps[A] = new AnyExtensionOps[A](x)
   implicit def tryExtensionOps[A](x: scala.util.Try[A]): TryExtensionOps[A] = new TryExtensionOps[A](x)
@@ -88,6 +98,7 @@ trait Implicits {
   implicit def iterableExtensionOps[A, Repr](xs: IterableLike[A, Repr]): IterableExtensionOps[A, Repr] = new IterableExtensionOps(xs)
   implicit def traversableOnceExtensionOps[A](xs: TraversableOnce[A]): TraversableOnceExtensionOps[A] = new TraversableOnceExtensionOps(xs)
   implicit def traversableExtensionOps[A](xs: Traversable[A]): TraversableExtensionOps[A] = new TraversableExtensionOps(xs)
-  implicit def jsObjectExtensionOps[A](x: play.api.libs.json.JsObject): JsObjectExtensionOps = new JsObjectExtensionOps(x)
+  implicit def jsObjectExtensionOps[A](x: JsObject): JsObjectExtensionOps = new JsObjectExtensionOps(x)
+  implicit def jsValueExtensionOps[A](x: JsValue): JsValueExtensionOps = new JsValueExtensionOps(x)
 }
 

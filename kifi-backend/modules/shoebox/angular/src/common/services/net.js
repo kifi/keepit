@@ -25,6 +25,7 @@ angular.module('kifi')
 
       user: get(shoebox, '/user/:id', 30),
       userOrOrg: get(shoebox, '/user-or-org/:handle?authToken=:authToken', 30),
+      createOrg: post(shoebox, '/organizations/create'),
       updateOrgProfile: post(shoebox, '/organizations/:id/modify'),
       uploadOrgAvatar: post(shoebox, '/organizations/:id/avatar/upload?x=:x&y=:y&s=:sideLength'),
       getOrgMembers: get(shoebox, '/organizations/:id/members', 30),
@@ -37,6 +38,10 @@ angular.module('kifi')
       modifyOrgMember: post(shoebox, '/organizations/:id/members/modify'),
       suggestOrgMember: get(shoebox, '/organizations/:id/members/suggest?query=:query&limit=:limit'),
       transferOrgMemberOwnership: post(shoebox, '/organizations/:id/transfer'),
+      getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 10),
+      setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
+
+      getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
 
       getKeep: get(shoebox, '/keeps/:id'),
       getKeepsInLibrary: get(shoebox, '/libraries/:id/keeps', 30),
@@ -45,6 +50,7 @@ angular.module('kifi')
       moveKeepsToLibrary: post(shoebox, '/libraries/move'),
       removeKeepFromLibrary: del(shoebox, '/libraries/:id/keeps/:keepId'),
       removeManyKeepsFromLibrary: post(shoebox, '/libraries/:id/keeps/delete'),
+      changeKeepImage: post(shoebox, '/libraries/:id/keeps/:keepId/image'),
 
       getLibraryShareSuggest: get(shoebox, '/libraries/:id/members/suggest?n=30', 30),
       updateLibraryMembership: post(shoebox, '/libraries/:id/members/:uid/access'),

@@ -11,6 +11,7 @@ import com.keepit.heimdal.{ DelightedAnswerSources, BasicDelightedAnswer }
 import com.keepit.model._
 import com.keepit.commanders._
 import com.keepit.social.BasicUser
+import org.joda.time.DateTime
 
 import play.api.libs.json._
 import play.api.libs.json.Json.toJson
@@ -32,6 +33,7 @@ class MobileUserController @Inject() (
   userCommander: UserCommander,
   userConnectionsCommander: UserConnectionsCommander,
   userIpAddressCommander: UserIpAddressCommander,
+  userInboxCommander: UserInboxCommander,
   typeaheadCommander: TypeaheadCommander,
   keepCountCache: KeepCountCache,
   keepRepo: KeepRepo,
@@ -346,6 +348,12 @@ class MobileUserController @Inject() (
     )
     db.readWrite { implicit rw => postOffice.sendMail(email) }
     Ok
+  }
+
+  def getPendingRequests(before: Option[DateTime], limit: Int) = UserAction { implicit request =>
+    val pendingRequests = userInboxCommander.getPendingRequests(request.userId, before, limit)
+    val result = Json.obj("pending" -> pendingRequests)
+    Ok(result)
   }
 }
 

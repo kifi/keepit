@@ -2,26 +2,25 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.concurrent.{ FakeExecutionContextModule, ExecutionContextModule }
-import com.keepit.common.controller.{ FakeUserActionsModule, FakeUserActionsHelper }
+import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.FakeShoeboxAppSecureSocialModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.KeepFactory._
-import com.keepit.common.social.{ FakeShoeboxAppSecureSocialModule }
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -40,8 +39,7 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
     FakeSearchServiceClientModule(),
     FakeHeimdalServiceClientModule(),
     FakeShoeboxAppSecureSocialModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule())
+    FakeCortexServiceClientModule())
 
   "AdminPersonaController" should {
     "get all personas" in {
@@ -162,10 +160,10 @@ class AdminPersonaControllerTest extends Specification with ShoeboxApplicationIn
         val (user1, k1, k2, k3, k4) = db.readWrite { implicit s =>
           val user1 = user().withUsername("drogo").saved
           val lib1 = library().withOwner(user1).saved
-          val keep1 = keep().withLibrary(lib1).withNote(Some("")).saved
-          val keep2 = keep().withLibrary(lib1).withNote(None).saved
-          val keep3 = keep().withLibrary(lib1).withNote(Some("[#asdf]")).saved
-          val keep4 = keep().withLibrary(lib1).withNote(Some("[#first] [\\#qwer]")).saved
+          val keep1 = keep().withLibrary(lib1).withUser(user1).withNote(Some("")).saved
+          val keep2 = keep().withLibrary(lib1).withUser(user1).withNote(None).saved
+          val keep3 = keep().withLibrary(lib1).withUser(user1).withNote(Some("[#asdf]")).saved
+          val keep4 = keep().withLibrary(lib1).withUser(user1).withNote(Some("[#first] [\\#qwer]")).saved
 
           val tag1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("first")))
           val tag2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("second")))

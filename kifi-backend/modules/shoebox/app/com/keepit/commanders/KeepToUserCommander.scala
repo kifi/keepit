@@ -22,9 +22,12 @@ trait KeepToUserCommander {
   def removeKeepFromUser(keepId: Id[Keep], userId: Id[User])(implicit session: RWSession): Try[Unit]
   def removeKeepFromAllUsers(keep: Keep)(implicit session: RWSession): Unit
 
+  def deactivate(ktu: KeepToUser)(implicit session: RWSession): Unit
+
   // Fun helper methods
   def isKeepInUser(keepId: Id[Keep], userId: Id[User])(implicit session: RSession): Boolean
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit
+  def syncWithKeep(ktu: KeepToUser, keep: Keep)(implicit session: RWSession): KeepToUser
 }
 
 @Singleton
@@ -49,16 +52,19 @@ class KeepToUserCommanderImpl @Inject() (
     }
   }
 
+  def deactivate(ktu: KeepToUser)(implicit session: RWSession): Unit = {
+    ktuRepo.deactivate(ktu)
+  }
   def removeKeepFromUser(keepId: Id[Keep], userId: Id[User])(implicit session: RWSession): Try[Unit] = {
     ktuRepo.getByKeepIdAndUserId(keepId, userId) match {
       case None => Failure(KeepToUserFail.NOT_CONNECTED_TO_USER)
       case Some(activeKtu) =>
-        ktuRepo.deactivate(activeKtu)
+        deactivate(activeKtu)
         Success(())
     }
   }
   def removeKeepFromAllUsers(keep: Keep)(implicit session: RWSession): Unit = {
-    ktuRepo.getAllByKeepId(keep.id.get).foreach(ktuRepo.deactivate)
+    ktuRepo.getAllByKeepId(keep.id.get).foreach(deactivate)
   }
 
   def isKeepInUser(keepId: Id[Keep], userId: Id[User])(implicit session: RSession): Boolean = {
@@ -66,9 +72,10 @@ class KeepToUserCommanderImpl @Inject() (
   }
 
   def syncKeep(keep: Keep)(implicit session: RWSession): Unit = {
-    ktuRepo.getAllByKeepId(keep.id.get).foreach { ktu => syncWithKeep(ktu, keep) }
+    // Sync ALL of the connections (including the dead ones)
+    ktuRepo.getAllByKeepId(keep.id.get, excludeStateOpt = None).foreach { ktu => syncWithKeep(ktu, keep) }
   }
-  private def syncWithKeep(ktu: KeepToUser, keep: Keep)(implicit session: RWSession): KeepToUser = {
+  def syncWithKeep(ktu: KeepToUser, keep: Keep)(implicit session: RWSession): KeepToUser = {
     require(ktu.keepId == keep.id.get, "keep.id does not match ktu.keepId")
     ktuRepo.save(ktu.withUriId(keep.uriId))
   }

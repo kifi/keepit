@@ -4,6 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.json.EitherFormat
 import com.keepit.common.mail.EmailAddress
@@ -19,12 +20,14 @@ import scala.util.{ Failure, Success }
 @Singleton
 class MobileOrganizationInviteController @Inject() (
     userCommander: UserCommander,
-    val orgCommander: OrganizationCommander,
-    val orgMembershipCommander: OrganizationMembershipCommander,
-    val orgInviteCommander: OrganizationInviteCommander,
+    orgCommander: OrganizationCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
+    val db: Database,
+    val permissionCommander: PermissionCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
@@ -65,16 +68,16 @@ class MobileOrganizationInviteController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     orgInviteCommander.createGenericInvite(request.orgId, request.request.userId) match {
       case Right(invite) =>
-        Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
+        Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.MobileOrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url)))
       case Left(fail) => fail.asErrorResponse
     }
   }
 
-  def acceptInvitation(pubId: PublicId[Organization], authToken: String) = UserAction { request =>
+  def acceptInvitation(pubId: PublicId[Organization], authTokenOpt: Option[String]) = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
-        orgInviteCommander.acceptInvitation(orgId, request.userId, authToken) match {
+        orgInviteCommander.acceptInvitation(orgId, request.userId, authTokenOpt) match {
           case Right(organizationMembership) => NoContent
           case Left(organizationFail) => organizationFail.asErrorResponse
         }
@@ -89,5 +92,12 @@ class MobileOrganizationInviteController @Inject() (
         NoContent
       case _ => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
     }
+  }
+
+  def getPendingOrganizationsForUser = UserAction { request =>
+    val userId = request.userId
+    val pendingOrgs = orgInviteCommander.getInvitesByInviteeAndDecision(userId, InvitationDecision.PENDING).map(_.organizationId)
+    val pendingOrgInfos = orgCommander.getOrganizationInfos(pendingOrgs, viewerIdOpt = None).values.toSeq
+    Ok(Json.toJson(pendingOrgInfos))
   }
 }

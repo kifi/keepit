@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, Exte
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
+import com.keepit.notify.model.Recipient
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ ModelWithState, ModelWithExternalId, Id, ExternalId }
@@ -29,6 +30,12 @@ sealed trait MessageSender {
       orElse { asNonUser.map(nup => nonUserF(nup.identifier)) }.
       getOrElse { systemF() }
   }
+
+  def asRecipient: Option[Recipient] =
+    if (isSystem) None
+    else asUser.map(userId => Recipient(userId)) orElse asNonUser.collect {
+      case NonUserEmailParticipant(email) => Recipient(email)
+    }
 }
 
 object MessageSender {

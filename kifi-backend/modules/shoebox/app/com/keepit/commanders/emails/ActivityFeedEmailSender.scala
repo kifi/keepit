@@ -2,7 +2,7 @@ package com.keepit.commanders.emails
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.emails.activity._
-import com.keepit.commanders.{ CenteredCropImageRequest, CroppedImageSize, KeepImageCommander, KeepsCommander, LibraryCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -17,8 +17,7 @@ import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.strings.AbbreviateString
 import com.keepit.common.time._
 import com.keepit.common.performance._
-import com.keepit.curator.model.{ RecommendationSubSource, RecommendationSource }
-import com.keepit.curator.{ CuratorServiceClient, LibraryQualityHelper }
+import com.keepit.curator.LibraryQualityHelper
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.social.BasicUser
@@ -100,12 +99,12 @@ class ActivityFeedEmailComponents @Inject() (
 class ActivityFeedEmailSenderImpl @Inject() (
     val components: ActivityFeedEmailComponents,
     val clock: Clock,
-    val libraryCommander: LibraryCommander,
+    val libraryInfoCommander: LibraryInfoCommander,
+    val libraryAccessCommander: LibraryAccessCommander,
     val libraryRepo: LibraryRepo,
     val membershipRepo: LibraryMembershipRepo,
     val db: Database,
     val eliza: ElizaServiceClient,
-    curator: CuratorServiceClient,
     userRepo: UserRepo,
     experimentCommander: LocalUserExperimentCommander,
     emailTemplateSender: EmailTemplateSender,
@@ -115,7 +114,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     friendRequestRepo: FriendRequestRepo,
     userConnectionRepo: UserConnectionRepo,
     activityEmailRepo: ActivityEmailRepo,
-    keepCommander: KeepsCommander,
+    keepCommander: KeepCommander,
     keepImageCommander: KeepImageCommander,
     postOffice: LocalPostOffice,
     s3Config: S3ImageConfig,
@@ -257,9 +256,6 @@ class ActivityFeedEmailSenderImpl @Inject() (
               ))
             }
 
-            curator.notifyLibraryRecosDelivered(toUserId, libRecos.map(_.libraryId).toSet,
-              RecommendationSource.Email, RecommendationSubSource.ActivityFeed)
-
             val subjectLine = {
               if (toUserId.id % 2 == 0) "Things you should know on Kifi"
               else "What's happening right now on Kifi"
@@ -312,7 +308,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val libRecoIds = libRecosUnseen.map(_.libraryId)
     val libRecoMemberCountLookup = (id: Id[Library]) => libIdToLibView(id).numFollowers
     val since = lastEmailSentAt(previouslySentEmails)
-    libraryCommander.sortAndSelectLibrariesWithTopGrowthSince(libRecoIds.toSet, since, libRecoMemberCountLookup).map {
+    libraryInfoCommander.sortAndSelectLibrariesWithTopGrowthSince(libRecoIds.toSet, since, libRecoMemberCountLookup).map {
       case (id, members) =>
         val memberIds = members.map(_.userId)
         LibraryInfoFollowersView(libIdToLibView(id), memberIds)
@@ -332,7 +328,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
   private def fetchLibToKeepImages(libInfoView: LibraryInfoView): Future[LibraryInfoViewWithKeepImages] = {
     def recur(target: Int, offset: Int, limit: Int): Future[Seq[String]] = {
       if (target > 0) {
-        val keepsF = libraryCommander.getKeeps(libInfoView.libraryId, offset, limit)
+        val keepsF = libraryInfoCommander.getKeeps(libInfoView.libraryId, offset, limit)
 
         keepsF flatMap { keeps =>
           val keepIds = keeps.map(_.id.get).toSet
@@ -356,7 +352,8 @@ class ActivityFeedEmailSenderImpl @Inject() (
 
   class UserActivityFeedHelper(val toUserId: Id[User], val previouslySent: Seq[ActivityEmail]) extends ActivityEmailLibraryHelpers {
     val clock = ActivityFeedEmailSenderImpl.this.clock
-    val libraryCommander = ActivityFeedEmailSenderImpl.this.libraryCommander
+    val libraryInfoCommander = ActivityFeedEmailSenderImpl.this.libraryInfoCommander
+    val libraryAccessCommander = ActivityFeedEmailSenderImpl.this.libraryAccessCommander
 
     // weight of URI reco recency... must be between 0..1
     val uriRecoRecencyWeight = 1
@@ -383,7 +380,7 @@ class ActivityFeedEmailSenderImpl @Inject() (
     val libraryAgePredicate: Library => Boolean = lib => lib.createdAt > minRecordAge
 
     private lazy val (ownedPublishedLibs: Seq[Library], followedLibraries: Seq[Library], invitedLibraries: Seq[(LibraryInvite, Library)]) = {
-      val (rawUserLibs, rawInvitedLibs) = libraryCommander.getLibrariesByUser(toUserId)
+      val (rawUserLibs, rawInvitedLibs) = libraryInfoCommander.getLibrariesByUser(toUserId)
       val (ownedLibs, followedLibs) = rawUserLibs.filter(_._2.visibility == LibraryVisibility.PUBLISHED).partition(_._1.isOwner)
       (ownedLibs.map(_._2), followedLibs.map(_._2), rawInvitedLibs)
     }

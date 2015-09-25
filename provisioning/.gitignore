@@ -3,3 +3,4 @@ roles/jtyr.ulimit/
 roles/ricbra.logentries/
 roles/williamyeh.oracle-java/
 .cache/
+tarballs/

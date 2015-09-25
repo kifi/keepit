@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileMemberManageCtrl', [
-  '$rootScope', '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator', 'net',
-  function($rootScope, $scope, profile, profileService, orgProfileService, modalService, Paginator, net) {
+  '$rootScope', '$scope', '$stateParams', 'profile', 'profileService',
+  'orgProfileService', 'modalService', 'Paginator', 'net', 'ORG_PERMISSION',
+  function($rootScope, $scope, $stateParams, profile, profileService,
+           orgProfileService, modalService, Paginator, net, ORG_PERMISSION) {
     function memberPageAnalytics(args) {
       args = _.extend(args, { type: 'orgMembers' });
       orgProfileService.trackEvent('user_clicked_page', organization, args);
@@ -53,21 +55,19 @@ angular.module('kifi')
     };
 
     function removeMember(member) {
-      orgProfileService.removeOrgMember(organization.id, {
-          members: [{
-            userId: member.id
-          }]
-        })
-        .then(function success() {
-          var action = (profileService.me.id === member.id ? 'clickedLeaveOrg' : 'clickedRemoveOrg');
-          memberPageAnalytics({ action: action, orgMember: member.username });
-          removeMemberFromPage(member);
-        })
-        ['catch'](handleErrorResponse);
+      orgProfileService
+      .removeOrgMember(organization.id, { userId: member.id })
+      .then(function success() {
+        var action = (profileService.me.id === member.id ? 'clickedLeaveOrg' : 'clickedRemoveOrg');
+        memberPageAnalytics({ action: action, orgMember: member.username });
+        removeMemberFromPage(member);
+      })
+      ['catch'](handleErrorResponse);
     }
 
     function cancelInvite(member) {
-      orgProfileService.cancelOrgMemberInvite(organization.id, {
+      orgProfileService
+      .cancelOrgMemberInvite(organization.id, {
         cancel: [{
           id: member.id ? member.id : undefined,
           email: member.email ? member.email : undefined
@@ -91,7 +91,7 @@ angular.module('kifi')
     $scope.members = null;
     $scope.myMembership = $scope.membership;
     $scope.organization = organization;
-    $scope.canInvite = $scope.myMembership.permissions && $scope.myMembership.permissions.indexOf('invite_members') > -1;
+    $scope.canInvite = $scope.myMembership.permissions && $scope.myMembership.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
     $scope.me = profileService.me;
 
     function resetAndFetch() {
@@ -106,11 +106,11 @@ angular.module('kifi')
 
     $scope.fetchMembers = function () {
       memberLazyLoader
-        .fetch()
-        .then(function (members) {
-          $scope.members = members;
-        })
-        ['catch'](handleErrorResponse);
+      .fetch()
+      .then(function (members) {
+        $scope.members = members;
+      })
+      ['catch'](handleErrorResponse);
     };
 
     $scope.$on('resetAndFetch', function() {
@@ -141,17 +141,17 @@ angular.module('kifi')
 
     $scope.$on('inviteMember', function (e, member, cb) {
       var promise = orgProfileService
-        .sendOrgMemberInvite(organization.id, {
-          invites: [{
-            id: member.id ? member.id : undefined,
-            email: member.email ? member.email : undefined,
-            role: 'member'
-          }]
-        })
-        .then(function () {
-          memberPageAnalytics({ action: 'clickedInvite', orgMember: member.username });
-        })
-        ['catch'](handleErrorResponse);
+      .sendOrgMemberInvite(organization.id, {
+        invites: [{
+          id: member.id ? member.id : undefined,
+          email: member.email ? member.email : undefined,
+          role: 'member'
+        }]
+      })
+      .then(function () {
+        memberPageAnalytics({ action: 'clickedInvite', orgMember: member.username });
+      })
+      ['catch'](handleErrorResponse);
 
       cb(promise);
     });
@@ -169,19 +169,22 @@ angular.module('kifi')
     });
 
     $scope.$on('makeOwner', function(e, member) {
-      modifyMemberRole(member, 'owner').then(function() {
+      modifyMemberRole(member, 'owner')
+      .then(function() {
         memberPageAnalytics({ action: 'clickedMakeOwner', orgMember: member.username });
       });
     });
 
     $scope.$on('promoteMember', function (e, member) {
-      modifyMemberRole(member, 'admin').then(function () {
+      modifyMemberRole(member, 'admin')
+      .then(function () {
         memberPageAnalytics({ action: 'clickedMakeAdmin', orgMember: member.username });
       });
     });
 
     $scope.$on('demoteMember', function (e, member) {
-      modifyMemberRole(member, 'member').then(function () {
+      modifyMemberRole(member, 'member')
+      .then(function () {
         memberPageAnalytics({ action: 'clickedDemote', orgMember: member.username });
       });
     });
@@ -191,11 +194,10 @@ angular.module('kifi')
     });
 
     function modifyMemberRole(member, role) {
-      return orgProfileService.modifyOrgMember(organization.id, {
-        members: [{
-          userId: member.id,
-          newRole: role
-        }]
+      return orgProfileService
+      .modifyOrgMember(organization.id, {
+        userId: member.id,
+        newRole: role
       })
       .then(function success() {
         member.role = role;
@@ -223,6 +225,10 @@ angular.module('kifi')
     }
 
     $scope.openInviteModal = function (inviteType) {
+      if (!$scope.canInvite) {
+        return;
+      }
+
       memberPageAnalytics({ action: 'clickedInviteBegin' });
 
       modalService.open({
@@ -258,7 +264,15 @@ angular.module('kifi')
         }
       });
     };
+
+
     $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgMembers' });
+
+    if ($stateParams.openInviteModal) {
+      $scope.openInviteModal();
+    }
+    $scope.$on('childOpenInviteModal', $scope.openInviteModal);
+
     resetAndFetch();
   }
 ]);

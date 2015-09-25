@@ -1,5 +1,9 @@
 <div class="{{ 'profile-image-widget' + (readonly ? ' profile-image-widget-disabled' : '') }}" ng-click="selectFile()">
-  <div class="profile-image" ng-style="{'background-image': 'url(' + picUrl + ')'}"></div>
+  <div 
+    class="profile-image" 
+    ng-style="{'background-image': 'url(' + picUrl + ')'}"
+    ng-class="{'editable': !readonly}"
+  ></div>
   <label class="profile-image-label">
     <input ng-disabled="readonly" class="profile-image-file" type="file" name="photo" accept="image/*" kf-file-change="fileChosen">
   </label>

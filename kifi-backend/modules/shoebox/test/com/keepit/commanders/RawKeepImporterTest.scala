@@ -13,7 +13,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext, HeimdalQueueDevModule }
 import com.keepit.model._
@@ -46,7 +45,6 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
     AbuseControlModule(),
-    FakeCuratorServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule()
   )
@@ -58,7 +56,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
         val user = db.readWrite { implicit session =>
           UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json"), UTF8).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = None))
@@ -87,7 +85,7 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user.id.get, access = LibraryAccess.OWNER))
           (user, lib)
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json"), UTF8).mkString)
         bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = Some(lib.id.get)))

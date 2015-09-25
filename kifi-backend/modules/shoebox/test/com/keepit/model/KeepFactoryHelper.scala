@@ -12,11 +12,11 @@ object KeepFactoryHelper {
     def saved(implicit injector: Injector, session: RWSession): Keep = {
 
       def fixUriReferences(candidate: Keep): Keep = {
-        if (candidate.urlId.id < 0 && candidate.uriId.id < 0) {
+        if (candidate.uriId.id < 0) {
           val unsavedUri: NormalizedURI = NormalizedURI.withHash(candidate.url, Some(s"${random(5)}")).copy(title = candidate.title)
           val uri = injector.getInstance(classOf[NormalizedURIRepo]).save(unsavedUri)
           val url = injector.getInstance(classOf[URLRepo]).save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
-          candidate.copy(uriId = uri.id.get, urlId = url.id.get)
+          candidate.copy(uriId = uri.id.get)
         } else candidate
       }
 
@@ -37,11 +37,9 @@ object KeepFactoryHelper {
         candidate
       }
 
-      val keep = {
-        val candidate = partialKeep.get
-        fixUriReferences(candidate) |> fixLibraryReferences
-      }
-      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None))
+      val keep = partialKeep.get |> fixUriReferences |> fixLibraryReferences
+
+      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(Set(keep.libraryId.get)).withParticipants(Set(keep.userId)))
       val library = injector.getInstance(classOf[LibraryRepo]).get(finalKeep.libraryId.get)
 
       val ktl = KeepToLibrary(

@@ -3,6 +3,7 @@ package com.keepit.controllers.mobile
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.commanders.OrganizationMembershipCommander
+import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
@@ -47,6 +48,7 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           .withMembers(members)
           .withInvitedUsers(invitedUsers)
           .withInvitedEmails(invitedEmails)
+          .withWeakMembers()
           .saved
 
         (org, owner, members, invitedUsers, invitedEmails)
@@ -79,8 +81,10 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
 
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
-          inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
-          inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(members.head.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === false
+          db.readOnlyMaster { implicit session =>
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(members.head.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === false
+          }
 
           inject[FakeUserActionsHelper].setUser(members.head)
           val memberRequest = route.getMembers(publicOrgId)
@@ -117,7 +121,9 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
 
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
-          inject[OrganizationMembershipCommander].getPermissions(orgId = org.id.get, userIdOpt = Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
+          db.readOnlyMaster { implicit session =>
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(owner.id.get)).contains(OrganizationPermission.INVITE_MEMBERS) === true
+          }
 
           inject[FakeUserActionsHelper].setUser(owner)
           val ownerRequest = route.getMembers(publicOrgId)
@@ -154,11 +160,11 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val (org, owner, _) = setup()
           val publicOrgId = PublicId[Organization]("NoWayThisOneIsValid")
 
-          val jsonPayload = Json.parse("""{"members": []}""")
+          val jsonPayload = JsString("")
 
           inject[FakeUserActionsHelper].setUser(owner)
-          val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
-          val result = controller.modifyMembers(publicOrgId)(request)
+          val request = route.modifyMember(publicOrgId).withBody(jsonPayload)
+          val result = controller.modifyMember(publicOrgId)(request)
           status(result) === BAD_REQUEST
         }
       }
@@ -166,11 +172,11 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner, members) = setup()
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
-          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${members.head.externalId}", "newRole": 42}]}""")
+          val jsonPayload = Json.parse(s"""{"userId": "${members.head.externalId}", "newRole": 42}""")
 
           inject[FakeUserActionsHelper].setUser(owner)
-          val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
-          val result = controller.modifyMembers(publicOrgId)(request)
+          val request = route.modifyMember(publicOrgId).withBody(jsonPayload)
+          val result = controller.modifyMember(publicOrgId)(request)
           status(result) === BAD_REQUEST
         }
       }
@@ -182,11 +188,11 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val m1 = members(0)
           val m2 = members(1)
 
-          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${m2.externalId}", "newRole": "admin"}]}""")
+          val jsonPayload = Json.parse(s"""{"userId": "${m2.externalId}", "newRole": "admin"}""")
 
           inject[FakeUserActionsHelper].setUser(m1)
-          val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
-          val result = controller.modifyMembers(publicOrgId)(request)
+          val request = route.modifyMember(publicOrgId).withBody(jsonPayload)
+          val result = controller.modifyMember(publicOrgId)(request)
 
           status(result) === FORBIDDEN
         }
@@ -196,11 +202,11 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val (org, owner, members) = setup()
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
-          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${members.head.externalId}", "newRole": "member"}]}""")
+          val jsonPayload = Json.parse(s"""{"userId": "${members.head.externalId}", "newRole": "member"}""")
 
           inject[FakeUserActionsHelper].setUser(owner)
-          val request = route.modifyMembers(publicOrgId).withBody(jsonPayload)
-          val result = controller.modifyMembers(publicOrgId)(request)
+          val request = route.modifyMember(publicOrgId).withBody(jsonPayload)
+          val result = controller.modifyMember(publicOrgId)(request)
           status(result) === OK
         }
       }
@@ -225,11 +231,11 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val (org, owner, _) = setup()
           val publicOrgId = PublicId[Organization]("NoWayThisOneIsValid")
 
-          val jsonPayload = Json.parse("""{"members": []}""")
+          val jsonPayload = JsString("")
 
           inject[FakeUserActionsHelper].setUser(owner)
-          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
-          val result = controller.removeMembers(publicOrgId)(request)
+          val request = route.removeMember(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMember(publicOrgId)(request)
           status(result) === BAD_REQUEST
         }
       }
@@ -237,11 +243,11 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner, members) = setup()
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
-          val jsonPayload = Json.parse(s"""{"members": [{"userId": 42}]}""")
+          val jsonPayload = Json.parse(s"""{"userId": 42}""")
 
           inject[FakeUserActionsHelper].setUser(owner)
-          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
-          val result = controller.removeMembers(publicOrgId)(request)
+          val request = route.removeMember(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMember(publicOrgId)(request)
           status(result) === BAD_REQUEST
         }
       }
@@ -253,11 +259,11 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val m1 = members(0)
           val m2 = members(1)
 
-          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${m2.externalId}"}]}""")
+          val jsonPayload = Json.parse(s"""{"userId": "${m2.externalId}"}""")
 
           inject[FakeUserActionsHelper].setUser(m1)
-          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
-          val result = controller.removeMembers(publicOrgId)(request)
+          val request = route.removeMember(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMember(publicOrgId)(request)
 
           status(result) === FORBIDDEN
         }
@@ -267,12 +273,17 @@ class MobileOrganizationMembershipControllerTest extends Specification with Shoe
           val (org, owner, members) = setup()
           val publicOrgId = Organization.publicId(org.id.get)(inject[PublicIdConfiguration])
 
-          val jsonPayload = Json.parse(s"""{"members": [{"userId": "${members.head.externalId}"}]}""")
+          val jsonPayload = Json.parse(s"""{"userId": "${members.head.externalId}"}""")
 
           inject[FakeUserActionsHelper].setUser(owner)
-          val request = route.removeMembers(publicOrgId).withBody(jsonPayload)
-          val result = controller.removeMembers(publicOrgId)(request)
+          val request = route.removeMember(publicOrgId).withBody(jsonPayload)
+          val result = controller.removeMember(publicOrgId)(request)
           status(result) === OK
+
+          // there are futures running in the background that will blow up if the test ends and the db is dumped
+          inject[WatchableExecutionContext].drain()
+
+          1 === 1
         }
       }
     }

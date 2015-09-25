@@ -116,7 +116,7 @@ class AuthCommander @Inject() (
     s3ImageStore: S3ImageStore,
     postOffice: LocalPostOffice,
     inviteCommander: InviteCommander,
-    libraryCommander: LibraryCommander,
+    libraryMembershipCommander: LibraryMembershipCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -438,7 +438,7 @@ class AuthCommander @Inject() (
     // Abstracting away errors and manually reporting. If someone needs the specific error, feel free to change the signature.
     Library.decodePublicId(libPubId).map { libId =>
       implicit val context = HeimdalContext(Map())
-      libraryCommander.joinLibrary(userId, libId, authToken).fold(
+      libraryMembershipCommander.joinLibrary(userId, libId, authToken).fold(
         { libFail =>
           airbrake.notify(s"[finishSignup] lib-auto-join failed. $libFail")
           false
@@ -454,7 +454,7 @@ class AuthCommander @Inject() (
   def autoJoinOrg(userId: Id[User], orgPubId: PublicId[Organization], authToken: String): Boolean = {
     Organization.decodePublicId(orgPubId).map { orgId =>
       implicit val context = HeimdalContext.empty
-      orgInviteCommander.acceptInvitation(orgId, userId, authToken).fold(
+      orgInviteCommander.acceptInvitation(orgId, userId, Some(authToken)).fold(
         { orgFail =>
           airbrake.notify(s"[finishSignup] org-auto-join failed. $orgFail")
           false

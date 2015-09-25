@@ -1,12 +1,13 @@
 package com.keepit.notify.model.event
 
 import com.keepit.common.db.Id
-import com.keepit.model.{Organization, Library, Keep, User}
+import com.keepit.model._
 import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.time._
+import play.api.libs.functional.syntax._
 
 sealed trait NotificationEvent { self =>
 
@@ -50,7 +51,17 @@ case class NewConnectionInvite(
 
 }
 
-object NewConnectionInvite extends NewConnectionInviteImpl
+object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvite] {
+
+  override val name: String = "new_connection_invite"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+    (__ \ "time").format[DateTime] and
+    (__ \ "inviterId").format[Id[User]]
+  )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
+
+}
 
 case class ConnectionInviteAccepted(
   recipient: Recipient,
@@ -62,7 +73,18 @@ case class ConnectionInviteAccepted(
 
 }
 
-object ConnectionInviteAccepted extends ConnectionInviteAcceptedImpl
+object ConnectionInviteAccepted extends NonGroupingNotificationKind[ConnectionInviteAccepted] {
+
+  override val name: String = "connection_invite_accepted"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "accepterId").format[Id[User]]
+    )(ConnectionInviteAccepted.apply, unlift(ConnectionInviteAccepted.unapply))
+
+}
+
 
 case class LibraryNewKeep(
   recipient: Recipient,
@@ -76,7 +98,19 @@ case class LibraryNewKeep(
 
 }
 
-object LibraryNewKeep extends LibraryNewKeepImpl
+object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
+
+  override val name: String = "library_new_keep"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "keeperId").format[Id[User]] and
+      (__ \ "keepId").format[Id[Keep]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(LibraryNewKeep.apply, unlift(LibraryNewKeep.unapply))
+
+}
 
 // todo is this ever really used/called?
 case class NewKeepActivity(
@@ -91,7 +125,20 @@ case class NewKeepActivity(
 
 }
 
-object NewKeepActivity extends NewKeepActivityImpl
+object NewKeepActivity extends NonGroupingNotificationKind[NewKeepActivity] {
+
+  override val name: String = "new_keep_activity"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "keeperId").format[Id[User]] and
+      (__ \ "keepId").format[Id[Keep]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(NewKeepActivity.apply, unlift(NewKeepActivity.unapply))
+
+}
+
 
 case class LibraryCollabInviteAccepted(
   recipient: Recipient,
@@ -104,7 +151,18 @@ case class LibraryCollabInviteAccepted(
 
 }
 
-object LibraryCollabInviteAccepted extends LibraryCollabInviteAcceptedImpl
+object LibraryCollabInviteAccepted extends NonGroupingNotificationKind[LibraryCollabInviteAccepted] {
+
+  override val name: String = "library_collab_invite_accepted"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "accepterId").format[Id[User]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(LibraryCollabInviteAccepted.apply, unlift(LibraryCollabInviteAccepted.unapply))
+
+}
 
 case class LibraryFollowInviteAccepted(
   recipient: Recipient,
@@ -117,7 +175,18 @@ case class LibraryFollowInviteAccepted(
 
 }
 
-object LibraryFollowInviteAccepted extends LibraryFollowInviteAcceptedImpl
+object LibraryFollowInviteAccepted extends NonGroupingNotificationKind[LibraryFollowInviteAccepted] {
+
+  override val name: String = "library_follow_invite_accepted"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "accepterId").format[Id[User]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(LibraryFollowInviteAccepted.apply, unlift(LibraryFollowInviteAccepted.unapply))
+
+}
 
 case class LibraryNewCollabInvite(
   recipient: Recipient,
@@ -130,7 +199,18 @@ case class LibraryNewCollabInvite(
 
 }
 
-object LibraryNewCollabInvite extends LibraryNewCollabInviteImpl
+object LibraryNewCollabInvite extends NonGroupingNotificationKind[LibraryNewCollabInvite] {
+
+  override val name: String = "library_new_collab_invite"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "inviterId").format[Id[User]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(LibraryNewCollabInvite.apply, unlift(LibraryNewCollabInvite.unapply))
+
+}
 
 case class LibraryNewFollowInvite(
   recipient: Recipient,
@@ -143,11 +223,24 @@ case class LibraryNewFollowInvite(
 
 }
 
-object LibraryNewFollowInvite extends LibraryNewFollowInviteImpl
+object LibraryNewFollowInvite extends NonGroupingNotificationKind[LibraryNewFollowInvite] {
+
+  override val name: String = "library_new_follow_invite"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "inviterId").format[Id[User]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(LibraryNewFollowInvite.apply, unlift(LibraryNewFollowInvite.unapply))
+
+}
+
 
 case class NewMessage(
   recipient: Recipient,
   time: DateTime,
+  from: Recipient,
   messageThreadId: Long, // need to use long here because MessageThread is only defined in Eliza
   messageId: Long // same here
 ) extends NotificationEvent {
@@ -157,7 +250,26 @@ case class NewMessage(
 
 }
 
-object NewMessage extends NewMessageImpl
+object NewMessage extends NotificationKind[NewMessage] {
+
+  override val name: String = "new_message"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+    (__ \ "time").format[DateTime] and
+    (__ \ "from").format[Recipient] and
+    (__ \ "messageThreadId").format[Long] and
+    (__ \ "messageId").format[Long]
+  )(NewMessage.apply, unlift(NewMessage.unapply))
+
+  override def groupIdentifier(event: NewMessage): Option[String] = Some(event.messageThreadId.toString)
+
+  override def shouldGroupWith(newEvent: NewMessage, existingEvents: Set[NewMessage]): Boolean = {
+    val existing = existingEvents.head
+    existing.messageThreadId == newEvent.messageThreadId
+  }
+
+}
 
 case class OrgNewInvite(
   recipient: Recipient,
@@ -170,7 +282,18 @@ case class OrgNewInvite(
 
 }
 
-object OrgNewInvite extends OrgNewInviteImpl
+object OrgNewInvite extends NonGroupingNotificationKind[OrgNewInvite] {
+
+  override val name: String = "org_new_invite"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "inviterId").format[Id[User]] and
+      (__ \ "orgId").format[Id[Organization]]
+    )(OrgNewInvite.apply, unlift(OrgNewInvite.unapply))
+
+}
 
 case class OrgInviteAccepted(
   recipient: Recipient,
@@ -183,7 +306,19 @@ case class OrgInviteAccepted(
 
 }
 
-object OrgInviteAccepted extends OrgInviteAcceptedImpl
+object OrgInviteAccepted extends NonGroupingNotificationKind[OrgInviteAccepted] {
+
+  override val name: String = "org_invite_accepted"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "accepterId").format[Id[User]] and
+      (__ \ "orgId").format[Id[Organization]]
+    )(OrgInviteAccepted.apply, unlift(OrgInviteAccepted.unapply))
+
+}
+
 
 case class OwnedLibraryNewCollabInvite(
   recipient: Recipient,
@@ -197,7 +332,25 @@ case class OwnedLibraryNewCollabInvite(
 
 }
 
-object OwnedLibraryNewCollabInvite extends OwnedLibraryNewCollabInviteImpl
+object OwnedLibraryNewCollabInvite extends NotificationKind[OwnedLibraryNewCollabInvite] {
+
+  override val name: String = "owned_library_new_collab_invite"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "inviterId").format[Id[User]] and
+      (__ \ "inviteeId").format[Id[User]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(OwnedLibraryNewCollabInvite.apply, unlift(OwnedLibraryNewCollabInvite.unapply))
+
+  override def shouldGroupWith(newEvent: OwnedLibraryNewCollabInvite, existingEvents: Set[OwnedLibraryNewCollabInvite]): Boolean = {
+    // only check a random event, they should all have the same inviter and library
+    val existing = existingEvents.head
+    existing.inviterId == newEvent.inviterId && existing.libraryId == newEvent.libraryId
+  }
+
+}
 
 case class OwnedLibraryNewFollowInvite(
   recipient: Recipient,
@@ -211,7 +364,25 @@ case class OwnedLibraryNewFollowInvite(
 
 }
 
-object OwnedLibraryNewFollowInvite extends OwnedLibraryNewFollowInviteImpl
+object OwnedLibraryNewFollowInvite extends NotificationKind[OwnedLibraryNewFollowInvite] {
+
+  override val name: String = "owned_library_new_follow_invite"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "inviterId").format[Id[User]] and
+      (__ \ "inviteeId").format[Id[User]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(OwnedLibraryNewFollowInvite.apply, unlift(OwnedLibraryNewFollowInvite.unapply))
+
+  override def shouldGroupWith(newEvent: OwnedLibraryNewFollowInvite, existingEvents: Set[OwnedLibraryNewFollowInvite]): Boolean = {
+    // only check a random event, they should all have the same inviter and library
+    val existing = existingEvents.head
+    existing.inviterId == newEvent.inviterId && existing.libraryId == newEvent.libraryId
+  }
+
+}
 
 case class OwnedLibraryNewFollower(
   recipient: Recipient,
@@ -224,7 +395,18 @@ case class OwnedLibraryNewFollower(
 
 }
 
-object OwnedLibraryNewFollower extends OwnedLibraryNewFollowerImpl
+object OwnedLibraryNewFollower extends NonGroupingNotificationKind[OwnedLibraryNewFollower] {
+
+  override val name: String = "owned_library_new_follower"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "followerId").format[Id[User]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(OwnedLibraryNewFollower.apply, unlift(OwnedLibraryNewFollower.unapply))
+
+}
 
 case class OwnedLibraryNewCollaborator(
   recipient: Recipient,
@@ -237,7 +419,18 @@ case class OwnedLibraryNewCollaborator(
 
 }
 
-object OwnedLibraryNewCollaborator extends OwnedLibraryNewCollaboratorImpl
+object OwnedLibraryNewCollaborator extends NonGroupingNotificationKind[OwnedLibraryNewCollaborator] {
+
+  override val name: String = "owned_library_new_collaborator"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "collaboratorId").format[Id[User]] and
+      (__ \ "libraryId").format[Id[Library]]
+    )(OwnedLibraryNewCollaborator.apply, unlift(OwnedLibraryNewCollaborator.unapply))
+
+}
 
 case class NewSocialConnection(
   recipient: Recipient,
@@ -250,7 +443,18 @@ case class NewSocialConnection(
 
 }
 
-object NewSocialConnection extends NewSocialConnectionImpl
+object NewSocialConnection extends NonGroupingNotificationKind[NewSocialConnection] {
+
+  override val name: String = "new_social_connection"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "friendId").format[Id[User]] and
+      (__ \ "networkType").formatNullable[SocialNetworkType]
+    )(NewSocialConnection.apply, unlift(NewSocialConnection.unapply))
+
+}
 
 // todo missing, social new library through twitter (unused?)
 // todo missing, social new follower through twitter (unused?)
@@ -265,7 +469,18 @@ case class SocialContactJoined(
 
 }
 
-object SocialContactJoined extends SocialContactJoinedImpl
+object SocialContactJoined extends NonGroupingNotificationKind[SocialContactJoined] {
+
+  override val name: String = "social_contact_joined"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "joinerId").format[Id[User]]
+    )(SocialContactJoined.apply, unlift(SocialContactJoined.unapply))
+
+}
+
 
 case class DepressedRobotGrumble(
     recipient: Recipient,
@@ -279,4 +494,44 @@ case class DepressedRobotGrumble(
 
 }
 
-object DepressedRobotGrumble extends DepressedRobotGrumbleImpl
+object DepressedRobotGrumble extends NotificationKind[DepressedRobotGrumble] {
+
+  override val name: String = "depressed_robot_grumble"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "robotName").format[String] and
+      (__ \ "grumblingAbout").format[String] and
+      (__ \ "shouldGroup").formatNullable[Boolean]
+    )(DepressedRobotGrumble.apply, unlift(DepressedRobotGrumble.unapply))
+
+  override def shouldGroupWith(newEvent: DepressedRobotGrumble, existingEvents: Set[DepressedRobotGrumble]): Boolean = newEvent.shouldGroup.getOrElse(false)
+
+}
+
+case class LegacyNotification(
+  recipient: Recipient,
+  time: DateTime,
+  json: JsValue,
+  uriId: Option[Id[NormalizedURI]]
+) extends NotificationEvent {
+
+  type N = LegacyNotification
+  val kind = LegacyNotification
+
+}
+
+
+object LegacyNotification extends NonGroupingNotificationKind[LegacyNotification] {
+
+  override val name: String = "legacy"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+    (__ \ "time").format[DateTime] and
+    (__ \ "json").format[JsValue] and
+    (__ \ "uriId").formatNullable[Id[NormalizedURI]]
+  )(LegacyNotification.apply, unlift(LegacyNotification.unapply))
+
+}

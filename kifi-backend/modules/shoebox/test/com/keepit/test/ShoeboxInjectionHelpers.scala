@@ -1,7 +1,8 @@
 package com.keepit.test
 
-import com.keepit.commanders.{ UserEmailAddressCommander, HandleCommanderImpl, HandleCommander }
+import com.keepit.commanders._
 import com.keepit.common.db.slick.SlickSessionProvider
+import com.keepit.integrity.{ KeepChecker, LibraryChecker }
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.FakeSlickSessionProvider
@@ -28,6 +29,11 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def normalizationService(implicit injector: Injector) = inject[NormalizationService]
   def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def keepRepo(implicit injector: Injector) = inject[KeepRepo]
+  def ktlRepo(implicit injector: Injector) = inject[KeepToLibraryRepo]
+  def ktuRepo(implicit injector: Injector) = inject[KeepToUserRepo]
+  def keepCommander(implicit injector: Injector) = inject[KeepCommander]
+  def ktlCommander(implicit injector: Injector) = inject[KeepToLibraryCommander]
+  def ktuCommander(implicit injector: Injector) = inject[KeepToUserCommander]
   def socialUserInfoRepo(implicit injector: Injector) = inject[SocialUserInfoRepo]
   def installationRepo(implicit injector: Injector) = inject[KifiInstallationRepo]
   def userExperimentRepo(implicit injector: Injector) = inject[UserExperimentRepo]
@@ -40,6 +46,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[FakeSlickSessionProvider]
   def libraryRepo(implicit injector: Injector) = inject[LibraryRepo]
+  def libraryCommander(implicit injector: Injector) = inject[LibraryCommander]
   def libraryMembershipRepo(implicit injector: Injector) = inject[LibraryMembershipRepo]
   def librarySubscriptionRepo(implicit injector: Injector) = inject[LibrarySubscriptionRepo]
   def libraryInviteRepo(implicit injector: Injector) = inject[LibraryInviteRepo]
@@ -52,4 +59,13 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def personaRepo(implicit injector: Injector) = inject[PersonaRepo]
   def userPersonaRepo(implicit injector: Injector) = inject[UserPersonaRepo]
   def handleCommander(implicit injector: Injector) = inject[HandleCommander].asInstanceOf[HandleCommanderImpl]
+  def orgRepo(implicit injector: Injector) = inject[OrganizationRepo]
+  def orgMembershipRepo(implicit injector: Injector) = inject[OrganizationMembershipRepo]
+  def orgInviteRepo(implicit injector: Injector) = inject[OrganizationInviteRepo]
+  def orgCommander(implicit injector: Injector) = inject[OrganizationCommander]
+  def orgMembershipCommander(implicit injector: Injector) = inject[OrganizationMembershipCommander]
+  def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
+  def libraryChecker(implicit injector: Injector) = inject[LibraryChecker]
+  def keepChecker(implicit injector: Injector) = inject[KeepChecker]
+  def permissionCommander(implicit injector: Injector) = inject[PermissionCommander].asInstanceOf[PermissionCommanderImpl]
 }

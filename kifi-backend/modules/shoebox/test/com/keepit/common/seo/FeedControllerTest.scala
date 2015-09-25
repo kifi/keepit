@@ -70,16 +70,16 @@ class FeedControllerTest extends Specification with ShoeboxTestInjector {
 
       val hover = KeepSource.keeper
 
-      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
         uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url,
         uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
+      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusDays(1),
         visibility = LibraryVisibility.PUBLISHED, libraryId = Some(lib1.id.get)))
 

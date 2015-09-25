@@ -1,10 +1,10 @@
 package com.keepit.commanders
 
 import akka.actor.Scheduler
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
-import com.keepit.commanders.emails.EmailSenderProvider
+import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender, EmailSenderProvider }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.core._
@@ -73,7 +73,7 @@ object UpdatableUserInfo {
   implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 }
 
-case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int, orgs: Seq[OrganizationCard])
+case class BasicUserInfo(basicUser: BasicUser, info: UpdatableUserInfo, notAuthed: Seq[String], numLibraries: Int, numConnections: Int, numFollowers: Int, orgs: Seq[OrganizationView], pendingOrgs: Seq[OrganizationView])
 
 case class UserProfile(userId: Id[User], basicUserWithFriendStatus: BasicUserWithFriendStatus, numKeeps: Int)
 
@@ -87,7 +87,8 @@ case class UserProfileStats(
   numTags: Int,
   numInvitedLibraries: Option[Int] = None,
   biography: Option[String] = None,
-  orgs: Seq[OrganizationCard])
+  orgs: Seq[OrganizationInfo],
+  pendingOrgs: Set[OrganizationInfo])
 object UserProfileStats {
   implicit val writes: Writes[UserProfileStats] = (
     (__ \ 'numLibraries).write[Int] and
@@ -99,7 +100,8 @@ object UserProfileStats {
     (__ \ 'numTags).write[Int] and
     (__ \ 'numInvitedLibraries).writeNullable[Int] and
     (__ \ 'biography).writeNullable[String] and
-    (__ \ 'orgs).write[Seq[OrganizationCard]]
+    (__ \ 'orgs).write[Seq[OrganizationInfo]] and
+    (__ \ 'pendingOrgs).write[Set[OrganizationInfo]]
   )(unlift(UserProfileStats.unapply))
 }
 
@@ -119,6 +121,9 @@ class UserCommander @Inject() (
     libraryRepo: LibraryRepo,
     organizationCommander: OrganizationCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
+    organizationInviteCommander: OrganizationInviteCommander,
+    organizationMembershipRepo: OrganizationMembershipRepo,
+    organizationInviteRepo: OrganizationInviteRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionCommander: CollectionCommander,
     abookServiceClient: ABookServiceClient,
@@ -133,11 +138,11 @@ class UserCommander @Inject() (
     s3ImageStore: S3ImageStore,
     heimdalClient: HeimdalServiceClient,
     userImageUrlCache: UserImageUrlCache,
-    libraryCommander: LibraryCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     friendStatusCommander: FriendStatusCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
-    emailSender: EmailSenderProvider,
+    welcomeEmailSender: Provider[WelcomeEmailSender],
+    contactJoinedEmailSender: Provider[ContactJoinedEmailSender],
     usernameCache: UsernameCache,
     userExperimentRepo: UserExperimentRepo,
     allFakeUsersCache: AllFakeUsersCache,
@@ -179,9 +184,9 @@ class UserCommander @Inject() (
   }
 
   def updateUserBiography(userId: Id[User], biography: String): Unit = {
-    db.readWrite { implicit session =>
+    db.readWrite(attempts = 3) { implicit session =>
       val trimmed = biography.trim
-      if (trimmed != "") {
+      if (trimmed.nonEmpty) {
         userValueRepo.setValue(userId, UserValueName.USER_DESCRIPTION, trimmed)
       } else {
         userValueRepo.clearValue(userId, UserValueName.USER_DESCRIPTION)
@@ -276,7 +281,7 @@ class UserCommander @Inject() (
   }
 
   def getUserInfo(user: User): BasicUserInfo = {
-    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards) = db.readOnlyMaster { implicit session =>
+    val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
       val emails = emailRepo.getAllByUser(user.id.get).map { e => (e, userEmailAddressCommander.isPrimaryEmail(e)) }
@@ -291,10 +296,13 @@ class UserCommander @Inject() (
       val numConnections = userConnectionRepo.getConnectionCount(user.id.get)
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
-      val orgs = organizationMembershipCommander.getAllOrganizationsForUser(user.id.get)
-      val orgCards = organizationCommander.getOrganizationCards(orgs, user.id).values.toSeq
+      val orgs = organizationMembershipRepo.getByUserId(user.id.get, Limit(Int.MaxValue), Offset(0)).map(_.organizationId)
+      val orgViews = organizationCommander.getOrganizationViews(orgs.toSet, user.id, authTokenOpt = None).values.toSeq
 
-      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgCards)
+      val pendingOrgs = organizationInviteRepo.getByInviteeIdAndDecision(user.id.get, InvitationDecision.PENDING).map(_.organizationId)
+      val pendingOrgViews = organizationCommander.getOrganizationViews(pendingOrgs.toSet, user.id, authTokenOpt = None).values.toSeq
+
+      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews)
     }
 
     val emailInfos = emails.sortBy { case (e, isPrimary) => (isPrimary, !e.verified, e.id.get.id) }.reverse.map {
@@ -306,7 +314,7 @@ class UserCommander @Inject() (
           isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
         )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgCards)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews)
   }
 
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
@@ -320,37 +328,6 @@ class UserCommander @Inject() (
 
     val segment = UserSegmentFactory(numBms, numFriends)
     segment
-  }
-
-  def createUser(firstName: String, lastName: String, state: State[User]): User = {
-    val newUser: User = db.readWrite(attempts = 3) { implicit session =>
-      val user = userRepo.save(User(firstName = firstName, lastName = lastName, state = state))
-      val userWithUsername = handleCommander.autoSetUsername(user) getOrElse {
-        throw new Exception(s"COULD NOT CREATE USER [$firstName $lastName] SINCE WE DIDN'T FIND A USERNAME!!!")
-      }
-      userWithUsername
-    }
-
-    SafeFuture {
-      db.readWrite(attempts = 3) { implicit session =>
-        userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_GUIDE, true)
-        userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_PERSONA, true) // todo, this shouldn't be true for all users, like when they were invited to a lib
-        userValueRepo.setValue(newUser.id.get, UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
-      }
-      searchClient.warmUpUser(newUser.id.get)
-      searchClient.updateUserIndex()
-    }
-
-    val userId = newUser.id.get
-    libraryCommander.internSystemGeneratedLibraries(userId)
-    if (userId.id % 2 == 0) { //for half of the users
-      libraryCommander.createReadItLaterLibrary(userId)
-      db.readWrite { implicit session =>
-        userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.READ_IT_LATER))
-      }
-    }
-
-    newUser
   }
 
   def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]] = synchronized {
@@ -376,7 +353,7 @@ class UserCommander @Inject() (
             val toNotify = contacts.diff(alreadyConnectedUsers) - newUserId
 
             log.info("sending new user contact notifications to: " + toNotify)
-            val emailsF = toNotify.map { userId => emailSender.contactJoined(userId, newUserId) }
+            val emailsF = toNotify.map { userId => contactJoinedEmailSender.get.apply(userId, newUserId) }
 
             elizaServiceClient.sendGlobalNotification( //push sent
               userIds = toNotify,
@@ -419,7 +396,7 @@ class UserCommander @Inject() (
 
   def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
-      val emailF = emailSender.welcome(newUser.id.get, targetEmailOpt, isPlainEmail)
+      val emailF = welcomeEmailSender.get.apply(newUser.id.get, targetEmailOpt, isPlainEmail)
       emailF.map { email =>
         db.readWrite { implicit rw => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
         ()
@@ -727,5 +704,12 @@ class UserCommander @Inject() (
         userExperimentRepo.getByType(UserExperimentType.FAKE).map(_.userId).toSet ++ experimentRepo.getUserIdsByExperiment(UserExperimentType.AUTO_GEN)
       }
     }
+  }
+
+  def liveFlushRemoteClientCache(userId: Id[User], flushEverything: Boolean = false): Future[Unit] = {
+    // This sends a simple socket message to any connected clients to tell them to flush their local caches. It's
+    // most useful when something big changed about a user, like if they're now in an organization.
+    // Clients may not respect this, it's a hint only.
+    elizaServiceClient.sendToUser(userId, Json.arr("flush"))
   }
 }

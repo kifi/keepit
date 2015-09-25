@@ -11,8 +11,6 @@
 
 -> /  cortexService.Routes
 
--> /  curatorService.Routes
-
 -> /  graphService.Routes
 
 -> /  roverService.Routes

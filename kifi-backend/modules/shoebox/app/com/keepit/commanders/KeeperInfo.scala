@@ -73,7 +73,8 @@ object KeepData {
     (__ \ 'libraryId).write[PublicId[Library]]
   )(unlift(KeepData.unapply))
 
-  def apply(basicKeep: BasicKeep): KeepData = KeepData(basicKeep.id, basicKeep.mine, basicKeep.removable, basicKeep.visibility == LibraryVisibility.SECRET, basicKeep.libraryId)
+  def apply(personalKeep: PersonalKeep): KeepData =
+    KeepData(personalKeep.id, personalKeep.mine, personalKeep.removable, personalKeep.visibility == LibraryVisibility.SECRET, personalKeep.libraryId)
 }
 
 // The extension uses this object to augment `KeepData` only when needed. It's useless by itself.
@@ -110,9 +111,11 @@ case class LibraryData(
   visibility: LibraryVisibility,
   path: String,
   hasCollaborators: Boolean,
-  subscribedToUpdates: Boolean,
+  subscribedToUpdates: Boolean, // deprecated, use membership.subscribed instead
   collaborators: Seq[BasicUser],
-  orgAvatar: Option[ImagePath])
+  orgAvatar: Option[ImagePath], //not all libs have orgs
+  membership: Option[LibraryMembershipInfo])
+
 object LibraryData {
   implicit val writes: Writes[LibraryData] = (
     (__ \ 'id).write[PublicId[Library]] and
@@ -123,6 +126,7 @@ object LibraryData {
     (__ \ 'hasCollaborators).write[Boolean] and
     (__ \ 'subscribedToUpdates).write[Boolean] and
     (__ \ 'collaborators).write[Seq[BasicUser]] and
-    (__ \ 'orgAvatar).writeNullable[ImagePath]
+    (__ \ 'orgAvatar).writeNullable[ImagePath] and
+    (__ \ 'membership).writeNullable[LibraryMembershipInfo]
   )(unlift(LibraryData.unapply))
 }

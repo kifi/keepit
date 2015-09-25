@@ -6,11 +6,10 @@ import securesocial.controllers.TemplatesPlugin
 import com.keepit.common.social.{ ShoeboxTemplatesPlugin }
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.store.S3ImageStore
-import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.common.time.Clock
-import com.keepit.commanders.{ UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
+import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
 import play.api.Play.current
 import com.keepit.controllers.core.OAuth2CommonConfig
 
@@ -43,11 +42,12 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     emailRepo: UserEmailAddressRepo,
     socialGraphPlugin: SocialGraphPlugin,
     userCommander: UserCommander,
+    userCreationCommander: UserCreationCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
     userIdentityHelper: UserIdentityHelper,
     clock: Clock): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userExperimentCommander, userEmailAddressCommander, userIdentityHelper, clock
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userCreationCommander, userExperimentCommander, userEmailAddressCommander, userIdentityHelper, clock
   )
 
   @Singleton

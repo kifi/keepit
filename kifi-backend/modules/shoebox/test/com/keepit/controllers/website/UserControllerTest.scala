@@ -57,33 +57,15 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
-        val expected = Json.parse(s"""
-            {
-              "id":"${user.externalId}",
-              "firstName":"Shanee",
-              "lastName":"Smith",
-              "pictureName":"0.jpg",
-              "username":"test",
-              "emails":[],
-              "notAuthed":[],
-              "experiments":["admin"],
-              "numLibraries":0,
-              "numConnections":0,
-              "numFollowers":0,
-              "pendingFriendRequests":0,
-              "orgs":
-              [{
-                  "id":"${Organization.publicId(org.id.get)(inject[PublicIdConfiguration]).id}",
-                  "ownerId":"${user.externalId}",
-                  "handle":"${org.handle.value}",
-                  "name":"${org.name}",
-                  "numMembers":1,
-                  "numLibraries":0
-              }]
-            }
-          """)
+        val resultJson = contentAsJson(result)
 
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        (resultJson \ "id").as[ExternalId[User]] === user.externalId
+        (resultJson \ "firstName").as[String] === "Shanee"
+        (resultJson \ "experiments").as[Seq[String]] === Seq("admin")
+
+        implicit val orgInfoReads = OrganizationInfo.testReads
+        (resultJson \ "orgs").as[Seq[OrganizationInfo]].length === 1
+        (resultJson \ "pendingOrgs").as[Seq[OrganizationInfo]].length === 0
       }
     }
 

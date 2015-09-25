@@ -1,9 +1,10 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
-import com.keepit.abook.model.RichContact
+import com.keepit.abook.model.{ OrganizationInviteRecommendation, RichContact }
 import com.keepit.commanders.emails.EmailTemplateSender
+import com.keepit.common.controller.UserRequest
 import com.keepit.common.time._
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -21,8 +22,10 @@ import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPu
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
+import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
+import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -30,18 +33,18 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[OrganizationInviteCommanderImpl])
 trait OrganizationInviteCommander {
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]]
   def cancelOrganizationInvites(request: OrganizationInviteCancelRequest): Either[OrganizationFail, OrganizationInviteCancelResponse]
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationMembership]
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationMembership]
   def declineInvitation(orgId: Id[Organization], userId: Id[User]): Seq[OrganizationInvite]
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] // creates a Universal Invite Link for an organization and inviter. Anyone with the link can join the Organization
   def getInvitesByOrganizationId(orgId: Id[Organization]): Set[OrganizationInvite]
   def getLastSentByOrganizationIdAndInviteeId(orgId: Id[Organization], inviteeId: Id[User]): Option[OrganizationInvite]
   def getInviteByOrganizationIdAndAuthToken(orgId: Id[Organization], authToken: String): Option[OrganizationInvite]
-  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]]
+  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]]
   def isAuthValid(orgId: Id[Organization], authToken: String): Boolean
   def getViewerInviteInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Option[OrganizationInviteInfo]
+  def getInvitesByInviteeAndDecision(userId: Id[User], decision: InvitationDecision): Set[OrganizationInvite]
 }
 
 @Singleton
@@ -52,7 +55,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo,
-    aBookClient: ABookServiceClient,
+    abookClient: ABookServiceClient,
+    searchClient: SearchServiceClient,
     implicit val defaultContext: ExecutionContext,
     userIpAddressRepo: UserIpAddressRepo,
     userRepo: UserRepo,
@@ -65,6 +69,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     typeaheadCommander: TypeaheadCommander,
     organizationAnalytics: OrganizationAnalytics,
     userExperimentRepo: UserExperimentRepo,
+    userCommander: Provider[UserCommander],
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
@@ -98,13 +103,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def convertPendingInvites(emailAddress: EmailAddress, userId: Id[User])(implicit session: RWSession): Unit = {
-    val hasOrgInvite = organizationInviteRepo.getByEmailAddress(emailAddress).map { invitation =>
-      organizationInviteRepo.save(invitation.copy(userId = Some(userId)))
-      invitation.state
-    } contains OrganizationInviteStates.ACTIVE
-  }
-
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
     val OrganizationInviteSendRequest(orgId, inviterId, inviteeAddresses, inviteeUserIds, message) = orgInvite
 
@@ -118,24 +116,27 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case Some(fail) => Future.successful(Left(fail))
       case _ => {
         val contactsByEmailAddressFut: Future[Map[EmailAddress, RichContact]] = {
-          aBookClient.internKifiContacts(inviterId, inviteeAddresses.map(BasicContact(_)).toSeq: _*).imap { kifiContacts =>
+          abookClient.internKifiContacts(inviterId, inviteeAddresses.map(BasicContact(_)).toSeq: _*).imap { kifiContacts =>
             (inviteeAddresses zip kifiContacts).toMap
           }
         }
 
-        val basicUserByUserId: Map[Id[User], BasicUser] = db.readOnlyMaster { implicit session =>
-          basicUserRepo.loadAll(inviteeUserIds.toSet)
-        }
-
         contactsByEmailAddressFut map { contactsByEmail =>
-          val addMembers = inviteeUserIds.map { userId =>
+          val (allInviteeUserIds, nonUserContactsByEmail) = contactsByEmail.foldLeft((inviteeUserIds, Map.empty[EmailAddress, RichContact])) {
+            case ((userIds, nonUserContactsByEmail), (email, contact)) if contact.userId.isDefined => (userIds + contact.userId.get, nonUserContactsByEmail)
+            case ((userIds, nonUserContactsByEmail), (email, contact)) if contact.userId.isEmpty => (userIds, nonUserContactsByEmail + (email -> contact))
+          }
+
+          val basicUserByUserId: Map[Id[User], BasicUser] = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(allInviteeUserIds) }
+
+          val addMembers = allInviteeUserIds.map { userId =>
             val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), message = message)
             val inviteeInfo: Either[BasicUser, RichContact] = Left(basicUserByUserId(userId))
             (orgInvite, inviteeInfo)
           }
-          val addByEmail = inviteeAddresses.map { emailAddress =>
+          val addByEmail = nonUserContactsByEmail.keys.map { emailAddress =>
             val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, emailAddress = Some(emailAddress), message = message)
-            val inviteeInfo: Either[BasicUser, RichContact] = Right(contactsByEmail(emailAddress))
+            val inviteeInfo: Either[BasicUser, RichContact] = Right(nonUserContactsByEmail(emailAddress))
             (orgInvite, inviteeInfo)
           }
           val invitesAndInviteeInfos = addMembers ++ addByEmail
@@ -231,8 +232,8 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
     elizaClient.sendGlobalNotification( //push sent
       userIds = invitees,
-      title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${org.name}!",
-      body = s"Help ${org.name} by sharing your knowledge with them.",
+      title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${org.abbreviatedName}!",
+      body = s"Join the ${org.abbreviatedName} team, so you can access and build your team's knowledge",
       linkText = "Let's do it!",
       linkUrl = orgLink,
       imageUrl = userImage,
@@ -280,11 +281,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit context: HeimdalContext): Either[OrganizationFail, OrganizationMembership] = {
+  def acceptInvitation(orgId: Id[Organization], userId: Id[User], authTokenOpt: Option[String])(implicit context: HeimdalContext): Either[OrganizationFail, OrganizationMembership] = {
     val (invitations, membershipOpt) = db.readOnlyReplica { implicit session =>
       val userInvitations = organizationInviteRepo.getByOrgAndUserId(orgId, userId)
       val existingMembership = organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
-      val universalInvitation = organizationInviteRepo.getByOrgIdAndAuthToken(orgId, authToken)
+      val universalInvitation = authTokenOpt.flatMap(organizationInviteRepo.getByOrgIdAndAuthToken(orgId, _))
       val allInvitations = universalInvitation match {
         case Some(invitation) if !userInvitations.contains(invitation) => userInvitations.+:(invitation)
         case _ => userInvitations
@@ -312,7 +313,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization)
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
-          if (authToken.nonEmpty) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
+          if (authTokenOpt.exists(_.nonEmpty)) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)
         }
       }
       success
@@ -323,21 +324,21 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
     val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
-      val title = s"${invitee.firstName} accepted your invitation to join ${org.name}!"
+      val title = s"${invitee.firstName} accepted your invitation to join ${org.abbreviatedName}!"
       val inviterId = invite.inviterId
       elizaClient.sendGlobalNotification( //push sent
         userIds = Set(inviterId),
         title = title,
-        body = s"Click here to view ${org.name}’s libraries.",
-        linkText = s"See ${org.name}’s libraries",
+        body = s"Click here to view ${org.abbreviatedName}’s libraries.",
+        linkText = s"See ${org.abbreviatedName}’s libraries",
         linkUrl = s"https://www.kifi.com/${org.handle.value}",
         imageUrl = inviteeImage,
         sticky = false,
         category = NotificationCategory.User.ORGANIZATION_JOINED,
         extra = Some(Json.obj(
           "member" -> BasicUser.fromUser(invitee),
-          "organization" -> Json.toJson(OrganizationNotificationInfoBuilder.fromOrganization(org, orgImageOpt))
-        ))
+          "organization" -> NotificationInfoModel.organization(org, orgImageOpt))
+        )
       )
       elizaClient.sendNotificationEvent(OrgInviteAccepted(
         Recipient(inviterId),
@@ -398,58 +399,50 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int): Future[Seq[MaybeOrganizationMember]] = {
-    val friendsAndContactsFut = query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, Some(limit))
+  def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]] = {
+    val usersAndEmailsFut = query.map(_.trim).filter(_.nonEmpty) match {
       case None =>
-        val memberCount = db.readOnlyMaster { implicit s => organizationMembershipRepo.countByOrgId(orgId) }
-        Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, Some(limit + memberCount)))
-    }
-    val activeInvites = db.readOnlyMaster { implicit session =>
-      organizationInviteRepo.getAllByOrgIdAndDecisions(orgId, Set(InvitationDecision.PENDING, InvitationDecision.DECLINED))
-    }
-
-    val invitedUsers = activeInvites.groupBy(_.userId).collect {
-      case (Some(userId), invites) =>
-        val access = invites.map(_.role).maxBy(_.priority)
-        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
-        userId -> (access, lastInvitedAt)
-    }
-
-    val invitedEmailAddresses = activeInvites.groupBy(_.emailAddress).collect {
-      case (Some(emailAddress), invites) =>
-        val access = invites.map(_.role).maxBy(_.priority)
-        val lastInvitedAt = invites.map(_.createdAt).maxBy(_.getMillis)
-        emailAddress -> (access, lastInvitedAt)
+        abookClient.getRecommendationsForOrg(orgId, Some(userId), offset = 0, limit = limit + 9).map { orgInviteRecos =>
+          val userRecos = orgInviteRecos.collect { case reco if reco.identifier.isLeft => reco.identifier.left.get }
+          val emailRecos = orgInviteRecos.collect { case reco if reco.identifier.isRight => RichContact(email = reco.identifier.right.get, name = reco.name) }
+          (userRecos, emailRecos)
+        }
+      case Some(validQuery) =>
+        val memberCount = db.readOnlyMaster { implicit session => organizationMembershipRepo.countByOrgId(orgId) }
+        val usersFut = searchClient.searchUsersByName(userId, validQuery, limit + memberCount, request.acceptLanguages.map(_.toString), request.experiments)
+        val emailsFut = abookClient.prefixQuery(userId, validQuery, maxHits = Some(limit + 9))
+        for {
+          users <- usersFut
+          emails <- emailsFut
+        } yield {
+          (users.map(_.userId), emails.map(_.info))
+        }
     }
 
-    friendsAndContactsFut.map {
+    usersAndEmailsFut.map {
       case (users, contacts) =>
-        val existingMembers = {
-          val userIds = users.map(_._1).toSet
-          db.readOnlyMaster { implicit session =>
-            organizationMembershipRepo.getByOrgIdAndUserIds(orgId, userIds)
-          }.map(_.userId).toSet
-        }
-        val suggestedUsers = users.collect {
-          case (userId, basicUser) if !existingMembers.contains(userId) => // if we decide to add "role" to invites, existing members should not be filtered (they may be promoted via an invite)
-            val (role, lastInvitedAt) = invitedUsers.get(userId) match {
-              case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
-              case None => invitedUsers.get(userId) match {
-                case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
-                case None => (OrganizationRole.MEMBER, None) // default invite role
-              }
-            }
-            MaybeOrganizationMember(Left(basicUser), role, lastInvitedAt)
+        val nonMembers = db.readOnlyMaster { implicit session =>
+          val members = organizationMembershipRepo.getByOrgIdAndUserIds(orgId, users.toSet)
+          val fakes = userCommander.get().getAllFakeUsers()
+          val isRequesterAdmin = userExperimentRepo.hasExperiment(userId, UserExperimentType.ADMIN)
+          users.filter(id => !members.exists(_.userId == id) && (!fakes.contains(id) || isRequesterAdmin))
         }
 
-        val suggestedEmailAddresses = contacts.map { contact =>
-          val (role, lastInvitedAt) = invitedEmailAddresses.get(contact.email) match {
-            case Some((role, lastInvitedAt)) => (role, Some(lastInvitedAt))
-            case None => (OrganizationRole.MEMBER, None)
-          }
-          MaybeOrganizationMember(Right(contact), role, lastInvitedAt)
+        val uniqueEmailsWithName = contacts.groupBy(_.email.address.toLowerCase).map {
+          case (address, groupedContacts) => (address, groupedContacts.find(_.name.isDefined).getOrElse(groupedContacts.head))
+        }.values.toSeq
+
+        val basicUserById = db.readOnlyReplica { implicit session => basicUserRepo.loadAllActive(nonMembers.toSet) }
+
+        val suggestedUsers = nonMembers.collect {
+          case uid if basicUserById.get(uid).isDefined =>
+            MaybeOrganizationMember(Left(basicUserById(uid)), OrganizationRole.MEMBER, lastInvitedAt = None)
         }
+
+        val suggestedEmailAddresses = uniqueEmailsWithName.map { contact =>
+          MaybeOrganizationMember(Right(BasicContact.fromRichContact(contact)), OrganizationRole.MEMBER, lastInvitedAt = None)
+        }
+
         (suggestedUsers ++ suggestedEmailAddresses).take(limit)
     }
   }
@@ -466,5 +459,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       val inviter = db.readOnlyReplica { implicit session => basicUserRepo.load(invite.inviterId) }
       OrganizationInviteInfo.fromInvite(invite, inviter)
     }
+  }
+
+  def getInvitesByInviteeAndDecision(userId: Id[User], decision: InvitationDecision): Set[OrganizationInvite] = {
+    db.readOnlyReplica { implicit session => organizationInviteRepo.getByInviteeIdAndDecision(userId, decision) }
   }
 }

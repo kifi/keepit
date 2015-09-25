@@ -130,4 +130,11 @@
       }
       </table>
   }
+
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminLibraryController.getLibrariesWithInactiveOwner" method="POST">
+    <button type="submit">Get libraries with Inactive Owner</button>
+  </form>
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminLibraryController.removeLibrariesWithInactiveOwner" method="POST">
+    <button type="submit">Remove libraries with Inactive Owner</button>
+  </form>
 }

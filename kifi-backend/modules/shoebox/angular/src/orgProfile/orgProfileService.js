@@ -2,9 +2,32 @@
 
 angular.module('kifi')
 
+.constant('ORG_PERMISSION', {
+  MANAGE_PLAN: 'manage_plan',
+  FORCE_EDIT_LIBRARIES: 'force_edit_libraries',
+  INVITE_MEMBERS: 'invite_members',
+  GROUP_MESSAGING: 'group_messaging',
+  EDIT_ORGANIZATION: 'edit_organization',
+  VIEW_ORGANIZATION: 'view_organization',
+  REMOVE_LIBRARIES: 'remove_libraries',
+  CREATE_SLACK_INTEGRATION: 'create_slack_integration',
+  MODIFY_MEMBERS: 'modify_members',
+  PUBLISH_LIBRARIES: 'publish_libraries',
+  REMOVE_MEMBERS: 'remove_members',
+  ADD_LIBRARIES: 'add_libraries',
+  VIEW_MEMBERS: 'view_members'
+})
+
+.constant('ORG_SETTING_VALUE', {
+  ADMIN: 'admin',
+  MEMBER: 'member',
+  ANYONE: 'anyone',
+  DISABLED: 'disabled'
+})
+
 .factory('orgProfileService', [
-  '$http', '$rootScope', 'profileService', 'routeService', '$q', '$analytics', 'net',
-  function ($http, $rootScope, profileService, routeService, $q, $analytics, net) {
+  '$window', '$http', '$rootScope', 'routeService', '$q', '$analytics', 'net', 'ml',
+  function ($window, $http, $rootScope, routeService, $q, $analytics, net, ml) {
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
@@ -16,6 +39,17 @@ angular.module('kifi')
     }
 
     var api = {
+      createOrg: function(name) {
+        ml.specs.createOrg = new ml.Spec([
+          new ml.Expect('Org was assigned a handle', function(handle) { return (handle !== undefined); }),
+          new ml.Assert('Created org was returned in 3 seconds or less', 3000)
+        ]);
+        return net.createOrg({ name: name }).then(function(response) {
+          var handle = response.data.organization.handle;
+          ml.specs.createOrg.respond(handle);
+          return handle;
+        });
+      },
       sendOrgMemberInvite: function (orgId, inviteFields) {
         return net.sendOrgMemberInvite(orgId, inviteFields)
           .then(function (response) {
@@ -38,6 +72,17 @@ angular.module('kifi')
       transferOrgMemberOwnership: function (orgId, newOwner) {
         return net.transferOrgMemberOwnership(orgId, newOwner);
       },
+      getOrgSettings: function(orgId) {
+        return net.getOrgSettings(orgId).then(function(response) {
+          return response.data;
+        });
+      },
+      setOrgSettings: function(orgId, data) {
+        return net.setOrgSettings(orgId, data).then(function (response) {
+          net.getOrgSettings.clearCache();
+          return response.data;
+        });
+      },
       getOrgLibraries: function (orgId, page, size) {
         return net.getOrgLibraries(orgId, {
           offset: page,
@@ -59,7 +104,7 @@ angular.module('kifi')
       },
       suggestOrgMember: function (orgId, query, limit) {
         if (typeof limit === 'undefined') {
-          limit = 3;
+          limit = 10;
         }
 
         return net.suggestOrgMember(orgId, query, limit).then(function (response) {

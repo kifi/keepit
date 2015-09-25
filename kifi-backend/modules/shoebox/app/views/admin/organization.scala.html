@@ -42,6 +42,16 @@ orgStats: OrganizationStatistics
         </form>
         </td></tr>
     <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
+    <tr><td>Plan</td><td>@orgStats.plan.id (Price per User per Cycle: @orgStats.plan.pricePerCyclePerUser, Cycle Length: @orgStats.plan.billingCycle.month month)<button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
+    <tr><td>Billing Cycle Start</td><td>@adminHelper.dateTimeDisplay(orgStats.billingCycleStart)</td></tr>
+    <tr><td>Credit</td><td>@orgStats.credit<button id="process-billing-now" class="btn btn-default btn-xs">Process Payments Now</button></td></tr>
+    <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>)</td></tr>
+    <tr><td>Extra credit</td><td>
+        Amount (cents)? <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
+        Passphrase: <input id="extra-credit-pass" type="text"></input>
+        Memo: <input id="extra-credit-memo" type="text" placeholder="optional"></input>
+        <button id="extra-credit-submit" class="btn btn-default btn-xs">Do it!</button>
+    </td></tr>
     <tr>
     <th>Experiments</th>
     <td id="experiments" class="form-inline">
@@ -53,10 +63,41 @@ orgStats: OrganizationStatistics
     </td>
     </tr>
     <tr>
+        <th>Non-member permissions</th>
+        <td id="permissions-nonmember" class="form-inline">
+            @for(p <- OrganizationPermission.all) {
+            <label class="checkbox">
+                <input type="checkbox" data-permission="@p.value" @if(orgStats.org.getNonmemberPermissions.contains(p)) {checked}>@p.value
+            </label>
+            }
+        </td>
+    </tr>
+    <tr>
+        <th>Member permissions</th>
+        <td id="permissions-member" class="form-inline">
+            @for(p <- OrganizationPermission.all) {
+            <label class="checkbox">
+                <input type="checkbox" data-permission="@p.value" @if(orgStats.org.getRolePermissions(OrganizationRole.MEMBER).contains(p)) {checked}>@p.value
+            </label>
+            }
+        </td>
+    </tr>
+    <tr>
+        <th>Admin permissions</th>
+        <td id="permissions-admin" class="form-inline">
+            @for(p <- OrganizationPermission.all) {
+            <label class="checkbox">
+                <input type="checkbox" data-permission="@p.value" @if(orgStats.org.getRolePermissions(OrganizationRole.ADMIN).contains(p)) {checked}>@p.value
+            </label>
+            }
+        </td>
+    </tr>
+
+    <tr>
         <th>Active</th>
         <td>
             @orgStats.org.state <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.forceDeactivate(orgStats.orgId)" method="POST" class="form-inline set-inactive">
-                <button type="submit" class="btn btn-default">Set inactive</button>
+                <button type="submit" class="btn btn-default btn-xs">Set inactive</button>
             </form>
         </td>
     </tr>
@@ -67,7 +108,7 @@ orgStats: OrganizationStatistics
             Title:<br/><textarea id="admin-chat-title" rows="1" cols="120">Kifi for your organization</textarea><br/>
             Message:<br/><textarea id="admin-chat-text" rows="5" cols="120">Welcome to Kifi</textarea><br/>
             Recipients:<br/><textarea id="admin-chat-recipients">@{Html(orgStats.members.map(m => orgStats.membersStatistics(m.userId).user.externalId.id).mkString(", \n"))}</textarea><br/>
-            <button id="admin-chat-button" class="btn btn-default">Start Chat</button>
+            <button id="admin-chat-button" class="btn btn-default btn-xs">Start Chat</button>
     </tr>
 
 </table>
@@ -87,75 +128,77 @@ orgStats: OrganizationStatistics
 
 <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addDomainOwnership(orgStats.orgId)" method="POST" class="form-inline add-domain-ownership">
     <input type="text" name="domainName" placeholder="Domain name">
-    <button type="submit" class="btn btn-default">Add Ownership</button>
+    <button type="submit" class="btn btn-default btn-xs">Add Ownership</button>
 </form>
 
 @orgStats.members.size members @orgStats.candidates.size candidates
 
-<table class="org-members table table-bordered" style="width:600px">
-    <tr>
-        <th>Member Id</th>
-        <th>External Id</th>
-        <th>Member Name</th>
-        <th>Role</th>
-        <th>Last Keep</th>
-        <th>Lib created</th>
-        <th>Keeps PRV/PUB</th>
-        <th>Messages all/active/started</th>
-        <th>Remove</th>
-        <th>Make an owner</th>
-    </tr>
-    @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
+<table id="members" class="org-members table table-bordered tablesorter"
+       style="width:600px">
+    <thead>
         <tr>
-            <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(membership.userId)">@membership.userId</a></td>
-            <td>@orgStats.membersStatistics(membership.userId).user.externalId.id</td>
-            <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
-            <td>@membership.role</td>
-            <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
-            <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
-            <td>@orgStats.membersStatistics(membership.userId).numPrivateKeeps / @orgStats.membersStatistics(membership.userId).numPublicKeeps</td>
-            <td>@orgStats.membersStatistics(membership.userId).numChats</td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+            <th>Member Name</th>
+            <th>Role</th>
+            <th class="sorter-mmddyy">Last Keep</th>
+            <th>Libs</th>
+            <th>Keeps PRV/PUB/ORG/DISC</th>
+            <th>Chats</th>
+            <th>Remove</th>
+            <th>Make an owner</th>
         </tr>
-    }
+    </thead>
+    <tbody>
+        @for(membership <- orgStats.members.toSeq.sortBy(_.role)) {
+            <tr>
+                <td>@adminHelper.userDisplay(orgStats.membersStatistics(membership.userId).user)</td>
+                <td>@membership.role</td>
+                <td>@orgStats.membersStatistics(membership.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
+                <td>@orgStats.membersStatistics(membership.userId).numLibrariesCreated</td>
+                <td>@orgStats.membersStatistics(membership.userId).keepVisibilityCount.secret / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.published / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.organization / @orgStats.membersStatistics(membership.userId).keepVisibilityCount.discoverable</td>
+                <td>@orgStats.membersStatistics(membership.userId).numChats</td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default btn-xs">Remove</button></form></td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@membership.userId"><button type="submit" class="btn btn-default btn-xs">Make Owner</button></form></td>
+            </tr>
+        }
+    </tbody>
 </table>
 
-<table class="org-candidates table table-bordered" style="width:600px">
-    <tr>
-        <th>Candidate Id</th>
-        <th>External Id</th>
-        <th>Candidate Name</th>
-        <th>Last Keep</th>
-        <th>libraries</th>
-        <th>Keeps PRV/PUB</th>
-        <th>Chats</th>
-        <th>Remove</th>
-        <th>Make a member</th>
-        <th>Invite 2ba member</th>
-        <th>Make an owner</th>
-    </tr>
-    @for(candidate <- orgStats.candidates.toSeq) {
+<table id="candidates" class="org-candidates table table-bordered tablesorter"
+       style="width:600px">
+    <thead>
         <tr>
-            <td>@candidate.userId</td>
-            <td>@orgStats.membersStatistics(candidate.userId).user.externalId.id</td>
-            <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
-            <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("Never!")</td>
-            <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
-            <td>@orgStats.membersStatistics(candidate.userId).numPrivateKeeps / @orgStats.membersStatistics(candidate.userId).numPublicKeeps</td>
-            <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Remove</button></form></td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Member</button></form></td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Invite Member</button></form></td>
-            <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
-                <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default">Make Owner</button></form></td>
+            <th>Candidate Name</th>
+            <th class="sorter-mmddyy">Last Keep</th>
+            <th>Boards</th>
+            <th>Keeps PRV/PUB/ORG/DISC</th>
+            <th>Chats</th>
+            <th>Remove</th>
+            <th>Make member</th>
+            <th>Invite member</th>
+            <th>Make owner</th>
         </tr>
-    }
+    </thead>
+    <tbody>
+        @for(candidate <- orgStats.candidates.toSeq) {
+            <tr>
+                <td>@adminHelper.userDisplay(orgStats.membersStatistics(candidate.userId).user)</td>
+                <td>@orgStats.membersStatistics(candidate.userId).dateLastManualKeep.map(d => adminHelper.dateTimeDisplay(d)).getOrElse("")</td>
+                <td>@orgStats.membersStatistics(candidate.userId).numLibrariesCreated</td>
+                <td>@orgStats.membersStatistics(candidate.userId).keepVisibilityCount.secret / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.published / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.organization / @orgStats.membersStatistics(candidate.userId).keepVisibilityCount.discoverable</td>
+                <td>@orgStats.membersStatistics(candidate.userId).numChats</td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Remove</button></form></td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addMember(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Member</button></form></td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.inviteCandidateToOrg(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Invite</button></form></td>
+                <td><form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.transferOwner(orgStats.orgId)" method="POST" class="form-inline add-candidate">
+                    <input type="hidden" name="user-id" value="@candidate.userId"><button type="submit" class="btn btn-default btn-xs">Owner</button></form></td>
+            </tr>
+        }
+    </tbody>
 </table>
 <br/>
 <form action="@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)" method="POST" class="form-inline add-candidate">
@@ -188,7 +231,7 @@ orgStats: OrganizationStatistics
 </table>
 
 <h3>Chat Engagement</h3>
- 
+
 
 <canvas id="org-engagement-chart" style="width: 100%; height: 400px;"></canvas>
 
@@ -201,6 +244,11 @@ orgStats: OrganizationStatistics
     </style>
 
     <script type="text/javascript">
+
+    $(function(){
+      $("#members").tablesorter({ theme : "green", widgets : ['zebra']  });
+      $("#candidates").tablesorter({ theme : "green", widgets : ['zebra'] });
+    });
 
     var orgEngagementChartElem = $("#org-engagement-chart");
     var orgEngagementChart = new Chart(orgEngagementChartElem.get(0).getContext("2d")).Line({
@@ -251,6 +299,64 @@ orgStats: OrganizationStatistics
             $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
         }
     });
+
+    // Permissions garbage. I am so sorry for this code. -- Ryan
+    $("#permissions-nonmember").on("click", "input", function() {
+        var $td = $(this).closest("#permissions-nonmember");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addRolePermission(orgStats.orgId, "none", "yyy")'.replace("yyy", $(this).data("permission")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeRolePermission(orgStats.orgId, "none", "yyy")'.replace("yyy", $(this).data("permission")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+    });
+    $("#permissions-member").on("click", "input", function() {
+        var $td = $(this).closest("#permissions-member");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addRolePermission(orgStats.orgId, "member", "yyy")'.replace("yyy", $(this).data("permission")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeRolePermission(orgStats.orgId, "member", "yyy")'.replace("yyy", $(this).data("permission")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+    });
+    $("#permissions-admin").on("click", "input", function() {
+        var $td = $(this).closest("#permissions-admin");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+        if (this.checked) {
+            console.log($(this).data("exp"));
+            $.post('@com.keepit.controllers.admin.routes.AdminOrganizationController.addRolePermission(orgStats.orgId, "admin", "yyy")'.replace("yyy", $(this).data("permission")))
+                .done(done).fail(fail);
+        } else {
+            $.ajax('@com.keepit.controllers.admin.routes.AdminOrganizationController.removeRolePermission(orgStats.orgId, "admin", "yyy")'.replace("yyy", $(this).data("permission")),
+            {type: "DELETE"}).done(done).fail(fail);
+        }
+        function done() {
+            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+    });
+    // Again, I am so sorry.  :'(
+
     function addCandidate(orgId, candidateId) {
       $.post("@com.keepit.controllers.admin.routes.AdminOrganizationController.addCandidate(orgStats.orgId)", { "user-id":  candidateId }).done(done);
     };
@@ -287,6 +393,55 @@ orgStats: OrganizationStatistics
       location.reload();
     };
 
+    $("#extra-credit-submit").click(function () {
+        var amount = $("#extra-credit-amount").val();
+        var passphrase = $("#extra-credit-pass").val();
+        var memo = $("#extra-credit-memo").val();
+        var payload = { "amount": amount, "passphrase": passphrase, "memo": memo };
+        var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.grantExtraCredit(orgStats.orgId)", payload);
+        deffered.done( function (data) {
+            alert(data);
+            location.reload();
+        });
+        deffered.fail (function () {
+            console.log("FAIL:", arguments);
+            alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+        })
+    });
+
+    $("#process-billing-now").click(function () {
+        if ("@orgStats.stripeToken" === "N/A") {
+            alert("There seems to be no active credit card on file");
+            return;
+        }
+        if (confirm("Are you sure?")) {
+            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.processOrgNow(orgStats.orgId)", {});
+            deffered.done( function (data) {
+                alert(data);
+                location.reload();
+            });
+            deffered.fail (function () {
+                console.log("FAIL:", arguments);
+                alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+            })
+        }
+    });
+
+
+    $("#edit-plan").click(function () {
+        var newPlanId = prompt("Enter New Plan Id")
+        if (newPlanId != null) {
+            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.changePlanForOrg(orgStats.orgId)", {planId: newPlanId});
+            deffered.done( function (data) {
+                alert(data);
+                location.reload();
+            });
+            deffered.fail (function () {
+                console.log("FAIL:", arguments);
+                alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+            })
+        }
+    });
 
 </script>
 }

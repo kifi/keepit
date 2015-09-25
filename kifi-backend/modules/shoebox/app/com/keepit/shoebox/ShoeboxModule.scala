@@ -4,7 +4,6 @@ import com.keepit.commanders.emails.activity.{ ActivityEmailQueueModule }
 import com.keepit.common.controller.UserActionsModule
 import com.keepit.common.seo.SiteMapGeneratorModule
 import com.keepit.controllers.internal.DataPipelineExecutorModule
-import com.keepit.notify.NotifyModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.rover.RoverServiceClientModule
@@ -18,7 +17,6 @@ import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
 import com.keepit.search.{ SearchServiceClientModule }
 import com.keepit.eliza.{ ElizaServiceClientModule }
-import com.keepit.curator.CuratorServiceClientModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.heimdal.{ HeimdalServiceClientModule }
 import com.keepit.abook.{ ABookServiceClientModule }
@@ -29,10 +27,11 @@ import com.keepit.cortex.{ CortexServiceClientModule }
 import com.keepit.graph.{ GraphServiceClientModule }
 import com.keepit.common.zookeeper.ServiceTypeModule
 import com.keepit.common.service.ServiceType
+import com.keepit.payments.ProdStripeClientModule
 
 case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.SHOEBOX
-  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.CURATOR :: ServiceType.ROVER :: Nil
+  val servicesToListenOn = ServiceType.SEARCH :: ServiceType.ELIZA :: ServiceType.HEIMDAL :: ServiceType.ABOOK :: ServiceType.CORTEX :: ServiceType.GRAPH :: ServiceType.ROVER :: Nil
 }
 
 trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
@@ -44,7 +43,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val siteMapModule: SiteMapGeneratorModule
   val storeModule: ShoeboxStoreModule
   val normalizationQueueModule: NormalizationUpdateJobQueueModule
-  val notifyModule: NotifyModule
 
   // Shoebox Functional Modules
   val analyticsModule: AnalyticsModule
@@ -65,7 +63,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val abookServiceClientModule: ABookServiceClientModule
   val cortexServiceClientModule: CortexServiceClientModule
   val graphServiceClientModule: GraphServiceClientModule
-  val curatorServiceClientModule: CuratorServiceClientModule
   val roverServiceClientModule: RoverServiceClientModule
 
   val abuseControlModule = AbuseControlModule()
@@ -75,6 +72,7 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val geckoboardModule = GeckoboardModule()
   val dataIntegrityModule = DataIntegrityModule()
   val keepImportsModule = KeepImportsModule()
+  val stripeClientModule = ProdStripeClientModule()
 
   val dbSequencingModule = ShoeboxDbSequencingModule()
 

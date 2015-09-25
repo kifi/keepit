@@ -53,9 +53,10 @@ object ImageSource {
   case object UserUpload extends UserInitiated("user_upload")
   case object TwitterSync extends UserInitiated("twitter_sync")
   case object Unknown extends ImageSource("unknown")
+  case object DummyPlaceholder extends ImageSource("dummy")
   case class RoverArticle[A <: Article](kind: ArticleKind[A]) extends SystemInitiated(s"${kind.typeCode}_article")
 
-  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync) ++ ArticleKind.all.map(RoverArticle(_))
+  private val all: Seq[ImageSource] = Seq(Unknown, Embedly, EmbedlyOrPagePeeker, UserUpload, UserPicked, TwitterSync, DummyPlaceholder) ++ ArticleKind.all.map(RoverArticle(_))
   def apply(name: String) = all.find(_.name == name).getOrElse(throw new Exception(s"Can't find ImageSource for $name"))
 
   implicit val format = new Format[ImageSource] {
@@ -73,7 +74,7 @@ sealed abstract class ImageStoreFailure(val reason: String, val cause: Option[Th
 
 object ImageProcessState {
   // In-progress
-  case class ImageLoadedAndHashed(file: TemporaryFile, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
+  case class ImageLoadedAndHashed(file: File, format: ImageFormat, hash: ImageHash, sourceImageUrl: Option[String]) extends ImageStoreInProgress
   case class ImageValid(image: File, format: ImageFormat, hash: ImageHash, processOperation: ProcessImageOperation) extends ImageStoreInProgress
   case class ReadyToPersist(key: ImagePath, format: ImageFormat, file: File, imageInfo: RawImageInfo, processOperation: ProcessImageOperation) extends ImageStoreInProgress
   case class UploadedImage(key: ImagePath, format: ImageFormat, imageInfo: RawImageInfo, processOperation: ProcessImageOperation) extends ImageStoreInProgress

@@ -9,7 +9,6 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.model.{ KeepSource, URLFactory, NormalizedURI, Keep, Library, LibrarySlug, LibraryVisibility, NotificationCategory }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
@@ -30,17 +29,14 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
     FakeSearchServiceClientModule(),
     FakeSocialGraphModule(),
     FakeABookServiceClientModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule()
+    FakeCortexServiceClientModule()
   )
 
   "EmailTemplateProcessor" should {
     "replaces placeholders with real values" in {
       withDb(modules: _*) { implicit injector =>
         val testFactory = inject[ShoeboxTestFactory]
-        val (user1, user2, user3, user4) = db.readWrite { implicit rw =>
-          testFactory.setupUsers()
-        }
+        val (user1, user2, user3, user4) = testFactory.setupUsers()
 
         val t1 = new DateTime(2014, 7, 4, 12, 0, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val (library, keep) = db.readWrite { implicit rw =>
@@ -48,7 +44,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
             visibility = LibraryVisibility.SECRET, ownerId = user1.id.get, createdAt = t1, memberCount = 1))
           val uri = uriRepo.save(NormalizedURI.withHash("http://www.avengers.org/", Some("Avengers")))
           val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
-          val keep = keepRepo.save(Keep(title = Some("Avengers$1.org"), userId = user1.id.get, url = url.url, urlId = url.id.get,
+          val keep = keepRepo.save(Keep(title = Some("Avengers$1.org"), userId = user1.id.get, url = url.url,
             uriId = uri.id.get, source = KeepSource.default, createdAt = t1, keptAt = t1, visibility = LibraryVisibility.PUBLISHED,
             libraryId = Some(library.id.get)))
           (library, keep)

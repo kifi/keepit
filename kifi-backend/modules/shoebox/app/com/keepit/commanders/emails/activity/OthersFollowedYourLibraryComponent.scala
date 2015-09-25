@@ -2,7 +2,7 @@ package com.keepit.commanders.emails.activity
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.emails.LibraryInfoFollowersView
-import com.keepit.commanders.{ LibraryCommander, RecommendationsCommander }
+import com.keepit.commanders.{ LibraryInfoCommander, RecommendationsCommander }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -15,9 +15,8 @@ import scala.concurrent.Future
 @Singleton
 class OthersFollowedYourLibraryComponent @Inject() (db: Database,
     libraryRepo: LibraryRepo,
-    recoCommander: RecommendationsCommander,
     val membershipRepo: LibraryMembershipRepo,
-    val libraryCommander: LibraryCommander,
+    val libraryInfoCommander: LibraryInfoCommander,
     val clock: Clock,
     private val airbrake: AirbrakeNotifier) extends ActivityEmailLibraryMembershipHelpers {
 
@@ -27,7 +26,7 @@ class OthersFollowedYourLibraryComponent @Inject() (db: Database,
       libraryRepo.getAllByOwner(toUserId) map { l => l.id.get -> l }
     }.toMap
 
-    val librariesToMembers = libraryCommander.sortAndSelectLibrariesWithTopGrowthSince(ownedLibraries.keySet,
+    val librariesToMembers = libraryInfoCommander.sortAndSelectLibrariesWithTopGrowthSince(ownedLibraries.keySet,
       since, (id: Id[Library]) => ownedLibraries(id).memberCount)
     val librariesToMembersMap = librariesToMembers.toMap
     createLibraryInfoFollowersViews(toUserId, ownedLibraries, librariesToMembersMap, friends)

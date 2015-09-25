@@ -33,7 +33,7 @@ class AdminBookmarksController @Inject() (
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
   libraryCommander: LibraryCommander,
-  keepCommander: KeepsCommander,
+  keepCommander: KeepCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -146,7 +146,9 @@ class AdminBookmarksController @Inject() (
       }
     }
 
-    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture().recover {
+      case ex: Throwable => -1
+    }
 
     val bookmarkTodayAllCountsFuture = Future {
       timing("load bookmarks counts from today") {
@@ -214,7 +216,9 @@ class AdminBookmarksController @Inject() (
     val PAGE_SIZE = 25
 
     val bmsFut = Future { db.readOnlyReplica { implicit s => keepRepo.page(page, PAGE_SIZE, false, Set(KeepStates.INACTIVE)) } }
-    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture()
+    val bookmarkTotalCountFuture = keepCommander.getKeepsCountFuture().recover {
+      case ex: Throwable => -1
+    }
 
     bmsFut.flatMap { bms =>
       val uris = bms.map { _.uriId }

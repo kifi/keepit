@@ -1,14 +1,19 @@
 package com.keepit.integrity
 
+import com.keepit.common.time.FakeClock
+import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 import com.keepit.common.actor.{ TestKitSupport, FakeActorSystemModule }
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
+import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
+import scala.util.Random
 
 class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
 
@@ -42,12 +47,9 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
             val hover = KeepSource.keeper
-            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get,
-              uriId = nuri0.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm2 = bmRepo.save(Keep(title = Some("bing"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm3 = bmRepo.save(Keep(title = Some("bing"), userId = user2.id.get, url = url2.url, urlId = url2.id.get,
-              uriId = nuri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
+            val bm1 = KeepFactory.keep().withUser(user).withUri(nuri0).withLibrary(main.id.get).saved
+            val bm2 = KeepFactory.keep().withUser(user).withUri(nuri2).withLibrary(main.id.get).saved
+            val bm3 = KeepFactory.keep().withUser(user2).withUri(nuri2).withLibrary(main.id.get).saved
 
             (Array(nuri0, nuri1, nuri2, nuri3), Array(url0, url1, url2), Array(bm1, bm2, bm3))
           }
@@ -65,9 +67,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
           urlRepo.getByNormUri(uris(2).id.get).size === 2
           urlRepo.getByNormUri(uris(3).id.get).size === 0
-
-          bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(0).id.get
-
         }
 
         // merge
@@ -81,11 +80,6 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
           urlRepo.getByNormUri(uris(1).id.get).head.url === urls(0).url
           urlRepo.getByNormUri(uris(0).id.get) === Nil
-
-          bmRepo.getByUrlId(urls(0).id.get).head.uriId === uris(1).id.get
-          bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
-          bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(2).id.get
-
         }
 
         val centralConfig = inject[CentralConfig]
@@ -99,17 +93,12 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
           uriRepo.getByState(NormalizedURIStates.REDIRECTED, -1).size === 1
           urlRepo.getByNormUri(uris(2).id.get).head.url === urls(1).url
           urlRepo.getByNormUri(uris(3).id.get).head.url === urls(2).url
-
-          bmRepo.getByUrlId(urls(1).id.get).head.uriId === uris(2).id.get
-          bmRepo.getByUrlId(urls(2).id.get).head.uriId === uris(3).id.get
-
         }
 
       }
     }
 
     "handle collections correctly when migrating bookmarks" in {
-
       withDb(modules: _*) { implicit injector =>
         val db = inject[Database]
         val urlRepo = inject[URLRepo]
@@ -156,21 +145,12 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
 
             val main = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.DISCOVERABLE, kind = LibraryKind.SYSTEM_MAIN, slug = LibrarySlug("asdf"), memberCount = 1))
 
-            val hover = KeepSource.keeper
-            val bm0 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm0better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url0.url, urlId = url0.id.get, uriId = uri0better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-
-            val bm1 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
-              uriId = uri1.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm1better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url1.url, urlId = url1.id.get, uriId = uri1better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-
-            val bm2 = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
-              uriId = uri2.id.get, source = hover, visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
-            val bm2better = bmRepo.save(Keep(title = Some("google"), userId = user.id.get, url = url2.url, urlId = url2.id.get, uriId = uri2better.id.get, source = hover,
-              visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(main.id.get)))
+            val bm0 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri0).withLibrary(main).saved
+            val bm0better = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri0better).withLibrary(main).saved
+            val bm1 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri1).withLibrary(main).saved
+            val bm1better = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri1better).withLibrary(main).saved
+            val bm2 = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri2).withLibrary(main).saved
+            val bm2better = KeepFactory.keep().withTitle("google").withUser(user).withUri(uri2better).withLibrary(main).saved
 
             val c0 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("google")))
             val c1 = collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("googleBetter")))
@@ -221,7 +201,56 @@ class UriIntegrityPluginTest extends TestKitSupport with SpecificationLike with 
         }
 
       }
+    }
 
+    "pass an extremely abusive test" in {
+      withDb(modules: _*) { implicit injector =>
+        val numUsers = 3
+        val numUrisPerUser = 15
+        val (users, lib, origUris, dupUris) = db.readWrite { implicit session =>
+
+          val users = Random.shuffle(UserFactory.users(numUsers).saved)
+          val lib = LibraryFactory.library().withOwner(users.head).withCollaborators(users.tail).saved
+
+          val urisByUser = users.map { user =>
+            val urls = for (i <- 1 to numUrisPerUser) yield s"http://${RandomStringUtils.randomAlphanumeric(10)}.com"
+            val uris = urls.map { url => normalizedURIInterner.internByUri(url, contentWanted = true) }.toSeq
+            user.id.get -> uris
+          }.toMap
+
+          uriRepo.getByState(NormalizedURIStates.ACTIVE, -1).size === numUsers * numUrisPerUser
+          for ((user, uris) <- urisByUser) {
+            val keptAt = inject[FakeClock].now.minusHours(Random.nextInt(1000))
+            uris.foreach { uri => KeepFactory.keep().withUser(user).withLibrary(lib.id.get).withUri(uri).withKeptAt(keptAt).saved }
+          }
+
+          val allUris = Random.shuffle(urisByUser.values.toSeq.flatten)
+          val (dupUris, origUris) = allUris.splitAt(allUris.length / 3)
+
+          (users, lib, origUris, dupUris)
+        }
+
+        // Mark some of them as duplicate and schedule a URI migration
+        val plugin = inject[UriIntegrityPlugin]
+        plugin.onStart()
+        for ((origUri, dupUri) <- origUris zip dupUris) {
+          plugin.handleChangedUri(URIMigration(dupUri.id.get, origUri.id.get))
+        }
+        inject[ChangedURISeqAssigner].assignSequenceNumbers()
+
+        // Do the migration
+        plugin.batchURIMigration()
+
+        db.readOnlyMaster { implicit session =>
+          val allKeeps = inject[KeepRepo].all
+          allKeeps.count(_.isActive) === origUris.length // all the dup URIs should lead to deactivated keeps
+          allKeeps.count(_.isPrimary) === origUris.length
+          allKeeps.count(_.isInactive) === dupUris.length
+          allKeeps.count(!_.isPrimary) === dupUris.length
+          allKeeps.groupBy(k => (k.libraryId, k.isPrimary, k.uriId)).values.foreach(_.length === 1)
+        }
+        1 === 1
+      }
     }
   }
 }

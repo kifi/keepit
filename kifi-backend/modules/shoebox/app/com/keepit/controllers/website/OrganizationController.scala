@@ -4,6 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
@@ -16,16 +17,20 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class OrganizationController @Inject() (
-    val orgCommander: OrganizationCommander,
-    val orgMembershipCommander: OrganizationMembershipCommander,
-    val orgInviteCommander: OrganizationInviteCommander,
+    orgCommander: OrganizationCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
+    val db: Database,
+    val permissionCommander: PermissionCommander,
     airbrake: AirbrakeNotifier,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
+
+  implicit val organizationViewWrites = OrganizationView.defaultWrites
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
@@ -96,7 +101,7 @@ class OrganizationController @Inject() (
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalIds(Seq(extId)).values.head
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
-    val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
+    val orgCards = orgCommander.getOrganizationInfos(visibleOrgs.toSet, request.userIdOpt).values.toSeq
 
     Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
   }

@@ -18,7 +18,7 @@ case class NotificationJson(obj: JsObject) extends AnyVal
 
 /** Makes `NotificationJson` from `RawNotification` */
 @Singleton
-private[commanders] class NotificationJsonMaker @Inject() (
+class NotificationJsonMaker @Inject() (
     shoebox: ShoeboxServiceClient,
     rover: RoverServiceClient,
     implicit val imageConfig: S3ImageConfig,
@@ -35,10 +35,10 @@ private[commanders] class NotificationJsonMaker @Inject() (
       if (includeUriSummary) rover.getUriSummaryByUris(rawNotifications.flatMap(_._3).toSet) // todo(???): if title and description are not used, switch to getImagesByUris
       else Future.successful(Map.empty)
     }
-    Future.sequence(rawNotifications.map { n =>
+    Future.sequence(rawNotifications.flatMap { n =>
       val futureUriSummary = n._3.map(uriId => futureSummariesByUriId.map(_.get(uriId))) getOrElse Future.successful(None)
       makeOpt(n, futureUriSummary)
-    }.flatten)
+    })
   }
 
   // including URI summaries is optional because it's currently slow and only used by the canary extension (new design)
@@ -89,18 +89,16 @@ private[commanders] class NotificationJsonMaker @Inject() (
 
   private def author(value: JsValue): Future[Option[BasicUserLikeEntity]] = {
     value.asOpt[BasicUserLikeEntity] match {
-      case Some(bu: BasicUser) => updateBasicUser(bu) map Some.apply
+      case Some(BasicUserLikeEntity.user(bu)) => updateBasicUser(bu).map(u => Some(BasicUserLikeEntity(u)))
       case x => Future.successful(x)
     }
   }
 
   private def participants(value: JsValue): Future[Seq[BasicUserLikeEntity]] = {
     value.asOpt[Seq[BasicUserLikeEntity]] map { participants =>
-      Future.sequence(participants.map { participant =>
-        participant match {
-          case p: BasicUser => updateBasicUser(p)
-          case p => Future.successful(p)
-        }
+      Future.sequence(participants.map {
+        case BasicUserLikeEntity.user(p) => updateBasicUser(p).map(u => BasicUserLikeEntity(u))
+        case p => Future.successful(p)
       })
     } getOrElse {
       Future.successful(Seq.empty)

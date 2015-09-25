@@ -1,15 +1,16 @@
 package com.keepit.model
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import scala.collection.mutable
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.{ KeepVisibilityCount, LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps }
 import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick._
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
-import com.keepit.common.logging.Logging
-import com.keepit.commanders.{ LibraryMetadataKey, LibraryMetadataCache, WhoKeptMyKeeps }
-import com.keepit.common.core._
+
+import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
 
 @ImplementedBy(classOf[KeepRepoImpl])
 trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNumberFunction[Keep] {
@@ -20,6 +21,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByExtIdAndUser(extId: ExternalId[Keep], userId: Id[User])(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate this method ASAP
   def getByExtIdandLibraryId(extId: ExternalId[Keep], libraryId: Id[Library], excludeSet: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] // TODO(ryan)[2015-08-03]: deprecate ASAP
 
+  def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], librariesHash: LibrariesHash)(implicit session: RSession): Set[Keep]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Keep] //todo: replace option with seq
   def getByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Seq[Keep]
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[Keep]] = Some(KeepStates.INACTIVE))(implicit session: RSession): Seq[Keep]
@@ -34,13 +36,11 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getCountManualByUserInLastDays(userId: Id[User], days: Int)(implicit session: RSession): Int
   def getCountByUsers(userIds: Set[Id[User]])(implicit session: RSession): Map[Id[User], Int]
   def getCountByUsersAndSource(userIds: Set[Id[User]], sources: Set[KeepSource])(implicit session: RSession): Map[Id[User], Int]
-  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int)
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getAllCountsByTimeAndSource(from: DateTime, to: DateTime)(implicit session: RSession): Seq[(KeepSource, Int)]
   def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber[Keep], fetchSize: Int)(implicit session: RSession): Seq[Keep]
-  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep]
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]]
@@ -65,7 +65,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
+  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
@@ -76,11 +76,15 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
 class KeepRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    val countCache: KeepCountCache,
+    libraryMembershipRepo: LibraryMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    organizationMembershipRepo: OrganizationMembershipRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToLibraryRepo: KeepToLibraryRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
+    countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
     libraryMetadataCache: LibraryMetadataCache,
-    countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with ExternalIdColumnDbFunction[Keep] with SeqNumberDbFunction[Keep] with Logging {
+    countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
 
   import db.Driver.simple._
 
@@ -88,7 +92,6 @@ class KeepRepoImpl @Inject() (
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with SeqNumberColumn[Keep] with NamedColumns {
     def title = column[Option[String]]("title", O.Nullable) //indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
-    def urlId = column[Id[URL]]("url_id", O.NotNull)
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
@@ -101,10 +104,12 @@ class KeepRepoImpl @Inject() (
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
+    def librariesHash = column[Option[LibrariesHash]]("libraries_hash", O.Nullable)
+    def participantsHash = column[Option[ParticipantsHash]]("participants_hash", O.Nullable)
 
-    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, urlId, url),
+    def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
       (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
-        note, originalKeeperId, organizationId)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, { Keep.unapplyToDbRow _ })
+        note, originalKeeperId, organizationId, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -112,6 +117,9 @@ class KeepRepoImpl @Inject() (
 
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
+
+  implicit val getLibrariesHashResult = getResultOptionFromMapper[LibrariesHash]
+  implicit val getParticipantsHashResult = getResultOptionFromMapper[ParticipantsHash]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     Keep._applyFromDbRow(
@@ -122,7 +130,6 @@ class KeepRepoImpl @Inject() (
       title = r.<<[Option[String]],
       uriId = r.<<[Id[NormalizedURI]],
       isPrimary = r.<<[Option[Boolean]],
-      urlId = r.<<[Id[URL]],
       url = r.<<[String],
       isPrivate = r.<<[Boolean],
       userId = r.<<[Id[User]],
@@ -135,7 +142,9 @@ class KeepRepoImpl @Inject() (
       sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
       note = r.<<[Option[String]],
       originalKeeperId = r.<<[Option[Id[User]]],
-      organizationId = r.<<[Option[Id[Organization]]]
+      organizationId = r.<<[Option[Id[Organization]]],
+      librariesHash = r.<<[Option[LibrariesHash]],
+      participantsHash = r.<<[Option[ParticipantsHash]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -201,6 +210,7 @@ class KeepRepoImpl @Inject() (
   def getByExtId(extId: ExternalId[Keep], excludeStates: Set[State[Keep]] = Set(KeepStates.INACTIVE))(implicit session: RSession): Option[Keep] = {
     getOpt(extId).filter(k => !excludeStates.contains(k.state))
   }
+
   def getByExtIds(extIds: Set[ExternalId[Keep]])(implicit session: RSession): Map[ExternalId[Keep], Option[Keep]] = {
     if (extIds.isEmpty) {
       Map.empty[ExternalId[Keep], Option[Keep]] // return immediately, don't search through table
@@ -215,6 +225,10 @@ class KeepRepoImpl @Inject() (
         extId -> (keepMap.get(extId) orElse None)
       }.toMap
     }
+  }
+
+  def getByUriAndLibrariesHash(uriId: Id[NormalizedURI], librariesHash: LibrariesHash)(implicit session: RSession): Set[Keep] = {
+    (for (b <- rows if b.uriId === uriId && b.librariesHash === librariesHash && b.state === KeepStates.ACTIVE) yield b).list.toSet
   }
 
   // preserved for backward compatibility
@@ -261,7 +275,6 @@ class KeepRepoImpl @Inject() (
 
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
     sql"select count(*) from bookmark where uri_id = $uriId and is_private = false and state = 'active'".as[Int].first
   }
 
@@ -270,21 +283,18 @@ class KeepRepoImpl @Inject() (
 
   def getNonPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
     val interpolated = sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${ownerId} and bm.state = '#${KeepStates.ACTIVE}' and bm.visibility != '#${LibraryVisibility.SECRET.value}' order by bm.kept_at desc, bm.id desc limit $offset, $limit;"""
     interpolated.as[Keep].list
   }
 
   def getPrivate(ownerId: Id[User], offset: Int, limit: Int)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
     val interpolated = sql"""select #$bookmarkColumnOrder from bookmark bm where bm.user_id = ${ownerId} and bm.state = '#${KeepStates.ACTIVE}' and bm.visibility = '#${LibraryVisibility.SECRET.value}' order by bm.kept_at desc, bm.id desc limit $offset, $limit;"""
     interpolated.as[Keep].list
   }
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Keep]], afterId: Option[ExternalId[Keep]], count: Int)(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
 
     // Performance sensitive call.
     // Separate queries for each case because the db will cache the query plans when we only use parametrized queries instead of raw strings.
@@ -400,12 +410,6 @@ class KeepRepoImpl @Inject() (
     }.run
   }.map { case (userId, count) => userId -> count }.toMap
 
-  def getPrivatePublicCountByUser(userId: Id[User])(implicit session: RSession): (Int, Int) = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val sql = sql"select sum(is_private), sum(1 - is_private) from bookmark where user_id=${userId} and state = '#${KeepStates.ACTIVE}'"
-    sql.as[(Int, Int)].first
-  }
-
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
@@ -437,9 +441,6 @@ class KeepRepoImpl @Inject() (
   }
 
   def getBookmarksChanged(num: SequenceNumber[Keep], limit: Int)(implicit session: RSession): Seq[Keep] = super.getBySequenceNumber(num, limit)
-
-  def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Keep] =
-    (for (b <- rows if b.urlId === urlId) yield b).list
 
   def delete(id: Id[Keep])(implicit sesion: RWSession): Unit = {
     val q = (for (b <- rows if b.id === id) yield b)
@@ -541,21 +542,58 @@ class KeepRepoImpl @Inject() (
     keeps.list.toSet
   }
 
-  def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep] = {
+  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    import scala.collection.JavaConversions._
 
-    (beforeIdOpt.flatMap(getOpt), afterIdOpt.flatMap(getOpt)) match {
-      case (Some(before), _) =>
-        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at <= ${before.keptAt} AND id < ${before.id.get} ORDER BY kept_at DESC, id DESC LIMIT $limit;""".as[Keep].list
-      case (None, Some(after)) =>
-        // This case is not strictly correct. It's not possible to call after a keep, and get other keeps kept in the same ms.
-        // Fortunately, ending in this state where you have a keep id and need ones that happened after (and they happened in the same ms)
-        // is nearly impossible. We can't use IDs as tie breakers because old IDs may get updated kept_at fields.
-        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId AND kept_at > ${after.keptAt} ORDER BY kept_at DESC, id DESC LIMIT $limit;""".as[Keep].list
-      case (None, None) =>
-        sql"""SELECT #$bookmarkColumnOrder FROM bookmark bm WHERE library_id IN (SELECT library_id FROM library_membership WHERE user_id=$userId AND state='active') AND state='active' AND user_id!=$userId ORDER BY kept_at DESC, id DESC LIMIT $limit;""".as[Keep].list
+    val ktl_JOIN_lm_WHERE_THIS_USER = s"""keep_to_library ktl inner join library_membership lm on (ktl.library_id = lm.library_id) where lm.state = 'active' and ktl.state = 'active' and lm.user_id = $userId"""
+    val ktl_JOIN_om_WHERE_THIS_USER = s"""keep_to_library ktl inner join organization_membership om on (ktl.organization_id = om.organization_id) where om.state = 'active' and ktl.state = 'active' and (ktl.visibility = 'published' or ktl.visibility = 'organization') and om.user_id = $userId"""
+    val ktu_WHERE_THIS_USER = s"""keep_to_user ktu where ktu.state = 'active' and ktu.user_id = $userId"""
+
+    def getFirstAddedAt(keepId: Id[Keep]): Option[DateTime] = {
+      sql"""SELECT min(k.added_at) FROM
+        ((SELECT ktl.added_at as added_at FROM #$ktl_JOIN_lm_WHERE_THIS_USER AND ktl.keep_id = $keepId)
+        UNION (SELECT ktl.added_at as added_at FROM #$ktl_JOIN_om_WHERE_THIS_USER AND ktl.keep_id = $keepId)
+        UNION (SELECT ktu.added_at as added_at FROM #$ktu_WHERE_THIS_USER AND ktu.keep_id = $keepId)) as k
+      """.as[Option[DateTime]].first
     }
+
+    def getKeepIdAndFirstAddedAt(id: ExternalId[Keep]): Option[(Id[Keep], DateTime)] = {
+      for {
+        keep <- getOpt(id)
+        keepId <- keep.id
+        firstAddedAtForUser <- getFirstAddedAt(keepId)
+      } yield (keepId, firstAddedAtForUser)
+    }
+
+    val added_at_BEFORE = beforeIdOpt.flatMap(getKeepIdAndFirstAddedAt) match {
+      case None => "true"
+      case Some((keepId, before)) => s"added_at <= '$before' AND keep_id < $keepId"
+    }
+
+    val added_at_AFTER = afterIdOpt.flatMap(getKeepIdAndFirstAddedAt) match {
+      case None => "true"
+      case Some((_, after)) => s"added_at > '$after'"
+      // This is not strictly correct. It's not possible to call after a keep, and get other keeps kept in the same ms.
+      // Fortunately, ending in this state where you have a keep id and need ones that happened after (and they happened in the same ms)
+      // is nearly impossible. We can't use IDs as tie breakers because old IDs may get updated added_at fields.
+    }
+
+    val keepsFromLibraries = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_lm_WHERE_THIS_USER AND $added_at_BEFORE GROUP BY ktl.keep_id"""
+    val keepsFromOrganizations = s"""SELECT ktl.keep_id as id, min(ktl.added_at) as first_added_at FROM $ktl_JOIN_om_WHERE_THIS_USER AND $added_at_BEFORE GROUP BY ktl.keep_id"""
+    val keepsFromUser = s"""SELECT ktu.keep_id as id, ktu.added_at as first_added_at FROM $ktu_WHERE_THIS_USER AND $added_at_BEFORE"""
+
+    val keepsAndFirstAddedAt = sql"""
+      SELECT k.id as keep_id, min(k.first_added_at) as added_at
+      FROM ((#$keepsFromLibraries) UNION (#$keepsFromOrganizations) UNION (#$keepsFromUser)) as k
+      GROUP BY k.id
+      HAVING #$added_at_AFTER AND #$added_at_BEFORE
+      ORDER BY added_at DESC, keep_id DESC
+      LIMIT $limit
+    """.as[(Id[Keep], DateTime)].list
+
+    val keepIds = keepsAndFirstAddedAt.map { case (keepId, _) => keepId }
+    val keepsById = getByIds(keepIds.toSet)
+    keepIds.map(keepsById(_))
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {

@@ -10,7 +10,6 @@ import com.keepit.cortex.ProdCortexServiceClientModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 import com.keepit.graph.ProdGraphServiceClientModule
 import com.keepit.heimdal.DevHeimdalServiceClientModule
-import com.keepit.notify.ShoeboxNotifyModule
 import com.keepit.rover.ProdRoverServiceClientModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox._
@@ -24,7 +23,6 @@ import com.keepit.inject.CommonDevModule
 import com.keepit.common.integration.DevReaperModule
 import com.keepit.queue.{ DevLibrarySuggestedSearchQueueModule, DevNormalizationUpdateJobQueueModule }
 import com.keepit.common.concurrent.ProdForkJoinContextMonitorModule
-import com.keepit.curator.ProdCuratorServiceClientModule
 
 case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val secureSocialModule = ProdShoeboxSecureSocialModule()
@@ -36,7 +34,6 @@ case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val normalizationQueueModule = DevNormalizationUpdateJobQueueModule()
   val activityEmailActorModule = DevActivityEmailQueueModule()
   val suggestedSearchTermsModule = DevLibrarySuggestedSearchQueueModule()
-  val notifyModule = ShoeboxNotifyModule()
 
   // Shoebox Functional Modules
   val analyticsModule = DevAnalyticsModule()
@@ -54,6 +51,5 @@ case class ShoeboxDevModule() extends ShoeboxModule with CommonDevModule {
   val abookServiceClientModule = ProdABookServiceClientModule()
   val cortexServiceClientModule = ProdCortexServiceClientModule()
   val graphServiceClientModule = ProdGraphServiceClientModule()
-  val curatorServiceClientModule = ProdCuratorServiceClientModule()
   val roverServiceClientModule = ProdRoverServiceClientModule()
 }

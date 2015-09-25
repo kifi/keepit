@@ -1,6 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.common.crypto.PublicId
+import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
@@ -24,6 +25,7 @@ import com.keepit.eliza.model._
 
 import akka.actor.Scheduler
 import com.keepit.common.json.TupleFormat._
+import com.keepit.common.core._
 
 sealed case class LibraryPushNotificationCategory(name: String)
 sealed case class UserPushNotificationCategory(name: String)
@@ -60,8 +62,8 @@ object PushNotificationExperiment {
 
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
-  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
-  def sendToUser(userId: Id[User], data: JsArray): Unit
+  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit]
+  def sendToUser(userId: Id[User], data: JsArray): Future[Unit]
   def sendToAllUsers(data: JsArray): Unit
 
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
@@ -74,7 +76,7 @@ trait ElizaServiceClient extends ServiceClient {
 
   def unsendNotification(messageHandle: Id[MessageHandle]): Unit
 
-  def sendNotificationEvent(event: NotificationEvent): Unit
+  def sendNotificationEvent(event: NotificationEvent): Future[Unit]
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -98,6 +100,8 @@ trait ElizaServiceClient extends ServiceClient {
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
 
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
+
+  def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -110,7 +114,7 @@ class ElizaServiceClientImpl @Inject() (
 
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
     implicit val userFormatter = Id.format[User]
-    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> recipient.pictureName, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
+    val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> Json.toJson(recipient.pictureName.getOrElse(S3UserPictureConfig.defaultName)), "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
     call(Eliza.internal.sendUserPushNotification(), payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
     }
@@ -133,16 +137,16 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {
+  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "data" -> data)
-    broadcast(Eliza.internal.sendToUserNoBroadcast, payload)
+    Future.sequence(broadcast(Eliza.internal.sendToUserNoBroadcast, payload).values).map(_ => ())
   }
 
-  def sendToUser(userId: Id[User], data: JsArray): Unit = {
+  def sendToUser(userId: Id[User], data: JsArray): Future[Unit] = {
     implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "data" -> data)
-    call(Eliza.internal.sendToUser, payload)
+    call(Eliza.internal.sendToUser, payload).map(_ => ())
   }
 
   def sendToAllUsers(data: JsArray): Unit = {
@@ -181,9 +185,9 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.unsendNotification(messageHandle), attempts = 6, callTimeouts = longTimeout)
   }
 
-  def sendNotificationEvent(event: NotificationEvent): Unit = {
+  def sendNotificationEvent(event: NotificationEvent): Future[Unit] = {
     val payload = Json.toJson(event)
-    call(Eliza.internal.sendNotificationEvent(), payload)
+    call(Eliza.internal.sendNotificationEvent(), payload).imap(_ => ())
   }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {
@@ -248,6 +252,12 @@ class ElizaServiceClientImpl @Inject() (
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = {
     call(Eliza.internal.getAllThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
       response.json.as[Seq[GroupThreadStats]]
+    }
+  }
+
+  def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = {
+    call(Eliza.internal.getTotalMessageCountForGroup, body = Json.toJson(users), callTimeouts = longTimeout).map { response =>
+      response.json.as[Int]
     }
   }
 }

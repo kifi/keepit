@@ -141,6 +141,24 @@ cardBorderRadius = 16px
   background-size: auto 21px
   background-repeat: no-repeat
 
+.kf-upl-card-upsell
+  position: absolute
+  top: 3px
+  right: 5px
+  width: 20px
+  height: 20px
+  z-index: 2
+  background-position: center
+  background-size: 15px 15px
+  background-repeat: no-repeat
+  z-index: 10
+
+  &.kf-upsell:not(:hover) svg
+    fill: #fff
+
+.kf-upl-card-upsell + .kf-upl-card-setting
+  right: 25px
+
 .kf-upl-card-setting
   position: absolute
   top: 5px
@@ -318,6 +336,7 @@ lockRadius = 14px
 
 .kf-upl-card-private
 .kf-upl-card-public
+.kf-upl-card-org-private
   display: inline-block
   vertical-align: middle
   width: 22px

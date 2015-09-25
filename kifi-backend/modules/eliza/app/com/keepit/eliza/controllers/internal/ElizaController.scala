@@ -1,6 +1,7 @@
 package com.keepit.eliza.controllers.internal
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.time.Clock
 import com.keepit.eliza._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
@@ -8,6 +9,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.{ Username, Library, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.realtime._
+import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 
 import scala.concurrent.future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -25,7 +27,8 @@ class ElizaController @Inject() (
     messagingCommander: MessagingCommander,
     deviceRepo: DeviceRepo,
     db: Database,
-    elizaStatsCommander: ElizaStatsCommander) extends ElizaServiceController with Logging {
+    elizaStatsCommander: ElizaStatsCommander,
+    clock: Clock) extends ElizaServiceController with Logging {
 
   def disableDevice(id: Id[Device]) = Action { request =>
     val device = db.readWrite { implicit s =>
@@ -126,6 +129,12 @@ class ElizaController @Inject() (
     val userIds = request.body.as[Seq[Id[User]]]
     val threadStats = elizaStatsCommander.getAllThreadsForGroupByWeek(userIds)
     Ok(Json.toJson(threadStats))
+  }
+
+  def getTotalMessageCountForGroup = Action(parse.tolerantJson) { request =>
+    val userIds = request.body.as[Set[Id[User]]]
+    val totalMessages = elizaStatsCommander.getTotalMessageCountForGroup(userIds)
+    Ok(Json.toJson(totalMessages))
   }
 
 }

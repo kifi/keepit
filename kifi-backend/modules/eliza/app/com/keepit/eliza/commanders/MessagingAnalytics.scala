@@ -140,15 +140,15 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def clearedNotification(userId: Id[User], message: Message, thread: MessageThread, existingContext: HeimdalContext): Unit = {
+  def clearedNotification(userId: Id[User], message: ExternalId[Message], thread: ExternalId[MessageThread], existingContext: HeimdalContext): Unit = {
     val clearedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "cleared")
       contextBuilder += ("channel", kifi)
-      contextBuilder += ("messageId", message.externalId.id)
-      contextBuilder += ("threadId", thread.externalId.id)
+      contextBuilder += ("messageId", message.id)
+      contextBuilder += ("threadId", thread.id)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
     }
   }
@@ -192,7 +192,7 @@ class MessagingAnalytics @Inject() (
       sender match {
         case MessageSender.User(userId) => {
           val uriId = thread.uriId.get
-          shoebox.getBasicKeeps(userId, Set(uriId)).foreach { basicKeeps =>
+          shoebox.getPersonalKeeps(userId, Set(uriId)).foreach { basicKeeps =>
             contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
             thread.participants.foreach(addOrganizationInfo(contextBuilder, _))
             val context = contextBuilder.build
@@ -245,8 +245,8 @@ class MessagingAnalytics @Inject() (
   private def addOrganizationInfo(contextBuilder: HeimdalContextBuilder, participants: MessageThreadParticipants): Unit = {
     val orgIdsByUserIdFut = shoebox.getOrganizationsForUsers(participants.allUsers)
     orgIdsByUserIdFut.foreach { orgIdsByUserId =>
-      val commonOrgs = orgIdsByUserId.values.reduce[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
-      contextBuilder += ("organizationId", commonOrgs.map(_.toString).toSeq)
+      val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
+      commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", orgId.id.toString) }
     }
   }
 }

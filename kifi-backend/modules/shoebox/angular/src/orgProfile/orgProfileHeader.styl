@@ -1,29 +1,22 @@
 ophSmallMaxDim = 736px // for @media max-height and max-width
-ophImageWidth = 200px
+ophImageWidth = 100px
 
 .kf-oph
   background: pageHeaderColor
   color: #fff
-  padding-bottom: 75px
   position: relative
 
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    padding-bottom: 12px
+.kf-oph-wrapper
+  wrapper()
+  padding: 0
+  position: relative
 
 .kf-oph-top
-  position: relative
   padding-top: 50px
   max-width: 480px
   margin: 0 auto
   display: flex
-
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    padding-top: 12px
-    margin-left: 20px
-    margin-right: 20px
-
-  @media (max-width: appMobileWidth)
-    flex-direction: column
+  flex-direction: column
 
   textarea.kf-edit-field
     background: transparent
@@ -40,6 +33,24 @@ ophImageWidth = 200px
     overflow: hidden
     border-radius: 5%
     margin: auto
+    margin-bottom: 15px
+
+.kf-oph-upper-right
+  position: absolute
+  top: 25px
+  right: 25px
+
+.kf-oph-invite-button.kf-link
+  color: rgba(255, 255, 255, 0.8)
+
+  svg
+    fill: rgba(255, 255, 255, 0.8)
+
+  &:hover
+    color: white
+
+    svg
+      fill: white
 
 .kf-oph-pic-wrapper
   position: relative
@@ -63,26 +74,26 @@ ophImageWidth = 200px
 
 .kf-oph-about
   flex: 1
-  margin-left: 25px
   text-align: left
-
-  @media (max-width: appMobileWidth)
-    margin-right: 25px
-    margin-top: 25px
 
   .kf-oph-input
     width: 100%
+    text-align: center
+
+  .kf-click-to-edit .kf-click-to-edit-p
+    text-align: center
+    width: 100%
+
+.kf-oph-about-info
+  margin-bottom: 40px
 
 .kf-oph-name
   line-height: 31px
-  font-size: 21px
+  font-size: 30px
   font-weight: normal
   color: inherit
   box-sizing: border-box
 
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    line-height: 20px
-    font-size: 14px
 
 .kf-oph-description
   color: #d8d8d8
@@ -92,10 +103,6 @@ ophImageWidth = 200px
   word-break: break-word
   width: 100%
   margin-bottom: 10px
-
-  @media (max-height: ophSmallMaxDim) and (max-width: ophSmallMaxDim)
-    line-height: 16px
-    font-size: 10px
 
   &>a[href]
     color: inherit
@@ -128,50 +135,73 @@ ophImageWidth = 200px
   margin: 10px auto 0
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    margin-top: 2px
-
-  &::before
-    content: ''
-    display: block
-    height: 1px
-    background-color: #fff
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     &::before
       transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
 
 .kf-oph-stats-a
   display: inline-block
-  padding: 6px 10px
+  padding: 6px 14px
   color: #9fa3aa
+  background-color: alpha(#fff, 5%)
+  border-top-left-radius: 5px
+  border-top-right-radius: 5px
 
-  &[href]:hover
-    background-color: alpha(#fff, 5%)
+  &:not(.active)[href]:hover
+    background-color: alpha(#fff, 10%)
 
   &:not([href])
     color: accentGreen
     cursor: default
 
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    padding: 3px 5px
+  &:focus
+    outline: none
+
+  &.active
+    background: appBackgroundColor
+    color: textBlackColor
+
+    .kf-oph-stats-count
+      color: inherit
+
+  .kf-oph-stats-count
+  .kf-oph-stats-name
+    display: inline-block
+    vertical-align: middle
 
 .kf-oph-stats-name
-  line-height: 20px
-  font-size: 12px
-  text-transform: uppercase
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    line-height: 12px
-    font-size: 7px
+  line-height: 24px
+  font-size: 14px
 
 .kf-oph-stats-count
   color: #fff
   line-height: 24px
-  font-size: 18px
-
-  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    line-height: 15px
-    font-size: 11px
+  font-size: 14px
+  margin-right: 5px
 
   :not([href])>&
     color: inherit
+
+.profile-image.editable
+  overflow: hidden
+  position: relative
+
+  &:after
+    content: 'Upload new'
+    position: absolute
+    right: 5%
+    left: 5%
+    background: white
+    font-size: 0.85rem
+    padding: 7px
+    background: secondaryTextGray
+    border-top-left-radius: defaultBorderRadius
+    border-top-right-radius: defaultBorderRadius
+    bottom: -50px
+    transition: bottom 0.25s ease-out
+
+  &:hover
+    &:after
+      bottom: 0
+
+.kf-oph-upsell-invite .kf-tooltip-body
+  width: 175px

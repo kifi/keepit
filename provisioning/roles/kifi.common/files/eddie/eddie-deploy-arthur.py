@@ -5,14 +5,26 @@ import getpass
 import boto.ec2
 import spur
 import os
+import os.path
 import time
 import portalocker
-from boto.s3.connection import S3Connection
-from boto.s3.key import Key
+import mimetypes
 import datetime
 import json
+import shutil
+import math
+import uuid
+from multiprocessing import Pool
+from boto.s3.connection import S3Connection
+from boto.s3.key import Key
+from filechunkio import FileChunkIO
+
 
 userName = None
+
+AWS_ACCESS_KEY_ID = "AKIAINZ2TABEYCFH7SMQ"
+AWS_SECRET_ACCESS_KEY = "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"
+DEFAULT_REGION = "us-west-1"
 
 class FileLock(object):
 
@@ -50,15 +62,17 @@ class S3Asset(object):
 class S3Assets(object):
 
   def __init__(self, serviceType, bucket):
-    conn = S3Connection("AKIAINZ2TABEYCFH7SMQ", "s0asxMClN0loLUHDXe9ZdPyDxJTGdOiquN/SyDLi")
-    bucket = conn.get_bucket(bucket)
-    allKeys = bucket.list()
+    conn = S3Connection(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+    self.serviceType = serviceType
+    self.bucket = conn.get_bucket(bucket)
+
+  def load(self):
+    allKeys = self.bucket.list()
     self.assets = []
     for key in allKeys:
       asset = S3Asset(key)
-      if asset.serviceType==serviceType:
+      if asset.serviceType==self.serviceType:
         self.assets.append(asset)
-
 
   def latest(self):
     inOrder = sorted(self.assets, key = lambda x: x.timestamp)
@@ -110,6 +124,74 @@ def log(msg):
   print amsg
   message_slack(amsg)
 
+# Adapted from https://github.com/boto/boto/blob/2d7796a625f9596cbadb7d00c0198e5ed84631ed/bin/s3put
+
+def _upload_part(bucketname, multipart_id, part_num,
+  source_path, offset, bytes, amount_of_retries=10):
+  """
+  Uploads a part with retries.
+  """
+
+  def _upload(retries_left=amount_of_retries):
+    try:
+
+      conn = S3Connection(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+      bucket = conn.get_bucket(bucketname)
+      for mp in bucket.get_all_multipart_uploads():
+        if mp.id == multipart_id:
+          with FileChunkIO(source_path, 'r', offset=offset, bytes=bytes) as fp:
+            mp.upload_part_from_file(fp=fp, part_num=part_num)
+          break
+    except Exception as exc:
+      if retries_left:
+        _upload(retries_left=retries_left - 1)
+      else:
+        print('Failed uploading part #%d' % part_num)
+        raise exc
+    else:
+      if debug == 1:
+        print('... Uploaded part #%d' % part_num)
+
+  _upload()
+
+
+def multipart_upload(bucketname, source_path, keyname, acl='private', headers={}, guess_mimetype=True, parallel_processes=4, region=DEFAULT_REGION):
+    """
+    Parallel multipart upload.
+    """
+    conn = boto.s3.connect_to_region(region, aws_access_key_id=AWS_ACCESS_KEY_ID,
+                                 aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    bucket = conn.get_bucket(bucketname)
+
+    if guess_mimetype:
+      mtype = mimetypes.guess_type(keyname)[0] or 'application/octet-stream'
+      headers.update({'Content-Type': mtype})
+
+    mp = bucket.initiate_multipart_upload(keyname, headers=headers)
+
+    source_size = os.stat(source_path).st_size
+    bytes_per_chunk = max(int(math.sqrt(5242880) * math.sqrt(source_size)),
+                          5242880)
+    chunk_amount = int(math.ceil(source_size / float(bytes_per_chunk)))
+
+    pool = Pool(processes=parallel_processes)
+    for i in range(chunk_amount):
+      offset = i * bytes_per_chunk
+      remaining_bytes = source_size - offset
+      bytes = min([bytes_per_chunk, remaining_bytes])
+      part_num = i + 1
+      pool.apply_async(_upload_part, [bucketname, mp.id,
+        part_num, source_path, offset, bytes])
+    pool.close()
+    pool.join()
+
+    if len(mp.get_all_parts()) == chunk_amount:
+      mp.complete_upload()
+      key = bucket.get_key(keyname)
+      key.set_acl(acl)
+    else:
+      mp.cancel_upload()
+
 def getAllInstances():
   conn = boto.ec2.connect_to_region("us-west-1")
   live_instances = [x for x in conn.get_only_instances() if x.state != 'terminated']
@@ -142,6 +224,7 @@ if __name__=="__main__":
       '--version',
       action = 'store',
       help = "Target version. Either a short commit hash, 'latest', or a non positive integer to roll back (e.g. '-1' rolls back by one version). (default: 'latest') ",
+      default = 'latest',
       metavar = "Version"
     )
     parser.add_argument(
@@ -179,17 +262,43 @@ if __name__=="__main__":
 
     assets = S3Assets(args.serviceType, "fortytwo-builds")
 
-    version = 'latest'
-    full_version = 'latest'
-    if args.version:
+    if args.version == 'latest':
+
+      last_build = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/api/json').json()
+      log("Uploading assets for build %s" % (last_build['fullDisplayName']))
+
+      latest_asset = None
+      for artifact in last_build['artifacts']:
+        relative_path = artifact['relativePath']
+        potential_key = Key(assets.bucket, os.path.basename(relative_path))
+        potential_asset = S3Asset(potential_key)
+        if potential_asset.serviceType == args.serviceType:
+          if potential_key.exists():
+            log('Build asset %s already exists, continuing with deploy' % relative_path)
+          else:
+            tmp_uuid = str(uuid.uuid4())
+            source_dir = 'deploy-tmp/%s' % (tmp_uuid)
+            source_path = '%s/%s' % (source_dir, relative_path)
+            os.makedirs(os.path.dirname(source_path))
+            jenkins_file = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/artifact/%s' % relative_path)
+            with open(source_path, 'wb') as handle:
+              for chunk in jenkins_file.iter_content(1024):
+                handle.write(chunk)
+            multipart_upload('fortytwo-builds', source_path, os.path.basename(source_path))
+            log('Uploaded build asset %s' % relative_path)
+            if os.path.exists(source_dir):
+              shutil.rmtree(source_dir)
+          latest_asset = potential_asset
+
+      version = latest_asset.hash
+      full_version = latest_asset.name + " (latest)"
+    else:
+      assets.load()
       version = args.version
       try:
         full_version = assets.byHash(version).name
       except:
         full_version = version
-    else:
-      version = assets.latest().hash
-      full_version = assets.latest().name + " (latest)"
 
     slack_version = "<https://github.com/kifi/keepit/commit/" + version + "|" + full_version + ">"
 
@@ -199,7 +308,7 @@ if __name__=="__main__":
       command.append("force")
     else:
       if (not args.nolock) and (not lock.lock()):
-        print "There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business."
+        log("There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business.")
         sys.exit(0)
 
     log("Deploying %s to %s (%s): %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, slack_version))

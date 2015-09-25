@@ -55,6 +55,7 @@ object LibraryFields {
     val SYSTEM_PERSONA = 3
     val SYSTEM_READ_IT_LATER = 4
     val SYSTEM_GUIDE = 5
+    val SYSTEM_ORG_GENERAL = 6
 
     @inline def toNumericCode(kind: LibraryKind) = kind match {
       case LibraryKind.SYSTEM_MAIN => SYSTEM_MAIN
@@ -63,14 +64,17 @@ object LibraryFields {
       case LibraryKind.SYSTEM_PERSONA => SYSTEM_PERSONA
       case LibraryKind.SYSTEM_READ_IT_LATER => SYSTEM_READ_IT_LATER
       case LibraryKind.SYSTEM_GUIDE => SYSTEM_GUIDE
+      case LibraryKind.SYSTEM_ORG_GENERAL => SYSTEM_ORG_GENERAL
     }
 
-    @inline def fromNumericCode(kind: Long) = {
-      if (kind == SYSTEM_MAIN) LibraryKind.SYSTEM_MAIN
-      else if (kind == SYSTEM_SECRET) LibraryKind.SYSTEM_SECRET
-      else if (kind == SYSTEM_READ_IT_LATER) LibraryKind.SYSTEM_READ_IT_LATER
-      else if (kind == SYSTEM_GUIDE) LibraryKind.SYSTEM_GUIDE
-      else LibraryKind.USER_CREATED
+    @inline def fromNumericCode(kind: Long) = kind match {
+      case `SYSTEM_MAIN` => LibraryKind.SYSTEM_MAIN
+      case `SYSTEM_SECRET` => LibraryKind.SYSTEM_SECRET
+      case `USER_CREATED` => LibraryKind.USER_CREATED
+      case `SYSTEM_PERSONA` => LibraryKind.SYSTEM_PERSONA
+      case `SYSTEM_READ_IT_LATER` => LibraryKind.SYSTEM_READ_IT_LATER
+      case `SYSTEM_GUIDE` => LibraryKind.SYSTEM_GUIDE
+      case `SYSTEM_ORG_GENERAL` => LibraryKind.SYSTEM_ORG_GENERAL
     }
   }
 

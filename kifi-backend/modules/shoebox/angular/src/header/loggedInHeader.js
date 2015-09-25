@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
   '$scope', '$rootElement', '$rootScope', '$document', 'profileService', 'libraryService',
-  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state',
+  '$location', 'util', 'KEY', 'modalService', '$timeout', '$state', 'mobileOS',
   function (
     $scope, $rootElement, $rootScope, $document, profileService, libraryService,
-    $location, util, KEY, modalService, $timeout, $state) {
+    $location, util, KEY, modalService, $timeout, $state, mobileOS) {
 
     $scope.search = {text: $state.params.q || '', focused: false, suggesting: false, libraryChip: false};
     $scope.me = profileService.me;
@@ -22,6 +22,8 @@ angular.module('kifi')
       profileService.prefs.site_notify_libraries_in_search = false;
       profileService.savePrefs({site_notify_libraries_in_search: false});
     };
+
+    $scope.showMobileInterstitial = (mobileOS === 'iOS' || mobileOS === 'Android');
 
     //
     // Watchers & Listeners
@@ -117,7 +119,7 @@ angular.module('kifi')
       $scope.search.text = '';
       $scope.search.suggesting = false;
       if ($state.is('search')) {
-        $state.go('home');
+        $state.go('home.feed');
       } else if ($state.is('library.search')) {
         $state.go('^.keeps');
       }
@@ -149,12 +151,28 @@ angular.module('kifi')
       }
     };
 
+    $scope.shouldShowCreateTeam = function () {
+      return $scope.me.experiments.indexOf('admin') !== -1;
+    };
+
     $scope.addKeeps = function () {
       var library = $scope.library;
       modalService.open({
         template: 'keeps/addKeepModal.tpl.html',
         modalData: {selectedLibId: library && libraryService.isMyLibrary(library) && library.id}
       });
+    };
+
+    $scope.createLibrary = function () {
+      if ($state.includes('*.libraries.**')) {
+        $rootScope.$broadcast('openCreateLibrary');
+      } else {
+        $state.go('userProfile.libraries.own', { handle: $scope.me.username, openCreateLibrary: true });
+      }
+    };
+
+    $scope.createTeam = function () {
+      $state.go('teams.new');
     };
 
     function onDocKeyDown(e) {

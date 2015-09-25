@@ -68,8 +68,13 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
             val deadOtherKeeps = uris.map(uri => KeepFactory.keep().withURIId(uri.id.get).withLibrary(deadOtherLib).saved)
             val randoKeeps = uris.map(uri => KeepFactory.keep().withURIId(uri.id.get).withLibrary(randoLib).saved)
 
-            inject[KeepToLibraryRepo].count === userKeeps.length + otherKeeps.length + deadOtherKeeps.length + randoKeeps.length
-            inject[KeepToLibraryRepo].getVisibileFirstOrderImplicitKeeps(user.id.get, uri.id.get) === (userKeeps.filter(_.uriId == uri.id.get) ++ otherKeeps.filter(_.uriId == uri.id.get)).map(_.id.get).toSet
+            val allKeeps = userKeeps ++ otherKeeps ++ deadOtherKeeps ++ randoKeeps
+            val firstOrderImplicitKeeps = userKeeps.filter(_.uriId == uri.id.get) ++ otherKeeps.filter(_.uriId == uri.id.get)
+
+            inject[KeepToLibraryRepo].count === allKeeps.length
+            val actual = inject[KeepToLibraryRepo].getVisibileFirstOrderImplicitKeeps(Set(uri.id.get), Set(userLib, otherLib).map(_.id.get)).map(_.keepId)
+            val expected = firstOrderImplicitKeeps.map(_.id.get).toSet
+            actual === expected
           }
           1 === 1
         }
@@ -222,23 +227,7 @@ class KeepToLibraryRepoTest extends Specification with ShoeboxTestInjector {
           1 === 1
         }
       }
-      "match getRecentKeepsFromFollowedLibraries" in {
-        // def getRecentKeepsFromFollowedLibraries(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
-        withDb(modules: _*) { implicit injector =>
-          db.readWrite { implicit session =>
-            val user = UserFactory.user().saved
-            val libs = LibraryFactory.libraries(20).map(_.withOwner(UserFactory.user().saved)).saved
-            libs.foreach { lib => KeepFactory.keeps(50).map(_.withUser(lib.ownerId).withLibrary(lib)).saved }
-            val followedLibs = Random.shuffle(libs).take(libs.length / 2)
-            followedLibs.foreach { lib => LibraryMembershipFactory.membership().withLibraryFollower(lib, user).saved }
 
-            val expected = inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user.id.get, 20, None, None)
-            val actual = inject[KeepToLibraryRepo].getRecentFromLibraries(followedLibs.map(_.id.get).toSet, Limit(20), None, None)
-            expected.map(_.id.get) === actual.map(_.keepId)
-          }
-          1 === 1
-        }
-      }
       "match latestKeptAtByLibraryIds" in {
         // def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
         withDb(modules: _*) { implicit injector =>

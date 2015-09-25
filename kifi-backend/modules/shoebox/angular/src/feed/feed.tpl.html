@@ -1,0 +1,111 @@
+<main class="kf-feed-items kf-main-pane" smart-scroll scroll-distance="scrollDistance" scroll-disabled="!hasMoreKeeps()" scroll-next="fetchKeeps()">
+  <section ng-if="!isLoading() && feed.length === 0" class="kf-feed-item">
+    <header class="kf-feed-top">
+      <h3>Your stream is currently empty</h3>
+    </header>
+    <div class="kf-keep">
+      <div class="kf-feed-empty-keep">
+        <span>Follow top libraries from our <a ng-href="{{ featuredLibrariesRoute }}" target="_self">Featured Libraries</a></span>
+        <ul class="kf-feed-empty-dummy-libs">
+          <li class="kf-feed-empty-dummy-lib">
+            <a href="jen/analytics-data"><img src="/img/feed/analytics-data@2x.png" class="kf-feed-empty-dummy-lib-image" /></a>
+          </li>
+          <li class="kf-feed-empty-dummy-lib">
+            <a href="/ashley-mcgregordey/social-community"><img src="/img/feed/social-community@2x.png" class="kf-feed-empty-dummy-lib-image" /></a>
+          </li>
+          <li class="kf-feed-empty-dummy-lib">
+            <a href="brandon-loudermilkphd/machine-learning-resources"><img src="/img/feed/machine-learning-resources@2x.png" class="kf-feed-empty-dummy-lib-image" /></a>
+          </li>
+        </ul>
+        <p>Search to find libraries and keeps from intriguing search queries:</p>
+        <ul class="kf-feed-empty-searches">
+          <li class="kf-feed-empty-searches-query" ng-repeat="search in suggestedSearches">
+            <a ng-href="/find?q={{ search.query }}" ng-bind="search.title"></a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <section class="kf-feed-item" ng-if="::((!isLoading() || undefined) && feed.length < 10)">
+    <div class="kf-feed-top"><h3>Add a keep</h3></div>
+      <div class="kf-keep kf-feed-empty-add-keep">
+        <div kf-create-keep-widget></div>
+      </div>
+    </div>
+  </section>
+  <section class="kf-feed-item" ng-repeat="feedItem in feed">
+    <header class="kf-feed-top">
+      <h4 class="kf-feed-heading">
+        <a
+          class="kf-feed-tooltip-target"
+          ng-href="{{ feedItem.user | slug }}"
+          kf-user-tooltip="::feedItem.user"
+          ng-bind="feedItem.user | name"
+          ng-click="keepClick(null, $event)"
+          click-action="clickedProfile"
+        ></a>
+        <span>kept this</span>
+        <span ng-if="::feedItem.library">into</span>
+        <div
+          class="kf-privacy-container"
+          ng-if="feedItem.library.visibility === 'secret'"
+          data-kf-tooltip="This library is only viewable to those you invite"
+          data-kf-tooltip-position="{{ feed.indexOf(feedItem) ? 'top' : 'bottom' }}"
+        >
+          <svg
+            kf-symbol-sprite
+            icon="lock"
+            class="kf-privacy-icon"
+            ng-class="{'kf-collab': lib.numCollaborators}"
+            title="A private library"
+          ></svg>
+        </div>
+        <div
+          class="kf-privacy-container"
+          ng-if="feedItem.library.visibility === 'discoverable'"
+          data-kf-tooltip="This library is viewable to others in search results"
+          data-kf-tooltip-position="{{ feed.indexOf(feedItem) ? 'top' : 'bottom' }}"
+        >
+          <svg
+            kf-symbol-sprite
+            icon="star"
+            class="kf-privacy-icon"
+            ng-class="{'kf-collab': lib.numCollaborators}"
+            title="A discoverable library"
+            ng-show="feedItem.library.visibility === 'discoverable'"
+          ></svg>
+        </div>
+        <span><!-- Separate the inline-block elements from each other --></span>
+        <a
+          ng-if="::feedItem.library"
+          class="kf-feed-tooltip-target"
+          ng-href="{{ feedItem.library.path }}"
+          kf-user-tooltip="::feedItem.user"
+          library="::feedItem.library"
+          ng-bind="feedItem.library.name"
+          ng-click="keepClick(null, $event)"
+          click-action="clickedLibrary"
+        ></a>
+        <span ng-if="feedItem.organization">in</span>
+        <a
+          class="kf-feed-tooltip-target"
+          ng-if="feedItem.organization"
+          ng-href="{{feedItem.organization.handle}}"
+          kf-user-tooltip="::feedItem.organization"
+          ng-bind="feedItem.organization.name"
+          ng-click="keepClick(null, $event)"
+          click-action="clickedOrganization"
+        ></a> &mdash; <span am-time-ago="feedItem.createdAt"></span>
+      </h4>
+    </header>
+    <div class="kf-keep">
+      <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true" click-callback="keepClick(keep, event)"></div>
+    </div>
+  </section>
+  <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="hasMoreKeeps() && fetchKeeps()">
+    <span ng-if="!isLoading() && hasMoreKeeps()" class="kf-feed-get-more">See more</span>
+    <span ng-if="!isLoading() && !hasMoreKeeps()" class="kf-feed-no-more">There is no more activity to show.</span>
+    <span ng-if="isLoading()" class="kf-feed-get-more-loading">Loading...</span>
+  </div>
+  <div class="kf-feed-loading-spinner" kf-loading-spinner hide="!isLoading()"></div>
+</main>

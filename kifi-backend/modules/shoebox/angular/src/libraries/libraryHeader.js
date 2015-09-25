@@ -5,10 +5,10 @@ angular.module('kifi')
 .directive('kfLibraryHeader', [
   '$http', '$location', '$q', '$rootScope', '$state', '$stateParams', '$timeout', '$window', '$$rAF',
   '$filter', 'env', 'libraryService', 'modalService','profileService', 'platformService', 'signupService',
-  'routeService', 'linkify',
+  'routeService', 'linkify', 'LIB_PERMISSION',
   function ($http, $location, $q, $rootScope, $state, $stateParams, $timeout, $window, $$rAF,
             $filter, env, libraryService, modalService, profileService, platformService, signupService,
-            routeService, linkify) {
+            routeService, linkify, LIB_PERMISSION) {
     return {
       restrict: 'A',
       replace: true,
@@ -53,6 +53,7 @@ angular.module('kifi')
         // Scope data.
         //
         scope.Math = Math;
+        scope.LIB_PERMISSION = LIB_PERMISSION;
         scope.search = { 'text': $stateParams.q || '' };
         scope.isMobile = platformService.isSupportedMobilePlatform();
         scope.descExpanded = false;
@@ -523,6 +524,10 @@ angular.module('kifi')
           return t*t*t;
         }
 
+        scope.hasPermission = function (permission) {
+          return scope.library.membership && scope.library.membership.permissions.indexOf(permission) !== -1;
+        };
+
         scope.isSelf = function (user) {
           return profileService.me.id === user.id;
         };
@@ -633,7 +638,6 @@ angular.module('kifi')
               template: 'libraries/libraryMembersModal.tpl.html',
               modalData: {
                 library: scope.library,
-                canManageMembers: (scope.isOwner() || (scope.isCollaborating() && scope.collabsCanInvite)),
                 amOwner: scope.isOwner(),
                 filterType: filterType,
                 currentPageOrigin: 'libraryPage'
@@ -708,10 +712,14 @@ angular.module('kifi')
             var lib = scope.library;
             if (lib && libraryId === lib.id && lib.membership) {
               if (lib.membership.access === 'read_only') {
-                lib.numFollowers--;
+                if (lib.numFollowers > 0) {
+                  lib.numFollowers--;
+                }
                 _.remove(lib.followers, {id: profileService.me.id});
               } else if (lib.membership.access === 'read_write') {
-                lib.numCollaborators--;
+                if (lib.numCollaborators > 0) {
+                  lib.numCollaborators--;
+                }
                 _.remove(lib.collaborators, {id: profileService.me.id});
               }
               lib.membership = undefined;

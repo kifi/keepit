@@ -45,8 +45,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             (invitee, invite)
           }
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId, invite.authToken)
-          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
+          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
+          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
 
           status(result) must equalTo(NO_CONTENT)
         }
@@ -68,8 +68,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId, invite.authToken)
-          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
+          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
+          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
           status(result) must equalTo(NO_CONTENT)
         }
       }
@@ -79,19 +79,18 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val orgId = Id[Organization](1)
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
           val (invitee, invite) = db.readWrite { implicit session =>
-            val invitee = UserFactory.user().withName("New", "Guy").saved
-            val inviter = UserFactory.user().withName("Mr", "Inviter").saved
-            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
-            val org = OrganizationFactory.organization().withOwner(owner).withHandle(OrganizationHandle("kifi")).saved
-            inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER))
+            val invitee = UserFactory.user().saved
+            val inviter = UserFactory.user().saved
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter)).withWeakMembers().saved
 
             val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
             (invitee, invite)
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId, invite.authToken)
-          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
+          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
+          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
           result === OrganizationFail.NO_VALID_INVITATIONS
         }
       }
@@ -103,8 +102,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(PublicId[Organization]("12345"), "authToken")
-          val result = controller.acceptInvitation(PublicId[Organization]("12345"), "authToken")(request)
+          val request = route.acceptInvitation(PublicId[Organization]("12345"), Some("authToken"))
+          val result = controller.acceptInvitation(PublicId[Organization]("12345"), Some("authToken"))(request)
 
           result === OrganizationFail.INVALID_PUBLIC_ID
         }
@@ -211,9 +210,9 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           implicit val config = inject[PublicIdConfiguration]
           val (inviter, org) = db.readWrite { implicit session =>
-            val inviter = UserFactory.user().withName("Mr", "Inviter").saved
-            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
-            val org = OrganizationFactory.organization().withOwner(owner).withHandle(OrganizationHandle("kifi")).saved
+            val inviter = UserFactory.user().saved
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withWeakMembers().saved
             inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER))
             (inviter, org)
           }
@@ -230,9 +229,9 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
         withDb(controllerTestModules: _*) { implicit injector =>
           implicit val config = inject[PublicIdConfiguration]
           val inviter = db.readWrite { implicit session =>
-            val inviter = UserFactory.user().withName("Mr", "Inviter").saved
-            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
-            val org = OrganizationFactory.organization().withOwner(owner).withHandle(OrganizationHandle("kifi")).saved
+            val inviter = UserFactory.user().saved
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
             inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER))
             inviter
           }
@@ -249,12 +248,12 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
     "when inviteUsers is called:" in {
       def setupInviters()(implicit injector: Injector) = {
         db.readWrite { implicit session =>
-          val owner = UserFactory.user().withName("The", "Unknown").saved
+          val owner = UserFactory.user().saved
           val inviter = UserFactory.user().saved
           userEmailAddressCommander.intern(inviter.id.get, EmailAddress("inviter@kifi.com")).get
           val cannot_invite = UserFactory.user().saved
           val not_a_member = UserFactory.user().saved
-          val org = OrganizationFactory.organization().withName("Void").withOwner(owner).withMembers(Seq(inviter, cannot_invite)).saved
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter, cannot_invite)).withWeakMembers().saved
 
           val inviterMembership = inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, inviter.id.get).get
           inject[OrganizationMembershipRepo].save(inviterMembership.withPermissions(Set(OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)))

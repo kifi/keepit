@@ -64,8 +64,10 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   private object Version7 extends LandingVersion { val version = 7 }
   private object Version8 extends LandingVersion { val version = 8 }
   private object Version9 extends LandingVersion { val version = 9 }
-  private val versions = Seq(Version1, Version2, Version3, Version4, Version5, Version6, Version7, Version8, Version9)
-  private val defaultVersion = Version7
+  private object Version10 extends LandingVersion { val version = 10 }
+  private object Version11 extends LandingVersion { val version = 11 }
+  private val versions = Seq(Version1, Version2, Version3, Version4, Version5, Version6, Version7, Version8, Version9, Version10, Version11)
+  private val defaultVersion = Version11
 
   def landing(implicit request: Request[_]): String = {
     val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
@@ -77,8 +79,8 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
       pickOpt.flatMap(v => versions.find(_.version == v)).getOrElse {
         //        val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
         //        val hash = Math.abs(ip.hashCode) % 100
-        //        (if (hash < 50) Version9 else Version7) tap { w => log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$w") }
-        Version9
+        //        (if (hash < 50) Version10 else Version9) tap { w => log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$w") }
+        Version11
       }
     }
     s"index.${version.version}"

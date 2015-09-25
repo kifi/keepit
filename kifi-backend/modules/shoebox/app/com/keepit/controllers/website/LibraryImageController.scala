@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ ProcessedImageSize, LibraryCommander, LibraryImageCommander }
+import com.keepit.commanders._
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
@@ -26,7 +26,8 @@ class LibraryImageController @Inject() (
   libraryImageCommander: LibraryImageCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   val userActionsHelper: UserActionsHelper,
-  val libraryCommander: LibraryCommander,
+  val libraryInfoCommander: LibraryInfoCommander,
+  val libraryAccessCommander: LibraryAccessCommander,
   val publicIdConfig: PublicIdConfiguration,
   implicit val config: PublicIdConfiguration,
   private implicit val executionContext: ExecutionContext)
@@ -38,8 +39,10 @@ class LibraryImageController @Inject() (
       libraryImageRequestRepo.save(LibraryImageRequest(libraryId = libraryId, source = ImageSource.UserUpload))
     }
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(
-      request.body, libraryId, LibraryImagePosition(posX, posY), ImageSource.UserUpload, request.userId, Some(imageRequest.id.get))
+    val uploadImageF = libraryImageCommander.uploadLibraryImageFromFile(request.body.file, libraryId, LibraryImagePosition(posX, posY), ImageSource.UserUpload, request.userId, Some(imageRequest.id.get)).map { s =>
+      request.body.file.delete()
+      s
+    }
     uploadImageF.map {
       case fail: ImageStoreFailure =>
         InternalServerError(Json.obj("error" -> fail.reason))
@@ -47,7 +50,7 @@ class LibraryImageController @Inject() (
         val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(LibraryImageController.defaultImageSize)
         libraryImageCommander.getBestImageForLibrary(libraryId, idealSize) match {
           case Some(img: LibraryImage) =>
-            Ok(Json.toJson(LibraryImageInfoBuilder.createInfo(img)))
+            Ok(Json.toJson(LibraryImageInfo.fromImage(img)))
           case None =>
             NotFound(Json.obj("error" -> "image_not_found"))
         }
@@ -89,11 +92,11 @@ class LibraryImageController @Inject() (
       val accessibleLibIds = db.readOnlyReplica { implicit session =>
         libraryRepo.getLibraries(libIds.toSet)
       } filter {
-        case (_, lib) => libraryCommander.canViewLibrary(request.userIdOpt, lib)
+        case (_, lib) => libraryAccessCommander.canViewLibrary(request.userIdOpt, lib)
       } keySet
       val size = idealSize.map(ImageSize(_)).getOrElse(ProcessedImageSize.Medium.idealSize)
       val imagesByPublicId = libraryImageCommander.getBestImageForLibraries(accessibleLibIds, size) map {
-        case (id, img) => Library.publicId(id).id -> LibraryImageInfoBuilder.createInfo(img)
+        case (id, img) => Library.publicId(id).id -> LibraryImageInfo.fromImage(img)
       }
       Ok(Json.toJson(imagesByPublicId))
     } else {

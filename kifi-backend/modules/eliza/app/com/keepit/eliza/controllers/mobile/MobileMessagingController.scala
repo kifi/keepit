@@ -2,6 +2,7 @@ package com.keepit.eliza.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.UserAgent
@@ -9,7 +10,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.model.{ Message, MessageSource, MessageThread }
 import com.keepit.heimdal._
-import com.keepit.model.User
+import com.keepit.model.{ Organization, User }
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 
@@ -23,33 +24,45 @@ class MobileMessagingController @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     notificationCommander: NotificationDeliveryCommander,
     val userActionsHelper: UserActionsHelper,
+    notificationMessagingCommander: NotificationMessagingCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     messageSearchCommander: MessageSearchCommander,
     implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
 
   def getNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
-    val noticesFuture = before match {
+    val threadNoticesFuture = before match {
       case Some(before) =>
         notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
         notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
     }
-    noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
+    val noticesFuture = before match {
+      case Some(before) =>
+        notificationMessagingCommander.getLatestNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, true)
+      case None =>
+        notificationMessagingCommander.getLatestNotifications(request.userId, howMany.toInt, true).map(_.results)
+    }
+    for {
+      threadNotices <- threadNoticesFuture
+      notices <- noticesFuture
+    } yield {
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
-      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
     }
   }
 
   def getSystemNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val noticesFuture = before match {
       case Some(before) =>
-        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
+        notificationMessagingCommander.getLatestNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, true)
       case None =>
-        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(false))
+        notificationMessagingCommander.getLatestNotifications(request.userId, howMany.toInt, true).map(_.results)
     }
-    noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
+    for {
+      notices <- noticesFuture
+    } yield {
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(false))
-      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(Seq(), notices, Some(howMany)), numUnreadUnmuted))
     }
   }
 
@@ -67,15 +80,24 @@ class MobileMessagingController @Inject() (
   }
 
   def getUnreadNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
-    val noticesFuture = before match {
+    val threadNoticesFuture = before match {
       case Some(before) =>
         notificationCommander.getUnreadSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
         notificationCommander.getLatestUnreadSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true).map(_._1)
     }
-    noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
+    val noticesFuture = before match {
+      case Some(before) =>
+        notificationMessagingCommander.getNotificationsWithNewEventsBefore(request.userId, parseStandardTime(before), howMany.toInt, true)
+      case None =>
+        notificationMessagingCommander.getNotificationsWithNewEvents(request.userId, howMany.toInt, true).map(_.results)
+    }
+    for {
+      threadNotices <- threadNoticesFuture
+      notices <- noticesFuture
+    } yield {
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
-      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
     }
   }
 
@@ -99,29 +121,24 @@ class MobileMessagingController @Inject() (
       (o \ "text").as[String].trim,
       (o \ "source").asOpt[MessageSource]
     )
-    val (users, emailContacts) = messagingCommander.validateRecipients((o \ "recipients").as[Seq[JsValue]])
-
-    val validUserRecipients = users.collect { case JsSuccess(validUser, _) => validUser }
-    val validEmailRecipients = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
-
-    val url = (o \ "url").asOpt[String]
-    val urls = JsObject(o.as[JsObject].value.filterKeys(Set("url", "canonical", "og").contains).toSeq)
+    val (validUserRecipients, validEmailRecipients, validOrgRecipients) = messagingCommander.parseRecipients((o \ "recipients").as[Seq[JsValue]]) // XXXX
+    val url = (o \ "url").as[String]
 
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     contextBuilder += ("source", "mobile")
 
-    val messageSubmitResponse = messagingCommander.sendMessageAction(title, text, source,
-      validUserRecipients, validEmailRecipients, url, urls, request.userId, contextBuilder.build) map {
-        case (message, threadInfoOpt, messages) =>
-          Ok(Json.obj(
-            "id" -> message.externalId.id,
-            "parentId" -> message.threadExtId.id,
-            "createdAt" -> message.createdAt,
-            "threadInfo" -> threadInfoOpt,
-            "messages" -> messages.reverse))
-      }
-
-    messageSubmitResponse // todo(JP, Eduardo, Léo): return meaningful error about invalid participants
+    messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
+      case (message, threadInfoOpt, messages) =>
+        Ok(Json.obj(
+          "id" -> message.externalId.id,
+          "parentId" -> message.threadExtId.id,
+          "createdAt" -> message.createdAt,
+          "threadInfo" -> threadInfoOpt,
+          "messages" -> messages.reverse))
+    }.recover {
+      case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
+        Forbidden(Json.obj("error" -> "insufficient_org_permissions"))
+    }
   }
 
   def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = UserAction(parse.tolerantJson) { request =>
@@ -173,8 +190,8 @@ class MobileMessagingController @Inject() (
               "text" -> m.text
             )
             val msgJson = baseJson ++ (m.user match {
-              case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(bnu: BasicNonUser) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
+              case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
+              case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
               case _ => Json.obj()
             })
 
@@ -213,8 +230,8 @@ class MobileMessagingController @Inject() (
               "text" -> m.text
             )
             val msgJson = baseJson ++ (m.user match {
-              case Some(bu: BasicUser) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(bnu: BasicNonUser) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
+              case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
+              case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
               case _ => Json.obj()
             })
 
@@ -266,18 +283,19 @@ class MobileMessagingController @Inject() (
   }
 
   def addParticipantsToThread(threadId: ExternalId[MessageThread], users: String, emailContacts: String) = UserAction { request =>
-    val source = UserAgent(request) match {
-      case agent if agent.isAndroid => MessageSource.ANDROID
-      case agent if agent.isIphone => MessageSource.IPHONE
-      case agent => throw new IllegalArgumentException(s"user agent not supported: $agent")
-    }
     if (users.nonEmpty || emailContacts.nonEmpty) {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
       contextBuilder += ("source", "mobile")
       //assuming the client does the proper checks!
       val validEmails = emailContacts.split(",").map(_.trim).filterNot(_.isEmpty).map { email => BasicContact.fromString(email).get }
-      val validUserIds = users.split(",").map(_.trim).filterNot(_.isEmpty).map { id => ExternalId[User](id) }
-      messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, Some(source))(contextBuilder.build)
+      val (validUserIds, validOrgIds) = users.split(",").map(_.trim).filterNot(_.isEmpty).foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
+        // This API is basically insane. Passing comma separated entities in URL params on a POST?
+        ExternalId.asOpt[User](id) match {
+          case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
+          case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
+        }
+      }
+      messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)
     }
     Ok("")
   }

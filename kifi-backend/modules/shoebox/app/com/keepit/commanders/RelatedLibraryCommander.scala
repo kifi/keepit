@@ -31,7 +31,7 @@ class RelatedLibraryCommanderImpl @Inject() (
     db: Database,
     libRepo: LibraryRepo,
     libMemRepo: LibraryMembershipRepo,
-    libCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     cortex: CortexServiceClient,
     userCommander: UserCommander,
     libQualityHelper: LibraryQualityHelper,
@@ -72,7 +72,7 @@ class RelatedLibraryCommanderImpl @Inject() (
       .flatMap { relatedLibs =>
         val t1 = System.currentTimeMillis
         val (libs, kinds) = relatedLibs.map { x => (x.library, x.kind) }.unzip
-        val fullInfosFut = libCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { _.map { _._2 } }
+        val fullInfosFut = libraryInfoCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { _.map { _._2 } }
         fullInfosFut.map { info =>
           val t2 = System.currentTimeMillis
           statsd.timing("commander.RelatedLibraryCommander.getSuggestedLibs", t1 - t0, 1.0)

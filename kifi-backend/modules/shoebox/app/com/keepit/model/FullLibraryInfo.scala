@@ -6,6 +6,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.BasicContact
+import com.keepit.common.store.ImagePath
 import com.keepit.social.{ BasicUser, BasicUserFields }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -32,12 +33,12 @@ object LibraryError {
   }
 }
 
-case class LibraryFail(status: Int, message: String)
+case class LibraryFail(status: Int, message: String) extends Exception(message)
 
 @json
 case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
 
-case class ExternalLibraryAddRequest(
+case class ExternalLibraryCreateRequest(
   name: String,
   visibility: LibraryVisibility,
   slug: Option[String],
@@ -47,10 +48,11 @@ case class ExternalLibraryAddRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[ExternalLibrarySpace] = None)
+  space: Option[ExternalLibrarySpace] = None,
+  orgMemberAccess: Option[LibraryAccess] = None)
 
-object ExternalLibraryAddRequest {
-  implicit val reads: Reads[ExternalLibraryAddRequest] = (
+object ExternalLibraryCreateRequest {
+  val readsMobileV1: Reads[ExternalLibraryCreateRequest] = (
     (__ \ 'name).read[String] and
     (__ \ 'visibility).read[LibraryVisibility] and
     (__ \ 'slug).readNullable[String] and
@@ -60,11 +62,13 @@ object ExternalLibraryAddRequest {
     (__ \ 'listed).readNullable[Boolean] and
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
-    (__ \ 'space).readNullable[ExternalLibrarySpace]
-  )(ExternalLibraryAddRequest.apply _)
+    (__ \ 'space).readNullable[ExternalLibrarySpace] and
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+  )(ExternalLibraryCreateRequest.apply _)
+  val reads = readsMobileV1
 }
 
-case class LibraryAddRequest(
+case class LibraryCreateRequest(
   name: String,
   visibility: LibraryVisibility,
   slug: String,
@@ -74,7 +78,21 @@ case class LibraryAddRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[LibrarySpace] = None)
+  space: Option[LibrarySpace] = None,
+  orgMemberAccess: Option[LibraryAccess] = None)
+
+object LibraryCreateRequest {
+  def forOrgGeneralLibrary(org: Organization): LibraryCreateRequest = {
+    LibraryCreateRequest(
+      name = "General",
+      visibility = LibraryVisibility.ORGANIZATION,
+      slug = "general",
+      kind = Some(LibraryKind.SYSTEM_ORG_GENERAL),
+      space = Some(LibrarySpace.fromOrganizationId(org.id.get)),
+      orgMemberAccess = Some(LibraryAccess.READ_WRITE)
+    )
+  }
+}
 
 case class ExternalLibraryModifyRequest(
   name: Option[String] = None,
@@ -85,10 +103,11 @@ case class ExternalLibraryModifyRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  externalSpace: Option[ExternalLibrarySpace] = None)
+  externalSpace: Option[ExternalLibrarySpace] = None,
+  orgMemberAccess: Option[LibraryAccess] = None)
 
 object ExternalLibraryModifyRequest {
-  implicit val reads: Reads[ExternalLibraryModifyRequest] = (
+  val readsMobileV1: Reads[ExternalLibraryModifyRequest] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'slug).readNullable[String] and
     (__ \ 'visibility).readNullable[LibraryVisibility] and
@@ -97,8 +116,11 @@ object ExternalLibraryModifyRequest {
     (__ \ 'listed).readNullable[Boolean] and
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
-    (__ \ 'space).readNullable[ExternalLibrarySpace]
+    (__ \ 'space).readNullable[ExternalLibrarySpace] and
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
   )(ExternalLibraryModifyRequest.apply _)
+
+  val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
 }
 
 case class LibraryModifyRequest(
@@ -110,11 +132,13 @@ case class LibraryModifyRequest(
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[LibrarySpace] = None)
+  space: Option[LibrarySpace] = None,
+  orgMemberAccess: Option[LibraryAccess] = None)
 
 case class LibraryModifyResponse(
   modifiedLibrary: Library,
-  keepChanges: Future[Unit])
+  keepChanges: Future[Unit],
+  edits: Map[String, Boolean])
 
 case class LibraryInfo(
   id: PublicId[Library],
@@ -156,7 +180,7 @@ object LibraryInfo {
       shortDescription = lib.description,
       url = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), lib.slug),
       color = lib.color,
-      image = image.map(LibraryImageInfoBuilder.createInfo(_)),
+      image = image.map(LibraryImageInfo.fromImage),
       owner = owner,
       numKeeps = lib.keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
@@ -184,12 +208,13 @@ case class LibraryCardInfo(
   lastKept: DateTime,
   following: Option[Boolean], // @deprecated use membership object instead!
   membership: Option[LibraryMembershipInfo],
+  invite: Option[LibraryInviteInfo], // currently only for Invited tab on viewer's own user profile
   caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
-  invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
   path: String,
-  org: Option[OrganizationCard])
+  org: Option[BasicOrganizationView],
+  orgMemberAccess: Option[LibraryAccess])
 
 object LibraryCardInfo {
   implicit val writes = new Writes[LibraryCardInfo] {
@@ -211,12 +236,13 @@ object LibraryCardInfo {
       "lastKept" -> o.lastKept,
       "following" -> o.following,
       "membership" -> o.membership,
+      "invite" -> o.invite,
       "caption" -> o.caption,
       "modifiedAt" -> o.modifiedAt,
       "kind" -> o.kind,
-      "invite" -> o.invite,
       "path" -> o.path,
-      "org" -> o.org).nonNullFields
+      "org" -> o.org,
+      "orgMemberAccess" -> o.orgMemberAccess).nonNullFields
   }
   def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
     collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
@@ -224,12 +250,6 @@ object LibraryCardInfo {
 
   def chooseFollowers(followers: Seq[BasicUser]): Seq[BasicUser] = {
     followers.filter(_.pictureName != "0.jpg").take(4) // 3 shown, 1 extra in case viewer is one and leaves
-  }
-}
-
-object LibraryNotificationInfoBuilder {
-  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser)(implicit config: PublicIdConfiguration): LibraryNotificationInfo = {
-    LibraryNotificationInfo(Library.publicId(lib.id.get), lib.name, lib.slug, lib.color, image.map(LibraryImageInfoBuilder.createInfo), owner)
   }
 }
 
@@ -265,7 +285,10 @@ case class FullLibraryInfo(
   whoCanInvite: LibraryInvitePermissions,
   modifiedAt: DateTime,
   path: String,
-  org: Option[OrganizationCard])
+  org: Option[BasicOrganizationView],
+  orgMemberAccess: Option[LibraryAccess],
+  membership: Option[LibraryMembershipInfo],
+  invite: Option[LibraryInviteInfo])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
@@ -293,19 +316,13 @@ object FullLibraryInfo {
       "whoCanInvite" -> o.whoCanInvite,
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
-      "org" -> o.org
+      "org" -> o.org,
+      "orgMemberAccess" -> o.orgMemberAccess,
+      "membership" -> o.membership,
+      "invite" -> o.invite
     ).nonNullFields
   }
 }
-
-case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
-  override val version = 2
-  val namespace = "library_info_libraryid"
-  def toKey(): String = libraryId.id.toString
-}
-
-class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 sealed trait LibrarySourceAttribution
 

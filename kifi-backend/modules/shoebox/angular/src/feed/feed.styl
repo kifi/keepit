@@ -1,0 +1,129 @@
+.kf-feed-items
+  a:hover
+    text-decoration: underline
+
+.kf-feed-loading-spinner.kf-loading-spinner
+  display: block
+  width: 100px
+  margin: auto
+
+.kf-feed-tooltip-target
+  position: relative
+
+  > .kf-utt
+    left: calc(50% - 40px)
+
+  > .kf-ult
+    left: calc(50% - 105px)
+
+.kf-feed-title
+  font-size: 1.6rem
+  margin-bottom: 20px
+
+.kf-feed-top
+  position: relative
+  border: defaultBorder
+  border-bottom: 0
+  border-radius: 10px 10px 0 0
+  padding: 10px 20px
+  background-color: #fff
+  font-size: 13px
+  font-weight: 400
+  color: #9d9d9d
+
+  .kf-privacy-icon
+    position: relative
+    top: -2px
+    fill: none
+    stroke: black
+    stroke-width: 10px
+
+  .kf-privacy-container
+    margin-right: -4px
+
+  [data-kf-tooltip]
+    display: inline-block
+    position: relative
+
+  + .kf-keep
+    padding-top: 20px
+    border-top-left-radius: 0
+    border-top-right-radius: 0
+
+    .kf-keep-top
+      display: none
+
+  // library feeds with invite need additional spacing between the control header and the invite banner
+  .kf-feed-with-invite &
+    padding-bottom: 10px
+
+.kf-feed-heading > a
+    color: accentGreen
+
+.kf-feed-get-more-container
+  display: block
+  margin-bottom: 20px
+  border: defaultBorder
+  border-radius: 10px
+  padding: 12px 0
+  text-align: center
+  background: #fff
+  cursor: pointer
+
+  @media (min-width: appMinWidth)
+    display: none
+
+.kf-feed-get-more
+.kf-feed-get-more-loading
+.kf-feed-no-more
+  font-size: 16px
+  font-weight: bold
+  color: #006bb2
+
+.kf-feed-get-more:hover
+  text-decoration: underline
+  cursor: pointer
+
+.kf-feed-item.ng-leave
+  opacity: 1
+  transition: opacity 0.5s ease
+
+.kf-feed-item.ng-leave.ng-leave-active
+  opacity: 0
+
+.kf-feed-item.ng-enter
+  opacity: 0
+  transition: opacity 0.5s ease
+
+.kf-feed-item.ng-enter.ng-enter-active
+  opacity: 1
+
+.kf-feed-empty-keep
+.kf-feed-empty-add-keep
+  font-size: .85rem
+
+.kf-feed-empty-searches
+  column-count: 2
+  column-gap: 20px
+  text-align: left
+
+.kf-feed-empty-searches-query
+  width: 140px
+  margin: 0 auto 5px
+  padding-top: 5px
+
+.kf-keep.kf-feed-empty-add-keep
+  padding-bottom: 15px
+
+.kf-feed-empty-dummy-libs
+  display: flex
+  justify-content: space-around
+  margin-top: 15px
+
+.kf-feed-empty-dummy-lib > a
+  display: block
+
+.kf-feed-empty-dummy-lib-image
+  display: inline-block
+  width: 84px
+  height: 116px

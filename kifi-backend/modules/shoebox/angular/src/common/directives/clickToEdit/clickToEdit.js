@@ -31,7 +31,8 @@ angular.module('kifi')
           if (textarea && span) {
             // Show an element that matches the textarea's styling to determine
             // how high it should be to show all of textarea's text.
-            span.width(textarea.css('width')); // This must be first.
+            var tester = span[0];
+            tester.style.width = textarea.css('width');
             $scope.view.textareaHeight = {'height': span.css('height') };
           }
         };

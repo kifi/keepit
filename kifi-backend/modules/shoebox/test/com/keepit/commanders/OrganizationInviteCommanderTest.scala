@@ -1,7 +1,5 @@
 package com.keepit.commanders
 
-import java.util.concurrent.TimeUnit
-
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
@@ -10,29 +8,25 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
-import com.keepit.model.UserFactoryHelper._
+import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.OrganizationFactoryHelper._
-import com.keepit.model.OrganizationFactory
-import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.{ OrganizationFactory, _ }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 
 import scala.concurrent.Await
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.Duration
 
 class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
-  def orgInviteCommander(implicit injector: Injector) = inject[OrganizationInviteCommander]
-  def organizationMembershipRepo(implicit injector: Injector) = inject[OrganizationMembershipRepo]
 
-  def setup(implicit injector: Injector) = {
+  def setup(implicit injector: Injector): (Organization, User) = {
     db.readWrite { implicit session =>
       val owner = UserFactory.user().withName("Kiwi", "Kiwi").saved
       userEmailAddressCommander.intern(userId = owner.id.get, address = EmailAddress("kiwi-test@kifi.com")).get
-      val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).saved
-      val membership = organizationMembershipRepo.save(org.newMembership(userId = owner.id.get, role = OrganizationRole.ADMIN))
-      (org, owner, membership)
+      val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).withWeakMembers().saved
+      (org, owner)
     }
   }
 
@@ -47,11 +41,11 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
     "invite members" in {
       withDb(modules: _*) { implicit injector =>
         val invitees: Set[Either[Id[User], EmailAddress]] = Set(Right(EmailAddress("kiwi-test@kifi.com")))
-        val (org, owner, _) = setup
+        val (org, owner) = setup
         val inviteeEmails = invitees.collect { case Right(email) => email }
         val inviteeUserIds = invitees.collect { case Left(userId) => userId }
         val orgInvite = OrganizationInviteSendRequest(org.id.get, owner.id.get, inviteeEmails, inviteeUserIds, Some("would you like to join Kifi?"))
-        val result = Await.result(orgInviteCommander.inviteToOrganization(orgInvite), new FiniteDuration(3, TimeUnit.SECONDS))
+        val result = Await.result(orgInviteCommander.inviteToOrganization(orgInvite), Duration.Inf)
 
         result.isRight === true
         val inviteesWithAccess = result.right.get
@@ -64,20 +58,20 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
     "when inviting members already in the org" in {
       "return an error" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, owner, _) = setup
+          val (org, owner) = setup
           val invitees: Set[Either[Id[User], EmailAddress]] = Set(Left(owner.id.get))
           val inviter = db.readWrite { implicit session =>
-            val bond = UserFactory.user.withName("James", "Bond").saved
+            val bond = UserFactory.user().withName("James", "Bond").saved
             val membership: OrganizationMembership = org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER)
-            organizationMembershipRepo.save(membership.copy(permissions = (membership.permissions + OrganizationPermission.INVITE_MEMBERS)))
+            orgMembershipRepo.save(membership.copy(permissions = membership.permissions + OrganizationPermission.INVITE_MEMBERS))
             bond
           }
           val inviteeEmails = invitees.collect { case Right(email) => email }
           val inviteeUserIds = invitees.collect { case Left(userId) => userId }
           val orgInvite = OrganizationInviteSendRequest(org.id.get, inviter.id.get, inviteeEmails, inviteeUserIds, Some("inviting the owner, what a shmuck"))
-          val result = Await.result(orgInviteCommander.inviteToOrganization(orgInvite), new FiniteDuration(3, TimeUnit.SECONDS))
+          val result = Await.result(orgInviteCommander.inviteToOrganization(orgInvite), Duration.Inf)
 
-          result.isLeft === true
+          result must beLeft
           result.left.get === OrganizationFail.ALREADY_A_MEMBER
         }
       }
@@ -86,42 +80,42 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
     "not invite members when" in {
       "the inviter cannot invite" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, _, _) = setup
+          val (org, _) = setup
           val invitees = Set.empty[Either[Id[User], EmailAddress]]
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
-            val bond = UserFactory.user.withName("James", "Bond").saved
-            organizationMembershipRepo.save(org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER))
+            val bond = UserFactory.user().withName("James", "Bond").saved
+            orgMembershipRepo.save(org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER))
             bond
           }
           val inviteeEmails = invitees.collect { case Right(email) => email }
           val inviteeUserIds = invitees.collect { case Left(userId) => userId }
           val orgInvite = OrganizationInviteSendRequest(org.id.get, aMemberThatCannotInvite.id.get, inviteeEmails, inviteeUserIds, None)
-          val result = Await.result(orgInviteCommander.inviteToOrganization(orgInvite), new FiniteDuration(3, TimeUnit.SECONDS))
+          val result = Await.result(orgInviteCommander.inviteToOrganization(orgInvite), Duration.Inf)
 
-          result.isLeft === true
+          result must beLeft
           val organizationFail = result.left.get
           organizationFail === OrganizationFail.INSUFFICIENT_PERMISSIONS
         }
       }
       "the inviter is not a member" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, _, _) = setup
+          val (org, _) = setup
           val invitees = Set.empty[Either[Id[User], EmailAddress]]
           val notAMember = db.readWrite { implicit session =>
             UserFactory.user.withName("James", "Bond").saved
           }
           val inviteeEmails = invitees.collect { case Right(email) => email }
           val inviteeUserIds = invitees.collect { case Left(userId) => userId }
-          val result = Await.result(orgInviteCommander.inviteToOrganization(OrganizationInviteSendRequest(org.id.get, notAMember.id.get, inviteeEmails, inviteeUserIds, None)), new FiniteDuration(3, TimeUnit.SECONDS))
+          val result = Await.result(orgInviteCommander.inviteToOrganization(OrganizationInviteSendRequest(org.id.get, notAMember.id.get, inviteeEmails, inviteeUserIds, None)), Duration.Inf)
 
-          result.isLeft === true
+          result must beLeft
           val organizationFail = result.left.get
           organizationFail === OrganizationFail.NOT_A_MEMBER
         }
       }
     }
 
-    "convert email invitations to userId" in {
+    "convert email invitations to userId after user verifies email" in {
       withDb(modules: _*) { implicit injector =>
         val orgInviteRepo = inject[OrganizationInviteRepo]
         db.readWrite { implicit session =>
@@ -130,10 +124,10 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           }
         }
 
-        val orgInviteCommander = inject[OrganizationInviteCommander]
+        val pendingInvite = inject[PendingInviteCommander]
         val invitedUserId = db.readWrite { implicit session =>
           val userId = userRepo.save(User(firstName = "Kiwi", lastName = "Kifi")).id.get
-          orgInviteCommander.convertPendingInvites(EmailAddress("kiwi@kifi.com"), userId)
+          pendingInvite.convertPendingOrgInvites(EmailAddress("kiwi@kifi.com"), userId)
           userId
         }
         val invites = db.readOnlyMaster { implicit session =>
@@ -162,7 +156,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
             (org, invite)
           }
-          inviteCommander.acceptInvitation(org.id.get, userId, invite.authToken) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inviteCommander.acceptInvitation(org.id.get, userId, Some(invite.authToken)) must haveClass[Right[OrganizationFail, OrganizationMembership]]
         }
       }
 
@@ -179,7 +173,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.ADMIN))
             org
           }
-          inviteCommander.acceptInvitation(org.id.get, userId, "authToken") === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inviteCommander.acceptInvitation(org.id.get, userId, Some("authToken")) === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
     }

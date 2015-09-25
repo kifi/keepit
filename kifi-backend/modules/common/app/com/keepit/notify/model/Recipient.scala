@@ -14,6 +14,11 @@ case class UserRecipient(id: Id[User], experimentEnabled: Option[Boolean] = None
   override val kind = "user"
 
   override def toString = id.toString
+
+  override def equals(that: Any): Boolean = that match {
+    case UserRecipient(thatId, _) if thatId == this.id => true
+    case _ => false
+  }
 }
 
 case class EmailRecipient(address: EmailAddress) extends Recipient {

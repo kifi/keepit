@@ -34,43 +34,26 @@
           </div>
 
           <div class="manage-lib-input-wrapper" ng-if="me.orgs.length">
-            <h3 class="manage-lib-heading"></h3>
+            <h3 class="manage-lib-heading">Location</h3>
             <div class="manage-lib-input-area">
-              <label>
-                <input type="checkbox" ng-model="libraryProps.inOrg" ng-click="setOrg()" />
-                Organization library
-              </label>
-              <div class="manage-lib-org-selector" ng-show="libraryProps.inOrg">
-                <div
-                  class="manage-lib-org-selector-org"
-                  ng-repeat="org in me.orgs"
-                  ng-class="{'selected': libraryProps.selectedOrgId === org.id}"
-                  ng-click="setOrg(org.id)"
-                >
-                  <img ng-src="{{ org|pic:100 }}" />
-                  <h1>{{org.name}}</h1>
-                </div>
-              </div>
-              <div class="manage-lib-user-selector" ng-show="!libraryProps.inOrg">
-                <img ng-src="{{ me|pic:100 }}" />
-                <span>This library will be created on your profile.</span>
+              <div
+                kf-org-selector
+                library-props="libraryProps"
+                library="library"
+                space="space"
+              >
               </div>
             </div>
           </div>
 
           <div class="manage-lib-input-wrapper">
             <h3 class="manage-lib-heading">Privacy</h3>
-            <div class="manage-lib-input-area manage-lib-create-visibility-wrapper" ng-switch="library.visibility">
-              <div kf-library-visibility-selector library="library" space="space.destination"></div>
-              <p ng-switch-when="published" class="manage-lib-create-visiblity-description">
-                Anyone can see and follow this library
-              </p>
-              <p ng-switch-when="organization" class="manage-lib-create-visiblity-description">
-                Only members of {{ space.destination | name }} can see this library
-              </p>
-              <p ng-switch-when="secret" class="manage-lib-create-visiblity-description">
-                Only people you invite can see this library
-              </p>
+            <div class="manage-lib-input-area manage-lib-create-visibility-wrapper">
+              <div 
+                kf-library-visibility-selector 
+                library="library" 
+                space="space.destination"
+              ></div>
             </div>
           </div>
 

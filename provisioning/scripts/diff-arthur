@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# Diff a local file against the same file on arthur
+#
+
+LOCAL_FILE=$1
+
+if [[ ! -f $LOCAL_FILE ]]; then
+  echo "Local file not found: $LOCAL_FILE"
+  exit 1
+fi
+
+# assumes the caller has an SSH alias "arthur" that has the correct host/ip & port
+HOST=arthur
+
+ssh $HOST "cat ansible/$LOCAL_FILE" | diff - $LOCAL_FILE

@@ -14,7 +14,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ UserFactory, User }
-import com.keepit.realtime.{ FakeAppBoyModule, FakeUrbanAirshipModule }
+import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, FakeShoeboxServiceModule, ShoeboxServiceClient }
@@ -43,7 +43,6 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     FakeHeimdalServiceClientModule(),
     FakeElizaServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeUrbanAirshipModule(),
     FakeAppBoyModule(),
     FakeUserActionsModule(),
     FakeCryptoModule(),

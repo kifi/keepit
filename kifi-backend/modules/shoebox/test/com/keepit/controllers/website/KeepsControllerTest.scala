@@ -16,12 +16,12 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.graph.FakeGraphServiceModule
 import com.keepit.heimdal._
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -45,8 +45,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeHeimdalServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule()
+    FakeCortexServiceClientModule()
   )
 
   def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id
@@ -104,19 +103,20 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE))
 
-          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-          val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
+          val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
             uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           (user1, user2, bookmark1, bookmark2, bookmark3, lib1)
         }
-        val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        implicit val pubIdConfig = inject[PublicIdConfiguration]
+        val pubLibId1 = Library.publicId(lib1.id.get)
         val keeps = db.readWrite { implicit s =>
           keepRepo.getByUser(user1.id.get, None, None, 100)
         }
@@ -158,7 +158,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "hashtags":[],
               "summary":{},
               "siteName":"Amazon",
-              "libraryId":"${pubLibId1.id}"},
+              "libraryId":"${pubLibId1.id}",
+              "library":${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+              },
             {
               "id":"${bookmark1.externalId.toString}",
               "title":"G1",
@@ -181,7 +183,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "hashtags":[],
               "summary":{},
               "siteName":"Google",
-              "libraryId":"${pubLibId1.id}"}
+              "libraryId":"${pubLibId1.id}",
+              "library":${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+              }
           ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
@@ -216,20 +220,20 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
           libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
-          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
             uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-          val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
+          val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
             uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
           (user1, bookmark1, bookmark2, bookmark3, lib1)
         }
-
-        val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
+        implicit val pubIdConfig = inject[PublicIdConfiguration]
+        val pubLibId1 = Library.publicId(lib1.id.get)
         val keeps = db.readWrite { implicit s =>
           keepRepo.getByUser(user1.id.get, None, None, 100)
         }
@@ -269,7 +273,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                 "hashtags":[],
                 "summary":{},
                 "siteName":"Amazon",
-                "libraryId":"${pubLibId1.id}"
+                "libraryId":"${pubLibId1.id}",
+                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
               }
             ]
           }
@@ -286,7 +291,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep], u1Main: Library, _) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -299,6 +304,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3), (Seq(keeps1(0).userId), 1))
 
         inject[FakeUserActionsHelper].setUser(u1)
+
+        implicit val publicIdConfiguration = inject[PublicIdConfiguration]
 
         val request = FakeRequest("GET", path)
         val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = Some("click"), count = 20, withPageInfo = false)(request)
@@ -328,7 +335,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "hashtags":[],
                       "summary":{},
                       "siteName":"Kifi",
-                      "libraryId":"l7jlKlnA36Su"
+                      "libraryId":"${Library.publicId(u1Main.id.get)(inject[PublicIdConfiguration]).id}",
+                      "library":${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get)(inject[PublicIdConfiguration]), name = "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
@@ -348,7 +356,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
-                      "libraryId":"l7jlKlnA36Su"
+                      "libraryId":"l7jlKlnA36Su",
+                      "library":${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get), name = "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
                     }
                   ],
                   "helprank":"click"
@@ -367,7 +376,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep], u1Main: Library, _) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -380,6 +389,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         inject[FakeSearchServiceClient].setKeepers((Seq(keeps1(1).userId, u2.id.get), 3))
 
         inject[FakeUserActionsHelper].setUser(u1)
+
+        implicit val publicIdConfiguration = inject[PublicIdConfiguration]
 
         val request = FakeRequest("GET", path)
         val result = inject[KeepsController].allKeeps(before = Some(keeps1(1).externalId.toString), after = None, collectionOpt = None, helprankOpt = Some("click"), count = 20, withPageInfo = false)(request)
@@ -409,7 +420,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "hashtags":[],
                       "summary":{},
                       "siteName":"FortyTwo",
-                      "libraryId":"l7jlKlnA36Su"
+                      "libraryId":"l7jlKlnA36Su",
+                      "library": ${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get), "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
                     }
                   ],
                   "helprank":"click"
@@ -427,7 +439,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val heimdal = inject[HeimdalServiceClient].asInstanceOf[FakeHeimdalServiceClientImpl]
         val db = inject[Database]
 
-        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep]) = helpRankSetup(heimdal, db)
+        val (u1: User, u2: User, u3, keeps1: Seq[Keep], keeps2: Seq[Keep], keeps3: Seq[Keep], u1Main: Library, u3Main: Library) = helpRankSetup(heimdal, db)
 
         val keeps = db.readOnlyMaster { implicit s =>
           keepRepo.getByUser(u1.id.get, None, None, 100)
@@ -439,6 +451,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         inject[FakeSearchServiceClient] === inject[FakeSearchServiceClient]
 
         inject[FakeUserActionsHelper].setUser(u3)
+
+        implicit val publicIdConfiguration = inject[PublicIdConfiguration]
 
         val request = FakeRequest("GET", path)
         val result = inject[KeepsController].allKeeps(before = None, after = None, collectionOpt = None, helprankOpt = Some("click"), count = 2, withPageInfo = false)(request)
@@ -468,7 +482,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "hashtags":[],
                                       "summary":{},
                                       "siteName":"Facebook",
-                                      "libraryId":"lzmfsKLJyou6"
+                                      "libraryId":"lzmfsKLJyou6",
+                                      "library": ${Json.toJson(BasicLibrary(Library.publicId(u3Main.id.get), "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
                                     },
                                     {
                                       "id":"${keeps3(0).externalId.toString}",
@@ -488,7 +503,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "hashtags":[],
                                       "summary":{},
                                       "siteName":"Kifi",
-                                      "libraryId":"lzmfsKLJyou6"
+                                      "libraryId":"lzmfsKLJyou6",
+                                      "library": ${Json.toJson(BasicLibrary(Library.publicId(u3Main.id.get), "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
                                     }
                                   ],
                                   "helprank":"click"
@@ -537,7 +553,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val user1 = db.readWrite { implicit session =>
           UserFactory.user().withName("Mega", "Tron").withUsername("test").saved
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(user1.id.get)
         db.readWrite { implicit session =>
           val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
           val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))
@@ -551,10 +567,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
-          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
-          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
 
@@ -732,7 +748,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val user1 = db.readWrite { implicit session =>
           UserFactory.user().withName("Mega", "Tron").withUsername("test").saved
         }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(user1.id.get)
         db.readWrite { implicit session =>
           val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
           val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))
@@ -747,10 +763,10 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
           val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
-          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
-          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
             uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
 

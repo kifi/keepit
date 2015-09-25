@@ -13,12 +13,17 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
+import com.keepit.payments.{ DollarAmount, PlanManagementCommander, PaidPlan }
 import com.keepit.model._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
+
+case class KeepVisibilityCount(secret: Int, published: Int, organization: Int, discoverable: Int) {
+  def all = secret + published + organization + discoverable
+}
 
 case class UserStatistics(
   user: User,
@@ -27,8 +32,7 @@ case class UserStatistics(
   invitations: Int,
   invitedBy: Seq[User],
   socialUsers: Seq[SocialUserInfo],
-  privateKeeps: Int,
-  publicKeeps: Int,
+  keepVisibilityCount: KeepVisibilityCount,
   experiments: Set[UserExperimentType],
   kifiInstallations: Seq[KifiInstallation],
   librariesCreated: Int,
@@ -56,8 +60,7 @@ case class OrganizationStatisticsOverview(
 case class MemberStatistics(
   user: User,
   numChats: Int,
-  numPublicKeeps: Int,
-  numPrivateKeeps: Int,
+  keepVisibilityCount: KeepVisibilityCount,
   numLibrariesCreated: Int,
   numLibrariesCollaborating: Int,
   numLibrariesFollowing: Int,
@@ -94,7 +97,11 @@ case class OrganizationStatistics(
   experiments: Set[OrganizationExperimentType],
   domains: Set[Domain],
   internalMemberChatStats: Seq[SummaryByYearWeek],
-  allMemberChatStats: Seq[SummaryByYearWeek])
+  allMemberChatStats: Seq[SummaryByYearWeek],
+  credit: DollarAmount,
+  stripeToken: String,
+  billingCycleStart: DateTime,
+  plan: PaidPlan)
 
 case class OrganizationMemberRecommendationInfo(
   user: User,
@@ -108,6 +115,7 @@ class UserStatisticsCommander @Inject() (
     clock: Clock,
     kifiInstallationRepo: KifiInstallationRepo,
     keepRepo: KeepRepo,
+    keepToLibraryRepo: KeepToLibraryRepo,
     emailRepo: UserEmailAddressRepo,
     elizaClient: ElizaServiceClient,
     libraryRepo: LibraryRepo,
@@ -125,7 +133,8 @@ class UserStatisticsCommander @Inject() (
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
     domainRepo: DomainRepo,
     abook: ABookServiceClient,
-    airbrake: AirbrakeNotifier) {
+    airbrake: AirbrakeNotifier,
+    planManagementCommander: PlanManagementCommander) {
 
   def invitedBy(socialUserIds: Seq[Id[SocialUserInfo]], emails: Seq[UserEmailAddress])(implicit s: RSession): Seq[User] = {
     val invites = invitationRepo.getByRecipientSocialUserIdsAndEmailAddresses(socialUserIds.toSet, emails.map(_.address).toSet)
@@ -135,7 +144,7 @@ class UserStatisticsCommander @Inject() (
 
   def userStatistics(user: User, socialUserInfos: Map[Id[User], Seq[SocialUserInfo]])(implicit s: RSession): UserStatistics = {
     val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a, b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
-    val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(user.id.get)
+    val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(user.id.get)
     val emails = emailRepo.getAllByUser(user.id.get)
     val emailAddress = Try(emailRepo.getByUser(user.id.get)).toOption
     val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(user.id.get, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY))
@@ -152,8 +161,7 @@ class UserStatisticsCommander @Inject() (
       invitationRepo.countByUser(user.id.get),
       invitedBy(socialUserInfos.getOrElse(user.id.get, Seq()).map(_.id.get), emails),
       socialUserInfos.getOrElse(user.id.get, Seq()),
-      privateKeeps,
-      publicKeeps,
+      keepVisibilityCount,
       userExperimentRepo.getUserExperiments(user.id.get),
       kifiInstallations,
       librariesCreated,
@@ -167,7 +175,7 @@ class UserStatisticsCommander @Inject() (
   def membersStatistics(userIds: Set[Id[User]])(implicit session: RSession): Future[Map[Id[User], MemberStatistics]] = {
     val membersStatsFut = userIds.map { userId =>
       val numChatsFut = elizaClient.getUserThreadStats(userId)
-      val (numPrivateKeeps, numPublicKeeps) = keepRepo.getPrivatePublicCountByUser(userId)
+      val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
       val librariesCountsByAccess = libraryMembershipRepo.countsWithUserIdAndAccesses(userId, Set(LibraryAccess.OWNER, LibraryAccess.READ_ONLY, LibraryAccess.READ_WRITE))
       val numLibrariesCreated = librariesCountsByAccess(LibraryAccess.OWNER) // I prefer to see the Main and Secret libraries included
       val numLibrariesFollowing = librariesCountsByAccess(LibraryAccess.READ_ONLY)
@@ -180,8 +188,7 @@ class UserStatisticsCommander @Inject() (
         userId -> MemberStatistics(
           user = user,
           numChats = numChats.all,
-          numPublicKeeps = numPublicKeeps,
-          numPrivateKeeps = numPrivateKeeps,
+          keepVisibilityCount = keepVisibilityCount,
           numLibrariesCreated = numLibrariesCreated,
           numLibrariesCollaborating = numLibrariesCollaborating,
           numLibrariesFollowing = numLibrariesFollowing,
@@ -200,7 +207,7 @@ class UserStatisticsCommander @Inject() (
     }
 
     val fMemberRecommendations = try {
-      abook.getRecommendationsForOrg(orgId, adminId, disclosePrivateEmails = true, 0, numMemberRecos + members.size + candidates.size)
+      abook.getRecommendationsForOrg(orgId, viewerIdOpt = None, 0, numMemberRecos + candidates.size)
     } catch {
       case ex: Exception => airbrake.notify(ex); Future.successful(Seq.empty[OrganizationInviteRecommendation])
     }
@@ -261,6 +268,11 @@ class UserStatisticsCommander @Inject() (
       }
     }
 
+    val credit = planManagementCommander.getCurrentCredit(orgId)
+    val stripeToken = planManagementCommander.getDefaultPaymentMethod(orgId).map(_.stripeToken.token).getOrElse("N/A")
+    val plan = planManagementCommander.currentPlan(orgId)
+    val billingCycleStart = planManagementCommander.getBillingCycleStart(orgId)
+
     for {
       membersStats <- membersStatsFut
       memberRecos <- fMemberRecoInfos
@@ -283,7 +295,11 @@ class UserStatisticsCommander @Inject() (
       experiments = experiments,
       domains = domains,
       internalMemberChatStats = internalMemberChatStats,
-      allMemberChatStats = allMemberChatStats
+      allMemberChatStats = allMemberChatStats,
+      credit = credit,
+      stripeToken = stripeToken,
+      billingCycleStart = billingCycleStart,
+      plan = plan
     )
   }
 

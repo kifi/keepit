@@ -2,6 +2,7 @@ package com.keepit.eliza.model
 
 import com.keepit.common.time._
 import com.keepit.common.db.{ Model, Id }
+import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.model.{ User, NormalizedURI }
 
 import play.api.libs.json._
@@ -33,7 +34,8 @@ case class UserThread(
   replyable: Boolean = true,
   lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
   started: Boolean = false, //Whether or not this thread was started by this user
-  accessToken: ThreadAccessToken = ThreadAccessToken())
+  accessToken: ThreadAccessToken = ThreadAccessToken(),
+  notificationId: Option[Id[Notification]] = None)
     extends Model[UserThread] with ParticipantThread {
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
@@ -42,6 +44,8 @@ case class UserThread(
   lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updateAt, user = $user, thread = $threadId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
+
+  def toRawNotification: RawNotification = (lastNotification, unread, uriId)
 }
 
 object UserThread {

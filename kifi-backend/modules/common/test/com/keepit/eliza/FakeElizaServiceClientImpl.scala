@@ -30,12 +30,12 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   protected def httpClient: com.keepit.common.net.HttpClient = ???
   var inbox = List.empty[(Id[User], NotificationCategory, String, String)]
 
-  def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
+  def sendToUserNoBroadcast(userId: Id[User], data: JsArray) = Future.successful((): Unit)
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = Future.successful(1)
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int] = Future.successful(1)
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int] = Future.successful(1)
 
-  def sendToUser(userId: Id[User], data: JsArray): Unit = {}
+  def sendToUser(userId: Id[User], data: JsArray) = Future.successful((): Unit)
 
   def sendToAllUsers(data: JsArray): Unit = {}
 
@@ -94,5 +94,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   override def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = Future.successful(Seq.empty)
 
-  override def sendNotificationEvent(event: NotificationEvent): Unit = {}
+  override def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = Future.successful(0)
+
+  override def sendNotificationEvent(event: NotificationEvent): Future[Unit] = Future.successful(())
 }

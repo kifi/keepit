@@ -35,8 +35,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     userEmailAddressRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
     userRepo: UserRepo,
-    libraryInviteCommander: LibraryInviteCommander,
-    organizationInviteCommander: OrganizationInviteCommander,
+    pendingInviteCommander: PendingInviteCommander,
     heimdalClient: HeimdalServiceClient,
     emailConfirmationSender: EmailConfirmationSender,
     clock: Clock,
@@ -87,8 +86,8 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {
-    libraryInviteCommander.convertPendingInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
-    organizationInviteCommander.convertPendingInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
+    pendingInviteCommander.convertPendingLibraryInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
+    pendingInviteCommander.convertPendingOrgInvites(emailAddress = emailAddress.address, userId = emailAddress.userId)
     val verifiedEmail = userEmailAddressRepo.save(emailAddress.copy(verifiedAt = Some(currentDateTime)))
 
     lazy val isPendingPrimaryEmail = {

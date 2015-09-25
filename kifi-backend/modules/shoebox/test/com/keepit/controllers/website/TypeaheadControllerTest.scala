@@ -181,7 +181,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res1.head.value === "email/chan@jing.com"
 
         val res2 = search("doug")
-        res2.length === 1 // email de-duped
+        res2.length === 2 // email de-duped
         res2.head.label === "Douglas Adams"
 
         val res3 = search("郭靖")
@@ -250,7 +250,7 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         res1.head.value === "email/chan@jing.com"
 
         val res2 = search("doug")
-        res2.length === 1
+        res2.length === 2
         res2.head.value === s"fortytwo/${u2.externalId}" // email deduped due (userId set)
 
         val res3 = search("郭靖")

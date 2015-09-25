@@ -108,7 +108,13 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
 
+  def getSharedThreadsForGroup(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
+
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
+
+  def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread]
+
+  def getThreadsThatNeedBackfilling()(implicit session: RSession): Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])]
 }
 
 /**
@@ -116,10 +122,9 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
  */
 @Singleton
 class UserThreadRepoImpl @Inject() (
-  val clock: Clock,
-  val db: DataBaseComponent,
-  userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache)
-    extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
+    val clock: Clock,
+    val db: DataBaseComponent,
+    userThreadStatsForUserIdCache: UserThreadStatsForUserIdCache) extends UserThreadRepo with DbRepo[UserThread] with DbRepoWithDelete[UserThread] with MessagingTypeMappers with Logging {
 
   import db.Driver.simple._
 
@@ -140,7 +145,8 @@ class UserThreadRepoImpl @Inject() (
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
     def started = column[Boolean]("started", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, replyable, lastActive, started, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def notificationId = column[Option[Id[Notification]]]("notification_id", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, replyable, lastActive, started, accessToken, notificationId) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user, threadId), unique = true)
   }
@@ -274,7 +280,8 @@ class UserThreadRepoImpl @Inject() (
     (for (
       row <- rows if row.user === userId &&
         row.unread &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+        row.replyable
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -286,7 +293,8 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId &&
         row.unread &&
         row.notificationUpdatedAt < time &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+        row.replyable
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -355,11 +363,11 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {
-    StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending").first
+    StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending and replyable").first
   }
 
   def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = {
-    StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending").first
+    StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and replyable").first
   }
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
@@ -480,7 +488,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
+  def getSharedThreadsForGroup(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     if (users.isEmpty) Seq.empty[GroupThreadStats]
     else {
@@ -489,14 +497,43 @@ class UserThreadRepoImpl @Inject() (
         select thread_id, created_at, count(*) as c from user_thread
           where user_id in (""" + users_list + """)
           and replyable = 1
-          and created_at >= '2015-1-1'
           group by thread_id
-          order by week(created_at)
-          desc
+          having count(*) > 1
       """
       val query = new SQLInterpolation_WarningsFixed(StringContext(queryStr)).sql.as[(Long, DateTime, Int)]
       query.list.map((GroupThreadStats.apply _).tupled)
     }
+  }
+
+  def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    if (users.isEmpty) Seq.empty[GroupThreadStats]
+    else {
+      val users_list = users.map(_.id).mkString("(", ",", ")")
+      sql"""
+        select thread_id, created_at, count(*) as c from user_thread
+          where user_id in #$users_list
+          and replyable = 1
+          and created_at >= '2015-1-1'
+          group by thread_id
+          order by week(created_at)
+          desc
+      """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
+    }
+  }
+
+  def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread] = {
+    (for (row <- rows if row.notificationId === id) yield row).firstOption
+  }
+
+  def getThreadsThatNeedBackfilling()(implicit session: RSession): Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""
+       select id, user_id, last_notification, notification_pending, uri_id from user_thread
+       where user_thread.replyable = FALSE and uri_id is null and last_notification != 'null' and not exists (
+         select * from notification where kind = 'legacy' and backfilled_for = user_thread.id
+       ) limit 500;
+      """.as[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])].list
   }
 
 }

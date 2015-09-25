@@ -1,7 +1,8 @@
 package com.keepit.controllers.admin
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander, LibrarySuggestedSearchCommander }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -18,6 +19,7 @@ import com.keepit.search.SearchServiceClient
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import play.api.mvc.Action
 import views.html
 
 import scala.concurrent.Future
@@ -51,6 +53,7 @@ class AdminLibraryController @Inject() (
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryCommander: LibraryCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     libraryImageRepoImpl: LibraryImageRepoImpl,
     userRepo: UserRepo,
     cortex: CortexServiceClient,
@@ -200,7 +203,7 @@ class AdminLibraryController @Inject() (
   }
 
   def internUserSystemLibraries(userId: Id[User]) = AdminUserPage { implicit request =>
-    val res = libraryCommander.internSystemGeneratedLibraries(userId)
+    val res = libraryInfoCommander.internSystemGeneratedLibraries(userId)
 
     Ok(res.toString)
   }
@@ -215,7 +218,7 @@ class AdminLibraryController @Inject() (
     }.flatten
 
     val result = confirmedIds.map { userId =>
-      userId.id + " -> " + libraryCommander.internSystemGeneratedLibraries(userId)
+      userId.id + " -> " + libraryInfoCommander.internSystemGeneratedLibraries(userId)
     }
 
     Ok(s"count: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))
@@ -307,7 +310,9 @@ class AdminLibraryController @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val newOwner = Id[User](body.get("user-id").get.toLong)
     val orgIdOpt = body.get("org-id").flatMap(id => Try(id.toLong).toOption).map(id => Id[Organization](id))
-    libraryCommander.unsafeTransferLibrary(libId, newOwner)
+    db.readWrite { implicit session =>
+      libraryCommander.unsafeTransferLibrary(libId, newOwner)
+    }
     val modifyRequest = orgIdOpt match {
       case Some(orgId) => LibraryModifyRequest(space = Some(LibrarySpace.fromOrganizationId(orgId)), visibility = Some(LibraryVisibility.ORGANIZATION))
       case None => LibraryModifyRequest(space = Some(LibrarySpace.fromUserId(newOwner)), visibility = Some(LibraryVisibility.PUBLISHED))
@@ -340,7 +345,7 @@ class AdminLibraryController @Inject() (
       (lib, keeps)
     }
     implicit val context = HeimdalContext.empty
-    libraryCommander.copyKeeps(lib.ownerId, toLibraryId = lib.id.get, keeps = keeps, withSource = Some(KeepSource.systemCopied))._2 foreach {
+    libraryCommander.copyKeeps(lib.ownerId, toLibraryId = lib.id.get, keeps = keeps.toSet, withSource = Some(KeepSource.systemCopied))._2 foreach {
       case (keep, libraryError) =>
         throw new Exception(s"can't copy keep $keep : $libraryError")
     }
@@ -360,6 +365,20 @@ class AdminLibraryController @Inject() (
       val (successes, fails) = libraryCommander.moveAllKeepsFromLibrary(userId, fromLibraryId, toLibraryId)
       Ok(Json.obj("moved" -> successes, "failures" -> fails.map(_._1)))
     }
+  }
+
+  def removeLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+    // delete all libraries with an inactive owner: no exceptions for collaborative or system libraries
+
+    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner }
+    FutureHelpers.sequentialExec(libIds)(libraryCommander.unsafeAsyncDeleteLibrary)
+
+    Ok
+  }
+
+  def getLibrariesWithInactiveOwner = AdminUserAction { implicit request =>
+    val libIds = db.readOnlyMaster { implicit session => libraryRepo.getLibrariesWithInactiveOwner }
+    Ok(Json.obj("ids" -> Json.toJson(libIds), "count" -> libIds.length))
   }
 
 }

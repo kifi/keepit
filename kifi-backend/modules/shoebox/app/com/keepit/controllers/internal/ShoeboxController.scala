@@ -1,5 +1,6 @@
 package com.keepit.controllers.internal
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.URI
 import com.google.inject.Inject
 import com.keepit.commanders._
@@ -14,9 +15,10 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, LocalPostOffice }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImageSize
+import com.keepit.common.store.{ S3ImageStore, ImageSize }
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.{ NotificationId, NotificationKind }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
@@ -38,6 +40,7 @@ class ShoeboxController @Inject() (
   userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
+  keepCommander: KeepCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
@@ -54,8 +57,11 @@ class ShoeboxController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
+  orgRepo: OrganizationRepo,
+  organizationAvatarCommander: OrganizationAvatarCommander,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
+  libraryAccessCommander: LibraryAccessCommander,
   friendRequestRepo: FriendRequestRepo,
   invitationRepo: InvitationRepo,
   userValueRepo: UserValueRepo,
@@ -68,13 +74,21 @@ class ShoeboxController @Inject() (
   libraryCommander: LibraryCommander,
   libraryImageCommander: LibraryImageCommander,
   libraryRepo: LibraryRepo,
+  libraryMembershipRepo: LibraryMembershipRepo,
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
+  libraryInfoCommander: LibraryInfoCommander,
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
+  s3ImageStore: S3ImageStore,
+  pathCommander: PathCommander,
+  organizationCommander: OrganizationCommander,
   userPersonaRepo: UserPersonaRepo,
-  rover: RoverServiceClient)(implicit private val clock: Clock,
+  orgCandidateRepo: OrganizationMembershipCandidateRepo,
+  permissionCommander: PermissionCommander,
+  rover: RoverServiceClient,
+  implicit val config: PublicIdConfiguration)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
 
@@ -444,7 +458,7 @@ class ShoeboxController @Inject() (
     val libraryId = (json \ "libraryId").as[Id[Library]]
     val userIdOpt = (json \ "userId").asOpt[Id[User]]
     val authToken = (json \ "authToken").asOpt[String]
-    val authorized = libraryCommander.canViewLibrary(userIdOpt, libraryId, authToken)
+    val authorized = libraryAccessCommander.canViewLibrary(userIdOpt, libraryId, authToken)
     Ok(JsBoolean(authorized))
   }
 
@@ -454,12 +468,19 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(keeps))
   }
 
-  def getBasicKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
+  def getPersonalKeeps(userId: Id[User]) = Action(parse.tolerantJson) { request =>
     val uriIds = request.body.as[Set[Id[NormalizedURI]]]
-    val keepDataByUriId = keepDecorator.getBasicKeeps(userId, uriIds)
-    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[BasicKeep]]
+    val keepDataByUriId = keepDecorator.getPersonalKeeps(userId, uriIds)
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[NormalizedURI], Set[PersonalKeep]]
     val result = Json.toJson(keepDataByUriId.toSeq)
     Ok(result)
+  }
+
+  def getBasicKeepsByIds() = Action(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Set[Id[Keep]]]
+    val keepDataById = keepCommander.getBasicKeeps(keepIds)
+
+    Ok(Json.toJson(keepDataById))
   }
 
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
@@ -467,7 +488,7 @@ class ShoeboxController @Inject() (
     val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
     val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
 
-    val basicDetailsByLibraryId = libraryCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
+    val basicDetailsByLibraryId = libraryInfoCommander.getBasicLibraryDetails(libraryIds, idealImageSize, viewerId)
     implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], BasicLibraryDetails]
     val result = Json.toJson(basicDetailsByLibraryId.toSeq)
     Ok(result)
@@ -492,7 +513,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
-    val libraryIds = libraryCommander.getLibrariesWithWriteAccess(userId)
+    val libraryIds = libraryInfoCommander.getLibrariesWithWriteAccess(userId)
     Ok(Json.toJson(libraryIds))
   }
 
@@ -520,5 +541,39 @@ class ShoeboxController @Inject() (
     val userIds = request.body.as[Set[Id[User]]]
     val orgIdsByUserId = organizationMembershipCommander.getAllForUsers(userIds).mapValues(_.map(_.organizationId))
     Ok(Json.toJson(orgIdsByUserId))
+  }
+
+  def getOrgTrackingValues(orgId: Id[Organization]) = Action { request =>
+    Ok(Json.toJson(organizationCommander.getOrgTrackingValues(orgId)))
+  }
+
+  def getBasicOrganizationsByIds() = Action(parse.tolerantJson) { request =>
+    val orgIds = request.body.as[Set[Id[Organization]]]
+    val basicOrgs = organizationCommander.getBasicOrganizations(orgIds)
+    Ok(Json.toJson(basicOrgs))
+  }
+
+  def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = Action { request =>
+    val membershipOpt = db.readOnlyReplica { implicit session => libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).map(_.toLibraryMembershipView) }
+    Ok(Json.toJson(membershipOpt))
+  }
+
+  def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = Action { request =>
+    val (membershipOpt, candidateOpt) = db.readOnlyReplica { implicit session =>
+      (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId), orgCandidateRepo.getByUserAndOrg(userId, orgId))
+    }
+    val inviteOpt = organizationInviteCommander.getLastSentByOrganizationIdAndInviteeId(orgId, userId)
+    Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), membershipOpt.map(_.permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
+  }
+
+  def getUserPermissionsByOrgId() = Action(parse.tolerantJson) { request =>
+    val orgIds = (request.body \ "orgIds").as[Set[Id[Organization]]]
+    val userId = (request.body \ "userId").as[Id[User]]
+
+    val permissionsByOrgId = db.readOnlyMaster { implicit session =>
+      orgIds.map { orgId => orgId -> permissionCommander.getOrganizationPermissions(orgId, Some(userId)) }.toMap
+    }
+
+    Ok(Json.toJson(permissionsByOrgId))
   }
 }

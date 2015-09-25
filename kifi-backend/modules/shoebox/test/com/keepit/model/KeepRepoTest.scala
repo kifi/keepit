@@ -14,6 +14,33 @@ import org.specs2.mutable._
 class KeepRepoTest extends Specification with ShoeboxTestInjector {
 
   "KeepRepo" should {
+    "save and load a keep" in {
+      withDb() { implicit injector =>
+        db.readWrite { implicit session =>
+          val savedKeep = keepRepo.save(Keep(
+            uriId = Id[NormalizedURI](1),
+            isPrimary = true,
+            url = "http://www.kifi.com",
+            visibility = LibraryVisibility.ORGANIZATION,
+            userId = Id[User](3),
+            source = KeepSource.keeper,
+            libraryId = Some(Id[Library](4)),
+            librariesHash = Some(LibrariesHash(5)),
+            participantsHash = Some(ParticipantsHash(6))
+          ))
+          val cacheKeep = keepRepo.get(savedKeep.id.get)
+          val dbKeep = keepRepo.getNoCache(savedKeep.id.get)
+          cacheKeep === dbKeep
+
+          // The savedKeep is not equal to the dbKeep because of originalKeeperId
+          // If you can figure out a way to have keepRepo.save give back the correct model, I will be so happy
+          // -- Ryan
+          def f(k: Keep) = (k.id.get, k.uriId, k.isPrimary, k.url, k.visibility, k.userId, k.source, k.libraryId, k.librariesHash, k.participantsHash)
+          f(dbKeep) === f(savedKeep)
+        }
+        1 === 1
+      }
+    }
     "getPrivate" in {
       withDb() { implicit injector =>
         val (user1, user2, keep1, keep2, keep3) = db.readWrite { implicit s =>
@@ -102,8 +129,12 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         db.readWrite { implicit s =>
           val user1 = user().saved
+          val library = LibraryFactory.library().withOwner(user1).saved
+          val keep = KeepFactory.keep().withUser(user1).withLibrary(library).saved
           inject[LibraryMembershipRepo]
-          inject[KeepRepo].getRecentKeepsFromFollowedLibraries(user1.id.get, 10, None, None)
+          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, None)
+          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, Some(keep.externalId), None)
+          inject[KeepRepo].getRecentKeeps(user1.id.get, 10, None, Some(keep.externalId))
           1 === 1
         }
       }

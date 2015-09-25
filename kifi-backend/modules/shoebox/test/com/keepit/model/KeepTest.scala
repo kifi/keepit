@@ -34,16 +34,16 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
       val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
-      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+      keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+      keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
         uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url, urlId = url2.id.get,
+      keepRepo.save(Keep(title = Some("A2"), userId = user1.id.get, url = url2.url,
         uriId = uri3.id.get, source = hover, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50),
         visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get)))
-      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id.get,
+      keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
         uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1),
         visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
@@ -134,8 +134,6 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         db.readOnlyMaster { implicit s =>
           keepRepo.getCountByUser(user1.id.get) === 3
           keepRepo.getCountByUser(user2.id.get) === 1
-          keepRepo.getPrivatePublicCountByUser(user1.id.get) === (1, 2)
-          keepRepo.getPrivatePublicCountByUser(user2.id.get) === (0, 1)
         }
       }
     }
@@ -154,7 +152,7 @@ class KeepTest extends Specification with ShoeboxTestInjector {
         }
         db.readWrite { implicit s =>
           val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
-          keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id.get,
+          keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
             uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
         }
@@ -194,15 +192,15 @@ class KeepTest extends Specification with ShoeboxTestInjector {
 
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
-          keepRepo.save(Keep(title = Some("k1"), userId = user.id.get, url = url1.url, urlId = url1.id.get,
+          keepRepo.save(Keep(title = Some("k1"), userId = user.id.get, url = url1.url,
             uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-          keepRepo.save(Keep(title = Some("k2"), userId = user.id.get, url = url2.url, urlId = url2.id.get,
+          keepRepo.save(Keep(title = Some("k2"), userId = user.id.get, url = url2.url,
             uriId = uri2.id.get, source = hover, createdAt = t1.plusMinutes(9), keptAt = t1.plusMinutes(9),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
 
-          keepRepo.save(Keep(title = Some("k3"), userId = user.id.get, url = url3.url, urlId = url3.id.get,
+          keepRepo.save(Keep(title = Some("k3"), userId = user.id.get, url = url3.url,
             uriId = uri3.id.get, source = hover, createdAt = t1.plusMinutes(6), keptAt = t1.plusMinutes(6),
             visibility = LibraryVisibility.SECRET, libraryId = Some(lib1.id.get)))
 

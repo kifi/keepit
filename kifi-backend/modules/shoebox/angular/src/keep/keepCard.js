@@ -3,10 +3,12 @@
 angular.module('kifi')
 
 .directive('kfKeepCard', [
-  '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
+  '$state', '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
   'modalService', 'keepActionService', 'undoService', '$rootScope', 'profileService',
-  function ($analytics, extensionLiaison, util, installService, libraryService,
-      modalService, keepActionService, undoService, $rootScope, profileService) {
+  '$injector',
+  function ($state, $analytics, extensionLiaison, util, installService, libraryService,
+      modalService, keepActionService, undoService, $rootScope, profileService,
+      $injector) {
 
     // constants for side-by-side layout image sizing heuristic, based on large screen stylesheet values
     var cardW = 496;
@@ -114,8 +116,10 @@ angular.module('kifi')
             // don't repeat the user at the top of the keep card in the keeper list
             _.remove(keep.keepers, {id: keep.user.id});
           }
-          if (keep.libraryId) {
+          if (keep.libraryId && $state.includes('libraries')) {
             // if on a library page, don't show the library
+            // TODO: The controller should not decide what data is SHOWN, that's
+            // the template's responsibility...
             _.remove(keep.libraries, function (pair) {
               return pair[0].id === keep.libraryId;
             });
@@ -153,9 +157,23 @@ angular.module('kifi')
         //
         // Scope methods.
         //
-        $rootScope.$on('onWidgetLibraryClicked', function(event, args) {
-          scope.onWidgetLibraryClicked(args.clickedLibrary);
-        });
+        scope.editKeepNote = function (event, keep) {
+          if (keep.id !== scope.keep.id || keep.user.id !== profileService.me.id) {
+            return;
+          }
+
+          var keepEl = angular.element(event.target).closest('.kf-keep');
+          var editor = keepEl.find('.kf-knf-editor');
+          if (!editor.length) {
+            var noteEl = keepEl.find('.kf-keep-note');
+            var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keep.library.id; })[0];
+            $injector.get('keepNoteForm').init(noteEl, keep.note, keep.library.id, distinctKeep.id, function update(noteText) {
+              keep.note = noteText;
+            });
+          } else {
+            editor.focus();
+          }
+        };
 
         scope.onWidgetLibraryClicked = function (clickedLibrary) {
           if (scope.keptToLibraryIds.indexOf(clickedLibrary.id) >= 0) {
@@ -183,7 +201,7 @@ angular.module('kifi')
                   scope.keep.keepersTotal++;
 
                   libraryService.addToLibraryCount(clickedLibrary.id, 1);
-                  scope.$emit('keepAdded', [scope.keep], clickedLibrary);
+                  $rootScope.$broadcast('keepAdded', [scope.keep], clickedLibrary);
                 })['catch'](modalService.openGenericErrorModal);
               });
             })['catch'](modalService.openGenericErrorModal);
@@ -199,17 +217,11 @@ angular.module('kifi')
               scope.$emit('keepAdded', [fullKeep], clickedLibrary);
             };
 
-            (scope.keep.id ? // Recommended keeps have no keep.id.
-              keepActionService.copyToLibrary([scope.keep.id], clickedLibrary.id, scope.galleryView).then(function (result) {
-                if (result.successes.length > 0) {
-                  return keepActionService.fetchFullKeepInfo(scope.keep).then(fetchKeepInfoCallback);
-                }
-              }) :
-              keepActionService.keepToLibrary([{title: scope.keep.title, url: scope.keep.url}], clickedLibrary.id).then(function (result) {
-                if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
-                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(fetchKeepInfoCallback);
-                }
-              }))['catch'](modalService.openGenericErrorModal);
+            keepActionService.keepToLibrary([{title: scope.keep.title, url: scope.keep.url}], clickedLibrary.id).then(function (result) {
+              if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
+                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(fetchKeepInfoCallback);
+              }
+            })['catch'](modalService.openGenericErrorModal);
           }
         };
 
@@ -227,10 +239,6 @@ angular.module('kifi')
             //   });
             // });
           }
-        };
-
-        scope.editKeepNote = function (event, keep) {
-          $rootScope.$emit('editKeepNote', event, keep);
         };
 
         scope.trackTweet = function () {
@@ -257,6 +265,13 @@ angular.module('kifi')
           if (newVal) {
             scope.libraries = _.reject(libraryService.getOwnInfos(), {id: scope.keep.libraryId});
           }
+        });
+        [
+          $rootScope.$on('onWidgetLibraryClicked', function(event, args) {
+            scope.onWidgetLibraryClicked(args.clickedLibrary);
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
         });
       }
     };

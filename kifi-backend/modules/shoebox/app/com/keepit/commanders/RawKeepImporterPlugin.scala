@@ -47,8 +47,8 @@ private class RawKeepImporterActor @Inject() (
     libraryRepo: LibraryRepo,
     airbrake: AirbrakeNotifier,
     libraryAnalytics: LibraryAnalytics,
-    bookmarksCommanderProvider: Provider[KeepsCommander],
-    libraryCommanderProvider: Provider[LibraryCommander],
+    bookmarksCommanderProvider: Provider[KeepCommander],
+    libraryInfoCommander: LibraryInfoCommander,
     rover: RoverServiceClient,
     searchClient: SearchServiceClient,
     clock: Clock,
@@ -205,7 +205,7 @@ private class RawKeepImporterActor @Inject() (
   private val librariesByUserId: Cache[Id[User], (Library, Library)] = CacheBuilder.newBuilder().concurrencyLevel(4).initialCapacity(128).maximumSize(128).expireAfterWrite(30, TimeUnit.SECONDS).build()
   private def getLibFromPrivacy(isPrivate: Boolean, userId: Id[User])(implicit session: RWSession) = {
     val (main, secret) = librariesByUserId.get(userId, new Callable[(Library, Library)] {
-      def call() = libraryCommanderProvider.get.getMainAndSecretLibrariesForUser(userId)
+      def call() = libraryInfoCommander.getMainAndSecretLibrariesForUser(userId)
     })
     if (isPrivate) secret else main
   }
@@ -246,7 +246,7 @@ case class RawKeepGroupImportContext(userId: Id[User], source: KeepSource, insta
 @Singleton
 class KeepTagImportHelper @Inject() (
     db: Database,
-    keepsCommanderProvider: Provider[KeepsCommander],
+    keepsCommanderProvider: Provider[KeepCommander],
     kifiInstallationRepo: KifiInstallationRepo) extends Logging {
 
   def process(rawKeepGroupImportContext: RawKeepGroupImportContext): Unit = {

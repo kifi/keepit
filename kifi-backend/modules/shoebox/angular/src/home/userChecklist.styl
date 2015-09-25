@@ -1,0 +1,82 @@
+section-padding = 10px 16px
+section-border = defaultBorder
+section-border-radius = 10px
+
+.kf-uc
+  padding: 10px 16px
+  line-height: 14px
+  font-size: 12px
+  overflow: hidden
+  border-radius: section-border-radius
+  border: section-border
+  background-color: #fff
+
+levitate-color = rgba(79, 196, 158, .5)
+
+.kf-uc-highlight-levitate
+  box-shadow: 0 5px 10px 5px rgba(0,0,0,0.5)
+  animation: kf-uc-highlight-levitate-anim 2s ease-in-out infinite
+
+@keyframes kf-uc-highlight-levitate-anim
+  0%
+    box-shadow: 0 0 15px 0px levitate-color
+  50%
+    box-shadow: 0 0 15px 10px levitate-color
+  100%
+    box-shadow: 0 0 15px 0px levitate-color
+
+.kf-uc-title
+  font-size: 15px
+  padding: 6px 0 16px
+
+.kf-uc-item
+  cursor: pointer
+
+.kf-uc-item + .kf-uc-item
+  margin-top: 16px
+
+.kf-uc-item-title
+  font-size: 12px
+
+.kf-uc-item:hover .kf-uc-item-title
+  text-decoration: underline
+
+.kf-uc-item-subtitle
+  margin: 0
+  color: #999
+  font-size: 10px
+
+.kf-uc-check
+  float: left
+  width: 23px
+  height: 23px
+  margin: 2px 5px 5px 0
+  border-radius: 50%
+  border: 1px solid #bbb
+
+.kf-uc-item-complete
+  &:hover .kf-uc-item-title
+    text-decoration: none
+
+  .kf-uc-item-title
+  .kf-uc-item-subtitle
+    color: accentGreen
+
+  .kf-uc-check
+    border-color: accentGreen
+    background-position: center
+    background-size: 14px 14px
+    background-repeat: no-repeat
+
+.kf-uc-example-follow-btn.kf-rcl-follow-btn
+  vertical-align: middle
+  // Adjust the size to make it look less like a "real" CTA
+  width: 90px
+  height: 26px
+  padding-right: 2px
+  line-height: 25px
+
+.kf-ucl-follow-example
+  font-size: 11px
+  text-transform: uppercase
+  text-shadow: 0 0 1px rgba(0,0,0,0.4);

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="@routes.Assets.at("bootstrap/css/bootstrap.min.css")" />
     <link rel="stylesheet" href="@routes.Assets.at("bootstrap/css/bootstrap-theme.min.css")" />
     <link rel="stylesheet" href="@routes.Assets.at("bootstrap/css/bootstrap-responsive.min.css")" />
+    <link rel="stylesheet" href="@routes.Assets.at("tablesorter/theme.green.min.css")" />
     @for(stylesheet <- "admin_main" :: stylesheets) {
       <link rel="stylesheet" href="@routes.Assets.at("stylesheets/" + stylesheet + ".css")">
     }
@@ -15,6 +16,7 @@
       <script src="@routes.Assets.at("javascripts/jquery" + ext)"></script>
       <script src="@routes.Assets.at("bootstrap/js/bootstrap" + ext)"></script>
     }
+    <script src="@routes.Assets.at("tablesorter/jquery.tablesorter.combined.min.js")"></script>
     @for(script <- scripts) {
       <script src="@routes.Assets.at("javascripts/" + script + ".js")"></script>
     }
@@ -40,8 +42,6 @@
               <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Keeps</a>
               <ul class="dropdown-menu" role="menu">
                 <li><a href="@com.keepit.controllers.admin.routes.AdminLibraryController.index(0)">Libraries</a>
-                <li><a href="@com.keepit.controllers.admin.routes.AdminLibraryRecommendationsController.index()">Library Recommendations</a>
-                <li><a href="@com.keepit.controllers.admin.routes.AdminGeneralRecommendationsController.view()">General Recommendations</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Keeps</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksKeywordsPageView(0)">Keep Keywords</a>
                 <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.whoKeptMyKeeps()">Who Kept My Keeps</a>
@@ -100,15 +100,6 @@
                     <li><a href="@com.keepit.controllers.admin.routes.AdminPornDetectorController.index">Porn Detector</a>
                 </ul>
                </li>
-
-               <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown" href="javascript:">Curator</a>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="@com.keepit.controllers.admin.routes.AdminCuratorController.view">Feedback</a>
-                </ul>
-               </li>
-
-
 
               <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="@com.keepit.controllers.admin.routes.AdminHealthController.serviceView">Service</a>

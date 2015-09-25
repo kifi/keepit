@@ -18,7 +18,7 @@ import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
-import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.info._
 import com.keepit.notify.model.NotificationId
 import com.keepit.rover.model.BasicImages
 import com.keepit.search._
@@ -244,7 +244,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       case (uri, user, optionalTitle) =>
         val library = internLibrary(user.id.get, isPrivate)
         val url = uriToUrl(uri.id.get)
-        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, urlId = url.id.get, url = url.url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), originalKeeperId = Some(user.id.get))
+        Keep(title = optionalTitle orElse uri.title, userId = user.id.get, uriId = uri.id.get, url = url.url, source = source, visibility = library.visibility, libraryId = Some(library.id.get), originalKeeperId = Some(user.id.get))
     }
     saveBookmarks(bookmarks: _*)
   }
@@ -324,7 +324,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]] = Future.successful(allNormalizedURIs.values.find(_.url == url))
 
-  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = ???
+  def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]] = Future.successful(Right(url))
 
   def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
     val uri = allNormalizedURIs.values.find(_.url == url) getOrElse NormalizedURI.withHash(url).copy(id = Some(Id[NormalizedURI](url.hashCode)))
@@ -621,9 +621,9 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]] =
     Future.successful(newKeepsInLibrariesExpectation(userId).take(max))
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = Future.successful {
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[PersonalKeep]]] = Future.successful {
     (allUserBookmarks(userId).map(allBookmarks(_)).groupBy(_.uriId) -- uriIds).mapValues(_.map { keep =>
-      BasicKeep(
+      PersonalKeep(
         keep.externalId,
         keep.userId == userId,
         true,
@@ -633,7 +633,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     })
   }
 
-  def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]] = ???
+  def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]] = Future.successful(Map.empty)
 
   def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
 
@@ -668,4 +668,16 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]] = Future.successful(None)
 
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = Future.successful(Map.empty)
+
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = Future.successful(OrgTrackingValues(0, 0, 0, 0))
+
+  def getBasicKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = Future.successful(Map.empty)
+
+  def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = Future.successful(Map.empty)
+
+  def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = Future.successful(None)
+
+  def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = Future.successful(OrganizationUserRelationship(orgId = Id[Organization](1), userId = Id[User](1), role = None, permissions = None, isInvited = false, isCandidate = false))
+
+  def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
 }

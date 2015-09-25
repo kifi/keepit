@@ -16,6 +16,7 @@ import com.keepit.cortex.core.{ StatModel, ModelVersion }
 import com.keepit.cortex.models.lda.DenseLDA
 import com.keepit.common.mail.EmailAddress
 import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
+import com.keepit.typeahead.UserPrefixSearchRequest
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.social.SocialNetworkType
@@ -147,7 +148,7 @@ object Shoebox extends Service {
     def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipsChanged", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def canViewLibrary() = ServiceRoute(POST, "/internal/shoebox/database/canViewLibrary")
     def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
-    def getBasicKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeeps", Param("userId", userId))
+    def getPersonalKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getPersonalKeeps", Param("userId", userId))
     def getBasicLibraryDetails() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryDetails")
     def getKeepCounts() = ServiceRoute(POST, "/internal/shoebox/database/getKeepCounts")
     def getKeepImages() = ServiceRoute(POST, "/internal/shoebox/database/getKeepImages")
@@ -164,6 +165,12 @@ object Shoebox extends Service {
     def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/hasOrganizationMembership", Param("orgId", orgId), Param("userId", userId))
     def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/getIngestableOrganizationDomainOwnerships", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getOrganizationsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationsForUsers")
+    def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))
+    def getBasicKeepsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeepsByIds")
+    def getBasicOrganizationsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicOrganizationsByIds")
+    def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipView", Param("libraryId", libraryId), Param("userId", userId))
+    def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationUserRelationship", Param("orgId", orgId), Param("userId", userId))
+    def getUserPermissionsByOrgId() = ServiceRoute(POST, "/internal/shoebox/database/getUserPermissionsByOrgId")
   }
 }
 
@@ -183,6 +190,7 @@ object Search extends Service {
     def getLibraryDocument() = ServiceRoute(POST, s"/internal/search/index/library/document")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
     def searchUsers() = ServiceRoute(POST, "/internal/search/search/users")
+    def searchUsersByName() = ServiceRoute(POST, "/internal/search/search/users/name")
     def userTypeahead() = ServiceRoute(POST, "/internal/search/search/userTypeahead")
     def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: Option[String], debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean) =
       ServiceRoute(GET, "/internal/search/search/uri/explain", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("libraryId", libraryId), Param("lang", lang), Param("debug", debug), Param("disablePrefixSearch", disablePrefixSearch), Param("disableFullTextSearch", disableFullTextSearch))
@@ -240,6 +248,7 @@ object Eliza extends Service {
     def getUnreadNotifications(userId: Id[User], howMany: Int) = ServiceRoute(GET, "/internal/eliza/getUnreadNotifications", Param("userId", userId), Param("howMany", howMany))
     def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
+    def getTotalMessageCountForGroup = ServiceRoute(POST, "/internal/eliza/getTotalMessageCountForGroup")
   }
 }
 
@@ -313,7 +322,7 @@ object ABook extends Service {
     def hideInviteRecommendationForUser(userId: Id[User]) = ServiceRoute(POST, s"/internal/abook/user/${userId}/hideInviteRecommendation")
     def getIrrelevantPeopleForUser(userId: Id[User]) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getIrrelevantPeople")
     def getIrrelevantPeopleForOrg(orgId: Id[Organization]) = ServiceRoute(GET, s"/internal/abook/org/${orgId}/getIrrelevantPeople")
-    def getRecommendationsForOrg(orgId: Id[Organization], viewerId: Id[User], disclosePrivateEmails: Boolean, offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/org/$orgId/getRecommendations", Param("orgId", orgId), Param("viewerId", viewerId), Param("disclosePrivateEmails", disclosePrivateEmails), Param("offset", offset), Param("limit", limit))
+    def getRecommendationsForOrg(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/org/$orgId/getRecommendations", Param("orgId", orgId), Param("viewerIdOpt", viewerIdOpt.map(_.id)), Param("offset", offset), Param("limit", limit))
     def hideUserRecommendationForOrg(orgId: Id[Organization], memberId: Id[User], irrelevantUserId: Id[User]) = ServiceRoute(POST, s"/internal/abook/org/$orgId/hideUserRecommendation")
     def hideEmailRecommendationForOrg(orgId: Id[Organization]) = ServiceRoute(POST, s"/internal/abook/org/${orgId}/hideEmailRecommendation")
     def getOrganizationRecommendationsForUser(userId: Id[User], offset: Int, limit: Int) = ServiceRoute(GET, s"/internal/abook/user/${userId}/getOrganizationRecommendations", Param("offset", offset), Param("limit", limit))
@@ -377,23 +386,6 @@ object Graph extends Service {
     def getSociallyRelatedEntitiesForUser(userId: Id[User]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntitiesForUser", Param("userId", userId))
     def getSociallyRelatedEntitiesForOrg(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/graph/getSociallyRelatedEntitiesForOrg", Param("orgId", orgId))
     def explainFeed() = ServiceRoute(POST, "/internal/graph/explainFeed")
-  }
-}
-
-object Curator extends Service {
-  object internal {
-    def topRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/topRecos", Param("userId", userId))
-    def topPublicRecos(userId: Option[Id[User]]) = ServiceRoute(GET, "/internal/curator/topPublicRecos", Param("userId", userId))
-    def generalRecos() = ServiceRoute(GET, "/internal/curator/generalRecos")
-    def updateUriRecommendationFeedback(userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/curator/updateUriRecommendationFeedback", Param("userId", userId), Param("uriId", uriId))
-    def updateLibraryRecommendationFeedback(userId: Id[User], libraryId: Id[Library]) = ServiceRoute(POST, "/internal/curator/updateLibraryRecommendationFeedback", Param("userId", userId), Param("libraryId", libraryId))
-    def triggerEmailToUser(code: String, userId: Id[User]) = ServiceRoute(POST, "/internal/curator/triggerEmailToUser", Param("code", code), Param("userId", userId))
-    def refreshUserRecos(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/refreshUserRecos", Param("userId", userId))
-    def topLibraryRecos(userId: Id[User], limit: Option[Int]) = ServiceRoute(POST, "/internal/curator/topLibraryRecos", Param("userId", userId), Param("limit", limit))
-    def refreshLibraryRecos(userId: Id[User], await: Boolean) = ServiceRoute(POST, "/internal/curator/refreshLibraryRecos", Param("userId", userId), Param("await", await))
-    def notifyLibraryRecosDelivered(userId: Id[User]) = ServiceRoute(POST, "/internal/curator/notifyLibraryRecosDelivered", Param("userId", userId))
-    def ingestPersonaRecos(userId: Id[User], reverseIngestion: Boolean) = ServiceRoute(POST, "/internal/curator/ingestPersonaRecos", Param("userId", userId), Param("reverseIngestion", reverseIngestion))
-    def examineUserFeedbackCounter(userId: Id[User]) = ServiceRoute(GET, "/internal/curator/examineUserFeedbackCounter", Param("userId", userId))
   }
 }
 

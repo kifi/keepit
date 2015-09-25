@@ -4,6 +4,7 @@ import com.keepit.common.cache._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.Id.mapOfIdToObjectFormat
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.path.Path
 import com.keepit.common.store.S3UserPictureConfig
 import com.keepit.model._
 import play.api.libs.functional.syntax._
@@ -11,30 +12,6 @@ import play.api.libs.json._
 import scala.annotation.switch
 import scala.concurrent.duration.Duration
 import play.api.Play
-
-trait BasicUserLikeEntity {
-  def asBasicUser: Option[BasicUser] = None
-  def asBasicNonUser: Option[BasicNonUser] = None
-}
-
-object BasicUserLikeEntity {
-  private implicit val nonUserTypeFormat = Json.format[NonUserKind]
-  implicit val format = new Format[BasicUserLikeEntity] {
-    def reads(json: JsValue): JsResult[BasicUserLikeEntity] = {
-      // Detect if this is a BasicUser or BasicNonUser
-      (json \ "kind").asOpt[String] match {
-        case Some(kind) => BasicNonUser.format.reads(json)
-        case None => BasicUser.format.reads(json)
-      }
-    }
-    def writes(entity: BasicUserLikeEntity): JsValue = {
-      entity match {
-        case b: BasicUser => BasicUser.format.writes(b)
-        case b: BasicNonUser => BasicNonUser.format.writes(b)
-      }
-    }
-  }
-}
 
 trait BasicUserFields {
   def externalId: ExternalId[User]
@@ -59,8 +36,8 @@ case class BasicUser(
     firstName: String,
     lastName: String,
     pictureName: String,
-    username: Username) extends BasicUserLikeEntity with BasicUserFields {
-  override def asBasicUser = Some(this)
+    username: Username) extends BasicUserFields {
+  def path: Path = Path(username.value)
 }
 
 object BasicUser {

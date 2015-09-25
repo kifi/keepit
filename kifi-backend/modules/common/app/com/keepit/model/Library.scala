@@ -8,9 +8,9 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCache
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.path.Path
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
-import com.keepit.model.view.LibraryMembershipView
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 
@@ -43,7 +43,8 @@ case class Library(
     lastKept: Option[DateTime] = None,
     keepCount: Int = 0,
     whoCanInvite: Option[LibraryInvitePermissions] = None,
-    organizationId: Option[Id[Organization]] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    organizationId: Option[Id[Organization]] = None,
+    organizationMemberAccess: Option[LibraryAccess] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def sanitizeForDelete: Library = this.copy(
     name = RandomStringUtils.randomAlphanumeric(20),
@@ -57,8 +58,11 @@ case class Library(
   def withOwner(newOwner: Id[User]) = this.copy(ownerId = newOwner)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
+  def isUserCreated: Boolean = kind == LibraryKind.USER_CREATED || kind == LibraryKind.SYSTEM_PERSONA
+  def isSystemCreated: Boolean = !isUserCreated
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
+
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -90,8 +94,9 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     lastKept: Option[DateTime],
     keepCount: Int,
     whoCanInvite: Option[LibraryInvitePermissions],
-    organizationId: Option[Id[Organization]] = None) = {
-    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId)
+    organizationId: Option[Id[Organization]],
+    organizationMemberAccess: Option[LibraryAccess]) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId, organizationMemberAccess)
   }
 
   def unapplyToDbRow(lib: Library) = {
@@ -113,7 +118,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
       lib.lastKept,
       lib.keepCount,
       lib.whoCanInvite,
-      lib.organizationId)
+      lib.organizationId,
+      lib.organizationMemberAccess)
   }
 
   protected[this] val publicIdPrefix = "l"
@@ -137,7 +143,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'lastKept).formatNullable[DateTime] and
     (__ \ 'keepCount).format[Int] and
     (__ \ 'whoCanInvite).formatNullable[LibraryInvitePermissions] and
-    (__ \ "orgId").formatNullable[Id[Organization]]
+    (__ \ "orgId").formatNullable[Id[Organization]] and
+    (__ \ "orgMemberAccess").formatNullable[LibraryAccess]
   )(Library.apply, unlift(Library.unapply))
 
   def isValidName(name: String): Boolean = {
@@ -229,7 +236,7 @@ object LibraryPathHelper {
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 7
+  override val version = 9
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }
@@ -303,10 +310,11 @@ sealed abstract class LibraryKind(val value: String, val priority: Int) {
 object LibraryKind {
   case object SYSTEM_MAIN extends LibraryKind("system_main", 0)
   case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
-  case object SYSTEM_PERSONA extends LibraryKind("system_persona", 2)
-  case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_it_later", 2)
-  case object SYSTEM_GUIDE extends LibraryKind("system_guide", 3)
-  case object USER_CREATED extends LibraryKind("user_created", 2)
+  case object SYSTEM_ORG_GENERAL extends LibraryKind("system_org_general", 2)
+  case object SYSTEM_PERSONA extends LibraryKind("system_persona", 3)
+  case object USER_CREATED extends LibraryKind("user_created", 3)
+  case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_it_later", 3)
+  case object SYSTEM_GUIDE extends LibraryKind("system_guide", 4)
 
   implicit def format[T]: Format[LibraryKind] =
     Format(__.read[String].map(LibraryKind(_)), new Writes[LibraryKind] { def writes(o: LibraryKind) = JsString(o.value) })
@@ -315,9 +323,9 @@ object LibraryKind {
     str match {
       case SYSTEM_MAIN.value => SYSTEM_MAIN
       case SYSTEM_SECRET.value => SYSTEM_SECRET
+      case SYSTEM_ORG_GENERAL.value => SYSTEM_ORG_GENERAL
       case SYSTEM_PERSONA.value => SYSTEM_PERSONA
       case SYSTEM_READ_IT_LATER.value => SYSTEM_READ_IT_LATER
-      case "system_read_id_later" => SYSTEM_READ_IT_LATER //for backward compatibility. I'll update the db and clear the cache. can remove by Aug 6, 2015
       case SYSTEM_GUIDE.value => SYSTEM_GUIDE
       case USER_CREATED.value => USER_CREATED
       case _ => throw new Exception(s"unknown library kind: $str")
@@ -345,9 +353,12 @@ case class BasicLibrary(id: PublicId[Library], name: String, path: String, visib
 }
 
 object BasicLibrary {
-  def apply(library: Library, owner: BasicUser, org: Option[Organization])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
-    val path = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), library.slug)
+  def apply(library: Library, owner: BasicUser, orgHandle: Option[OrganizationHandle])(implicit publicIdConfig: PublicIdConfiguration): BasicLibrary = {
+    val path = LibraryPathHelper.formatLibraryPath(owner, orgHandle, library.slug)
     BasicLibrary(Library.publicId(library.id.get), library.name, path, library.visibility, library.color)
+  }
+  implicit val libraryWrites = Writes[BasicLibrary] { library =>
+    Json.obj("id" -> library.id, "name" -> library.name, "path" -> library.path, "visibility" -> library.visibility, "color" -> library.color, "secret" -> library.isSecret) //todo(Léo): remove secret field
   }
 }
 
@@ -368,8 +379,9 @@ case class BasicLibraryDetails(
   numFollowers: Int,
   numCollaborators: Int,
   keepCount: Int,
-  membership: Option[LibraryMembership] // viewer
-  )
+  membership: Option[LibraryMembershipInfo], // viewer
+  ownerId: Id[User],
+  url: Path)
 
 sealed abstract class LibraryColor(val hex: String)
 object LibraryColor {

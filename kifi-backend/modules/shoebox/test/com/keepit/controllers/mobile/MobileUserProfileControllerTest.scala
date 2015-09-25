@@ -87,6 +87,8 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
           (user1, user2, user3, user4, user5, user1lib, org)
         }
 
+        implicit val orgInfoReads = OrganizationInfo.testReads
+
         //non existing username
         status(getProfile(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
 
@@ -94,102 +96,35 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         val anonViewer = getProfile(None, user1.username)
         status(anonViewer) must equalTo(OK)
         contentType(anonViewer) must beSome("application/json")
-        contentAsJson(anonViewer) === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "numLibraries":1,
-              "numFollowedLibraries": 1,
-              "numCollabLibraries": 0,
-              "numKeeps": 5,
-              "numConnections": 3,
-              "numFollowers": 2,
-              "biography":"First Prez yo!",
-              "numTags":0,
-              "orgs":[
-                {
-                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
-                  "ownerId":"${user1.externalId}",
-                  "handle":"${org1.handle.value}",
-                  "name":"${org1.name}",
-                  "numMembers":1,
-                  "numLibraries":1
-                }
-              ]
-            }
-          """)
+        val res1 = contentAsJson(anonViewer)
+        (res1 \ "id").as[ExternalId[User]] === user1.externalId
+        (res1 \ "firstName").as[String] === "George"
+        (res1 \ "lastName").as[String] === "Washington"
+        (res1 \ "pictureName").as[String] === "pic1.jpg"
+        (res1 \ "numLibraries").as[Int] === 1
+        (res1 \ "numKeeps").as[Int] === 5
+        (res1 \ "numFollowers").as[Int] === 2
+        (res1 \ "numFollowedLibraries").as[Int] === 1
+        (res1 \ "numCollabLibraries").as[Int] === 0
+        (res1 \ "biography").as[String] === "First Prez yo!"
+        val orgs = (res1 \ "orgs").as[Seq[OrganizationInfo]]
+        orgs.head.orgId === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
+        orgs.head.members.length === 1
 
         //seeing a profile from another user (friend)
         val friendViewer = getProfile(Some(user2), user1.username)
         status(friendViewer) must equalTo(OK)
         contentType(friendViewer) must beSome("application/json")
-        contentAsJson(friendViewer) === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "isFriend": true,
-              "numLibraries":2,
-              "numFollowedLibraries": 1,
-              "numCollabLibraries": 1,
-              "numKeeps": 5,
-              "numConnections": 3,
-              "numFollowers": 3,
-              "biography":"First Prez yo!",
-              "numTags":0,
-              "orgs":[
-                {
-                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
-                  "ownerId":"${user1.externalId}",
-                  "handle":"${org1.handle.value}",
-                  "name":"${org1.name}",
-                  "numMembers":1,
-                  "numLibraries":1
-                }
-              ]
-            }
-          """)
+        val res2 = contentAsJson(friendViewer)
+        (res2 \ "numLibraries").as[Int] === 2
+        (res2 \ "numFollowers").as[Int] === 3
 
         //seeing a profile of my own
         val selfViewer = getProfile(Some(user1), user1.username)
         status(selfViewer) must equalTo(OK)
         contentType(selfViewer) must beSome("application/json")
-        contentAsJson(selfViewer) === Json.parse(
-          s"""
-            {
-              "id":"${user1.externalId.id}",
-              "firstName":"George",
-              "lastName":"Washington",
-              "pictureName":"pic1.jpg",
-              "username": "GDubs",
-              "numLibraries":4,
-              "numFollowedLibraries": 2,
-              "numCollabLibraries": 0,
-              "numKeeps": 5,
-              "numConnections": 3,
-              "numFollowers": 3,
-              "numInvitedLibraries": 0,
-              "biography":"First Prez yo!",
-              "numTags":0,
-              "orgs":[
-                {
-                  "id":"${Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]).id}",
-                  "ownerId":"${user1.externalId}",
-                  "handle":"${org1.handle.value}",
-                  "name":"${org1.name}",
-                  "numMembers":1,
-                  "numLibraries":1
-                }
-              ]
-            }
-          """)
+        val res3 = contentAsJson(selfViewer)
+        (res3 \ "numLibraries").as[Int] === 4 + 1 // for org general lib
       }
     }
 
@@ -405,7 +340,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER))}},
                   "modifiedAt":${lib2.updatedAt.getMillis},
                   "path": "/spongebob/catching-jellyfish"
                 },
@@ -432,7 +367,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))}},
                   "modifiedAt":${lib1.updatedAt.getMillis},
                   "path": "/spongebob/krabby-patty"
                 }

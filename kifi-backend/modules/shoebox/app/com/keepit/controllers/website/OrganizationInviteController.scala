@@ -4,6 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.json.EitherFormat
@@ -20,15 +21,17 @@ import scala.util.{ Failure, Success }
 @Singleton
 class OrganizationInviteController @Inject() (
     userCommander: UserCommander,
-    val orgCommander: OrganizationCommander,
-    val orgMembershipCommander: OrganizationMembershipCommander,
-    val orgInviteCommander: OrganizationInviteCommander,
+    orgCommander: OrganizationCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     organizationInviteCommander: OrganizationInviteCommander,
     typeaheadCommander: TypeaheadCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     airbrake: AirbrakeNotifier,
     val userActionsHelper: UserActionsHelper,
+    val db: Database,
+    val permissionCommander: PermissionCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
@@ -100,16 +103,16 @@ class OrganizationInviteController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     orgInviteCommander.createGenericInvite(request.orgId, request.request.userId) match {
       case Right(invite) =>
-        Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), invite.authToken).url)))
+        Ok(Json.obj("link" -> (fortyTwoConfig.applicationBaseUrl + routes.OrganizationInviteController.acceptInvitation(Organization.publicId(invite.organizationId), Some(invite.authToken)).url)))
       case Left(fail) => fail.asErrorResponse
     }
   }
 
-  def acceptInvitation(pubId: PublicId[Organization], authToken: String) = UserAction { request =>
+  def acceptInvitation(pubId: PublicId[Organization], authTokenOpt: Option[String]) = UserAction { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
     Organization.decodePublicId(pubId) match {
       case Success(orgId) =>
-        orgInviteCommander.acceptInvitation(orgId, request.userId, authToken) match {
+        orgInviteCommander.acceptInvitation(orgId, request.userId, authTokenOpt) match {
           case Right(organizationMembership) => NoContent
           case Left(organizationFail) => organizationFail.asErrorResponse
         }
@@ -128,6 +131,6 @@ class OrganizationInviteController @Inject() (
 
   def suggestMembers(pubId: PublicId[Organization], query: Option[String], limit: Int) = OrganizationUserAction(pubId).async { request =>
     if (limit > 30) { Future.successful(BadRequest(Json.obj("error" -> "invalid_limit"))) }
-    organizationInviteCommander.suggestMembers(request.request.userId, request.orgId, query, limit).map { members => Ok(Json.obj("members" -> members)) }
+    organizationInviteCommander.suggestMembers(request.request.userId, request.orgId, query, limit, request.request).map { members => Ok(Json.obj("members" -> members)) }
   }
 }

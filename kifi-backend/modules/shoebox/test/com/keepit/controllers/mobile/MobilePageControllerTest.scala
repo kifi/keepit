@@ -6,7 +6,6 @@ import com.keepit.abook.FakeABookServiceClientModule
 
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import org.specs2.mutable.{ SpecificationLike }
 
 import org.joda.time.DateTime
@@ -45,8 +44,7 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
     FakeSliderHistoryTrackerModule(),
     FakeABookServiceClientModule(),
     FakeCortexServiceClientModule(),
-    FakeSocialGraphModule(),
-    FakeCuratorServiceClientModule()
+    FakeSocialGraphModule()
   )
 
   "mobileController" should {
@@ -69,12 +67,12 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           val keep1 = keepRepo.save(Keep(
-            title = Some("G1"), userId = user1.id.get, url = url.url, urlId = url.id.get,
+            title = Some("G1"), userId = user1.id.get, url = url.url,
             uriId = uri.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
             externalId = ExternalId("cccccccc-286e-4386-8336-da255120b273")))
           val keep2 = keepRepo.save(Keep(
-            title = None, userId = user2.id.get, url = url.url, urlId = url.id.get,
+            title = None, userId = user2.id.get, url = url.url,
             uriId = uri.id.get, source = KeepSource.bookmarkImport, createdAt = t2.plusDays(1),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
             externalId = ExternalId("dddddddd-286e-4386-8336-da255120b273")))
@@ -137,12 +135,12 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
           val keep1 = keepRepo.save(Keep(
-            title = Some("G1"), userId = user1.id.get, url = url.url, urlId = url.id.get,
+            title = Some("G1"), userId = user1.id.get, url = url.url,
             uriId = uri.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
             externalId = ExternalId("cccccccc-286e-4386-8336-da255120b273")))
           val keep2 = keepRepo.save(Keep(
-            title = None, userId = user2.id.get, url = url.url, urlId = url.id.get,
+            title = None, userId = user2.id.get, url = url.url,
             uriId = uri.id.get, source = KeepSource.bookmarkImport, createdAt = t2.plusDays(1),
             visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
             externalId = ExternalId("dddddddd-286e-4386-8336-da255120b273")))

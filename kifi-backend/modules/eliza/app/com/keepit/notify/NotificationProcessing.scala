@@ -4,8 +4,9 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.model.{ NotificationItemRepo, NotificationRepo, Notification, NotificationItem }
+import com.keepit.eliza.model._
 import com.keepit.notify.delivery.WsNotificationDelivery
+import com.keepit.notify.info.StandardNotificationInfo
 import com.keepit.notify.model.NotificationKind
 import com.keepit.notify.model.event.NotificationEvent
 
@@ -16,7 +17,7 @@ class NotificationProcessing @Inject() (
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     delivery: WsNotificationDelivery,
-    notifExperimentCheck: NotifExperimentCheck,
+    legacyNotificationCheck: LegacyNotificationCheck,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   private def shouldGroupWith(event: NotificationEvent, items: Set[NotificationItem]): Boolean = {
@@ -35,10 +36,12 @@ class NotificationProcessing @Inject() (
       notificationItemRepo.save(NotificationItem(
         notificationId = notifId,
         kind = event.kind,
-        event = event
+        event = event,
+        eventTime = event.time
       ))
       val notif = notificationRepo.get(notifId)
       notificationRepo.save(notif.copy(lastEvent = event.time))
+      notificationRepo.get(notifId)
     }
   }
 
@@ -47,51 +50,59 @@ class NotificationProcessing @Inject() (
       val notif = notificationRepo.save(Notification(
         recipient = event.recipient,
         kind = event.kind,
+        groupIdentifier = None,
         lastEvent = event.time
       ))
       notificationItemRepo.save(NotificationItem(
         notificationId = notif.id.get,
         kind = event.kind,
-        event = event
+        event = event,
+        eventTime = event.time
       ))
-      notif
+      notificationRepo.get(notif.id.get)
     }
   }
 
-  def processNewEvent(event: NotificationEvent): Notification = {
+  def processNewEvent(event: NotificationEvent, tryDeliver: Boolean = true): Option[Notification] = {
     val groupIdentifier = getGroupIdentifier(event)
-    val notif = groupIdentifier match {
-      case Some(identifier) =>
-        db.readOnlyMaster { implicit session =>
-          notificationRepo.getByKindAndGroupIdentifier(event.kind, identifier)
-        } match {
-          case Some(notif) => saveToExistingNotification(notif.id.get, event)
-          case None => createNewNotification(event)
-        }
-      case None => {
-        db.readOnlyMaster { implicit session =>
-          notificationRepo.getLastByRecipientAndKind(event.recipient, event.kind)
-        } match {
-          case Some(existingNotif) =>
-            val notifItems = db.readOnlyMaster { implicit session =>
-              notificationItemRepo.getAllForNotification(existingNotif.id.get)
-            }
-            if (shouldGroupWith(event, notifItems.toSet)) {
-              saveToExistingNotification(existingNotif.id.get, event)
-            } else {
-              createNewNotification(event)
-            }
-          case _ => createNewNotification(event)
+    val recipient = event.recipient
+    if (legacyNotificationCheck.checkUserExperiment(recipient).experimentEnabled) {
+      val notif = groupIdentifier match {
+        case Some(identifier) =>
+          db.readOnlyMaster { implicit session =>
+            notificationRepo.getByGroupIdentifier(event.recipient, event.kind, identifier)
+          } match {
+            case Some(notifGrouped) => saveToExistingNotification(notifGrouped.id.get, event)
+            case None => createNewNotification(event)
+          }
+        case None =>
+          db.readOnlyMaster { implicit session =>
+            notificationRepo.getLastByRecipientAndKind(event.recipient, event.kind)
+          } match {
+            case Some(existingNotif) =>
+              val notifItems = db.readOnlyMaster { implicit session =>
+                notificationItemRepo.getAllForNotification(existingNotif.id.get)
+              }
+              if (shouldGroupWith(event, notifItems.toSet)) {
+                saveToExistingNotification(existingNotif.id.get, event)
+              } else {
+                createNewNotification(event)
+              }
+            case _ => createNewNotification(event)
+          }
+      }
+      val items = db.readOnlyMaster { implicit session =>
+        notificationItemRepo.getAllForNotification(notif.id.get)
+      }.toSet
+      if (tryDeliver) {
+        legacyNotificationCheck.ifUserExperiment(notif.recipient) { recipient =>
+          delivery.deliver(recipient, NotificationWithItems(notif, items))
         }
       }
+      Some(notif)
+    } else {
+      None
     }
-    val items = db.readOnlyMaster { implicit session =>
-      notificationItemRepo.getAllForNotification(notif.id.get)
-    }.toSet
-    notifExperimentCheck.ifExperiment(notif.recipient) { recipient =>
-      delivery.deliver(recipient, items)
-    }
-    notif
   }
 
 }

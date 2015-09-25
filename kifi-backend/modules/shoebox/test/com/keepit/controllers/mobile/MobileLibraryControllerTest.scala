@@ -18,7 +18,6 @@ import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
 import com.keepit.controllers.website.LibraryController
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
@@ -56,7 +55,6 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     FakeCortexServiceClientModule(),
     FakeABookServiceClientModule(),
     FakeSocialGraphModule(),
-    FakeCuratorServiceClientModule(),
     FakeSliderHistoryTrackerModule()
   )
 
@@ -121,7 +119,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // change a library title to an existing library's title
         val result2 = modifyLibrary(user, pubLib1, Json.obj("newName" -> lib2.name))
-        status(result2) must equalTo(BAD_REQUEST)
+        status(result2) must equalTo(OK)
 
         // change a library slug to an existing library's slug
         val result3 = modifyLibrary(user, pubLib1, Json.obj("newSlug" -> lib2.slug.value))
@@ -158,9 +156,10 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // upload an image
         {
-          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1.file, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
+          fakeImage1.clean()
         }
 
         val result1 = getLibraryByHandleAndSlug(user1, Handle("spongebob"), LibrarySlug("krabby-patty"))
@@ -201,9 +200,9 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                 "membership":{
                   "access" : "owner",
                   "listed" : true,
-                  "subscribed" : false
-                },
-                "invite": null
+                  "subscribed" : false,
+                  "permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]
+                }
               },
               "membership" : "owner"
             }""")
@@ -217,7 +216,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
 
         // upload an image
         {
-          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
+          val savedF = inject[LibraryImageCommander].uploadLibraryImageFromFile(fakeImage1.file, lib1.id.get, LibraryImagePosition(None, None), ImageSource.UserUpload, user1.id.get)(HeimdalContext.empty)
           val saved = Await.result(savedF, Duration("10 seconds"))
           saved === ImageProcessState.StoreSuccess(ImageFormat.PNG, ImageSize(66, 38), 612)
         }
@@ -259,9 +258,9 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                  "membership":{
                    "access" : "owner",
                    "listed" : true,
-                   "subscribed" : false
+                   "subscribed" : false,
+                  "permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]
                  },
-                 "invite" : null,
                  "path": "/spongebob/krabby-patty"
                },
                "membership" : "owner"
@@ -1003,7 +1002,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
     val uri = uriRepo.save(NormalizedURI(url = url, urlHash = UrlHash(url.hashCode.toString)))
     val urlId = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)).id.get
     val keep = keepRepo.save(Keep(
-      title = Some(title), userId = user.id.get, uriId = uri.id.get, urlId = urlId, url = uri.url, note = note,
+      title = Some(title), userId = user.id.get, uriId = uri.id.get, url = uri.url, note = note,
       source = KeepSource.keeper, visibility = lib.visibility, libraryId = lib.id))
     tags.foreach { tag =>
       val coll = collectionRepo.save(Collection(userId = keep.userId, name = Hashtag(tag)))

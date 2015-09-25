@@ -1,7 +1,7 @@
 package com.keepit.search.index.message
 
 import com.keepit.test.CommonTestInjector
-import com.keepit.social.BasicUser
+import com.keepit.social.{ BasicUserLikeEntity, BasicUser }
 import com.keepit.common.db.{ Id, ExternalId, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
@@ -31,7 +31,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       mode = FULL,
       id = Id[ThreadContent](44),
       seq = SequenceNumber(1),
-      participants = Seq(user1, user2),
+      participants = Seq(user1, user2).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime,
       url = "http://theenterprise.com",
       threadExternalId = ExternalId().id,
@@ -49,7 +49,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       mode = FULL,
       id = Id[ThreadContent](9),
       seq = SequenceNumber(2),
-      participants = Seq(user1, user2),
+      participants = Seq(user1, user2).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime,
       url = "http://thereliant.com",
       threadExternalId = ExternalId().id,
@@ -66,7 +66,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       mode = FULL,
       id = Id[ThreadContent](388),
       seq = SequenceNumber(3),
-      participants = Seq(user1, user3),
+      participants = Seq(user1, user3).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime,
       url = "http://amazon.com",
       threadExternalId = ExternalId().id,
@@ -83,7 +83,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       mode = FULL,
       id = Id[ThreadContent](389),
       seq = SequenceNumber(4),
-      participants = Seq(user1),
+      participants = Seq(user1).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime.minusDays(30),
       url = "http://amazon.com",
       threadExternalId = ExternalId().id,
@@ -99,7 +99,7 @@ class MessageSearcherTest extends Specification with CommonTestInjector {
       mode = FULL,
       id = Id[ThreadContent](390),
       seq = SequenceNumber(5),
-      participants = Seq(user1),
+      participants = Seq(user1).map(BasicUserLikeEntity.apply),
       updatedAt = currentDateTime.minusDays(7),
       url = "http://amazon.com",
       threadExternalId = ExternalId().id,

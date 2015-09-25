@@ -24,9 +24,16 @@ angular.module('kifi')
 
     // Set up the states.
     $stateProvider
-      .state('home', {  // Home page.
+      .state('home', {
         url: '/',
-        templateUrl: 'recos/recosView.tpl.html'
+        controller: 'HomeCtrl',
+        templateUrl: 'home/home.tpl.html',
+        'abstract': true
+      })
+      .state('home.feed', {
+        url: '',
+        controller: 'FeedCtrl',
+        templateUrl: 'feed/feed.tpl.html'
       })
       .state('invite', {
         url: '/invite',
@@ -52,7 +59,7 @@ angular.module('kifi')
         reloadOnSearch: false  // controller handles search query changes itself
       })
       .state('userOrOrg', {
-        url: '/:handle?authToken',
+        url: '/:handle?authToken&openCreateLibrary',
         controller: [
           '$state', '$stateParams', 'orgProfileService',
           function ($state, $stateParams, orgProfileService) {
@@ -70,7 +77,7 @@ angular.module('kifi')
         ]
       })
       .state('orgProfile', {
-        url: '/:handle?authToken',
+        url: '/:handle?authToken&openCreateLibrary',
         params: { organization: null },
         templateUrl: 'orgProfile/orgProfile.tpl.html',
         controller: 'OrgProfileCtrl',
@@ -96,22 +103,58 @@ angular.module('kifi')
                   }
                 });
             }
+          ],
+          settings: [
+            'orgProfileService', 'profile', 'messageTicker', 'ORG_PERMISSION',
+            function (orgProfileService, profile, messageTicker, ORG_PERMISSION) {
+              if (profile.membership.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
+                return orgProfileService
+                .getOrgSettings(profile.organization.id)
+                ['catch'](function(response) {
+                  messageTicker({
+                    text: response.statusText + ': Could not retrieve your settings. Please refresh and try again',
+                    type: 'red',
+                    delay: 0
+                  });
+                });
+              } else {
+                return {};
+              }
+            }
           ]
         },
         'abstract': true
       })
       .state('orgProfile.members', {
-        url: '/members',
+        url: '/members?openInviteModal',
         controller: 'OrgProfileMemberManageCtrl',
-        templateUrl: 'orgProfile/orgProfileMemberManage.tpl.html'
+        templateUrl: 'orgProfile/orgProfileMemberManage.tpl.html',
+        activetab: 'members'
       })
       .state('orgProfile.libraries', {
         url: '',
         controller: 'OrgProfileLibrariesCtrl',
-        templateUrl: 'orgProfile/orgProfileLibraries.tpl.html'
+        templateUrl: 'orgProfile/orgProfileLibraries.tpl.html',
+        activetab: 'libraries'
+      })
+      .state('orgProfile.settings', {
+        url: '/settings',
+        controller: 'OrgProfileSettingsCtrl',
+        templateUrl: 'orgProfile/orgProfileSettings.tpl.html',
+        activetab: 'settings'
+      })
+      .state('teams', {
+        url: '/teams',
+        'abstract': true,
+        template: '<ui-view/>'
+      })
+      .state('teams.new', {
+        url: '/new',
+        controller: 'OrgProfileCreateCtrl',
+        templateUrl: 'orgProfile/orgProfileCreate.tpl.html'
       })
       .state('userProfile', {
-        url: '/:handle?authToken',
+        url: '/:handle?authToken&openCreateLibrary',
         templateUrl: 'userProfile/userProfile.tpl.html',
         controller: 'UserProfileCtrl',
         resolve: {

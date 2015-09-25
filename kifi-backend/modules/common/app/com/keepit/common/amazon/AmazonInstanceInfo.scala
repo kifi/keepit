@@ -66,6 +66,8 @@ case class AmazonInstanceInfo(
     case AmazonInstanceType.C3Large.name => AmazonInstanceType.C3Large
     case AmazonInstanceType.C3XLarge.name => AmazonInstanceType.C3XLarge
     case AmazonInstanceType.C3XXLarge.name => AmazonInstanceType.C3XXLarge
+    case AmazonInstanceType.M2XXLarge.name => AmazonInstanceType.M2XXLarge
+    case AmazonInstanceType.M2XXXXLarge.name => AmazonInstanceType.M2XXXXLarge
     case AmazonInstanceType.M3Medium.name => AmazonInstanceType.M3Medium
     case AmazonInstanceType.M3Large.name => AmazonInstanceType.M3Large
     case AmazonInstanceType.M3XLarge.name => AmazonInstanceType.M3XLarge
@@ -91,6 +93,10 @@ object AmazonInstanceType {
   case object C3Large extends AmazonInstanceType("c3.large", 2, 7)
   case object C3XLarge extends AmazonInstanceType("c3.xlarge", 4, 14)
   case object C3XXLarge extends AmazonInstanceType("c3.2xlarge", 8, 24)
+
+  // M2 class
+  case object M2XXLarge extends AmazonInstanceType("m2.2xlarge", 4, 13)
+  case object M2XXXXLarge extends AmazonInstanceType("m2.4xlarge", 8, 26)
 
   // M3 class
   case object M3Medium extends AmazonInstanceType("m3.medium", 1, 3)

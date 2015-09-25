@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfManageLibrary', [
-  '$location', '$state', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'util',
-  function ($location, $state, friendService, libraryService, modalService,
-    profileService, util) {
+  '$window', '$rootScope', '$location', '$state', 'friendService',
+  'libraryService', 'modalService', 'profileService', 'util',
+  function ($window, $rootScope, $location, $state, friendService,
+            libraryService, modalService, profileService, util) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -88,7 +88,7 @@ angular.module('kifi')
         };
 
         scope.spaceIsOrg = function (space) {
-          return 'numMembers' in space;
+          return !!space && !('firstName' in space);
         };
 
         var ownerType = function(space) {
@@ -164,9 +164,10 @@ angular.module('kifi')
             listed: scope.library.membership.listed,
             color: colorNames[scope.library.color],
             subscriptions: nonEmptySubscriptions,
+            orgMemberAccess: scope.library.orgMemberAccess,
             space: owner
           }, true).then(function (resp) {
-            libraryService.fetchLibraryInfos(true);
+            // libraryService.fetchLibraryInfos(true);
 
             var newLibrary = resp.data.library;
             newLibrary.listed = resp.data.listed || (resp.data.library.membership && resp.data.library.membership.listed);
@@ -262,7 +263,7 @@ angular.module('kifi')
         //
         // On link.
         //
-        
+
         // Create scope.library
         if (scope.modalData && scope.modalData.library) {
           scope.library = _.cloneDeep(scope.modalData.library);
@@ -281,7 +282,8 @@ angular.module('kifi')
             'name': '',
             'description': '',
             'slug': '',
-            'visibility': 'published'
+            'visibility': 'published',
+            'orgMemberAccess': 'read_write'
           };
           scope.library.org = scope.modalData.organization;
           scope.library.membership = {
@@ -320,44 +322,6 @@ angular.module('kifi')
           scope.library.visibility = 'organization';
         }
 
-        scope.setOrg = function(id) { 
-          if (scope.libraryProps.inOrg) {
-            // Give preference to (1) id from args, (2) current page, (3) First organization in list.
-            var orgId = id || (scope.library.org || scope.me.orgs[0]).id;
-            scope.libraryProps.selectedOrgId = orgId;
-            scope.space.destination = scope.me.orgs.filter(function(org) {
-              return org.id === orgId;
-            })[0];
-          }
-          else {
-            // If user unclicks "organization" their destination should be
-            // their current profile.
-            scope.space.destination = scope.me;
-          }
-          onChangeSpace();
-        };
-
-        var onChangeSpace = function () {
-          var currIsOrg = scope.spaceIsOrg(scope.space.current);
-          var destIsOrg = scope.spaceIsOrg(scope.space.destination);
-
-          if (currIsOrg !== destIsOrg) {
-            if (currIsOrg) {
-              if (scope.library.visibility === 'organization') {
-                scope.library.visibility = 'secret';
-              }
-            } else {
-              if (scope.library.visibility === 'secret') {
-                scope.library.visibility = 'organization';
-              }
-            }
-          }
-
-          // Prevent non-org lib from having visibility === 'organization'
-          if (!destIsOrg && scope.library.visibility === 'organization') {
-            scope.library.visibility = 'secret';
-          }
-        };
         returnAction = scope.modalData && scope.modalData.returnAction;
         scope.currentPageOrigin = scope.modalData && scope.modalData.currentPageOrigin;
 
@@ -376,6 +340,15 @@ angular.module('kifi')
               scope.emptySlug = false;
             }
           }
+        });
+
+        [
+          $rootScope.$on('$stateChangeSuccess', function () {
+            $window.scrollTo(0, 0);
+            scope.close();
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
         });
 
         element.find('.manage-lib-name-input').focus();

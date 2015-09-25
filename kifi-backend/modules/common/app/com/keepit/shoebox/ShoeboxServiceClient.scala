@@ -4,7 +4,7 @@ import com.keepit.classify.{ NormalizedHostname, DomainInfo, Domain }
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
-import com.keepit.notify.info.NotificationInfo
+import com.keepit.notify.info._
 import com.keepit.notify.model.{ NotificationId, notificationIdMapFormat }
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
@@ -51,6 +51,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
+  def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]]
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
   def getEmailAddressForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
@@ -115,7 +116,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getLibraryMembershipsChanged(seqNum: SequenceNumber[LibraryMembership], fetchSize: Int): Future[Seq[LibraryMembershipView]]
   def canViewLibrary(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String]): Future[Boolean]
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]]
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[PersonalKeep]]]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]]
   def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
   def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]]
@@ -133,6 +134,11 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIngestableOrganizationDomainOwnerships(seqNum: SequenceNumber[OrganizationDomainOwnership], fetchSize: Int): Future[Seq[IngestableOrganizationDomainOwnership]]
   def getPrimaryOrg(userId: Id[User]): Future[Option[Id[Organization]]]
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]]
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues]
+  def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]]
+  def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship]
+  def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]): Future[Option[LibraryMembershipView]]
+  def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -158,7 +164,10 @@ case class ShoeboxCacheProvider @Inject() (
   librariesWithWriteAccessCache: LibrariesWithWriteAccessCache,
   userActivePersonaCache: UserActivePersonasCache,
   keepImagesCache: KeepImagesCache,
-  primaryOrgForUserCache: PrimaryOrgForUserCache)
+  primaryOrgForUserCache: PrimaryOrgForUserCache,
+  basicKeepByIdCache: BasicKeepByIdCache,
+  organizationMembersCache: OrganizationMembersCache,
+  basicOrganizationIdCache: BasicOrganizationIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -311,6 +320,19 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = {
+    cacheProvider.basicKeepByIdCache.bulkGetOrElseFuture(keepIds.map(BasicKeepIdKey)) { missingKeys =>
+      if (missingKeys.isEmpty) Future.successful(Map.empty)
+      else {
+        val payload = Json.toJson(missingKeys.map(_.id))
+        call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
+          val missing = res.json.as[Map[Id[Keep], BasicKeep]]
+          missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
+        }
+      }
+    }.map { bigMap => bigMap.map { case (key, value) => key.id -> value } }
+  }
+
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {
     redundantDBConnectionCheck(userIds)
     val payload = Json.toJson(userIds)
@@ -382,7 +404,9 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def internNormalizedURI(url: String, contentWanted: Boolean): Future[NormalizedURI] = {
     val payload = Json.obj("url" -> url, "contentWanted" -> contentWanted)
-    call(Shoebox.internal.internNormalizedURI, payload).map(r => r.json.as[NormalizedURI])
+    call(Shoebox.internal.internNormalizedURI, payload).map(r =>
+      r.json.as[NormalizedURI]
+    )
   }
 
   def persistServerSearchEvent(metaData: JsObject): Unit = {
@@ -688,11 +712,11 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.newKeepsInLibraryForEmail(userId, max)).map(_.json.as[Seq[Keep]])
   }
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[BasicKeep]]] = {
-    if (uriIds.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], Set[BasicKeep]]) else {
-      call(Shoebox.internal.getBasicKeeps(userId), Json.toJson(uriIds), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
-        implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[BasicKeep]]
-        r.json.as[Seq[(Id[NormalizedURI], Set[BasicKeep])]].toMap
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[PersonalKeep]]] = {
+    if (uriIds.isEmpty) Future.successful(Map.empty[Id[NormalizedURI], Set[PersonalKeep]]) else {
+      call(Shoebox.internal.getPersonalKeeps(userId), Json.toJson(uriIds), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[NormalizedURI], Set[PersonalKeep]]
+        r.json.as[Seq[(Id[NormalizedURI], Set[PersonalKeep])]].toMap
       }
     }
   }
@@ -778,7 +802,9 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getOrganizationMembers(orgId: Id[Organization]): Future[Set[Id[User]]] = {
-    call(Shoebox.internal.getOrganizationMembers(orgId)).map(_.json.as[Set[Id[User]]])
+    cacheProvider.organizationMembersCache.getOrElseFuture(OrganizationMembersKey(orgId)) {
+      call(Shoebox.internal.getOrganizationMembers(orgId)).map(_.json.as[Set[Id[User]]])
+    }
   }
 
   def hasOrganizationMembership(orgId: Id[Organization], userId: Id[User]): Future[Boolean] = {
@@ -807,5 +833,37 @@ class ShoeboxServiceClientImpl @Inject() (
   def getOrganizationsForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Set[Id[Organization]]]] = {
     val payload = Json.toJson(userIds)
     call(Shoebox.internal.getOrganizationsForUsers(), payload).map { _.json.as[Map[Id[User], Set[Id[Organization]]]] }
+  }
+
+  def getOrgTrackingValues(orgId: Id[Organization]): Future[OrgTrackingValues] = {
+    call(Shoebox.internal.getOrgTrackingValues(orgId)).map { _.json.as[OrgTrackingValues] }
+  }
+
+  def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = {
+    cacheProvider.basicOrganizationIdCache.bulkGetOrElseFuture(ids.map(BasicOrganizationIdKey.apply _)) { missing =>
+      val payload = Json.toJson(missing.map(_.id))
+      call(Shoebox.internal.getBasicOrganizationsByIds(), payload).map {
+        _.json.as[Map[Id[Organization], BasicOrganization]].map {
+          case (orgId, org) => (BasicOrganizationIdKey(orgId), org)
+        }
+      }
+    }.map {
+      _.map {
+        case (orgKey, org) => (orgKey.id, org)
+      }
+    }
+  }
+
+  def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]): Future[Option[LibraryMembershipView]] = {
+    call(Shoebox.internal.getLibraryMembershipView(libraryId, userId)).map { _.json.as[Option[LibraryMembershipView]] }
+  }
+
+  def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship] = {
+    call(Shoebox.internal.getOrganizationUserRelationship(orgId, userId)).map { _.json.as[OrganizationUserRelationship] }
+  }
+
+  def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]] = {
+    val payload = Json.obj("orgIds" -> orgIds, "userId" -> userId)
+    call(Shoebox.internal.getUserPermissionsByOrgId, payload).map { _.json.as[Map[Id[Organization], Set[OrganizationPermission]]] }
   }
 }

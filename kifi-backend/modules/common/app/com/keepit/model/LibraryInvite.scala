@@ -75,16 +75,21 @@ object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
     (__ \ 'authToken).format[String] and
     (__ \ 'message).format[Option[String]]
   )(LibraryInvite.apply, unlift(LibraryInvite.unapply))
-
-  implicit def ord: Ordering[LibraryInvite] = new Ordering[LibraryInvite] {
-    def compare(x: LibraryInvite, y: LibraryInvite): Int = x.access.priority compare y.access.priority
-  }
 }
 
-@json case class LibraryInviteInfo(inviter: BasicUser, access: LibraryAccess, message: Option[String], lastInvite: Long)
+case class LibraryInviteInfo(
+  access: LibraryAccess,
+  lastInvitedAt: DateTime,
+  inviter: BasicUser)
+
 object LibraryInviteInfo {
-  def createInfo(invite: LibraryInvite, inviter: BasicUser): LibraryInviteInfo = {
-    LibraryInviteInfo(inviter, invite.access, invite.message, invite.createdAt.getMillis)
+  implicit val writes = Writes[LibraryInviteInfo] { info =>
+    Json.obj(
+      "access" -> info.access,
+      "lastInvitedAt" -> info.lastInvitedAt,
+      "inviter" -> info.inviter,
+      "lastInvite" -> info.lastInvitedAt.getMillis // deprecated
+    )
   }
 }
 
@@ -117,4 +122,6 @@ class LibraryInviteIdCache(stats: CacheStatistics, accessLog: AccessLog, innermo
 object LibraryInviteStates extends States[LibraryInvite] {
   val ACCEPTED = State[LibraryInvite]("accepted")
   val DECLINED = State[LibraryInvite]("declined")
+
+  val notActive = Set(ACCEPTED, DECLINED, INACTIVE)
 }

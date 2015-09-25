@@ -4,8 +4,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.ActivityFeedEmailSender
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.service.IpAddress
-import com.keepit.curator.CuratorServiceClient
 import com.keepit.shoebox.cron.{ ActivityPusher, ActivityPushScheduler }
 import scala.concurrent.{ Await, Future, Promise }
 import scala.concurrent.duration.{ Duration, DurationInt }
@@ -79,6 +79,7 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
+    keepToLibraryRepo: KeepToLibraryRepo,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -115,7 +116,6 @@ class AdminUserController @Inject() (
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
-    curator: CuratorServiceClient,
     activityEmailSender: ActivityFeedEmailSender,
     activityPushSchedualer: ActivityPushScheduler,
     activityPusher: ActivityPusher,
@@ -358,7 +358,7 @@ class AdminUserController @Inject() (
           case All => (userRepo.pageIncluding(UserStates.ACTIVE)(page, pageSize),
             userRepo.countIncluding(UserStates.ACTIVE))
           case TopKeepersNotInOrg =>
-            val users = userRepo.topKeepersNotInOrgs(50)
+            val users = userRepo.topKeepersNotInOrgs(40)
             (users, users.size)
           case Registered => (userRepo.pageIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN)(page, pageSize),
             userRepo.countIncludingWithoutExp(UserStates.ACTIVE)(UserExperimentType.FAKE, UserExperimentType.AUTO_GEN))
@@ -461,10 +461,10 @@ class AdminUserController @Inject() (
 
     (nameOpt, visibilityOpt, slugOpt) match {
       case (Some(name), Some(visibility), Some(slug)) => {
-        val libraryAddRequest = LibraryAddRequest(name, visibility, slug)
+        val libraryAddRequest = LibraryCreateRequest(name, visibility, slug)
 
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val result: Either[LibraryFail, Library] = libraryCommander.addLibrary(libraryAddRequest, userId)
+        val result: Either[LibraryFail, Library] = libraryCommander.createLibrary(libraryAddRequest, userId)
         result match {
           case Left(fail) => BadRequest(fail.message)
           case Right(_) => Ok
@@ -775,11 +775,11 @@ class AdminUserController @Inject() (
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
 
-        val (privateKeeps, publicKeeps) = keepRepo.getPrivatePublicCountByUser(userId)
-        val keeps = privateKeeps + publicKeeps
+        val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
+        val keeps = keepVisibilityCount.all
         properties += ("keeps", keeps)
-        properties += ("publicKeeps", publicKeeps)
-        properties += ("privateKeeps", privateKeeps)
+        properties += ("publicKeeps", keepVisibilityCount.published + keepVisibilityCount.discoverable + keepVisibilityCount.organization)
+        properties += ("privateKeeps", keepVisibilityCount.secret)
         properties += ("tags", collectionRepo.count(userId))
         properties += ("kifiConnections", userConnectionRepo.getConnectionCount(userId))
         properties += ("socialConnections", socialConnectionRepo.getUserConnectionCount(userId))
@@ -919,6 +919,7 @@ class AdminUserController @Inject() (
     val ownedLibraries = libraryRepo.getAllByOwner(userId).map(_.id.get)
     val ownsCollaborativeLibs = libraryMembershipRepo.getCollaboratorsByLibrary(ownedLibraries.toSet).exists { case (_, collaborators) => collaborators.size > 1 }
     assert(!ownsCollaborativeLibs, "cannot deactivate a user if they own a library with collaborators: either delete the library or transfer its ownership")
+    FutureHelpers.sequentialExec(ownedLibraries)(libraryCommander.unsafeAsyncDeleteLibrary)
 
     // Personal Info
     userSessionRepo.invalidateByUser(userId) // User Session
@@ -1018,13 +1019,8 @@ class AdminUserController @Inject() (
   def sendEmail(toUserId: Id[User], code: String) = AdminUserPage { implicit request =>
     code match {
       case "activity" => activityEmailSender(Set(toUserId))
-      case _ => curator.triggerEmailToUser(code, toUserId)
+      case _ => throw new UnsupportedOperationException(code)
     }
-    NoContent
-  }
-
-  def refreshRecos(userId: Id[User]) = AdminUserPage { implicit request =>
-    SafeFuture(curator.refreshUserRecos(userId), Some(s"refreshing recommendations fro $userId"))
     NoContent
   }
 

@@ -2,6 +2,11 @@
   <div class="kf-klw-library-card" ng-style="{'background-color': library.color}">
     <div ng-if="library.kind === 'system_main'" class="kf-klw-star-icon svg-card-star"></div>
     <div ng-if="library.visibility === 'secret'" class="kf-klw-lock-icon svg-card-lock"></div>
+    <svg
+      ng-if="library.visibility === 'organization'"
+      kf-symbol-sprite
+      icon="org"
+    ></svg>
   </div>
 </div>
 {{library.name}}

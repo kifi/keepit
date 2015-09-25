@@ -1,3 +1,4 @@
 <div kf-modal class="kf-org-invite-search" kf-width="400px">
-  <div kf-org-invite-search></div>
+  <div ng-if="!modalData.addMany" kf-org-invite-search></div>
+  <div ng-if="modalData.addMany" kf-org-invite-many></div>
 </div>

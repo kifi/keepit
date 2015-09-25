@@ -12,6 +12,10 @@ import javax.crypto.spec.IvParameterSpec
 
 case class StripeToken(token: String)
 
+object StripeToken {
+  val DELETED = StripeToken("deleted")
+}
+
 case class PaymentMethod(
     id: Option[Id[PaymentMethod]] = None,
     createdAt: DateTime = currentDateTime,
@@ -23,6 +27,7 @@ case class PaymentMethod(
 
   def withId(id: Id[PaymentMethod]): PaymentMethod = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaymentMethod = this.copy(updatedAt = now)
+  def withState(state: State[PaymentMethod]): PaymentMethod = this.copy(state = state)
 }
 
 object PaymentMethod extends ModelWithPublicIdCompanion[PaymentMethod] {

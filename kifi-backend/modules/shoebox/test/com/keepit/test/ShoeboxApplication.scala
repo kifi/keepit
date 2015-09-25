@@ -22,7 +22,6 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time.FakeClockModule
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.inject.{ ApplicationInjector, FakeFortyTwoModule }
@@ -94,7 +93,6 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeMailModule(),
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
-    FakeCuratorServiceClientModule(),
     FakeSearchServiceClientModule(),
     FakeHttpClientModule(),
     DevTwilioCredentialsModule(),

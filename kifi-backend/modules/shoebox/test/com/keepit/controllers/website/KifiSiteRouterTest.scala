@@ -13,7 +13,6 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.controllers.mobile.MobileKeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.curator.FakeCuratorServiceClientModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -48,8 +47,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
     FakeKeepImportsModule(),
-    FakeCryptoModule(),
-    FakeCuratorServiceClientModule()
+    FakeCryptoModule()
   )
 
   "KifiSiteRouter" should {
@@ -182,8 +180,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         // Libraries
         val libraryCommander = inject[LibraryCommander]
         val Right(library) = {
-          val libraryRequest = LibraryAddRequest(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
-          libraryCommander.addLibrary(libraryRequest, user1.id.get)
+          val libraryRequest = LibraryCreateRequest(name = "Awesome Lib", visibility = LibraryVisibility.PUBLISHED, slug = "awesome-lib")
+          libraryCommander.createLibrary(libraryRequest, user1.id.get)
         }
         actionsHelper.unsetUser
         route(FakeRequest("GET", "/abe.z1234/awesome-lib")) must beWebApp

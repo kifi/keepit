@@ -5,6 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick.Database
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
@@ -15,15 +16,19 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class MobileOrganizationController @Inject() (
-    val orgCommander: OrganizationCommander,
-    val orgMembershipCommander: OrganizationMembershipCommander,
-    val orgInviteCommander: OrganizationInviteCommander,
+    orgCommander: OrganizationCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
+    val db: Database,
+    val permissionCommander: PermissionCommander,
     implicit val imageConfig: S3ImageConfig,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
+
+  implicit val organizationViewWrites = OrganizationView.embeddedMembershipWrites
 
   def createOrganization = UserAction(parse.tolerantJson) { request =>
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
@@ -68,12 +73,19 @@ class MobileOrganizationController @Inject() (
     Ok(Json.toJson(organizationView))
   }
 
+  def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
+    Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
+  }
+
   // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalId(extId)
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
-    val orgCards = orgCommander.getOrganizationCards(visibleOrgs, request.userIdOpt).values.toSeq
 
-    Ok(Json.obj("organizations" -> orgCards))
+    val orgViewsMap = orgCommander.getOrganizationViews(visibleOrgs.toSet, request.userIdOpt, authTokenOpt = None)
+
+    val orgViews = visibleOrgs.map(org => orgViewsMap(org))
+
+    Ok(Json.obj("organizations" -> orgViews))
   }
 }

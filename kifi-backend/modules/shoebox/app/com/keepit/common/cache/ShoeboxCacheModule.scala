@@ -318,11 +318,6 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def libraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new LibraryInfoIdCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 7 days))
-
-  @Singleton
-  @Provides
   def libraryMembershipCountByLibIdAndAccessCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new LibraryMembershipCountByLibIdAndAccessCache(stats, accessLog, (innerRepo, 2 minutes), (outerRepo, 7 days))
 
@@ -413,10 +408,26 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
     new PrimaryOrgForUserCache(stats, accessLog, (outerRepo, 14 days))
 
   @Provides @Singleton
+  def orgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrgTrackingValuesCache(stats, accessLog, (outerRepo, 14 days))
+
+  @Provides @Singleton
   def organizationExperimentCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationExperimentCache(stats, accessLog, (innerRepo, 1 minutes), (outerRepo, 7 days))
 
   @Provides @Singleton
   def organizationDomainOwnershipCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationDomainOwnershipAllCache(stats, accessLog, (outerRepo, 14 days))
+
+  @Provides @Singleton
+  def basicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicKeepByIdCache(stats, accessLog, (outerRepo, 14 days))
+
+  @Provides @Singleton
+  def organizationMembersCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrganizationMembersCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
 }

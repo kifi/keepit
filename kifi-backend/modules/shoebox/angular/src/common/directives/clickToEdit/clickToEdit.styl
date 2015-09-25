@@ -27,6 +27,12 @@ editButtonWidth = 40px
     word-wrap: break-word
     resize: none
 
+  .kf-click-to-edit-p
+    margin-bottom: 0px
+
+    + .kf-click-to-edit-p
+      margin-top: 5px
+
   &.editable
     &:hover
       textarea
@@ -39,6 +45,7 @@ editButtonWidth = 40px
 .kf-click-to-edit
   .kf-click-to-edit-textarea-tester
     box-sizing: border-box
+    padding-left: 15px
     position: absolute
     top: -9999px
     left: -9999px

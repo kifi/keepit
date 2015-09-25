@@ -40,6 +40,9 @@ angular.module('kifi')
 
 .filter('tagUrl', function () {
   return function (tag) {
+    if (_.startsWith(tag, '#')) {
+      tag = tag.slice(1);
+    }
     return '/find?q=tag:' + encodeURIComponent(tag.indexOf(' ') >= 0 ? '"' + tag + '"' : tag);
   };
 })

@@ -1,6 +1,6 @@
 package com.keepit.common.concurrent
 
-import java.util.concurrent.{ LinkedBlockingQueue, ThreadPoolExecutor, TimeUnit }
+import java.util.concurrent._
 
 import com.keepit.common.healthcheck.StackTrace
 import play.api.Mode
@@ -13,7 +13,7 @@ class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
 
   @volatile private[this] var closed = false
   @volatile private[this] var initiated = false
-  private[this] lazy val originExecutor = new ThreadPoolExecutor(0, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue[Runnable]())
+  private[this] lazy val originExecutor = Executors.newCachedThreadPool()
   private[this] lazy val internalContext: ScalaExecutionContext = {
     initiated = true
     scala.concurrent.ExecutionContext.fromExecutorService(originExecutor)
@@ -21,9 +21,9 @@ class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
   private[this] val lock = new Object()
   @volatile private[this] var addedAnything = false
   @volatile private[this] var counter: Int = 0
-  @volatile private[this] var maxExeutionCount: Int = 0
+  @volatile private[this] var maxExecutionCount: Int = 0
 
-  override def toString(): String = lock.synchronized { s"WatchableExecutionContext with counter = $counter and maxExeutionCount = $maxExeutionCount" }
+  override def toString: String = lock.synchronized { s"WatchableExecutionContext with counter = $counter and maxExecutionCount = $maxExecutionCount" }
 
   def execute(runnable: Runnable): Unit = lock.synchronized {
     if (closed) {
@@ -31,18 +31,18 @@ class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
     } else {
       val trace = new StackTrace()
       counter += 1
-      maxExeutionCount += 1
+      maxExecutionCount += 1
       addedAnything = true
       val wrapper = new Runnable {
         override def run(): Unit = try {
           runnable.run()
           lock.synchronized {
+            if (counter <= 1) lock.notifyAll()
             counter -= 1
-            if (counter < 0) throw new Exception(s"Counter should never be less then zero")
-            if (counter == 0) lock.notifyAll()
           }
         } catch {
           case e: Throwable =>
+            lock.synchronized { counter -= 1 }
             val t = trace.withCause(e)
             t.printStackTrace()
             throw t
@@ -62,7 +62,7 @@ class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
         }
       }
     }
-    maxExeutionCount
+    maxExecutionCount
   }
 
   def kill(): Int = {
@@ -72,7 +72,7 @@ class WatchableExecutionContext(mode: Mode.Mode) extends ScalaExecutionContext {
       if (!inProcess.isEmpty) {
         println(s"EXECUTOR STOPPED WHILE THERE WHERE ${inProcess.size} RUNNERS IN MID FLIGHT.")
       }
-      maxExeutionCount
+      counter
     } else 0
   }
 

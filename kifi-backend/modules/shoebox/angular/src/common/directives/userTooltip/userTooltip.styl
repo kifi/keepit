@@ -1,7 +1,7 @@
 .kf-utt
   position: absolute
-  left: -40px
   top: -88px
+  left: -40px
   background-color: #fff
   color: #faf9f9
   box-shadow: 0 3px 5px rgba(0,0,0,.1)
@@ -34,6 +34,14 @@
     background-color: #fff
     box-shadow: 2px 2px 3px rgba(0,0,0,.1)
     transform: rotate(45deg)
+
+.kf-utt-below
+  top: auto
+  bottom: -88px
+
+  &::after
+    top: -6px
+    bottom: auto
 
 .kf-utt-top
   display: table

@@ -1,0 +1,25 @@
+<div class="kf-org-create">
+  <div class="kf-wrapper">
+    <div class="kf-row">
+      <header class="kf-full-pane">
+        <h1 class="kf-org-create-title">Create a Team</h1>
+      </header>
+    </div>
+    <div ng-if="!org_experiment">
+      <p>Sorry, this is not yet available.</p>
+    </div>
+    <div ng-if="org_experiment" class="kf-row kf-container">
+      <div class="kf-org-create-container kf-split-pane">
+        <div class="kf-org-create-field">
+          <label>Name</label>
+          <input type="text" ng-model="orgName" class="kf-textbox kf-org-create-name" placeholder="Choose a name for your team" />
+        </div>
+
+        <input type="submit" ng-click="createOrg()" class="kf-button kf-button-large" value="Create Team"/>
+      </div>
+      <div class="kf-split-pane">
+        <p>After choosing a name for your team, we'll let you choose a logo, description, and link.</p>
+      </div>
+    </div>
+  </div>
+</div>

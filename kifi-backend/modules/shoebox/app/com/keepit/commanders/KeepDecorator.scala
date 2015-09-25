@@ -1,22 +1,31 @@
 package com.keepit.commanders
 
-import com.keepit.common.crypto.{ PublicIdConfiguration }
-import com.google.inject.{ Provider, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
+import com.keepit.common.core._
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ S3ImageConfig, ImageSize }
+import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
-import com.keepit.search.augmentation.{ LimitedAugmentationInfo, AugmentableItem }
+import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import com.keepit.common.core._
 
-class KeepDecorator @Inject() (
+@ImplementedBy(classOf[KeepDecoratorImpl])
+trait KeepDecorator {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]]
+  def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo]
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]]
+}
+
+@Singleton
+class KeepDecoratorImpl @Inject() (
     db: Database,
     basicUserRepo: BasicUserRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
@@ -24,9 +33,12 @@ class KeepDecorator @Inject() (
     collectionCommander: CollectionCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     keepRepo: KeepRepo,
+    ktlRepo: KeepToLibraryRepo,
+    ktuRepo: KeepToUserRepo,
     orgRepo: OrganizationRepo,
     keepImageCommander: KeepImageCommander,
     userCommander: Provider[UserCommander],
+    organizationCommander: OrganizationCommander,
     searchClient: SearchServiceClient,
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
     experimentCommander: LocalUserExperimentCommander,
@@ -34,7 +46,7 @@ class KeepDecorator @Inject() (
     airbrake: AirbrakeNotifier,
     implicit val imageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext,
-    implicit val publicIdConfig: PublicIdConfiguration) {
+    implicit val publicIdConfig: PublicIdConfiguration) extends KeepDecorator with Logging {
 
   def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
     val keeps = keepsSeq match {
@@ -52,14 +64,19 @@ class KeepDecorator @Inject() (
       }
       val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
-          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet
+          val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ keepsSeq.flatMap(_.libraryId).toSet
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
 
-        val libIdToOrg = {
+        val libIdToBasicOrg = {
           val libId2orgId = idToLibrary.mapValues(lib => lib.organizationId).collect { case (id, Some(orgid)) => id -> orgid }
-          val orgId2org = db.readOnlyMaster { implicit s => orgRepo.getByIds(libId2orgId.values.toSet) }
-          libId2orgId.mapValues { orgId => orgId2org.get(orgId) }.collect { case (id, Some(org)) => id -> org }
+          val libId2OrgCard = db.readOnlyMaster { implicit s =>
+            libId2orgId.map {
+              case (libId, orgId) =>
+                libId -> organizationCommander.getBasicOrganization(orgId)
+            }
+          }
+          libId2OrgCard
         }
 
         val idToBasicUser = {
@@ -70,12 +87,12 @@ class KeepDecorator @Inject() (
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
         val idToBasicLibrary = idToLibrary.mapValues { library =>
-          val orgOpt = libIdToOrg.get(library.id.get)
+          val orgOpt = libIdToBasicOrg.get(library.id.get)
           val user = idToBasicUser(library.ownerId)
-          BasicLibrary(library, user, orgOpt)
+          BasicLibrary(library, user, orgOpt.map(_.handle))
         }
 
-        (idToBasicUser, idToBasicLibrary)
+        (idToBasicUser, idToBasicLibrary, libIdToBasicOrg)
       }
       val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
 
@@ -96,7 +113,7 @@ class KeepDecorator @Inject() (
         }
       }
 
-      val allMyKeeps = perspectiveUserIdOpt.map { userId => getBasicKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[BasicKeep]]
+      val allMyKeeps = perspectiveUserIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
 
       val librariesWithWriteAccess = perspectiveUserIdOpt.map { userId =>
         db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
@@ -105,7 +122,7 @@ class KeepDecorator @Inject() (
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
-        (idToBasicUser, idToBasicLibrary) <- basicInfosFuture
+        (idToBasicUser, idToBasicLibrary, idToBasicOrg) <- basicInfosFuture
       } yield {
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
@@ -147,7 +164,9 @@ class KeepDecorator @Inject() (
               hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
               summary = Some(pageInfoForKeep),
               siteName = DomainToNameMapper.getNameFromUrl(keep.url),
-              libraryId = keep.libraryId.map(l => Library.publicId(l)),
+              libraryId = keep.libraryId.map(Library.publicId),
+              library = keep.libraryId.flatMap(idToBasicLibrary.get),
+              organization = keep.libraryId.flatMap(idToBasicOrg.get),
               sourceAttribution = sourceAttrOpt,
               note = keep.note
             )
@@ -192,11 +211,19 @@ class KeepDecorator @Inject() (
     }
   }
 
-  def getBasicKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Map[Id[NormalizedURI], Set[BasicKeep]] = {
+  def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]] = {
     val allKeeps = db.readOnlyReplica { implicit session =>
       val writeableLibs = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
-      val allKeeps = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds)
-      allKeeps
+      val oldWay = keepRepo.getByLibraryIdsAndUriIds(writeableLibs, uriIds).toSet
+      val newWay = {
+        val direct = ktuRepo.getByUserIdAndUriIds(userId, uriIds).map(_.keepId)
+        val indirectViaLibraries = ktlRepo.getVisibileFirstOrderImplicitKeeps(uriIds, writeableLibs).map(_.keepId)
+        (direct ++ indirectViaLibraries) |> keepRepo.getByIds |> (_.values.toSet)
+      }
+      if (newWay.map(_.id.get) != oldWay.map(_.id.get)) {
+        log.error(s"[KTL-MATCH] getBasicKeeps($userId, $uriIds): ${newWay.map(_.id.get)} != ${oldWay.map(_.id.get)}")
+      }
+      if (useMultilibLogic) newWay else oldWay
     }
     val grouped = allKeeps.groupBy(_.uriId)
     uriIds.map { uriId =>
@@ -206,17 +233,17 @@ class KeepDecorator @Inject() (
             val mine = userId == keep.userId
             val libraryId = keep.libraryId.get
             val removable = true // all keeps here are writeable
-            BasicKeep(
+            PersonalKeep(
               id = keep.externalId,
               mine = mine,
               removable = removable,
               visibility = keep.visibility,
               libraryId = Library.publicId(libraryId)
             )
-          }.toSet
+          }
           uriId -> userKeeps
         case _ =>
-          uriId -> Set.empty[BasicKeep]
+          uriId -> Set.empty[PersonalKeep]
       }
     }.toMap
   }

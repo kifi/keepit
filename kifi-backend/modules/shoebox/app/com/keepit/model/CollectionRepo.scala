@@ -17,7 +17,7 @@ import scala.util.Try
 import play.api.libs.json.Json
 import com.keepit.common.logging.Logging
 import scala.slick.jdbc.StaticQuery
-import com.keepit.typeahead.HashtagTypeahead
+import com.keepit.typeahead.{ UserHashtagTypeaheadUserIdKey, UserHashtagTypeaheadCache, HashtagTypeahead }
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection] {
@@ -49,7 +49,7 @@ class CollectionRepoImpl @Inject() (
   val elizaServiceClient: ElizaServiceClient,
   val db: DataBaseComponent,
   val clock: Clock,
-  typeahead: HashtagTypeahead)
+  userHashtagTypeaheadCache: UserHashtagTypeaheadCache)
     extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] with SeqNumberDbFunction[Collection] with Logging {
 
   import db.Driver.simple._
@@ -147,7 +147,9 @@ class CollectionRepoImpl @Inject() (
 
   def collectionChanged(collectionId: Id[Collection], isNewKeep: Boolean = false, inactivateIfEmpty: Boolean)(implicit session: RWSession): Collection = {
     val collection = get(collectionId)
-    session.onTransactionSuccess { typeahead.delete(collection.userId) }
+    session.onTransactionSuccess {
+      userHashtagTypeaheadCache.remove(UserHashtagTypeaheadUserIdKey(collection.userId))
+    }
     if (isNewKeep) {
       save(collection withLastKeptTo clock.now())
     } else if (inactivateIfEmpty && getBookmarkCount(collectionId) == 0) {

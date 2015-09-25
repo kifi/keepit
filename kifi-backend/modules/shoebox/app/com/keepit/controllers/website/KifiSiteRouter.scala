@@ -26,7 +26,7 @@ class KifiSiteRouter @Inject() (
   handleCommander: HandleCommander,
   val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
-  libraryCommander: LibraryCommander,
+  libraryInfoCommander: LibraryInfoCommander,
   libPathCommander: PathCommander,
   orgInviteCommander: OrganizationInviteCommander,
   libraryMetadataCache: LibraryMetadataCache,
@@ -144,7 +144,7 @@ class KifiSiteRouter @Inject() (
           case Left(org) => org.id.get
           case Right(user) => user.id.get
         }
-        val libraryOpt = libraryCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
+        val libraryOpt = libraryInfoCommander.getLibraryBySlugOrAlias(handleSpace, LibrarySlug(slug))
         libraryOpt map {
           case (library, isLibraryAlias) =>
             val libraryHasBeenMoved = isLibraryAlias
@@ -230,15 +230,17 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  private object IncompleteSignupFilter extends ActionFilter[MaybeUserRequest] {
+  private object NonActiveUserFilter extends ActionFilter[MaybeUserRequest] {
     protected def filter[A](request: MaybeUserRequest[A]): Future[Option[Result]] = Future.successful {
-      if (request.userOpt.isEmpty && request.identityOpt.isDefined) {
+      if ((request.userOpt.isEmpty && request.identityOpt.isDefined) || request.userOpt.exists(user => user.state == UserStates.INCOMPLETE_SIGNUP)) {
         Some(Redirect(com.keepit.controllers.core.routes.AuthController.signupPage()))
+      } else if (request.userOpt.exists(user => user.state == UserStates.BLOCKED || user.state == UserStates.INACTIVE)) {
+        Some(Redirect("/logout"))
       } else None
     }
   }
 
-  private val WebAppPage = MaybeUserPage andThen MobileAppFilter andThen IncompleteSignupFilter
+  private val WebAppPage = MaybeUserPage andThen MobileAppFilter andThen NonActiveUserFilter
 
   private def userMetadata(user: User, tab: UserProfileTab): Future[String] = try {
     userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get, tab)) {

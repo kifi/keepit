@@ -45,22 +45,37 @@
     </div>
   </div>
 
-  <div ng-show="showCreate">
+  <div ng-if="showCreate">
     <header class="keep-to-library-create-header">
       <span class="keep-to-library-back-arrow" ng-click="hideCreatePanel()"></span>Keep to a new library
     </header>
     <div class="keep-to-library-create-heading">Name Your Library</div>
     <div class="keep-to-library-create-name-input-container">
-      <input class="keep-to-library-create-name-input" ng-model="newLibrary.name" placeholder="Inspiring videos, Recipes I love...">
+      <input class="keep-to-library-create-name-input" ng-model="newLibrary.name" placeholder="Name your library">
       <span ng-show="$error.name" class="keep-to-library-create-name-error">{{$error.name}}</span>
     </div>
-    <div class="keep-to-library-create-heading">Make it private?</div>
+
+    <div ng-if="me.orgs.length">
+      <div class="keep-to-library-create-heading">Location</div>
+      <div class="keep-to-library-create-org-selector">
+        <div
+          kf-org-selector
+          library-props="libraryProps"
+          library="newLibrary"
+          space="space"
+        >
+        </div>
+      </div>
+    </div>
+
+    <div class="keep-to-library-create-heading">Privacy</div>
     <div class="keep-to-library-create-visibility">
-      <span class="keep-to-library-create-visibility-switch" kf-library-visibility-selector library="newLibrary"></span>
-      <span class="keep-to-library-create-visibility-explanation" ng-switch="newLibrary.visibility">
-        <span ng-switch-default>Anyone can see and follow this library</span>
-        <span ng-switch-when="secret">Only people you invite can see this library</span>
-      </span>
+      <div 
+        class="keep-to-library-create-visibility-switch" 
+        kf-library-visibility-selector 
+        library="newLibrary"
+        space="space.destination"
+      ></div>
     </div>
     <div ng-show="$error.general" class="keep-to-library-create-general-error">{{$error.general}}</div>
     <div class="keep-to-library-create-button-container">

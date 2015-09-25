@@ -3,8 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileLibrariesCtrl', [
-  '$rootScope', '$scope', 'profile', 'profileService', 'orgProfileService', 'modalService', 'Paginator',
-  function ($rootScope, $scope, profile, profileService, orgProfileService, modalService, Paginator) {
+  '$rootScope', '$scope', '$stateParams', 'profile', 'profileService',
+  'orgProfileService', 'modalService', 'Paginator', 'ORG_PERMISSION',
+  function ($rootScope, $scope, $stateParams, profile, profileService,
+            orgProfileService, modalService, Paginator, ORG_PERMISSION) {
     var organization = profile.organization;
     var libraryLazyLoader = new Paginator(librarySource);
     var newLibraryIds = {};
@@ -34,12 +36,19 @@ angular.module('kifi')
           resetAndFetchLibraries();
         }
       }),
+
       $rootScope.$on('libraryDeleted', function (event, libraryId) {
         _.remove($scope.libraries, {id: libraryId});
       }),
+
       $rootScope.$on('libraryKeepCountChanged', function (event, libraryId, keepCount) {
         (_.find($scope.libraries, {id: libraryId}) || {}).keepCount = keepCount;
+      }),
+
+      $rootScope.$on('openCreateLibrary', function () {
+        $scope.openCreateLibrary();
       })
+
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
     });
@@ -47,6 +56,7 @@ angular.module('kifi')
     $scope.organization = organization;
 
     $scope.me = profileService.me;
+    $scope.canInvite = $scope.membership.permissions && $scope.membership.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
@@ -67,6 +77,10 @@ angular.module('kifi')
     };
 
     $scope.openCreateLibrary = function () {
+      if (!$scope.canCreateLibraries) {
+        return;
+      }
+
       modalService.open({
         template: 'libraries/manageLibraryModal.tpl.html',
         modalData: {
@@ -81,7 +95,7 @@ angular.module('kifi')
       });
     };
 
-    $scope.canCreateLibraries = ($scope.membership.permissions.indexOf('add_libraries') !== -1);
+    $scope.canCreateLibraries = ($scope.membership.permissions.indexOf(ORG_PERMISSION.ADD_LIBRARIES) !== -1);
 
     $scope.shouldShowMoveCard = function () {
       return $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();
@@ -97,6 +111,11 @@ angular.module('kifi')
       });
     };
     $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgLibraries'});
+
+    if ($stateParams.openCreateLibrary) {
+      $scope.openCreateLibrary();
+    }
+
     resetAndFetchLibraries();
   }
 ]);

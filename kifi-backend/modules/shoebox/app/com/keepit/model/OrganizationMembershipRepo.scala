@@ -27,21 +27,24 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
   def deactivate(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership
   def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]]
-  def primaryOrgForUser(userId: Id[User])(implicit session: RSession): Option[Id[Organization]]
+  def getByRole(orgId: Id[Organization], role: OrganizationRole, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[Id[User]]
 }
 
 @Singleton
 class OrganizationMembershipRepoImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
+    orgMembersCache: OrganizationMembersCache,
     val db: DataBaseComponent,
     val clock: Clock) extends OrganizationMembershipRepo with DbRepo[OrganizationMembership] with SeqNumberDbFunction[OrganizationMembership] with Logging {
 
   override def deleteCache(orgMember: OrganizationMembership)(implicit session: RSession): Unit = {
     primaryOrgForUserCache.remove(PrimaryOrgForUserKey(orgMember.userId))
+    orgMembersCache.remove(OrganizationMembersKey(orgMember.organizationId))
   }
 
   override def invalidateCache(orgMember: OrganizationMembership)(implicit session: RSession): Unit = {
     primaryOrgForUserCache.remove(PrimaryOrgForUserKey(orgMember.userId))
+    orgMembersCache.remove(OrganizationMembersKey(orgMember.organizationId))
   }
 
   import db.Driver.simple._
@@ -92,10 +95,6 @@ class OrganizationMembershipRepoImpl @Inject() (
 
   override def save(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
     super.save(model.copy(seq = deferredSeqNum()))
-  }
-
-  def primaryOrgForUser(userId: Id[User])(implicit session: RSession): Option[Id[Organization]] = {
-    (for (row <- rows if row.userId === userId) yield row.organizationId).firstOption
   }
 
   private val getByOrgIdAndUserIdCompiled = Compiled { (orgId: Column[Id[Organization]], userId: Column[Id[User]]) =>
@@ -193,6 +192,15 @@ class OrganizationMembershipRepoImpl @Inject() (
   def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
     getTeammatesCompiled(userId).run.toSet
   }
+
+  def getByRole(orgId: Id[Organization], role: OrganizationRole, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[Id[User]] = {
+    excludeState match {
+      case Some(exclude) => (for { row <- rows if row.organizationId === orgId && row.state =!= exclude && row.role == role } yield row.userId).list
+      case None => (for { row <- rows if row.organizationId === orgId && row.role == role } yield row.userId).list
+    }
+
+  }
+
 }
 
 trait OrganizationMembershipSequencingPlugin extends SequencingPlugin

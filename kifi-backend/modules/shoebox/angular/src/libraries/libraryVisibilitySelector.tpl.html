@@ -1,23 +1,111 @@
-<div class="library-visibility-selector">
-  <label ng-if="!spaceIsOrg(space)">
-    <input class="library-visibility-checkbox-input" type="checkbox" ng-model="library.visibility" ng-false-value="'published'" ng-true-value="'secret'">
-    <div class="library-visibility-checkbox-custom-input kf-transitions">
-      <div class="library-visibility-checkbox-custom-input-public-background"></div>
-      <div class="library-visibility-checkbox-custom-input-secret-background svg-card-lock"></div>
-    </div>
-  </label>
-  <div ng-if="spaceIsOrg(space)" class="library-visibility-radio-settings-option">
-    <label class="library-visibility-radio-label">
-      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'published'">
-      <span class="library-visibility-option-text">Public</span>
-    </label><!-- remove extra space from inline-block
-    --><label class="library-visibility-radio-label">
-      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'organization'">
-      <span class="library-visibility-option-text">Organization</span>
-    </label><!-- remove extra space from inline-block
-    --><label class="library-visibility-radio-label">
-      <input type="radio" class="library-visibility-radio-input" ng-model="library.visibility" ng-value="'secret'">
-      <span class="library-visibility-option-text">Private</span>
+<div
+  class="kf-library-visibility-selector"
+>
+  <div class="kf-row">
+    <label class="kf-triptych kf-library-visibility-selector-public"
+      ng-class="{
+        'active': library.visibility === 'published',
+        'disabled': space.membership.permissions.indexOf(ORG_PERMISSION.PUBLISH_LIBRARIES) === -1
+      }"
+    >
+      <input
+        type="radio"
+        name="library-visibility"
+        ng-model="library.visibility"
+        ng-value="'published'"
+        ng-disabled="space.membership.permissions.indexOf(ORG_PERMISSION.PUBLISH_LIBRARIES) === -1"
+      />
+      <svg
+        kf-symbol-sprite
+        icon="globe"
+        class="kf-library-visibility-selector-icon"
+      ></svg>
+      <span class="kf-library-visibility-selector-caption">Public</span>
+      <span
+        ng-if="spaceIsOrg(space) && space.settings && !(space.membership.role === 'member' && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER)"
+        kf-upsell
+        position="right"
+        on-click="onClickUpsellPublic()"
+        on-hover="onHoverUpsellPublic()"
+      >
+      <span ng-if="space.planName.toLowerCase().indexOf('paid') === -1">
+        Restrict who can make libraries public by <a class="kf-link" href="#">Upgrading to Premium</a>.
+      </span>
+      <span ng-if="space.planName.toLowerCase().indexOf('paid') !== -1">
+        <span ng-if="space.membership.role === 'admin' && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER">
+          Any member can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
+        </span>
+        <span ng-if="space.membership.role === 'admin' && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN">
+          Only admins can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
+        </span>
+        <span ng-if="space.membership.role === 'admin' && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED">
+          No one can make your team's libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
+        </span>
+        <span ng-if="space.membership.role === 'member' && (space.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED || space.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN)">
+          Public libraries are disabled for {{ space.name }}. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
+        </span>
+      </span>
+    </label>
+    <label class="kf-triptych kf-library-visibility-selector-team"
+      ng-class="{
+        'active': library.visibility === 'organization',
+        'disabled': !spaceIsOrg(space),
+        'kf-tooltip-parent': !isUserOrgMember
+      }"
+    >
+      <div ng-if="!isUserOrgMember" class="kf-tooltip-body">Curious?<br />Click to get early access to the <a class="kf-link" target="_self" href="https://www.kifi.com/teams">Kifi for Teams</a> beta</div>
+      <input
+        type="radio"
+        name="library-visibility"
+        ng-model="library.visibility"
+        ng-value="'organization'"
+        ng-disabled="!spaceIsOrg(space)"
+      />
+      <svg
+        kf-symbol-sprite
+        icon="org"
+        class="kf-library-visibility-selector-icon"
+      ></svg>
+      <span class="kf-library-visibility-selector-caption">Team</span>
+    </label>
+    <label
+      class="kf-triptych kf-library-visibility-selector-private"
+      ng-class="{ 'active': library.visibility === 'secret' }"
+    >
+      <input
+        type="radio"
+        name="library-visibility"
+        ng-model="library.visibility"
+        ng-value="'secret'"
+      />
+      <svg
+        kf-symbol-sprite
+        icon="lock"
+        class="kf-library-visibility-selector-icon"
+      ></svg>
+      <span class="kf-library-visibility-selector-caption">Private</span>
     </label>
   </div>
+  <p
+    class="kf-library-visibility-selector-helptext"
+    ng-if="library.visibility === 'published'"
+  >
+    Anyone can see and follow this library
+  </p>
+  <p
+    class="kf-library-visibility-selector-helptext"
+    ng-if="library.visibility === 'organization'"
+  >
+    Only members of {{ space.name }} can see this library
+  </p>
+  <p
+    class="kf-library-visibility-selector-helptext"
+    ng-if="library.visibility === 'secret'"
+  >
+    Only people you invite can see this library
+  </p>
+  <label class="kf-library-visibility-selector-checkbox" ng-if="spaceIsOrg(space) && library.visibility !== 'secret'">
+    <input type="checkbox" ng-change="changeOrgMemberAccess()" ng-model="orgMemberAccessWrite" />
+    Members of {{ space.name }} can join and keep to this library.
+  </label>
 </div>

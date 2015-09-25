@@ -1,0 +1,44 @@
+# this playbook shouldn't be run manually, it's intended to be run automaticaly
+# from Ubuntu cloud-init (set via the AWS EC2 user-data)
+---
+- hosts: localhost
+  sudo: yes
+  tasks:
+    - name: add localhost to the ec2 group
+      add_host: name=localhost groups=ec2
+
+- include: kifi-node-setup.yml
+
+- hosts: localhost
+  sudo: yes
+  tasks:
+    # the kifi-node-setup playbook writes this file on the ec2 instance
+    - include_vars: /opt/kifi-vars.yml
+
+    - set_fact: ansible_fqdn="{{ kifi_hostname }}"
+
+    - name: add localhost to service group {{ ec2_tag_Service }}
+      add_host:
+        name: localhost
+        groups: tag_Service_{{ ec2_tag_Service }}
+
+    - name: notify slack started
+      local_action:
+        module: slack
+        domain: kifi.slack.com
+        token: T02A81H50/B0A32CHUG/CSB8WJi58RKoEwqXK45bAXJY
+        msg: "ec2-local started: {{ ec2_instance_type }} @ {{ public_dns_name }}"
+        username: "Ansible [{{ ec2_tag_Name }}]"
+
+- include: ec2-service.yml
+
+- hosts: localhost
+  sudo: yes
+  tasks:
+    - name: notify slack completed
+      local_action:
+        module: slack
+        domain: kifi.slack.com
+        token: T02A81H50/B0A32CHUG/CSB8WJi58RKoEwqXK45bAXJY
+        msg: "ec2-local completed: {{ ec2_instance_type }} @ {{ public_dns_name }}"
+        username: "Ansible [{{ ec2_tag_Name }}]"

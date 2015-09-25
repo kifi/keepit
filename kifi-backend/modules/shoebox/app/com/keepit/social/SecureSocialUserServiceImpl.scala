@@ -21,7 +21,7 @@ import securesocial.core._
 import securesocial.core.IdentityId
 import com.keepit.model.UserEmailAddress
 import securesocial.core.providers.Token
-import com.keepit.commanders.{ UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
+import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
 import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.Future
@@ -68,6 +68,7 @@ class SecureSocialUserPluginImpl @Inject() (
   emailRepo: UserEmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin,
   userCommander: UserCommander,
+  userCreationCommander: UserCreationCommander,
   userExperimentCommander: LocalUserExperimentCommander,
   userEmailAddressCommander: UserEmailAddressCommander,
   userIdentityHelper: UserIdentityHelper,
@@ -167,7 +168,7 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   private def createUser(socialUser: SocialUser): User = timing(s"create user ${socialUser.identityId}") {
-    val u = userCommander.createUser(
+    val u = userCreationCommander.createUser(
       socialUser.firstName,
       socialUser.lastName,
       state = UserStates.ACTIVE

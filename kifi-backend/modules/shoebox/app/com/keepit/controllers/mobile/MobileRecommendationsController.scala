@@ -1,43 +1,42 @@
 package com.keepit.controllers.mobile
 
+import com.keepit.common.time._
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepsCommander, LocalUserExperimentCommander, RecommendationsCommander }
+import com.keepit.commanders.{ LibraryInfoCommander, KeepCommander, LocalUserExperimentCommander, RecommendationsCommander }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.UserAgent
-import com.keepit.controllers.website.RecommendationControllerHelper
-import com.keepit.curator.model.{ FullLibRecoResults, FullUriRecoResults, RecommendationSubSource, RecommendationSource }
+import com.keepit.curator.model._
 import com.keepit.model._
 import com.kifi.macros.json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsString, Json }
-import play.api.mvc.Result
 
 import scala.concurrent.Future
 
 class MobileRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
-    commander: RecommendationsCommander,
-    keepsCommander: KeepsCommander,
+    recommendationsCommander: RecommendationsCommander,
+    keepsCommander: KeepCommander,
     userExperimentCommander: LocalUserExperimentCommander,
+    libraryInfoCommander: LibraryInfoCommander,
+    normalizedURIRepo: NormalizedURIRepo,
     val db: Database,
     val userRepo: UserRepo,
-    val libMemRepo: LibraryMembershipRepo) extends UserActions with ShoeboxServiceController with RecommendationControllerHelper {
+    val keepRepo: KeepRepo,
+    val libMemRepo: LibraryMembershipRepo) extends UserActions with ShoeboxServiceController {
 
   def topRecosV2(recencyWeight: Float, more: Boolean) = UserAction.async { request =>
-    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, more, recencyWeight, None)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, 10, RecommendationSource.Site, RecommendationSubSource.RecommendationsFeed, context = None)
-
-    for (libs <- libRecosF; uris <- uriRecosF) yield Ok {
-      val FullUriRecoResults(urisReco, _) = uris
-      val FullLibRecoResults(libsReco, _) = libs
-      val shuffled = mix(urisReco, libsReco)
-      Json.toJson(shuffled)
+    getKeepStreamAsRecos(request.userId, 10, None) map {
+      case (recos, _) =>
+        val json = Json.toJson(recos)
+        Ok(json)
     }
   }
 
   @json case class RecosRequest(recencyWeight: Float, uriContext: Option[String], libContext: Option[String])
+
   def topRecosV3Post() = UserAction.async { implicit request =>
     request.body.asJson.flatMap(_.asOpt[RecosRequest]) match {
       case None =>
@@ -47,45 +46,17 @@ class MobileRecommendationsController @Inject() (
     }
   }
 
-  private def sanitizeContext(uriContext: String, libContext: String): (String, String) = {
-    val contextBankruptcyLength = 3000 // 4k is max request size, leaves some room for other params
-    val uctxLen = uriContext.length
-    val lctxLen = libContext.length
-    if (uctxLen + lctxLen <= contextBankruptcyLength) {
-      (uriContext, libContext)
-    } else {
-      if (uctxLen >= contextBankruptcyLength && lctxLen >= contextBankruptcyLength) {
-        ("", "")
-      } else {
-        if (uctxLen >= lctxLen) ("", libContext)
-        else (uriContext, "")
-      }
-    }
-  }
-
   // _uctx and _lctx are meant to support an iOS bug. Should not be supported in the future.
   def topRecosV3(recencyWeight: Float, uriContext: Option[String], libContext: Option[String], uctx: Option[String], lctx: Option[String]) = UserAction.async { request =>
+
     val uriContext2 = uriContext orElse uctx
     val libContext2 = libContext orElse lctx
-
-    val libCnt = libraryRecoCount(request.userId)
-
-    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, uriContext.isDefined, recencyWeight, context = uriContext2)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = libContext2)
-
-    for (libs <- libRecosF; uris <- uriRecosF) yield {
-      val FullUriRecoResults(urisReco, newUrisContext) = uris
-      val FullLibRecoResults(libsReco, newLibsContext) = libs
-      val recos = mix(urisReco, libsReco)
-      val (goodUriContext, goodLibContext) = sanitizeContext(newUrisContext, newLibsContext)
-
-      Ok(Json.obj("recos" -> recos, "uctx" -> goodUriContext, "lctx" -> goodLibContext))
-    }
+    feedFromStream(uriContext2, libContext2, request.userId)
   }
 
   def topPublicRecos() = UserAction.async { request =>
     val useDict = request.headers.get("X-Kifi-Client").exists(_.toLowerCase.trim.startsWith("ios 2.1"))
-    commander.topPublicRecos(request.userId).map { recos =>
+    recommendationsCommander.topPublicRecos(request.userId).map { recos =>
       if (useDict) Ok(Json.obj("recos" -> recos))
       else Ok(Json.toJson(recos))
     }
@@ -94,7 +65,7 @@ class MobileRecommendationsController @Inject() (
   def trash(id: ExternalId[NormalizedURI]) = UserAction.async { request =>
     val feedback = UriRecommendationFeedback(trashed = Some(true), source = Some(getRecommendationSource(request)),
       subSource = Some(RecommendationSubSource.RecommendationsFeed))
-    commander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
+    recommendationsCommander.updateUriRecommendationFeedback(request.userId, id, feedback).map(fkis => Ok(Json.toJson(fkis)))
   }
 
   def feedV1Post() = UserAction.async { request =>
@@ -102,24 +73,58 @@ class MobileRecommendationsController @Inject() (
       case None =>
         Future.successful(BadRequest(JsString("bad format for POST request")))
       case Some(req) =>
-        feedV1(req)(request)
+        feedFromStreamWithRequest(req)(request)
     }
   }
 
-  def feedV1(req: RecosRequest) = UserAction.async { request =>
-    val libCnt = libraryRecoCount(request.userId)
+  private def feedFromStreamWithRequest(req: RecosRequest) = UserAction.async { request =>
+    feedFromStream(req.uriContext, req.libContext, request.userId)
+  }
 
-    val uriRecosF = commander.topRecos(request.userId, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, req.uriContext.isDefined, req.recencyWeight, context = req.uriContext)
-    val libRecosF = commander.topPublicLibraryRecos(request.userId, libCnt, getRecommendationSource(request), RecommendationSubSource.RecommendationsFeed, context = req.libContext)
-    val libUpdatesF = commander.maybeUpdatesFromFollowedLibraries(request.userId)
+  private def getKeepStreamAsRecos(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]]) = keepsCommander.getKeepStream(userId, limit, beforeExtId, None).map { updatedKeepsWithOptId =>
+    val updatedKeeps = updatedKeepsWithOptId.filterNot(k => k.id.isEmpty || k.summary.isEmpty)
+    val keepIdToUriId = db.readOnlyReplica { implicit session =>
+      val allKeeps: Map[ExternalId[Keep], Option[Keep]] = keepRepo.getByExtIds(updatedKeeps.map(k => k.id.get).toSet)
+      val keepIdToUriId = allKeeps collect {
+        case (extId, keepOpt) if keepOpt.isDefined => //not cached
+          val uri = normalizedURIRepo.get(keepOpt.get.uriId) //cached
+          extId -> uri.externalId
+      }
+      keepIdToUriId
+    }
 
-    for (libs <- libRecosF; uris <- uriRecosF; libUpdatesOpt <- libUpdatesF) yield {
-      val FullUriRecoResults(urisReco, newUrisContext) = uris
-      val FullLibRecoResults(libsReco, newLibsContext) = libs
-      val recos = libUpdatesOpt.map { _ +: mix(urisReco, libsReco) }.getOrElse(mix(urisReco, libsReco))
-      val (goodUriContext, goodLibContext) = sanitizeContext(newUrisContext, newLibsContext)
+    val goodUriContext = updatedKeeps.sortBy(_.createdAt.getOrElse(END_OF_TIME)).headOption.map(_.id.get.id).getOrElse("") //oldest keep external id
+    val keepRecos = updatedKeeps.map { keep =>
+      FullUriRecoInfo(metaData = None, itemInfo = UriRecoItemInfo(id = keepIdToUriId(keep.id.get),
+        title = keep.title,
+        url = keep.url,
+        keepers = keep.keepers.getOrElse(Seq.empty),
+        libraries = keep.libraries.map(_.map { case (lib, user) => RecoLibraryInfo(user, lib.id, lib.name, lib.path, lib.color.map(_.hex)) } toSeq).getOrElse(Seq.empty),
+        others = Math.max(0, keep.keepersTotal.getOrElse(0) - keep.keepers.map(_.size).getOrElse(0)),
+        siteName = keep.siteName,
+        summary = keep.summary.get), explain = None)
+    }
+    keepRecos -> goodUriContext
+  }
 
-      Ok(Json.obj("recos" -> recos, "uctx" -> goodUriContext, "lctx" -> goodLibContext))
+  private def feedFromStream(uriContext: Option[String], libContext: Option[String], userId: Id[User]) = {
+    val beforeExtId = uriContext.flatMap(id => ExternalId.asOpt[Keep](id))
+    val sentLibs: Boolean = libContext.exists(_ == "sentLibs")
+    val defaultLimit = 10
+
+    val libsF: Future[Seq[FullLibRecoInfo]] = recommendationsCommander.curatedPublicLibraryRecos(userId).map(_.map(_._2))
+    val updatedKeepsF = getKeepStreamAsRecos(userId, defaultLimit, beforeExtId)
+
+    for {
+      libs <- libsF
+      (keepRecos, goodUriContext) <- updatedKeepsF
+    } yield {
+      if (!sentLibs && keepRecos.size < defaultLimit) {
+        Ok(Json.obj("recos" -> (keepRecos ++ libs), "uctx" -> goodUriContext, "lctx" -> "sentLibs"))
+      } else {
+        val lctx = libContext.getOrElse("")
+        Ok(Json.obj("recos" -> keepRecos, "uctx" -> goodUriContext, "lctx" -> lctx))
+      }
     }
   }
 

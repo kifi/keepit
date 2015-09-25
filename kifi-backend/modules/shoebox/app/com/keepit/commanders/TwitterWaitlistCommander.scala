@@ -110,7 +110,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
 
     (entryOpt, suiOpt, syncOpt) match {
       case (Some(entry), Some(sui), None) if entry.state == TwitterWaitlistEntryStates.ACTIVE && sui.credentials.isDefined && sui.userId.isDefined =>
-        val addRequest = LibraryAddRequest(
+        val addRequest = LibraryCreateRequest(
           name = s"Interesting links from @$handle",
           visibility = LibraryVisibility.PUBLISHED,
           slug = s"interesting-links-from-$handle",
@@ -120,7 +120,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
           listed = Some(true)
         )
         implicit val context = heimdalContextBuilder.build
-        libraryCommander.addLibrary(addRequest, userId).fold({ fail =>
+        libraryCommander.createLibrary(addRequest, userId).fold({ fail =>
           Left(fail.message)
         }, { lib =>
           db.readWrite { implicit session =>
@@ -219,7 +219,9 @@ class TwitterWaitlistCommanderImpl @Inject() (
         }
     }.flatMap { imageFile =>
       implicit val context = heimdalContextBuilder.build
-      libraryImageCommander.uploadLibraryImageFromFile(imageFile, libraryId, LibraryImagePosition(None, None), ImageSource.TwitterSync, userId, None)
+      libraryImageCommander.uploadLibraryImageFromFile(imageFile.file, libraryId, LibraryImagePosition(None, None), ImageSource.TwitterSync, userId, None).map { _ =>
+        imageFile.file // To force imageFile not to be GCed
+      }
     }
   }
 }

@@ -424,6 +424,17 @@ var socketHandlers = {
       api.requestUpdateCheck();
     }
   },
+  flush: function (t) {
+    log('[socket:flush]', t);
+    if (t === 'full') {
+      clearSession();
+    } else {
+      lightFlush();
+    }
+    authenticate(function () {
+      log('[socket:flush] we\'re back');
+    });
+  },
   experiments: function (exp) {
     log('[socket:experiments]', exp);
     experiments = exp;
@@ -678,7 +689,7 @@ api.port.on({
     }
     tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'unkept'});
   },
-  keeps_and_libraries: function (_, respond, tab) {
+  keeps_and_libraries_and_organizations_and_me: function (_, respond, tab) {
     var d = pageData[tab.nUri];
     loadLibraries(function (libraries) {
       var recentLibIds = loadRecentLibs();
@@ -691,7 +702,15 @@ api.port.on({
       libraries.filter(idIsIn(mySysLibIds)).forEach(setProp('system', true));
       libraries.filter(idIsIn(recentLibIds)).forEach(setProp('recent', true));
       var keeps = d ? d.keeps : [];
-      respond({keeps: keeps, libraries: libraries, posting: experiments.indexOf('explicit_social_posting') >= 0});
+
+      respond({
+        keeps: keeps,
+        libraries: libraries,
+        organizations: organizations,
+        me: me,
+        posting: experiments.indexOf('explicit_social_posting') >= 0
+      });
+
       // preload keep details
       keeps.forEach(function (keep) {
         ajax('GET', '/ext/libraries/' + keep.libraryId + '/keeps/' + keep.id, function (details) {
@@ -748,7 +767,13 @@ api.port.on({
     }, respond.bind(null, false));
   },
   follow_library: function (id, respond) {
-    ajax('POST', '/ext/libraries/' + id + '/join', respond.bind(null, true), respond.bind(null, false));
+    ajax('POST', '/ext/libraries/' + id + '/join', function () {
+      // Clear the cache because following libraries makes the cache stale.
+      // The backend will send updated membership information.
+      storeLibraries([]);
+
+      respond(true);
+    }, respond.bind(null, false));
   },
   unfollow_library: function (id, respond) {
     ajax('POST', '/ext/libraries/' + id + '/leave', respond.bind(null, true), respond.bind(null, false));
@@ -1222,13 +1247,13 @@ api.port.on({
   },
   search_contacts: function (data, respond, tab) {
     if (!contactSearchCache) {
-      contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(3600000);
+      contactSearchCache = new (global.ContactSearchCache || require('./contact_search_cache').ContactSearchCache)(30000);
     }
     var contacts = contactSearchCache.get(data.q);
     if (contacts) {
       respond(toResults(contacts));
     } else {
-      ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n}, function (contacts) {
+      ajax('GET', '/ext/contacts/search', {query: data.q, limit: data.n + (data.exclude && data.exclude.length) || 0}, function (contacts) {
         contactSearchCache.put(data.q, contacts);
         respond(toResults(contacts));
       }, function () {
@@ -1245,7 +1270,11 @@ api.port.on({
       if (!contacts.some(idIs(SUPPORT.id)) && (data.q ? sf.filter(data.q, [SUPPORT], getName).length : contacts.length < data.n)) {
         appendUserResult(contacts, data.n, SUPPORT);
       }
-      var results = contacts.map(toContactResult, {sf: sf, q: data.q});
+      //debugger;
+      var results = contacts
+        .filter(function (elem) { return data.exclude.indexOf(elem.id || elem.email) === -1; })
+        .slice(0, data.n)
+        .map(toContactResult, {sf: sf, q: data.q});
       if (results.length < data.n && data.q && !data.exclude.some(idIs(data.q)) && !results.some(emailIs(data.q))) {
         results.push({id: 'q', q: data.q, isValidEmail: emailRe.test(data.q)});
       }
@@ -2365,7 +2394,7 @@ function loadLibraries(done, fail) {
 
 function ajaxLoadLibraries(done, fail) {
   var loadedAt = Date.now();
-  ajax('GET', '/ext/libraries', function (o) {
+  ajax('GET', '/ext/libraries?allowOpenCollab=true', function (o) {
     storeLibraries(o.libraries, loadedAt);
     done(o.libraries);
   }, fail);
@@ -2627,7 +2656,7 @@ function sameOrLikelyRedirected(url1, url2) {
 
 // ===== Session management
 
-var me, mySysLibIds, prefs, experiments, eip, socket, silence, onLoadingTemp;
+var me, mySysLibIds, organizations, prefs, experiments, eip, socket, silence, onLoadingTemp;
 
 function authenticate(callback, retryMs) {
   var origInstId = stored('installation_id');
@@ -2645,6 +2674,7 @@ function authenticate(callback, retryMs) {
     api.toggleLogging(data.experiments.indexOf('extension_logging') >= 0);
     me = standardizeUser(data.user);
     mySysLibIds = data.libraryIds;
+    organizations = data.orgs;
     experiments = data.experiments;
     eip = data.eip;
     socket = socket || api.socket.open(
@@ -2679,13 +2709,18 @@ function authenticate(callback, retryMs) {
   });
 }
 
-function clearSession() {
+function lightFlush() {
   if (me) {
     storeDrafts({});
     storeLibraries([]);
     unstore('recent_libraries');
-    unstore('recent_tags');  // TODO: remove after a few weeks
-    unstore('recent_tag_times');
+  }
+  clearDataCache();
+}
+
+function clearSession() {
+  lightFlush();
+  if (me) {
     unstore('user_id');
     api.tabs.each(function (tab) {
       api.icon.set(tab, 'icons/url_gray.png');
@@ -2697,15 +2732,15 @@ function clearSession() {
     });
   }
   me = mySysLibIds = prefs = experiments = eip = null;
-  if (socket) {
-    socket.close();
-    socket = null;
-  }
+
   if (silence) {
     api.timers.clearTimeout(silence.timeout);
     silence = null;
   }
-  clearDataCache();
+  if (socket) {
+    socket.close();
+    socket = null;
+  }
 }
 
 function deauthenticate() {

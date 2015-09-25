@@ -30,6 +30,7 @@ class MobileUserProfileController @Inject() (
   userValueRepo: UserValueRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   organizationCommander: OrganizationCommander,
+  orgInviteRepo: OrganizationInviteRepo,
   userCommander: UserCommander,
   userProfileCommander: UserProfileCommander,
   collectionCommander: CollectionCommander,
@@ -56,12 +57,15 @@ class MobileUserProfileController @Inject() (
       case None => NotFound(s"can't find username $username")
       case Some(profile) =>
         val (numLibraries, numCollabLibraries, numFollowedLibs, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewerOpt.map(_.id.get))
-        val (numConnections, userBiography, orgCards) = db.readOnlyMaster { implicit s =>
+        val (numConnections, userBiography, orgInfos, pendingOrgs) = db.readOnlyMaster { implicit s =>
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
           val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
-          val orgCards = orgMemberships.map { orgMembership => organizationCommander.getOrganizationCardHelper(orgMembership.organizationId, viewerOpt.flatMap(_.id)) }
-          (numConnections, userBio, orgCards)
+          val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
+            organizationCommander.getOrganizationInfo(orgId, viewerOpt.flatMap(_.id))
+          }
+          val orgInfos = orgMemberships.map { orgMembership => organizationCommander.getOrganizationInfo(orgMembership.organizationId, viewerOpt.flatMap(_.id)) }
+          (numConnections, userBio, orgInfos, pendingOrgs)
         }
 
         val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
@@ -75,7 +79,8 @@ class MobileUserProfileController @Inject() (
           numTags = collectionCommander.getCount(profile.userId),
           numInvitedLibraries = numInvitedLibs,
           biography = userBiography,
-          orgs = orgCards
+          orgs = orgInfos,
+          pendingOrgs = pendingOrgs.toSet
         )).as[JsObject]
 
         Ok(jsonFriendInfo ++ jsonProfileInfo)

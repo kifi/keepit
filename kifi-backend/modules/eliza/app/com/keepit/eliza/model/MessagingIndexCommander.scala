@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.model.User
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
+import com.keepit.social.BasicUserLikeEntity
 
 import scala.concurrent.Future
 
@@ -35,6 +36,7 @@ class MessagingIndexCommander @Inject() (
     val userParticipants: Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(userParticipants)
     val participantBasicNonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).map(NonUserParticipant.toBasicNonUser)
+      .map(BasicUserLikeEntity.apply)
 
     val messages: Seq[Message] = db.readOnlyReplica { implicit session =>
       messageRepo.get(threadId, 0)
@@ -67,7 +69,7 @@ class MessagingIndexCommander @Inject() (
         mode = FULL,
         id = Id[ThreadContent](threadId.id),
         seq = seq,
-        participants = participantBasicUsers.values.toSeq ++ participantBasicNonUsers,
+        participants = participantBasicUsers.values.toSeq.map(BasicUserLikeEntity.apply) ++ participantBasicNonUsers,
         updatedAt = messages.head.createdAt,
         url = thread.url.getOrElse(""),
         threadExternalId = thread.externalId.id,

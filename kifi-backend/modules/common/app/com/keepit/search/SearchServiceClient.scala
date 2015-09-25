@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, BenchmarkResults }
 import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType, ServiceUri }
 import com.keepit.common.db.Id
-import com.keepit.common.net.{ ClientResponse, HttpClient }
+import com.keepit.common.net.{ CallTimeouts, ClientResponse, HttpClient }
 import com.keepit.common.routes.{ ServiceRoute, Search, Common }
 import com.keepit.model._
 import com.keepit.search.index.{ IndexInfo }
@@ -17,10 +17,8 @@ import play.twirl.api.Html
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{ Future }
 import scala.concurrent.duration._
-import com.keepit.typeahead.TypeaheadHit
+import com.keepit.typeahead._
 import com.keepit.social.{ BasicUser, TypeaheadUserHit }
-import com.keepit.typeahead.PrefixMatching
-import com.keepit.typeahead.PrefixFilter
 import com.keepit.search.augmentation._
 import com.keepit.common.core._
 
@@ -48,6 +46,7 @@ trait SearchServiceClient extends ServiceClient {
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
   def searchUsers(userId: Option[Id[User]], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[DeprecatedUserSearchResult]
+  def searchUsersByName(userId: Id[User], query: String, limit: Int = 10, acceptLangs: Seq[String], userExperiments: Set[UserExperimentType]): Future[Seq[UserPrefixSearchHit]]
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]]
   def userTypeaheadWithUserId(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[TypeaheadUserHit]]]
   def explainUriResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], libraryId: Option[Id[Library]], lang: String, debug: Option[String], disablePrefixSearch: Boolean, disableFullTextSearch: Boolean): Future[Html]
@@ -152,6 +151,13 @@ class SearchServiceClientImpl(
     }
   }
 
+  def searchUsersByName(userId: Id[User], query: String, limit: Int = 10, acceptLangs: Seq[String], userExperiments: Set[UserExperimentType]): Future[Seq[UserPrefixSearchHit]] = {
+    val payload = Json.toJson(UserPrefixSearchRequest(userId, query, limit, acceptLangs, userExperiments))
+    call(Search.internal.searchUsersByName(), payload).map { r =>
+      Json.fromJson[Seq[UserPrefixSearchHit]](r.json).get
+    }
+  }
+
   def userTypeahead(userId: Id[User], query: String, maxHits: Int = 10, context: String = "", filter: String = ""): Future[Seq[TypeaheadHit[BasicUser]]] = {
     val payload = Json.toJson(DeprecatedUserSearchRequest(Some(userId), query, maxHits, context, filter))
     call(Search.internal.userTypeahead(), payload).map { r =>
@@ -244,9 +250,10 @@ class SearchServiceClientImpl(
 
   def indexInfoList(): Seq[Future[(ServiceInstance, Seq[IndexInfo])]] = {
     val url = Search.internal.indexInfoList()
+    val longTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(1000), maxJsonParseTime = Some(10000))
     serviceCluster.allMembers.collect {
       case instance if instance.isHealthy =>
-        callUrl(url, new ServiceUri(instance, protocol, port, url.url), JsNull).map { r => (instance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
+        callUrl(url, new ServiceUri(instance, protocol, port, url.url), JsNull, true, longTimeout).map { r => (instance, Json.fromJson[Seq[IndexInfo]](r.json).get) }
     }
   }
 

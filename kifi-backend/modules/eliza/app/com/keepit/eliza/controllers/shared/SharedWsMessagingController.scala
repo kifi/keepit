@@ -1,11 +1,16 @@
 package com.keepit.eliza.controllers.shared
 
+import com.keepit.common.net.HttpClient
+import com.keepit.eliza.commanders.NotificationMessagingCommander.NotificationResultsForPage
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
-import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationDeliveryCommander, MessagingCommander }
+import com.keepit.eliza.commanders._
 import com.keepit.common.db.{ ExternalId, State }
 import com.keepit.model.{ User, NotificationCategory, UserExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
+import com.keepit.notify.LegacyNotificationCheck
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.NewMessage
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
@@ -14,6 +19,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.commanders.RemoteUserExperimentCommander
+import org.joda.time.DateTime
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -24,10 +30,15 @@ import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.KifiInstallationStore
 
+import scala.concurrent.Future
+import scala.util.{ Success, Failure }
+
 class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
-  notificationCommander: NotificationDeliveryCommander,
+  notificationDeliveryCommander: NotificationDeliveryCommander,
+  notificationMessagingCommander: NotificationMessagingCommander,
+  legacyNotificationCheck: LegacyNotificationCheck,
   val userActionsHelper: UserActionsHelper,
   protected val websocketRouter: WebSocketRouter,
   amazonInstanceInfo: AmazonInstanceInfo,
@@ -41,6 +52,7 @@ class SharedWsMessagingController @Inject() (
   protected val heimdal: HeimdalServiceClient,
   protected val heimdalContextBuilder: HeimdalContextBuilderFactory,
   protected val userExperimentCommander: RemoteUserExperimentCommander,
+  protected val httpClient: HttpClient,
   val accessLog: AccessLog,
   val shoutdownListener: WebsocketsShutdownListener)
     extends UserActions with AuthenticatedWebSocketsController {
@@ -76,36 +88,38 @@ class SharedWsMessagingController @Inject() (
     },
     "add_participants_to_thread" -> {
       case JsString(threadId) +: (data: JsValue) +: _ =>
-        val (users, emailContacts, source) = data match {
+        val (users, emailContacts, orgs) = data match {
           case JsArray(whoDat) => {
-            val (users, emailContacts) = messagingCommander.validateRecipients(whoDat)
-            (users, emailContacts, None)
+            val (users, emailContacts, orgs) = messagingCommander.parseRecipients(whoDat)
+            (users, emailContacts, orgs)
           }
           case _ => {
-            val users = messagingCommander.validateUsers((data \ "users").asOpt[Seq[JsValue]] getOrElse Seq.empty)
-            val emailContacts = messagingCommander.validateEmailContacts((data \ "nonUsers").asOpt[Seq[JsValue]] getOrElse Seq.empty)
-            (users, emailContacts, (data \ "source").asOpt[MessageSource])
+            val (users, _, _) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
+            val (_, _, orgs) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
+            val (_, contacts, _) = messagingCommander.parseRecipients((data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
+            (users, contacts, orgs)
           }
         }
 
-        val validUsers = users.collect { case JsSuccess(validUser, _) => validUser }
-        val validContacts = emailContacts.collect { case JsSuccess(validContact, _) => validContact }
-
-        if (validUsers.nonEmpty || validContacts.nonEmpty) {
+        if (users.nonEmpty || emailContacts.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-          messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), validUsers, validContacts, source)
-        } // todo(Martin, Jared, Léo): return meaningful error about invalid participants
+          messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailContacts, orgs)
+        }
     },
     "get_unread_notifications_count" -> { _ =>
+      val recipient = Recipient(socket.userId)
       val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
       val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
-      socket.channel.push(Json.arr("unread_notifications_count", numUnreadUnmutedMessages + numUnreadUnmutedNotifications, numUnreadUnmutedMessages, numUnreadUnmutedNotifications))
+      socket.channel.push(Json.arr("unread_notifications_count",
+        numUnreadUnmutedMessages + numUnreadUnmutedNotifications,
+        numUnreadUnmutedMessages,
+        numUnreadUnmutedNotifications))
       // note: "unread_notifications_count" is broadcasted elsewhere too
     },
     // inbox notification/thread handlers
     "get_one_thread" -> {
       case JsNumber(requestId) +: JsString(threadId) +: _ =>
-        val fut = notificationCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId), needsPageImages(socket))
+        val fut = notificationDeliveryCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId), needsPageImages(socket))
         fut.foreach { json =>
           socket.channel.push(Json.arr(requestId.toLong, json.obj))
         }
@@ -116,21 +130,36 @@ class SharedWsMessagingController @Inject() (
     },
     "get_latest_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
-        fut.foreach { notices =>
-          val (numUnread, numUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numUnreadUnmuted, numUnread, currentDateTime))
+        val recipient = Recipient(socket.userId)
+        val fut = for {
+          threadJsons <- notificationDeliveryCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+          notifJsons <- notificationMessagingCommander.getLatestNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+        } yield {
+          val (oldNumUnread, oldNumUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
+          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons.results), oldNumUnread, oldNumUnreadUnmuted)
+        }
+
+        fut.foreach {
+          case (notices, numTotal, numUnread) =>
+            socket.channel.push(Json.arr(requestId.toLong, notices, numTotal, numUnread))
         }
         fut.onFailure {
-          case _ =>
+          case e =>
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
     "get_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        val recipient = Recipient(socket.userId)
+        val fut = for {
+          threadJsons <- notificationDeliveryCommander.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          notifJsons <- notificationMessagingCommander.getLatestNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        } yield {
+          notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons, Some(howMany.toInt))
+        }
+
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          socket.channel.push(Json.arr(requestId.toLong, notices))
         }
         fut.onFailure {
           case _ =>
@@ -139,10 +168,17 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+        val recipient = Recipient(socket.userId)
+        val fut = for {
+          threadJsons <- notificationDeliveryCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+          notifJsons <- notificationMessagingCommander.getNotificationsWithNewEvents(socket.userId, howMany.toInt, needsPageImages(socket))
+        } yield {
+          val total = threadJsons._2 + notifJsons.numTotal
+          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons._1, notifJsons.results), total)
+        }
         fut.foreach {
           case (notices, numTotal) =>
-            socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj), numTotal))
+            socket.channel.push(Json.arr(requestId.toLong, notices, numTotal))
         }
         fut.onFailure {
           case _ =>
@@ -151,9 +187,16 @@ class SharedWsMessagingController @Inject() (
     },
     "get_unread_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        val recipient = Recipient(socket.userId)
+        val fut = for {
+          threadJsons <- notificationDeliveryCommander.getUnreadSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+          notifJsons <- notificationMessagingCommander.getNotificationsWithNewEventsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        } yield {
+          notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons, Some(howMany.toInt))
+        }
+
         fut.foreach { notices =>
-          socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
+          socket.channel.push(Json.arr(requestId.toLong, notices))
         }
         fut.onFailure {
           case _ =>
@@ -162,7 +205,8 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
+        val recipient = Recipient(socket.userId)
+        val fut = notificationDeliveryCommander.getLatestSentSendableNotifications(socket.userId, howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
@@ -173,7 +217,8 @@ class SharedWsMessagingController @Inject() (
     },
     "get_sent_threads_before" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        val recipient = Recipient(socket.userId)
+        val fut = notificationDeliveryCommander.getSentSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
@@ -184,10 +229,11 @@ class SharedWsMessagingController @Inject() (
     },
     "get_page_threads" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: _ =>
-        val fut = notificationCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
+        val recipient = Recipient(socket.userId)
+        val fut = notificationDeliveryCommander.getLatestSendableNotificationsForPage(socket.userId, url, howMany.toInt, needsPageImages(socket))
         fut.foreach {
-          case (nUriStr, notices, numTotal, numUnreadUnmuted) =>
-            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnreadUnmuted))
+          case (nUriStr, notices, numTotal, numUnread) =>
+            socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnread))
         }
         fut.onFailure {
           case _ =>
@@ -196,7 +242,8 @@ class SharedWsMessagingController @Inject() (
     },
     "get_page_threads_before" -> {
       case JsNumber(requestId) +: JsString(url) +: JsNumber(howMany) +: JsString(time) +: _ =>
-        val fut = notificationCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
+        val recipient = Recipient(socket.userId)
+        val fut = notificationDeliveryCommander.getSendableNotificationsForPageBefore(socket.userId, url, parseStandardTime(time), howMany.toInt, needsPageImages(socket))
         fut.foreach { notices =>
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
@@ -208,17 +255,29 @@ class SharedWsMessagingController @Inject() (
     "set_all_notifications_visited" -> {
       case JsString(notifId) +: _ =>
         val messageId = ExternalId[Message](notifId)
-        val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
-        val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
-        val lastModified = notificationCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
-        socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
+        legacyNotificationCheck.ifNotifItemExists(notifId) {
+          case (notif, item) =>
+            val recipient = Recipient(socket.userId)
+            notificationMessagingCommander.setNotificationsUnreadBefore(notif, recipient, item)
+        } {
+          val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
+          val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
+          val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
+          websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
+        }
     },
 
     // end of inbox notification/thread handlers
 
     "set_message_unread" -> {
       case JsString(messageId) +: _ =>
-        messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
+        implicit val context = authenticatedWebSocketsContextBuilder(socket).build
+        legacyNotificationCheck.ifNotifItemExists(messageId) {
+          case (notif, item) =>
+            notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = true)
+        } {
+          messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
+        }
     },
     "set_message_read" -> {
       case JsString(messageId) +: _ =>
@@ -227,18 +286,32 @@ class SharedWsMessagingController @Inject() (
         contextBuilder += ("global", false)
         contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json
         implicit val context = contextBuilder.build
-        messagingCommander.setRead(socket.userId, msgExtId)
-        messagingCommander.setLastSeen(socket.userId, msgExtId)
+        legacyNotificationCheck.ifNotifItemExists(messageId) {
+          case (notif, item) =>
+            notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = false)
+        } {
+          messagingCommander.setRead(socket.userId, msgExtId)
+          messagingCommander.setLastSeen(socket.userId, msgExtId)
+        }
     },
     "mute_thread" -> {
       case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+        legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
+          notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = true)
+        } {
+          messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+        }
     },
     "unmute_thread" -> {
       case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        messagingCommander.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+        val notifExternalId = ExternalId[Notification](jsThreadId)
+        legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
+          notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = false)
+        } {
+          messagingCommander.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+        }
     },
     "eip" -> {
       case JsString(eip) +: _ =>
