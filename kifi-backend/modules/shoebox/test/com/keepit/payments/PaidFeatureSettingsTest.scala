@@ -3,9 +3,11 @@ package com.keepit.payments
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.controllers.mobile.MobileOrganizationMembershipController
+import com.keepit.controllers.ext.ExtUserController
+import com.keepit.controllers.mobile.{ MobileContactsController, MobileUserController, MobileOrganizationMembershipController }
 import com.keepit.controllers.website.{ LibraryController, OrganizationMembershipController }
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.test.ShoeboxTestInjector
@@ -20,11 +22,12 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.heimdal.HeimdalContext
 
 import org.specs2.mutable.SpecificationLike
+import play.api.libs.json.JsObject
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector {
 
@@ -300,14 +303,14 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val planManagementCommander = inject[PlanManagementCommander]
         val (org, owner, admin, member, nonMember) = setup()
 
-        val createSlackIntegration = OrganizationPermissionFeature.CreateSlackIntegration
-        val forceEditLibraries = OrganizationPermissionFeature.EditLibrary
+        val createSlackIntegrationFeature = OrganizationPermissionFeature.CreateSlackIntegration
+        val forceEditLibrariesFeature = OrganizationPermissionFeature.EditLibrary
 
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
           val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSettings(Set(
-            FeatureSetting(createSlackIntegration.name, createSlackIntegration.options.find(_ == "admin").get),
-            FeatureSetting(forceEditLibraries.name, forceEditLibraries.options.find(_ == "member").get))
+            FeatureSetting(createSlackIntegrationFeature.name, createSlackIntegrationFeature.options.find(_ == "admin").get),
+            FeatureSetting(forceEditLibrariesFeature.name, forceEditLibrariesFeature.options.find(_ == "member").get))
           ).saved
           (plan, account)
         }
@@ -331,9 +334,167 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
 
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(createSlackIntegration.name, "member"))))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(createSlackIntegrationFeature.name, "member"))))
 
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "group messaging permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val feature = OrganizationPermissionFeature.GroupMessaging
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(
+            FeatureSetting(feature.name, feature.options.find(_ == "disabled").get)
+          ).saved
+          (plan, account)
+        }
+
+        val mobileRoute = com.keepit.controllers.mobile.routes.MobileContactsController.searchForAllContacts(query = None, limit = None).url
+        val extRoute = com.keepit.controllers.ext.routes.ExtUserController.searchForContacts(query = None, limit = None).url
+
+        val mobileContactsController = inject[MobileContactsController]
+        val extUserController = inject[ExtUserController]
+
+        // nobody can send group messages
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerMobileRequest1 = FakeRequest("GET", mobileRoute)
+        val ownerMobileResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerMobileRequest1)
+        contentAsJson(ownerMobileResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminMobileRequest1 = FakeRequest("GET", mobileRoute)
+        val adminMobileResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminMobileRequest1)
+        contentAsJson(adminMobileResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberMobileRequest1 = FakeRequest("GET", mobileRoute)
+        val memberMobileResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberMobileRequest1)
+        contentAsJson(memberMobileResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerExtRequest1 = FakeRequest("GET", mobileRoute)
+        val ownerExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest1)
+        contentAsJson(ownerExtResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminExtRequest1 = FakeRequest("GET", mobileRoute)
+        val adminExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest1)
+        contentAsJson(adminExtResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberExtRequest1 = FakeRequest("GET", mobileRoute)
+        val memberExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest1)
+        contentAsJson(memberExtResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        // allow admins to send group messages
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "admin"))))
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerMobileRequest2 = FakeRequest("GET", mobileRoute)
+        val ownerMobileResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerMobileRequest2)
+        contentAsJson(ownerMobileResult2).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminMobileRequest2 = FakeRequest("GET", mobileRoute)
+        val adminMobileResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminMobileRequest2)
+        contentAsJson(adminMobileResult2).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberMobileRequest2 = FakeRequest("GET", mobileRoute)
+        val memberMobileResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberMobileRequest2)
+        contentAsJson(memberMobileResult2).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerExtRequest2 = FakeRequest("GET", mobileRoute)
+        val ownerExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest2)
+        contentAsJson(ownerExtResult2).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminExtRequest2 = FakeRequest("GET", mobileRoute)
+        val adminExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest2)
+        contentAsJson(adminExtResult2).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberExtRequest2 = FakeRequest("GET", mobileRoute)
+        val memberExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest2)
+        contentAsJson(memberExtResult2).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get))
+        } must beTrue
+
+        // members can send group messages
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "member"))))
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerMobileRequest3 = FakeRequest("GET", mobileRoute)
+        val ownerMobileResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerMobileRequest3)
+        contentAsJson(ownerMobileResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminMobileRequest3 = FakeRequest("GET", mobileRoute)
+        val adminMobileResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminMobileRequest3)
+        contentAsJson(adminMobileResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberMobileRequest3 = FakeRequest("GET", mobileRoute)
+        val memberMobileResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberMobileRequest3)
+        contentAsJson(memberMobileResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerExtRequest3 = FakeRequest("GET", mobileRoute)
+        val ownerExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest3)
+        contentAsJson(ownerExtResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminExtRequest3 = FakeRequest("GET", mobileRoute)
+        val adminExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest3)
+        contentAsJson(adminExtResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberExtRequest3 = FakeRequest("GET", mobileRoute)
+        val memberExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest3)
+        contentAsJson(memberExtResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
       }
     }
   }

@@ -21,6 +21,10 @@ trait PaymentProcessingCommander {
   def processAllBilling(): Future[Map[Id[Organization], (DollarAmount, String)]]
   def forceChargeAccount(account: PaidAccount, amount: DollarAmount, description: Option[String]): Future[DollarAmount] //not private for admin use
   def processAccount(account: PaidAccount): Future[(DollarAmount, String)]
+
+  private[payments] val MIN_BALANCE: DollarAmount
+  private[payments] val MAX_BALANCE: DollarAmount
+
 }
 
 @Singleton
@@ -37,8 +41,8 @@ class PaymentProcessingCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
-  private val MAX_BALANCE = DollarAmount.wholeDollars(-100) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
-  private val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
+  private[payments] val MAX_BALANCE = DollarAmount.wholeDollars(-100) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
+  private[payments] val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
 
   val processingLock = new ReactiveLock(1)
 
@@ -53,7 +57,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     log.info(s"[PPC][${account.orgId}] Starting Processing")
     db.readWrite { implicit session =>
       val plan = paidPlanRepo.get(account.planId)
-      val billingCycleElapsed = account.billingCycleStart.plusMonths(plan.billingCycle.month).isAfter(clock.now)
+      val billingCycleElapsed = account.billingCycleStart.plusMonths(plan.billingCycle.month).isBefore(clock.now)
       val maxBalanceExceeded = account.credit.cents < MAX_BALANCE.cents
       val shouldProcess = !account.frozen && (billingCycleElapsed || maxBalanceExceeded)
       if (shouldProcess) {
@@ -62,17 +66,17 @@ class PaymentProcessingCommanderImpl @Inject() (
         val updatedAccountPreCharge = if (billingCycleElapsed) account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart) else account
 
         if (account.credit.cents < MIN_BALANCE.cents) {
-          val chargeAmount = DollarAmount(-1 * account.credit.cents)
+          val chargeAmount = DollarAmount(-1 * updatedAccountPreCharge.credit.cents)
           log.info(s"[PPC][${account.orgId}] Going to charge $chargeAmount")
           val description = if (maxBalanceExceeded) s"Max balance exceeded charge for org ${account.orgId} of amount $chargeAmount" else s"Regular charge for org ${account.orgId} of amount $chargeAmount"
-          forceChargeAccount(account, chargeAmount, Some(description)).map { amount => amount -> "Charge performed" }
+          forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> "Charge performed" }
         } else {
           log.info(s"[PPC][${account.orgId}] Not Charging. Balance less than $$1 (${account.credit})")
           paidAccountRepo.save(updatedAccountPreCharge)
-          Future.successful(DollarAmount.ZERO -> "No charging because of low balance")
+          Future.successful(DollarAmount.ZERO -> "Not charging because of low balance")
         }
       } else {
-        Future.successful(DollarAmount.ZERO -> "Not processed because conditions not met.")
+        Future.successful(DollarAmount.ZERO -> "Not processed because conditions not met")
       }
     }
   }.getOrElse(Future.successful(DollarAmount.ZERO -> "Failed to get lock"))

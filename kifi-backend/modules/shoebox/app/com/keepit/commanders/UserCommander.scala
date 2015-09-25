@@ -4,7 +4,7 @@ import akka.actor.Scheduler
 import com.google.inject.{ Provider, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
-import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender, EmailSenderProvider }
+import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching
 import com.keepit.common.core._
@@ -22,7 +22,7 @@ import com.keepit.common.usersegment.{ UserSegment, UserSegmentFactory }
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
-import com.keepit.model.{ UserEmailAddress, _ }
+import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.SocialContactJoined
 import com.keepit.search.SearchServiceClient
@@ -137,7 +137,6 @@ class UserCommander @Inject() (
     searchClient: SearchServiceClient,
     s3ImageStore: S3ImageStore,
     heimdalClient: HeimdalServiceClient,
-    userImageUrlCache: UserImageUrlCache,
     libraryMembershipRepo: LibraryMembershipRepo,
     friendStatusCommander: FriendStatusCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
@@ -196,15 +195,13 @@ class UserCommander @Inject() (
   }
 
   def updateUserInfo(userId: Id[User], userData: UpdatableUserInfo): Unit = {
-    db.readOnlyMaster { implicit session =>
-      val user = userRepo.getNoCache(userId)
+    val user = db.readOnlyMaster { implicit session => userRepo.getNoCache(userId) }
 
-      userData.emails.foreach(updateEmailAddresses(userId, user.firstName, _))
-      userData.biography.foreach(updateUserBiography(userId, _))
+    userData.emails.foreach(userEmailAddressCommander.updateEmailAddresses(userId, _))
+    userData.biography.foreach(updateUserBiography(userId, _))
 
-      if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
-        updateUserNames(user, userData.firstName.get, userData.lastName.get)
-      }
+    if (userData.firstName.exists(_.nonEmpty) && userData.lastName.exists(_.nonEmpty)) {
+      updateUserNames(user, userData.firstName.get, userData.lastName.get)
     }
   }
 
@@ -218,55 +215,6 @@ class UserCommander @Inject() (
     db.readWrite { implicit session =>
       val user = userRepo.get(userId)
       userRepo.save(user.copy(firstName = newFirstName.getOrElse(user.firstName), lastName = newLastName.getOrElse(user.lastName)))
-    }
-  }
-
-  // todo(Léo): this method isn't resilient to intermediate failures, should be made idempotent and atomic (and confirmation email can be sent async)
-  def addEmail(userId: Id[User], address: EmailAddress, isPrimary: Boolean): Future[Either[String, Unit]] = {
-    db.readWrite { implicit session =>
-      userEmailAddressCommander.intern(userId, address)
-    } match {
-      case Success((emailAddr, true)) =>
-        db.readWrite { implicit session =>
-          if (isPrimary && !userEmailAddressCommander.isPrimaryEmail(emailAddr)) {
-            userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
-          }
-        }
-
-        if (!emailAddr.verified && !emailAddr.verificationSent) {
-          userEmailAddressCommander.sendVerificationEmail(emailAddr).imap(Right(_))
-        } else Future.successful(Right(()))
-      case Success((_, false)) => Future.successful(Left("email already added"))
-      case Failure(_: UnavailableEmailAddressException) => Future.successful(Left("permission_denied"))
-      case Failure(error) => Future.failed(error)
-    }
-  }
-
-  def makeEmailPrimary(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
-    db.readWrite { implicit session =>
-      emailRepo.getByAddressAndUser(userId, address) match {
-        case Some(emailRecord) => Right {
-          if (!userEmailAddressCommander.isPrimaryEmail(emailRecord)) {
-            userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
-          }
-        }
-        case _ => Left("unknown_email")
-      }
-    }
-  }
-
-  def removeEmail(userId: Id[User], address: EmailAddress): Either[String, Unit] = {
-    db.readWrite { implicit session =>
-      emailRepo.getByAddressAndUser(userId, address) match {
-        case Some(email) => userEmailAddressCommander.deactivate(email) match {
-          case Success(_) => Right(())
-          case Failure(_: LastEmailAddressException) => Left("last email")
-          case Failure(_: LastVerifiedEmailAddressException) => Left("last verified email")
-          case Failure(_: PrimaryEmailAddressException) => Left("trying to remove primary email")
-          case Failure(unknownError) => throw unknownError
-        }
-        case _ => Left("email not found")
-      }
     }
   }
 
@@ -284,7 +232,7 @@ class UserCommander @Inject() (
     val (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews) = db.readOnlyMaster { implicit session =>
       val basicUser = basicUserRepo.load(user.id.get)
       val biography = userValueRepo.getValueStringOpt(user.id.get, UserValueName.USER_DESCRIPTION)
-      val emails = emailRepo.getAllByUser(user.id.get).map { e => (e, userEmailAddressCommander.isPrimaryEmail(e)) }
+      val emails = emailRepo.getAllByUser(user.id.get)
       val pendingPrimary = userValueRepo.getValueStringOpt(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
       val notAuthed = socialUserInfoRepo.getNotAuthorizedByUser(user.id.get).map(_.networkType.name).filter(_ != "linkedin") // Don't send down LinkedIn anymore
 
@@ -305,13 +253,13 @@ class UserCommander @Inject() (
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews)
     }
 
-    val emailInfos = emails.sortBy { case (e, isPrimary) => (isPrimary, !e.verified, e.id.get.id) }.reverse.map {
-      case (email, isPrimary) =>
+    val emailInfos = emails.sortBy { e => (e.primary, !e.verified, e.id.get.id) }.reverse.map {
+      email =>
         EmailInfo(
           address = email.address,
           isVerified = email.verified,
-          isPrimary = isPrimary,
-          isPendingPrimary = pendingPrimary.isDefined && pendingPrimary.get.equalsIgnoreCase(email.address)
+          isPrimary = email.primary,
+          isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(email.address))
         )
     }
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews)
@@ -448,41 +396,6 @@ class UserCommander @Inject() (
     }
   }
 
-  @deprecated(message = "use addEmail/modifyEmail/removeEmail", since = "2014-08-20")
-  def updateEmailAddresses(userId: Id[User], firstName: String, emails: Seq[EmailInfo]): Unit = {
-    db.readWrite { implicit session =>
-      val uniqueEmails = emails.map(_.address).toSet
-      val (existing, toRemove) = emailRepo.getAllByUser(userId).partition(em => uniqueEmails contains em.address)
-
-      // Add new emails
-      val added = (uniqueEmails -- existing.map(_.address)).map { address =>
-        userEmailAddressCommander.intern(userId, address).get._1 tap { addedEmail =>
-          session.onTransactionSuccess(userEmailAddressCommander.sendVerificationEmail(addedEmail))
-        }
-      }
-
-      // Set the correct email as primary
-      (added ++ existing).foreach { emailRecord =>
-        val isPrimary = emails.exists { emailInfo => (emailInfo.address == emailRecord.address) && (emailInfo.isPrimary || emailInfo.isPendingPrimary) }
-        if (isPrimary && !userEmailAddressCommander.isPrimaryEmail(emailRecord)) {
-          userEmailAddressCommander.setAsPrimaryEmail(emailRecord)
-        }
-      }
-
-      // Remove missing emails
-      toRemove.foreach(userEmailAddressCommander.deactivate(_))
-    }
-  }
-
-  def getUserImageUrl(userId: Id[User], width: Int): Future[String] = {
-    val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
-    val imageName = user.pictureName.getOrElse("0")
-    implicit val txn = TransactionalCaching.Implicits.directCacheAccess
-    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width, imageName)) {
-      s3ImageStore.getPictureUrl(Some(width), user, imageName)
-    }
-  }
-
   private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[Map[UserValueName, JsValue]] = {
     if (prefSet.contains(UserValueName.SHOW_DELIGHTED_QUESTION)) {
       // Check if user should be shown Delighted question
@@ -579,15 +492,6 @@ class UserCommander @Inject() (
         case Success(updatedUser) => Right(updatedUser.username)
         case Failure(InvalidHandleException(handle)) => Left("invalid_username")
         case Failure(_: UnavailableHandleException) => Left("username_exists")
-        case Failure(error) => throw error
-      }
-    }
-  }
-
-  def importSocialEmail(userId: Id[User], emailAddress: EmailAddress): UserEmailAddress = {
-    db.readWrite { implicit s =>
-      userEmailAddressCommander.intern(userId, emailAddress, verified = true) match {
-        case Success((email, _)) => email
         case Failure(error) => throw error
       }
     }

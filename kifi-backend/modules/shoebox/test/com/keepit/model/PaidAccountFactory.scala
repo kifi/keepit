@@ -6,6 +6,8 @@ import com.keepit.common.db.Id
 import com.keepit.payments._
 import com.keepit.common.time._
 
+import org.joda.time.DateTime
+
 object PaidAccountFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
@@ -25,6 +27,9 @@ object PaidAccountFactory {
     def withCredit(amount: DollarAmount) = new PartialPaidAccount(account.copy(credit = amount))
     def withSetting(featureSetting: FeatureSetting) = new PartialPaidAccount(account.copy(featureSettings = FeatureSetting.alterSettings(account.featureSettings, Set(featureSetting))))
     def withSettings(featureSettings: Set[FeatureSetting]) = new PartialPaidAccount(account.copy(featureSettings = FeatureSetting.alterSettings(account.featureSettings, featureSettings)))
+    def withBillingCycleStart(billingCycleStart: DateTime) = new PartialPaidAccount(account.copy(billingCycleStart = billingCycleStart))
+    def withActiveUsers(activeUsers: Int) = new PartialPaidAccount(account.copy(activeUsers = activeUsers))
+    def withFrozen(frozen: Boolean) = new PartialPaidAccount(account.copy(frozen = frozen))
     def get: PaidAccount = account
   }
 

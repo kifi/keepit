@@ -4,6 +4,7 @@ import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.PutObjectResult
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.cache.TransactionalCaching
 
 import com.keepit.common.controller.{ UserActionsHelper }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -35,7 +36,7 @@ import play.api.Play.current
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore extends S3ExternalIdImageStore {
 
-  def getPictureUrl(width: Int, user: User): Future[String]
+  def getPictureUrl(width: Int, userId: Id[User]): Future[String]
   def getPictureUrl(width: Option[Int], user: User, picName: String): Future[String]
   def uploadRemotePicture(userId: Id[User], externalId: ExternalId[User], pictureSource: UserPictureSource, pictureName: Option[String], setDefault: Boolean)(getPictureUrl: Option[ImageSize] => Option[String]): Future[Seq[(String, Try[PutObjectResult])]]
   def forceUpdateSocialPictures(userId: Id[User]): Unit
@@ -59,13 +60,21 @@ class S3ImageStoreImpl @Inject() (
     airbrake: AirbrakeNotifier,
     clock: Clock,
     userPictureRepo: UserPictureRepo,
+    userImageUrlCache: UserImageUrlCache,
     eliza: ElizaServiceClient,
     imageUtils: ImageUtils,
     val config: S3ImageConfig) extends S3ImageStore with S3Helper with Logging {
 
   private val ExpirationTime = Weeks.ONE
 
-  def getPictureUrl(width: Int, user: User): Future[String] = getPictureUrl(Some(width), user, "0") // todo: Change to default
+  def getPictureUrl(width: Int, userId: Id[User]): Future[String] = {
+    val user = db.readOnlyMaster { implicit session => userRepo.get(userId) }
+    val imageName = user.pictureName.getOrElse("0")
+    implicit val txn = TransactionalCaching.Implicits.directCacheAccess
+    userImageUrlCache.getOrElseFuture(UserImageUrlCacheKey(userId, width, imageName)) {
+      getPictureUrl(Some(width), user, imageName)
+    }
+  }
 
   def getPictureUrl(width: Option[Int], user: User, pictureName: String): Future[String] = {
     if (config.isLocal) {
@@ -288,4 +297,5 @@ class S3ImageStoreImpl @Inject() (
       }
     }
   }
+
 }

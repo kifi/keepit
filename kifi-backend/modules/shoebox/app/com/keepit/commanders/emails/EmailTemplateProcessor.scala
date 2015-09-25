@@ -1,7 +1,7 @@
 package com.keepit.commanders.emails
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
-import com.keepit.commanders.{ PathCommander, UserCommander }
+import com.keepit.commanders.{ PathCommander }
 import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ LargeString, Id }
@@ -10,6 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
+import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ helpers, EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
 import com.keepit.common.mail.template.EmailLayout._
@@ -63,7 +64,7 @@ class EmailTemplateProcessorImpl @Inject() (
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
-    userCommander: Provider[UserCommander],
+    s3ImageStore: S3ImageStore,
     libPathCommander: PathCommander,
     emailAddressRepo: UserEmailAddressRepo,
     config: FortyTwoConfig,
@@ -279,7 +280,7 @@ class EmailTemplateProcessorImpl @Inject() (
 
   private def getUserImageUrls(userIds: Seq[Id[User]], width: Int = 100) = {
     Future.sequence(
-      userIds map (userId => userCommander.get.getUserImageUrl(userId, width).map(url => (userId, url)))
+      userIds map (userId => s3ImageStore.getPictureUrl(width, userId).map(userId -> _))
     ) map (_.toMap)
   }
 
