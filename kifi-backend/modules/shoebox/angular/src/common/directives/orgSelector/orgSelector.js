@@ -22,7 +22,7 @@ angular.module('kifi')
         $scope.unsetOrg = function () {
           // Allow moving if...
           if (!$scope.library.id || // we're creating a new library
-              !$scope.spaceIsOrg($scope.space.destination) || // or we're moving out of the personal space
+              !$scope.spaceIsOrg($scope.space.current) || // or we're moving out of the personal space
               $scope.space.current.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1) { // or we have permission
             $scope.libraryProps.selectedOrgId = undefined;
             $scope.space.destination = $scope.me;
@@ -31,7 +31,7 @@ angular.module('kifi')
 
         $scope.setOrg = function (id) {
           if (!$scope.library.id ||
-              !$scope.spaceIsOrg($scope.space.destination) ||
+              !$scope.spaceIsOrg($scope.space.current) ||
               $scope.space.current.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1) {
             // Give preference to (1) id from args, (2) current page, (3) First organization in list.
             var orgId = id || ($scope.library.org || $scope.me.orgs[0]).id;
