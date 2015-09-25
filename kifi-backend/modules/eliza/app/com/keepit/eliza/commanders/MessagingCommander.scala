@@ -179,24 +179,6 @@ class MessagingCommander @Inject() (
     db.readOnlyReplicaAsync { implicit session => userThreadRepo.checkUrisDiscussed(userId, uriIds) }
   }
 
-  def deleteUserThreadsForMessageId(id: Id[Message]): Unit = {
-    val (threadExtId, userThreads): (ExternalId[MessageThread], Seq[UserThread]) = db.readOnlyMaster { implicit session =>
-      val message = messageRepo.get(id)
-      val threadId = message.thread
-      (message.threadExtId, userThreadRepo.getByThread(threadId))
-    }
-    if (userThreads.length != 1) {
-      airbrake.notify(s"Trying to delete notification for thread $threadExtId with not exactly one participant. Not permitted.")
-    } else {
-      userThreads.foreach { userThread =>
-        db.readWrite { implicit session =>
-          userThreadRepo.delete(userThread)
-        }
-        notificationDeliveryCommander.notifyRemoveThread(userThread.user, threadExtId)
-      }
-    }
-  }
-
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
     abookServiceClient.internKifiContacts(userId, nonUsers: _*).map { richContacts =>
       richContacts.map(richContact => NonUserEmailParticipant(richContact.email))

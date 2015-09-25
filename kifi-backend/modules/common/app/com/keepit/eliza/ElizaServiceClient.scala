@@ -72,8 +72,6 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
-  def unsendNotification(messageHandle: Id[MessageHandle]): Unit
-
   def sendNotificationEvent(event: NotificationEvent): Future[Unit]
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
@@ -161,11 +159,6 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   val longTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
-
-  def unsendNotification(messageHandle: Id[MessageHandle]): Unit = {
-    //yes, we really want this one to get through. considering pushing the message to SQS later on.
-    call(Eliza.internal.unsendNotification(messageHandle), attempts = 6, callTimeouts = longTimeout)
-  }
 
   def sendNotificationEvent(event: NotificationEvent): Future[Unit] = {
     val payload = Json.toJson(event)
