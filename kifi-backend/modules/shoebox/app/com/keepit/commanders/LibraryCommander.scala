@@ -373,7 +373,7 @@ class LibraryCommanderImpl @Inject() (
     val oldLibrary = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
     if (oldLibrary.ownerId != userId) {
       Some(LibraryFail(FORBIDDEN, "permission_denied"))
-    } else if (oldLibrary.kind == LibraryKind.SYSTEM_MAIN || oldLibrary.kind == LibraryKind.SYSTEM_SECRET) {
+    } else if (oldLibrary.isSystemLibrary) {
       Some(LibraryFail(BAD_REQUEST, "cant_delete_system_generated_library"))
     } else {
       val keepsInLibrary = db.readWrite { implicit s =>
