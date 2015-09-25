@@ -79,6 +79,8 @@ class EventTrackingController @Inject() (
 
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
 
+    if (rawUserEvent.eventType.name.equalsIgnoreCase("user_messaged")) rawUserEvent.context.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => log.info(s"[OrgMessageTracking] successfully tracked messagedWholeOrgId=${orgId.toString}") }
+
     val userEventF = EventAugmentor.safelyAugmentContext(userEvent, augmentors: _*).map { ctx =>
       userEvent.copy(context = ctx)
     }
