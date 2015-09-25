@@ -74,7 +74,6 @@ trait KeepCommander {
   def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection]
   def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection]
   def tagUrl(tag: Collection, rawBookmark: Seq[RawBookmarkRepresentation], userId: Id[User], libraryId: Id[Library], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext): Unit
-  def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep])
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection
   def removeTag(id: ExternalId[Collection], url: String, userId: Id[User])(implicit context: HeimdalContext): Unit
   def clearTags(url: String, userId: Id[User]): Unit
@@ -118,8 +117,6 @@ class KeepCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     normalizedURIInterner: NormalizedURIInterner,
     clock: Clock,
-    libraryCommander: LibraryCommander,
-    libraryAccessCommander: LibraryAccessCommander,
     libraryInfoCommander: LibraryInfoCommander,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
@@ -554,17 +551,6 @@ class KeepCommanderImpl @Inject() (
     }
     val (bookmarks, _) = keepInterner.internRawBookmarks(rawBookmark, userId, library, source)
     addToCollection(tag.id.get, bookmarks) // why doesn't this update search?
-  }
-
-  def tagKeeps(tag: Collection, userId: Id[User], keepIds: Seq[ExternalId[Keep]])(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep]) = {
-    val (canEditKeep, cantEditKeeps) = db.readOnlyMaster { implicit s =>
-      val canAccess = Map[Id[Library], Boolean]().withDefault(id => libraryAccessCommander.canModifyLibrary(id, userId))
-      keepIds map keepRepo.get partition { keep =>
-        keep.libraryId.exists(canAccess)
-      }
-    }
-    addToCollection(tag.id.get, canEditKeep)
-    (canEditKeep, cantEditKeeps)
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection = {
