@@ -24,7 +24,7 @@
         <h2 id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
         <div ng-repeat="field in section.fields" class="kf-ops-setting kf-row">
           <div class="kf-ops-setting-desc kf-main-pane">
-            <h3>{{ field.title }}</h3>
+            <h3 id="{{ field.fieldKey }}">{{ field.title }}</h3>
             <p>{{ field.description }}</p>
           </div>
           <div class="kf-side-pane">
@@ -38,11 +38,12 @@
           </div>
         </div>
       </section>
-
-      <h1 id="team-plan">Team Plan</h1>
-      <h1 id="team-contacts">Contacts</h1>
-      <h1 id="credit-card">Credit Card</h1>
-      <h1 id="history">History</h1>
+      <!--
+        <h1 id="team-plan">Team Plan</h1>
+        <h1 id="team-contacts">Contacts</h1>
+        <h1 id="credit-card">Credit Card</h1>
+        <h1 id="history">History</h1>
+      -->
       <div class="kf-ops-push"></div>
     </div>
   </div>
