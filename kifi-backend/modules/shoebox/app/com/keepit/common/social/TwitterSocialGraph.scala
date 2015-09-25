@@ -232,44 +232,11 @@ class TwitterSocialGraphImpl @Inject() (
               val libImageOpt = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Medium.idealSize)
               log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] auto-joining user ${userId} twitter_sync library ${libraryId}")
               libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = LibraryAccess.READ_ONLY))
-              //notifyUserOnLibraryFollow(user, twitterSyncState, library, libOwner, ownerImage, libLink, libImageOpt)
-              //notifyOwnerOnLibraryFollow(user, library, libOwner, ownerImage, libLink, libImageOpt)
             }
           }
         }
       }
       log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] finished auto-joining all twitter_sync libraries")
-    }
-  }
-
-  private def notifyUserOnLibraryFollow(user: User, twitterSyncState: TwitterSyncState, library: Library, libOwner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
-    val userId = user.id.get
-    if (user.createdAt > clock.now.minusMinutes(30)) {
-      //send a push notifications only if the user was created more then 30 minutes ago.
-      val message = s"${libOwner.firstName} created a Twitter Library"
-      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-      if (canSendPush) {
-        elizaServiceClient.sendLibraryPushNotification(
-          userId,
-          message,
-          library.id.get,
-          libLink,
-          PushNotificationExperiment.Experiment1,
-          LibraryPushNotificationCategory.LibraryInvitation)
-      }
-    }
-  }
-
-  private def notifyOwnerOnLibraryFollow(follower: User, lib: Library, owner: BasicUser, ownerImage: String, libLink: String, libImageOpt: Option[LibraryImage]): Future[Any] = {
-    val message = s"${follower.firstName} ${follower.lastName} is following you on Twitter"
-    val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-    if (canSendPush) {
-      elizaServiceClient.sendUserPushNotification(
-        userId = lib.ownerId,
-        message = message,
-        recipient = follower,
-        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-        category = UserPushNotificationCategory.NewLibraryFollower)
     }
   }
 
