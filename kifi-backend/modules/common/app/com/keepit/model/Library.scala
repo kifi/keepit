@@ -58,48 +58,11 @@ case class Library(
   def withOwner(newOwner: Id[User]) = this.copy(ownerId = newOwner)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
-  def isUserCreated: Boolean = kind == LibraryKind.USER_CREATED
+  def isUserCreated: Boolean = kind == LibraryKind.USER_CREATED || kind == LibraryKind.SYSTEM_PERSONA
   def isSystemCreated: Boolean = !isUserCreated
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 
-  def permissionsByAccess(access: LibraryAccess): Set[LibraryPermission] = access match {
-    case LibraryAccess.READ_ONLY => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.INVITE_FOLLOWERS
-    )
-
-    case LibraryAccess.READ_WRITE => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.INVITE_FOLLOWERS,
-      LibraryPermission.ADD_KEEPS,
-      LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
-    ) ++ (if (!whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
-
-    case LibraryAccess.OWNER if isSystemCreated => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.ADD_KEEPS,
-      LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
-    )
-    case LibraryAccess.OWNER if isUserCreated => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.EDIT_LIBRARY,
-      LibraryPermission.MOVE_LIBRARY,
-      LibraryPermission.DELETE_LIBRARY,
-      LibraryPermission.REMOVE_MEMBERS,
-      LibraryPermission.ADD_KEEPS,
-      LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS,
-      LibraryPermission.REMOVE_OTHER_KEEPS,
-      LibraryPermission.INVITE_FOLLOWERS,
-      LibraryPermission.INVITE_COLLABORATORS
-    )
-  }
-  def createMembershipInfo(mem: LibraryMembership, extraPermissions: Set[LibraryPermission]): LibraryMembershipInfo = {
-    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionsByAccess(mem.access) ++ extraPermissions)
-  }
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {
@@ -347,10 +310,11 @@ sealed abstract class LibraryKind(val value: String, val priority: Int) {
 object LibraryKind {
   case object SYSTEM_MAIN extends LibraryKind("system_main", 0)
   case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
-  case object SYSTEM_PERSONA extends LibraryKind("system_persona", 2)
-  case object USER_CREATED extends LibraryKind("user_created", 2)
-  case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_it_later", 2)
-  case object SYSTEM_GUIDE extends LibraryKind("system_guide", 3)
+  case object SYSTEM_ORG_GENERAL extends LibraryKind("system_org_general", 2)
+  case object SYSTEM_PERSONA extends LibraryKind("system_persona", 3)
+  case object USER_CREATED extends LibraryKind("user_created", 3)
+  case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_it_later", 3)
+  case object SYSTEM_GUIDE extends LibraryKind("system_guide", 4)
 
   implicit def format[T]: Format[LibraryKind] =
     Format(__.read[String].map(LibraryKind(_)), new Writes[LibraryKind] { def writes(o: LibraryKind) = JsString(o.value) })
@@ -359,6 +323,7 @@ object LibraryKind {
     str match {
       case SYSTEM_MAIN.value => SYSTEM_MAIN
       case SYSTEM_SECRET.value => SYSTEM_SECRET
+      case SYSTEM_ORG_GENERAL.value => SYSTEM_ORG_GENERAL
       case SYSTEM_PERSONA.value => SYSTEM_PERSONA
       case SYSTEM_READ_IT_LATER.value => SYSTEM_READ_IT_LATER
       case SYSTEM_GUIDE.value => SYSTEM_GUIDE

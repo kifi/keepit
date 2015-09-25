@@ -156,7 +156,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             val invite = inviteRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = inviterId, userId = Some(userId), role = OrganizationRole.MEMBER))
             (org, invite)
           }
-          inviteCommander.acceptInvitation(org.id.get, userId, invite.authToken) must haveClass[Right[OrganizationFail, OrganizationMembership]]
+          inviteCommander.acceptInvitation(org.id.get, userId, Some(invite.authToken)) must haveClass[Right[OrganizationFail, OrganizationMembership]]
         }
       }
 
@@ -173,7 +173,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
             memberRepo.save(org.newMembership(userId = inviterId, role = OrganizationRole.ADMIN))
             org
           }
-          inviteCommander.acceptInvitation(org.id.get, userId, "authToken") === Left(OrganizationFail.NO_VALID_INVITATIONS)
+          inviteCommander.acceptInvitation(org.id.get, userId, Some("authToken")) === Left(OrganizationFail.NO_VALID_INVITATIONS)
         }
       }
     }

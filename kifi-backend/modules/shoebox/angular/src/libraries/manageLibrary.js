@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfManageLibrary', [
-  '$location', '$state', 'friendService', 'libraryService', 'modalService',
-  'profileService', 'util',
-  function ($location, $state, friendService, libraryService, modalService,
-    profileService, util) {
+  '$window', '$rootScope', '$location', '$state', 'friendService',
+  'libraryService', 'modalService', 'profileService', 'util', 'LIB_PERMISSION',
+  function ($window, $rootScope, $location, $state, friendService,
+            libraryService, modalService, profileService, util, LIB_PERMISSION) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -30,6 +30,7 @@ angular.module('kifi')
         //
         // Scope data.
         //
+        scope.LIB_PERMISSION = LIB_PERMISSION;
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -88,7 +89,7 @@ angular.module('kifi')
         };
 
         scope.spaceIsOrg = function (space) {
-          return !('firstName' in space);
+          return !!space && !('firstName' in space);
         };
 
         var ownerType = function(space) {
@@ -260,10 +261,14 @@ angular.module('kifi')
           scope.showFollowers = false;
         };
 
+        scope.hasPermission = function (permission) {
+          return scope.library.membership && scope.library.membership.permissions.indexOf(permission) !== -1;
+        };
+
         //
         // On link.
         //
-        
+
         // Create scope.library
         if (scope.modalData && scope.modalData.library) {
           scope.library = _.cloneDeep(scope.modalData.library);
@@ -340,6 +345,15 @@ angular.module('kifi')
               scope.emptySlug = false;
             }
           }
+        });
+
+        [
+          $rootScope.$on('$stateChangeSuccess', function () {
+            $window.scrollTo(0, 0);
+            scope.close();
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
         });
 
         element.find('.manage-lib-name-input').focus();

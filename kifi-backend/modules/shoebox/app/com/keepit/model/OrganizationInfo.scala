@@ -83,7 +83,7 @@ object OrganizationInviteInfo {
     (__ \ 'lastInvited).read[DateTime]
   )(OrganizationInviteInfo.apply _)
   def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
-    OrganizationInviteInfo(inviter, invite.updatedAt)
+    OrganizationInviteInfo(inviter, invite.createdAt)
   }
 }
 
@@ -111,7 +111,7 @@ object OrganizationView {
       "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
   }
 
-  val mobileWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
+  val embeddedMembershipWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++
       Json.obj("membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject])
   }

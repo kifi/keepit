@@ -170,6 +170,7 @@ object Shoebox extends Service {
     def getBasicOrganizationsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicOrganizationsByIds")
     def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipView", Param("libraryId", libraryId), Param("userId", userId))
     def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationUserRelationship", Param("orgId", orgId), Param("userId", userId))
+    def getUserPermissionsByOrgId() = ServiceRoute(POST, "/internal/shoebox/database/getUserPermissionsByOrgId")
   }
 }
 
@@ -233,7 +234,6 @@ object Eliza extends Service {
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
     def sendToAllUsers() = ServiceRoute(POST, "/internal/eliza/sendToAllUsers")
     def connectedClientCount() = ServiceRoute(GET, "/internal/eliza/connectedClientCount")
-    def sendGlobalNotification() = ServiceRoute(POST, "/internal/eliza/sendGlobalNotification")
     def unsendNotification(messageHandle: Id[MessageHandle]) = ServiceRoute(GET, "/internal/eliza/unsendNotification", Param("id", messageHandle))
     def sendNotificationEvent() = ServiceRoute(POST, "/internal/eliza/notifications/post")
     def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")

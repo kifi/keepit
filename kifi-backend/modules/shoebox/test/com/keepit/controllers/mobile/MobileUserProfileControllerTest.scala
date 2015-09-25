@@ -124,7 +124,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         status(selfViewer) must equalTo(OK)
         contentType(selfViewer) must beSome("application/json")
         val res3 = contentAsJson(selfViewer)
-        (res3 \ "numLibraries").as[Int] === 4
+        (res3 \ "numLibraries").as[Int] === 4 + 1 // for org general lib
       }
     }
 
@@ -340,7 +340,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(lib2.permissionsByAccess(LibraryAccess.OWNER))}},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER))}},
                   "modifiedAt":${lib2.updatedAt.getMillis},
                   "path": "/spongebob/catching-jellyfish"
                 },
@@ -367,7 +367,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))}},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))}},
                   "modifiedAt":${lib1.updatedAt.getMillis},
                   "path": "/spongebob/krabby-patty"
                 }

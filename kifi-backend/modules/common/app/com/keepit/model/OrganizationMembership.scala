@@ -31,6 +31,7 @@ case class OrganizationMembership(
   )
 
   def isActive = state == OrganizationMembershipStates.ACTIVE
+  def isInactive = state == OrganizationMembershipStates.INACTIVE
 
   def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
 

@@ -2,7 +2,7 @@ package com.keepit.payments
 
 import com.google.inject.{ Provides, Singleton }
 
-case class FakeShoeboxServiceClientModule() extends StripeClientModule {
+case class FakeStripeClientModule() extends StripeClientModule {
 
   def configure() {}
 

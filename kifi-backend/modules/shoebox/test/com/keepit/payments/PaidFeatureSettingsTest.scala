@@ -3,10 +3,12 @@ package com.keepit.payments
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.controllers.mobile.MobileOrganizationMembershipController
-import com.keepit.controllers.website.OrganizationMembershipController
+import com.keepit.controllers.ext.ExtUserController
+import com.keepit.controllers.mobile.{ MobileContactsController, MobileUserController, MobileOrganizationMembershipController }
+import com.keepit.controllers.website.{ LibraryController, OrganizationMembershipController }
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.actor.TestKitSupport
@@ -20,11 +22,12 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.heimdal.HeimdalContext
 
 import org.specs2.mutable.SpecificationLike
+import play.api.libs.json.JsObject
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 
 class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector {
 
@@ -61,35 +64,34 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         }
 
         // owner can create public libraries
-        val libraryCommander = inject[LibraryCommander]
-        val ownerCreateRequest = LibraryCreateRequest(name = "Alphabet Soup", slug = "alphabet", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
+        val ownerCreateRequest = LibraryInitialValues(name = "Alphabet Soup", slug = "alphabet", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
         val ownerLibResponse = libraryCommander.createLibrary(ownerCreateRequest, owner.id.get)
         ownerLibResponse must beRight
 
         // admin can create public libraries
-        val adminCreateRequest = LibraryCreateRequest(name = "Alphabetter Soup", slug = "alphabetter", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(admin.id.get, org.id)))
+        val adminCreateRequest = LibraryInitialValues(name = "Alphabetter Soup", slug = "alphabetter", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(admin.id.get, org.id)))
         val adminLibResponse = libraryCommander.createLibrary(adminCreateRequest, admin.id.get)
         adminLibResponse must beRight
 
         // member cannot create public libraries
-        val memberCreateRequest1 = LibraryCreateRequest(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(member.id.get, org.id)))
+        val memberCreateRequest1 = LibraryInitialValues(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(member.id.get, org.id)))
         val memberLibResponse1 = libraryCommander.createLibrary(memberCreateRequest1, member.id.get)
         memberLibResponse1 must beLeft
 
-        val memberCreateRequest2 = LibraryCreateRequest(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.SECRET, space = Some(LibrarySpace(member.id.get, org.id)))
+        val memberCreateRequest2 = LibraryInitialValues(name = "Alphabest Soup", slug = "alphabest", visibility = LibraryVisibility.SECRET, space = Some(LibrarySpace(member.id.get, org.id)))
         val memberLibResponse2 = libraryCommander.createLibrary(memberCreateRequest2, member.id.get)
         memberLibResponse2 must beRight
         val library = memberLibResponse2.right.get
 
         // member cannot modify an org library to be public
-        val memberModifyRequest1 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
+        val memberModifyRequest1 = LibraryModifications(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse3 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest1)
         memberLibResponse3 must beLeft
 
         // admins can alter feature settings
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, feature.options.find(_ == "member").get))))
 
-        val memberModifyRequest2 = LibraryModifyRequest(visibility = Some(LibraryVisibility.PUBLISHED))
+        val memberModifyRequest2 = LibraryModifications(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse4 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest2)
         memberLibResponse4 must beRight
       }
@@ -125,7 +127,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberInviteResponse1 must beLeft
 
         // admins can alter feature settings
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, feature.options.find(_ == "member").get))))
 
         val memberInviteRequest2 = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
         val memberInviteResponse2 = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest2), Duration(5, "seconds"))
@@ -152,15 +154,15 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val libraryCommander = inject[LibraryCommander]
 
-        val ownerModifyRequest = LibraryModifyRequest(name = Some("Elon's Main Library"))
-        val adminModifyRequest = LibraryModifyRequest(name = Some("Larry's Main Library"))
-        val memberModifyRequest = LibraryModifyRequest(name = Some("Sergey's Main Library"))
+        val ownerModifyRequest = LibraryModifications(name = Some("Elon's Main Library"))
+        val adminModifyRequest = LibraryModifications(name = Some("Larry's Main Library"))
+        val memberModifyRequest = LibraryModifications(name = Some("Sergey's Main Library"))
 
         libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
 
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("force_edit_libraries", "member")))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "member"))))
 
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
       }
@@ -172,9 +174,11 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       withDb(modules: _*) { implicit injector =>
         val (org, owner, admin, member, nonMember) = setup()
 
+        val feature = OrganizationPermissionFeature.ViewMembers
+
         val (plan, account) = db.readWrite { implicit session =>
           val plan = PaidPlanFactory.paidPlan().saved
-          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting("view_members", "member")).saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, "member")).saved
           (plan, account)
         }
 
@@ -206,7 +210,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         status(nonMemberMobileResult1) must equalTo(FORBIDDEN)
         (contentAsJson(nonMemberMobileResult1) \ "error").as[String] must equalTo("insufficient_permissions")
 
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting("view_members", "anyone")))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "anyone"))))
 
         val nonMemberResult2 = organizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
         status(nonMemberResult2) must equalTo(OK)
@@ -243,9 +247,254 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberResponse must beLeft
         memberResponse.left.get must equalTo(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
-        planManagementCommander.setAccountFeatureSettings(org.id.get, owner.id.get, FeatureSetting.alterSetting(account.featureSettings, FeatureSetting(feature.name, feature.options.find(_ == "member").get)))
+        planManagementCommander.setAccountFeatureSettings(org.id.get, owner.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, feature.options.find(_ == "member").get))))
 
         organizationCommander.modifyOrganization(memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "move org library permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val feature = OrganizationPermissionFeature.RemoveOrganizationLibraries
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(FeatureSetting(feature.name, feature.options.find(_ == "disabled").get)).saved
+          (plan, account)
+        }
+
+        val (ownerLibrary, adminLibrary, memberLibrary) = db.readWrite { implicit session =>
+          (LibraryFactory.library().withOwner(owner).withOrganization(org).saved,
+            LibraryFactory.library().withOwner(admin).withOrganization(org).saved,
+            LibraryFactory.library().withOwner(member).withOrganization(org).saved)
+        }
+
+        val libraryCommander = inject[LibraryCommander]
+
+        val ownerModifyRequest = LibraryModifications(space = Some(UserSpace(owner.id.get)))
+        val adminModifyRequest = LibraryModifications(space = Some(UserSpace(admin.id.get)))
+        val memberModifyRequest = LibraryModifications(space = Some(UserSpace(member.id.get)))
+
+        libraryCommander.modifyLibrary(ownerLibrary.id.get, owner.id.get, ownerModifyRequest) must beLeft
+        libraryCommander.modifyLibrary(adminLibrary.id.get, admin.id.get, adminModifyRequest) must beLeft
+        libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beLeft
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "admin"))))
+
+        libraryCommander.modifyLibrary(ownerLibrary.id.get, owner.id.get, ownerModifyRequest) must beRight
+        libraryCommander.modifyLibrary(adminLibrary.id.get, admin.id.get, adminModifyRequest) must beRight
+        libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beLeft
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "member"))))
+
+        libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "create slack integration permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val createSlackIntegrationFeature = OrganizationPermissionFeature.CreateSlackIntegration
+        val forceEditLibrariesFeature = OrganizationPermissionFeature.EditLibrary
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSettings(Set(
+            FeatureSetting(createSlackIntegrationFeature.name, createSlackIntegrationFeature.options.find(_ == "admin").get),
+            FeatureSetting(forceEditLibrariesFeature.name, forceEditLibrariesFeature.options.find(_ == "member").get))
+          ).saved
+          (plan, account)
+        }
+
+        val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withOrganization(org).saved }
+
+        val libraryCommander = inject[LibraryCommander]
+
+        val ownerModifyRequest = LibraryModifications(subscriptions = Some(Seq(LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")))))
+
+        val adminModifyRequest = LibraryModifications(subscriptions = Some(Seq(
+          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")),
+          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok")))))
+
+        val memberModifyRequest = LibraryModifications(subscriptions = Some(Seq(
+          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")),
+          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok")),
+          LibrarySubscriptionKey("#product", SlackInfo("https://hooks.slack.com/services/ko/ko")))))
+
+        libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(createSlackIntegrationFeature.name, "member"))))
+
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "group messaging permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, nonMember) = setup()
+
+        val feature = OrganizationPermissionFeature.GroupMessaging
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(
+            FeatureSetting(feature.name, feature.options.find(_ == "disabled").get)
+          ).saved
+          (plan, account)
+        }
+
+        val mobileRoute = com.keepit.controllers.mobile.routes.MobileContactsController.searchForAllContacts(query = None, limit = None).url
+        val extRoute = com.keepit.controllers.ext.routes.ExtUserController.searchForContacts(query = None, limit = None).url
+
+        val mobileContactsController = inject[MobileContactsController]
+        val extUserController = inject[ExtUserController]
+
+        // nobody can send group messages
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerMobileRequest1 = FakeRequest("GET", mobileRoute)
+        val ownerMobileResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerMobileRequest1)
+        contentAsJson(ownerMobileResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminMobileRequest1 = FakeRequest("GET", mobileRoute)
+        val adminMobileResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminMobileRequest1)
+        contentAsJson(adminMobileResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberMobileRequest1 = FakeRequest("GET", mobileRoute)
+        val memberMobileResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberMobileRequest1)
+        contentAsJson(memberMobileResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerExtRequest1 = FakeRequest("GET", mobileRoute)
+        val ownerExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest1)
+        contentAsJson(ownerExtResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminExtRequest1 = FakeRequest("GET", mobileRoute)
+        val adminExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest1)
+        contentAsJson(adminExtResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberExtRequest1 = FakeRequest("GET", mobileRoute)
+        val memberExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest1)
+        contentAsJson(memberExtResult1).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
+        } must beTrue
+
+        // allow admins to send group messages
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "admin"))))
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerMobileRequest2 = FakeRequest("GET", mobileRoute)
+        val ownerMobileResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerMobileRequest2)
+        contentAsJson(ownerMobileResult2).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminMobileRequest2 = FakeRequest("GET", mobileRoute)
+        val adminMobileResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminMobileRequest2)
+        contentAsJson(adminMobileResult2).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberMobileRequest2 = FakeRequest("GET", mobileRoute)
+        val memberMobileResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberMobileRequest2)
+        contentAsJson(memberMobileResult2).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get))
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerExtRequest2 = FakeRequest("GET", mobileRoute)
+        val ownerExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest2)
+        contentAsJson(ownerExtResult2).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminExtRequest2 = FakeRequest("GET", mobileRoute)
+        val adminExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest2)
+        contentAsJson(adminExtResult2).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberExtRequest2 = FakeRequest("GET", mobileRoute)
+        val memberExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest2)
+        contentAsJson(memberExtResult2).as[Seq[JsObject]].forall { obj =>
+          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get))
+        } must beTrue
+
+        // members can send group messages
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "member"))))
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerMobileRequest3 = FakeRequest("GET", mobileRoute)
+        val ownerMobileResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerMobileRequest3)
+        contentAsJson(ownerMobileResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminMobileRequest3 = FakeRequest("GET", mobileRoute)
+        val adminMobileResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminMobileRequest3)
+        contentAsJson(adminMobileResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberMobileRequest3 = FakeRequest("GET", mobileRoute)
+        val memberMobileResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberMobileRequest3)
+        contentAsJson(memberMobileResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val ownerExtRequest3 = FakeRequest("GET", mobileRoute)
+        val ownerExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest3)
+        contentAsJson(ownerExtResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminExtRequest3 = FakeRequest("GET", mobileRoute)
+        val adminExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest3)
+        contentAsJson(adminExtResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberExtRequest3 = FakeRequest("GET", mobileRoute)
+        val memberExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest3)
+        contentAsJson(memberExtResult3).as[Seq[JsObject]].exists { obj =>
+          (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
+        } must beTrue
       }
     }
   }

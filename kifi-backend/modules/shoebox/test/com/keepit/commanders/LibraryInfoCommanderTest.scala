@@ -20,6 +20,9 @@ import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 class LibraryInfoCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   def modules = Seq(
@@ -58,42 +61,22 @@ class LibraryInfoCommanderTest extends TestKitSupport with SpecificationLike wit
   }
 
   "LibraryInfoCommander" should {
-    "make sure library permissions are reported correctly" in {
-      "for system libraries" in {
+    "serve up full library infos" in {
+      "not fail for org general libraries" in {
         withDb(modules: _*) { implicit injector =>
-          val systemLibs = {
-            val mainLib = LibraryFactory.library().withKind(LibraryKind.SYSTEM_MAIN).get
-            val secretLib = LibraryFactory.library().withKind(LibraryKind.SYSTEM_SECRET).get
-            val readItLaterLib = LibraryFactory.library().withKind(LibraryKind.SYSTEM_READ_IT_LATER).get
-            Set(mainLib, secretLib, readItLaterLib)
+          val (org, owner, member, orgGeneralLibrary) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+            val orgGeneralLibrary = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
+            (org, owner, member, orgGeneralLibrary)
           }
-          for (lib <- systemLibs) {
-            lib.permissionsByAccess(LibraryAccess.OWNER) === Set(
-              LibraryPermission.VIEW_LIBRARY,
-              LibraryPermission.ADD_KEEPS,
-              LibraryPermission.EDIT_OWN_KEEPS,
-              LibraryPermission.REMOVE_OWN_KEEPS
-            )
-          }
-          1 === 1
-        }
-      }
-      "for user created libraries" in {
-        withDb(modules: _*) { implicit injector =>
-          val lib = LibraryFactory.library().withKind(LibraryKind.USER_CREATED).get
-          lib.permissionsByAccess(LibraryAccess.OWNER) === Set(
-            LibraryPermission.VIEW_LIBRARY,
-            LibraryPermission.EDIT_LIBRARY,
-            LibraryPermission.MOVE_LIBRARY,
-            LibraryPermission.DELETE_LIBRARY,
-            LibraryPermission.REMOVE_MEMBERS,
-            LibraryPermission.ADD_KEEPS,
-            LibraryPermission.EDIT_OWN_KEEPS,
-            LibraryPermission.REMOVE_OWN_KEEPS,
-            LibraryPermission.REMOVE_OTHER_KEEPS,
-            LibraryPermission.INVITE_FOLLOWERS,
-            LibraryPermission.INVITE_COLLABORATORS
-          )
+          val fullInfosForOwner = inject[LibraryInfoCommander].createFullLibraryInfo(Some(owner.id.get), showPublishedLibraries = true, orgGeneralLibrary, ProcessedImageSize.Large.idealSize, None, showKeepCreateTime = true, useMultilibLogic = true)
+          val fullInfosForMember = inject[LibraryInfoCommander].createFullLibraryInfo(Some(member.id.get), showPublishedLibraries = true, orgGeneralLibrary, ProcessedImageSize.Large.idealSize, None, showKeepCreateTime = true, useMultilibLogic = true)
+          Await.result(fullInfosForOwner, Duration.Inf)
+          Await.result(fullInfosForMember, Duration.Inf)
+
+          1 ==== 1
         }
       }
     }

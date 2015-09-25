@@ -29,6 +29,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getBySpace(space: LibrarySpace, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def getBySpaceAndName(space: LibrarySpace, name: String, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
+  def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
   def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
@@ -45,7 +46,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getOwnerLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library]
   def getOwnerLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[Library]
   def getOwnerLibrariesForSelfWithOrdering(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library]
-  def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[(Library, LibraryInvite)]
 
   def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library]
   def getFollowingLibrariesForOtherUser(userId: Id[User], friendId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library]
@@ -76,6 +76,8 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
 
   // one-time admin cleanup endpoint
   def getLibrariesWithInactiveOwner()(implicit session: RSession): Seq[Id[Library]]
+
+  def deactivate(model: Library)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -212,6 +214,20 @@ class LibraryRepoImpl @Inject() (
       case UserSpace(userId) => getByUserIdAndSlug(userId, slug, excludeState)
       case OrganizationSpace(orgId) => getByOrgIdAndSlug(orgId, slug, excludeState)
     }
+  }
+
+  private def getByUserIdAndKind(userId: Id[User], kind: LibraryKind, excludeState: Option[State[Library]])(implicit session: RSession) = {
+    for (b <- rows if b.kind === kind && b.ownerId === userId && b.orgId.isEmpty && b.state =!= excludeState.orNull) yield b
+  }
+  private def getByOrgIdAndKind(orgId: Id[Organization], kind: LibraryKind, excludeState: Option[State[Library]])(implicit session: RSession) = {
+    for (b <- rows if b.kind === kind && b.orgId === orgId && b.state =!= excludeState.orNull) yield b
+  }
+  def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library] = {
+    val q = space match {
+      case UserSpace(userId) => getByUserIdAndKind(userId, kind, excludeState)
+      case OrganizationSpace(orgId) => getByOrgIdAndKind(orgId, kind, excludeState)
+    }
+    q.list.toSet
   }
 
   def getByUser(userId: Id[User], excludeState: Option[State[Library]], excludeAccess: Option[LibraryAccess])(implicit session: RSession): Seq[(LibraryMembership, Library)] = {
@@ -351,22 +367,6 @@ class LibraryRepoImpl @Inject() (
     }
     val priorityOrdering = if (orderedByPriority) s"""$membershipTable.priority desc,""" else ""
     priorityOrdering + ordering
-  }
-
-  def getInvitedLibrariesForSelf(userId: Id[User], page: Paginator)(implicit session: RSession): Seq[(Library, LibraryInvite)] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    // The technique we use below to ensure we get the desired invite for each library (maximum access level) is from:
-    // http://stackoverflow.com/questions/12102200/get-records-with-max-value-for-each-group-of-grouped-sql-results#answer-28090544
-    // It works right now because 'read_write' > 'read_only'. We'll need to modify the query (e.g. use a case expression) if we start
-    // to allow sending invitations with additional access levels where lexicographical ordering does not match ordinal ordering.
-    sql"""
-      select lib.*, li.id, li.library_id, li.inviter_id, li.user_id, li.email_address, li.access, li.created_at, li.updated_at, li.state, li.auth_token, li.message
-      from library lib,
-        (select v1.* from library_invite v1 left join library_invite v2 on v2.user_id = v1.user_id and v2.library_id = v1.library_id and v2.state = v1.state and (v1.access < v2.access or (v1.access = v2.access and v1.id < v2.id)) where v1.user_id=$userId and v1.state='active' and v2.id is null) li
-      where lib.id = li.library_id and lib.state='active'
-      order by lib.member_count desc, lib.last_kept desc, lib.id desc
-      limit ${page.itemsToDrop}, ${page.size}
-    """.as[(Library, LibraryInvite)].list
   }
 
   def getFollowingLibrariesForAnonymous(userId: Id[User], page: Paginator, ordering: Option[LibraryOrdering], direction: Option[SortDirection] = None, orderedByPriority: Boolean = true)(implicit session: RSession): Seq[Library] = {
@@ -530,6 +530,10 @@ class LibraryRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     val q = sql"""select lib.id from library lib inner join user u on lib.owner_id = u.id where lib.state = 'active' and u.state = 'inactive'"""
     q.as[Id[Library]].list
+  }
+
+  def deactivate(model: Library)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }
 

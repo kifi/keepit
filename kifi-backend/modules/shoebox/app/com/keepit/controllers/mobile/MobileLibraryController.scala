@@ -72,7 +72,7 @@ class MobileLibraryController @Inject() (
   }
 
   def createLibrary() = UserAction(parse.tolerantJson) { request =>
-    val externalCreateRequestValidated = request.body.validate[ExternalLibraryCreateRequest](ExternalLibraryCreateRequest.readsMobileV1)
+    val externalCreateRequestValidated = request.body.validate[ExternalLibraryInitialValues](ExternalLibraryInitialValues.readsMobileV1)
 
     externalCreateRequestValidated match {
       case JsError(errs) =>
@@ -85,7 +85,7 @@ class MobileLibraryController @Inject() (
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubId).get)
           }
-          LibraryCreateRequest(
+          LibraryInitialValues(
             name = externalCreateRequest.name,
             slug = slug,
             visibility = externalCreateRequest.visibility,
@@ -121,7 +121,7 @@ class MobileLibraryController @Inject() (
     val newWhoCanInvite = (json \ "newWhoCanInvite").asOpt[LibraryInvitePermissions]
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    val modifyRequest = LibraryModifyRequest(newName, newSlug, newVisibility, newDescription, newColor, newListed, newWhoCanInvite)
+    val modifyRequest = LibraryModifications(newName, newSlug, newVisibility, newDescription, newColor, newListed, newWhoCanInvite)
     val res = libraryCommander.modifyLibrary(libId, request.userId, modifyRequest)
     res match {
       case Left(fail) => sendFailResponse(fail)
@@ -131,7 +131,7 @@ class MobileLibraryController @Inject() (
 
   def modifyLibraryV2(pubId: PublicId[Library]) = (UserAction andThen LibraryOwnerAction(pubId))(parse.tolerantJson) { request =>
     val id = Library.decodePublicId(pubId).get
-    val externalModifyRequestValidated = request.body.validate[ExternalLibraryModifyRequest](ExternalLibraryModifyRequest.readsMobileV1)
+    val externalModifyRequestValidated = request.body.validate[ExternalLibraryModifications](ExternalLibraryModifications.readsMobileV1)
 
     externalModifyRequestValidated match {
       case JsError(errs) =>
@@ -143,7 +143,7 @@ class MobileLibraryController @Inject() (
             case ExternalUserSpace(extId) => LibrarySpace.fromUserId(userRepo.getByExternalId(extId).id.get)
             case ExternalOrganizationSpace(pubOrgId) => LibrarySpace.fromOrganizationId(Organization.decodePublicId(pubOrgId).get)
           }
-          LibraryModifyRequest(
+          LibraryModifications(
             name = externalLibraryModifyRequest.name,
             slug = externalLibraryModifyRequest.slug,
             visibility = externalLibraryModifyRequest.visibility,
@@ -193,14 +193,8 @@ class MobileLibraryController @Inject() (
       val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
         k.copy(note = Hashtags.formatMobileNote(k.note, v1))
       })
-
-      val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(userIdOpt, libraryId)
-      val inviteOpt = libraryInviteCommander.getViewerInviteInfo(userIdOpt, libraryId)
-      val accessStr = membershipOpt.map(_.access.value).getOrElse("none")
-      val membershipJson = Json.toJson(membershipOpt)
-      val inviteJson = Json.toJson(inviteOpt)
-      val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
-      Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
+      val accessStr = editedLibInfo.membership.map(_.access.value).getOrElse("none")
+      Ok(Json.obj("library" -> editedLibInfo, "membership" -> accessStr)) // todo: remove membership once it's not being used
     }
   }
 
@@ -218,19 +212,13 @@ class MobileLibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize, None).map { libInfo =>
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
-
-            val membershipOpt = libraryInfoCommander.getViewerMembershipInfo(request.userIdOpt, library.id.get)
-            val inviteOpt = libraryInviteCommander.getViewerInviteInfo(request.userIdOpt, library.id.get)
-            val accessStr = membershipOpt.map(_.access.value).getOrElse("none")
-            val membershipJson = Json.toJson(membershipOpt)
-            val inviteJson = Json.toJson(inviteOpt)
-            val libraryJson = Json.toJson(editedLibInfo).as[JsObject] + ("membership" -> membershipJson) + ("invite" -> inviteJson)
+            val accessStr = editedLibInfo.membership.map(_.access.value).getOrElse("none")
             libraryCommander.trackLibraryView(request.userIdOpt, library)
-            Ok(Json.obj("library" -> libraryJson, "membership" -> accessStr)) // todo: remove membership once it's not being used
+            Ok(Json.obj("library" -> editedLibInfo, "membership" -> accessStr)) // todo: remove membership once it's not being used
           }
         })
       case Left(fail) =>
@@ -251,9 +239,8 @@ class MobileLibraryController @Inject() (
     val libs = libraryInfoCommander.getLibrariesUserCanKeepTo(userId, includeOrgLibraries = true)
     val libOwnerIds = libs.map(_._1.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
     }
 
     val writeableLibraryInfos = libraryCards.map { libraryCard =>
@@ -310,9 +297,8 @@ class MobileLibraryController @Inject() (
     }
     val libOwnerIds = writeableLibraries.map(_._2.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
-      val user = userRepo.get(userId)
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(user), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
       libraryCards
     }
 
@@ -511,10 +497,9 @@ class MobileLibraryController @Inject() (
           implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
-            case Right((lib, mem)) => {
-              val permissionsFromOrg = db.readOnlyReplica { implicit session => libraryInfoCommander.getLibraryPermissionsFromOrgPermissions(lib.organizationId, Some(mem.userId)) }
-              (pubId, Right(lib.createMembershipInfo(mem, permissionsFromOrg)))
-            }
+            case Right((lib, mem)) =>
+              val membershipInfo = db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+              (pubId, Right(membershipInfo))
           }
       }
     }

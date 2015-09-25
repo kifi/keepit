@@ -15,7 +15,7 @@ trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByOrgIdAndUserIdAndAuthToken(organizationId: Id[Organization], userId: Id[User], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndAuthToken(organizationId: Id[Organization], authToken: String, state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Option[OrganizationInvite]
   def getByOrgAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
-  def getAllByOrganization(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite]
+  def getAllByOrgId(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite]
   def getByOrganizationAndDecision(organizationId: Id[Organization], decision: InvitationDecision, offset: Offset, limit: Limit, includeAnonymous: Boolean, excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Seq[OrganizationInvite]
   def getAllByOrgIdAndDecisions(organizationId: Id[Organization], decision: Set[InvitationDecision], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite]
   def getAllByUserId(userId: Id[User], excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Set[OrganizationInvite]
@@ -136,7 +136,7 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
     for { row <- rows if row.organizationId === orgId && row.state === state } yield row
   }
 
-  def getAllByOrganization(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite] = {
+  def getAllByOrgId(organizationId: Id[Organization], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Set[OrganizationInvite] = {
     getAllByOrganizationCompiled(organizationId, state).list.toSet
   }
 

@@ -125,7 +125,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentGlobalNotification(userIds: Set[Id[User]], message: Message, thread: MessageThread, category: NotificationCategory): Unit = {
+  def sentGlobalNotification(userIds: Set[Id[User]], messageId: ExternalId[Message], threadId: ExternalId[MessageThread], category: NotificationCategory): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
@@ -133,8 +133,8 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("channel", kifi)
       contextBuilder.addNotificationCategory(category)
       contextBuilder += ("global", true)
-      contextBuilder += ("messageId", message.externalId.id)
-      contextBuilder += ("threadId", thread.externalId.id)
+      contextBuilder += ("messageId", messageId.id)
+      contextBuilder += ("threadId", threadId.id)
       val context = contextBuilder.build
       userIds.foreach { id => heimdal.trackEvent(UserEvent(id, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
     }
@@ -188,6 +188,8 @@ class MessagingAnalytics @Inject() (
       message.source.foreach { source => contextBuilder += ("source", source.value) }
       thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
+
+      contextBuilder.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => s"[OrgMessageTracking] successfully tracked messagedWholeOrgId=${orgId.value}" }
 
       sender match {
         case MessageSender.User(userId) => {
@@ -246,7 +248,8 @@ class MessagingAnalytics @Inject() (
     val orgIdsByUserIdFut = shoebox.getOrganizationsForUsers(participants.allUsers)
     orgIdsByUserIdFut.foreach { orgIdsByUserId =>
       val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
-      commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", orgId.id.toString) }
+      log.info(s"[OrgMessageTracking] commonOrgs=${commonOrgs.map(_.mkString(","))}")
+      commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", ContextStringData(orgId.toString)) }
     }
   }
 }

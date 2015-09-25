@@ -86,6 +86,7 @@ class ShoeboxController @Inject() (
   organizationCommander: OrganizationCommander,
   userPersonaRepo: UserPersonaRepo,
   orgCandidateRepo: OrganizationMembershipCandidateRepo,
+  permissionCommander: PermissionCommander,
   rover: RoverServiceClient,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
@@ -409,7 +410,7 @@ class ShoeboxController @Inject() (
   }
 
   def getUserImageUrl(id: Id[User], width: Int) = Action.async { request =>
-    userCommander.getUserImageUrl(id, width).map { url =>
+    s3ImageStore.getPictureUrl(width, id).map { url =>
       Ok(Json.toJson(url))
     }
   }
@@ -563,5 +564,16 @@ class ShoeboxController @Inject() (
     }
     val inviteOpt = organizationInviteCommander.getLastSentByOrganizationIdAndInviteeId(orgId, userId)
     Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), membershipOpt.map(_.permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
+  }
+
+  def getUserPermissionsByOrgId() = Action(parse.tolerantJson) { request =>
+    val orgIds = (request.body \ "orgIds").as[Set[Id[Organization]]]
+    val userId = (request.body \ "userId").as[Id[User]]
+
+    val permissionsByOrgId = db.readOnlyMaster { implicit session =>
+      orgIds.map { orgId => orgId -> permissionCommander.getOrganizationPermissions(orgId, Some(userId)) }.toMap
+    }
+
+    Ok(Json.toJson(permissionsByOrgId))
   }
 }

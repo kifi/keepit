@@ -2,6 +2,21 @@
 
 angular.module('kifi')
 
+.constant('LIB_PERMISSION', {
+  INVITE_COLLABORATORS: 'invite_collaborators',
+  MOVE_LIBRARY: 'move_library',
+  INVITE_FOLLOWERS: 'invite_followers',
+  VIEW_LIBRARY: 'view_library',
+  DELETE_LIBRARY: 'delete_library',
+  REMOVE_OWN_KEEPS: 'remove_own_keeps',
+  REMOVE_OTHER_KEEPS: 'remove_other_keeps',
+  CREATE_SLACK_INTEGRATION: 'create_slack_integration',
+  EDIT_LIBRARY: 'edit_library',
+  EDIT_OWN_KEEPS: 'edit_own_keeps',
+  REMOVE_MEMBERS: 'remove_members',
+  ADD_KEEPS: 'add_keeps'
+})
+
 .factory('libraryService', [
   '$http', '$rootScope', 'profileService', 'routeService', '$q', '$analytics', 'net',
   function ($http, $rootScope, profileService, routeService, $q, $analytics, net) {

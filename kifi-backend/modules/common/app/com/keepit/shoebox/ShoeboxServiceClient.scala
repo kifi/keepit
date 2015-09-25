@@ -138,6 +138,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]]
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship]
   def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]): Future[Option[LibraryMembershipView]]
+  def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -859,5 +860,10 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship] = {
     call(Shoebox.internal.getOrganizationUserRelationship(orgId, userId)).map { _.json.as[OrganizationUserRelationship] }
+  }
+
+  def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]] = {
+    val payload = Json.obj("orgIds" -> orgIds, "userId" -> userId)
+    call(Shoebox.internal.getUserPermissionsByOrgId, payload).map { _.json.as[Map[Id[Organization], Set[OrganizationPermission]]] }
   }
 }

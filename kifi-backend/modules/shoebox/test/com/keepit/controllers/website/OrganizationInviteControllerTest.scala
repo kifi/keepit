@@ -45,8 +45,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
             (invitee, invite)
           }
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId, invite.authToken)
-          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
+          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
+          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
 
           status(result) must equalTo(NO_CONTENT)
         }
@@ -68,8 +68,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId, invite.authToken)
-          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
+          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
+          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
           status(result) must equalTo(NO_CONTENT)
         }
       }
@@ -89,8 +89,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId, invite.authToken)
-          val result = controller.acceptInvitation(publicOrgId, invite.authToken)(request)
+          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
+          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
           result === OrganizationFail.NO_VALID_INVITATIONS
         }
       }
@@ -102,8 +102,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(PublicId[Organization]("12345"), "authToken")
-          val result = controller.acceptInvitation(PublicId[Organization]("12345"), "authToken")(request)
+          val request = route.acceptInvitation(PublicId[Organization]("12345"), Some("authToken"))
+          val result = controller.acceptInvitation(PublicId[Organization]("12345"), Some("authToken"))(request)
 
           result === OrganizationFail.INVALID_PUBLIC_ID
         }
@@ -174,7 +174,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           status(result) === OK
 
           val allInvitations = db.readOnlyMaster { implicit s =>
-            inject[OrganizationInviteRepo].getAllByOrganization(org.id.get)
+            inject[OrganizationInviteRepo].getAllByOrgId(org.id.get)
           }
           allInvitations.size === 1
           val onlyInvitation = allInvitations.head

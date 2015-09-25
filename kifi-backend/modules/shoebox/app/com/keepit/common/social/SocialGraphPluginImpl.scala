@@ -1,6 +1,6 @@
 package com.keepit.common.social
 
-import com.keepit.commanders.UserCommander
+import com.keepit.commanders.{ UserEmailAddressCommander, UserCommander }
 import com.keepit.common.auth.AuthException
 import com.keepit.common.net.NonOKResponseException
 import com.keepit.model._
@@ -15,7 +15,7 @@ import akka.util.Timeout
 import scala.concurrent.{ Promise, Future }
 import scala.concurrent.duration._
 import akka.pattern.ask
-import com.keepit.social.{ SocialNetworkType, SocialGraphPlugin, SocialGraph }
+import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialGraphPlugin, SocialGraph }
 import com.keepit.model.SocialConnection
 import com.keepit.common.db.Id
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient }
@@ -43,6 +43,7 @@ private[social] class SocialGraphActor @Inject() (
   socialUserTypeahead: SocialUserTypeahead,
   userValueRepo: UserValueRepo,
   userCommander: UserCommander,
+  emailAddressCommander: UserEmailAddressCommander,
   heimdal: HeimdalServiceClient,
   clock: Clock)
     extends FortyTwoActor(airbrake) with Logging {
@@ -108,7 +109,10 @@ private[social] class SocialGraphActor @Inject() (
         }
 
         val friendsSocialId = rawInfo.jsons.map { json =>
-          graph.extractEmails(json).map(email => userCommander.importSocialEmail(userId, email))
+          val emails = graph.extractEmails(json)
+          db.readWrite { implicit session =>
+            emails.foreach(emailAddressCommander.intern(userId, _, verified = true))
+          }
 
           val friends = graph.extractFriends(json)
           socialUserImportFriends.importFriends(socialUserInfo, friends)

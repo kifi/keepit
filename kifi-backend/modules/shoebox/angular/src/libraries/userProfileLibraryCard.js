@@ -3,15 +3,21 @@
 angular.module('kifi')
 
 .directive('kfUserProfileLibraryCard', [
-  '$rootScope', '$location', 'profileService', 'libraryService', 'modalService', 'platformService', 'signupService',
-  function ($rootScope, $location, profileService, libraryService, modalService, platformService, signupService) {
+  '$rootScope', '$location', 'profileService', 'libraryService', 'modalService',
+  'platformService', 'signupService', 'LIB_PERMISSION', 'ORG_SETTING_VALUE',
+  function ($rootScope, $location, profileService, libraryService, modalService,
+            platformService, signupService, LIB_PERMISSION, ORG_SETTING_VALUE) {
     // values that are the same for all cards that coexist at any one time
     var currentPageName;
     var currentPageOrigin;
 
     function canModifyCollaborators(lib) {
-      var mem = lib.membership;
-      return mem && (mem.access === 'owner' || mem.access === 'read_write' && lib.whoCanInvite === 'collaborator');
+      return (
+        lib.membership && (
+          lib.membership.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1 ||
+          lib.membership.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) !== -1
+        )
+      );
     }
 
     function updateCollaborators(numCollaborators, ignored, scope) {
@@ -148,6 +154,17 @@ angular.module('kifi')
         });
     }
 
+    function hasPermission(permission) {
+      var scope = this;
+      return scope.lib.membership && scope.lib.membership.permissions.indexOf(permission) !== -1;
+    }
+
+    function getMeOrg() {
+      var scope = this;
+      var meOrg = profileService.me.orgs.filter(function (o) { return o.id === scope.lib.org.id; }).pop();
+      return meOrg;
+    }
+
     return {
       restrict: 'A',
       replace: true,
@@ -160,6 +177,8 @@ angular.module('kifi')
       },
       templateUrl: 'libraries/userProfileLibraryCard.tpl.html',
       link: function (scope) {
+        scope.LIB_PERMISSION = LIB_PERMISSION;
+        scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
         // cheaper to stash than to bind functions that need them
         currentPageName = scope.currentPageName;
         currentPageOrigin = scope.currentPageOrigin;
@@ -200,6 +219,8 @@ angular.module('kifi')
         scope.onCollabButtonClick = onCollabButtonClick;
         scope.toggleSubscribed = toggleSubscribed;
         scope.trackUplCardClick = trackUplCardClick;
+        scope.hasPermission = hasPermission;
+        scope.getMeOrg = getMeOrg;
       }
     };
   }

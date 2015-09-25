@@ -1,21 +1,20 @@
 .kf-library-visibility-selector
   .kf-row
-    max-width: 250px
+    max-width: 335px
     margin-left: -20px
     margin-top: -20px
 
-  &.team-disabled
-    .kf-library-visibility-selector-team
-      cursor: no-drop
+  .kf-triptych.disabled
+    cursor: no-drop
 
-      .kf-library-visibility-selector-icon
-        fill: textLightGrey
+    .kf-library-visibility-selector-icon
+      fill: textLightGrey
 
-      .kf-library-visibility-selector-caption
-        color: textLightGrey
+    .kf-library-visibility-selector-caption
+      color: textLightGrey
 
-      &:hover
-        background: none
+    &:hover
+      background: none
 
   input[type="radio"]
     display: none
@@ -24,6 +23,7 @@
   border-radius: defaultBorderRadius
   padding: defaultPadding
   box-sizing: border-box
+  text-align: center
 
 
   &:hover
@@ -40,8 +40,7 @@
   display: block
 
 .kf-library-visibility-selector-caption
-  text-align: center
-  display: block
+  display: inline-block
 
 .kf-library-visibility-selector-team.active
   .kf-library-visibility-selector-icon
@@ -63,7 +62,7 @@
 
   .kf-library-visibility-selector-caption
     color: libraryRed
-    
+
 .kf-library-visibility-selector-helptext
   color: libraryGray
   margin-top: 0

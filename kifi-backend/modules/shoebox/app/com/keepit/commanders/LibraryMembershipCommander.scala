@@ -294,37 +294,21 @@ class LibraryMembershipCommanderImpl @Inject() (
       ("New Library Follower", NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
     }
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
-    elizaClient.sendGlobalNotification( //push sent
-      userIds = Set(lib.ownerId),
-      title = title,
-      body = message,
-      linkText = s"See ${follower.firstName}’s profile",
-      linkUrl = s"https://www.kifi.com/${follower.username.value}",
-      imageUrl = s3ImageStore.avatarUrlByUser(follower),
-      sticky = false,
-      category = category,
-      unread = !lotsOfFollowers, // if not a lot of recent followers, notification is marked unread
-      extra = Some(Json.obj(
-        "follower" -> BasicUser.fromUser(follower),
-        "library" -> NotificationInfoModel.library(lib, libImageOpt, owner)
-      ))
-    ) map { _ =>
-        if (!lotsOfFollowers) {
-          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
-          if (canSendPush) {
-            val pushCat = category match {
-              case NotificationCategory.User.LIBRARY_COLLABORATED => UserPushNotificationCategory.NewLibraryCollaborator
-              case _ => UserPushNotificationCategory.NewLibraryFollower
-            }
-            elizaClient.sendUserPushNotification(
-              userId = lib.ownerId,
-              message = message,
-              recipient = follower,
-              pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-              category = pushCat)
-          }
+    if (!lotsOfFollowers) {
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
+      if (canSendPush) {
+        val pushCat = category match {
+          case NotificationCategory.User.LIBRARY_COLLABORATED => UserPushNotificationCategory.NewLibraryCollaborator
+          case _ => UserPushNotificationCategory.NewLibraryFollower
         }
+        elizaClient.sendUserPushNotification(
+          userId = lib.ownerId,
+          message = message,
+          recipient = follower,
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+          category = pushCat)
       }
+    }
     if (access == LibraryAccess.READ_WRITE) {
       elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
         Recipient(lib.ownerId),

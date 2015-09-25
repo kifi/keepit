@@ -63,7 +63,7 @@ class NotificationProcessing @Inject() (
     }
   }
 
-  def processNewEvent(event: NotificationEvent, tryDeliver: Boolean = true): Option[Notification] = {
+  def processNewEvent(event: NotificationEvent, tryDeliver: Boolean = true): Option[NotificationWithItems] = {
     val groupIdentifier = getGroupIdentifier(event)
     val recipient = event.recipient
     if (legacyNotificationCheck.checkUserExperiment(recipient).experimentEnabled) {
@@ -99,7 +99,7 @@ class NotificationProcessing @Inject() (
           delivery.deliver(recipient, NotificationWithItems(notif, items))
         }
       }
-      Some(notif)
+      Some(NotificationWithItems(notif, items))
     } else {
       None
     }

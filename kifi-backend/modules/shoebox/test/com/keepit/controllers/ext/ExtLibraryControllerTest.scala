@@ -44,9 +44,46 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   )
 
   "ExtLibraryController" should {
+    "format a library properly" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (user, lib) = db.readWrite { implicit s =>
+          val user = UserFactory.user().withName("Morgan", "Freeman").withUsername("morgan").saved
+          val lib = LibraryFactory.library().withName("Million Dollar Baby").withOwner(user).withVisibility(LibraryVisibility.PUBLISHED).withSlug("baby").withColor(LibraryColor.RED).saved
+          (user, lib)
+        }
+        implicit val config = inject[PublicIdConfiguration]
+        val pubId = Library.publicId(lib.id.get).id
+        val basicUserRepo = inject[BasicUserRepo]
+        val result = getLibraries(user)
+        status(result) must equalTo(OK)
+        contentType(result) must beSome("application/json")
+
+        db.readOnlyMaster { implicit session =>
+          val payload = Json.parse(contentAsString(result))
+          val libraryJson = (payload \ "libraries").as[Seq[JsObject]].head
+          libraryJson === Json.obj(
+            "id" -> pubId,
+            "name" -> "Million Dollar Baby",
+            "color" -> LibraryColor.RED,
+            "visibility" -> "published",
+            "path" -> "/morgan/baby",
+            "hasCollaborators" -> false,
+            "subscribedToUpdates" -> false,
+            "collaborators" -> Json.arr(),
+            "membership" -> Json.obj(
+              "access" -> LibraryAccess.OWNER,
+              "listed" -> true,
+              "subscribed" -> false,
+              "permissions" -> Json.toJson(permissionCommander.libraryPermissionsByAccess(lib, LibraryAccess.OWNER))
+            )
+          )
+        }
+      }
+    }
+
     "get libraries" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, lib1, lib2, lib3, lib4) = db.readWrite { implicit s =>
+        val (user1, user2, lib1, lib2, lib3, lib4, orgGeneralLib) = db.readWrite { implicit s =>
           val user1 = UserFactory.user().withName("Morgan", "Freeman").withUsername("morgan").saved
           val lib1 = LibraryFactory.library().withName("Million Dollar Baby").withOwner(user1).withVisibility(LibraryVisibility.PUBLISHED).withSlug("baby").withColor(LibraryColor.RED).saved
 
@@ -63,7 +100,9 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val org = OrganizationFactory.organization().withName("Braff").withHandle(OrganizationHandle("braff")).withOwner(user2).withMembers(Seq(user1)).saved
           val lib4 = LibraryFactory.library().withName("Going In Style").withOwner(user2).withOrganization(org).withVisibility(LibraryVisibility.ORGANIZATION).withOrgMemberCollaborativePermission(Some(LibraryAccess.READ_WRITE)).withSlug("robbers").withColor(LibraryColor.SKY_BLUE).saved
 
-          (user1, user2, lib1, lib2, lib3, lib4)
+          val orgGeneralLib = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
+
+          (user1, user2, lib1, lib2, lib3, lib4, orgGeneralLib)
         }
         implicit val config = inject[PublicIdConfiguration]
         val pubId1 = Library.publicId(lib1.id.get).id
@@ -76,53 +115,10 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         contentType(result) must beSome("application/json")
 
         db.readOnlyMaster { implicit session =>
-          Json.parse(contentAsString(result)) === Json.obj(
-            "libraries" -> Seq(
-              Json.obj(
-                "id" -> pubId2,
-                "name" -> "Dark Knight",
-                "color" -> LibraryColor.BLUE,
-                "visibility" -> "published",
-                "path" -> "/michael/darkknight",
-                "hasCollaborators" -> true,
-                "subscribedToUpdates" -> false,
-                "collaborators" -> Seq(basicUserRepo.load(user2.id.get)),
-                "membership" -> Json.obj(
-                  "access" -> LibraryAccess.READ_WRITE,
-                  "listed" -> true,
-                  "subscribed" -> false,
-                  "permissions" -> Json.toJson(lib2.permissionsByAccess(LibraryAccess.READ_WRITE))
-                )
-              ),
-              Json.obj(
-                "id" -> pubId1,
-                "name" -> "Million Dollar Baby",
-                "color" -> LibraryColor.RED,
-                "visibility" -> "published",
-                "path" -> "/morgan/baby",
-                "hasCollaborators" -> false,
-                "subscribedToUpdates" -> false,
-                "collaborators" -> Seq.empty[BasicUser],
-                "membership" -> Json.obj(
-                  "access" -> LibraryAccess.OWNER,
-                  "listed" -> true,
-                  "subscribed" -> false,
-                  "permissions" -> Json.toJson(lib1.permissionsByAccess(LibraryAccess.OWNER))
-                )
-              ),
-              Json.obj(
-                "id" -> pubId4,
-                "name" -> "Going In Style",
-                "color" -> LibraryColor.SKY_BLUE,
-                "visibility" -> "organization",
-                "path" -> "/braff/robbers",
-                "hasCollaborators" -> true,
-                "subscribedToUpdates" -> false,
-                "collaborators" -> Seq(basicUserRepo.load(user2.id.get)),
-                "orgAvatar" -> "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
-              )
-            )
-          )
+          val payload = Json.parse(contentAsString(result))
+          val librariesJson = (payload \ "libraries").as[Seq[JsObject]]
+          librariesJson.length === 4
+          librariesJson.map(j => (j \ "name").as[String]).toSet === Set(lib1, lib2, lib4, orgGeneralLib).map(_.name)
         }
       }
     }

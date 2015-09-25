@@ -3,13 +3,17 @@
 angular.module('kifi')
 
 .directive('kfSmallLibraryCard', [
-  '$location', 'modalService', '$window', 'platformService',
-  function ($location, modalService, $window, platformService) {
+  '$location', 'modalService', '$window', 'platformService', 'LIB_PERMISSION',
+  function ($location, modalService, $window, platformService, LIB_PERMISSION) {
     var currentPageOrigin = 'libraryPage.RelatedLibraries';
 
     function canModifyCollaborators(lib) {
-      var mem = lib.membership;
-      return mem && (mem.access === 'owner' || mem.access === 'read_write' && lib.whoCanInvite === 'collaborator');
+      return (
+        lib.membership && (
+          lib.membership.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1 ||
+          lib.membership.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) !== -1
+        )
+      );
     }
 
     function updateCollaborators(numCollaborators, ignored, scope) {

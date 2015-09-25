@@ -33,12 +33,12 @@ object LibraryError {
   }
 }
 
-case class LibraryFail(status: Int, message: String)
+case class LibraryFail(status: Int, message: String) extends Exception(message)
 
 @json
 case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
 
-case class ExternalLibraryCreateRequest(
+case class ExternalLibraryInitialValues(
   name: String,
   visibility: LibraryVisibility,
   slug: Option[String],
@@ -51,8 +51,34 @@ case class ExternalLibraryCreateRequest(
   space: Option[ExternalLibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
 
-object ExternalLibraryCreateRequest {
-  val readsMobileV1: Reads[ExternalLibraryCreateRequest] = (
+case class LibraryInitialValues(
+    name: String,
+    visibility: LibraryVisibility,
+    slug: String,
+    kind: Option[LibraryKind] = None,
+    description: Option[String] = None,
+    color: Option[LibraryColor] = None,
+    listed: Option[Boolean] = None,
+    whoCanInvite: Option[LibraryInvitePermissions] = None,
+    subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
+    space: Option[LibrarySpace] = None,
+    orgMemberAccess: Option[LibraryAccess] = None) {
+  def asLibraryModifications: LibraryModifications = LibraryModifications(
+    name = Some(name),
+    visibility = Some(visibility),
+    slug = Some(slug),
+    description = description,
+    color = color,
+    listed = listed,
+    whoCanInvite = whoCanInvite,
+    subscriptions = subscriptions,
+    space = space,
+    orgMemberAccess = orgMemberAccess
+  )
+}
+
+object ExternalLibraryInitialValues {
+  val readsMobileV1: Reads[ExternalLibraryInitialValues] = (
     (__ \ 'name).read[String] and
     (__ \ 'visibility).read[LibraryVisibility] and
     (__ \ 'slug).readNullable[String] and
@@ -64,24 +90,24 @@ object ExternalLibraryCreateRequest {
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace] and
     (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
-  )(ExternalLibraryCreateRequest.apply _)
+  )(ExternalLibraryInitialValues.apply _)
   val reads = readsMobileV1
 }
 
-case class LibraryCreateRequest(
-  name: String,
-  visibility: LibraryVisibility,
-  slug: String,
-  kind: Option[LibraryKind] = None,
-  description: Option[String] = None,
-  color: Option[LibraryColor] = None,
-  listed: Option[Boolean] = None,
-  whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
-  space: Option[LibrarySpace] = None,
-  orgMemberAccess: Option[LibraryAccess] = None)
+object LibraryInitialValues {
+  def forOrgGeneralLibrary(org: Organization): LibraryInitialValues = {
+    LibraryInitialValues(
+      name = "General",
+      visibility = LibraryVisibility.ORGANIZATION,
+      slug = "general",
+      kind = Some(LibraryKind.SYSTEM_ORG_GENERAL),
+      space = Some(LibrarySpace.fromOrganizationId(org.id.get)),
+      orgMemberAccess = Some(LibraryAccess.READ_WRITE)
+    )
+  }
+}
 
-case class ExternalLibraryModifyRequest(
+case class ExternalLibraryModifications(
   name: Option[String] = None,
   slug: Option[String] = None,
   visibility: Option[LibraryVisibility] = None,
@@ -93,24 +119,7 @@ case class ExternalLibraryModifyRequest(
   externalSpace: Option[ExternalLibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
 
-object ExternalLibraryModifyRequest {
-  val readsMobileV1: Reads[ExternalLibraryModifyRequest] = (
-    (__ \ 'name).readNullable[String] and
-    (__ \ 'slug).readNullable[String] and
-    (__ \ 'visibility).readNullable[LibraryVisibility] and
-    (__ \ 'description).readNullable[String] and
-    (__ \ 'color).readNullable[LibraryColor] and
-    (__ \ 'listed).readNullable[Boolean] and
-    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
-    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
-    (__ \ 'space).readNullable[ExternalLibrarySpace] and
-    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
-  )(ExternalLibraryModifyRequest.apply _)
-
-  val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
-}
-
-case class LibraryModifyRequest(
+case class LibraryModifications(
   name: Option[String] = None,
   slug: Option[String] = None,
   visibility: Option[LibraryVisibility] = None,
@@ -121,6 +130,23 @@ case class LibraryModifyRequest(
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
+
+object ExternalLibraryModifications {
+  val readsMobileV1: Reads[ExternalLibraryModifications] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'slug).readNullable[String] and
+    (__ \ 'visibility).readNullable[LibraryVisibility] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[ExternalLibrarySpace] and
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+  )(ExternalLibraryModifications.apply _)
+
+  val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
+}
 
 case class LibraryModifyResponse(
   modifiedLibrary: Library,
@@ -195,13 +221,13 @@ case class LibraryCardInfo(
   lastKept: DateTime,
   following: Option[Boolean], // @deprecated use membership object instead!
   membership: Option[LibraryMembershipInfo],
+  invite: Option[LibraryInviteInfo], // currently only for Invited tab on viewer's own user profile
   caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
-  invite: Option[LibraryInviteInfo] = None, // currently only for Invited tab on viewer's own user profile
   path: String,
   org: Option[BasicOrganizationView],
-  orgMemberAccess: Option[LibraryAccess]) // TODO(cam): (possibly) squash this into LibraryMembershipInfo.access to clean things up, need to confirm with clients that it'd be equivalent in terms of UX
+  orgMemberAccess: Option[LibraryAccess])
 
 object LibraryCardInfo {
   implicit val writes = new Writes[LibraryCardInfo] {
@@ -223,10 +249,10 @@ object LibraryCardInfo {
       "lastKept" -> o.lastKept,
       "following" -> o.following,
       "membership" -> o.membership,
+      "invite" -> o.invite,
       "caption" -> o.caption,
       "modifiedAt" -> o.modifiedAt,
       "kind" -> o.kind,
-      "invite" -> o.invite,
       "path" -> o.path,
       "org" -> o.org,
       "orgMemberAccess" -> o.orgMemberAccess).nonNullFields
@@ -273,7 +299,9 @@ case class FullLibraryInfo(
   modifiedAt: DateTime,
   path: String,
   org: Option[BasicOrganizationView],
-  orgMemberAccess: Option[LibraryAccess])
+  orgMemberAccess: Option[LibraryAccess],
+  membership: Option[LibraryMembershipInfo],
+  invite: Option[LibraryInviteInfo])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
@@ -302,19 +330,12 @@ object FullLibraryInfo {
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
       "org" -> o.org,
-      "orgMemberAccess" -> o.orgMemberAccess
+      "orgMemberAccess" -> o.orgMemberAccess,
+      "membership" -> o.membership,
+      "invite" -> o.invite
     ).nonNullFields
   }
 }
-
-case class LibraryInfoIdKey(libraryId: Id[Library]) extends Key[LibraryInfo] {
-  override val version = 2
-  val namespace = "library_info_libraryid"
-  def toKey(): String = libraryId.id.toString
-}
-
-class LibraryInfoIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends ImmutableJsonCacheImpl[LibraryInfoIdKey, LibraryInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 sealed trait LibrarySourceAttribution
 

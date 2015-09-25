@@ -588,11 +588,25 @@
   }
 }
 
+// HACK(carlos):
+// Without "display: none", firefox wants to show the radio buttons,
+// But with "display: none", Chrome will resist selecting the radio buttons (because a11y?)
+// So we only hide it in the problem browser (Firefox : / )
+@-moz-document url-prefix() {
+  .kifi-keep-box-new-lib-location-item,
+  .kifi-keep-box-new-lib-visibility-item {
+    input {
+      display: none;
+    }
+  }
+}
+
 .kifi-keep-box-new-lib-visibility-item,
 .kifi-keep-box-new-lib-location-item {
   input {
-    display: none;
+    position: absolute; // take it out of the flow
   }
+
   &.kifi-selected,
   &:hover{
     background-color: #e8e8e8;
@@ -667,10 +681,6 @@
   font-size: 13px;
   color: #777;
   position: relative;
-
-  input {
-    display: none;
-  }
 
   p {
     text-align: center;
