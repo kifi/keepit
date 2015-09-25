@@ -61,7 +61,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         }
 
         // owner can create public libraries
-        val libraryCommander = inject[LibraryCommander]
         val ownerCreateRequest = LibraryInitialValues(name = "Alphabet Soup", slug = "alphabet", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
         val ownerLibResponse = libraryCommander.createLibrary(ownerCreateRequest, owner.id.get)
         ownerLibResponse must beRight
