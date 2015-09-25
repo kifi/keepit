@@ -114,7 +114,7 @@ class LibraryCommanderImpl @Inject() (
     }
     def slugCollision = {
       libraryRepo.getBySpaceAndSlug(targetSpace, LibrarySlug(libCreateReq.slug)) match {
-        case Some(existingLibrary) => Some(LibraryFail(BAD_REQUEST, "library_exists_with_given_slug"))
+        case Some(existingLibrary) => Some(LibraryFail(BAD_REQUEST, "library_slug_exists"))
         case None => None
       }
     }
