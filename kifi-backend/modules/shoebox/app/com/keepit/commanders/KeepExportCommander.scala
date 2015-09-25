@@ -78,19 +78,18 @@ class KeepExportCommanderImpl @Inject() (
     }
   }
 
-  private def unsafeExportKeeps(exportRequest: KeepExportRequest)(implicit session: RSession): KeepExportResponse = {
+  def unsafeExportKeeps(exportRequest: KeepExportRequest)(implicit session: RSession): KeepExportResponse = {
     val keepIds = exportRequest match {
       case PersonalKeepExportRequest(userId) =>
-        val collaborativeLibIds = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
+        val writableLibIds = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
         def libIsInValidSpace(lib: Library): Boolean = lib.space match {
           case UserSpace(uid) => uid == userId
           case OrganizationSpace(_) => false
         }
-        val libIdsToExportFrom = libraryRepo.getByIds(collaborativeLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
+        val libIdsToExportFrom = libraryRepo.getByIds(writableLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
         ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.filter(_.addedBy == userId).map(_.keepId)
 
       case OrganizationKeepExportRequest(userId, orgIds) =>
-        Seq.empty
         val libIdsToExportFrom = orgIds.flatMap { orgId => libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)) }.filter(!_.isSecret).map(_.id.get).toSet
         ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.map(_.keepId)
     }

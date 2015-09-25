@@ -52,7 +52,7 @@ case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[Stri
         val tags = keepTags(keep.id.get).map(_.replace("&", "&amp;").replace("\"", ""))
         s""""${tags.mkString(",")}""""
       }
-      val date = keep.createdAt.getMillis / 1000
+      val date = keep.keptAt.getMillis / 1000
       val line = {
         s"""<DT><A HREF="${keep.url}" ADD_DATE="$date" TAGS=$tagString>$title</A>"""
       }
@@ -61,8 +61,8 @@ case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[Stri
     before + keeps.map(createExport).mkString("\n") + after
   }
   def formatAsJson: JsValue = {
-    val jsonMap = keeps.map { keep =>
-      keep.externalId.id -> Json.obj(
+    val keepJsonArray = keeps.map { keep =>
+      Json.obj(
         "title" -> (keep.title.getOrElse(""): String),
         "date" -> keep.keptAt.getMillis / 1000,
         "url" -> keep.url,
@@ -71,6 +71,6 @@ case class KeepExportResponse(keeps: Seq[Keep], keepTags: Map[Id[Keep], Seq[Stri
         "tags" -> keepTags(keep.id.get)
       )
     }
-    Json.obj("keeps" -> JsObject(jsonMap))
+    Json.obj("keeps" -> JsArray(keepJsonArray))
   }
 }

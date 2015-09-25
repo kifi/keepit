@@ -15,7 +15,6 @@ object KeepFactoryHelper {
         if (candidate.uriId.id < 0) {
           val unsavedUri: NormalizedURI = NormalizedURI.withHash(candidate.url, Some(s"${random(5)}")).copy(title = candidate.title)
           val uri = injector.getInstance(classOf[NormalizedURIRepo]).save(unsavedUri)
-          val url = injector.getInstance(classOf[URLRepo]).save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
           candidate.copy(uriId = uri.id.get)
         } else candidate
       }
