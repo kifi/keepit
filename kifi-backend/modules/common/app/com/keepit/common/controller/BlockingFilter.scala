@@ -12,7 +12,7 @@ object BlockingFilter extends Filter {
   }
 
   val blocked = Seq(
-    "103.60.176.6", // User 97229
-    "166.177.248.29" // Léo's phone
+    "103.60.176.6",
+    "103.60.176.238"
   )
 }
