@@ -58,8 +58,8 @@ case class Library(
   def withOwner(newOwner: Id[User]) = this.copy(ownerId = newOwner)
   val isPublished: Boolean = visibility == LibraryVisibility.PUBLISHED
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
-  def isUserCreated: Boolean = kind == LibraryKind.USER_CREATED || kind == LibraryKind.SYSTEM_PERSONA
-  def isSystemCreated: Boolean = !isUserCreated
+  def canBeModified: Boolean = kind == LibraryKind.USER_CREATED || kind == LibraryKind.SYSTEM_PERSONA
+  def isSystemLibrary: Boolean = !canBeModified
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 
