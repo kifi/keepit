@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong
 import net.codingwell.scalaguice.InjectorExtensions._
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
-    extends WithFilters(new LoggingFilter()) with Logging with EmptyInjector {
+    extends WithFilters(new LoggingFilter(), BlockingFilter) with Logging with EmptyInjector {
 
   //used to identify instance of application. used to debug in test mode
   val globalId: ExternalId[FortyTwoGlobal] = ExternalId()
