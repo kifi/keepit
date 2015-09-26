@@ -1,28 +1,34 @@
 package com.keepit.controllers.website
 
 import java.util.concurrent.TimeoutException
-import java.util.zip.{ ZipInputStream, ZipFile }
+import java.util.zip.{ ZipEntry, ZipInputStream, ZipFile }
+import com.keepit.common.social.twitter.RawTweet
+import com.keepit.common.time
+import org.joda.time.format.{ DateTimeFormat, DateTimeParser, ISODateTimeFormat, DateTimeFormatterBuilder }
 
-import com.keepit.commanders.{ TweetImportCommander, KeepCommander, KeepInterner }
+import scala.collection.JavaConversions._
+
+import com.keepit.commanders.{ KeepCommander, KeepInterner }
 import com.keepit.common.akka.{ TimeoutFuture, SafeFuture }
 import com.keepit.common.controller.{ UserRequest, UserActions, UserActionsHelper, ShoeboxServiceController }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick._
 import com.keepit.common.util.UrlClassifier
 import com.keepit.model._
-import org.apache.commons.io.FileUtils
+import org.apache.commons.io.{ Charsets, IOUtils, FileUtils }
 import play.api.libs.Files.TemporaryFile
 
 import play.api.libs.json._
 
-import com.google.inject.Inject
+import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import play.api.mvc.{ MaxSizeExceeded, Request }
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.io.Source
 import scala.util.{ Try, Failure, Success }
 import org.jsoup.Jsoup
 import java.io._
 import com.keepit.common.db.Id
-import java.util.UUID
+import java.util.{ Locale, UUID }
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
@@ -39,7 +45,9 @@ class BookmarkImporter @Inject() (
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     keepsCommander: KeepCommander,
-    tweetCommander: TweetImportCommander,
+    twitterArchiveParser: TwitterArchiveParser,
+    netscapeBookmarkParser: NetscapeBookmarkParser,
+    evernoteParser: EvernoteParser,
     clock: Clock,
     implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
@@ -53,25 +61,21 @@ class BookmarkImporter @Inject() (
       case Right(bookmarks) =>
 
         val uploadAttempt = Try(bookmarks).flatMap { file =>
-          val isTwitterZip = tweetCommander.isLikelyTwitterImport(file.file)
-          if (isTwitterZip) {
+          if (twitterArchiveParser.canProbablyParse(file)) {
             log.info(s"[bmFileImport:$id] Twitter import, ${file.file.getAbsoluteFile}")
-            tweetCommander.parseTwitterArchive(file.file)
+            twitterArchiveParser.parse(file)
+          } else if (evernoteParser.canProbablyParse(file)) {
+            evernoteParser.parse(file)
           } else {
-            // We support HTML files that are zipped. Determine if that's the case.
-            val zippedFileOpt = extractZippedHtmlFile(file.file)
-            log.info(s"[bmFileImport:$id] Netscape import, ${file.file.getAbsoluteFile}; zipped: ${zippedFileOpt.isDefined}")
-            parseNetscapeBookmarks(zippedFileOpt.getOrElse(file))
+            log.info(s"[bmFileImport:$id] Netscape import, ${file.file.getAbsoluteFile}")
+            netscapeBookmarkParser.parse(file)
           }
         }.map {
-          case (sourceOpt, parsed) =>
+          case ((sourceOpt, parsed)) =>
             implicit val timeout = Duration("10 seconds")
             TimeoutFuture {
               processBookmarkExtraction(sourceOpt, parsed, pubId, LoggingFields(startMillis, id, request))
-            }.recover {
-              case ex: TimeoutException => // Since it didn't fail yet, we'll probably succeed. Don't keep the user waiting.
-                None
-            }
+            }.recover { case ex: TimeoutException => None } /* Since it didn't fail yet, we'll probably succeed. Don't keep the user waiting. */
         } match {
           case Success(fut) => fut
           case Failure(ex) => Future.failed(ex)
@@ -97,9 +101,10 @@ class BookmarkImporter @Inject() (
     }
   }
 
+  // remove this, should not be in here
   def processDirectTwitterData(userId: Id[User], libraryId: Id[Library], tweets: Seq[JsObject]): Unit = {
     implicit val context = heimdalContextBuilderFactoryBean().build
-    val (sourceOpt, parsed) = tweetCommander.parseTwitterJson(tweets)
+    val (sourceOpt, parsed) = twitterArchiveParser.parseTwitterJson(tweets)
     log.info(s"[TweetSync] Got ${parsed.length} Bookmarks out of ${tweets.length} tweets")
     val tagSet = parsed.flatMap { bm => bm.tags }.toSet
 
@@ -109,7 +114,7 @@ class BookmarkImporter @Inject() (
     val taggedKeeps = parsed.map {
       case Bookmark(t, h, tagNames, createdDate, originalJson) =>
         val keepTagNames = tagNames.flatMap(tags.get).map(_.name.tag)
-        BookmarkWithHashtags(t, h, keepTagNames, createdDate, originalJson)
+        Bookmark(t, h, keepTagNames, createdDate, originalJson)
     }
 
     val (importId, rawKeeps) = createRawKeeps(userId, sourceOpt, taggedKeeps, libraryId)
@@ -138,7 +143,7 @@ class BookmarkImporter @Inject() (
       val taggedKeeps = parsed.map {
         case Bookmark(t, h, tagNames, createdDate, originalJson) =>
           val keepTags = tagNames.flatMap(tags.get) :+ importTag
-          BookmarkWithHashtags(t, h, keepTags.map(_.name.tag), createdDate, originalJson)
+          Bookmark(t, h, keepTags.map(_.name.tag), createdDate, originalJson)
       }
       log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
 
@@ -162,8 +167,57 @@ class BookmarkImporter @Inject() (
     }
   }
 
-  /* Parses Netscape-bookmark formatted file, extracting useful fields */
-  private def parseNetscapeBookmarks(bookmarks: TemporaryFile): Try[(Option[KeepSource], List[Bookmark])] = Try {
+  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[Bookmark], libraryId: Id[Library]) = {
+    val importId = UUID.randomUUID.toString
+    val rawKeeps = bookmarks.map {
+      case Bookmark(title, href, hashtags, createdDate, originalJson) =>
+        val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty) && title.exists(_ != href)) Some(title.get) else None
+        val hashtagsArray = if (hashtags.nonEmpty) {
+          Some(JsArray(hashtags.map(Json.toJson(_))))
+        } else {
+          None
+        }
+
+        RawKeep(userId = userId,
+          title = titleOpt,
+          url = href,
+          importId = Some(importId),
+          source = source.getOrElse(KeepSource.bookmarkFileImport),
+          originalJson = originalJson,
+          installationId = None,
+          keepTags = hashtagsArray,
+          libraryId = Some(libraryId),
+          createdDate = createdDate)
+    }
+    (importId, rawKeeps)
+  }
+}
+
+case class Bookmark(title: Option[String], href: String, tags: List[String], createdDate: Option[DateTime], originalJson: Option[JsValue])
+
+trait ImportParser {
+  def canProbablyParse(file: TemporaryFile): Boolean
+  def parse(file: TemporaryFile): Try[(Option[KeepSource], List[Bookmark])]
+}
+
+@Singleton
+class NetscapeBookmarkParser @Inject() () extends ImportParser with ZipParser {
+  def canProbablyParse(file: TemporaryFile): Boolean = {
+    // Jsoup is *very* lenient about what it accepts
+    file.file.length < 1024 * 1024 * 10
+  }
+
+  def parse(bookmarks: TemporaryFile): Try[(Option[KeepSource], List[Bookmark])] = Try {
+    // We support bookmark exports that were zipped. Determining if that's the case here.
+    val zipFile = if (containsFileName(bookmarks.file, htmlFile)) {
+      parseZip(bookmarks)
+    } else {
+      None
+    }
+    parseHtml(zipFile.getOrElse(bookmarks))
+  }.flatten
+
+  def parseHtml(bookmarks: TemporaryFile): Try[(Option[KeepSource], List[Bookmark])] = Try {
     // This is a standard for bookmark exports.
     // http://msdn.microsoft.com/en-us/library/aa753582(v=vs.85).aspx
 
@@ -176,6 +230,7 @@ class BookmarkImporter @Inject() (
       case Some("Kippt Bookmarks") => Some(KeepSource("Kippt"))
       case Some("Pocket Export") => Some(KeepSource("Pocket"))
       case Some("Instapaper: Export") => Some(KeepSource("Instapaper"))
+      case Some(title) if title.contains("Diigo") => Some(KeepSource("Diigo"))
       case _ => None
     }
 
@@ -189,24 +244,11 @@ class BookmarkImporter @Inject() (
         val lists = Option(elem.attr("list")).getOrElse("")
         val tags = Option(elem.attr("tags")).getOrElse("")
 
-        val tagList = (lists + tags).split(",").map(_.trim).filter(_.nonEmpty).toList
-        val createdDate: Option[DateTime] = Option(elem.attr("add_date")).flatMap { x =>
-          Try {
-            x.toLong match { // This breaks in 2020.
-              case l if l > 1000000000L && l < 1600000000L => // Unix time
-                Some(new DateTime(l * 1000))
-              case l if l > 1000000000000L && l < 1600000000000L => // ms since epoch
-                Some(new DateTime(l))
-              case l if l > 1000000000000000L && l < 1600000000000000L => // μs since epoch (Google Bookmarks uses this)
-                Some(new DateTime(l / 1000))
-              case _ =>
-                None
-            }
-          }.toOption
-        }.flatten
-
-        // This may be useful in the future, but we currently are not using them:
-        // val lastVisitDate = Option(elem.attr("last_visit"))
+        val tagList = (lists + tags).split(",").map(_.trim).filter(_.nonEmpty).toList.distinct
+        val createdDate = Option(elem.attr("add_date"))
+          .orElse(Option(elem.attr("last_visit")))
+          .orElse(Option(elem.attr("last_modified")))
+          .flatMap(bookmarkDateStrToDateTime)
 
         Bookmark(Some(title), href, tagList, createdDate, Some(Json.obj("href" -> elem.html())))
       }
@@ -214,57 +256,167 @@ class BookmarkImporter @Inject() (
     (source, extracted)
   }
 
-  private def createRawKeeps(userId: Id[User], source: Option[KeepSource], bookmarks: Seq[BookmarkWithHashtags], libraryId: Id[Library]) = {
-    val importId = UUID.randomUUID.toString
-    val rawKeeps = bookmarks.map {
-      case BookmarkWithHashtags(title, href, hashtags, createdDate, originalJson) =>
-        val titleOpt = if (title.nonEmpty && title.exists(_.nonEmpty) && title.exists(_ != href)) Some(title.get) else None
-        val hashtagsArray = if (hashtags.nonEmpty) {
-          Some(JsArray(hashtags.map(Json.toJson(_))))
-        } else {
-          None
+  val bookmarkDateStrToDateTime: String => Option[DateTime] = {
+    case x if x.nonEmpty =>
+      val parsedAsNumericOpt = Try {
+        x.toLong match { // This breaks in 2020.
+          case l if l > 1000000000L && l < 1600000000L => // Unix time
+            Some(new DateTime(l * 1000))
+          case l if l > 1000000000000L && l < 1600000000000L => // ms since epoch
+            Some(new DateTime(l))
+          case l if l > 1000000000000000L && l < 1600000000000000L => // μs since epoch (Google Bookmarks uses this)
+            Some(new DateTime(l / 1000))
+          case _ =>
+            None
         }
+      }.toOption.flatten
 
-        RawKeep(userId = userId,
-          title = titleOpt,
-          url = href,
-          isPrivate = true,
-          importId = Some(importId),
-          source = source.getOrElse(KeepSource.bookmarkFileImport),
-          originalJson = originalJson,
-          installationId = None,
-          keepTags = hashtagsArray,
-          libraryId = Some(libraryId),
-          createdDate = createdDate)
-    }
-    (importId, rawKeeps)
+      parsedAsNumericOpt.orElse(Try(new DateTime(x)).toOption)
+    case otherwise => None
   }
 
-  private def extractZippedHtmlFile(file: File): Option[TemporaryFile] = {
-    import scala.collection.JavaConversions._
-    Try {
-      val zip = new ZipFile(file)
-      val isZipped = zip.entries().toStream.find { ze =>
-        require(!ze.getName.endsWith("zip") && ze.getSize < (1024 * 1024 * 10), s"Suspicious zip file. ${ze.getName} ${ze.getSize}") // Protection against zip bombs. If you fail, reject entire file.
-        ze.getName.endsWith("html") || ze.getName.endsWith("htm")
-      }.map { zipped =>
-        val is = zip.getInputStream(zipped)
+  private def parseZip(bookmarks: TemporaryFile) = {
+    val zipFileOpt = Try(new ZipFile(bookmarks.file)).toOption
+    zipFileOpt.flatMap { zipFile =>
+      val res = getFiles(zipFile, htmlFile, { ze =>
+        val is = zipFile.getInputStream(ze)
         val extractedF = TemporaryFile("bm-", ".zip")
         FileUtils.copyInputStreamToFile(is, extractedF.file)
         is.close()
         extractedF
-      }
-      zip.close()
-      isZipped
-    } match {
-      case Success(f) => f
-      case Failure(ex) =>
-        log.error("Bad zip file. Usually not a problem.", ex)
-        None
+      }).headOption
+      zipFile.close()
+      res
     }
   }
 
+  private val htmlFile = (f: String) => f.endsWith("html") || f.endsWith("htm")
 }
 
-case class Bookmark(title: Option[String], href: String, tags: List[String], createdDate: Option[DateTime], originalJson: Option[JsValue])
-case class BookmarkWithHashtags(title: Option[String], href: String, hashtags: List[String], createdAt: Option[DateTime], originalJson: Option[JsValue])
+@Singleton
+class EvernoteParser @Inject() () extends ImportParser {
+  def canProbablyParse(file: TemporaryFile): Boolean = {
+    file.file.length < 1024 * 1024 * 20 &&
+      Try(Source.fromFile(file.file, 255).getLines().take(2).toList.mkString("").contains("xml.evernote.com")).getOrElse(false)
+  }
+
+  def parse(bookmarks: TemporaryFile): Try[(Option[KeepSource], List[Bookmark])] = Try {
+    val notes = Jsoup.parse(bookmarks.file, "UTF-8").select("note").iterator().toStream
+
+    val parsed = notes.flatMap { note =>
+      val createdAt = Option(note.select("updated")).orElse(Option(note.select("created"))).flatMap(s => Option(s.text())).map(formatter.parseDateTime)
+      val links = Jsoup.parse(note.select("content").text()).select("en-note a").iterator().toStream.flatMap { elem =>
+        val href = Option(elem.attr("href"))
+        val text = Option(elem.text()).filterNot(href.contains)
+
+        href.collect {
+          case h if h.length > 11 =>
+            Bookmark(text, h, List.empty, createdAt, Some(Json.obj("href" -> elem.html())))
+        }
+      }
+      links
+    }
+
+    (Option(KeepSource.evernote), parsed.toList)
+  }
+
+  private val formatter = new DateTimeFormatterBuilder().append(
+    ISODateTimeFormat.dateTime.getPrinter,
+    Array[DateTimeParser](ISODateTimeFormat.dateTime.getParser, DateTimeFormat.forPattern("yyyyMMdd'T'HHmmssZ").getParser))
+    .toFormatter.withLocale(Locale.ENGLISH).withZone(time.DEFAULT_DATE_TIME_ZONE)
+}
+
+trait ZipParser extends Logging {
+
+  def containsFileName(file: File, nameMatcher: String => Boolean): Boolean = {
+    val zipT = Try(new ZipFile(file))
+    zipT.map { zip =>
+      val matches = safelyTraverseZip(zip).exists(ze => nameMatcher(ze.getName))
+      zip.close()
+      matches
+    }.getOrElse(false)
+  }
+
+  def getFiles[T](zip: ZipFile, nameMatcher: String => Boolean, fileParser: ZipEntry => T): Stream[T] = {
+    safelyTraverseZip(zip).map { ze =>
+      Try(fileParser(ze))
+    }.collect { case Success(ze) => ze }
+  }
+
+  private def safelyTraverseZip(zip: ZipFile): Stream[ZipEntry] = {
+    Try {
+      require(zip.size() < 1024 * 1024 * 10, "ZIP archive too large")
+      zip.entries().toStream.take(1000).flatMap { ze =>
+        if (!ze.getName.endsWith("zip") && ze.getSize < (1024 * 1024 * 5)) {
+          Some(ze)
+        } else {
+          None
+        }
+      }
+    }.getOrElse(Stream.empty[ZipEntry])
+  }
+
+}
+@ImplementedBy(classOf[TwitterArchiveParserImpl])
+trait TwitterArchiveParser extends ImportParser {
+  def parseTwitterJson(jsons: Seq[JsObject]): (Option[KeepSource], List[Bookmark])
+}
+
+@Singleton
+class TwitterArchiveParserImpl @Inject() (urlClassifier: UrlClassifier) extends TwitterArchiveParser with ZipParser {
+  def canProbablyParse(file: TemporaryFile): Boolean = {
+    containsFileName(file.file, _.startsWith("data/js/tweets"))
+  }
+
+  // Parses Twitter archives, from https://twitter.com/settings/account (click “Request your archive”)
+  def parse(file: TemporaryFile): Try[(Option[KeepSource], List[Bookmark])] = Try {
+    val zipT = Try(new ZipFile(file.file))
+
+    val links = zipT.map { zip =>
+      val res = getFiles[Seq[Bookmark]](zip, _.startsWith("data/js/tweets/"), { ze =>
+        twitterEntryToJson(zip, ze).collect {
+          case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
+        }.flatten
+      }).toList.flatten
+      zip.close()
+      res
+    }.getOrElse(List.empty)
+
+    (Option(KeepSource.twitterFileImport), links)
+  }
+
+  def parseTwitterJson(jsons: Seq[JsObject]): (Option[KeepSource], List[Bookmark]) = {
+    val links = twitterJsonToRawTweets(jsons).collect {
+      case tweet if tweet.entities.urls.nonEmpty => rawTweetToBookmarks(tweet)
+    }.flatten
+    (Option(KeepSource.twitterSync), links.toList)
+  }
+
+  private def rawTweetToBookmarks(tweet: RawTweet): Seq[Bookmark] = {
+    val tags = tweet.entities.hashtags.map(_.text).toList
+    tweet.entities.urls.filterNot(url => urlClassifier.socialActivityUrl(url.expandedUrl)).map { url =>
+      Bookmark(title = None, href = url.expandedUrl, tags = tags, createdDate = Some(tweet.createdAt), originalJson = Some(tweet.originalJson))
+    }
+  }
+
+  private def twitterJsonToRawTweets(jsons: Seq[JsValue]): Seq[RawTweet] = {
+    jsons.flatMap { rawTweetJson =>
+      Json.fromJson[RawTweet](rawTweetJson) match {
+        case JsError(fail) =>
+          log.warn(s"Couldn't parse a raw tweet: $fail\n$rawTweetJson")
+          None
+        case JsSuccess(rt, _) => Some(rt)
+      }
+    }
+  }
+
+  private def twitterEntryToJson(zip: ZipFile, entry: ZipEntry): Seq[RawTweet] = {
+    val is = zip.getInputStream(entry)
+    val str = IOUtils.toString(is, Charsets.UTF_8)
+    is.close()
+    Try(Json.parse(str.substring(str.indexOf("=") + 1)).as[JsArray]) match {
+      case Success(rawTweetsJson) => twitterJsonToRawTweets(rawTweetsJson.value)
+      case Failure(ex) => Seq()
+    }
+  }
+}

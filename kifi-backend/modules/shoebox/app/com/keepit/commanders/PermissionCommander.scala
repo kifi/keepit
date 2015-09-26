@@ -56,13 +56,13 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.REMOVE_OWN_KEEPS
     ) ++ (if (!library.whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
 
-    case LibraryAccess.OWNER if library.isSystemCreated => Set(
+    case LibraryAccess.OWNER if library.isSystemLibrary => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS
     )
-    case LibraryAccess.OWNER if library.isUserCreated => Set(
+    case LibraryAccess.OWNER if library.canBeModified => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.EDIT_LIBRARY,
       LibraryPermission.MOVE_LIBRARY,

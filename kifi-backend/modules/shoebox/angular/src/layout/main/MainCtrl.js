@@ -110,7 +110,7 @@ angular.module('kifi')
     $scope.allowUpload = function (files) {
       var file = files[0];
       var ext = file && file.name.split('.').pop();
-      if (ext && (ext === 'html' || ext === 'htm' || ext === 'zip')) {
+      if (ext && (ext === 'html' || ext === 'htm' || ext === 'zip' || ext === 'enex')) {
         $scope.importFilename = file.name;
         $scope.disableBookmarkImport = false;
         $scope.importFileStatus = '';

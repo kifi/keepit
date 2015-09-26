@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ NonOKResponseException, DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model.OrganizationPermission._
 import com.keepit.model._
@@ -69,6 +70,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     organizationExperimentRepo: OrganizationExperimentRepo,
     userExperimentRepo: UserExperimentRepo,
     userRepo: UserRepo,
+    elizaServiceClient: ElizaServiceClient,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipCommander: LibraryMembershipCommander,
@@ -241,6 +243,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
       libraryMembershipCommander.joinLibrary(request.targetId, lib.id.get)
     }
     planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
+    elizaServiceClient.sendToUser(request.targetId, Json.arr("flush"))
+
     OrganizationMembershipAddResponse(request, newMembership)
   }
 

@@ -22,8 +22,10 @@ import com.keepit.shoebox.{ AbuseControlModule, FakeShoeboxServiceClientModule, 
 import com.keepit.test._
 import org.specs2.mutable.SpecificationLike
 import play.api.libs.json.Json
+import com.keepit.model.{ UserFactory, LibraryFactory }
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryFactory._
 
 class RawKeepImporterTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   // This is a good example of how to test actor side effects.
@@ -53,13 +55,16 @@ class RawKeepImporterTest extends TestKitSupport with SpecificationLike with Sho
 
     "properly handle imports" in {
       withDb(modules: _*) { implicit injector =>
-        val user = db.readWrite { implicit session =>
-          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
+        val (user, lib) = db.readWrite { implicit session =>
+          val u = UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved;
+          val l = LibraryFactory.library().withOwner(u.id.get).saved
+
+          (u, l)
         }
         inject[LibraryInfoCommander].internSystemGeneratedLibraries(user.id.get)
         val bookmarkInterner = inject[KeepInterner]
         val json = Json.parse(io.Source.fromFile(new File("test/data/bookmarks_small.json"), UTF8).mkString)
-        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = None))
+        bookmarkInterner.persistRawKeeps(inject[RawKeepFactory].toRawKeep(user.id.get, KeepSource.bookmarkImport, json, libraryId = lib.id))
 
         // Importer is run synchronously in TestKit.
 

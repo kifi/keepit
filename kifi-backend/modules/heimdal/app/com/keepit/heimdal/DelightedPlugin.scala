@@ -24,13 +24,6 @@ class DelightedAnswerReceiverActor @Inject() (
     case FetchNewDelightedAnswers =>
       log.info("Checking for new answers")
       commander.fetchNewDelightedAnswers()
-    case ScheduleSurveyForLapsedUsers(skipCount) =>
-      log.info(s"Scheduling survey for lapsed users (skip count: $skipCount)")
-      commander.scheduleSurveyForLapsedUsers(skipCount) map { count =>
-        if (count > 0) {
-          self ! ScheduleSurveyForLapsedUsers(skipCount + count)
-        }
-      }
     case m => throw new UnsupportedActorMessage(m)
   }
 }
