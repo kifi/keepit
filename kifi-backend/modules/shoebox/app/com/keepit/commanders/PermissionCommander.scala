@@ -42,13 +42,38 @@ class PermissionCommanderImpl @Inject() (
     }
   }
 
-  def libraryPermissionsByAccess(library: Library, access: LibraryAccess): Set[LibraryPermission] = access match {
-    case LibraryAccess.READ_ONLY => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.INVITE_FOLLOWERS
-    )
+  def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
+    val lib = libraryRepo.get(libId)
+    val libMembershipOpt = userIdOpt.flatMap { userId => libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId) }
 
-    case LibraryAccess.READ_WRITE => Set(
+    val libAccessOpt = libMembershipOpt match {
+      case Some(libMembership) => Some(libMembership.access)
+      case None =>
+        val viewerHasImplicitAccess = lib.visibility match {
+          case LibraryVisibility.DISCOVERABLE =>
+            userIdOpt.contains(lib.ownerId) // this would be a really bad sign, since they should have a LibraryMembership
+          case LibraryVisibility.ORGANIZATION =>
+            userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(lib.organizationId.get, _).isDefined)
+          case _ => false
+        }
+        val userHasInvite = userIdOpt.exists { userId => libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).nonEmpty }
+        Some(LibraryAccess.READ_ONLY).filter { _ => viewerHasImplicitAccess || userHasInvite }
+    }
+
+    val libPermissions = libraryPermissionsByAccess(lib, libAccessOpt)
+    lib.organizationId.map { orgId =>
+      combineOrganizationAndLibraryPermissions(libPermissions, getOrganizationPermissions(orgId, userIdOpt))
+    } getOrElse libPermissions
+  }
+
+  def libraryPermissionsByAccess(library: Library, accessOpt: Option[LibraryAccess]): Set[LibraryPermission] = accessOpt match {
+    case None =>
+      if (library.isPublished) Set(LibraryPermission.VIEW_LIBRARY) else Set.empty
+    case Some(LibraryAccess.READ_ONLY) => Set(
+      LibraryPermission.VIEW_LIBRARY
+    ) ++ (if (!library.isSecret) Set(LibraryPermission.INVITE_FOLLOWERS) else Set.empty)
+
+    case Some(LibraryAccess.READ_WRITE) => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.INVITE_FOLLOWERS,
       LibraryPermission.ADD_KEEPS,
@@ -56,15 +81,16 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.REMOVE_OWN_KEEPS
     ) ++ (if (!library.whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
 
-    case LibraryAccess.OWNER if library.isSystemLibrary => Set(
+    case Some(LibraryAccess.OWNER) if library.isSystemLibrary => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS
     )
-    case LibraryAccess.OWNER if library.canBeModified => Set(
+    case Some(LibraryAccess.OWNER) if library.canBeModified => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.EDIT_LIBRARY,
+      LibraryPermission.PUBLISH_LIBRARY,
       LibraryPermission.MOVE_LIBRARY,
       LibraryPermission.DELETE_LIBRARY,
       LibraryPermission.REMOVE_MEMBERS,
@@ -76,36 +102,20 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.INVITE_COLLABORATORS
     )
   }
-  def libraryPermissionsFromOrgPermissions(lib: Library, orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = orgPermissions.collect {
-    case OrganizationPermission.REMOVE_LIBRARIES => Set(LibraryPermission.DELETE_LIBRARY, LibraryPermission.MOVE_LIBRARY)
-    case OrganizationPermission.FORCE_EDIT_LIBRARIES => Set(LibraryPermission.EDIT_LIBRARY)
-    case OrganizationPermission.EXPORT_KEEPS => Set(LibraryPermission.EXPORT_KEEPS)
-    case OrganizationPermission.CREATE_SLACK_INTEGRATION => Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
-  }.flatten
+  def combineOrganizationAndLibraryPermissions(libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
+    val addedPermissions = Map[Boolean, Set[LibraryPermission]](
+      (libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)) ->
+        Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY)
+    ).collect { case (true, ps) => ps }.flatten
 
-  def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
-    val lib = libraryRepo.get(libId)
-    val libMembershipOpt = userIdOpt.flatMap { userId => libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId) }
+    val removedPermissions = Map[Boolean, Set[LibraryPermission]](
+      !orgPermissions.contains(OrganizationPermission.PUBLISH_LIBRARIES) ->
+        Set(LibraryPermission.PUBLISH_LIBRARY),
+      !orgPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES) ->
+        Set(LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
+    ).collect { case (true, ps) => ps }.flatten
 
-    libMembershipOpt match {
-      case Some(libMembership) =>
-        val libPermissions = libraryPermissionsByAccess(lib, libMembership.access)
-        val implicitPermissions = lib.organizationId.map { orgId =>
-          libraryPermissionsFromOrgPermissions(lib, getOrganizationPermissions(orgId, userIdOpt))
-        }.getOrElse(Set.empty)
-        libPermissions ++ implicitPermissions
-      case None =>
-        val libraryCanBeViewed = lib.visibility match {
-          case LibraryVisibility.PUBLISHED => true
-          case LibraryVisibility.SECRET => false
-          case LibraryVisibility.DISCOVERABLE =>
-            userIdOpt.contains(lib.ownerId)
-          case LibraryVisibility.ORGANIZATION =>
-            userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(lib.organizationId.get, _).isDefined)
-        }
-        val userHasInvite = userIdOpt.exists { userId => libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).nonEmpty }
-        if (userHasInvite || libraryCanBeViewed) libraryPermissionsByAccess(lib, LibraryAccess.READ_ONLY)
-        else Set.empty
-    }
+    libPermissions ++ addedPermissions -- removedPermissions
   }
+
 }

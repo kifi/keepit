@@ -103,6 +103,7 @@ sealed abstract class LibraryPermission(val value: String)
 object LibraryPermission {
   case object VIEW_LIBRARY extends LibraryPermission("view_library")
   case object EDIT_LIBRARY extends LibraryPermission("edit_library")
+  case object PUBLISH_LIBRARY extends LibraryPermission("publish_library")
   case object MOVE_LIBRARY extends LibraryPermission("move_library")
   case object DELETE_LIBRARY extends LibraryPermission("delete_library")
   case object INVITE_FOLLOWERS extends LibraryPermission("invite_followers")
@@ -125,6 +126,7 @@ object LibraryPermission {
     str match {
       case VIEW_LIBRARY.value => VIEW_LIBRARY
       case EDIT_LIBRARY.value => EDIT_LIBRARY
+      case PUBLISH_LIBRARY.value => PUBLISH_LIBRARY
       case MOVE_LIBRARY.value => MOVE_LIBRARY
       case DELETE_LIBRARY.value => DELETE_LIBRARY
       case INVITE_FOLLOWERS.value => INVITE_FOLLOWERS
@@ -137,7 +139,6 @@ object LibraryPermission {
       case REMOVE_OTHER_KEEPS.value => REMOVE_OTHER_KEEPS
       case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
-      // TODO(ryan): should we have a `case _ => ???` here, and what should ??? be
     }
   }
 }

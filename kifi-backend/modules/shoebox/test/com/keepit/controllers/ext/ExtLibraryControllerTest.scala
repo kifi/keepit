@@ -74,7 +74,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
               "access" -> LibraryAccess.OWNER,
               "listed" -> true,
               "subscribed" -> false,
-              "permissions" -> Json.toJson(permissionCommander.libraryPermissionsByAccess(lib, LibraryAccess.OWNER))
+              "permissions" -> Json.toJson(permissionCommander.libraryPermissionsByAccess(lib, Some(LibraryAccess.OWNER)))
             )
           )
         }
