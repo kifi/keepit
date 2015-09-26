@@ -14,6 +14,8 @@ class FakeStripeClientImpl extends StripeClient {
 
   var transactions = Map[StripeToken, ArrayBuffer[FakeTransaction]]()
 
+  var failingMode = false
+
   private def newToken(): Future[StripeToken] = Future.successful {
     val num = tokenCounter.getAndIncrement()
     val token = StripeToken(s"faketoken_$num")
@@ -21,11 +23,15 @@ class FakeStripeClientImpl extends StripeClient {
     token
   }
 
-  def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult] = Future.successful {
-    val num = chargeCounter.getAndIncrement()
-    val trans = FakeTransaction(s"faketransaction_$num", amount, token, description)
-    transactions(token).append(trans)
-    StripeChargeSuccess(amount, trans.id)
+  def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult] = {
+    if (failingMode) {
+      Future.failed(new Exception("boom"))
+    } else {
+      val num = chargeCounter.getAndIncrement()
+      val trans = FakeTransaction(s"faketransaction_$num", amount, token, description)
+      transactions(token).append(trans)
+      Future.successful(StripeChargeSuccess(amount, trans.id))
+    }
   }
 
   def getPermanentToken(token: String, description: String): Future[StripeToken] = newToken()

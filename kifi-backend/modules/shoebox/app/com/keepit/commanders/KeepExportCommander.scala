@@ -78,27 +78,31 @@ class KeepExportCommanderImpl @Inject() (
     }
   }
 
-  private def unsafeExportKeeps(exportRequest: KeepExportRequest)(implicit session: RSession): KeepExportResponse = {
+  def unsafeExportKeeps(exportRequest: KeepExportRequest)(implicit session: RSession): KeepExportResponse = {
     val keepIds = exportRequest match {
       case PersonalKeepExportRequest(userId) =>
-        val collaborativeLibIds = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
+        val writableLibIds = libraryMembershipRepo.getLibrariesWithWriteAccess(userId)
         def libIsInValidSpace(lib: Library): Boolean = lib.space match {
           case UserSpace(uid) => uid == userId
           case OrganizationSpace(_) => false
         }
-        val libIdsToExportFrom = libraryRepo.getByIds(collaborativeLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
+        val libIdsToExportFrom = libraryRepo.getByIds(writableLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
         ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.filter(_.addedBy == userId).map(_.keepId)
 
       case OrganizationKeepExportRequest(userId, orgIds) =>
-        Seq.empty
-        val libIdsToExportFrom = orgIds.flatMap { orgId => libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)) }.filter(!_.isSecret).map(_.id.get).toSet
+        val libIdsToExportFrom = orgIds.flatMap { orgId => libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)) }.filter(!_.isSecret).map(_.id.get)
         ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.map(_.keepId)
     }
     val keeps = keepRepo.getByIds(keepIds.toSet).values.toSeq
+
     val tagIds = ktcRepo.getCollectionsForKeeps(keeps)
     val idToTag = collectionRepo.getByIds(tagIds.flatten.toSet).mapValues(_.name.tag)
     val tagsByKeepId = (keeps zip tagIds).map { case (keep, keepTags) => keep.id.get -> keepTags.map(idToTag(_)) }.toMap
-    KeepExportResponse(keeps.sortBy(_.keptAt), tagsByKeepId)
+
+    val libIdsByKeep = ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet).mapValues(ktls => ktls.map(_.libraryId))
+    val idToLib = libraryRepo.getByIds(libIdsByKeep.values.flatten.toSet)
+    val libsByKeepId = keeps.map { keep => keep.id.get -> libIdsByKeep(keep.id.get).map(idToLib(_)) }.toMap
+    KeepExportResponse(keeps.sortBy(_.keptAt), tagsByKeepId, libsByKeepId)
   }
 }
 

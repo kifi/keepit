@@ -2,11 +2,11 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Inject
 
-import com.keepit.commanders.{ OrganizationCommander, EmailContactResult, UserContactResult, TypeaheadCommander }
+import com.keepit.commanders._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ OrganizationMembershipRepo, UserExperimentType }
+import com.keepit.model.{ OrganizationPermission, OrganizationMembershipRepo, UserExperimentType }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ Json, JsArray, JsString }
@@ -17,7 +17,8 @@ class MobileContactsController @Inject() (
   orgCommander: OrganizationCommander,
   orgMemberRepo: OrganizationMembershipRepo,
   db: Database,
-  typeaheadCommander: TypeaheadCommander)
+  typeaheadCommander: TypeaheadCommander,
+  permissionCommander: PermissionCommander)
     extends UserActions with ShoeboxServiceController {
 
   def searchForNonUserContacts(q: String, n: Int) = UserAction.async { request =>
@@ -32,7 +33,12 @@ class MobileContactsController @Inject() (
     val typeaheadF = typeaheadCommander.searchForContacts(request.userId, query.getOrElse(""), limit)
 
     val orgsToInclude = {
-      val orgsUserIsIn = db.readOnlyReplica(implicit s => orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId))
+      val orgsUserIsIn = db.readOnlyReplica { implicit s =>
+        orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId)
+          .filter { orgId =>
+            permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
+          }
+      }
       val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
       val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs

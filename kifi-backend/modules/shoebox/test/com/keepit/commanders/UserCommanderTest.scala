@@ -24,7 +24,6 @@ import scala.concurrent.duration.Duration
 class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
-    val userRepo = inject[UserRepo]
     val emailCommander = inject[UserEmailAddressCommander]
     val connectionRepo = inject[UserConnectionRepo]
 
@@ -198,50 +197,6 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         userCommander.setUsername(user3.id.get, Username("yes"), false) === Left("invalid_username")
         userCommander.setUsername(user3.id.get, Username("aes.corp"), false) === Left("invalid_username")
 
-      }
-    }
-
-    "handle emails" in {
-      withDb(modules: _*) { implicit injector =>
-        val userCommander = inject[UserCommander]
-        val userValueRepo = inject[UserValueRepo]
-        val user = db.readWrite { implicit session =>
-          UserFactory.user().withName("Abe", "Lincoln").withUsername("AbeLincoln").saved
-        }
-
-        val email1 = EmailAddress("vampireXslayer@gmail.com")
-        val email2 = EmailAddress("uncleabe@gmail.com")
-
-        // add email 1 & 2
-        Await.result(userCommander.addEmail(user.id.get, email1, false), Duration(5, "seconds")).isRight === true
-        Await.result(userCommander.addEmail(user.id.get, email2, true), Duration(5, "seconds")).isRight === true
-        db.readOnlyMaster { implicit session =>
-          userEmailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1, email2)
-          val userId = user.id.get
-          val userValueOpt = userValueRepo.getUserValue(userId, UserValueName.PENDING_PRIMARY_EMAIL)
-          userValueOpt.get.value === email2.address
-        }
-
-        // verify all emails
-        db.readWrite { implicit session =>
-          userEmailAddressRepo.getAllByUser(user.id.get).map { em =>
-            inject[UserEmailAddressCommander].saveAsVerified(em)
-          }
-        }
-
-        // make email1 primary
-        userCommander.makeEmailPrimary(user.id.get, email1).isRight === true
-        db.readOnlyMaster { implicit session =>
-          userEmailAddressRepo.getPrimaryByUser(user.id.get).map(_.address) === Some(email1)
-          userValueRepo.getUserValue(user.id.get, UserValueName.PENDING_PRIMARY_EMAIL) === None
-        }
-        // remove email1 then email2
-        userCommander.removeEmail(user.id.get, email1).isRight === false // removing primary email
-        userCommander.removeEmail(user.id.get, email2).isRight === true
-        db.readOnlyMaster { implicit session =>
-          userEmailAddressRepo.getAllByUser(user.id.get).map(_.address) === Seq(email1)
-        }
-        userCommander.removeEmail(user.id.get, email1).isRight === false // removing last email
       }
     }
 

@@ -14,7 +14,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
+import com.keepit.heimdal.{ ContextStringData, HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import com.keepit.notify.delivery.{ WsNotificationDelivery, NotificationJsonFormat }
 import com.keepit.notify.model.event.NewMessage
@@ -682,12 +682,14 @@ class MessagingCommander @Inject() (
       shoebox.hasOrganizationMembership(oid, userId).flatMap {
         case true =>
           //ignoring case of multiple org ids in the same chat, just picking the last one
-          moreContext += ("messagedWholeOrgId", oid.id)
+          moreContext += ("messagedWholeOrgId", ContextStringData(oid.toString))
           shoebox.getOrganizationMembers(oid)
         case false =>
           Future.successful(Set.empty[Id[User]])
       }
     }).map(_.flatten)
+
+    moreContext.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => log.info(s"[OrgMessageTracking] should be tracking messagedWholeOrgId=$orgId") }
 
     val context = moreContext.addExistingContext(initContext).build
 
