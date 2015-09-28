@@ -3,7 +3,7 @@
     <ul class="kf-ops-nav">
       <li>
         <a class="kf-link" href="#team-settings">Team Settings</a>
-        <ul class="kf-ops-nav">
+        <ul class="kf-ops-nav-inner">
           <li ng-repeat="section in settingsSectionTemplateData" ng-if="section.heading">
             <a
               class="kf-link"
@@ -19,25 +19,32 @@
       <li><a class="kf-link" href="#history">History</a></li> -->
     </ul>
     <div class="kf-ops-main">
-      <h1 id="team-settings">Team Settings</h1>
-      <section ng-repeat="section in settingsSectionTemplateData">
-        <h2 id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
-        <div ng-repeat="field in section.fields" class="kf-ops-setting kf-row">
-          <div class="kf-ops-setting-desc kf-main-pane">
-            <h3 id="{{ field.fieldKey }}">{{ field.title }}</h3>
-            <p>{{ field.description }}</p>
-          </div>
-          <div class="kf-side-pane">
-            <select
-              class="kf-ops-setting-select"
-              ng-model="settings[field.fieldKey].setting"
-              ng-disabled="!settings[field.fieldKey].editable"
-              ng-options="option.value as option.label for option in field.selectOptions"
-              ng-change="updateSettings()"
-            ></select>
-          </div>
+      <div ng-if="billingState.credit > 0" kf-credit-banner credit="{{ billingState.credit }}"></div>
+      <div class="kf-container kf-ops-main-fields">
+        <div class="kf-container-header">
+          <h1 id="team-settings">Team Settings</h1>
         </div>
-      </section>
+        <div class="kf-container-main">
+          <section ng-repeat="section in settingsSectionTemplateData">
+            <h2 id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
+            <div ng-repeat="field in section.fields" class="kf-ops-setting kf-row">
+              <div class="kf-main-pane">
+                <h3 id="{{ field.fieldKey }}">{{ field.title }}</h3>
+                <p class="kf-ops-setting-desc">{{ field.description }}</p>
+              </div>
+              <div class="kf-side-pane">
+                <select
+                  class="kf-ops-setting-select"
+                  ng-model="settings[field.fieldKey].setting"
+                  ng-disabled="!settings[field.fieldKey].editable"
+                  ng-options="option.value as option.label for option in field.selectOptions"
+                  ng-change="updateSettings()"
+                ></select>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
       <!--
         <h1 id="team-plan">Team Plan</h1>
         <h1 id="team-contacts">Contacts</h1>
