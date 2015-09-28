@@ -43,7 +43,7 @@ class ShoeboxUserActionsHelper @Inject() (
   }
 
   def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = Future.successful {
-    db.readOnlyMaster { implicit s => identityHelper.getUserIdentity(userId) }
+    db.readOnlyMaster { implicit s => identityHelper.getUserIdentityByUserId(userId) }
   }
 
   def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]] = Future.successful(getSecureSocialUserFromRequest)

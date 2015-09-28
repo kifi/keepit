@@ -57,7 +57,7 @@ class UserIdentityHelper @Inject() (userRepo: UserRepo, emailRepo: UserEmailAddr
     getOwnerId(socialUser.identityId, emailAddress)
   }
 
-  def getUserIdentity(userId: Id[User])(implicit session: RSession): Option[UserIdentity] = {
+  def getUserIdentityByUserId(userId: Id[User])(implicit session: RSession): Option[UserIdentity] = {
     Try(emailRepo.getByUser(userId)) match {
       case Success(email) =>
         val user = userRepo.get(userId)
@@ -67,6 +67,28 @@ class UserIdentityHelper @Inject() (userRepo: UserRepo, emailRepo: UserEmailAddr
         socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).headOption.flatMap { info =>
           info.credentials.map(UserIdentity(info.userId, _))
         }
+    }
+  }
+
+  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = {
+    val socialId = SocialId(identityId.userId)
+    val networkType = SocialNetworkType(identityId.providerId)
+    networkType match {
+      case EMAIL | FORTYTWO | FORTYTWO_NF => {
+        EmailAddress.validate(socialId.id).toOption.flatMap { email =>
+          emailRepo.getByAddress(email).map { emailAddr =>
+            val userId = emailAddr.userId
+            val user = userRepo.get(userId)
+            val userCred = userCredRepo.findByUserIdOpt(userId)
+            UserIdentity(user, email, userCred)
+          }
+        }
+      }
+      case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
+        socialUserInfoRepo.getOpt(socialId, networkType).flatMap { info =>
+          info.credentials.map(UserIdentity(info.userId, _))
+        }
+      }
     }
   }
 }
@@ -97,27 +119,8 @@ class SecureSocialUserPluginImpl @Inject() (
   }
 
   def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
-    val socialId = SocialId(id.userId)
-    val networkType = SocialNetworkType(id.providerId)
-
     db.readOnlyMaster { implicit session =>
-      networkType match {
-        case EMAIL | FORTYTWO | FORTYTWO_NF => {
-          EmailAddress.validate(socialId.id).toOption.flatMap { email =>
-            emailRepo.getByAddress(email).map { emailAddr =>
-              val userId = emailAddr.userId
-              val user = userRepo.get(userId)
-              val userCred = userCredRepo.findByUserIdOpt(userId)
-              UserIdentity(user, email, userCred)
-            }
-          }
-        }
-        case socialNetwork if SocialNetworks.social.contains(socialNetwork) => {
-          socialUserInfoRepo.getOpt(socialId, networkType).flatMap { info =>
-            info.credentials.map(UserIdentity(info.userId, _))
-          }
-        }
-      }
+      userIdentityHelper.getUserIdentity(id)
     }
   }
 

@@ -10,6 +10,7 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
+import securesocial.core.IdentityId
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
 import scala.concurrent.duration._
@@ -45,8 +46,9 @@ import com.keepit.common.json.EitherFormat
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
 
+  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]]
+  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]]
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
-  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
   def getUser(userId: Id[User]): Future[Option[User]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
@@ -184,7 +186,6 @@ class ShoeboxServiceClientImpl @Inject() (
 
   // request consolidation
   private[this] val consolidateGetUserReq = new RequestConsolidator[Id[User], Option[User]](ttl = 30 seconds)
-  private[this] val consolidateSocialInfoByNetworkAndSocialIdReq = new RequestConsolidator[SocialUserInfoNetworkKey, Option[SocialUserInfo]](ttl = 30 seconds)
   private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
 
@@ -194,23 +195,24 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = {
+    call(Shoebox.internal.getUserIdentity(providerId = identityId.providerId, id = identityId.userId)).map { r =>
+      r.json.asOpt[UserIdentity]
+    }
+  }
+
+  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]] = {
+    call(Shoebox.internal.getUserIdentityByUserId(userId)).map { r =>
+      r.json.asOpt[UserIdentity]
+    }
+  }
+
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
     cacheProvider.userExternalIdCache.getOrElseFutureOpt(UserExternalIdKey(id)) {
       call(Shoebox.internal.getUserOpt(id)).map { r =>
         r.json match {
           case JsNull => None
           case js: JsValue => Some(js.as[User])
-        }
-      }
-    }
-  }
-
-  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = {
-    consolidateSocialInfoByNetworkAndSocialIdReq(SocialUserInfoNetworkKey(networkType, id)) { k =>
-      cacheProvider.socialUserNetworkCache.get(k) match {
-        case Some(sui) => Future.successful(Some(sui))
-        case None => call(Shoebox.internal.getSocialUserInfoByNetworkAndSocialId(id.id, networkType.name)) map { resp =>
-          resp.json.asOpt[SocialUserInfo]
         }
       }
     }

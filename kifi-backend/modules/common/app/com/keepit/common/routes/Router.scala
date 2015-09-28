@@ -19,7 +19,10 @@ import com.keepit.abook.model.{ IngestableContact, EmailAccountInfo }
 import com.keepit.typeahead.UserPrefixSearchRequest
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.social.SocialNetworkType
+import com.keepit.social.{UserIdentity, SocialNetworkType}
+import securesocial.core.IdentityId
+
+import scala.concurrent.Future
 
 trait Service
 
@@ -73,6 +76,8 @@ case object PUT extends Method("PUT")
 
 object Shoebox extends Service {
   object internal {
+    def getUserIdentity(providerId: String, id: String) = ServiceRoute(GET, "/internal/shoebox/auth/getUserIdentity", Param("providerId", providerId), Param("id", id))
+    def getUserIdentityByUserId(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/auth/getUserIdentityByUserId", Param("userId", userId))
     def getNormalizedURI(id: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
     def getNormalizedURIs(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURIs", Param("ids", ids))
     def getNormalizedURIByURL() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedURIByURL")
@@ -109,7 +114,6 @@ object Shoebox extends Service {
     def getExperiments() = ServiceRoute(GET, "/internal/shoebox/database/getExperiments")
     def getExperiment(id: Id[SearchConfigExperiment]) = ServiceRoute(GET, "/internal/shoebox/database/getExperiment", Param("id", id))
     def saveExperiment = ServiceRoute(POST, "/internal/shoebox/database/saveExperiment")
-    def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfoByNetworkAndSocialId", Param("id", id), Param("networkType", networkType))
     def getSocialUserInfosByUserId(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfosByUserId", Param("id", id))
     def getPrimaryOrg(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getPrimaryOrg", Param("id", id))
     def getSessionByExternalId(sessionId: UserSessionExternalId) = ServiceRoute(GET, "/internal/shoebox/database/sessionViewByExternalId", Param("sessionId", sessionId))
