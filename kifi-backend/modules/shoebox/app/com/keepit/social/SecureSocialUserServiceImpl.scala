@@ -244,7 +244,7 @@ class SecureSocialUserPluginImpl @Inject() (
 
     val socialId = parseSocialId(socialUser)
     val existingSocialIdForNetwork = socialUserInfoRepo.getByUser(userId).collectFirst { case info if info.networkType == networkType => info.socialId }
-    if (existingSocialIdForNetwork.contains(socialId)) {
+    if (existingSocialIdForNetwork.exists(_ != socialId)) {
       val message = s"Can't intern SocialUserInfo $socialUser for user $userId who has already connected a $networkType account with SocialId $existingSocialIdForNetwork"
       throw new IllegalStateException(message)
     }
