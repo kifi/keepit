@@ -82,13 +82,13 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val userId = session1.getUserId.get
         val cookies1 = cookies(result)
 
-        val user = db.readOnlyMaster { implicit s =>
-          userEmailAddressRepo.getByAddress(fooEmail).map(_.userId) must beSome(userId)
-          userCredRepo.verifyPassword(userId).apply(fooPwd) must beTrue
-          userRepo.get(userId)
+        val (user, suiOpt) = db.readOnlyMaster { implicit s =>
+          val user = userRepo.get(userId)
+          val suiOpt = socialUserInfoRepo.getByUser(userId).headOption
+          (user, suiOpt)
         }
-
         user.state === UserStates.INCOMPLETE_SIGNUP
+        suiOpt.isDefined === true
 
         // 2. finalize
         val path2 = "/auth/email-finalize"
@@ -102,10 +102,13 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         session2.getUserId.get === userId
         contentAsString(result2) !== ""
 
-        val user2 = db.readOnlyMaster { implicit s =>
-          userRepo.get(userId)
+        val (user2, suiOpt2) = db.readOnlyMaster { implicit s =>
+          val user = userRepo.get(userId)
+          val suiOpt = socialUserInfoRepo.getByUser(userId).headOption
+          (user, suiOpt)
         }
         user2.state === UserStates.ACTIVE
+        suiOpt2.isDefined === true
 
         // 3. logout
         val path3 = "/logout"
@@ -136,8 +139,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val authController = inject[AuthController]
         val path = "/auth/email-signup"
         val fooEmail = EmailAddress("foo@bar.com")
-        val fooPwd = "1234567"
-        val payload = Json.obj("email" -> fooEmail.address, "password" -> fooPwd, "firstName" -> "Foo", "lastName" -> "Bar")
+        val payload = Json.obj("email" -> fooEmail.address, "password" -> "1234567", "firstName" -> "Foo", "lastName" -> "Bar")
         val request = FakeRequest("POST", path).withBody(payload)
         val result = authController.emailSignup()(request)
         status(result) === OK
@@ -146,12 +148,13 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val sess = session(result)
         sess.getUserId.isDefined === true
         val userId = sess.getUserId.get
-        val user = db.readOnlyMaster { implicit s =>
-          userEmailAddressRepo.getByAddress(fooEmail).map(_.userId) must beSome(userId)
-          userCredRepo.verifyPassword(userId).apply("1234567") must beTrue
-          userRepo.get(userId)
+        val (user, suiOpt) = db.readOnlyMaster { implicit s =>
+          val user = userRepo.get(userId)
+          val suiOpt = socialUserInfoRepo.getByUser(userId).headOption
+          (user, suiOpt)
         }
         user.state === UserStates.ACTIVE
+        suiOpt.isDefined === true
 
         // (wrong) sign-up
         val payload1 = Json.obj("email" -> fooEmail.address, "password" -> "wrongpwd", "firstName" -> "NotFoo", "lastName" -> "NotBar")

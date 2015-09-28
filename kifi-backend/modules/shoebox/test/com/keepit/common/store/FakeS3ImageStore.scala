@@ -5,7 +5,7 @@ import java.io.File
 import com.amazonaws.services.s3.model.PutObjectResult
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.model.{ UserPictureSource, User, UserRepo }
+import com.keepit.model.{ UserRepo, SocialUserInfo, User }
 
 import scala.concurrent._
 import scala.util.{ Success, Try }
@@ -18,9 +18,10 @@ case class FakeS3ImageStore(val config: S3ImageConfig, db: Database, userRepo: U
   def getPictureUrl(width: Option[Int], user: User, picVersion: String): Future[String] =
     Promise[String]().success(s"//cloudfront/users/${user.id.get}/pics/${width.getOrElse(100)}/$picVersion.jpg").future
 
-  def uploadRemotePicture(userId: Id[User], externalId: ExternalId[User], pictureSource: UserPictureSource, pictureName: Option[String], setDefault: Boolean)(getPictureUrl: Option[ImageSize] => Option[String]): Future[Seq[(String, Try[PutObjectResult])]] = {
-    Future.successful(Seq())
-  }
+  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String, setDefault: Boolean): Future[Seq[(String, Try[PutObjectResult])]] =
+    Promise[Seq[(String, Try[PutObjectResult])]]().success(Seq()).future
+  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], setDefault: Boolean): Future[Seq[(String, Try[PutObjectResult])]] =
+    Promise[Seq[(String, Try[PutObjectResult])]]().success(Seq()).future
 
   def uploadTemporaryPicture(file: File): Try[(String, String)] =
     Success("token", "http://cloudfront/token.jpg")

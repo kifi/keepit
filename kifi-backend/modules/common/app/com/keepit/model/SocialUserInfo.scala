@@ -1,7 +1,5 @@
 package com.keepit.model
 
-import com.keepit.common.store.ImageSize
-
 import scala.concurrent.duration._
 
 import org.joda.time.DateTime
@@ -39,8 +37,15 @@ case class SocialUserInfo(
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials)) //want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
   def withLastGraphRefresh(lastGraphRefresh: Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
-  def getPictureUrl(preferredSize: Option[ImageSize] = Some(ImageSize(50, 50))): Option[String] = SocialNetworks.getPictureUrl(networkType, socialId)(preferredSize) orElse pictureUrl
-  def getProfileUrl: Option[String] = SocialNetworks.getProfileUrl(networkType, socialId) orElse profileUrl
+  def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
+    case SocialNetworks.FACEBOOK =>
+      Some(s"https://graph.facebook.com/v2.0/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+    case _ => pictureUrl
+  }
+  def getProfileUrl: Option[String] = profileUrl orElse (networkType match {
+    case SocialNetworks.FACEBOOK => Some(s"https://www.facebook.com/$socialId")
+    case _ => None
+  })
   override def toString(): String = s"SocialUserInfo[Id=$id,User=$userId,Name=$fullName,network=$networkType,socialId=$socialId,state=$state]"
 }
 

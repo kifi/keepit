@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import com.keepit.common.db._
-import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.mail.EmailAddress
@@ -14,7 +13,7 @@ case class PasswordReset(
     state: State[PasswordReset] = PasswordResetStates.ACTIVE,
     token: String,
     usedAt: Option[DateTime] = None,
-    usedByIP: Option[IpAddress] = None,
+    usedByIP: Option[String] = None,
     sentTo: EmailAddress) extends ModelWithState[PasswordReset] {
   def withId(id: Id[PasswordReset]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
