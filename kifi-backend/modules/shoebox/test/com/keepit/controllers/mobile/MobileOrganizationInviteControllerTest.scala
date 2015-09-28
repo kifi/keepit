@@ -279,8 +279,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val not_a_member = UserFactory.user().saved
           val org = OrganizationFactory.organization().withName("Void").withOwner(owner).withMembers(Seq(inviter, cannot_invite)).withWeakMembers().saved
 
-          val inviterMembership = inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, inviter.id.get).get
-          inject[OrganizationMembershipRepo].save(inviterMembership.withPermissions(inviterMembership.permissions ++ Set(OrganizationPermission.INVITE_MEMBERS)))
+          // TODO(ryan): [NOW] give the inviter INVITE_MEMBER permissions by messing with org settings
 
           (org, owner, inviter, cannot_invite, not_a_member)
         }

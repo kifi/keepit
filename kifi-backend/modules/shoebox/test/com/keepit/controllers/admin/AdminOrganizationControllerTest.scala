@@ -26,35 +26,6 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
   )
 
   "AdminOrganizationController" should {
-    "give all organizations a new permission" in {
-      withDb(modules: _*) { implicit injector =>
-        val (admin, orgs) = db.readWrite { implicit session =>
-          val admin = UserFactory.user().saved
-          val orgs = OrganizationFactory.organizations(8).map(_.withOwner(UserFactory.user().saved)).saved
-          (admin, orgs)
-        }
-
-        val targetPermission = FORCE_EDIT_LIBRARIES
-
-        db.readOnlyMaster { implicit session =>
-          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN) }
-          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.MEMBER).contains(targetPermission) === false }
-        }
-
-        inject[FakeUserActionsHelper].setUser(admin, Set(UserExperimentType.ADMIN))
-        val payload: JsValue = Json.obj("permissions" -> Json.obj("add" -> Json.obj(OrganizationRole.ADMIN.value -> Seq(targetPermission.value))), "confirmation" -> "i swear i know what i am doing")
-        val request = route.applyPermissionsDiffToAllOrganizations().withBody(payload)
-        val result = controller.applyPermissionsDiffToAllOrganizations()(request)
-        status(result) === OK
-
-        inject[WatchableExecutionContext].drain()
-
-        db.readOnlyMaster { implicit session =>
-          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN) + targetPermission }
-          orgRepo.all.forall { org => org.basePermissions.forRole(OrganizationRole.MEMBER).contains(targetPermission) === false }
-        }
-        1 === 1
-      }
-    }
+    skipped("nothing here right now")
   }
 }

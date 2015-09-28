@@ -406,29 +406,6 @@ class AdminOrganizationController @Inject() (
     Right(expType)
   }
 
-  def addRolePermission(orgId: Id[Organization], roleStr: String, permissionStr: String) = AdminUserAction { request =>
-    implicit val context = HeimdalContext.empty
-    val roleOpt = if (roleStr == "none") None else Some(OrganizationRole(roleStr))
-    val permission = OrganizationPermission(permissionStr)
-    db.readWrite { implicit session =>
-      val org = orgRepo.get(orgId)
-      val pdiff = PermissionsDiff.justAdd(roleOpt -> Set(permission))
-      orgCommander.unsafeModifyOrganization(request, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff)))
-    }
-    Ok(JsString(s"added $permission to $roleOpt"))
-  }
-  def removeRolePermission(orgId: Id[Organization], roleStr: String, permissionStr: String) = AdminUserAction { request =>
-    implicit val context = HeimdalContext.empty
-    val roleOpt = if (roleStr == "none") None else Some(OrganizationRole(roleStr))
-    val permission = OrganizationPermission(permissionStr)
-    db.readWrite { implicit session =>
-      val org = orgRepo.get(orgId)
-      val pdiff = PermissionsDiff.justRemove(roleOpt -> Set(permission))
-      orgCommander.unsafeModifyOrganization(request, org.id.get, OrganizationModifications(permissionsDiff = Some(pdiff)))
-    }
-    Ok(JsString(s"removed $permission from $roleOpt"))
-  }
-
   def addDomainOwnership(orgId: Id[Organization]) = AdminUserAction(parse.tolerantFormUrlEncoded) { implicit request =>
     val body = request.body
     val domainName = body.get("domainName").flatMap(_.headOption).get
@@ -459,17 +436,4 @@ class AdminOrganizationController @Inject() (
       case Right(response) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
     }
   }
-
-  def applyPermissionsDiffToAllOrganizations() = AdminUserAction(parse.tolerantJson) { implicit request =>
-    implicit val reads = KeyFormat.key2Reads[PermissionsDiff, String]("permissions", "confirmation")
-    val (permissionsDiff, confirmation) = request.body.as[(PermissionsDiff, String)]
-    assert(confirmation == "i swear i know what i am doing", "admin does not know what they are doing")
-    val orgIds = db.readOnlyMaster { implicit session => orgRepo.all.filter(_.isActive).map(_.id.get) }
-
-    for (orgId <- orgIds) {
-      orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(permissionsDiff = Some(permissionsDiff)))
-    }
-    Ok(Json.obj("permissions" -> permissionsDiff, "modified" -> orgIds))
-  }
-
 }

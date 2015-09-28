@@ -559,11 +559,14 @@ class ShoeboxController @Inject() (
   }
 
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = Action { request =>
-    val (membershipOpt, candidateOpt) = db.readOnlyReplica { implicit session =>
-      (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId), orgCandidateRepo.getByUserAndOrg(userId, orgId))
+    val (membershipOpt, candidateOpt, permissions) = db.readOnlyReplica { implicit session =>
+      val membershipOpt = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+      val candidateOpt = orgCandidateRepo.getByUserAndOrg(userId, orgId)
+      val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId))
+      (membershipOpt, candidateOpt, permissions)
     }
     val inviteOpt = organizationInviteCommander.getLastSentByOrganizationIdAndInviteeId(orgId, userId)
-    Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), membershipOpt.map(_.permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
+    Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), Some(permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
   }
 
   def getUserPermissionsByOrgId() = Action(parse.tolerantJson) { request =>

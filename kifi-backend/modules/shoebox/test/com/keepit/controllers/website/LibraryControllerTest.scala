@@ -353,8 +353,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             val org = OrganizationFactory.organization().withOwner(orgOwner).withMembers(Seq(libOwner)).saved
             val lib = LibraryFactory.library().withOwner(libOwner).withCollaborators(Seq(orgOwner)).withOrganization(org).saved
 
-            val ownerMembership = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, orgOwner.id.get).get
-            orgMembershipRepo.save(ownerMembership.withPermissions(ownerMembership.permissions + FORCE_EDIT_LIBRARIES))
+            // TODO(ryan): [NOW] give the org owner force-edit permissions by messing with org settings
 
             (orgOwner, libOwner, lib, org)
           }

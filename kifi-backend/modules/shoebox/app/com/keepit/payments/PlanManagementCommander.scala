@@ -71,7 +71,6 @@ trait PlanManagementCommander {
   def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse
   def setAccountFeatureSettingsHelper(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting])(implicit session: RWSession): AccountFeatureSettingsResponse
 
-  def applyNewBasePermissionsToMembers(orgId: Id[Organization], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession)
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
 
@@ -586,65 +585,12 @@ class PlanManagementCommanderImpl @Inject() (
 
   def setAccountFeatureSettingsHelper(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting])(implicit session: RWSession): AccountFeatureSettingsResponse = {
     val oldAccount = paidAccountRepo.getByOrgId(orgId)
-
     val updatedAccount = oldAccount.withFeatureSettings(settings)
 
-    updateOrganizationPermissions(orgId, oldAccount.featureSettings, updatedAccount.featureSettings)
     paidAccountRepo.save(updatedAccount)
 
     val plan = paidPlanRepo.get(updatedAccount.planId)
     AccountFeatureSettingsResponse(plan.features, updatedAccount.featureSettings, plan.name)
   }
-
-  private def updateOrganizationPermissions(orgId: Id[Organization], oldFeatureSettings: Set[FeatureSetting], newFeatureSettings: Set[FeatureSetting])(implicit session: RWSession): Unit = {
-    assert(oldFeatureSettings.map(_.name) == newFeatureSettings.map(_.name))
-
-    val permissionFeaturesByName = oldFeatureSettings.flatMap(featureSetting => Feature.get(featureSetting.name)).collect {
-      case feature: OrganizationPermissionFeature => feature.name -> feature
-    }.toMap
-
-    def featureSettingsToPermissionsByRole(featureSettings: Set[FeatureSetting]): PermissionsMap = {
-      val settingsByName = featureSettings.map { case FeatureSetting(name, setting) => name -> setting }.toMap
-
-      settingsByName.foldLeft(PermissionsMap.empty) {
-        case (acc, (name, setting)) =>
-          val permissionsByRole = permissionFeaturesByName(name).permissionsByRoleBySetting(setting)
-          acc ++ permissionsByRole
-      }
-    }
-
-    val oldPermissionsByRole = featureSettingsToPermissionsByRole(oldFeatureSettings)
-    val newPermissionsByRole = featureSettingsToPermissionsByRole(newFeatureSettings)
-
-    val addedPermissions = newPermissionsByRole -- oldPermissionsByRole
-    val removedPermissions = oldPermissionsByRole -- newPermissionsByRole
-
-    val permissionsDiff = PermissionsDiff(addedPermissions, removedPermissions)
-
-    val org = orgRepo.get(orgId)
-
-    val updatedOrg = org.applyPermissionsDiff(permissionsDiff)
-
-    orgRepo.save(updatedOrg)
-
-    applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, updatedOrg.basePermissions)
-  }
-
-  def applyNewBasePermissionsToMembers(orgId: Id[Organization], oldBasePermissions: BasePermissions, newBasePermissions: BasePermissions)(implicit session: RWSession): Unit = {
-    val memberships = orgMembershipRepo.getAllByOrgId(orgId)
-    val membershipsByRole = memberships.groupBy(_.role)
-    for ((role, memberships) <- membershipsByRole) {
-      val beingAdded = newBasePermissions.forRole(role) -- oldBasePermissions.forRole(role)
-      val beingRemoved = oldBasePermissions.forRole(role) -- newBasePermissions.forRole(role)
-      memberships.foreach { membership =>
-        // If the member is currently MISSING some permissions that normally come with their role
-        // it means those permissions were explicitly revoked. We do not give them those back.
-        val explicitlyRevoked = oldBasePermissions.forRole(role) -- membership.permissions
-        val newPermissions = ((membership.permissions ++ beingAdded) -- beingRemoved) -- explicitlyRevoked
-        orgMembershipRepo.save(membership.withPermissions(newPermissions))
-      }
-    }
-  }
-
 }
 

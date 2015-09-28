@@ -307,10 +307,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val owner = UserFactory.user().saved
             val member = UserFactory.user().saved
 
-            // This org is super crappy, members can't do anything
-            val crappyBPs = Organization.defaultBasePermissions.withPermissions(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.VIEW_ORGANIZATION))
-
-            val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withMembers(Seq(member)).withBasePermissions(crappyBPs).saved
+            val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withMembers(Seq(member)).saved
+            // TODO(ryan): [NOW] make it so that members in this org cannot ADD_LIBRARIES
             (org, owner, member)
           }
           val libraryCommander = inject[LibraryCommander]
@@ -427,11 +425,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifications(space = Some(org.id.get))) must beRight
 
           // However, if we give the admin force-edit permissions
-          // TODO(ryan): can we find a way to test this without manually modifying the db?
-          db.readWrite { implicit session =>
-            val ownerMembership = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, orgOwner.id.get).get
-            orgMembershipRepo.save(ownerMembership.withPermissions(ownerMembership.permissions + FORCE_EDIT_LIBRARIES))
-          }
+          // TODO(ryan): [NOW] actually give the admin force-edit permissions by editing the org settings
+
           // They still can't steal the library
           libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifications(space = Some(orgOwner.id.get))) must beLeft
           // But they can force it back into the owner's personal space
@@ -916,8 +911,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 1
         }
 
-        inject[LibraryCommander].internSystemGeneratedLibraries(userIron.id.get)
-        inject[LibraryCommander].internSystemGeneratedLibraries(userCaptain.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userIron.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userCaptain.id.get)
 
         // System libraries are created
         db.readOnlyMaster { implicit session =>
@@ -928,8 +923,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // Operation is idempotent
-        inject[LibraryCommander].internSystemGeneratedLibraries(userIron.id.get)
-        inject[LibraryCommander].internSystemGeneratedLibraries(userHulk.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userIron.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userHulk.id.get)
         db.readWrite { implicit session =>
           libraryRepo.all().size === 9
           libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
@@ -949,7 +944,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.save(main.copy(state = LibraryStates.INACTIVE, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main_old")))
         }
 
-        inject[LibraryCommander].internSystemGeneratedLibraries(userIron.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userIron.id.get)
 
         // Fixes problems in sys libraries
         db.readOnlyMaster { implicit session =>
@@ -965,7 +960,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER))
         }
 
-        inject[LibraryCommander].internSystemGeneratedLibraries(userIron.id.get)
+        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userIron.id.get)
 
         db.readOnlyMaster { implicit session =>
           val ironMains = libraryRepo.getByUser(userIron.id.get, None).map(_._2).filter(_.ownerId == userIron.id.get).filter(_.kind == LibraryKind.SYSTEM_MAIN)

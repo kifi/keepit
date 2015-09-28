@@ -19,21 +19,17 @@ case class OrganizationMembership(
     seq: SequenceNumber[OrganizationMembership] = SequenceNumber.ZERO,
     organizationId: Id[Organization],
     userId: Id[User],
-    role: OrganizationRole,
-    permissions: Set[OrganizationPermission]) extends ModelWithState[OrganizationMembership] with ModelWithSeqNumber[OrganizationMembership] {
+    role: OrganizationRole) extends ModelWithState[OrganizationMembership] with ModelWithSeqNumber[OrganizationMembership] {
 
   def withId(id: Id[OrganizationMembership]): OrganizationMembership = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationMembership = this.copy(updatedAt = now)
   def withState(newState: State[OrganizationMembership]): OrganizationMembership = this.copy(state = newState)
-  def withPermissions(newPermissions: Set[OrganizationPermission]): OrganizationMembership = this.copy(permissions = newPermissions)
   def sanitizeForDelete: OrganizationMembership = this.copy(
     state = OrganizationMembershipStates.INACTIVE
   )
 
   def isActive = state == OrganizationMembershipStates.ACTIVE
   def isInactive = state == OrganizationMembershipStates.INACTIVE
-
-  def hasPermission(p: OrganizationPermission): Boolean = permissions.contains(p)
 
   def toIngestableOrganizationMembership = IngestableOrganizationMembership(id.get, organizationId, userId, createdAt, state, seq)
 }
@@ -47,8 +43,7 @@ object OrganizationMembership {
     (__ \ 'seq).format(SequenceNumber.format[OrganizationMembership]) and
     (__ \ 'organizationId).format[Id[Organization]] and
     (__ \ 'userId).format[Id[User]] and
-    (__ \ 'role).format[OrganizationRole] and
-    (__ \ 'permissions).format[Set[OrganizationPermission]]
+    (__ \ 'role).format[OrganizationRole]
   )(OrganizationMembership.apply, unlift(OrganizationMembership.unapply))
 }
 object OrganizationMembershipStates extends States[OrganizationMembership]
