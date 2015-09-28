@@ -179,8 +179,8 @@ angular.module('kifi')
           scope.modalTitle = scope.library.name;
           scope.canManage = (
             scope.library.membership && (
-              scope.library.membership.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) ||
-              scope.library.membership.permissions.indexOf(LIB_PERMISSION.INVITE_MEMBERS)
+              scope.library.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) ||
+              scope.library.permissions.indexOf(LIB_PERMISSION.INVITE_MEMBERS)
             )
           );
           scope.currentPageOrigin = scope.modalData.currentPageOrigin;

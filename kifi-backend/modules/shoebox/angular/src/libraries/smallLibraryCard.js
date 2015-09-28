@@ -10,8 +10,8 @@ angular.module('kifi')
     function canModifyCollaborators(lib) {
       return (
         lib.membership && (
-          lib.membership.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1 ||
-          lib.membership.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) !== -1
+          lib.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1 ||
+          lib.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) !== -1
         )
       );
     }

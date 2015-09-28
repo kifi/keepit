@@ -44,7 +44,7 @@ angular.module('kifi')
       var $scope = this;
 
       return (
-        $scope.myMembership.role === 'admin' &&
+        ($scope.thisViewer.membership && $scope.thisViewer.membership.role === 'admin') &&
         $scope.member.role !== 'admin' &&
         $scope.hasAcceptedInvite()
       );
@@ -65,7 +65,7 @@ angular.module('kifi')
       var $scope = this;
       var hasCorrectPermission = (
         (
-          $scope.myMembership.role === 'admin' &&
+          ($scope.thisViewer.membership && $scope.thisViewer.membership.role === 'admin') &&
           $scope.member.role !== 'admin'
         ) || (
           profileService.me.id === $scope.profile.ownerId
@@ -157,7 +157,7 @@ angular.module('kifi')
       templateUrl: 'orgProfile/orgProfileMember.tpl.html',
       $scope: {
         member: '=',
-        myMembership: '=',
+        thisViewer: '=',
         organization: '='
       },
       replace: true,

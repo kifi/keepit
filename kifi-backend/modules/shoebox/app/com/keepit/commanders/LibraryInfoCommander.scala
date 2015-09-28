@@ -268,6 +268,10 @@ class LibraryInfoCommanderImpl @Inject() (
       } toMap
     }
 
+    val permissionsByLibraryId = db.readOnlyMaster { implicit s =>
+      libraries.map { lib => lib.id.get -> permissionCommander.getLibraryPermissions(lib.id.get, viewerUserIdOpt) }
+    }.toMap
+
     val futureFullLibraryInfos = libraries.map { lib =>
       val libId = lib.id.get
       for {
@@ -279,16 +283,15 @@ class LibraryInfoCommanderImpl @Inject() (
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(libId)
         val owner = usersById(lib.ownerId)
         val orgViewOpt = lib.organizationId.map(basicOrgViewById.apply)
-        val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
-        val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
+        val followers = memberInfosByLibraryId(libId).shown.map(usersById(_))
+        val collaborators = memberInfosByLibraryId(libId).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
         val attr = getSourceAttribution(libId)
-
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
         }
-        lib.id.get -> FullLibraryInfo(
-          id = Library.publicId(lib.id.get),
+        libId -> FullLibraryInfo(
+          id = Library.publicId(libId),
           name = lib.name,
           owner = owner,
           description = lib.description,
@@ -311,8 +314,9 @@ class LibraryInfoCommanderImpl @Inject() (
           path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = orgViewOpt.map(_.basicOrganization.handle), slug = lib.slug),
           org = orgViewOpt,
           orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None,
-          membership = membershipByLibraryId.flatMap(_.get(lib.id.get)),
-          invite = inviteByLibraryId.flatMap(_.get(lib.id.get))
+          membership = membershipByLibraryId.flatMap(_.get(libId)),
+          invite = inviteByLibraryId.flatMap(_.get(libId)),
+          permissions = permissionsByLibraryId(libId)
         )
       }
     }

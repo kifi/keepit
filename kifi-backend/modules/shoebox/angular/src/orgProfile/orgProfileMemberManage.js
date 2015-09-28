@@ -89,9 +89,9 @@ angular.module('kifi')
     }
 
     $scope.members = null;
-    $scope.myMembership = $scope.membership;
+    $scope.thisViewer = $scope.viewer;
     $scope.organization = organization;
-    $scope.canInvite = $scope.myMembership.permissions && $scope.myMembership.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
+    $scope.canInvite = $scope.thisViewer.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
     $scope.me = profileService.me;
 
     function resetAndFetch() {

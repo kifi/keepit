@@ -19,7 +19,7 @@ angular.module('kifi')
         scope.quickKeep = {};
 
         scope.hasAddKeepPermission = function () {
-          return scope.library && scope.library.membership && scope.library.membership.permissions.indexOf(LIB_PERMISSION.ADD_KEEPS) !== -1;
+          return scope.library && scope.library.permissions.indexOf(LIB_PERMISSION.ADD_KEEPS) !== -1;
         };
 
         scope.doQuickKeep = function () {

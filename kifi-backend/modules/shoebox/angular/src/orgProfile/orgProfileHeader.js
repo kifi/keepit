@@ -14,7 +14,7 @@ angular.module('kifi')
     restrict: 'A',
     scope: {
       profile: '=',
-      membership: '=',
+      viewer: '=',
       plan: '='
     },
     templateUrl: 'orgProfile/orgProfileHeader.tpl.html',
@@ -28,13 +28,13 @@ angular.module('kifi')
       var authToken = $location.search().authToken || '';
       scope.authTokenQueryString = authToken ? 'authToken='+authToken : '';
 
-      scope.readonly = scope.membership.permissions.indexOf(ORG_PERMISSION.EDIT_ORGANIZATION) === -1;
+      scope.readonly = scope.viewer.permissions.indexOf(ORG_PERMISSION.EDIT_ORGANIZATION) === -1;
       scope.myTextValue = 'Hello';
       scope.acknowledgedInvite = false;
       scope.isAdmin = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 
-      if (!profileService.userLoggedIn() && scope.profile && scope.membership.invite) {
-        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite});
+      if (!profileService.userLoggedIn() && scope.profile && scope.viewer.invite) {
+        signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.viewer.invite});
       }
 
       scope.goToMemberInvite = function () {
@@ -112,14 +112,14 @@ angular.module('kifi')
       };
 
       scope.shouldShowInviteBanner = function () {
-        return profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !scope.acknowledgedInvite;
+        return profileService.userLoggedIn() && !scope.viewer.membership && scope.viewer.invite && !scope.acknowledgedInvite;
       };
 
       scope.shouldShowSignupBanner = function () {
-        return !profileService.userLoggedIn() && !scope.membership.role && scope.membership.invite && !angular.element('#kf-modal').length;
+        return !profileService.userLoggedIn() && !scope.viewer.membership && scope.viewer.invite && !angular.element('#kf-modal').length;
       };
 
-      scope.canInvite = scope.membership.permissions && scope.membership.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
+      scope.canInvite = scope.viewer.permissions && scope.viewer.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
 
       scope.inviteBannerButtons = [
         {
@@ -150,7 +150,7 @@ angular.module('kifi')
           label: 'Accept',
           className: 'kf-accept',
           click: function () {
-            signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.membership.invite });
+            signupService.register({orgId: scope.profile.id, intent: 'joinOrg', orgAuthToken: authToken, invite: scope.viewer.invite });
           }
         }
       ];

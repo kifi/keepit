@@ -14,8 +14,8 @@ angular.module('kifi')
     function canModifyCollaborators(lib) {
       return (
         lib.membership && (
-          lib.membership.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1 ||
-          lib.membership.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) !== -1
+          lib.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1 ||
+          lib.permissions.indexOf(LIB_PERMISSION.REMOVE_MEMBERS) !== -1
         )
       );
     }
@@ -156,7 +156,7 @@ angular.module('kifi')
 
     function hasPermission(permission) {
       var scope = this;
-      return scope.lib.membership && scope.lib.membership.permissions.indexOf(permission) !== -1;
+      return scope.lib.permissions.indexOf(permission) !== -1;
     }
 
     function getMeOrg() {
