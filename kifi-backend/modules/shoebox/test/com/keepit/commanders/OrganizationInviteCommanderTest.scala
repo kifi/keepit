@@ -62,8 +62,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           val invitees: Set[Either[Id[User], EmailAddress]] = Set(Left(owner.id.get))
           val inviter = db.readWrite { implicit session =>
             val bond = UserFactory.user().withName("James", "Bond").saved
-            val membership: OrganizationMembership = org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER)
-            orgMembershipRepo.save(membership.copy(permissions = membership.permissions + OrganizationPermission.INVITE_MEMBERS))
+            // TODO(ryan): [NOW] give the org members invite permissions
             bond
           }
           val inviteeEmails = invitees.collect { case Right(email) => email }

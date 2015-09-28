@@ -672,7 +672,7 @@ class MessagingCommander @Inject() (
     val canSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
       !permissionsByOrgId.exists {
         case (orgId, permissions) =>
-          !permissions.contains(OrganizationPermission.GROUP_MESSAGING)
+          !permissions.contains(OrganizationPermission.MESSAGE_ORGANIZATION)
             .tap { _ => airbrake.notify(s"user $userId was able to send to org $orgId without permissions!") }
       }
     }

@@ -41,13 +41,11 @@ case class PaidAccount(
     frozen: Boolean = false,
     modifiedSinceLastIntegrityCheck: Boolean = true,
     activeUsers: Int,
-    billingCycleStart: DateTime,
-    featureSettings: Set[FeatureSetting]) extends ModelWithState[PaidAccount] {
+    billingCycleStart: DateTime) extends ModelWithState[PaidAccount] {
 
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
-  def withFeatureSettings(featureSettings: Set[FeatureSetting]): PaidAccount = this.copy(featureSettings = featureSettings)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 
   def withReducedCredit(reduction: DollarAmount): PaidAccount = {

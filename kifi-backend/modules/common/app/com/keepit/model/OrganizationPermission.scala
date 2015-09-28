@@ -16,7 +16,7 @@ object OrganizationPermission {
   case object PUBLISH_LIBRARIES extends OrganizationPermission("publish_libraries")
   case object REMOVE_LIBRARIES extends OrganizationPermission("remove_libraries")
   case object FORCE_EDIT_LIBRARIES extends OrganizationPermission("force_edit_libraries")
-  case object GROUP_MESSAGING extends OrganizationPermission("group_messaging")
+  case object MESSAGE_ORGANIZATION extends OrganizationPermission("message_organization")
   case object EXPORT_KEEPS extends OrganizationPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends OrganizationPermission("create_slack_integration")
   case object MANAGE_PLAN extends OrganizationPermission("manage_plan")
@@ -32,7 +32,7 @@ object OrganizationPermission {
     PUBLISH_LIBRARIES,
     REMOVE_LIBRARIES,
     FORCE_EDIT_LIBRARIES,
-    GROUP_MESSAGING,
+    MESSAGE_ORGANIZATION,
     EXPORT_KEEPS,
     CREATE_SLACK_INTEGRATION,
     MANAGE_PLAN
@@ -64,9 +64,10 @@ object OrganizationPermission {
       case ADD_LIBRARIES.value => ADD_LIBRARIES
       case PUBLISH_LIBRARIES.value => PUBLISH_LIBRARIES
       case REMOVE_LIBRARIES.value => REMOVE_LIBRARIES
-      case "edit_libraries" => FORCE_EDIT_LIBRARIES // for temp backwards compatibility
+      case "edit_libraries" => FORCE_EDIT_LIBRARIES
       case FORCE_EDIT_LIBRARIES.value => FORCE_EDIT_LIBRARIES
-      case GROUP_MESSAGING.value => GROUP_MESSAGING
+      case "group_messaging" => MESSAGE_ORGANIZATION
+      case MESSAGE_ORGANIZATION.value => MESSAGE_ORGANIZATION
       case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
       case MANAGE_PLAN.value => MANAGE_PLAN
