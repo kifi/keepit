@@ -56,6 +56,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
             credentials = Some(su)))
           user
         }
+        libraryCommander.internSystemGeneratedLibraries(user.id.get, generateNew = true)
         inject[FakeUserActionsHelper].setUser(user)
 
         val cookie = Authenticator.create(su).right.get.toCookie
