@@ -25,6 +25,7 @@ import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander,
 import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.Future
+import scala.util.{ Failure, Try }
 
 @Singleton
 class UserIdentityHelper @Inject() (emailRepo: UserEmailAddressRepo, socialUserInfoRepo: SocialUserInfoRepo) {
@@ -52,7 +53,7 @@ class UserIdentityHelper @Inject() (emailRepo: UserEmailAddressRepo, socialUserI
   }
 
   def getOwnerId(socialUser: SocialUser)(implicit session: RSession): Option[Id[User]] = {
-    val emailAddress = parseEmailAddress(socialUser)
+    val emailAddress = parseEmailAddress(socialUser).toOption
     getOwnerId(socialUser.identityId, emailAddress)
   }
 }
@@ -114,9 +115,10 @@ class SecureSocialUserPluginImpl @Inject() (
       val userId = user.id.get
       val networkType = parseNetworkType(socialUser)
       val (isNewIdentity, socialUserInfoOpt) = db.readWrite { implicit session =>
-        val isNewEmailAddress = internEmailAddress(userId, socialUser).get._2
+        val isNewEmailAddressMaybe = internEmailAddress(userId, socialUser).map(_._2)
         networkType match {
           case EMAIL | FORTYTWO | FORTYTWO_NF => {
+            val isNewEmailAddress = isNewEmailAddressMaybe.get
             userCredRepo.internUserPassword(userId, socialUser.passwordInfo.get.password)
             (isNewEmailAddress, None)
           }
@@ -212,11 +214,11 @@ class SecureSocialUserPluginImpl @Inject() (
     }
   }
 
-  private def internEmailAddress(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Option[(UserEmailAddress, Boolean)] = {
+  private def internEmailAddress(userId: Id[User], socialUser: SocialUser)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)] = {
     parseEmailAddress(socialUser).flatMap { emailAddress =>
       val networkType = parseNetworkType(socialUser)
       val verified = verifiedEmailProviders.contains(networkType)
-      userEmailAddressCommander.intern(userId, emailAddress, verified).toOption
+      userEmailAddressCommander.intern(userId, emailAddress, verified)
     }
   }
 
@@ -381,5 +383,8 @@ object SocialUserHelpers {
   }
   def parseSocialId(socialUser: SocialUser): SocialId = parseSocialId(socialUser.identityId)
 
-  def parseEmailAddress(socialUser: SocialUser): Option[EmailAddress] = socialUser.email.flatMap(EmailAddress.validate(_).toOption)
+  def parseEmailAddress(socialUser: SocialUser): Try[EmailAddress] = socialUser.email match {
+    case None => Failure(new IllegalArgumentException(s"Email address not fount in SocialUser: $socialUser"))
+    case Some(address) => EmailAddress.validate(address)
+  }
 }
