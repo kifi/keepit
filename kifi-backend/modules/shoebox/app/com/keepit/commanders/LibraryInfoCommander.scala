@@ -621,12 +621,12 @@ class LibraryInfoCommanderImpl @Inject() (
 
   @AlertingTimer(2 seconds)
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfos")
-  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerIdOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet
-    val membershipsToLibsMap = viewerOpt.map { viewerId =>
+    val membershipsToLibsMap = viewerIdOpt.map { viewerId =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewerId)
     } getOrElse Map.empty
-    val orgViews = organizationCommander.getBasicOrganizationViews(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerOpt, authTokenOpt = None)
+    val orgViews = organizationCommander.getBasicOrganizationViews(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerIdOpt, authTokenOpt = None)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -650,7 +650,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val membershipInfoOpt = membershipOpt.map(createMembershipInfo)
-      val inviteInfoOpt = createInviteInfo(lib.id.get, viewerOpt, None)
+      val inviteInfoOpt = createInviteInfo(lib.id.get, viewerIdOpt, None)
 
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {
         Some(membershipOpt.isDefined)
@@ -658,7 +658,7 @@ class LibraryInfoCommanderImpl @Inject() (
         None
       }
 
-      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, viewerOpt.flatMap(_.id))
+      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, viewerIdOpt)
 
       createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, permissions, path, orgViewOpt)
     }

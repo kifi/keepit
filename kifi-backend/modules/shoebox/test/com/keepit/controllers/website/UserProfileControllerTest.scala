@@ -319,8 +319,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (ownLib \ "id").as[PublicId[Library]] must equalTo(pubId1)
         (ownLib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (ownLib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.PUBLISHED)
-        (ownLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER)))
-        (ownLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER))
+        (ownLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER))))
+        (ownLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER)))
         (ownLib \ "followers").as[Seq[BasicUser]].head.externalId must equalTo(user2.externalId)
         (ownLib \ "collaborators").as[Seq[BasicUser]].head.externalId must equalTo(user3.externalId)
 
@@ -333,8 +333,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (followingLib \ "id").as[PublicId[Library]] must equalTo(pubId3)
         (followingLib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (followingLib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (followingLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.READ_ONLY, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib3, LibraryAccess.READ_ONLY)))
-        (followingLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib3, LibraryAccess.READ_ONLY))
+        (followingLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.READ_ONLY, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib3, Some(LibraryAccess.READ_ONLY))))
+        (followingLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib3, Some(LibraryAccess.READ_ONLY)))
 
         // test viewing invited libraries
         val result3 = getProfileLibraries(Some(user1), user1.username, 0, 10, "invited")

@@ -202,7 +202,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                   "access" : "owner",
                   "listed" : true,
                   "subscribed" : false,
-                  "permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]
+                  "permissions": ${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))}
                 }
               },
               "membership" : "owner"
@@ -262,7 +262,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                    "access" : "owner",
                    "listed" : true,
                    "subscribed" : false,
-                  "permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]
+                  "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))}
                  },
                  "path": "/spongebob/krabby-patty"
                },
