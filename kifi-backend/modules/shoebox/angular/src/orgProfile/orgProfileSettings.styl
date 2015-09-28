@@ -2,11 +2,20 @@
   padding-top: 35px
   text-align: left
 
+  // Prevent the fixed header from covering up any #anchored headings.
+  // via https://css-tricks.com/hash-tag-links-padding/
+  h1,h2,h3,h4
+    &[id]:before
+      display: block
+      content: " "
+      margin-top: -80px
+      height: 80px
+      visibility: hidden
+
 .kf-ops-nav
   flex: 3
 
-
-  .kf-ops-nav
+  .kf-ops-nav-inner
     margin-top: 5px
 
     > li
@@ -16,32 +25,23 @@
 .kf-ops-main
   flex: 9
 
-  h1
-    heading_xl()
-    margin-bottom: 20px
-
-  * + h1
-    margin-top: 25px
-
   h2
     heading_lg()
 
-  * + h2
-    margin-top: 20px
-
   h3
     font-size: 16px
-    font-weight: bold
-    margin-bottom: 7px
 
 .kf-ops-setting-select
   width: 100%
 
-.kf-ops-setting
-  p
-    margin-top: 0
-    margin-bottom: 25px
-
 .kf-ops-push
   display: block
   height: 80vh
+
+.kf-ops-main-fields
+  margin-top: 15px
+
+.kf-ops-setting-desc
+  margin: 10px 0 20px
+  font-size: 14px
+  color: #666
