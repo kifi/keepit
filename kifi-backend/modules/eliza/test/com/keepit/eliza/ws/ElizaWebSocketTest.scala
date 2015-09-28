@@ -46,7 +46,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
     "connect and disconnect" in {
       running(new ElizaApplication(modules: _*)) {
 
-        setupUserIdentity
+        setupSocialUser
         val socket = MockWebSocket()
 
         socket.out === Json.arr("hi")
@@ -58,7 +58,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
     "respond to queries" in {
       running(new ElizaApplication(modules: _*)) {
 
-        setupUserIdentity
+        setupSocialUser
 
         val socket = MockWebSocket()
         socket.out
@@ -126,7 +126,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
     "notify of new messages" in {
       running(new ElizaApplication(modules: _*)) {
 
-        setupUserIdentity
+        setupSocialUser
         val messagingCommander = inject[MessagingCommander]
         val socket = MockWebSocket()
         socket.out
