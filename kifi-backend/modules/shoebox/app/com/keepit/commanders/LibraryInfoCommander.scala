@@ -136,7 +136,7 @@ class LibraryInfoCommanderImpl @Inject() (
       libraryIds.map { libId =>
         val lib = libs(libId)
         val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
-        val numFollowers = counts.readOnly
+        val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(libId)) 0 else counts.readOnly
         val numCollaborators = counts.readWrite
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
         val membershipOpt = membershipsByLibraryId.get(libId).flatten
@@ -155,7 +155,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val subscribedToUpdates = memOpt.exists(_.subscribedToUpdates)
       if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
         val owner = basicUserRepo.load(library.ownerId)
-        val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
+        val followerCount = if (LibraryMembershipCommander.defaultLibraries.contains(library.id.get)) 0 else libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
         Right((library, owner, followerCount, following, subscribedToUpdates))
       } else {
         Left(LibraryFail(FORBIDDEN, "library_access_denied"))
@@ -556,7 +556,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
         val countMap = libraryMembershipRepo.countWithLibraryIdByAccess(lib.id.get)
-        val numFollowers = countMap.readOnly
+        val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(lib.id.get)) 0 else countMap.readOnly
         val numCollaborators = countMap.readWrite
 
         val collaborators = libraryMembershipRepo.someWithLibraryIdAndAccess(lib.id.get, 3, LibraryAccess.READ_WRITE)
@@ -599,7 +599,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val viewerMem = libMems.find(_.userId == viewerId).get
       val subscriptions = librarySubscriptionRepo.getByLibraryId(lib.id.get).map { sub => LibrarySubscription.toSubKey(sub) }
       val (numFollowers, numCollaborators, collabsSample) = if (libMems.length > 1) {
-        val numFollowers = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
+        val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(lib.id.get)) 0 else libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
         val numCollaborators = libMems.length - 1
         val collabsSample = libMems.filter(_.access != LibraryAccess.OWNER)
           .sortBy(_.userId != viewerId)
@@ -715,10 +715,10 @@ class LibraryInfoCommanderImpl @Inject() (
       val collaboratorsShown = collaborators.length
 
       val numCollaborators = memberCount.readWrite
-      val numMembers = numCollaborators + memberCount.readOnly
+      val numMembers = numCollaborators + (if (LibraryMembershipCommander.defaultLibraries.contains(libraryId)) 0 else memberCount.readOnly)
 
       // Get Followers
-      val followersLimit = limit - collaboratorsShown
+      val followersLimit = if (LibraryMembershipCommander.defaultLibraries.contains(libraryId)) 0 else limit - collaboratorsShown
       val followers = if (followersLimit == 0) Seq.empty[LibraryMembership]
       else {
         val followersOffset = if (collaboratorsShown > 0) 0
