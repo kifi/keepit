@@ -197,53 +197,6 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
           response === OrganizationFail.INVALID_MODIFY_NAME
         }
       }
-      "succeed for valid modifications" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner)
-          val publicId = Organization.publicId(org.id.get)
-
-          db.readOnlyMaster { implicit session =>
-            orgRepo.get(org.id.get).getNonmemberPermissions === Set(OrganizationPermission.VIEW_ORGANIZATION, OrganizationPermission.VIEW_MEMBERS)
-          }
-
-          val json =
-            """{ "permissions":
-                {
-                  "add": {"member": ["invite_members"]},
-                  "remove": {"none": ["view_organization", "view_members"]}
-                }
-               } """.stripMargin
-          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
-          val response = controller.modifyOrganization(publicId)(request)
-          status(response) === OK
-
-          db.readOnlyMaster { implicit session =>
-            val updatedOrg = orgRepo.get(org.id.get)
-            updatedOrg.getNonmemberPermissions === Set.empty
-            updatedOrg.getRolePermissions(OrganizationRole.MEMBER) === Organization.defaultBasePermissions.forRole(OrganizationRole.MEMBER) + OrganizationPermission.INVITE_MEMBERS
-            updatedOrg.getRolePermissions(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN)
-          }
-        }
-      }
-
-      "fail if you try and take away admin permissions" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner)
-          val publicId = Organization.publicId(org.id.get)
-
-          val json =
-            """{ "permissions":
-                {
-                  "remove": { "admin": ["remove_libraries"] }
-                }
-               } """.stripMargin
-          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
-          val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.INVALID_MODIFY_PERMISSIONS
-        }
-      }
     }
 
     "when deleteOrganization is called:" in {

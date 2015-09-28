@@ -19,6 +19,9 @@ case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg
 case class OrganizationModifyRequest(requesterId: Id[User], orgId: Id[Organization], modifications: OrganizationModifications) extends OrganizationRequest
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
+case class OrganizationSettingsRequest(orgId: Id[Organization], requesterId: Id[User], settings: OrganizationSettings) extends OrganizationRequest
+case class OrganizationSettingsResponse(config: OrganizationConfiguration)
+
 case class OrganizationDeleteRequest(requesterId: Id[User], orgId: Id[Organization]) extends OrganizationRequest
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, returningLibsFut: Future[Unit], deletingLibsFut: Future[Unit])
 
@@ -82,6 +85,7 @@ object OrganizationFail {
   case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found_siteurl")
   case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
   case object INVALID_AUTHTOKEN extends OrganizationFail(UNAUTHORIZED, "invalid_authtoken")
+  case object INVALID_SETTINGS extends OrganizationFail(FORBIDDEN, "invalid_settings")
 
   def apply(str: String): OrganizationFail = {
     str match {
