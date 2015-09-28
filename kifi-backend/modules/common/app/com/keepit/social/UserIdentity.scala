@@ -1,8 +1,12 @@
 package com.keepit.social
 
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, State, ExternalId, Id }
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ UserCred, User }
+import com.keepit.common.time.DateTimeJsonFormat
+import com.keepit.model.{ UserPicture, UserCred, User }
+import com.kifi.macros.json
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import securesocial.core.{ IdentityId, PasswordInfo, AuthenticationMethod, SocialUser }
 
@@ -40,6 +44,12 @@ object UserIdentity {
     )
     UserIdentity(user.id, socialUser)
   }
+
+  import com.keepit.serializer.SocialUserSerializer._
+  implicit val format = (
+    (__ \ 'userId).formatNullable(Id.format[User]) and
+    (__ \ 'socialUser).format[SocialUser]
+  )(UserIdentity.apply, unlift(UserIdentity.unapply))
 }
 
 class NewUserIdentity(userId: Option[Id[User]], socialUser: SocialUser) extends MaybeUserIdentity(userId, socialUser)

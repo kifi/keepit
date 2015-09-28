@@ -934,6 +934,8 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
 GET     /internal/guiceGraph                          @com.keepit.controllers.admin.AdminHealthController.getGuiceGraph()
 
+GET     /internal/shoebox/auth/getUserIdentity                         @com.keepit.controllers.internal.ShoeboxController.getUserIdentity(providerId: String, id: String)
+GET     /internal/shoebox/auth/getUserIdentityByUserId                 @com.keepit.controllers.internal.ShoeboxController.getUserIdentityByUserId(userId: Id[User])
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIByURL()
@@ -988,7 +990,6 @@ GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.internal.ShoeboxController.getExperiments
 GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.internal.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.internal.ShoeboxController.saveExperiment
-GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/getPrimaryOrg      @com.keepit.controllers.internal.ShoeboxController.getPrimaryOrg(id: Id[User])
 GET     /internal/shoebox/database/sessionViewByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionViewByExternalId(sessionId: UserSessionExternalId)
