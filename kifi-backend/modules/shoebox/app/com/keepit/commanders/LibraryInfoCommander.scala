@@ -235,7 +235,9 @@ class LibraryInfoCommanderImpl @Inject() (
       library.id.get -> {
         val counts = memberInfosByLibraryId(library.id.get).counts
         val collaboratorCount = counts.readWrite
-        val followerCount = counts.readOnly
+        // The following line of code hides the number of followers for default libraries
+        // This is to prevent real users from seeing how many new users we have
+        val followerCount = if (LibraryMembershipCommander.defaultLibraries.contains(library.id.get)) 0 else counts.readOnly
         val keepCount = library.keepCount
         (collaboratorCount, followerCount, keepCount)
       }
@@ -278,7 +280,9 @@ class LibraryInfoCommanderImpl @Inject() (
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(libId)
         val owner = usersById(lib.ownerId)
         val orgViewOpt = lib.organizationId.map(basicOrgViewById.apply)
-        val followers = memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
+        // The following line of code hides the details of who exactly follows the default libraries
+        // This is to prevent real users from seeing all the new users (including the fake users we sometimes create)
+        val followers = if (LibraryMembershipCommander.defaultLibraries.contains(libId)) Seq.empty else memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
         val attr = getSourceAttribution(libId)
