@@ -59,6 +59,7 @@ class LibraryController @Inject() (
   airbrake: AirbrakeNotifier,
   keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
+  permissionCommander: PermissionCommander,
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryMembershipCommander: LibraryMembershipCommander,
@@ -673,6 +674,7 @@ class LibraryController @Inject() (
     relatedLibraryCommander.suggestedLibrariesInfo(id, userIdOpt)
       .map {
         case (fullInfos, relatedKinds) =>
+          val permissions = db.readOnlyReplica { implicit s => permissionCommander.getLibraryPermissions(id, userIdOpt) }
           val libs = fullInfos.map { info =>
             LibraryCardInfo(
               id = info.id,
@@ -692,6 +694,7 @@ class LibraryController @Inject() (
               following = None,
               membership = info.membership,
               invite = info.invite,
+              permissions = permissions,
               modifiedAt = info.modifiedAt,
               kind = info.kind,
               path = info.path,

@@ -8,6 +8,7 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.strings._
 
 case class OrganizationInfo(
     orgId: PublicId[Organization],
@@ -50,25 +51,33 @@ object OrganizationInfo {
   )(OrganizationInfo.apply _)
 }
 
-case class OrganizationMembershipInfo(
-  isInvited: Boolean, // deprecated, kill and use invite.isDefined || invite != null instead
+case class OrganizationMembershipInfo(role: OrganizationRole)
+object OrganizationMembershipInfo {
+  implicit val defaultWrites = new Writes[OrganizationMembershipInfo] {
+    def writes(o: OrganizationMembershipInfo): JsValue = Json.obj("role" -> o.role)
+  }
+
+  val testReads = new Reads[OrganizationMembershipInfo] {
+    def reads(json: JsValue): JsResult[OrganizationMembershipInfo] = (json \ "role").validate[OrganizationRole].map(OrganizationMembershipInfo.apply)
+  }
+}
+
+case class OrganizationViewerInfo(
   invite: Option[OrganizationInviteInfo],
   permissions: Set[OrganizationPermission],
-  role: Option[OrganizationRole])
-object OrganizationMembershipInfo {
-  implicit val defaultWrites: Writes[OrganizationMembershipInfo] = (
-    (__ \ 'isInvited).write[Boolean] and
+  membership: Option[OrganizationMembershipInfo])
+object OrganizationViewerInfo {
+  implicit val defaultWrites: Writes[OrganizationViewerInfo] = (
     (__ \ 'invite).writeNullable[OrganizationInviteInfo] and
     (__ \ 'permissions).write[Set[OrganizationPermission]] and
-    (__ \ 'role).writeNullable[OrganizationRole]
-  )(unlift(OrganizationMembershipInfo.unapply))
+    (__ \ 'membership).writeNullable[OrganizationMembershipInfo]
+  )(unlift(OrganizationViewerInfo.unapply))
 
-  val testReads: Reads[OrganizationMembershipInfo] = (
-    (__ \ 'isInvited).read[Boolean] and
+  val testReads: Reads[OrganizationViewerInfo] = (
     (__ \ 'invite).readNullable[OrganizationInviteInfo](OrganizationInviteInfo.testReads) and
     (__ \ 'permissions).read[Set[OrganizationPermission]] and
-    (__ \ 'role).readNullable[OrganizationRole]
-  )(OrganizationMembershipInfo.apply _)
+    (__ \ 'membership).readNullable[OrganizationMembershipInfo](OrganizationMembershipInfo.testReads)
+  )(OrganizationViewerInfo.apply _)
 }
 
 case class OrganizationInviteInfo(
@@ -89,31 +98,31 @@ object OrganizationInviteInfo {
 
 case class BasicOrganizationView(
   basicOrganization: BasicOrganization,
-  membershipInfo: OrganizationMembershipInfo)
+  viewerInfo: OrganizationViewerInfo)
 object BasicOrganizationView {
   implicit val defaultWrites: Writes[BasicOrganizationView] = new Writes[BasicOrganizationView] {
-    def writes(o: BasicOrganizationView) = Json.toJson(o.basicOrganization).as[JsObject] + ("membership" -> Json.toJson(o.membershipInfo))
+    def writes(o: BasicOrganizationView) = Json.toJson(o.basicOrganization).as[JsObject] + ("viewer" -> Json.toJson(o.viewerInfo))
   }
 
   val testReads: Reads[BasicOrganizationView] = (
     __.read[BasicOrganization] and
-    (__ \ "membership").read[OrganizationMembershipInfo](OrganizationMembershipInfo.testReads)
+    (__ \ "viewer").read[OrganizationViewerInfo](OrganizationViewerInfo.testReads)
   )(BasicOrganizationView.apply _)
 }
 
 case class OrganizationView(
   organizationInfo: OrganizationInfo,
-  membershipInfo: OrganizationMembershipInfo)
+  viewerInfo: OrganizationViewerInfo)
 
 object OrganizationView {
   val defaultWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
-      "membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo))
+      "viewer" -> OrganizationViewerInfo.defaultWrites.writes(o.viewerInfo))
   }
 
   val embeddedMembershipWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
     def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++
-      Json.obj("membership" -> OrganizationMembershipInfo.defaultWrites.writes(o.membershipInfo).as[JsObject])
+      Json.obj("viewer" -> OrganizationViewerInfo.defaultWrites.writes(o.viewerInfo).as[JsObject])
   }
 }
 

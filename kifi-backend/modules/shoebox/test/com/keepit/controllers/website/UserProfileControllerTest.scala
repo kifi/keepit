@@ -7,7 +7,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.EmailAccountInfo
 import com.keepit.commanders.{ LibraryImageCommander, FriendStatusCommander }
 import com.keepit.common.controller.{ FakeUserActionsHelper }
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.FakeSocialGraphModule
@@ -314,92 +314,27 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
-        val expected = Json.parse(
-          s"""
-          {
-            "own": [
-              {
-                "id": "${pubId1.id}",
-                "name": "lib1",
-                "description": "My first library!",
-                "color": "${LibraryColor.BLUE.hex}",
-                "slug": "lib1",
-                "kind": "user_created",
-                "visibility": "published",
-                "owner":{
-                  "id":"${user1.externalId.id}",
-                  "firstName":"first",
-                  "lastName":"user",
-                  "pictureName":"0.jpg",
-                  "username":"firstuser"
-                },
-                "numKeeps": 1,
-                "numFollowers": 1,
-                "followers": [
-                  {
-                    "id": "${user2.externalId.id}",
-                    "firstName": "second",
-                    "lastName": "user",
-                    "pictureName": "alf.jpg",
-                    "username": "seconduser"
-                  }],
-                "numCollaborators":1,
-                "collaborators":[
-                  {
-                    "id": "${user3.externalId.id}",
-                    "firstName": "third",
-                    "lastName": "user",
-                    "pictureName": "asdf.jpg",
-                    "username": "thirduser"
-                  }],
-                "lastKept":${keep1.createdAt.getMillis},
-                "following":true,
-                "membership":{"access":"owner","listed":true,"subscribed":false,"permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]},
-                "modifiedAt":${lib1Updated.updatedAt.getMillis},
-                "path": "/firstuser/lib1",
-                "subscriptions": []
-              }
-             ]
-          }
-         """)
-        Json.parse(contentAsString(result1)) must equalTo(expected)
+        val result1Json = Json.parse(contentAsString(result1))
+        val ownLib = (result1Json \ "own").as[Seq[JsObject]].head
+        (ownLib \ "id").as[PublicId[Library]] must equalTo(pubId1)
+        (ownLib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (ownLib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.PUBLISHED)
+        (ownLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER)))
+        (ownLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER))
+        (ownLib \ "followers").as[Seq[BasicUser]].head.externalId must equalTo(user2.externalId)
+        (ownLib \ "collaborators").as[Seq[BasicUser]].head.externalId must equalTo(user3.externalId)
 
         // test viewing following libraries
         val result2 = getProfileLibraries(Some(user1), user1.username, 0, 10, "following")
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
-          s"""
-          {
-            "following": [
-              {
-                "id":"${pubId3.id}",
-                "name":"lib3",
-                "slug":"lib3",
-                "visibility":"secret",
-                "owner":{
-                  "id":"${basicUser2.externalId.id}",
-                  "firstName":"second",
-                  "lastName":"user",
-                  "pictureName":"alf.jpg",
-                  "username":"seconduser"
-                },
-                "numKeeps":0,
-                "numFollowers":1,
-                "followers":[],
-                "numCollaborators":0,
-                "collaborators":[],
-                "lastKept":${lib3.lastKept.get.getMillis},
-                "following": true,
-                "membership": {"access":"read_only","listed":true,"subscribed":false, "permissions":["view_library", "invite_followers"]},
-                "modifiedAt":${lib3.updatedAt.getMillis},
-                "path": "/seconduser/lib3",
-                "kind":"user_created"
-              }
-            ]
-          }
-        """
-        ))
+        val result2Json = Json.parse(contentAsString(result2))
+        val followingLib = (result2Json \ "following").as[Seq[JsObject]].head
+        (followingLib \ "id").as[PublicId[Library]] must equalTo(pubId3)
+        (followingLib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (followingLib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
+        (followingLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.READ_ONLY, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib3, LibraryAccess.READ_ONLY)))
+        (followingLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib3, LibraryAccess.READ_ONLY))
 
         // test viewing invited libraries
         val result3 = getProfileLibraries(Some(user1), user1.username, 0, 10, "invited")

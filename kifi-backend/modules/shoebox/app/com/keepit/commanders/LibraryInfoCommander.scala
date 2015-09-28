@@ -600,6 +600,7 @@ class LibraryInfoCommanderImpl @Inject() (
               following = None,
               membership = None,
               invite = None,
+              permissions = Set.empty,
               caption = extraInfo.caption,
               modifiedAt = lib.updatedAt,
               path = info.path,
@@ -656,7 +657,10 @@ class LibraryInfoCommanderImpl @Inject() (
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, path, orgViewOpt)
+
+      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, viewerOpt.flatMap(_.id))
+
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, permissions, path, orgViewOpt)
     }
   }
 
@@ -690,6 +694,8 @@ class LibraryInfoCommanderImpl @Inject() (
         airbrake.notify(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue? does the owner has a library membership object?")
       }
 
+      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, Some(viewerId))
+
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),
         name = lib.name,
@@ -709,6 +715,7 @@ class LibraryInfoCommanderImpl @Inject() (
         following = None, // not needed
         membership = None, // not needed
         invite = None, // not needed
+        permissions = permissions,
         path = path,
         modifiedAt = lib.updatedAt,
         org = basicOrgViewOpt,
@@ -719,7 +726,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfo")
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], path: String, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], permissions: Set[LibraryPermission], path: String, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -738,6 +745,7 @@ class LibraryInfoCommanderImpl @Inject() (
       following = isFollowing,
       membership = membershipInfoOpt,
       invite = inviteInfoOpt,
+      permissions = permissions,
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
       path = path,

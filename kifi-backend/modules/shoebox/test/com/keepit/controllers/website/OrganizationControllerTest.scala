@@ -103,19 +103,19 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         val ownerRequest = route.getOrganization(publicId)
         val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
         status(ownerResponse) === OK
-        (Json.parse(contentAsString(ownerResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.ADMIN)
+        (Json.parse(contentAsString(ownerResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.ADMIN)
 
         inject[FakeUserActionsHelper].setUser(member)
         val memberRequest = route.getOrganization(publicId)
         val memberResponse = controller.getOrganization(publicId)(memberRequest)
         status(memberResponse) === OK
-        (Json.parse(contentAsString(memberResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.MEMBER)
+        (Json.parse(contentAsString(memberResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.MEMBER)
 
         inject[FakeUserActionsHelper].setUser(rando)
         val randoRequest = route.getOrganization(publicId)
         val randoResponse = controller.getOrganization(publicId)(randoRequest)
         status(randoResponse) === OK
-        (Json.parse(contentAsString(randoResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forNonmember
+        (Json.parse(contentAsString(randoResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forNonmember
       }
       "serve up the right number of libraries depending on viewer permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>

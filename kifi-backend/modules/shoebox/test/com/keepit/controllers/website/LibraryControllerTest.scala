@@ -704,7 +704,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson \ "library" \ "org").as[Option[BasicOrganizationView]] must equalTo(Some(
           BasicOrganizationView(
             BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg")),
-            OrganizationMembershipInfo(isInvited = false, invite = None, Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN), Some(OrganizationRole.ADMIN))
+            OrganizationViewerInfo(invite = None, Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN), Some(OrganizationMembershipInfo(OrganizationRole.ADMIN)))
           )
         ))
         (resultJson \ "library" \ "orgMemberAccess").as[Option[LibraryAccess]] must equalTo(Some(LibraryAccess.READ_WRITE))
@@ -737,39 +737,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val (basicUser1, basicUser2) = db.readOnlyMaster { implicit s => (basicUserRepo.load(user1.id.get), basicUserRepo.load(user2.id.get)) }
 
-        val expected = Json.parse(
-          s"""
-            |{"libraries":
-              |[
-                |{
-                  |"id":"${pubId1.id}",
-                  |"name":"Library1",
-                  |"slug":"lib1",
-                  |"visibility":"secret",
-                  |"url":"/ahsu/lib1",
-                  |"owner":{
-                  |  "id":"${basicUser1.externalId}",
-                  |  "firstName":"${basicUser1.firstName}",
-                  |  "lastName":"${basicUser1.lastName}",
-                  |  "pictureName":"${basicUser1.pictureName}",
-                  |  "username":"${basicUser1.username.value}"
-                  |  },
-                  |"numKeeps":0,
-                  |"numFollowers":0,
-                  |"followers":[],
-                  |"numCollaborators":0,
-                  |"collaborators":[],
-                  |"lastKept":${Json.toJson(lib1.createdAt)(internalTime.DateTimeJsonLongFormat)},
-                  |"modifiedAt":${Json.toJson(lib1.updatedAt)(internalTime.DateTimeJsonLongFormat)},
-                  |"kind":"user_created",
-                  |"lastViewed":${Json.toJson(t2)(internalTime.DateTimeJsonLongFormat)},
-                  |"subscriptions": [],
-                  |"path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
-                |}
-              |]
-            |}
-           """.stripMargin)
-        Json.parse(contentAsString(result1)) must equalTo(expected)
+        val resultJson = Json.parse(contentAsString(result1))
+        val lib = (resultJson \ "libraries").as[Seq[JsObject]].head
+        (lib \ "id").as[PublicId[Library]] must equalTo(pubId1)
+        (lib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (lib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
+        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))
+        (lib \ "owner").as[BasicUser] must equalTo(basicUser1)
       }
     }
 

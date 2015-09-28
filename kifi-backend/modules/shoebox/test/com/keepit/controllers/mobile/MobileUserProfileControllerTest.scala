@@ -313,67 +313,22 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
 
         val result1 = getProfileLibraries(user1, 0, 10, "own")
         status(result1) must equalTo(OK)
-        Json.parse(contentAsString(result1)) === Json.parse(
-          s"""
-             {
-              "own" : [
-                {
-                  "id":"${pubId2.id}",
-                  "name":"Catching Jellyfish",
-                  "numFollowers":0,
-                  "numKeeps":0,
-                  "followers":[],
-                  "slug":"catching-jellyfish",
-                  "kind" : "user_created",
-                  "visibility" : "published",
-                  "owner": {
-                    "id":"${user1.externalId.id}",
-                    "firstName":"Spongebob",
-                    "lastName":"Squarepants",
-                    "pictureName":"0.jpg",
-                    "username":"spongebob"
-                  },
-                  "numKeeps" : 0,
-                  "numFollowers" : 0,
-                  "followers": [],
-                  "numCollaborators":0,
-                  "collaborators":[],
-                  "lastKept": ${lib2.createdAt.getMillis},
-                  "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER))}},
-                  "modifiedAt":${lib2.updatedAt.getMillis},
-                  "path": "/spongebob/catching-jellyfish"
-                },
-                {
-                  "id":"${pubId1.id}",
-                  "name":"Krabby Patty",
-                  "numFollowers":0,
-                  "numKeeps":0,
-                  "followers":[],
-                  "slug":"krabby-patty",
-                  "kind" : "user_created",
-                  "visibility" : "secret",
-                  "owner": {
-                    "id":"${user1.externalId.id}",
-                    "firstName":"Spongebob",
-                    "lastName":"Squarepants",
-                    "pictureName":"0.jpg",
-                    "username":"spongebob"
-                  },
-                  "numKeeps" : 0,
-                  "numFollowers" : 0,
-                  "followers": [],
-                  "numCollaborators": 0,
-                  "collaborators": [],
-                  "lastKept": ${lib1.createdAt.getMillis},
-                  "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))}},
-                  "modifiedAt":${lib1.updatedAt.getMillis},
-                  "path": "/spongebob/krabby-patty"
-                }
-              ]
-            }
-           """)
+
+        val resultJson = Json.parse(contentAsString(result1))
+        val libs = (resultJson \ "own").as[Seq[JsObject]]
+        (libs.head \ "id").as[PublicId[Library]] must equalTo(pubId2)
+        (libs.head \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (libs.head \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.PUBLISHED)
+        (libs.head \ "membership").as[Option[LibraryMembershipInfo]] must equalTo(
+          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER)))
+        )
+
+        (libs.last \ "id").as[PublicId[Library]] must equalTo(pubId1)
+        (libs.last \ "owner" \ "id").as[ExternalId[User]] must equalTo(user1.externalId)
+        (libs.last \ "membership").as[Option[LibraryMembershipInfo]] must equalTo(
+          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER)))
+        )
+
         val result2 = getProfileLibraries(user1, 0, 10, "all")
         status(result2) must equalTo(OK)
         val resultJson2 = contentAsJson(result2)

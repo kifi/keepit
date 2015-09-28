@@ -222,6 +222,7 @@ case class LibraryCardInfo(
   following: Option[Boolean], // @deprecated use membership object instead!
   membership: Option[LibraryMembershipInfo],
   invite: Option[LibraryInviteInfo], // currently only for Invited tab on viewer's own user profile
+  permissions: Set[LibraryPermission],
   caption: Option[String] = None, // currently only for marketing page
   modifiedAt: DateTime,
   kind: LibraryKind,
@@ -250,6 +251,7 @@ object LibraryCardInfo {
       "following" -> o.following,
       "membership" -> o.membership,
       "invite" -> o.invite,
+      "permissions" -> o.permissions,
       "caption" -> o.caption,
       "modifiedAt" -> o.modifiedAt,
       "kind" -> o.kind,
