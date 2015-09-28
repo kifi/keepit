@@ -15,9 +15,10 @@ class UserPasswordAuthentication @Inject() (
     userCredRepo: UserCredRepo) extends PasswordAuthentication with Logging {
 
   def authenticate(userId: Id[User], providedCreds: String): Boolean = {
-    db.readOnlyMaster { implicit session =>
-      userCredRepo.verifyPassword(userId, providedCreds)
+    val verifyPassword = db.readOnlyMaster { implicit session =>
+      userCredRepo.verifyPassword(userId)
     }
+    verifyPassword(providedCreds)
   }
 
 }

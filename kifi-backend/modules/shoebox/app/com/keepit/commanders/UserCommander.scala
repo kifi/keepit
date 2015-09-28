@@ -343,7 +343,7 @@ class UserCommander @Inject() (
 
   def changePassword(userId: Id[User], newPassword: String, oldPassword: Option[String]): Try[Unit] = Try {
     db.readWrite { implicit session =>
-      val isAllowed = oldPassword.exists(userCredRepo.verifyPassword(userId, _)) || userValueRepo.getValue(userId, UserValues.hasNoPassword)
+      val isAllowed = oldPassword.exists(userCredRepo.verifyPassword(userId).apply(_)) || userValueRepo.getValue(userId, UserValues.hasNoPassword)
       if (isAllowed) {
         doChangePassword(userId, newPassword)
       } else {

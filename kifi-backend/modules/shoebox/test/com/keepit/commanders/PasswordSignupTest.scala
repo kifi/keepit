@@ -84,7 +84,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
 
         val user = db.readOnlyMaster { implicit s =>
           userEmailAddressRepo.getByAddress(fooEmail).map(_.userId) must beSome(userId)
-          userCredRepo.verifyPassword(userId, fooPwd) must beTrue
+          userCredRepo.verifyPassword(userId).apply(fooPwd) must beTrue
           userRepo.get(userId)
         }
 
@@ -148,7 +148,7 @@ class PasswordSignupTest extends Specification with ShoeboxApplicationInjector {
         val userId = sess.getUserId.get
         val user = db.readOnlyMaster { implicit s =>
           userEmailAddressRepo.getByAddress(fooEmail).map(_.userId) must beSome(userId)
-          userCredRepo.verifyPassword(userId, "1234567") must beTrue
+          userCredRepo.verifyPassword(userId).apply("1234567") must beTrue
           userRepo.get(userId)
         }
         user.state === UserStates.ACTIVE

@@ -13,7 +13,7 @@ import securesocial.core.{ Registry, PasswordInfo }
 trait UserCredRepo extends Repo[UserCred] with RepoWithDelete[UserCred] {
   def findByUserIdOpt(id: Id[User], excludeState: Option[State[UserCred]] = Some(UserCredStates.INACTIVE))(implicit session: RSession): Option[UserCred]
   def internUserPassword(userId: Id[User], credentials: String)(implicit session: RWSession): UserCred
-  def verifyPassword(userId: Id[User], password: String)(implicit session: RSession): Boolean
+  def verifyPassword(userId: Id[User])(implicit session: RSession): String => Boolean
 }
 
 @Singleton
@@ -57,11 +57,13 @@ class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
     }
   }
 
-  def verifyPassword(userId: Id[User], password: String)(implicit session: RSession): Boolean = {
-    findByUserIdOpt(userId).exists { userCred =>
-      val currentPasswordInfo = PasswordInfo(UserCred.passwordHasher, userCred.credentials)
-      val hasher = Registry.hashers.currentHasher
-      hasher.matches(currentPasswordInfo, password)
+  def verifyPassword(userId: Id[User])(implicit session: RSession): String => Boolean = {
+    findByUserIdOpt(userId) match {
+      case Some(userCred) =>
+        val currentPasswordInfo = PasswordInfo(UserCred.passwordHasher, userCred.credentials)
+        val hasher = Registry.hashers.currentHasher
+        hasher.matches(currentPasswordInfo, _)
+      case None => Function.const(false)
     }
   }
 }
