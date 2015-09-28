@@ -99,7 +99,7 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
         (owner, other, ownerLibs)
       }
 
-      val (mainLib, secretLib) = inject[LibraryInfoCommander].internSystemGeneratedLibraries(owner.id.get)
+      val (mainLib, secretLib) = inject[LibraryCommander].internSystemGeneratedLibraries(owner.id.get)
       val allLibs = userCreatedLibs ++ Seq(mainLib, secretLib)
 
       val paginator = Paginator(0, 15)

@@ -203,7 +203,7 @@ class AdminLibraryController @Inject() (
   }
 
   def internUserSystemLibraries(userId: Id[User]) = AdminUserPage { implicit request =>
-    val res = libraryInfoCommander.internSystemGeneratedLibraries(userId)
+    val res = libraryCommander.internSystemGeneratedLibraries(userId)
 
     Ok(res.toString)
   }
@@ -218,7 +218,7 @@ class AdminLibraryController @Inject() (
     }.flatten
 
     val result = confirmedIds.map { userId =>
-      userId.id + " -> " + libraryInfoCommander.internSystemGeneratedLibraries(userId)
+      userId.id + " -> " + libraryCommander.internSystemGeneratedLibraries(userId)
     }
 
     Ok(s"count: ${result.size}<br>\n<br>\n" + result.mkString("<br>\n"))

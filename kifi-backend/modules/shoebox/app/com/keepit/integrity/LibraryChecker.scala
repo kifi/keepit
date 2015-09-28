@@ -15,7 +15,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val clock: Clock,
     val db: Database,
     val keepRepo: KeepRepo,
-    libraryInfoCommander: LibraryInfoCommander,
+    libraryCommander: LibraryCommander,
     val libraryMembershipRepo: LibraryMembershipRepo,
     val libraryRepo: LibraryRepo,
     val organizationRepo: OrganizationRepo,
@@ -80,7 +80,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       // makes sure user has active ownership of Library (if not, airbrake)
       // inactivates MAIN/SECRET Libraries created later (airbrakes if multiple MAIN/SECRET libraries for a user)
       // if MAIN/SECRET library not created - airbrake & create!
-      libraryInfoCommander.internSystemGeneratedLibraries(u.id.get, false)
+      libraryCommander.internSystemGeneratedLibraries(u.id.get, false)
     }
     timer.stopAndReport(appLog = true)
   }
