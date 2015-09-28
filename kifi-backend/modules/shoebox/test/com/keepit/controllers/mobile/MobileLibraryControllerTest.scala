@@ -167,46 +167,12 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
-        Json.parse(contentAsString(result1)) === Json.parse(
-          s"""
-            {
-              "library" : {
-                "id" : "${pubLib1.id}",
-                "name" : "Krabby Patty",
-                "visibility" : "secret",
-                "slug" : "krabby-patty",
-                "url" : "/spongebob/krabby-patty",
-                "image":{
-                  "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-                  "x":50,
-                  "y":50
-                },
-                "kind" : "user_created",
-                "owner" : {
-                  "id" : "${user1.externalId}",
-                  "firstName" : "Spongebob",
-                  "lastName": "Squarepants",
-                  "pictureName":"0.jpg",
-                  "username":"spongebob"
-                },
-                "followers" : [],
-                "collaborators":[],
-                "keeps" : [],
-                "numKeeps" : 0,
-                "numCollaborators" : 0,
-                "numFollowers" : 0,
-                "whoCanInvite": "collaborator",
-                "modifiedAt": ${lib1Updated.updatedAt.getMillis},
-                "path": "/spongebob/krabby-patty",
-                "membership":{
-                  "access" : "owner",
-                  "listed" : true,
-                  "subscribed" : false,
-                  "permissions": ${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))}
-                }
-              },
-              "membership" : "owner"
-            }""")
+        val lib = Json.parse(contentAsString(result1)) \ "library"
+        (lib \ "id").as[PublicId[Library]] must equalTo(pubLib1)
+        (lib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (lib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
+        (lib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER))))
+        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))
       }
     }
 
@@ -228,47 +194,12 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         val lib1Updated = db.readOnlyMaster { libraryRepo.get(lib1.id.get)(_) }
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
-        Json.parse(contentAsString(result1)) === Json.parse(
-          s"""
-             {
-               "library" : {
-                 "id" : "${pubLib1.id}",
-                 "name" : "Krabby Patty",
-                 "visibility" : "secret",
-                 "slug" : "krabby-patty",
-                 "url" : "/spongebob/krabby-patty",
-                 "image":{
-                     "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-                     "x":50,
-                     "y":50
-                   },
-                 "kind" : "user_created",
-                 "owner" : {
-                   "id" : "${user1.externalId}",
-                   "firstName" : "Spongebob",
-                   "lastName": "Squarepants",
-                   "pictureName":"0.jpg",
-                   "username":"spongebob"
-                 },
-                 "followers" : [],
-                 "collaborators":[],
-                 "keeps" : [],
-                 "numKeeps" : 0,
-                 "numCollaborators" : 0,
-                 "numFollowers" : 0,
-                 "whoCanInvite": "collaborator",
-                 "modifiedAt": ${lib1Updated.updatedAt.getMillis},
-                 "membership":{
-                   "access" : "owner",
-                   "listed" : true,
-                   "subscribed" : false,
-                  "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))}
-                 },
-                 "path": "/spongebob/krabby-patty"
-               },
-               "membership" : "owner"
-             }
-           """)
+        val lib = Json.parse(contentAsString(result1)) \ "library"
+        (lib \ "id").as[PublicId[Library]] must equalTo(pubLib1)
+        (lib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (lib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
+        (lib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER))))
+        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))
 
         // test retrieving persona library
         val personaLib = db.readWrite { implicit s =>

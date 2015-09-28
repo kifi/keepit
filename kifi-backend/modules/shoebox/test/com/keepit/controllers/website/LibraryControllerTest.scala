@@ -408,6 +408,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "get library by public id" in {
       withDb(modules: _*) { implicit injector =>
+        implicit val libInviteInfoReads = LibraryInviteInfo.testReads
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -437,47 +438,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result1) must beSome("application/json")
 
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
-        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
-          s"""{
-           "library":{
-             "id":"${pubId1.id}",
-             "name":"Library1",
-             "visibility":"secret",
-             "slug":"lib1",
-             "url":"/ahsu/lib1",
-             "image":{
-                  "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-                  "x":50,
-                  "y":50
-                },
-             "kind":"user_created",
-             "owner":{
-               "id":"${basicUser1.externalId}",
-               "firstName":"${basicUser1.firstName}",
-               "lastName":"${basicUser1.lastName}",
-               "pictureName":"${basicUser1.pictureName}",
-               "username":"${basicUser1.username.value}"
-               },
-             "followers":[],
-             "collaborators":[],
-             "keeps":[],
-             "numKeeps":0,
-             "numCollaborators":0,
-             "numFollowers":0,
-             "whoCanInvite":"collaborator",
-             "modifiedAt": ${lib1Updated.updatedAt.getMillis},
-             "membership": {
-              "access" : "owner",
-              "listed":true,
-              "subscribed":false,
-              "permissions": ${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER)))}
-             },
-             "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
-           },
-           "subscriptions": [],
-           "suggestedSearches": {"terms": [], "weights": []}
-          }
-        """))
+        val lib1Json = Json.parse(contentAsString(result1)) \ "library"
+        (lib1Json \ "id").as[PublicId[Library]] must equalTo(pubId1)
+        (lib1Json \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (lib1Json \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
+        (lib1Json \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER))))
+        (lib1Json \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))
 
         // viewed by another user with an invite
         val user2 = db.readWrite { implicit s =>
@@ -492,53 +458,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
-          s"""{
-           "library":{
-             "id":"${pubId1.id}",
-             "name":"Library1",
-             "visibility":"secret",
-             "slug":"lib1",
-             "url":"/ahsu/lib1",
-             "image":{
-                  "path":"library/26dbdc56d54dbc94830f7cfc85031481_66x38_o.png",
-                  "x":50,
-                  "y":50
-                },
-             "kind":"user_created",
-             "owner":{
-               "id":"${basicUser1.externalId}",
-               "firstName":"${basicUser1.firstName}",
-               "lastName":"${basicUser1.lastName}",
-               "pictureName":"${basicUser1.pictureName}",
-               "username":"${basicUser1.username.value}"
-             },
-             "followers":[],
-             "collaborators":[],
-             "keeps":[],
-             "numKeeps":0,
-             "numCollaborators":0,
-             "numFollowers":0,
-             "whoCanInvite":"collaborator",
-             "modifiedAt":${lib1Updated2.updatedAt.getMillis},
-             "invite": {
-              "access":"read_only",
-              "lastInvitedAt":${Json.toJson(t1.plusMinutes(3))},
-              "inviter": {
-                "id":"${basicUser1.externalId}",
-                "firstName":"${basicUser1.firstName}",
-                "lastName":"${basicUser1.lastName}",
-                "pictureName":"${basicUser1.pictureName}",
-                "username":"${basicUser1.username.value}"
-              },
-              "lastInvite":${t1.plusMinutes(3).getMillis}
-             },
-             "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
-           },
-           "subscriptions": [],
-           "suggestedSearches": {"terms": [], "weights": []}
-          }
-        """))
+        val lib2Json = Json.parse(contentAsString(result2)) \ "library"
+        (lib2Json \ "id").as[PublicId[Library]] must equalTo(pubId1)
+        (lib2Json \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (lib2Json \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
+        (lib2Json \ "permissions").as[Set[LibraryPermission]] must equalTo(db.readOnlyMaster { implicit s => permissionCommander.getLibraryPermissions(lib1Updated2.id.get, user2.id) })
+        (lib2Json \ "invite").as[LibraryInviteInfo] must equalTo(LibraryInviteInfo(access = LibraryAccess.READ_ONLY, lastInvitedAt = t1.plusMinutes(3), inviter = basicUser1))
+
       }
     }
 
@@ -605,44 +531,14 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         firstTime.isBefore(secondTime) === true
 
         val basicUser1 = db.readOnlyMaster { implicit s => basicUserRepo.load(user1.id.get) }
-        val expected = Json.parse(
-          s"""{
-             "library":{
-               "id":"${Library.publicId(lib1.id.get).id}",
-               "name":"Library1",
-               "visibility":"secret",
-               "slug":"lib1",
-               "url":"/ahsu/lib1",
-               "kind":"user_created",
-               "owner":{
-                 "id":"${basicUser1.externalId}",
-                 "firstName":"${basicUser1.firstName}",
-                 "lastName":"${basicUser1.lastName}",
-                 "pictureName":"${basicUser1.pictureName}",
-                 "username":"${basicUser1.username.value}"
-                 },
-               "followers":[],
-               "collaborators":[],
-               "keeps":[],
-               "numKeeps":0,
-               "numCollaborators":0,
-               "numFollowers":0,
-               "whoCanInvite":"collaborator",
-               "modifiedAt": ${lib1Updated.updatedAt.getMillis},
-               "membership":{
-                "access":"owner",
-                "listed":false,
-                "subscribed":false,
-                "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER)))}
-               },
-               "path": "${LibraryPathHelper.formatLibraryPath(basicUser1, None, lib1.slug)}"
-             },
-             "subscriptions": [],
-             "suggestedSearches": {"terms": [], "weights": []}
-            }
-          """)
-        Json.parse(contentAsString(result1)) must equalTo(expected)
-        Json.parse(contentAsString(result3)) must equalTo(expected)
+        val lib1Json = Json.parse(contentAsString(result1)) \ "library"
+        (lib1Json \ "id").as[PublicId[Library]] must equalTo(Library.publicId(lib1.id.get))
+        (lib1Json \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
+        (lib1Json \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
+        (lib1Json \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = false, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER))))
+        (lib1Json \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))
+
+        Json.parse(contentAsString(result3)) must equalTo(Json.parse(contentAsString(result1)))
       }
     }
 

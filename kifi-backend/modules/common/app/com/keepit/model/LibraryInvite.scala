@@ -91,6 +91,12 @@ object LibraryInviteInfo {
       "lastInvite" -> info.lastInvitedAt.getMillis // deprecated
     )
   }
+
+  val testReads: Reads[LibraryInviteInfo] = (
+    (__ \ "access").read[LibraryAccess] and
+    (__ \ "lastInvitedAt").read[DateTime] and
+    (__ \ "inviter").read[BasicUser]
+  )(LibraryInviteInfo.apply _)
 }
 
 sealed abstract class LibraryInvitePermissions(val value: String)
