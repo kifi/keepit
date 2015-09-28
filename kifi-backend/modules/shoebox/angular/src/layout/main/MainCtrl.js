@@ -117,7 +117,7 @@ angular.module('kifi')
       } else {
         $scope.importFilename = '';
         $scope.disableBookmarkImport = true;
-        $scope.importFileStatus = 'Invalid bookmark file (*.html). Try picking it again.';
+        $scope.importFileStatus = 'Invalid bookmark file (*.html, *.zip, *.enex). Try picking it again.';
       }
     };
 
