@@ -37,7 +37,7 @@ angular.module('kifi')
         scope.library = scope.modalData.library;
         scope.inviteType = scope.modalData.inviteType;
         scope.currentPageOrigin = scope.modalData.currentPageOrigin;
-        scope.canInviteCollabs = scope.library.membership.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1;
+        scope.canInviteCollabs = scope.library.membership && scope.library.membership.permissions.indexOf(LIB_PERMISSION.INVITE_COLLABORATORS) !== -1;
 
         function shareLibrary(opts) {
           if (scope.share.message) {

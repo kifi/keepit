@@ -27,7 +27,7 @@
             value="profile.description"
             readonly="readonly"
             ng-if="!(readonly && !profile.description.length)"
-          ></div><div ng-if="isAdmin"><a class="kf-oph-admin-link" ng-href="https://admin.kifi.com/admin/organization/{{profile.id}}">♡</a></div>
+          ></div><div ng-if="isKifiAdmin"><a class="kf-oph-admin-link" ng-href="https://admin.kifi.com/admin/organization/{{profile.id}}">♡</a></div>
           <p class="kf-oph-url">
             <span kf-click-to-edit on-save="save" readonly="readonly" class-name="'kf-oph-input'" input-placeholder="'Link (e.g. http://example.com)'" linkable="true" value="profile.site"></span>
           </p>
@@ -105,7 +105,7 @@
             ui-sref="orgProfile.settings"
             ng-click="onClickTrack($event, 'clickedProfileSettings')"
             ng-class="{ 'active': state.current.activetab ==='settings'}"
-            ng-if="!readonly && isAdmin"
+            ng-if="!readonly && membership.role === 'admin' && isKifiAdmin"
           >
             <div class="kf-oph-stats-name">Settings</div>
           </a>

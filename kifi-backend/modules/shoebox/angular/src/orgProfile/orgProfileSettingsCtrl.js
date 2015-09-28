@@ -163,10 +163,12 @@ angular.module('kifi')
       return 'We\'re still saving your settings. Are you sure you wish to leave this page?';
     }
 
-    billingService
-    .getBillingState($scope.profile.id)
-    .then(function (stateData) {
-      $scope.billingState = stateData;
-    });
+    if ($scope.membership.role === 'admin') {
+      billingService
+      .getBillingState($scope.profile.id)
+      .then(function (stateData) {
+        $scope.billingState = stateData;
+      });
+    }
   }
 ]);
