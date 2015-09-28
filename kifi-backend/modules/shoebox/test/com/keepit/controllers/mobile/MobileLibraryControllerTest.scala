@@ -709,6 +709,7 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
                "mine":true,
                "removable":true,
                "secret":true,
+               "visibility":"secret",
                "libraryId":"${pubLibId1.id}"
               }
              ]
