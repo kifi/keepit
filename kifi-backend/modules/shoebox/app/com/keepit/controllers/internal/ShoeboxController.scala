@@ -235,13 +235,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uri))
   }
 
-  def getBookmarks(userId: Id[User]) = Action { request =>
-    val bookmarks = db.readOnlyReplica(2) { implicit session => //no cache used
-      keepRepo.getByUser(userId)
-    }
-    Ok(Json.toJson(bookmarks))
-  }
-
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
     val bookmark = db.readOnlyMaster { implicit session => //using cache
       keepRepo.getByUriAndUser(uriId, userId)
