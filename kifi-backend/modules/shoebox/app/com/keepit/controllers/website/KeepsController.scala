@@ -114,15 +114,6 @@ class KeepsController @Inject() (
     }
   }
 
-  def tagKeeps(tagName: String) = UserAction(parse.tolerantJson) { implicit request =>
-    val keepIds = (request.body \ "keepIds").as[Seq[ExternalId[Keep]]]
-    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-    val tag = keepsCommander.getOrCreateTag(request.userId, tagName)
-    val (canEditKeep, cantEditKeeps) = keepsCommander.tagKeeps(tag, request.userId, keepIds)
-    Ok(Json.obj("success" -> canEditKeep.map(_.externalId),
-      "failure" -> cantEditKeeps.map(_.externalId)))
-  }
-
   def tagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, true))
 
   def untagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, false))
