@@ -57,9 +57,8 @@ class OrganizationMembershipRepoImpl @Inject() (
     seq: SequenceNumber[OrganizationMembership],
     organizationId: Id[Organization],
     userId: Id[User],
-    role: OrganizationRole,
-    permissions: Set[OrganizationPermission]) = {
-    OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, role, permissions)
+    role: OrganizationRole) = {
+    OrganizationMembership(id, createdAt, updatedAt, state, seq, organizationId, userId, role)
   }
 
   def unapplyToDbRow(member: OrganizationMembership) = {
@@ -70,24 +69,18 @@ class OrganizationMembershipRepoImpl @Inject() (
       member.seq,
       member.organizationId,
       member.userId,
-      member.role,
-      member.permissions))
+      member.role))
   }
 
   type RepoImpl = OrganizationMembershipTable
   class OrganizationMembershipTable(tag: Tag) extends RepoTable[OrganizationMembership](db, tag, "organization_membership") with SeqNumberColumn[OrganizationMembership] with NamedColumns {
     implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
-    implicit val organizationPermissionsMapper = MappedColumnType.base[Set[OrganizationPermission], String](
-      { permissions => Json.stringify(Json.toJson(permissions)) },
-      { str => Json.parse(str).as[Set[OrganizationPermission]] }
-    )
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
     def role = column[OrganizationRole]("role", O.NotNull)
-    def permissions = column[Set[OrganizationPermission]]("permissions", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, seq, organizationId, userId, role, permissions) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, seq, organizationId, userId, role) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new OrganizationMembershipTable(tag)

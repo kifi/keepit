@@ -19,6 +19,9 @@ case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg
 case class OrganizationModifyRequest(requesterId: Id[User], orgId: Id[Organization], modifications: OrganizationModifications) extends OrganizationRequest
 case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
 
+case class OrganizationSettingsRequest(orgId: Id[Organization], requesterId: Id[User], settings: OrganizationSettings) extends OrganizationRequest
+case class OrganizationSettingsResponse(config: OrganizationConfiguration)
+
 case class OrganizationDeleteRequest(requesterId: Id[User], orgId: Id[Organization]) extends OrganizationRequest
 case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, returningLibsFut: Future[Unit], deletingLibsFut: Future[Unit])
 
