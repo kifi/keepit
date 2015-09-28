@@ -137,7 +137,6 @@ object LibraryPermission {
       case REMOVE_OTHER_KEEPS.value => REMOVE_OTHER_KEEPS
       case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
-      // TODO(ryan): should we have a `case _ => ???` here, and what should ??? be
     }
   }
 }
