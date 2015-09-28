@@ -16,7 +16,7 @@ class UserCreationCommander @Inject() (
     userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
     libraryCommander: LibraryCommander,
-    libraryInfoCommander: LibraryInfoCommander,
+    libraryMembershipCommander: LibraryMembershipCommander,
     userExperimentRepo: UserExperimentRepo,
     implicit val executionContext: ExecutionContext) {
 
@@ -40,13 +40,8 @@ class UserCreationCommander @Inject() (
     }
 
     val userId = newUser.id.get
-    libraryInfoCommander.internSystemGeneratedLibraries(userId)
-    if (userId.id % 2 == 0) { //for half of the users
-      libraryCommander.createReadItLaterLibrary(userId)
-      db.readWrite { implicit session =>
-        userExperimentRepo.save(UserExperiment(userId = userId, experimentType = UserExperimentType.READ_IT_LATER))
-      }
-    }
+    libraryCommander.internSystemGeneratedLibraries(userId)
+    libraryMembershipCommander.followDefaultLibraries(userId)
 
     newUser
   }

@@ -15,7 +15,7 @@ import com.keepit.common.net.URI
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
-import com.keepit.social.{ BasicUser, SocialNetworks }
+import com.keepit.social.{ SocialNetworkType, BasicUser, SocialNetworks }
 import com.ning.http.client.providers.netty.NettyResponse
 
 import org.apache.commons.lang3.RandomStringUtils
@@ -38,9 +38,7 @@ trait S3ImageStore extends S3ExternalIdImageStore {
 
   def getPictureUrl(width: Int, userId: Id[User]): Future[String]
   def getPictureUrl(width: Option[Int], user: User, picName: String): Future[String]
-  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String, setDefault: Boolean): Future[Seq[(String, Try[PutObjectResult])]]
-  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], setDefault: Boolean): Future[Seq[(String, Try[PutObjectResult])]]
-
+  def uploadRemotePicture(userId: Id[User], externalId: ExternalId[User], pictureSource: UserPictureSource, pictureName: Option[String], setDefault: Boolean)(getPictureUrl: Option[ImageSize] => Option[String]): Future[Seq[(String, Try[PutObjectResult])]]
   def forceUpdateSocialPictures(userId: Id[User]): Unit
 
   // Returns (token, urlOfTempImage)
@@ -81,7 +79,9 @@ class S3ImageStoreImpl @Inject() (
   def getPictureUrl(width: Option[Int], user: User, pictureName: String): Future[String] = {
     if (config.isLocal) {
       val sui = db.readOnlyReplica { implicit s => suiRepo.getByUser(user.id.get).head }
-      Promise.successful(avatarUrlFromSocialNetwork(sui, width.map(_.toString).getOrElse("original"))).future
+      val preferredSize = width.map(w => ImageSize(w, w))
+      val pictureUrl = sui.getPictureUrl(preferredSize) getOrElse S3UserPictureConfig.defaultImage
+      Future.successful(pictureUrl)
     } else {
       user.userPictureId match {
         case None =>
@@ -96,13 +96,15 @@ class S3ImageStoreImpl @Inject() (
             }
           }
           if (sui.networkType != SocialNetworks.FORTYTWO) {
-            uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = true).map {
+            uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(sui.networkType), None, setDefault = true)(sui.getPictureUrl).map {
               case res =>
                 avatarUrlByExternalId(width, user.externalId, res.head._1)
             }
           } else {
-            uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = false)
-            Promise.successful(avatarUrlFromSocialNetwork(sui, width.map(_.toString).getOrElse("original"))).future
+            uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(sui.networkType), None, setDefault = false)(sui.getPictureUrl)
+            val preferredSize = width.map(w => ImageSize(w, w))
+            val pictureUrl = sui.getPictureUrl(preferredSize) getOrElse S3UserPictureConfig.defaultImage
+            Future.successful(pictureUrl)
           }
         case Some(userPicId) =>
           // We have an image so serve that one, even if it might be outdated
@@ -114,7 +116,7 @@ class S3ImageStoreImpl @Inject() (
               if (!upToDate) {
                 suiRepo.getByUser(user.id.get).filter(_.networkType.name == pic.origin.name).map { sui =>
                   // todo(Andrew): For now, *replace* social images. Soon: detect if it has changed, and create new.
-                  uploadPictureFromSocialNetwork(sui, user.externalId, pictureName, setDefault = false)
+                  uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(sui.networkType), Some(pictureName), setDefault = false)(sui.getPictureUrl)
                 }
               }
             }
@@ -125,27 +127,21 @@ class S3ImageStoreImpl @Inject() (
     }
   }
 
-  private def avatarUrlFromSocialNetwork(sui: SocialUserInfo, size: String): String = {
-    val numericSize = (if (size == "original") None else Try(size.toInt).toOption) getOrElse 1000
-    sui.getPictureUrl(numericSize, numericSize).getOrElse(
-      S3UserPictureConfig.defaultImage)
+  private def sizeName(size: Option[ImageSize]): String = size match {
+    case None => S3UserPictureConfig.OriginalImageSize
+    case Some(imageSize) if imageSize.width != imageSize.height => s"${imageSize.width}x${imageSize.height}"
+    case Some(squareImageSize) => squareImageSize.width.toString
   }
 
-  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], setDefault: Boolean): Future[Seq[(String, Try[PutObjectResult])]] =
-    uploadPictureFromSocialNetwork(sui, externalId, UserPicture.generateNewFilename, setDefault)
-
-  def uploadPictureFromSocialNetwork(sui: SocialUserInfo, externalId: ExternalId[User], pictureName: String, setDefault: Boolean): Future[Seq[(String, Try[PutObjectResult])]] = {
+  def uploadRemotePicture(userId: Id[User], externalId: ExternalId[User], pictureSource: UserPictureSource, pictureName: Option[String], setDefault: Boolean)(getPictureUrl: Option[ImageSize] => Option[String]): Future[Seq[(String, Try[PutObjectResult])]] = {
     if (config.isLocal) {
       Promise.successful(Seq()).future
     } else {
-      val useDefaultImage = sui.getPictureUrl().isEmpty
+      val useDefaultImage = getPictureUrl(None).isEmpty
+      val actualPictureName = pictureName getOrElse UserPicture.generateNewFilename
       // todo: Grab largest image social network allows, do resizing ourselves (the same way we do for uploaded images)
-      val future = Future.sequence(for {
-        sizeName <- S3UserPictureConfig.ImageSizes.map(_.toString) :+ "original"
-        userId <- sui.userId
-      } yield {
-        val px = if (sizeName == "original") "1000" else sizeName
-        val originalImageUrl = avatarUrlFromSocialNetwork(sui, px)
+      val future = Future.sequence((S3UserPictureConfig.sizes.map(Some(_)) :+ None).map { size =>
+        val originalImageUrl = getPictureUrl(size) getOrElse S3UserPictureConfig.defaultImage
         WS.url(originalImageUrl).withRequestTimeout(120000).get().flatMap { response =>
           if (response.status != 200) {
             WS.url(S3UserPictureConfig.defaultImage).withRequestTimeout(120000).get().map { response1 =>
@@ -156,18 +152,18 @@ class S3ImageStoreImpl @Inject() (
           }
         }.map {
           case (response, usedDefault) =>
-            val usedImage = if (usedDefault) S3UserPictureConfig.defaultName else pictureName
-            val key = keyByExternalId(sizeName, externalId, usedImage)
+            val usedImage: String = if (usedDefault) S3UserPictureConfig.defaultName else actualPictureName
+            val key = keyByExternalId(sizeName(size), externalId, usedImage)
             val putObj = uploadToS3(key, response.underlying[NettyResponse].getResponseBodyAsStream, label = originalImageUrl)
             (usedImage, putObj)
         }
       })
       future onComplete {
         case Success(a) =>
-          val usedImage = if (a.exists(_._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else pictureName
-          updateUserPictureRecord(sui.userId.get, usedImage, UserPictureSource(sui.networkType.name), setDefault, None)
+          val usedImage = if (a.exists(_._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else actualPictureName
+          updateUserPictureRecord(userId, usedImage, pictureSource, setDefault, None)
         case Failure(e) =>
-          airbrake.notify(s"Failed to upload picture $pictureName - $externalId of $sui to S3", e)
+          airbrake.notify(s"Failed to upload picture $pictureName - $externalId from $pictureSource to S3", e)
       }
       future
     }
@@ -182,11 +178,7 @@ class S3ImageStoreImpl @Inject() (
       val picName = user.userPictureId.map(pid => userPictureRepo.get(pid).name)
       (sui, user, picName)
     }
-    if (picName.isDefined) {
-      uploadPictureFromSocialNetwork(sui, user.externalId, picName.get, setDefault = true)
-    } else {
-      uploadPictureFromSocialNetwork(sui, user.externalId, setDefault = true)
-    }
+    uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(sui.networkType), picName, setDefault = true)(sui.getPictureUrl)
   }
 
   private def uploadToS3(key: String, is: InputStream, contentLength: Int = 0, label: String = "") =
@@ -262,7 +254,7 @@ class S3ImageStoreImpl @Inject() (
       case Success(res) =>
         val resizedImageResults = cropResizeAndUpload(userExtId, newFilename, bufferedImage, cropAttributes)
         resizedImageResults.find(_.isDefined).map { hadASuccess =>
-          updateUserPictureRecord(userId, newFilename, UserPictureSources.USER_UPLOAD, true, cropAttributes)
+          updateUserPictureRecord(userId, newFilename, UserPictureSource.USER_UPLOAD, true, cropAttributes)
           hadASuccess
         }.flatten.map { success =>
           avatarUrlByExternalId(Some(S3UserPictureConfig.ImageSizes.last), userExtId, newFilename)

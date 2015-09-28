@@ -456,7 +456,7 @@ gulp.task('assets:local-prod:rev', ['build-prod'], function () {
 });
 
 gulp.task('assets:release:rev', ['build-prod'], function () {
-  return compileAssetRevs({ prefix: '//d1dwdv9wd966qu.cloudfront.net/' }, cdnDir);
+  return compileAssetRevs({ prefix: 'https://d1dwdv9wd966qu.cloudfront.net/' }, cdnDir);
 });
 
 gulp.task('assets:local-prod:update_index', ['assets:local-prod:rev'], function () {

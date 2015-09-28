@@ -61,6 +61,9 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
             socialId = SocialId("222"), networkType = FACEBOOK, credentials = Some(su2)))
           (admin, impersonate)
         }
+        libraryCommander.internSystemGeneratedLibraries(admin.id.get, generateNew = true)
+        libraryCommander.internSystemGeneratedLibraries(impersonate.id.get, generateNew = true)
+
         val cookie1 = Authenticator.create(su1).right.get.toCookie
         val cookie2 = Authenticator.create(su2).right.get.toCookie
 

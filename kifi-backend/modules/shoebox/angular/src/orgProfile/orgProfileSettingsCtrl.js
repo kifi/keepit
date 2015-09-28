@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileSettingsCtrl', [
-  '$window', '$scope', 'orgProfileService', 'profileService', 'settings',
-  'messageTicker', 'ORG_SETTING_VALUE',
-  function ($window, $scope, orgProfileService, profileService, settings,
-            messageTicker, ORG_SETTING_VALUE) {
+  '$window', '$scope', 'orgProfileService', 'profileService', 'billingService',
+  'settings', 'messageTicker', 'ORG_SETTING_VALUE',
+  function ($window, $scope, orgProfileService, profileService, billingService,
+            settings, messageTicker, ORG_SETTING_VALUE) {
     $scope.settings = settings.settings;
 
     $scope.settingsSectionTemplateData = [
@@ -161,6 +161,14 @@ angular.module('kifi')
 
     function onBeforeUnload() {
       return 'We\'re still saving your settings. Are you sure you wish to leave this page?';
+    }
+
+    if ($scope.membership.role === 'admin') {
+      billingService
+      .getBillingState($scope.profile.id)
+      .then(function (stateData) {
+        $scope.billingState = stateData;
+      });
     }
   }
 ]);

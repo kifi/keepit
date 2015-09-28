@@ -41,7 +41,6 @@ trait LibraryInfoCommander {
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], showKeepCreateTime: Boolean = true, useMultilibLogic: Boolean = false): Future[FullLibraryInfo]
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
   def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])]
-  def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
   def sortAndSelectLibrariesWithTopGrowthSince(libraryMemberCountsSince: Map[Id[Library], Int], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
@@ -137,7 +136,7 @@ class LibraryInfoCommanderImpl @Inject() (
       libraryIds.map { libId =>
         val lib = libs(libId)
         val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
-        val numFollowers = counts.readOnly
+        val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(libId)) 0 else counts.readOnly
         val numCollaborators = counts.readWrite
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
         val membershipOpt = membershipsByLibraryId.get(libId).flatten
@@ -156,7 +155,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val subscribedToUpdates = memOpt.exists(_.subscribedToUpdates)
       if (library.visibility == LibraryVisibility.PUBLISHED || mine || following.get) {
         val owner = basicUserRepo.load(library.ownerId)
-        val followerCount = libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
+        val followerCount = if (LibraryMembershipCommander.defaultLibraries.contains(library.id.get)) 0 else libraryMembershipRepo.countWithLibraryIdByAccess(library.id.get).readOnly
         Right((library, owner, followerCount, following, subscribedToUpdates))
       } else {
         Left(LibraryFail(FORBIDDEN, "library_access_denied"))
@@ -236,7 +235,9 @@ class LibraryInfoCommanderImpl @Inject() (
       library.id.get -> {
         val counts = memberInfosByLibraryId(library.id.get).counts
         val collaboratorCount = counts.readWrite
-        val followerCount = counts.readOnly
+        // The following line of code hides the number of followers for default libraries
+        // This is to prevent real users from seeing how many new users we have
+        val followerCount = if (LibraryMembershipCommander.defaultLibraries.contains(library.id.get)) 0 else counts.readOnly
         val keepCount = library.keepCount
         (collaboratorCount, followerCount, keepCount)
       }
@@ -283,8 +284,10 @@ class LibraryInfoCommanderImpl @Inject() (
         val (collaboratorCount, followerCount, keepCount) = countsByLibraryId(libId)
         val owner = usersById(lib.ownerId)
         val orgViewOpt = lib.organizationId.map(basicOrgViewById.apply)
-        val followers = memberInfosByLibraryId(libId).shown.map(usersById(_))
-        val collaborators = memberInfosByLibraryId(libId).collaborators.map(usersById(_))
+        // The following line of code hides the details of who exactly follows the default libraries
+        // This is to prevent real users from seeing all the new users (including the fake users we sometimes create)
+        val followers = if (LibraryMembershipCommander.defaultLibraries.contains(libId)) Seq.empty else memberInfosByLibraryId(lib.id.get).shown.map(usersById(_))
+        val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
         val attr = getSourceAttribution(libId)
         if (keepInfos.size > keepCount) {
@@ -410,78 +413,6 @@ class LibraryInfoCommanderImpl @Inject() (
     }
   }
 
-  def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library) = {
-    db.readWrite(attempts = 3) { implicit session =>
-      val libMem = libraryMembershipRepo.getWithUserId(userId, None)
-      val allLibs = libraryRepo.getByUser(userId, None)
-      val user = userRepo.get(userId)
-
-      // Get all current system libraries, for main/secret, make sure only one is active.
-      // This corrects any issues with previously created libraries / memberships
-      val sysLibs = allLibs.filter(_._2.ownerId == userId)
-        .filter(l => l._2.kind == LibraryKind.SYSTEM_MAIN || l._2.kind == LibraryKind.SYSTEM_SECRET)
-        .sortBy(_._2.id.get.id)
-        .groupBy(_._2.kind).flatMap {
-          case (kind, libs) =>
-            val (slug, name, visibility) = if (kind == LibraryKind.SYSTEM_MAIN) ("main", "Main Library", LibraryVisibility.DISCOVERABLE) else ("secret", "Secret Library", LibraryVisibility.SECRET)
-
-            if (user.state == UserStates.ACTIVE) {
-              val activeLib = libs.head._2.copy(state = LibraryStates.ACTIVE, slug = LibrarySlug(slug), name = name, visibility = visibility, memberCount = 1)
-              val membership = libMem.find(m => m.libraryId == activeLib.id.get && m.access == LibraryAccess.OWNER)
-              if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind $kind (id: ${activeLib.id.get})")
-              val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER)).copy(state = LibraryMembershipStates.ACTIVE)
-              val active = (activeMembership, activeLib)
-              if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind $kind (ids: ${libs.tail.map(_._2.id.get)})")
-              val otherLibs = libs.tail.map {
-                case (a, l) =>
-                  val inactMem = libMem.find(_.libraryId == l.id.get)
-                    .getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER))
-                    .copy(state = LibraryMembershipStates.INACTIVE)
-                  (inactMem, l.copy(state = LibraryStates.INACTIVE))
-              }
-              active +: otherLibs
-            } else {
-              // do not reactivate libraries / memberships for nonactive users
-              libs
-            }
-        }.toList // force eval
-
-      // save changes for active users only
-      if (sysLibs.nonEmpty && user.state == UserStates.ACTIVE) {
-        sysLibs.map {
-          case (mem, lib) =>
-            libraryRepo.save(lib)
-            libraryMembershipRepo.save(mem)
-        }
-      }
-
-      // If user is missing a system lib, create it
-      val mainOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).isEmpty) {
-        val mainLib = libraryRepo.save(Library(name = "Main Library", ownerId = userId, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main"), kind = LibraryKind.SYSTEM_MAIN, memberCount = 1, keepCount = 0))
-        libraryMembershipRepo.save(LibraryMembership(libraryId = mainLib.id.get, userId = userId, access = LibraryAccess.OWNER))
-        if (!generateNew) {
-          airbrake.notify(s"$userId missing main library")
-        }
-        searchClient.updateLibraryIndex()
-        Some(mainLib)
-      } else None
-
-      val secretOpt = if (sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).isEmpty) {
-        val secretLib = libraryRepo.save(Library(name = "Secret Library", ownerId = userId, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("secret"), kind = LibraryKind.SYSTEM_SECRET, memberCount = 1, keepCount = 0))
-        libraryMembershipRepo.save(LibraryMembership(libraryId = secretLib.id.get, userId = userId, access = LibraryAccess.OWNER))
-        if (!generateNew) {
-          airbrake.notify(s"$userId missing secret library")
-        }
-        searchClient.updateLibraryIndex()
-        Some(secretLib)
-      } else None
-
-      val mainLib = sysLibs.find(_._2.kind == LibraryKind.SYSTEM_MAIN).map(_._2).orElse(mainOpt).get
-      val secretLib = sysLibs.find(_._2.kind == LibraryKind.SYSTEM_SECRET).map(_._2).orElse(secretOpt).get
-      (mainLib, secretLib)
-    }
-  }
-
   // sorts by the highest growth of members in libraries since the last email (descending)
   //
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])] = {
@@ -528,12 +459,7 @@ class LibraryInfoCommanderImpl @Inject() (
       case (membership, lib) =>
         membership.access == LibraryAccess.OWNER && lib.kind == LibraryKind.SYSTEM_SECRET
     }
-    val (main, secret) = if (mainOpt.isEmpty || secretOpt.isEmpty) {
-      // Right now, we don't have any users without libraries. However, I'd prefer to be safe for now
-      // and fix it if a user's libraries are not set up.
-      log.error(s"Unable to get main or secret libraries for user $userId: $mainOpt $secretOpt")
-      internSystemGeneratedLibraries(userId)
-    } else (mainOpt.get._2, secretOpt.get._2)
+    val (main, secret) = (mainOpt.get._2, secretOpt.get._2)
     (main, secret)
   }
 
@@ -635,7 +561,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
         val countMap = libraryMembershipRepo.countWithLibraryIdByAccess(lib.id.get)
-        val numFollowers = countMap.readOnly
+        val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(lib.id.get)) 0 else countMap.readOnly
         val numCollaborators = countMap.readWrite
 
         val collaborators = libraryMembershipRepo.someWithLibraryIdAndAccess(lib.id.get, 3, LibraryAccess.READ_WRITE)
@@ -681,7 +607,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val viewerMem = libMems.find(_.userId == viewerId).get
       val subscriptions = librarySubscriptionRepo.getByLibraryId(lib.id.get).map { sub => LibrarySubscription.toSubKey(sub) }
       val (numFollowers, numCollaborators, collabsSample) = if (libMems.length > 1) {
-        val numFollowers = libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
+        val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(lib.id.get)) 0 else libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
         val numCollaborators = libMems.length - 1
         val collabsSample = libMems.filter(_.access != LibraryAccess.OWNER)
           .sortBy(_.userId != viewerId)
@@ -801,10 +727,10 @@ class LibraryInfoCommanderImpl @Inject() (
       val collaboratorsShown = collaborators.length
 
       val numCollaborators = memberCount.readWrite
-      val numMembers = numCollaborators + memberCount.readOnly
+      val numMembers = numCollaborators + (if (LibraryMembershipCommander.defaultLibraries.contains(libraryId)) 0 else memberCount.readOnly)
 
       // Get Followers
-      val followersLimit = limit - collaboratorsShown
+      val followersLimit = if (LibraryMembershipCommander.defaultLibraries.contains(libraryId)) 0 else limit - collaboratorsShown
       val followers = if (followersLimit == 0) Seq.empty[LibraryMembership]
       else {
         val followersOffset = if (collaboratorsShown > 0) 0
