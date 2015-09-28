@@ -115,20 +115,6 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
           1 === 1
         }
       }
-      "publish library permissions" in {
-        withDb(modules: _*) { implicit injector =>
-          db.readWrite { implicit session =>
-            val (owner, collab, follower, rando, noone, publicLib, secretLib) = setupLibs()
-            val all = Set(owner, collab, follower, rando, noone)
-
-            Set(publicLib, secretLib).foreach { lib =>
-              val whoCanPublishLibrary = all.filter { x => permissionCommander.getLibraryPermissions(publicLib.id.get, x).contains(LibraryPermission.PUBLISH_LIBRARY) }
-              whoCanPublishLibrary === Set(owner)
-            }
-          }
-          1 === 1
-        }
-      }
       "move library permissions" in {
         withDb(modules: _*) { implicit injector =>
           db.readWrite { implicit session =>

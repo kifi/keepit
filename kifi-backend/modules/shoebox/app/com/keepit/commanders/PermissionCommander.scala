@@ -90,7 +90,6 @@ class PermissionCommanderImpl @Inject() (
     case Some(LibraryAccess.OWNER) if library.canBeModified => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.EDIT_LIBRARY,
-      LibraryPermission.PUBLISH_LIBRARY,
       LibraryPermission.MOVE_LIBRARY,
       LibraryPermission.DELETE_LIBRARY,
       LibraryPermission.REMOVE_MEMBERS,
@@ -109,8 +108,6 @@ class PermissionCommanderImpl @Inject() (
     ).collect { case (true, ps) => ps }.flatten
 
     val removedPermissions = Map[Boolean, Set[LibraryPermission]](
-      !orgPermissions.contains(OrganizationPermission.PUBLISH_LIBRARIES) ->
-        Set(LibraryPermission.PUBLISH_LIBRARY),
       !orgPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES) ->
         Set(LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
     ).collect { case (true, ps) => ps }.flatten
