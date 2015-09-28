@@ -214,6 +214,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
         (user1, collections)
       }
+      libraryCommander.internSystemGeneratedLibraries(user.id.get, generateNew = true)
 
       db.readOnlyMaster { implicit s =>
         keepRepo.getByUser(user.id.get, None, None, 100).size === 0
