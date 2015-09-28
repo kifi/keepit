@@ -62,8 +62,7 @@ case class KeepData(
   id: ExternalId[Keep],
   mine: Boolean,
   removable: Boolean,
-  secret: Boolean, // i.e. library.visibility == SECRET; please use `visibility` below instead
-  visibility: LibraryVisibility,
+  secret: Boolean, // i.e. library.visibility == SECRET
   libraryId: PublicId[Library])
 object KeepData {
   implicit val writes: Writes[KeepData] = (
@@ -71,12 +70,11 @@ object KeepData {
     (__ \ 'mine).write[Boolean] and
     (__ \ 'removable).write[Boolean] and
     (__ \ 'secret).writeNullable[Boolean].contramap[Boolean](Some(_).filter(identity)) and
-    (__ \ 'visibility).write[LibraryVisibility] and
     (__ \ 'libraryId).write[PublicId[Library]]
   )(unlift(KeepData.unapply))
 
   def apply(personalKeep: PersonalKeep): KeepData =
-    KeepData(personalKeep.id, personalKeep.mine, personalKeep.removable, personalKeep.visibility == LibraryVisibility.SECRET, personalKeep.visibility, personalKeep.libraryId)
+    KeepData(personalKeep.id, personalKeep.mine, personalKeep.removable, personalKeep.visibility == LibraryVisibility.SECRET, personalKeep.libraryId)
 }
 
 // The extension uses this object to augment `KeepData` only when needed. It's useless by itself.

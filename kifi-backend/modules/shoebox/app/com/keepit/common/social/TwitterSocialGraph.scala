@@ -400,7 +400,7 @@ class TwitterSocialGraphImpl @Inject() (
             log.warn(s"Failed to get users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
             Seq.empty
           } else {
-            log.warn(s"Failed to get [$endpoint] users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
+            airbrake.notify(s"Failed to get [$endpoint] users $handle timeline, status ${response.status}, msg: ${response.json.toString}, social user info $socialUserInfoOpt , signature $sig", stackTrace)
             Seq.empty
           }
         }.recover {

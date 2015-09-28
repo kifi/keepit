@@ -247,7 +247,6 @@ class ExtLibraryController @Inject() (
                 mine = keep.userId == request.userId,
                 removable = mem.canWrite,
                 secret = keep.visibility == LibraryVisibility.SECRET,
-                visibility = keep.visibility,
                 libraryId = libraryPubId)
               val moarKeepData = MoarKeepData(
                 title = keep.title,
