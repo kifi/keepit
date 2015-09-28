@@ -120,7 +120,7 @@ class KeepsCommanderTest extends Specification with ShoeboxTestInjector {
             KeepExport(createdAt = dateTime2, title = Some("title 31"), url = "http://www.hi.com31", tags = None) ::
             Nil
 
-        val result = inject[KeepCommander].assembleKeepExport(keepExports)
+        val result = inject[KeepExportCommander].assembleKeepExport(keepExports)
 
         val expected = s"""<!DOCTYPE NETSCAPE-Bookmark-file-1>
              |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">

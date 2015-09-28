@@ -72,7 +72,7 @@ sealed trait Feature {
 object Feature {
   import OrganizationPermissionFeature._
   def get(name: String): Option[Feature] = ALL.find(_.name == name)
-  val ALL: Set[Feature] = Set(PublishLibraries, InviteMembers, GroupMessaging, EditLibrary, ViewMembers, RemoveOrganizationLibraries, CreateSlackIntegration, EditOrganization)
+  val ALL: Set[Feature] = Set(PublishLibraries, InviteMembers, GroupMessaging, EditLibrary, ViewMembers, RemoveOrganizationLibraries, CreateSlackIntegration, EditOrganization, ExportKeeps)
 }
 sealed abstract class OrganizationPermissionFeature(val permission: OrganizationPermission) extends Feature {
   def roleOptions: Map[String, Seq[Option[OrganizationRole]]]
@@ -121,6 +121,10 @@ object OrganizationPermissionFeature {
 
   case object EditOrganization extends OrganizationPermissionFeature(OrganizationPermission.EDIT_ORGANIZATION) {
     val roleOptions = Map("member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
+  }
+
+  case object ExportKeeps extends OrganizationPermissionFeature(OrganizationPermission.EXPORT_KEEPS) {
+    val roleOptions = Map("disabled" -> Seq.empty, "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
   }
 }
 

@@ -12,7 +12,7 @@ import com.keepit.controllers.website.{ LibraryController, OrganizationMembershi
 import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.commanders.{ OrganizationInviteCommander, LibraryCommander, OrganizationCommander }
+import com.keepit.commanders.{ KeepExportCommander, OrganizationInviteCommander, LibraryCommander, OrganizationCommander }
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.PaidPlanFactoryHelper._
@@ -36,7 +36,9 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
   )
 
   implicit val context = HeimdalContext.empty
+
   implicit def pubIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
+
   private def planManagementCommander(implicit injector: Injector) = inject[PlanManagementCommander]
 
   def setup()(implicit injector: Injector) = {
@@ -258,7 +260,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
         val planManagementCommander = inject[PlanManagementCommander]
-        val (org, owner, admin, member, nonMember) = setup()
+        val (org, owner, admin, member, _) = setup()
 
         val feature = OrganizationPermissionFeature.RemoveOrganizationLibraries
 
@@ -301,7 +303,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
         val planManagementCommander = inject[PlanManagementCommander]
-        val (org, owner, admin, member, nonMember) = setup()
+        val (org, owner, admin, member, _) = setup()
 
         val createSlackIntegrationFeature = OrganizationPermissionFeature.CreateSlackIntegration
         val forceEditLibrariesFeature = OrganizationPermissionFeature.EditLibrary
@@ -337,6 +339,39 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(createSlackIntegrationFeature.name, "member"))))
 
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
+      }
+    }
+  }
+
+  "export keeps permission" should {
+    "be configurable" in {
+      withDb(modules: _*) { implicit injector =>
+        val planManagementCommander = inject[PlanManagementCommander]
+        val (org, owner, admin, member, _) = setup()
+
+        val feature = OrganizationPermissionFeature.ExportKeeps
+
+        val (plan, account) = db.readWrite { implicit session =>
+          val plan = PaidPlanFactory.paidPlan().saved
+          val account = PaidAccountFactory.paidAccount().withOrganization(org.id.get).withPlan(plan.id.get).withSetting(
+            FeatureSetting(feature.name, feature.options.find(_ == "admin").get)
+          ).saved
+          (plan, account)
+        }
+
+        val keepExportCommander = inject[KeepExportCommander]
+
+        val ownerExportRequest = OrganizationKeepExportRequest(owner.id.get, Set(org.id.get))
+        val adminExportRequest = OrganizationKeepExportRequest(admin.id.get, Set(org.id.get))
+        val memberExportRequest = OrganizationKeepExportRequest(member.id.get, Set(org.id.get))
+
+        Await.result(keepExportCommander.exportKeeps(ownerExportRequest), Duration(3, SECONDS)) must beSuccessfulTry
+        Await.result(keepExportCommander.exportKeeps(adminExportRequest), Duration(3, SECONDS)) must beSuccessfulTry
+        Await.result(keepExportCommander.exportKeeps(memberExportRequest), Duration(3, SECONDS)) must beFailedTry
+
+        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, FeatureSetting.alterSettings(account.featureSettings, Set(FeatureSetting(feature.name, "member"))))
+
+        Await.result(keepExportCommander.exportKeeps(memberExportRequest), Duration(3, SECONDS)) must beSuccessfulTry
       }
     }
   }
@@ -387,21 +422,21 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         inject[FakeUserActionsHelper].setUser(owner)
         val ownerExtRequest1 = FakeRequest("GET", mobileRoute)
-        val ownerExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest1)
+        val ownerExtResult1 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest1)
         contentAsJson(ownerExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
         val adminExtRequest1 = FakeRequest("GET", mobileRoute)
-        val adminExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest1)
+        val adminExtResult1 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest1)
         contentAsJson(adminExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(member)
         val memberExtRequest1 = FakeRequest("GET", mobileRoute)
-        val memberExtResult1 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest1)
+        val memberExtResult1 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest1)
         contentAsJson(memberExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
         } must beTrue
@@ -432,21 +467,21 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         inject[FakeUserActionsHelper].setUser(owner)
         val ownerExtRequest2 = FakeRequest("GET", mobileRoute)
-        val ownerExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest2)
+        val ownerExtResult2 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest2)
         contentAsJson(ownerExtResult2).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
         val adminExtRequest2 = FakeRequest("GET", mobileRoute)
-        val adminExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest2)
+        val adminExtResult2 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest2)
         contentAsJson(adminExtResult2).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(member)
         val memberExtRequest2 = FakeRequest("GET", mobileRoute)
-        val memberExtResult2 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest2)
+        val memberExtResult2 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest2)
         contentAsJson(memberExtResult2).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get))
         } must beTrue
@@ -477,26 +512,25 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         inject[FakeUserActionsHelper].setUser(owner)
         val ownerExtRequest3 = FakeRequest("GET", mobileRoute)
-        val ownerExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(ownerExtRequest3)
+        val ownerExtResult3 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest3)
         contentAsJson(ownerExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
         val adminExtRequest3 = FakeRequest("GET", mobileRoute)
-        val adminExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(adminExtRequest3)
+        val adminExtResult3 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest3)
         contentAsJson(adminExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(member)
         val memberExtRequest3 = FakeRequest("GET", mobileRoute)
-        val memberExtResult3 = mobileContactsController.searchForAllContacts(query = None, limit = None)(memberExtRequest3)
+        val memberExtResult3 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest3)
         contentAsJson(memberExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
       }
     }
   }
-
 }
