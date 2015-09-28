@@ -71,8 +71,13 @@ class RemoteSecureSocialUserPlugin @Inject() (
     }
 
   def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
-    val resFuture = shoeboxClient.getUserIdentity(id)
-    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on ${id.providerId}")
+    val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.userId), SocialNetworkType(id.providerId))
+    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on $id.providerId") match {
+      case None =>
+        None
+      case Some(user) =>
+        user.credentials map { UserIdentity(user.userId, _) }
+    }
   }
 
   def save(identity: Identity): UserIdentity = throw new IllegalStateException(s"Attempt to call RemoteSecureSocialUserPlugin.save with identity $identity")

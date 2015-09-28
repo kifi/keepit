@@ -24,10 +24,9 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search._
 import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.social.{ UserIdentity, BasicUser, SocialId, SocialNetworkType }
+import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.json.JsObject
-import securesocial.core.IdentityId
 
 import scala.collection.mutable
 import scala.collection.mutable.{ Map => MutableMap }
@@ -308,10 +307,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(userOpt)
   }
 
-  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = Future.successful(None)
-
-  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]] = Future.successful(None)
-
   def getUser(id: Id[User]): Future[Option[User]] = {
     val user = Option(allUsers(id))
     Future.successful(user)
@@ -399,6 +394,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] =
+    Future.successful(socialUserInfosByNetworkAndSocialId.get(id, networkType))
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
     Future.successful(socialUserInfosByUserId(userId))
   }
