@@ -8,14 +8,14 @@ import securesocial.core.providers.Token
 class FakeSecureSocialUserPlugin extends SecureSocialUserPlugin {
 
   override def find(id: IdentityId): Option[UserIdentity] = Option(id).filter(_ == FakeSecureSocial.FAKE_IDENTITY_ID).map { _ =>
-    FakeSecureSocial.FAKE_USER_IDENTITY
+    FakeSecureSocial.fakeUserIdentity(None)
   }
 
   override def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = None
 
   override def deleteToken(uuid: String): Unit = {}
 
-  override def save(identity: Identity): UserIdentity = FakeSecureSocial.FAKE_USER_IDENTITY
+  override def save(identity: Identity): UserIdentity = FakeSecureSocial.fakeUserIdentity(None)
 
   override def save(token: Token): Unit = {}
 
