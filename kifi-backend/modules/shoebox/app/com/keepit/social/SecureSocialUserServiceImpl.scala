@@ -25,10 +25,10 @@ import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander,
 import com.keepit.common.mail.EmailAddress
 
 import scala.concurrent.Future
-import scala.util.{ Success, Failure, Try }
+import scala.util.{ Failure, Try }
 
 @Singleton
-class UserIdentityHelper @Inject() (userRepo: UserRepo, emailRepo: UserEmailAddressRepo, userCredRepo: UserCredRepo, socialUserInfoRepo: SocialUserInfoRepo) {
+class UserIdentityHelper @Inject() (emailRepo: UserEmailAddressRepo, socialUserInfoRepo: SocialUserInfoRepo) {
   import SocialUserHelpers._
 
   def getOwnerId(identityId: IdentityId, emailAddress: Option[EmailAddress] = None)(implicit session: RSession): Option[Id[User]] = {
@@ -55,19 +55,6 @@ class UserIdentityHelper @Inject() (userRepo: UserRepo, emailRepo: UserEmailAddr
   def getOwnerId(socialUser: SocialUser)(implicit session: RSession): Option[Id[User]] = {
     val emailAddress = parseEmailAddress(socialUser).toOption
     getOwnerId(socialUser.identityId, emailAddress)
-  }
-
-  def getUserIdentity(userId: Id[User])(implicit session: RSession): Option[UserIdentity] = {
-    Try(emailRepo.getByUser(userId)) match {
-      case Success(email) =>
-        val user = userRepo.get(userId)
-        val userCred = userCredRepo.findByUserIdOpt(userId)
-        Some(UserIdentity(user, email, userCred))
-      case _ =>
-        socialUserInfoRepo.getByUser(userId).filter(_.networkType != SocialNetworks.FORTYTWO).headOption.flatMap { info =>
-          info.credentials.map(UserIdentity(info.userId, _))
-        }
-    }
   }
 }
 
