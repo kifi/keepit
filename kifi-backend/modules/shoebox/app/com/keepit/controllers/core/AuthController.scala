@@ -127,6 +127,7 @@ class AuthController @Inject() (
     heimdalServiceClient: HeimdalServiceClient,
     config: FortyTwoConfig,
     twitterWaitlistCommander: TwitterWaitlistCommander,
+    userIdentityHelper: UserIdentityHelper,
     implicit val secureSocialClientIds: SecureSocialClientIds) extends UserActions with ShoeboxServiceController with Logging with SecureSocialHelper {
 
   // path is an Angular route
@@ -163,7 +164,7 @@ class AuthController @Inject() (
               userId <- sess.getUserId
             } yield {
               log.info(s"[logInWithUserPass] Linking userId $userId to $link, social data from $identity")
-              val userIdentity = UserIdentity(userId = Some(userId), socialUser = SocialUser(identity), allowSignup = false)
+              val userIdentity = UserIdentity(userId = Some(userId), socialUser = SocialUser(identity))
               UserService.save(userIdentity)
               log.info(s"[logInWithUserPass] Done. Hope it worked? for userId $userId / $link, $userIdentity")
             }
@@ -204,13 +205,9 @@ class AuthController @Inject() (
     val sess = Events.fire(new LoginEvent(socialUser)).getOrElse(session) - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey
     Authenticator.create(socialUser) match {
       case Right(authenticator) => {
-        val (user, sui) = db.readOnlyMaster { implicit s =>
-          val sui = socialRepo.get(SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId))
-          val user = userRepo.get(sui.userId.get)
-          log.info(s"[completeAuthentication] kifi user=$user; socialUser=${socialUser.identityId}")
-          (user, sui)
+        val userId = db.readOnlyMaster { implicit session =>
+          userIdentityHelper.getOwnerId(authenticator.identityId).get
         }
-        val userId = user.id.getOrElse(sui.userId.get)
         Redirect(ProviderController.toUrl(sess))
           .withSession(sess.setUserId(userId))
           .withCookies(authenticator.toCookie)
@@ -272,21 +269,20 @@ class AuthController @Inject() (
         val hasher = Registry.hashers.currentHasher
         val session = request.session
         val home = com.keepit.controllers.website.routes.HomeController.home()
-        authHelper.checkForExistingUser(info.email) collect {
-          case (emailIsVerifiedOrPrimary, sui) if sui.credentials.isDefined && sui.userId.isDefined =>
-            val identity = sui.credentials.get
+        UserService.find(IdentityId(info.email.address, SocialNetworks.EMAIL.authProvider)) match {
+          case Some(identity @ UserIdentity(Some(userId), socialUser)) => {
             val matches = hasher.matches(identity.passwordInfo.get, info.password)
             if (!matches) {
               Future.successful(Forbidden(Json.obj("error" -> "user_exists_failed_auth")))
             } else {
-              val user = db.readOnlyMaster { implicit s => userRepo.get(sui.userId.get) }
+              val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
               if (user.state != UserStates.INCOMPLETE_SIGNUP) {
                 Authenticator.create(identity).fold(
                   error => Future.successful(Status(INTERNAL_SERVER_ERROR)("0")),
                   authenticator =>
                     Future.successful(
                       Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
-                        .withSession((session - SecureSocial.OriginalUrlKey).setUserId(sui.userId.get))
+                        .withSession((session - SecureSocial.OriginalUrlKey).setUserId(userId))
                         .withCookies(authenticator.toCookie)
                     )
                 )
@@ -294,11 +290,13 @@ class AuthController @Inject() (
                 authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
               }
             }
-        } getOrElse {
-          val pInfo = hasher.hash(info.password)
-          val (_, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, Some(pInfo), firstName = "", lastName = "", isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
-          val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
-          authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
+          }
+          case _ => {
+            val pInfo = hasher.hash(info.password)
+            val (_, userId) = authCommander.saveUserPasswordIdentity(None, getSecureSocialUserFromRequest, info.email, Some(pInfo), firstName = "", lastName = "", isComplete = false) // todo(ray): remove getSecureSocialUserFromRequest
+            val user = db.readOnlyMaster { implicit s => userRepo.get(userId) }
+            authHelper.handleEmailPassFinalizeInfo(UserPassFinalizeInfo.toEmailPassFinalizeInfo(info), info.libraryPublicId, info.libAuthToken, info.orgPublicId, info.orgAuthToken)(UserRequest(request, user.id.get, None, userActionsHelper))
+          }
         }
     }
   }

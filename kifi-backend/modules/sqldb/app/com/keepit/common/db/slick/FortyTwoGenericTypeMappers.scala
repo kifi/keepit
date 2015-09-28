@@ -5,6 +5,7 @@ import javax.sql.rowset.serial.SerialClob
 
 import com.keepit.classify.{ DomainTagName, NormalizedHostname }
 import com.keepit.common.db._
+import com.keepit.common.service.IpAddress
 import com.keepit.common.mail.{ EmailAddress, _ }
 import com.keepit.common.math.ProbabilityDensity
 import com.keepit.common.net.UserAgent
@@ -25,18 +26,14 @@ import com.keepit.classify.{ NormalizedHostname, DomainTagName }
 import com.keepit.common.mail._
 import com.keepit.social.SocialNetworkType
 import securesocial.core.SocialUser
-import com.keepit.model.{ DeepLocator, UrlHash, _ }
 import com.keepit.notify.model.Recipient
 import com.keepit.search.{ ArticleSearchResult, Lang, SearchConfig }
 import com.keepit.serializer.SocialUserSerializer
 import com.keepit.social.{ SocialId, SocialNetworkType }
 import org.joda.time.{ DateTime, LocalTime }
-import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
 import securesocial.core.SocialUser
 
 import scala.concurrent.duration._
-import scala.slick.ast.TypedType
-import scala.slick.jdbc.{ GetResult, SetParameter }
 
 case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
@@ -72,6 +69,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val urlHashMapper = MappedColumnType.base[UrlHash, String](_.hash, UrlHash.apply)
   implicit val emailAddressHashMapper = MappedColumnType.base[EmailAddressHash, String](_.hash, EmailAddressHash.apply)
   implicit val normalizedHostnameMapper = MappedColumnType.base[NormalizedHostname, String](_.value, NormalizedHostname.apply)
+  implicit val ipAddressTypeMapper = MappedColumnType.base[IpAddress, String](_.toString, IpAddress(_))
   implicit val deepLocatorMapper = MappedColumnType.base[DeepLocator, String](_.value, DeepLocator.apply)
   implicit val deepLinkTokenMapper = MappedColumnType.base[DeepLinkToken, String](_.value, DeepLinkToken.apply)
   implicit val bookmarkSourceMapper = MappedColumnType.base[KeepSource, String](_.value, KeepSource.apply)

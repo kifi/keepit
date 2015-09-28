@@ -381,14 +381,13 @@ GET     /assets/sitemap.xml                     @com.keepit.controllers.website.
 GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.SiteMapController.librariesSitemap()
 GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
-GET     /site/keeps/stream          @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
-GET     /site/keeps/all             @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
-GET     /site/keeps/count           @com.keepit.controllers.website.KeepsController.numKeeps()
-GET     /site/keeps/export          @com.keepit.controllers.website.KeepsController.exportKeeps()
-GET     /site/keeps/:id             @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
-#### Deprecated: Used by Android now, should be dropped by Nov 1, 2014
-POST    /site/keeps/screenshot      @com.keepit.controllers.website.KeepsController.getScreenshotUrl()
-#### Deprecated: Used by Android and iOS now, should be dropped by Nov 1, 2014 when both will use the new /m/1/eliza/notifications endpoint
+GET     /site/keeps/stream               @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
+GET     /site/keeps/all                  @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
+GET     /site/keeps/count                @com.keepit.controllers.website.KeepsController.numKeeps()
+GET     /site/keeps/export               @com.keepit.controllers.website.KeepsController.exportKeeps()
+POST    /site/keeps/personalExport       @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
+POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
+GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
 
 POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
 POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()

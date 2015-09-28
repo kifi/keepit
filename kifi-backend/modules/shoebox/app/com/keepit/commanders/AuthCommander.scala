@@ -20,7 +20,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.controllers.core.{ AuthHelper }
 import com.keepit.heimdal._
 import com.keepit.model._
-import com.keepit.social.{ SocialId, SocialNetworks, SocialNetworkType, UserIdentity }
+import com.keepit.social._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.http.Status
 
@@ -145,7 +145,7 @@ class AuthCommander @Inject() (
 
     val (passwordInfo, usedAutoAssignedPassword) = passwordInfoOpt.map(p => (p, false)).getOrElse((Registry.hashers.currentHasher.hash(UUID.randomUUID.toString), true))
 
-    val newIdentity = UserIdentity(
+    val newIdentity = NewUserIdentity(
       userId = userIdOpt,
       socialUser = SocialUser(
         identityId = IdentityId(email.address, SocialNetworks.FORTYTWO.authProvider),
@@ -156,55 +156,31 @@ class AuthCommander @Inject() (
         avatarUrl = GravatarHelper.avatarFor(email.address),
         authMethod = AuthenticationMethod.UserPassword,
         passwordInfo = Some(passwordInfo)
-      ),
-      allowSignup = true
+      )
     )
+
     val savedIdentity = UserService.save(newIdentity) // Kifi User is created here if it doesn't exist
-    if (!isComplete) { // fix-up: with UserIdentity.isComplete gone, UserService.save creates user in ACTIVE state by default
-      db.readWrite { implicit rw =>
-        val maybeId = userIdOpt orElse socialUserInfoRepo.getOpt(SocialId(email.address), SocialNetworks.FORTYTWO).flatMap(_.userId)
-        maybeId match {
-          case None =>
-            airbrake.notify(s"[saveUserPasswordIdentity] Kifi User for ${email} has not been created. savedIdentity=$savedIdentity")
-          case Some(userId) =>
+
+    savedIdentity match {
+      case userIdentity @ UserIdentity(Some(userId), _) => {
+        db.readWrite { implicit rw =>
+          if (!isComplete) {
+            // fix-up: with UserIdentity.isComplete gone, UserService.save creates user in ACTIVE state by default
             val user = userRepo.get(userId)
             if (user.state != UserStates.INCOMPLETE_SIGNUP) {
               userRepo.save(user.copy(state = UserStates.INCOMPLETE_SIGNUP))
             }
+          }
+          userValueRepo.setValue(userId, UserValueName.HAS_NO_PASSWORD, usedAutoAssignedPassword)
         }
+        (userIdentity, userId)
+      }
+      case _ => {
+        val error = new IllegalStateException(s"[saveUserPasswordIdentity] Kifi User for ${email} has not been created. savedIdentity=$savedIdentity")
+        airbrake.notify(error)
+        throw error
       }
     }
-
-    val userIdFromEmailIdentity = for {
-      identity <- identityOpt
-      socialUserInfo <- db.readOnlyMaster { implicit s =>
-        socialUserInfoRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO)
-      }
-      userId <- socialUserInfo.userId
-    } yield {
-      UserService.save(UserIdentity(userId = Some(userId), socialUser = SocialUser(identity)))
-      userId
-    }
-
-    val confusedCompilerUserId = userIdFromEmailIdentity getOrElse {
-      val userIdOpt = for {
-        socialUserInfo <- db.readOnlyMaster { implicit s => socialUserInfoRepo.getOpt(SocialId(newIdentity.identityId.userId), SocialNetworks.FORTYTWO) }
-        userId <- socialUserInfo.userId
-      } yield userId
-      userIdOpt.get
-    }
-
-    if (usedAutoAssignedPassword) {
-      db.readWrite(attempts = 3) { implicit s =>
-        userValueRepo.setValue(confusedCompilerUserId, UserValueName.HAS_NO_PASSWORD, true)
-      }
-    } else {
-      db.readWrite(attempts = 3) { implicit s =>
-        userValueRepo.setValue(confusedCompilerUserId, UserValueName.HAS_NO_PASSWORD, false)
-      }
-    }
-
-    (newIdentity, confusedCompilerUserId)
   }
 
   private def parseCropForm(picHeight: Option[Int], picWidth: Option[Int], cropX: Option[Int], cropY: Option[Int], cropSize: Option[Int]) = {
@@ -279,12 +255,15 @@ class AuthCommander @Inject() (
     log.info(s"[finalizeEmailPassAccount] efi=$efi, userId=$userId, extUserId=$externalUserId, identity=$identityOpt, inviteExtId=$inviteExtIdOpt")
 
     val resultFuture = SafeFuture {
-      val identity = db.readOnlyMaster { implicit session =>
-        socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.FORTYTWO).flatMap(_.credentials)
-      } getOrElse identityOpt.get
+      val (passwordInfo, email) = db.readOnlyMaster { implicit session =>
+        val passwordInfo = userCredRepo.findByUserIdOpt(userId).map { userCred =>
+          PasswordInfo(hasher = "bcrypt", password = userCred.credentials)
+        } getOrElse identityOpt.flatMap(_.passwordInfo).get
 
-      val passwordInfo = identity.passwordInfo.get
-      val email = EmailAddress.validate(identity.email.get).get
+        val emailAddress = Try(emailAddressRepo.getByUser(userId)).toOption getOrElse identityOpt.flatMap(_.email.flatMap(EmailAddress.validate(_).toOption)).get
+        (passwordInfo, emailAddress)
+      }
+
       val (newIdentity, _) = saveUserPasswordIdentity(Some(userId), identityOpt, email = email, passwordInfoOpt = Some(passwordInfo), firstName = efi.firstName, lastName = efi.lastName, isComplete = true)
 
       val user = db.readWrite { implicit session =>

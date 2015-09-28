@@ -10,19 +10,20 @@ object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   val testPlanFeatures: Set[PlanFeature] =
-    Set( // very fragile way to create a plan feature set to ensure that our testing feature set matches existing features
-      PlanFeature(Feature.get("publish_libraries").get.name, Feature.get("publish_libraries").get.options.find(_ == "member").get, editable = true),
-      PlanFeature(Feature.get("invite_members").get.name, Feature.get("invite_members").get.options.find(_ == "member").get, editable = true),
-      PlanFeature(Feature.get("group_messaging").get.name, Feature.get("group_messaging").get.options.find(_ == "member").get, editable = true),
-      PlanFeature(Feature.get("force_edit_libraries").get.name, Feature.get("force_edit_libraries").get.options.find(_ == "disabled").get, editable = true),
-      PlanFeature(Feature.get("view_members").get.name, Feature.get("view_members").get.options.find(_ == "anyone").get, editable = true),
-      PlanFeature(Feature.get("remove_libraries").get.name, Feature.get("remove_libraries").get.options.find(_ == "member").get, editable = true),
-      PlanFeature(Feature.get("create_slack_integration").get.name, Feature.get("create_slack_integration").get.options.find(_ == "disabled").get, editable = true),
-      PlanFeature(Feature.get("edit_organization").get.name, Feature.get("edit_organization").get.options.find(_ == "admin").get, editable = true)
+    Set( // very hard-coded creation of a plan feature set to ensure that our testing feature set matches existing features
+      PlanFeature(OrganizationPermissionFeature.PublishLibraries.name, OrganizationPermissionFeature.PublishLibraries.options.find(_ == "member").get, editable = true),
+      PlanFeature(OrganizationPermissionFeature.InviteMembers.name, OrganizationPermissionFeature.InviteMembers.options.find(_ == "member").get, editable = true),
+      PlanFeature(OrganizationPermissionFeature.GroupMessaging.name, OrganizationPermissionFeature.GroupMessaging.options.find(_ == "member").get, editable = true),
+      PlanFeature(OrganizationPermissionFeature.EditLibrary.name, OrganizationPermissionFeature.EditLibrary.options.find(_ == "disabled").get, editable = true),
+      PlanFeature(OrganizationPermissionFeature.ViewMembers.name, OrganizationPermissionFeature.ViewMembers.options.find(_ == "anyone").get, editable = true),
+      PlanFeature(OrganizationPermissionFeature.RemoveOrganizationLibraries.name, OrganizationPermissionFeature.RemoveOrganizationLibraries.options.find(_ == "member").get, editable = true),
+      PlanFeature(OrganizationPermissionFeature.CreateSlackIntegration.name, OrganizationPermissionFeature.CreateSlackIntegration.options.find(_ == "disabled").get, editable = true),
+      PlanFeature(OrganizationPermissionFeature.EditOrganization.name, OrganizationPermissionFeature.EditOrganization.options.find(_ == "admin").get, editable = true),
+      PlanFeature(OrganizationPermissionFeature.ExportKeeps.name, OrganizationPermissionFeature.ExportKeeps.options.find(_ == "admin").get, editable = true)
     )
 
   def paidPlan(): PartialPaidPlan = {
-    assert(testPlanFeatures.map(_.name) == Feature.ALL.map(_.name))
+    assert(testPlanFeatures.map(_.name) == Feature.ALL.map(_.name), "test feature set is missing a feature")
     new PartialPaidPlan(PaidPlan(id = Some(Id[PaidPlan](idx.incrementAndGet())), kind = PaidPlan.Kind.NORMAL, name = Name(random(5)),
       pricePerCyclePerUser = DollarAmount(10000), billingCycle = BillingCycle(month = 1), features = testPlanFeatures))
   }

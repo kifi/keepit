@@ -24,6 +24,7 @@ import com.keepit.common.core._
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @ImplementedBy(classOf[LibraryMembershipCommanderImpl])
 trait LibraryMembershipCommander {
@@ -32,6 +33,12 @@ trait LibraryMembershipCommander {
   def leaveLibrary(libraryId: Id[Library], userId: Id[User])(implicit eventContext: HeimdalContext): Either[LibraryFail, Unit]
   def updateLibraryMembershipAccess(requestUserId: Id[User], libraryId: Id[Library], targetUserId: Id[User], newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership]
   def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]]
+  def followDefaultLibraries(userId: Id[User]): Future[Map[Id[Library], LibraryMembership]]
+}
+
+object LibraryMembershipCommander {
+  val kifiTutorial = Id[Library](622462)
+  val defaultLibraries = Set(kifiTutorial)
 }
 
 case class ModifyLibraryMembershipRequest(userId: Id[User], libraryId: Id[Library],
@@ -117,6 +124,7 @@ class LibraryMembershipCommanderImpl @Inject() (
   }
 
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)] = {
+    println(s"$userId joining $libraryId")
     val (lib, inviteList, existingActiveMembership) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val tokenInvites = if (authToken.isDefined) {
@@ -378,5 +386,19 @@ class LibraryMembershipCommanderImpl @Inject() (
         }
         suggestedUsers ++ suggestedEmailAddresses
     }
+  }
+
+  def followDefaultLibraries(userId: Id[User]): Future[Map[Id[Library], LibraryMembership]] = SafeFuture {
+    println(s"signing $userId up for ${LibraryMembershipCommander.defaultLibraries}")
+    implicit val context = HeimdalContext.empty
+    LibraryMembershipCommander.defaultLibraries.map { libId =>
+      val membership = joinLibrary(userId, libId) match {
+        case Left(fail) =>
+          println("failed!: " + fail)
+          throw fail
+        case Right((_, mem)) => mem
+      }
+      libId -> membership
+    }.toMap
   }
 }

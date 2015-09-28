@@ -49,9 +49,9 @@
           <div class="manage-lib-input-wrapper">
             <h3 class="manage-lib-heading">Privacy</h3>
             <div class="manage-lib-input-area manage-lib-create-visibility-wrapper">
-              <div 
-                kf-library-visibility-selector 
-                library="library" 
+              <div
+                kf-library-visibility-selector
+                library="library"
                 space="space.destination"
               ></div>
             </div>
@@ -66,7 +66,6 @@
               </label>
             </div>
           </div>
-
 
           <div ng-if="modifyingExistingLibrary && hasPermission(LIB_PERMISSION.CREATE_SLACK_INTEGRATION)" class="manage-lib-input-wrapper">
             <div class="manage-lib-integrations-title-wrapper" href="javascript:" ng-click="toggleIntegrations()">
@@ -103,7 +102,12 @@
 
       <div class="dialog-buttons">
         <button ng-if="!modifyingExistingLibrary" class="manage-lib-create-button" ng-click="saveLibrary()">Create Library</button>
-        <button ng-if="modifyingExistingLibrary" class="manage-lib-delete-button" ng-click="openDeleteLibraryModal()">Delete library</button>
+        <button
+          ng-if="modifyingExistingLibrary"
+          class="manage-lib-delete-button"
+          ng-click="openDeleteLibraryModal()"
+          ng-disabled="!hasPermission(LIB_PERMISSION.DELETE_LIBRARY)"
+        >Delete library</button>
         <button ng-if="modifyingExistingLibrary" class="manage-lib-save-button" ng-click="saveLibrary()">Save</button>
       </div>
     </div>

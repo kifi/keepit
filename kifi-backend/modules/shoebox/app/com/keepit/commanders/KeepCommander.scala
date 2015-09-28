@@ -29,7 +29,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 case class RawBookmarksWithCollection(
   collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[RawBookmarkRepresentation])
@@ -82,7 +82,6 @@ trait KeepCommander {
   def persistHashtagsForKeepAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext)
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
   def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
-  def assembleKeepExport(keepExports: Seq[KeepExport]): String
   def numKeeps(userId: Id[User]): Int
   def persistKeep(k: Keep, users: Set[Id[User]], libraries: Set[Id[Library]])(implicit session: RWSession): Keep
   def refreshLibrariesHash(keep: Keep)(implicit session: RWSession): Keep
@@ -110,6 +109,7 @@ class KeepCommanderImpl @Inject() (
     ktlCommander: KeepToLibraryCommander,
     ktuRepo: KeepToUserRepo,
     ktuCommander: KeepToUserCommander,
+    permissionCommander: PermissionCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
@@ -723,33 +723,6 @@ class KeepCommanderImpl @Inject() (
       case None if keepIdOpt.isDefined => suggestTagsForKeep(userId, keepIdOpt.get, Some(limit)).map(_.map((_, Seq.empty[(Int, Int)])))
       case None => Future.successful(Seq.empty) // We don't support this case yet
     }
-  }
-
-  def assembleKeepExport(keepExports: Seq[KeepExport]): String = {
-    // HTML format that follows Delicious exports
-    val before = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
-                   |<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
-                   |<!--This is an automatically generated file.
-                   |It will be read and overwritten.
-                   |Do Not Edit! -->
-                   |<Title>Kifi Bookmarks Export</Title>
-                   |<H1>Bookmarks</H1>
-                   |<DL>
-                   |""".stripMargin
-    val after = "\n</DL>"
-
-    def createExport(keep: KeepExport): String = {
-      // Parse Tags
-      val title = keep.title getOrElse ""
-      val tagString = keep.tags map { tags =>
-        s""" TAGS="${tags.replace("&", "&amp;").replace("\"", "")}""""
-      } getOrElse ""
-      val date = keep.createdAt.getMillis() / 1000
-      val line =
-        s"""<DT><A HREF="${keep.url}" ADD_DATE="${date}"${tagString}>${title.replace("&", "&amp;")}</A>"""
-      line
-    }
-    before + keepExports.map(createExport).mkString("\n") + after
   }
 
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }

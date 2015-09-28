@@ -80,9 +80,9 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
           val user5lib = library().withOwner(user5).published().withKeepCount(4).saved.savedFollowerMembership(user1)
           membership().withLibraryFollower(library().withOwner(user5).published().withKeepCount(1).saved, user1).unlisted().saved
 
-          keeps(2).map(_.withLibrary(user1secretLib)).saved
-          keeps(3).map(_.withLibrary(user1lib)).saved
-          keep().withLibrary(user3lib).saved
+          keeps(2).map(_.withUser(user1).withLibrary(user1secretLib)).saved
+          keeps(3).map(_.withUser(user1).withLibrary(user1lib)).saved
+          keep().withUser(user3).withLibrary(user3lib).saved
 
           (user1, user2, user3, user4, user5, user1lib, org)
         }
@@ -340,7 +340,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators":[],
                   "lastKept": ${lib2.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib2, LibraryAccess.OWNER))}},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER)))}},
                   "modifiedAt":${lib2.updatedAt.getMillis},
                   "path": "/spongebob/catching-jellyfish"
                 },
@@ -367,7 +367,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
                   "collaborators": [],
                   "lastKept": ${lib1.createdAt.getMillis},
                   "following":true,
-                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, LibraryAccess.OWNER))}},
+                  "membership":{"access":"owner","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER)))}},
                   "modifiedAt":${lib1.updatedAt.getMillis},
                   "path": "/spongebob/krabby-patty"
                 }

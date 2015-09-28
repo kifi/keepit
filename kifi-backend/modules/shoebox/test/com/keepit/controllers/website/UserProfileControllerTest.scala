@@ -82,9 +82,9 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
           invite().fromLibraryOwner(user5lib).toUser(user1.id.get).withState(LibraryInviteStates.ACCEPTED).saved
 
-          keeps(2).map(_.withLibrary(user1secretLib)).saved
-          keeps(3).map(_.withLibrary(user1lib)).saved
-          keep().withLibrary(user3lib).saved
+          keeps(2).map(_.withUser(user1).withLibrary(user1secretLib)).saved
+          keeps(3).map(_.withUser(user1).withLibrary(user1lib)).saved
+          keep().withUser(user3).withLibrary(user3lib).saved
 
           (user1, user2, user3, user4, user5, user1lib)
         }
@@ -197,16 +197,16 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
           val user3lib = library().withOwner(user3).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved
           val user5lib = library().withOwner(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).withMemberCount(4).saved.savedFollowerMembership(user1)
-          keep().withLibrary(user5lib).saved
+          keep().withUser(user5).withLibrary(user5lib).saved
           membership().withLibraryFollower(library().withOwner(user5).published().withKind(LibraryKind.USER_CREATED).withKeepCount(3).saved, user1).unlisted().saved
 
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved
           invite().fromLibraryOwner(user3lib).toUser(user1.id.get).withState(LibraryInviteStates.ACTIVE).saved // duplicate library invite
           invite().fromLibraryOwner(user5lib).toUser(user1.id.get).withState(LibraryInviteStates.ACCEPTED).saved
 
-          keeps(2).map(_.withLibrary(user1secretLib)).saved
-          keeps(3).map(_.withLibrary(user1lib)).saved
-          keep().withLibrary(user3lib).saved
+          keeps(2).map(_.withUser(user1).withLibrary(user1secretLib)).saved
+          keeps(3).map(_.withUser(user1).withLibrary(user1lib)).saved
+          keep().withUser(user3).withLibrary(user3lib).saved
 
           (user1, user2, user3, user4, user5, user1lib, user5lib, org, org2)
         }
@@ -297,7 +297,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
           val library1 = library().withName("lib1").withOwner(user1).published.withSlug("lib1").withMemberCount(11).withColor("blue").withDesc("My first library!").saved.savedFollowerMembership(user2).savedCollaboratorMembership(user3)
           val library2 = library().withName("lib2").withOwner(user2).secret.withSlug("lib2").withMemberCount(22).saved
           val library3 = library().withName("lib3").withOwner(user2).secret.withSlug("lib3").withMemberCount(33).saved.savedFollowerMembership(user1)
-          val k1 = keep().withLibrary(library1).saved
+          val k1 = keep().withUser(user1).withLibrary(library1).saved
           (user1, user2, user3, library1, library2, library3, k1)
         }
 
@@ -354,7 +354,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                   }],
                 "lastKept":${keep1.createdAt.getMillis},
                 "following":true,
-                "membership":{"access":"owner","listed":true,"subscribed":false,"permissions":["invite_collaborators","move_library","invite_followers","view_library","delete_library","remove_own_keeps","remove_other_keeps","edit_library","edit_own_keeps","remove_members","add_keeps"]},
+                "membership":{"access":"owner","listed":true,"subscribed":false,"permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))}},
                 "modifiedAt":${lib1Updated.updatedAt.getMillis},
                 "path": "/firstuser/lib1",
                 "subscriptions": []
@@ -391,7 +391,7 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
                 "collaborators":[],
                 "lastKept":${lib3.lastKept.get.getMillis},
                 "following": true,
-                "membership": {"access":"read_only","listed":true,"subscribed":false, "permissions":["view_library", "invite_followers"]},
+                "membership": {"access":"read_only","listed":true,"subscribed":false, "permissions":${Json.toJson(permissionCommander.libraryPermissionsByAccess(lib3, Some(LibraryAccess.READ_ONLY)))}},
                 "modifiedAt":${lib3.updatedAt.getMillis},
                 "path": "/seconduser/lib3",
                 "kind":"user_created"

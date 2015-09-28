@@ -3,7 +3,7 @@
     class="org-selector-org"
     ng-class="{
       'selected': !libraryProps.selectedOrgId,
-      'disabled': library.id && space.current.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) === -1
+      'disabled': library.id && !hasPermission(LIB_PERMISSION.MOVE_LIBRARY)
     }"
     ng-click="unsetOrg()"
   >
@@ -41,7 +41,7 @@
     ng-repeat="org in me.orgs"
     ng-class="{
       'selected': libraryProps.selectedOrgId === org.id,
-      'disabled': library.id && space.current.membership.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) === -1
+      'disabled': library.id && !hasPermission(LIB_PERMISSION.MOVE_LIBRARY)
     }"
     ng-click="setOrg(org.id)"
   >

@@ -553,7 +553,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val user1 = db.readWrite { implicit session =>
           UserFactory.user().withName("Mega", "Tron").withUsername("test").saved
         }
-        inject[LibraryInfoCommander].internSystemGeneratedLibraries(user1.id.get)
+        inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
         db.readWrite { implicit session =>
           val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
           val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))
@@ -748,7 +748,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         val user1 = db.readWrite { implicit session =>
           UserFactory.user().withName("Mega", "Tron").withUsername("test").saved
         }
-        inject[LibraryInfoCommander].internSystemGeneratedLibraries(user1.id.get)
+        inject[LibraryCommander].internSystemGeneratedLibraries(user1.id.get)
         db.readWrite { implicit session =>
           val tagA = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagA"), createdAt = t1))
           val tagB = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("tagB"), createdAt = t1))

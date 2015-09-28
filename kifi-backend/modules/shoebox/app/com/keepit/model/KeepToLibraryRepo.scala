@@ -15,6 +15,7 @@ import org.joda.time.DateTime
 trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
   def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
+  def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToLibrary]]
 
   def getCountByLibraryId(libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int
   def getCountsByLibraryIds(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Library], Int]
@@ -70,14 +71,22 @@ class KeepToLibraryRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToLibraryTable(tag)
   initTable()
 
-  private def getByKeepIdHelper(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
-    for (row <- rows if row.keepId === keepId && row.state =!= excludeStateOpt.orNull) yield row
+  private def getByKeepIdsHelper(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
+    for (row <- rows if row.keepId.inSet(keepIds) && row.state =!= excludeStateOpt.orNull) yield row
+  }
+  def countByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Int] = {
+    val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).groupBy(_.keepId).map { case (keepId, ktls) => (keepId, ktls.length) }.list.toMap
+    keepIds.map { keepId => keepId -> resultMap.getOrElse(keepId, 0) }.toMap
+  }
+  def getAllByKeepIds(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Map[Id[Keep], Seq[KeepToLibrary]] = {
+    val resultMap = getByKeepIdsHelper(keepIds, excludeStateOpt).list.groupBy(_.keepId)
+    keepIds.map { keepId => keepId -> resultMap.getOrElse(keepId, Seq.empty) }.toMap
   }
   def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Int = {
-    getByKeepIdHelper(keepId, excludeStateOpt).run.length
+    countByKeepIds(Set(keepId), excludeStateOpt).apply(keepId)
   }
   def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    getByKeepIdHelper(keepId, excludeStateOpt).list
+    getAllByKeepIds(Set(keepId), excludeStateOpt).apply(keepId)
   }
 
   private def getByLibraryIdsHelper(libraryIds: Set[Id[Library]], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
