@@ -33,10 +33,6 @@ class PaidAccountRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
-  implicit val settingsConfigColumnType = MappedColumnType.base[Set[FeatureSetting], String](
-    { featureSettings => Json.stringify(Json.toJson(featureSettings)) },
-    { str => Json.parse(str).as[Set[FeatureSetting]] }
-  )
 
   type RepoImpl = PaidAccountTable
   class PaidAccountTable(tag: Tag) extends RepoTable[PaidAccount](db, tag, "paid_account") {
@@ -50,8 +46,7 @@ class PaidAccountRepoImpl @Inject() (
     def modifiedSinceLastIntegrityCheck = column[Boolean]("modified_since_last_integrity_check", O.NotNull)
     def activeUsers = column[Int]("active_users", O.NotNull)
     def billingCycleStart = column[DateTime]("billing_cycle_start", O.NotNull)
-    def featureSettings = column[Set[FeatureSetting]]("feature_settings", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, modifiedSinceLastIntegrityCheck, activeUsers, billingCycleStart, featureSettings) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, modifiedSinceLastIntegrityCheck, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)

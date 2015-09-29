@@ -25,7 +25,7 @@ class PaidPlanRepoImpl @Inject() (
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
   implicit val billingCycleColumnType = MappedColumnType.base[BillingCycle, Int](_.month, BillingCycle(_))
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
-  implicit val featuresColumnType = MappedColumnType.base[Set[PlanFeature], String](
+  implicit val editableFeaturesTypeMapper = MappedColumnType.base[Set[Feature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
     { str =>
       Json.parse(str) match {

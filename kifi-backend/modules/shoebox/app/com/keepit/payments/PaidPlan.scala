@@ -35,7 +35,8 @@ case class PaidPlan(
     name: Name[PaidPlan],
     billingCycle: BillingCycle,
     pricePerCyclePerUser: DollarAmount,
-    features: Set[PlanFeature]) extends ModelWithPublicId[PaidPlan] with ModelWithState[PaidPlan] {
+    editableFeatures: Set[Feature],
+    defaultSettings: OrganizationSettings) extends ModelWithPublicId[PaidPlan] with ModelWithState[PaidPlan] {
 
   def withId(id: Id[PaidPlan]): PaidPlan = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidPlan = this.copy(updatedAt = now)
