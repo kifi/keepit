@@ -18,8 +18,4 @@ case class UserCred(id: Option[Id[UserCred]] = None,
   def withCredentials(creds: String) = this.copy(credentials = creds)
 }
 
-object UserCred {
-  val passwordHasher = "bcrypt"
-}
-
 object UserCredStates extends States[UserCred]

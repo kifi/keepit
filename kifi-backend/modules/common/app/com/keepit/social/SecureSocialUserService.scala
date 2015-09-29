@@ -86,8 +86,8 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 case class SecureSocialClientIds(linkedin: String, facebook: String)
 
 trait SecureSocialUserPlugin {
-  def find(id: IdentityId): Option[UserIdentity]
-  def save(identity: Identity): UserIdentity
+  def find(id: IdentityId): Option[SocialUser]
+  def save(identity: Identity): SocialUser
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser]
   def save(token: Token)

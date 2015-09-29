@@ -25,12 +25,11 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
-import com.keepit.social._
+import com.keepit.social.{ BasicUser, SocialGraphPlugin, SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
-import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
@@ -88,24 +87,12 @@ class ShoeboxController @Inject() (
   userPersonaRepo: UserPersonaRepo,
   orgCandidateRepo: OrganizationMembershipCandidateRepo,
   permissionCommander: PermissionCommander,
-  userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
 
   val MaxContentLength = 6000
-
-  def getUserIdentity(providerId: String, id: String) = Action { request =>
-    val identityId = IdentityId(providerId = providerId, userId = id)
-    val identity = db.readOnlyMaster { implicit session => userIdentityHelper.getUserIdentity(identityId) }
-    Ok(Json.toJson(identity))
-  }
-
-  def getUserIdentityByUserId(userId: Id[User]) = Action { request =>
-    val identity = db.readOnlyMaster { implicit session => userIdentityHelper.getUserIdentityByUserId(userId) }
-    Ok(Json.toJson(identity))
-  }
 
   def getUserOpt(id: ExternalId[User]) = Action { request =>
     val userOpt = db.readOnlyReplica { implicit s => userRepo.getOpt(id) } //using cache
@@ -233,6 +220,13 @@ class ShoeboxController @Inject() (
     }
     if (contentWanted) { rover.fetchAsap(uri.id.get, uri.url) }
     Ok(Json.toJson(uri))
+  }
+
+  def getBookmarks(userId: Id[User]) = Action { request =>
+    val bookmarks = db.readOnlyReplica(2) { implicit session => //no cache used
+      keepRepo.getByUser(userId)
+    }
+    Ok(Json.toJson(bookmarks))
   }
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>

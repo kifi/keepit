@@ -142,6 +142,11 @@ trait SearchTestHelper { self: SearchTestInjector =>
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByUser(edgesByUser, uniqueTitle, isPrivate, source)
   }
 
+  def getBookmarks(userId: Id[User])(implicit injector: Injector): Seq[Keep] = {
+    val future = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].getBookmarks(userId)
+    inject[MonitoredAwait].result(future, 3 seconds, "getBookmarks: this should not fail")
+  }
+
   val source = KeepSource("test")
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
   val noBoostConfig = defaultConfig.overrideWith(

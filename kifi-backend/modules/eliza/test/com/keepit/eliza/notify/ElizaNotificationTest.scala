@@ -45,7 +45,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
     "Notify users of new notifications" in {
 
       running(new ElizaApplication(modules: _*)) {
-        setupUserIdentity
+        setupSocialUser
         setupUserExperiment(true)
         val socket = MockWebSocket()
 
@@ -73,7 +73,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
     "Retrieve notifications properly" in {
 
       running(new ElizaApplication(modules: _*)) {
-        setupUserIdentity
+        setupSocialUser
         setupUserExperiment(true)
         val socket = MockWebSocket()
 
@@ -104,7 +104,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
     "Handle read/unread notifications" in {
 
       running(new ElizaApplication(modules: _*)) {
-        setupUserIdentity
+        setupSocialUser
         setupUserExperiment(true)
         val socket = MockWebSocket()
 

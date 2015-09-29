@@ -182,7 +182,7 @@ class UserController @Inject() (
     if (newPassword.length < 7) {
       BadRequest(Json.obj("error" -> "bad_new_password"))
     } else {
-      userCommander.changePassword(request.userId, newPassword, oldPassword = oldPasswordOpt) match {
+      userCommander.doChangePassword(request.userId, oldPasswordOpt, newPassword) match {
         case Failure(e) => Forbidden(Json.obj("error" -> e.getMessage))
         case Success(_) => Ok(Json.obj("success" -> true))
       }

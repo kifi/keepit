@@ -82,7 +82,7 @@ class UserPictureController @Inject() (
         user <- db.readOnlyReplica { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
       } yield {
         val socialUser = db.readOnlyReplica { implicit s => suiRepo.getByUser(user.id.get) }.head
-        imageStore.uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(socialUser.networkType), None, setDefault = false)(socialUser.getPictureUrl).map(_ => socialUser.socialId)
+        imageStore.uploadPictureFromSocialNetwork(socialUser, user.externalId, setDefault = false).map(_ => socialUser.socialId)
       }).map { results =>
         Ok(results.mkString(","))
       }

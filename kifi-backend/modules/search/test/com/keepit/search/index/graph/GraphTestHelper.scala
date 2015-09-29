@@ -91,4 +91,9 @@ trait GraphTestHelper extends SearchTestInjector {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     fakeShoeboxServiceClient.saveConnections(connections)
   }
+
+  def getBookmarksByUser(userId: Id[User])(implicit injector: Injector): Seq[Keep] = {
+    val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    await(fakeShoeboxServiceClient.getBookmarks(userId))
+  }
 }

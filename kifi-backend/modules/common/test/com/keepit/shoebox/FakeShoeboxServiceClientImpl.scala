@@ -24,10 +24,9 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search._
 import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.social.{ UserIdentity, BasicUser, SocialId, SocialNetworkType }
+import com.keepit.social.{ BasicUser, SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.json.JsObject
-import securesocial.core.IdentityId
 
 import scala.collection.mutable
 import scala.collection.mutable.{ Map => MutableMap }
@@ -117,7 +116,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val allUserFriendRequests = MutableMap[Id[User], Seq[Id[User]]]()
   val sentMail = mutable.MutableList[ElectronicMail]()
   val socialUserInfosByUserId = MutableMap[Id[User], List[SocialUserInfo]]()
-  val userIdentityByIdentityId = MutableMap[IdentityId, UserIdentity]()
+  val socialUserInfosByNetworkAndSocialId = MutableMap[(SocialId, SocialNetworkType), SocialUserInfo]()
   val allLibraries = MutableMap[Id[Library], Library]()
   val allLibraryMemberships = MutableMap[Id[LibraryMembership], LibraryMembership]()
   val newKeepsInLibrariesExpectation = MutableMap[Id[User], Seq[Keep]]()
@@ -127,10 +126,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   val callsGetToCandidateURIs = mutable.ArrayBuffer[Seq[Id[NormalizedURI]]]()
 
   // Fake data initialization methods
-
-  def saveUserIdentity(identityId: IdentityId, identity: UserIdentity): Unit = {
-    userIdentityByIdentityId += (identityId -> identity)
-  }
 
   def saveUsers(users: User*): Seq[User] = {
     users.map { user =>
@@ -312,10 +307,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(userOpt)
   }
 
-  def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = Future.successful(userIdentityByIdentityId.get(identityId))
-
-  def getUserIdentityByUserId(userId: Id[User]): Future[Option[UserIdentity]] = Future.successful(None)
-
   def getUser(id: Id[User]): Future[Option[User]] = {
     val user = Option(allUsers(id))
     Future.successful(user)
@@ -340,6 +331,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     val uriWithContentRequest = uri.withContentRequest(contentWanted)
     allNormalizedURIs += (uriWithContentRequest.id.get -> uriWithContentRequest)
     Future.successful(uriWithContentRequest)
+  }
+
+  def getBookmarks(userId: Id[User]): Future[Seq[Keep]] = {
+    val bookmarks = allUserBookmarks.getOrElse(userId, Set.empty).map(allBookmarks(_)).toSeq
+    Future.successful(bookmarks)
   }
 
   def getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int): Future[Seq[Keep]] = {
@@ -398,6 +394,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]] = Future.successful(Seq())
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] =
+    Future.successful(socialUserInfosByNetworkAndSocialId.get(id, networkType))
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
     Future.successful(socialUserInfosByUserId(userId))
   }

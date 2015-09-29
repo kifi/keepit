@@ -37,7 +37,7 @@ import com.keepit.common.logging.{ AccessLogTimer, AccessLog }
 import com.keepit.common.logging.Access.WS_IN
 import org.apache.commons.lang3.RandomStringUtils
 
-case class StreamSession(userId: Id[User], experiments: Set[UserExperimentType], adminUserId: Option[Id[User]], userAgent: String)
+case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[UserExperimentType], adminUserId: Option[Id[User]], userAgent: String)
 
 case class SocketInfo(
   channel: Concurrent.Channel[JsArray],
@@ -130,25 +130,28 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   private def authenticate(implicit request: RequestHeader): Option[Future[Option[StreamSession]]] = {
     for { // Options
       auth <- getAuthenticatorFromRequest()
+      identityId <- UserService.find(auth.identityId).map(_.identityId)
     } yield {
       (for { // Futures
-        userIdOpt <- shoebox.getUserIdentity(auth.identityId).map(_.flatMap(_.userId))
+        socialUser <- shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(identityId.userId), SocialNetworkType(identityId.providerId)).map(_.get)
       } yield {
-        userIdOpt.map { userId =>
-          userExperimentCommander.getExperimentsByUser(userId).flatMap { experiments =>
+        socialUser.userId.map { userId =>
+          userExperimentCommander.getExperimentsByUser(socialUser.userId.get).flatMap { experiments =>
+            val userId = socialUser.userId.get
             val userAgent = request.headers.get("User-Agent").getOrElse("NA")
             if (experiments.contains(UserExperimentType.ADMIN)) {
               impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME)) map { impExtUserId =>
                 for {
                   impUserId <- shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
+                  impSocUserInfo <- shoebox.getSocialUserInfosByUserId(impUserId)
                 } yield {
-                  StreamSession(impUserId, experiments, Some(userId), userAgent)
+                  StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId), userAgent)
                 }
               } getOrElse {
-                Future.successful(StreamSession(userId, experiments, Some(userId), userAgent))
+                Future.successful(StreamSession(userId, socialUser, experiments, Some(userId), userAgent))
               }
             } else {
-              Future.successful(StreamSession(userId, experiments, None, userAgent))
+              Future.successful(StreamSession(userId, socialUser, experiments, None, userAgent))
             }
           } map { Some(_): Option[StreamSession] }
         } getOrElse (Future.successful(None)) //from Option[Future] => Future[Option]

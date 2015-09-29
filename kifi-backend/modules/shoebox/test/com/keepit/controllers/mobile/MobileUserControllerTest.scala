@@ -63,8 +63,10 @@ class MobileUserControllerTest extends Specification with ShoeboxApplicationInje
         changePwdRoute === "/m/1/password/change"
         inject[Database].readWrite { implicit s =>
           val user = UserFactory.user().withName("Richard", "Feynman").withUsername("test").withId("e58be33f-51ad-4c7d-a88e-d4e6e3c9a672").saved
+          val identityId = IdentityId("me@feynman.com", "userpass")
           val pInfo = bcrypt.hash("welcome")
-          userCredRepo.internUserPassword(user.id.get, pInfo.password)
+          val socialUser = new SocialUser(identityId, "Richard", "Feynman", "Richard Feynman", Some(identityId.userId), None, AuthenticationMethod.UserPassword, passwordInfo = Some(pInfo))
+          socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("me@feynman.com"), networkType = FORTYTWO, credentials = Some(socialUser)))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("FRF"), networkType = FACEBOOK))
           socialUserInfoRepo.save(SocialUserInfo(userId = user.id, fullName = "Richard Feynman", state = SocialUserInfoStates.CREATED, socialId = SocialId("LRF"), networkType = LINKEDIN,
             profileUrl = Some("http://www.linkedin.com/in/rf"), pictureUrl = Some("http://my.pic.com/pic.jpg")))

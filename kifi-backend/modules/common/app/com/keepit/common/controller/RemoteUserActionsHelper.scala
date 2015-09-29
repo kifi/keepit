@@ -30,9 +30,13 @@ class RemoteUserActionsHelper @Inject() (
 
   def getUserExperiments(userId: Id[User])(implicit request: Request[_]): Future[Set[UserExperimentType]] = userExperimentCommander.getExperimentsByUser(userId)
 
-  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = shoebox.getUserIdentityByUserId(userId)
+  def getSecureSocialIdentityOpt(userId: Id[User])(implicit request: Request[_]): Future[Option[Identity]] = shoebox.getSocialUserInfosByUserId(userId).map(_.headOption.flatMap(_.credentials))
 
   def getSecureSocialIdentityFromRequest(implicit request: Request[_]): Future[Option[Identity]] = Future.successful { getSecureSocialUserFromRequest }
 
-  def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]] = shoebox.getUserIdentity(identity.identityId).map(_.flatMap(_.userId))
+  def getUserIdOptFromSecureSocialIdentity(identity: Identity): Future[Option[Id[User]]] = {
+    shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(identity.identityId.userId), SocialNetworkType(identity.identityId.providerId)).map { suiOpt =>
+      suiOpt.flatMap(_.userId)
+    }
+  }
 }
