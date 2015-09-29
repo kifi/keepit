@@ -23,6 +23,7 @@ trait EventContextHelper {
   def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]]
   def getOrgEventValues(orgId: Id[Organization], userId: Id[User]): Future[Seq[(String, ContextData)]]
   def getLibraryEventValues(libraryId: Id[Library], userId: Id[User]): Future[Seq[(String, ContextData)]]
+  def getOrganizationIdByExtThreadId(threadExtId: String): Future[Option[Id[Organization]]]
 }
 
 class EventContextHelperImpl @Inject() (
@@ -106,6 +107,19 @@ class EventContextHelperImpl @Inject() (
         }
       }
       libraryStatusOpt.map(libraryStatus => Seq(("libraryStatus", libraryStatus))).getOrElse(Seq.empty)
+    }
+  }
+
+  def getOrganizationIdByExtThreadId(threadExtId: String): Future[Option[Id[Organization]]] = {
+    eliza.getParticipantsByThreadExtId(threadExtId).flatMap { userIds =>
+      shoebox.getOrganizationsForUsers(userIds).map { orgsByUserId =>
+        orgsByUserId.values.reduceLeftOption[Set[Id[Organization]]] {
+          case (acc, orgSet) => acc.intersect(orgSet)
+        }.flatMap {
+          case commonOrgs if commonOrgs.nonEmpty => Some(commonOrgs.last) // track an arbitrary common org
+          case _ => None
+        }
+      }
     }
   }
 }

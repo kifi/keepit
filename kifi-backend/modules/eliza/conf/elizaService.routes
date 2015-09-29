@@ -78,6 +78,8 @@ POST  /internal/eliza/allThreadsForGroupByWeek         @com.keepit.eliza.control
 
 POST  /internal/eliza/getTotalMessageCountForGroup       @com.keepit.eliza.controllers.internal.ElizaController.getTotalMessageCountForGroup
 
+GET   /internal/eliza/getParticipantsByThreadExtId      @com.keepit.eliza.controllers.internal.ElizaController.getParticipantsByThreadExtId(threadId: String)
+
 GET  /internal/eliza/getUnreadNotifications     @com.keepit.eliza.controllers.internal.MessagingController.getUnreadNotifications(userId: Id[User], howMany: Int)
 
 POST /internal/eliza/disableDevice              @com.keepit.eliza.controllers.internal.ElizaController.disableDevice(id: Id[com.keepit.realtime.Device])
