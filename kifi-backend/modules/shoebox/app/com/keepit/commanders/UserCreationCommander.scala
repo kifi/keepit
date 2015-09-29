@@ -32,7 +32,7 @@ class UserCreationCommander @Inject() (
     SafeFuture {
       db.readWrite(attempts = 3) { implicit session =>
         userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_GUIDE, true)
-        userValueRepo.setValue(newUser.id.get, UserValueName.AUTO_SHOW_PERSONA, true) // todo, this shouldn't be true for all users, like when they were invited to a lib
+        userValueRepo.setValue(newUser.id.get, UserValueName.HAS_SEEN_FTUE, false)
         userValueRepo.setValue(newUser.id.get, UserValueName.EXT_SHOW_EXT_MSG_INTRO, true)
       }
       searchClient.warmUpUser(newUser.id.get)

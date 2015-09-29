@@ -326,10 +326,10 @@ class UserController @Inject() (
     import UserValueName._
     Set(
       AUTO_SHOW_GUIDE,
-      AUTO_SHOW_PERSONA,
       SHOW_DELIGHTED_QUESTION,
       HAS_NO_PASSWORD,
-      USE_MINIMAL_KEEP_CARD
+      USE_MINIMAL_KEEP_CARD,
+      HAS_SEEN_FTUE
     )
   }
 
