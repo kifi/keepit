@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ InvalidDatabaseEncodingException, Repo, DbRe
 import com.keepit.common.db.{ State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.time.Clock
-import com.keepit.model.Name
+import com.keepit.model.{OrganizationSettings, Name}
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import play.api.libs.json.{ JsArray, Json }
@@ -25,14 +25,13 @@ class PaidPlanRepoImpl @Inject() (
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
   implicit val billingCycleColumnType = MappedColumnType.base[BillingCycle, Int](_.month, BillingCycle(_))
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
-  implicit val editableFeaturesTypeMapper = MappedColumnType.base[Set[Feature], String](
+  implicit val featureSetTypeMapper = MappedColumnType.base[Set[Feature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
-    { str =>
-      Json.parse(str) match {
-        case x: JsArray => x.value.map(_.as[PlanFeature]).toSet
-        case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Set of PlanFeature")
-      }
-    }
+    { str => Json.parse(str).as[Set[Feature]] }
+  )
+  implicit val organizationSettingsTypeMapper = MappedColumnType.base[OrganizationSettings, String](
+    { obj => Json.stringify(Json.toJson(obj)) },
+    { str => Json.parse(str).as[OrganizationSettings] }
   )
 
   type RepoImpl = PaidPlanTable
