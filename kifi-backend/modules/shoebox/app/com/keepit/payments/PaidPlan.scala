@@ -99,7 +99,7 @@ object OrganizationPermissionFeature {
     val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
   }
 
-  case object GroupMessaging extends OrganizationPermissionFeature(OrganizationPermission.GROUP_MESSAGING) {
+  case object GroupMessaging extends OrganizationPermissionFeature(OrganizationPermission.MESSAGE_ORGANIZATION) {
     val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
   }
 

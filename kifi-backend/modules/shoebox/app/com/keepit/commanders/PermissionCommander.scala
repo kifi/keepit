@@ -133,7 +133,7 @@ class PermissionCommanderImpl @Inject() (
       OrganizationPermission.REMOVE_LIBRARIES,
       OrganizationPermission.INVITE_MEMBERS,
       OrganizationPermission.VIEW_MEMBERS,
-      OrganizationPermission.GROUP_MESSAGING,
+      OrganizationPermission.MESSAGE_ORGANIZATION,
       OrganizationPermission.PUBLISH_LIBRARIES
     )
     case Some(OrganizationRole.ADMIN) => Set(
@@ -145,7 +145,7 @@ class PermissionCommanderImpl @Inject() (
       OrganizationPermission.ADD_LIBRARIES,
       OrganizationPermission.VIEW_MEMBERS,
       OrganizationPermission.REMOVE_LIBRARIES,
-      OrganizationPermission.GROUP_MESSAGING,
+      OrganizationPermission.MESSAGE_ORGANIZATION,
       OrganizationPermission.PUBLISH_LIBRARIES,
       OrganizationPermission.MANAGE_PLAN,
       OrganizationPermission.EXPORT_KEEPS

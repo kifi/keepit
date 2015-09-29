@@ -15,8 +15,17 @@ case class OrganizationSettings(
   exportKeeps: FeatureSetting[Feature.ExportKeeps.type]
 )
 
-/*
 object OrganizationSettings {
+  implicit val publishLibrariesFormat = Feature.PublishLibrariesSetting.format
+  implicit val inviteMembersFormat = Feature.InviteMembersSetting.format
+  implicit val messageOrganizationFormat = Feature.MessageOrganizationSetting.format
+  implicit val forceEditLibrariesFormat = Feature.ForceEditLibrariesSetting.format
+  implicit val viewMembersFormat = Feature.ViewMembersSetting.format
+  implicit val removeLibrariesFormat = Feature.RemoveLibrariesSetting.format
+  implicit val createSlackIntegrationFormat = Feature.CreateSlackIntegrationSetting.format
+  implicit val editOrganizationFormat = Feature.EditOrganizationSetting.format
+  implicit val exportKeepsFormat = Feature.ExportKeepsSetting.format
+
   implicit val format: Format[OrganizationSettings] = (
     (__ \ 'publishLibraries).format[FeatureSetting[Feature.PublishLibraries.type]] and
     (__ \ 'inviteMembers).format[FeatureSetting[Feature.InviteMembers.type]] and
@@ -27,9 +36,8 @@ object OrganizationSettings {
     (__ \ 'createSlackIntegration).format[FeatureSetting[Feature.CreateSlackIntegration.type]] and
     (__ \ 'editOrganization).format[FeatureSetting[Feature.EditOrganization.type]] and
     (__ \ 'exportKeeps).format[FeatureSetting[Feature.ExportKeeps.type]]
-  )(OrganizationSettings.apply _, unlift(OrganizationSettings.unapply))
+  )(OrganizationSettings.apply, unlift(OrganizationSettings.unapply))
 }
-*/
 
 sealed trait Feature {
   def name: Name[Feature]
@@ -38,13 +46,6 @@ sealed abstract class OrganizationPermissionFeature(val permission: Organization
   def name = Name[Feature](permission.value)
 }
 sealed abstract class FeatureSetting[F <: Feature](val value: String)
-object FeatureSetting {
-  def apply(value: String): FeatureSetting[Feature.PublishLibraries.type] = value match {
-    case Feature.PublishLibraries.DISABLED.value => Feature.PublishLibraries.DISABLED
-    case Feature.PublishLibraries.ADMINS.value => Feature.PublishLibraries.ADMINS
-    case Feature.PublishLibraries.MEMBERS.value => Feature.PublishLibraries.MEMBERS
-  }
-}
 
 object Feature {
   val ALL: Set[Feature] = Set(
@@ -59,56 +60,83 @@ object Feature {
     ExportKeeps
   )
 
-  case object PublishLibraries extends OrganizationPermissionFeature(OrganizationPermission.PUBLISH_LIBRARIES) {
+  case object PublishLibraries extends OrganizationPermissionFeature(OrganizationPermission.PUBLISH_LIBRARIES)
+  object PublishLibrariesSetting {
+    val format: Format[FeatureSetting[PublishLibraries.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[PublishLibraries.type]("disabled")
     case object ADMINS extends FeatureSetting[PublishLibraries.type]("admins")
     case object MEMBERS extends FeatureSetting[PublishLibraries.type]("members")
   }
 
-  case object InviteMembers extends OrganizationPermissionFeature(OrganizationPermission.INVITE_MEMBERS) {
+  case object InviteMembers extends OrganizationPermissionFeature(OrganizationPermission.INVITE_MEMBERS)
+  object InviteMembersSetting {
+    val format: Format[FeatureSetting[InviteMembers.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[InviteMembers.type]("disabled")
     case object ADMINS extends FeatureSetting[InviteMembers.type]("admins")
     case object MEMBERS extends FeatureSetting[InviteMembers.type]("members")
   }
 
-  case object MessageOrganization extends OrganizationPermissionFeature(OrganizationPermission.GROUP_MESSAGING) {
+  case object MessageOrganization extends OrganizationPermissionFeature(OrganizationPermission.MESSAGE_ORGANIZATION)
+  object MessageOrganizationSetting {
+    val format: Format[FeatureSetting[MessageOrganization.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[MessageOrganization.type]("disabled")
     case object ADMINS extends FeatureSetting[MessageOrganization.type]("admins")
     case object MEMBERS extends FeatureSetting[MessageOrganization.type]("members")
   }
 
-  case object ForceEditLibraries extends OrganizationPermissionFeature(OrganizationPermission.FORCE_EDIT_LIBRARIES) {
+  case object ForceEditLibraries extends OrganizationPermissionFeature(OrganizationPermission.FORCE_EDIT_LIBRARIES)
+  object ForceEditLibrariesSetting {
+    val format: Format[FeatureSetting[ForceEditLibraries.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[ForceEditLibraries.type]("disabled")
     case object ADMINS extends FeatureSetting[ForceEditLibraries.type]("admins")
     case object MEMBERS extends FeatureSetting[ForceEditLibraries.type]("members")
   }
 
-  case object ViewMembers extends OrganizationPermissionFeature(OrganizationPermission.VIEW_MEMBERS) {
+  case object ViewMembers extends OrganizationPermissionFeature(OrganizationPermission.VIEW_MEMBERS)
+  object ViewMembersSetting {
+    val format: Format[FeatureSetting[ViewMembers.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS, ANYONE).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[ViewMembers.type]("disabled")
     case object ADMINS extends FeatureSetting[ViewMembers.type]("admins")
     case object MEMBERS extends FeatureSetting[ViewMembers.type]("members")
     case object ANYONE extends FeatureSetting[ViewMembers.type]("anyone")
   }
 
-  case object RemoveLibraries extends OrganizationPermissionFeature(OrganizationPermission.REMOVE_LIBRARIES) {
+  case object RemoveLibraries extends OrganizationPermissionFeature(OrganizationPermission.REMOVE_LIBRARIES)
+  object RemoveLibrariesSetting {
+    val format: Format[FeatureSetting[RemoveLibraries.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[RemoveLibraries.type]("disabled")
     case object ADMINS extends FeatureSetting[RemoveLibraries.type]("admins")
     case object MEMBERS extends FeatureSetting[RemoveLibraries.type]("members")
   }
 
-  case object CreateSlackIntegration extends OrganizationPermissionFeature(OrganizationPermission.CREATE_SLACK_INTEGRATION) {
+  case object CreateSlackIntegration extends OrganizationPermissionFeature(OrganizationPermission.CREATE_SLACK_INTEGRATION)
+  object CreateSlackIntegrationSetting {
+    val format: Format[FeatureSetting[CreateSlackIntegration.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[CreateSlackIntegration.type]("disabled")
     case object ADMINS extends FeatureSetting[CreateSlackIntegration.type]("admins")
     case object MEMBERS extends FeatureSetting[CreateSlackIntegration.type]("members")
   }
 
-  case object EditOrganization extends OrganizationPermissionFeature(OrganizationPermission.EDIT_ORGANIZATION) {
+  case object EditOrganization extends OrganizationPermissionFeature(OrganizationPermission.EDIT_ORGANIZATION)
+  object EditOrganizationSetting {
+    val format: Format[FeatureSetting[EditOrganization.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[EditOrganization.type]("disabled")
     case object ADMINS extends FeatureSetting[EditOrganization.type]("admins")
     case object MEMBERS extends FeatureSetting[EditOrganization.type]("members")
   }
 
-  case object ExportKeeps extends OrganizationPermissionFeature(OrganizationPermission.EXPORT_KEEPS) {
+  case object ExportKeeps extends OrganizationPermissionFeature(OrganizationPermission.EXPORT_KEEPS)
+  object ExportKeepsSetting {
+    val format: Format[FeatureSetting[ExportKeeps.type]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+    def toSetting = Set(DISABLED, ADMINS, MEMBERS).map(x => x.value -> x).toMap.apply _
     case object DISABLED extends FeatureSetting[ExportKeeps.type]("disabled")
     case object ADMINS extends FeatureSetting[ExportKeeps.type]("admins")
     case object MEMBERS extends FeatureSetting[ExportKeeps.type]("members")
