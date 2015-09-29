@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 
@@ -27,6 +28,7 @@ class PermissionCommanderImpl @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     userExperimentRepo: UserExperimentRepo,
     orgExperimentRepo: OrganizationExperimentRepo,
+    airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 
   def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
@@ -51,7 +53,9 @@ class PermissionCommanderImpl @Inject() (
       case None =>
         val viewerHasImplicitAccess = lib.visibility match {
           case LibraryVisibility.DISCOVERABLE =>
-            userIdOpt.contains(lib.ownerId) // this would be a really bad sign, since they should have a LibraryMembership
+            val isOwner = userIdOpt.contains(lib.ownerId) // this would be a really bad sign, since they should have a LibraryMembership
+            if (isOwner) airbrake.notify(s"found a library owner without a library membership! (libId=$libId, userId=$userIdOpt)")
+            isOwner
           case LibraryVisibility.ORGANIZATION =>
             userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(lib.organizationId.get, _).isDefined)
           case _ => false

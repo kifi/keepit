@@ -107,7 +107,7 @@ angular.module('kifi')
           settings: [
             'orgProfileService', 'profile', 'messageTicker', 'ORG_PERMISSION',
             function (orgProfileService, profile, messageTicker, ORG_PERMISSION) {
-              if (profile.membership.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
+              if (profile.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
                 return orgProfileService
                 .getOrgSettings(profile.organization.id)
                 ['catch'](function(response) {

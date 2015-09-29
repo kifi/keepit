@@ -9,16 +9,16 @@ angular.module('kifi')
             orgProfileService, originTrackingService, settings) {
     $window.document.title = profile.organization.name + ' • Kifi';
     $scope.profile = _.cloneDeep(profile.organization);
-    $scope.membership = _.cloneDeep(profile.membership);
+    $scope.viewer = _.cloneDeep(profile.viewer);
     $scope.settings = _.cloneDeep(settings);
   function trackPageView(attributes) {
     var url = $analytics.settings.pageTracking.basePath + $location.url();
 
     attributes = _.extend(orgProfileService.getCommonTrackingAttributes($scope.profile), attributes);
     attributes = originTrackingService.applyAndClear(attributes);
-    if ($scope.membership.role) {
-      attributes.orgMemberStatus = $scope.membership.role;
-    } else if ($scope.membership.invite) {
+    if ($scope.viewer.membership) {
+      attributes.orgMemberStatus = $scope.viewer.membership.role;
+    } else if ($scope.viewer.invite) {
       attributes.orgMemberStatus = 'pendingMember';
     }
     $analytics.pageTrack(url, attributes);

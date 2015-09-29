@@ -81,6 +81,7 @@ class UserProfileCommander @Inject() (
           following = Some(true),
           membership = membershipInfosByLibrary(lib.id.get),
           invite = None,
+          permissions = info.permissions,
           modifiedAt = lib.updatedAt,
           path = info.path,
           org = info.org,

@@ -262,7 +262,7 @@ angular.module('kifi')
         };
 
         scope.hasPermission = function (permission) {
-          return scope.library.membership && scope.library.membership.permissions.indexOf(permission) !== -1;
+          return scope.library.permissions.indexOf(permission) !== -1;
         };
 
         //

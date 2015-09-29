@@ -56,7 +56,7 @@ angular.module('kifi')
     $scope.organization = organization;
 
     $scope.me = profileService.me;
-    $scope.canInvite = $scope.membership.permissions && $scope.membership.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
+    $scope.canInvite = $scope.viewer.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
 
     $scope.fetchLibraries = function () {
       libraryLazyLoader
@@ -95,7 +95,7 @@ angular.module('kifi')
       });
     };
 
-    $scope.canCreateLibraries = ($scope.membership.permissions.indexOf(ORG_PERMISSION.ADD_LIBRARIES) !== -1);
+    $scope.canCreateLibraries = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.ADD_LIBRARIES) !== -1);
 
     $scope.shouldShowMoveCard = function () {
       return $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();

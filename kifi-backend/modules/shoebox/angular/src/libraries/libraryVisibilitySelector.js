@@ -43,10 +43,10 @@ angular.module('kifi')
         };
 
         $scope.$watch('space', function () {
-          var membership = $scope.space && $scope.space.membership;
+          var viewer = $scope.space && $scope.space.viewer;
 
           // Unset public permissions when moving from an org where we're allowed to publish to one where we are not
-          if (membership && membership.permissions.indexOf(ORG_PERMISSION.PUBLISH_LIBRARIES) === -1 && $scope.library.visibility === 'published') {
+          if (viewer && viewer.permissions.indexOf(ORG_PERMISSION.PUBLISH_LIBRARIES) === -1 && $scope.library.visibility === 'published') {
             $scope.library.visibility = 'organization';
           }
         });
