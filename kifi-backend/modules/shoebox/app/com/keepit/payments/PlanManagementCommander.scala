@@ -165,6 +165,7 @@ class PlanManagementCommanderImpl @Inject() (
                 billingCycleStart = clock.now,
                 featureSettings = planFeaturesToDefaultSettings(plan.features)
               ))
+              grantSpecialCreditHelper(orgId, DollarAmount.wholeDollars(50), None, Some("Welcome to Kifi!"))
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
               } else {
@@ -351,7 +352,7 @@ class PlanManagementCommanderImpl @Inject() (
     }
   }
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
+  private def grantSpecialCreditHelper(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String])(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
     paidAccountRepo.save(account.withIncreasedCredit(amount))
     accountEventRepo.save(AccountEvent(
@@ -369,6 +370,10 @@ class PlanManagementCommanderImpl @Inject() (
       memo = memo,
       chargeId = None
     ))
+  }
+
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
+    grantSpecialCreditHelper(orgId, amount, grantedByAdmin, memo)
   }.get
 
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount = db.readOnlyMaster { implicit session =>
