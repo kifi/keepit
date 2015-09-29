@@ -250,6 +250,7 @@ class MessagingAnalytics @Inject() (
       val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
       log.info(s"[OrgMessageTracking] commonOrgs=${commonOrgs.map(_.mkString(","))}")
       commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", ContextStringData(orgId.toString)) }
+      contextBuilder.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgMessageTracking] successfully tracking allParticipantsInOrgId = $orgId") }
     }
   }
 }

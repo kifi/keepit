@@ -679,17 +679,10 @@ class MessagingCommander @Inject() (
 
     val moreContext = new HeimdalContextBuilder()
     val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
-      shoebox.hasOrganizationMembership(oid, userId).flatMap {
-        case true =>
-          //ignoring case of multiple org ids in the same chat, just picking the last one
-          moreContext += ("messagedWholeOrgId", ContextStringData(oid.toString))
-          shoebox.getOrganizationMembers(oid)
-        case false =>
-          Future.successful(Set.empty[Id[User]])
-      }
+      shoebox.getOrganizationMembers(oid)
     }).map(_.flatten)
 
-    moreContext.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => log.info(s"[OrgMessageTracking] should be tracking messagedWholeOrgId=$orgId") }
+    if (orgIds.nonEmpty) moreContext += ("messagedAllOrgId", orgIds.last.toString)
 
     val context = moreContext.addExistingContext(initContext).build
 
