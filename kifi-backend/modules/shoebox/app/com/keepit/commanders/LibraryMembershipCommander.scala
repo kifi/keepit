@@ -155,7 +155,7 @@ class LibraryMembershipCommanderImpl @Inject() (
         val updatedMem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
             val subscribedToUpdates = subscribed.getOrElse(maxAccess == LibraryAccess.READ_WRITE)
-            log.info(s"[joinLibrary] New membership for $userId. New access: $maxAccess. $inviteList")
+            log.info(s"[joinLibrary] New membership for $userId.  New access: $maxAccess. $inviteList")
             val mem = libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
             notifyOwnerOfNewFollowerOrCollaborator(userId, lib, maxAccess) // todo, bad, this is in a db transaction and side effects
             mem
