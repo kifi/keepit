@@ -102,7 +102,7 @@ angular.module('kifi')
     ];
 
     $scope.updateSettings = function () {
-      $window.onbeforeunload = onBeforeUnload;
+      $window.addEventListener('beforeunload', onBeforeUnload);
 
       orgProfileService
       .setOrgSettings($scope.profile.id, nestedSettingToFlatSetting($scope.settings))
@@ -112,13 +112,16 @@ angular.module('kifi')
           type: 'green'
         });
         profileService.fetchMe();
-        $window.onbeforeunload = null;
         $scope.settings = settingsData.settings;
-      })['catch'](function(response) {
+      })
+      ['catch'](function(response) {
         messageTicker({
           text: response.statusText + ': There was an error saving your settings',
           type: 'red'
         });
+      })
+      ['finally'](function () {
+        $window.removeEventListener('beforeunload', onBeforeUnload);
       });
     };
 
