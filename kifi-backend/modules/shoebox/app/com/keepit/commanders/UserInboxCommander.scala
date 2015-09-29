@@ -19,7 +19,7 @@ object UserInboxCommander {
 
 @ImplementedBy(classOf[UserInboxCommanderImpl])
 trait UserInboxCommander {
-  def getPendingRequests(userId: Id[User], sentBefore: Option[DateTime], limit: Int): Seq[JsValue]
+  def getPendingRequests(userId: Id[User], sentBefore: Option[DateTime], limit: Int): (Seq[JsValue], Int)
 }
 
 @Singleton
@@ -34,8 +34,8 @@ class UserInboxCommanderImpl @Inject() (
 
   import UserInboxCommander._
 
-  def getPendingRequests(userId: Id[User], sentBefore: Option[DateTime], limit: Int): Seq[JsValue] = {
-    val pendingRequests: Seq[PendingRequest] = db.readOnlyMaster { implicit session =>
+  def getPendingRequests(userId: Id[User], sentBefore: Option[DateTime], limit: Int): (Seq[JsValue], Int) = {
+    val allPendingRequests: Seq[PendingRequest] = db.readOnlyMaster { implicit session =>
       val pendingFriendRequests = friendRequestRepo.getByRecipient(userId).map(PendingConnectionRequest(_))
       val pendingLibraryInvites = libraryInviteRepo.getByUser(userId, excludeStates = LibraryInviteStates.notActive).groupBy(_._1.libraryId).mapValues(_.maxBy(_._1.createdAt)).values.map(PendingLibraryInvite.tupled(_))
       val pendingOrganizationInvites = orgInviteRepo.getByInviteeIdAndDecision(userId, InvitationDecision.PENDING).groupBy(_.organizationId).mapValues(_.maxBy(_.createdAt)).values.map(PendingOrganizationInvite(_))
@@ -44,7 +44,10 @@ class UserInboxCommanderImpl @Inject() (
         case None => allPendingRequests
         case Some(timestamp) => allPendingRequests.filter(_.sentAt isBefore timestamp)
       }
-    }.sortBy(-_.sentAt.getMillis).take(limit)
+    }
+
+    val pendingTotal = allPendingRequests.length
+    val pendingRequests = allPendingRequests.sortBy(-_.sentAt.getMillis).take(limit)
 
     val basicUsersById = {
       val userIds = pendingRequests.collect {
@@ -54,7 +57,7 @@ class UserInboxCommanderImpl @Inject() (
       db.readOnlyMaster { implicit session => basicUserRepo.loadAll(userIds.toSet) }
     }
 
-    pendingRequests.map { request =>
+    val pending = pendingRequests.map { request =>
       val fromJson = request match {
         case PendingConnectionRequest(friendRequest) => Json.toJson(basicUsersById(friendRequest.senderId))
         case PendingLibraryInvite(_, library) => Json.toJson(libraryInfoCommander.createLibraryCardInfo(library, basicUsersById(library.ownerId), Some(userId), false, ProcessedImageSize.Medium.idealSize))
@@ -62,5 +65,7 @@ class UserInboxCommanderImpl @Inject() (
       }
       Json.obj("kind" -> request.kind, "sentAt" -> request.sentAt, "from" -> fromJson)
     }
+
+    (pending, pendingTotal)
   }
 }
