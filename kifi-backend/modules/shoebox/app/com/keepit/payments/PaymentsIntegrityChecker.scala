@@ -100,8 +100,10 @@ class PaymentsIntegrityChecker @Inject() (
 
   def checkMemberships(): Unit = {
     //the following two lines will need adjustment as the number of organizations grow
-    val modulus = 7 //days of the week
-    val partition = clock.now.getDayOfWeek() - 1 //what to do today
+    //val modulus = 7 //days of the week
+    val modulus = 1
+    //val partition = clock.now.getDayOfWeek() - 1 //what to do today
+    val partition = 0
     val orgIds = db.readOnlyReplica { implicit session => organizationRepo.getIdSubsetByModulus(modulus, partition) }
     orgIds.foreach { orgId =>
       processMembershipsForAccount(orgId) match {
