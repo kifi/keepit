@@ -352,7 +352,7 @@ class MobileUserController @Inject() (
 
   def getPendingRequests(before: Option[DateTime], limit: Int) = UserAction { implicit request =>
     val (pending, pendingTotal) = userInboxCommander.getPendingRequests(request.userId, before, limit)
-    val result = Json.obj("pending" -> pending, "pendingTotal" -> pendingTotal)
+    val result = Json.obj("pendingTotal" -> pendingTotal, "pending" -> pending)
     Ok(result)
   }
 }
