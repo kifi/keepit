@@ -5,10 +5,9 @@ import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, Use
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.model.{ OrganizationPermission, Organization }
+import com.keepit.model.{ OrganizationSettings, ExternalOrganizationConfiguration, OrganizationPermission, Organization }
 import com.keepit.commanders.{ PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
-import com.keepit.payments.AccountFeatureSettingsRequest
 
 import com.kifi.macros.json
 
@@ -84,16 +83,24 @@ class PaymentsController @Inject() (
   }
 
   def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val accountFeatureSettingsResponse = planCommander.getAccountFeatureSettings(request.orgId)
-    Ok(Json.toJson(accountFeatureSettingsResponse))
+    val response = planCommander.getAccountFeatureSettings(request.orgId)
+    val result = ExternalOrganizationConfiguration(
+      Organization.publicId(response.config.organizationId),
+      response.config.settings
+    )
+    Ok(Json.toJson(result))
   }
 
   def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN)(parse.tolerantJson) { request =>
-    request.body.validate[AccountFeatureSettingsRequest] match {
+    request.body.validate[OrganizationSettings] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
       case JsSuccess(settings, _) =>
-        val response = planCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings.featureSettings)
-        Ok(Json.toJson(response))
+        val response = planCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings).get
+        val result = ExternalOrganizationConfiguration(
+          Organization.publicId(response.config.organizationId),
+          response.config.settings
+        )
+        Ok(Json.toJson(result))
     }
   }
 

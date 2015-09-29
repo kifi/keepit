@@ -40,10 +40,10 @@ object OrganizationSettings {
 }
 
 sealed trait Feature {
-  def name: Name[Feature]
+  def value: String
 }
 sealed abstract class OrganizationPermissionFeature(val permission: OrganizationPermission) extends Feature {
-  def name = Name[Feature](permission.value)
+  val value = permission.value
 }
 sealed abstract class FeatureSetting[F <: Feature](val value: String)
 
@@ -58,6 +58,22 @@ object Feature {
     CreateSlackIntegration,
     EditOrganization,
     ExportKeeps
+  )
+  def apply(str: String): Feature = str match {
+    case PublishLibraries.value => PublishLibraries
+    case InviteMembers.value => InviteMembers
+    case MessageOrganization.value => MessageOrganization
+    case ForceEditLibraries.value => ForceEditLibraries
+    case ViewMembers.value => ViewMembers
+    case RemoveLibraries.value => RemoveLibraries
+    case CreateSlackIntegration.value => CreateSlackIntegration
+    case EditOrganization.value => EditOrganization
+    case ExportKeeps.value => ExportKeeps
+  }
+
+  implicit val format: Format[Feature] = Format (
+    __.read[String].map(Feature(_)),
+    Writes { x => JsString(x.value) }
   )
 
   case object PublishLibraries extends OrganizationPermissionFeature(OrganizationPermission.PUBLISH_LIBRARIES)

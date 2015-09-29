@@ -1,6 +1,6 @@
 package com.keepit.payments
 
-import com.keepit.commanders.OrganizationCommander
+import com.keepit.commanders.{ PermissionCommander, OrganizationCommander }
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -50,7 +50,7 @@ trait PlanManagementCommander {
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
 
   def currentPlan(orgId: Id[Organization]): PaidPlan
-  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, features: Set[PlanFeature]): PaidPlan
+  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings): PaidPlan
 
   def grandfatherPlan(id: Id[PaidPlan]): Try[PaidPlan]
   def deactivatePlan(id: Id[PaidPlan]): Try[PaidPlan]
@@ -67,9 +67,9 @@ trait PlanManagementCommander {
   def getAccountEvents(orgId: Id[Organization], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
 
-  def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsResponse
-  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse
-  def setAccountFeatureSettingsHelper(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting])(implicit session: RWSession): AccountFeatureSettingsResponse
+  def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse
+  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings): Try[OrganizationSettingsResponse]
+  def setAccountFeatureSettingsHelper(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings)(implicit session: RWSession): Try[OrganizationSettingsResponse]
 
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
@@ -86,11 +86,13 @@ class PlanManagementCommanderImpl @Inject() (
   paidPlanRepo: PaidPlanRepo,
   orgRepo: OrganizationRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
+  orgConfigRepo: OrganizationConfigurationRepo,
   basicUserRepo: BasicUserRepo,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
   accountLockHelper: AccountLockHelper,
+  permissionCommander: PermissionCommander,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends PlanManagementCommander with Logging {
@@ -99,10 +101,6 @@ class PlanManagementCommanderImpl @Inject() (
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
     paidAccountRepo.getAccountId(orgId)
-  }
-
-  private def planFeaturesToDefaultSettings(planFeatures: Set[PlanFeature]): Set[FeatureSetting] = {
-    planFeatures.map { case PlanFeature(name, default, _) => FeatureSetting(name, default) }
   }
 
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
@@ -144,8 +142,7 @@ class PlanManagementCommanderImpl @Inject() (
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
                 activeUsers = 0,
-                billingCycleStart = clock.now,
-                featureSettings = planFeaturesToDefaultSettings(plan.features)
+                billingCycleStart = clock.now
               ))
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
@@ -161,8 +158,7 @@ class PlanManagementCommanderImpl @Inject() (
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
                 activeUsers = 0,
-                billingCycleStart = clock.now,
-                featureSettings = planFeaturesToDefaultSettings(plan.features)
+                billingCycleStart = clock.now
               ))
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
@@ -379,16 +375,17 @@ class PlanManagementCommanderImpl @Inject() (
     paidPlanRepo.get(account.planId)
   }
 
-  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, features: Set[PlanFeature]): PaidPlan = {
-    db.readWrite { implicit session => createNewPlanHelper(name, billingCycle, price, custom, features) }
+  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings): PaidPlan = {
+    db.readWrite { implicit session => createNewPlanHelper(name, billingCycle, price, custom, editableFeatures, defaultSettings) }
   }
 
-  def createNewPlanHelper(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, features: Set[PlanFeature])(implicit session: RWSession): PaidPlan = {
+  def createNewPlanHelper(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings)(implicit session: RWSession): PaidPlan = {
     paidPlanRepo.save(PaidPlan(kind = if (custom) PaidPlan.Kind.CUSTOM else PaidPlan.Kind.NORMAL,
       name = name,
       billingCycle = billingCycle,
       pricePerCyclePerUser = price,
-      features = features
+      editableFeatures = editableFeatures,
+      defaultSettings = defaultSettings
     ))
   }
 
@@ -571,26 +568,24 @@ class PlanManagementCommanderImpl @Inject() (
     )
   }
 
-  def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsResponse = {
+  def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse = {
     db.readOnlyReplica { implicit session =>
-      val account = paidAccountRepo.getByOrgId(orgId)
-      val plan = paidPlanRepo.get(account.planId)
-      AccountFeatureSettingsResponse(plan.features, account.featureSettings, plan.name)
+      val config = orgConfigRepo.getByOrgId(orgId)
+      OrganizationSettingsResponse(config)
     }
   }
 
-  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting]): AccountFeatureSettingsResponse = {
+  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings): Try[OrganizationSettingsResponse] = {
     db.readWrite { implicit session => setAccountFeatureSettingsHelper(orgId, userId, settings) }
   }
 
-  def setAccountFeatureSettingsHelper(orgId: Id[Organization], userId: Id[User], settings: Set[FeatureSetting])(implicit session: RWSession): AccountFeatureSettingsResponse = {
-    val oldAccount = paidAccountRepo.getByOrgId(orgId)
-    val updatedAccount = oldAccount.withFeatureSettings(settings)
-
-    paidAccountRepo.save(updatedAccount)
-
-    val plan = paidPlanRepo.get(updatedAccount.planId)
-    AccountFeatureSettingsResponse(plan.features, updatedAccount.featureSettings, plan.name)
+  def setAccountFeatureSettingsHelper(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings)(implicit session: RWSession): Try[OrganizationSettingsResponse] = {
+    if (!permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.MANAGE_PLAN)) Failure(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+    else {
+      val currentConfig = orgConfigRepo.getByOrgId(orgId)
+      val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
+      Success(OrganizationSettingsResponse(newConfig))
+    }
   }
 }
 

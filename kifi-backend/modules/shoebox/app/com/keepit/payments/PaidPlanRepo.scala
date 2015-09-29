@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ InvalidDatabaseEncodingException, Repo, DbRe
 import com.keepit.common.db.{ State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.time.Clock
-import com.keepit.model.{OrganizationSettings, Name}
+import com.keepit.model.{ OrganizationSettings, Name, Feature }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import play.api.libs.json.{ JsArray, Json }
@@ -29,10 +29,6 @@ class PaidPlanRepoImpl @Inject() (
     { obj => Json.stringify(Json.toJson(obj)) },
     { str => Json.parse(str).as[Set[Feature]] }
   )
-  implicit val organizationSettingsTypeMapper = MappedColumnType.base[OrganizationSettings, String](
-    { obj => Json.stringify(Json.toJson(obj)) },
-    { str => Json.parse(str).as[OrganizationSettings] }
-  )
 
   type RepoImpl = PaidPlanTable
   class PaidPlanTable(tag: Tag) extends RepoTable[PaidPlan](db, tag, "paid_plan") {
@@ -40,8 +36,9 @@ class PaidPlanRepoImpl @Inject() (
     def name = column[Name[PaidPlan]]("name", O.NotNull)
     def billingCycle = column[BillingCycle]("billing_cycle", O.NotNull)
     def pricePerCyclePerUser = column[DollarAmount]("price_per_user_per_cycle", O.NotNull)
-    def features = column[Set[PlanFeature]]("features", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, kind, name, billingCycle, pricePerCyclePerUser, features) <> ((PaidPlan.apply _).tupled, PaidPlan.unapply _)
+    def editableFeatures = column[Set[Feature]]("editable_features", O.NotNull)
+    def defaultSettings = column[OrganizationSettings]("default_settings", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, kind, name, billingCycle, pricePerCyclePerUser, editableFeatures, defaultSettings) <> ((PaidPlan.apply _).tupled, PaidPlan.unapply _)
   }
 
   def table(tag: Tag) = new PaidPlanTable(tag)
