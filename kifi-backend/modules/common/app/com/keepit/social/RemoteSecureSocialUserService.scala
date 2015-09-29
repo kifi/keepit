@@ -71,18 +71,11 @@ class RemoteSecureSocialUserPlugin @Inject() (
     }
 
   def find(id: IdentityId): Option[UserIdentity] = reportExceptions {
-    val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.userId), SocialNetworkType(id.providerId))
-    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on $id.providerId") match {
-      case None =>
-        None
-      case Some(user) =>
-        user.credentials map { UserIdentity(user.userId, _) }
-    }
+    val resFuture = shoeboxClient.getUserIdentity(id)
+    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on ${id.providerId}")
   }
 
-  def save(identity: Identity): SocialUser = reportExceptions {
-    SocialUser(identity)
-  }
+  def save(identity: Identity): UserIdentity = throw new IllegalStateException(s"Attempt to call RemoteSecureSocialUserPlugin.save with identity $identity")
 
   // TODO(greg): implement when we start using the UsernamePasswordProvider
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = ???
