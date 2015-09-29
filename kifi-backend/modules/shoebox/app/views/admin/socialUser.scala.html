@@ -5,11 +5,11 @@
     @socialUserInfo.getProfileUrl.map { profileUrl =>
       <a data-hover="tooltip" title="@socialUserInfo.fullName+" class="name_tooltip_link"
         href="@profileUrl" target="_blank">
-        @socialUserInfo.getPictureUrl(60, 60).map { url => <img src="@url" width="30" height="30"> }
+        @socialUserInfo.getPictureUrl().map { url => <img src="@url" width="30" height="30"> }
         @socialUserInfo.fullName (@socialUserInfo.networkType/@socialUserInfo.socialId)
       </a>
     }.getOrElse {
-      @socialUserInfo.getPictureUrl(60, 60).map { url => <img src="@url" width="30" height="30"> }
+      @socialUserInfo.getPictureUrl().map { url => <img src="@url" width="30" height="30"> }
       @socialUserInfo.fullName (@socialUserInfo.networkType/@socialUserInfo.socialId)
     }
   </span>

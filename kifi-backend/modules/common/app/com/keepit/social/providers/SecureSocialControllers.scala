@@ -3,7 +3,7 @@ package com.keepit.social.providers
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.controller.KifiSession
 import com.keepit.common.logging.Logging
-import com.keepit.social.UserIdentity
+import com.keepit.social.UserIdentity$
 import play.api.mvc._
 import play.api.i18n.Messages
 import securesocial.core._

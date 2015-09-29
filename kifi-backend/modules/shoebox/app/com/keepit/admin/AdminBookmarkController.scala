@@ -28,7 +28,6 @@ class AdminBookmarksController @Inject() (
   keepRepo: KeepRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
   libraryRepo: LibraryRepo,
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
