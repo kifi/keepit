@@ -911,8 +911,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.getByUser(userCaptain.id.get).map(_._2).count(_.ownerId == userCaptain.id.get) === 1
         }
 
-        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userIron.id.get)
-        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userCaptain.id.get)
+        libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
+        libraryCommander.internSystemGeneratedLibraries(userCaptain.id.get)
 
         // System libraries are created
         db.readOnlyMaster { implicit session =>
@@ -923,8 +923,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         }
 
         // Operation is idempotent
-        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userIron.id.get)
-        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userHulk.id.get)
+        libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
+        libraryCommander.internSystemGeneratedLibraries(userHulk.id.get)
         db.readWrite { implicit session =>
           libraryRepo.all().size === 9
           libraryRepo.getByUser(userIron.id.get).map(_._2).count(_.ownerId == userIron.id.get) === 3
@@ -944,7 +944,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryRepo.save(main.copy(state = LibraryStates.INACTIVE, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("main_old")))
         }
 
-        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userIron.id.get)
+        libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
 
         // Fixes problems in sys libraries
         db.readOnlyMaster { implicit session =>
@@ -960,7 +960,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryMembershipRepo.save(LibraryMembership(userId = userIron.id.get, libraryId = lib.id.get, access = LibraryAccess.OWNER))
         }
 
-        inject[LibraryInfoCommander].internSystemGeneratedLibraries(userIron.id.get)
+        libraryCommander.internSystemGeneratedLibraries(userIron.id.get)
 
         db.readOnlyMaster { implicit session =>
           val ironMains = libraryRepo.getByUser(userIron.id.get, None).map(_._2).filter(_.ownerId == userIron.id.get).filter(_.kind == LibraryKind.SYSTEM_MAIN)

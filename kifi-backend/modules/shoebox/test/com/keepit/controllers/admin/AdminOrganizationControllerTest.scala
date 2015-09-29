@@ -26,6 +26,5 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
   )
 
   "AdminOrganizationController" should {
-    skipped("nothing here right now")
   }
 }

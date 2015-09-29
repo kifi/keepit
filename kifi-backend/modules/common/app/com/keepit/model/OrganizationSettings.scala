@@ -13,7 +13,19 @@ case class OrganizationSettings(
   createSlackIntegration: FeatureSetting[Feature.CreateSlackIntegration.type],
   editOrganization: FeatureSetting[Feature.EditOrganization.type],
   exportKeeps: FeatureSetting[Feature.ExportKeeps.type]
-)
+) {
+  def set[F <: Feature](kv: (F, FeatureSetting[F])): OrganizationSettings = kv match {
+    case (Feature.PublishLibraries, s: FeatureSetting[Feature.PublishLibraries.type]) => this.copy(publishLibraries = s)
+    case (Feature.InviteMembers, s: FeatureSetting[Feature.InviteMembers.type]) => this.copy(inviteMembers = s)
+    case (Feature.MessageOrganization, s: FeatureSetting[Feature.MessageOrganization.type]) => this.copy(messageOrganization = s)
+    case (Feature.ForceEditLibraries, s: FeatureSetting[Feature.ForceEditLibraries.type]) => this.copy(forceEditLibraries = s)
+    case (Feature.ViewMembers, s: FeatureSetting[Feature.ViewMembers.type]) => this.copy(viewMembers = s)
+    case (Feature.RemoveLibraries, s: FeatureSetting[Feature.RemoveLibraries.type]) => this.copy(removeLibraries = s)
+    case (Feature.CreateSlackIntegration, s: FeatureSetting[Feature.CreateSlackIntegration.type]) => this.copy(createSlackIntegration = s)
+    case (Feature.EditOrganization, s: FeatureSetting[Feature.EditOrganization.type]) => this.copy(editOrganization = s)
+    case (Feature.ExportKeeps, s: FeatureSetting[Feature.ExportKeeps.type]) => this.copy(exportKeeps = s)
+  }
+}
 
 object OrganizationSettings {
   implicit val publishLibrariesFormat = Feature.PublishLibrariesSetting.format
