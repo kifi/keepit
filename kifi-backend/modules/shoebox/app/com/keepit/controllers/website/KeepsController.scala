@@ -92,16 +92,29 @@ class KeepsController @Inject() (
       .as("text/html")
   }
 
-  def exportOrganizationKeeps() = UserAction.async(parse.tolerantJson) { request =>
-    val format = (request.body \ "format").as[KeepExportFormat]
-    val pubIds = (request.body \ "orgIds").as[Set[PublicId[Organization]]]
-    val orgIds = pubIds.map { pubId => Organization.decodePublicId(pubId).get }
-    keepExportCommander.exportKeeps(OrganizationKeepExportRequest(request.userId, orgIds)).map { response =>
-      format match {
-        case KeepExportFormat.JSON => Ok(response.get.formatAsJson)
-        case KeepExportFormat.HTML => Ok(response.get.formatAsHtml)
+  def exportOrganizationKeeps() = UserAction.async(parse.anyContent) { request =>
+    request.body.asFormUrlEncoded.flatMap { form =>
+      for {
+        format <- form.get("format").flatMap(_.headOption.map(KeepExportFormat.apply))
+        orgIds <- form.get("orgIds").map(_.map(PublicId.apply[Organization]))
+      } yield (format, orgIds.toSet)
+    }.orElse {
+      request.body.asJson.flatMap { json =>
+        for {
+          format <- (json \ "format").asOpt[KeepExportFormat]
+          orgIds <- (json \ "orgIds").asOpt[Set[PublicId[Organization]]]
+        } yield (format, orgIds)
       }
-    }
+    }.map {
+      case ((format, pubIds)) =>
+        val orgIds = pubIds.map { pubId => Organization.decodePublicId(pubId).get }
+        keepExportCommander.exportKeeps(OrganizationKeepExportRequest(request.userId, orgIds)).map { response =>
+          format match {
+            case KeepExportFormat.JSON => Ok(response.get.formatAsJson).withHeaders("Content-Disposition" -> "attachment; filename=\"kifi_export.json\"")
+            case KeepExportFormat.HTML => Ok(response.get.formatAsHtml).withHeaders("Content-Disposition" -> "attachment; filename=\"kifi_export.html\"")
+          }
+        }
+    }.getOrElse(Future.successful(BadRequest))
   }
 
   def exportPersonalKeeps() = UserAction.async(parse.tolerantJson) { request =>
