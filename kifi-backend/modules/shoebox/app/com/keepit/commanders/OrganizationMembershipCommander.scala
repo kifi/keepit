@@ -188,6 +188,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
   private def getValidationError(request: OrganizationMembershipRequest)(implicit session: RSession): Option[OrganizationFail] = {
     val org = organizationRepo.get(request.orgId)
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
+    val requesterPermissions = permissionCommander.getOrganizationPermissions(request.orgId, Some(request.requesterId))
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
     requesterOpt match {
@@ -195,21 +196,21 @@ class OrganizationMembershipCommanderImpl @Inject() (
       case Some(requester) =>
         request match {
           case OrganizationMembershipAddRequest(_, _, _, newRole) =>
-            val requesterCanInviteSpecifiedRole = (newRole <= requester.role) && requester.permissions.contains(INVITE_MEMBERS)
+            val requesterCanInviteSpecifiedRole = (newRole <= requester.role) && requesterPermissions.contains(INVITE_MEMBERS)
             if (targetOpt.isDefined) Some(OrganizationFail.ALREADY_A_MEMBER)
             else if (!requesterCanInviteSpecifiedRole) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
             else None
 
           case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
             val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
-            val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
+            val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requesterPermissions.contains(MODIFY_MEMBERS)
             if (!(requesterIsOwner || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
             else None
 
           case OrganizationMembershipRemoveRequest(_, _, _) =>
             val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
             val requesterRemovingSelf = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
-            val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(REMOVE_MEMBERS)
+            val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requesterPermissions.contains(REMOVE_MEMBERS)
             if (!(requesterIsOwner || requesterRemovingSelf || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
             else None
         }

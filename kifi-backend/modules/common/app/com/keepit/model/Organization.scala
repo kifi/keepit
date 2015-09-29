@@ -31,8 +31,7 @@ case class Organization(
     description: Option[String],
     ownerId: Id[User],
     primaryHandle: Option[PrimaryOrganizationHandle],
-    site: Option[String],
-    basePermissions: BasePermissions = Organization.defaultBasePermissions) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
+    site: Option[String]) extends ModelWithPublicId[Organization] with ModelWithState[Organization] with ModelWithSeqNumber[Organization] {
 
   override def withId(id: Id[Organization]): Organization = this.copy(id = Some(id))
   override def withUpdateTime(now: DateTime): Organization = this.copy(updatedAt = now)
@@ -40,25 +39,16 @@ case class Organization(
   def withName(newName: String): Organization = this.copy(name = newName)
   def withDescription(newDescription: Option[String]): Organization = this.copy(description = newDescription)
   def withOwner(newOwner: Id[User]): Organization = this.copy(ownerId = newOwner)
-  def applyPermissionsDiff(pdiff: PermissionsDiff): Organization = {
-    this.copy(basePermissions = basePermissions.applyPermissionsDiff(pdiff))
-  }
   def withSite(newSite: Option[String]): Organization = this.copy(site = newSite)
-  def hiddenFromNonmembers: Organization = {
-    this.copy(basePermissions = basePermissions.removePermission(None -> VIEW_ORGANIZATION))
-  }
 
   def abbreviatedName = this.name.abbreviate(33)
 
-  def getNonmemberPermissions = basePermissions.forNonmember
-  def getRolePermissions(role: OrganizationRole) = basePermissions.forRole(role)
-
   def newMembership(userId: Id[User], role: OrganizationRole): OrganizationMembership = {
-    OrganizationMembership(organizationId = id.get, userId = userId, role = role, permissions = getRolePermissions(role))
+    OrganizationMembership(organizationId = id.get, userId = userId, role = role)
   }
 
   def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
-    membership.copy(role = newRole, permissions = getRolePermissions(newRole))
+    membership.copy(role = newRole)
 
   def handle: OrganizationHandle = {
     primaryHandle match {
@@ -75,7 +65,6 @@ case class Organization(
     state = OrganizationStates.INACTIVE,
     name = RandomStringUtils.randomAlphanumeric(20),
     primaryHandle = None,
-    basePermissions = Organization.totallyInvisiblePermissions,
     description = None
   )
 }
@@ -86,33 +75,6 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
   protected val publicIdPrefix = "o"
   protected val publicIdIvSpec = new IvParameterSpec(Array(62, 91, 74, 34, 82, -77, 19, -35, -118, 3, 112, -59, -70, 94, 101, -115))
 
-  val defaultBasePermissions: BasePermissions =
-    BasePermissions(
-      None -> Set(VIEW_ORGANIZATION, VIEW_MEMBERS),
-      Some(OrganizationRole.ADMIN) -> Set(
-        VIEW_ORGANIZATION,
-        EDIT_ORGANIZATION,
-        INVITE_MEMBERS,
-        MODIFY_MEMBERS,
-        REMOVE_MEMBERS,
-        ADD_LIBRARIES,
-        VIEW_MEMBERS,
-        REMOVE_LIBRARIES,
-        GROUP_MESSAGING,
-        PUBLISH_LIBRARIES,
-        MANAGE_PLAN,
-        EXPORT_KEEPS
-      ),
-      Some(OrganizationRole.MEMBER) -> Set(
-        VIEW_ORGANIZATION,
-        ADD_LIBRARIES,
-        REMOVE_LIBRARIES,
-        INVITE_MEMBERS,
-        VIEW_MEMBERS,
-        GROUP_MESSAGING,
-        PUBLISH_LIBRARIES
-      )
-    )
   val totallyInvisiblePermissions: BasePermissions =
     BasePermissions(OrganizationRole.allOpts.map(_ -> Set.empty[OrganizationPermission]).toMap)
 
@@ -126,8 +88,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
     (__ \ 'description).formatNullable[String] and
     (__ \ 'ownerId).format(Id.format[User]) and
     (__ \ 'handle).formatNullable[PrimaryOrganizationHandle] and
-    (__ \ 'site).formatNullable[String] and
-    (__ \ 'basePermissions).format[BasePermissions]
+    (__ \ 'site).formatNullable[String]
   )(Organization.apply, unlift(Organization.unapply))
 
   def applyFromDbRow(
@@ -141,13 +102,12 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
     ownerId: Id[User],
     organizationHandle: Option[OrganizationHandle],
     normalizedOrganizationHandle: Option[OrganizationHandle],
-    site: Option[String],
-    basePermissions: BasePermissions) = {
+    site: Option[String]) = {
     val primaryOrganizationHandle = for {
       original <- organizationHandle
       normalized <- normalizedOrganizationHandle
     } yield PrimaryOrganizationHandle(original, normalized)
-    Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, primaryOrganizationHandle, site, basePermissions)
+    Organization(id, createdAt, updatedAt, state, seq, name, description, ownerId, primaryOrganizationHandle, site)
   }
 
   def unapplyToDbRow(org: Organization) = {
@@ -161,8 +121,7 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
       org.ownerId,
       org.primaryHandle.map(_.original),
       org.primaryHandle.map(_.normalized),
-      org.site,
-      org.basePermissions))
+      org.site))
   }
 
   case class UndefinedOrganizationHandleException(org: Organization) extends Exception(s"no handle found for $org")

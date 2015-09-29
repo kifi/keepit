@@ -51,6 +51,7 @@ trait OrganizationInviteCommander {
 class OrganizationInviteCommanderImpl @Inject() (db: Database,
     airbrake: AirbrakeNotifier,
     organizationRepo: OrganizationRepo,
+    permissionCommander: PermissionCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
@@ -75,11 +76,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
 
-    val validateRequester = requesterOpt match {
-      case None => Some(OrganizationFail.NOT_A_MEMBER)
-      case Some(membership) if !membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) => Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-      case _ => None
-    }
+    val validateRequester = if (!permissionCommander.getOrganizationPermissions(request.orgId, Some(request.requesterId)).contains(OrganizationPermission.INVITE_MEMBERS)) {
+      Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+    } else None
 
     validateRequester match {
       case Some(invalidRequester) => Some(invalidRequester)
@@ -337,16 +336,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] = {
     db.readWrite { implicit session =>
-      val membershipOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
-      membershipOpt match {
-        case Some(membership) if membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) =>
-          val invite = organizationInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId))
-
-          // tracking
-          organizationAnalytics.trackSentOrganizationInvites(inviterId, organizationRepo.get(orgId), Set(invite))
-          Right(invite)
-        case Some(membership) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        case None => Left(OrganizationFail.NOT_A_MEMBER)
+      if (!permissionCommander.getOrganizationPermissions(orgId, Some(inviterId)).contains(OrganizationPermission.INVITE_MEMBERS)) {
+        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      } else {
+        val invite = organizationInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId))
+        organizationAnalytics.trackSentOrganizationInvites(inviterId, organizationRepo.get(orgId), Set(invite))
+        Right(invite)
       }
     }
   }

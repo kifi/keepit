@@ -177,7 +177,8 @@ class OrganizationCommanderImpl @Inject() (
       orgMembershipRepo.getByOrgIdAndUserId(orgId, viewerId)
     }
     val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
-    OrganizationMembershipInfo(isInvited = inviteOpt.isDefined, invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
+    val permissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
+    OrganizationMembershipInfo(isInvited = inviteOpt.isDefined, invite = inviteOpt, role = membershipOpt.map(_.role), permissions = permissions)
   }
 
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo] = {
@@ -220,20 +221,14 @@ class OrganizationCommanderImpl @Inject() (
 
   private def validateModifications(modifications: OrganizationModifications): Option[OrganizationFail] = {
     val badName = modifications.name.exists(_.isEmpty)
-    val badPermissionsChange = modifications.permissionsDiff.exists { pdiff =>
-      def roleCannotSeeOrg = OrganizationRole.all.exists { role => pdiff.removed(Some(role)).contains(VIEW_ORGANIZATION) }
-      def messedWithAdmins = pdiff.added(Some(OrganizationRole.ADMIN)).nonEmpty || pdiff.removed(Some(OrganizationRole.ADMIN)).nonEmpty // not going to tackle this right now, but we may need to take this check off with new permissions e.g. FORCE_EDIT_LIBRARIES
-      roleCannotSeeOrg || messedWithAdmins
-    }
     val normalizedSiteUrl = modifications.site.map { url =>
       if (url.startsWith("http://") || url.startsWith("https://")) url
       else "https://" + url
     }
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
-    (badName, badPermissionsChange, badSiteUrl) match {
-      case (true, _, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
-      case (_, true, _) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
-      case (_, _, true) => Some(OrganizationFail.INVALID_MODIFY_SITEURL)
+    (badName, badSiteUrl) match {
+      case (true, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
+      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
       case _ => None
     }
   }
@@ -241,7 +236,6 @@ class OrganizationCommanderImpl @Inject() (
   private def organizationWithModifications(org: Organization, modifications: OrganizationModifications): Organization = {
     org.withName(modifications.name.getOrElse(org.name))
       .withDescription(modifications.description.orElse(org.description))
-      .applyPermissionsDiff(modifications.permissionsDiff.getOrElse(PermissionsDiff.empty))
       .withSite(modifications.site.orElse(org.site))
   }
 
@@ -278,7 +272,6 @@ class OrganizationCommanderImpl @Inject() (
           val org = orgRepo.get(request.orgId)
 
           val modifiedOrg = organizationWithModifications(org, request.modifications)
-          if (request.modifications.permissionsDiff.isDefined) planManagementCommander.applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, modifiedOrg.basePermissions)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
         case Some(orgFail) => Left(orgFail)
@@ -361,9 +354,6 @@ class OrganizationCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val modifiedOrg = orgRepo.save(organizationWithModifications(org, modifications))
-      if (modifications.permissionsDiff.isDefined) {
-        planManagementCommander.applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, modifiedOrg.basePermissions)
-      }
     }
   }
 

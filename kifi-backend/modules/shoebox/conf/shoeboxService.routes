@@ -737,8 +737,6 @@ GET     /admin/organization/:id/disownDomain/:domainHostname @com.keepit.control
 POST    /admin/organization/:id/forceDeactivate              @com.keepit.controllers.admin.AdminOrganizationController.forceDeactivate(id: Id[Organization])
 POST    /admin/organization/:id/experiment/:exp              @com.keepit.controllers.admin.AdminOrganizationController.addExperimentAction(id: Id[Organization], exp: String)
 DELETE  /admin/organization/:id/experiment/:exp              @com.keepit.controllers.admin.AdminOrganizationController.removeExperimentAction(id: Id[Organization], exp: String)
-POST    /admin/organization/:id/permissions/:role/:perm      @com.keepit.controllers.admin.AdminOrganizationController.addRolePermission(id: Id[Organization], role: String, perm: String)
-DELETE  /admin/organization/:id/permissions/:role/:perm      @com.keepit.controllers.admin.AdminOrganizationController.removeRolePermission(id: Id[Organization], role: String, perm: String)
 GET     /admin/organizations                                 @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int = 0)
 GET     /admin/organizations/:page                           @com.keepit.controllers.admin.AdminOrganizationController.organizationsView(page: Int)
 GET     /admin/fakeOrganizations                             @com.keepit.controllers.admin.AdminOrganizationController.fakeOrganizationsView(page: Int = 0)
@@ -751,7 +749,6 @@ GET     /admin/findOrganizationByNameJson                    @com.keepit.control
 POST    /admin/organizations/create                          @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
-POST    /admin/organizations/applyPermissionsDiffToAllOrganizations   @com.keepit.controllers.admin.AdminOrganizationController.applyPermissionsDiffToAllOrganizations()
 
 
 GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg

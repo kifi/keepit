@@ -35,7 +35,8 @@ case class PaidPlan(
     name: Name[PaidPlan],
     billingCycle: BillingCycle,
     pricePerCyclePerUser: DollarAmount,
-    features: Set[PlanFeature]) extends ModelWithPublicId[PaidPlan] with ModelWithState[PaidPlan] {
+    editableFeatures: Set[Feature],
+    defaultSettings: OrganizationSettings) extends ModelWithPublicId[PaidPlan] with ModelWithState[PaidPlan] {
 
   def withId(id: Id[PaidPlan]): PaidPlan = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidPlan = this.copy(updatedAt = now)
@@ -64,79 +65,3 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
 
 object PaidPlanStates extends States[PaidPlan]
 
-sealed trait Feature {
-  def name: String
-  def options: Seq[String]
-  def verify(setting: String) = options.contains(setting)
-}
-object Feature {
-  import OrganizationPermissionFeature._
-  def get(name: String): Option[Feature] = ALL.find(_.name == name)
-  val ALL: Set[Feature] = Set(PublishLibraries, InviteMembers, GroupMessaging, EditLibrary, ViewMembers, RemoveOrganizationLibraries, CreateSlackIntegration, EditOrganization, ExportKeeps)
-}
-sealed abstract class OrganizationPermissionFeature(val permission: OrganizationPermission) extends Feature {
-  def roleOptions: Map[String, Seq[Option[OrganizationRole]]]
-  def name = permission.value
-  def options = roleOptions.keys.toSeq
-  def permissionsByRoleBySetting: Map[String, PermissionsMap] = {
-    roleOptions.map {
-      case (setting, roles) =>
-        val permissionsByRole = roles.map { role => role -> this.permission }
-          .groupBy { _._1 }.map {
-            case (role, roleAndPermissions) => role -> roleAndPermissions.map(_._2).toSet
-          }
-        setting -> PermissionsMap(permissionsByRole)
-    }
-  }
-}
-object OrganizationPermissionFeature {
-
-  case object PublishLibraries extends OrganizationPermissionFeature(OrganizationPermission.PUBLISH_LIBRARIES) {
-    val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  }
-
-  case object InviteMembers extends OrganizationPermissionFeature(OrganizationPermission.INVITE_MEMBERS) {
-    val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  }
-
-  case object GroupMessaging extends OrganizationPermissionFeature(OrganizationPermission.GROUP_MESSAGING) {
-    val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  }
-
-  case object EditLibrary extends OrganizationPermissionFeature(OrganizationPermission.FORCE_EDIT_LIBRARIES) {
-    val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  }
-
-  case object ViewMembers extends OrganizationPermissionFeature(OrganizationPermission.VIEW_MEMBERS) {
-    val roleOptions = Map("anyone" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER), None), "member" -> Seq(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER)))
-  }
-
-  case object RemoveOrganizationLibraries extends OrganizationPermissionFeature(OrganizationPermission.REMOVE_LIBRARIES) {
-    val roleOptions = Map("disabled" -> Seq.empty, "admin" -> Seq(Some(OrganizationRole.ADMIN)), "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)))
-  }
-
-  case object CreateSlackIntegration extends OrganizationPermissionFeature(OrganizationPermission.CREATE_SLACK_INTEGRATION) {
-    val roleOptions = Map("disabled" -> Seq.empty, "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
-  }
-
-  case object EditOrganization extends OrganizationPermissionFeature(OrganizationPermission.EDIT_ORGANIZATION) {
-    val roleOptions = Map("member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
-  }
-
-  case object ExportKeeps extends OrganizationPermissionFeature(OrganizationPermission.EXPORT_KEEPS) {
-    val roleOptions = Map("disabled" -> Seq.empty, "member" -> Seq(Some(OrganizationRole.MEMBER), Some(OrganizationRole.ADMIN)), "admin" -> Seq(Some(OrganizationRole.ADMIN)))
-  }
-}
-
-@json
-case class PlanFeature(name: String, default: String, editable: Boolean) // Stored in db for PaidPlan
-@json
-case class ClientFeature(name: String, setting: String, editable: Boolean) // Sent to clients
-@json
-case class FeatureSetting(name: String, setting: String) // Received from clients, stored in db for PaidAccount
-
-object FeatureSetting {
-  def alterSettings(featureSettings: Set[FeatureSetting], toChange: Set[FeatureSetting]): Set[FeatureSetting] = {
-    featureSettings -- toChange.map(newSetting => featureSettings.find(_.name == newSetting.name).get) ++ toChange
-  }
-}

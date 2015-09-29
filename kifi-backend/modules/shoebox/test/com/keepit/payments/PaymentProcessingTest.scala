@@ -149,7 +149,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
           PaidAccountFactory.paidAccount()
-            .withOrganization(org.id.get)
+            .withOrganizationId(org.id.get)
             .withPlan(plan.id.get)
             .withFrozen(true)
             .withCredit(initialCredit)
@@ -176,7 +176,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganization(org.id.get)
+          PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withCredit(initialCredit)
             .withBillingCycleStart(currentDateTime.minusMonths(1).minusDays(1))
             .saved
@@ -201,7 +201,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganization(org.id.get)
+          PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withBillingCycleStart(currentDateTime)
             .withCredit(initialCredit)
             .saved
@@ -228,7 +228,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
 
-          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganization(org.id.get)
+          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withBillingCycleStart(billingCycleStart)
             .withCredit(initialCredit)
             .withActiveUsers(3)
@@ -267,7 +267,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganization(org.id.get)
+          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withBillingCycleStart(billingCycleStart)
             .withCredit(initialCredit)
             .withActiveUsers(3)
@@ -308,7 +308,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
 
-          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganization(org.id.get)
+          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withBillingCycleStart(billingCycleStart)
             .withCredit(initialCredit)
             .withActiveUsers(3)
@@ -345,7 +345,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
 
-          PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganization(org.id.get)
+          PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withBillingCycleStart(billingCycleStart)
             .withCredit(initialCredit)
             .withActiveUsers(3)
