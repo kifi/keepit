@@ -18,13 +18,14 @@ class EventProxyController @Inject() (
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory) extends UserActions with ShoeboxServiceController {
 
   def track() = MaybeUserAction(parse.tolerantJson) { request =>
+    import com.keepit.common.core._
     SafeFuture("event proxy") {
       val sentAt = clock.now()
       request.body.as[Seq[JsObject]].foreach { rawEvent =>
         val rawEventType = (rawEvent \ "event").as[String]
         val (eventType, intendedEventOpt) = getEventType(rawEventType)
         val builder = heimdalContextBuilderFactoryBean.withRequestInfo(request)
-        (rawEvent \ "properties").asOpt[HeimdalContext] match {
+        (rawEvent \ "properties").as[JsObject].nonNullFields.asOpt[HeimdalContext] match {
           case Some(ctx) =>
             builder.addExistingContext(ctx)
           case None =>
