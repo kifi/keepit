@@ -1,6 +1,7 @@
 package com.keepit.controllers.tracking
 
 import com.keepit.common.controller._
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
@@ -15,7 +16,8 @@ class EventProxyController @Inject() (
     val userActionsHelper: UserActionsHelper,
     clock: Clock,
     heimdal: HeimdalServiceClient,
-    heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory) extends UserActions with ShoeboxServiceController {
+    heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
+    airbrake: AirbrakeNotifier) extends UserActions with ShoeboxServiceController {
 
   def track() = MaybeUserAction(parse.tolerantJson) { request =>
     import com.keepit.common.core._
@@ -29,7 +31,7 @@ class EventProxyController @Inject() (
           case Some(ctx) =>
             builder.addExistingContext(ctx)
           case None =>
-            log.warn(s"[EventProxyController] Can't parse event: $rawEvent")
+            airbrake.notify(s"[EventProxyController] Can't parse event: $rawEvent")
         }
 
         val fullContext = builder.build
