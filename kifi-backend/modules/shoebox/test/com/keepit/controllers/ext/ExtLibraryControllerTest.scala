@@ -366,7 +366,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(result1) === OK
         contentType(result1) must beSome("application/json")
         val keep1 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib1.id.get, 0, 10).head }
-        contentAsString(result1) === s"""{"id":"${keep1.externalId}","mine":true,"removable":true,"libraryId":"${pubId1.id}","title":"kayne-fidence"}"""
+        contentAsString(result1) === s"""{"id":"${keep1.externalId}","mine":true,"removable":true,"visibility":"published","libraryId":"${pubId1.id}","title":"kayne-fidence"}"""
 
         // keep to someone else's library
         val result2 = addKeep(user1, pubId2, Json.obj(
@@ -376,7 +376,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
         status(result2) === OK
         contentType(result2) must beSome("application/json")
         val keep2 = db.readOnlyMaster { implicit s => keepRepo.getByLibrary(lib2.id.get, 0, 10).head }
-        contentAsString(result2) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true,"secret":true,"libraryId":"${pubId2.id}","title":"T 2"}"""
+        contentAsString(result2) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true,"secret":true,"visibility":"secret","libraryId":"${pubId2.id}","title":"T 2"}"""
 
         // keep to someone else's library again (should be idempotent)
         val result3 = addKeep(user1, pubId2, Json.obj(
@@ -384,7 +384,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "url" -> "http://www.beyonceisbetter.com",
           "guided" -> false))
         status(result3) === OK
-        contentAsString(result3) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true,"secret":true,"libraryId":"${pubId2.id}","title":"T 3"}"""
+        contentAsString(result3) === s"""{"id":"${keep2.externalId}","mine":true,"removable":true,"secret":true,"visibility":"secret","libraryId":"${pubId2.id}","title":"T 3"}"""
 
         // try to keep to someone else's library without sufficient access
         val result4 = addKeep(user1, pubId3, Json.obj(

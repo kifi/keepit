@@ -124,7 +124,6 @@ class LibraryMembershipCommanderImpl @Inject() (
   }
 
   def joinLibrary(userId: Id[User], libraryId: Id[Library], authToken: Option[String] = None, subscribed: Option[Boolean] = None)(implicit eventContext: HeimdalContext): Either[LibraryFail, (Library, LibraryMembership)] = {
-    println(s"$userId joining $libraryId")
     val (lib, inviteList, existingActiveMembership) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val tokenInvites = if (authToken.isDefined) {
