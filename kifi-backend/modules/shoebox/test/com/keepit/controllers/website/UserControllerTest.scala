@@ -172,7 +172,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
               (json2 \ key).as[JsValue] == value
           }.reduce(_ && _)
         }
-        println(Json.parse(contentAsString(result2)))
         subsetOf(expected, Json.parse(contentAsString(result2)).as[JsObject]) === true
       }
     }
