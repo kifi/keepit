@@ -705,7 +705,7 @@ class LibraryController @Inject() (
       }
   }
 
-  def marketingSiteSuggestedLibraries() = Action.async {
+  def marketingSiteSuggestedLibraries() = MaybeUserAction.async {
     libraryInfoCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
   }
 
