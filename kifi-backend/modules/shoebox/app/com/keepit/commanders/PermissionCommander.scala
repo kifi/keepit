@@ -19,6 +19,7 @@ trait PermissionCommander {
 class PermissionCommanderImpl @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
+    orgConfigRepo: OrganizationConfigurationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgInviteRepo: OrganizationInviteRepo,
     userRepo: UserRepo,
@@ -36,16 +37,14 @@ class PermissionCommanderImpl @Inject() (
   }
 
   private def computeOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
-    val basePermissions = userIdOpt match {
-      case None => defaultOrganizationPermissions(None)
-      case Some(userId) =>
-        val roleOpt = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.role)
-        val invites = orgInviteRepo.getByOrgIdAndUserId(orgId, userId)
-        val invitePermissions = if (invites.nonEmpty) extraInviteePermissions else Set.empty
-        defaultOrganizationPermissions(roleOpt) ++ invitePermissions
-    }
-    // TODO(ryan): [NOW] this needs to grab the org's settings, then modify the basePermissions accordingly
-    basePermissions
+    val roleOpt = userIdOpt.flatMap { userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.role) }
+    val basePermissions = settinglessOrganizationPermissions(roleOpt)
+    val hasOrganizationInvite = userIdOpt.exists { userId => orgInviteRepo.getByOrgIdAndUserId(orgId, userId).nonEmpty }
+
+    val inviteBasedPermissions = if (hasOrganizationInvite) extraInviteePermissions else Set.empty
+    val settingsBasedPermissions = orgConfigRepo.getByOrgId(orgId).settings.extraPermissionsFor(roleOpt)
+
+    basePermissions ++ inviteBasedPermissions ++ settingsBasedPermissions
   }
 
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
@@ -121,34 +120,21 @@ class PermissionCommanderImpl @Inject() (
     libPermissions ++ addedPermissions -- removedPermissions
   }
 
-  val extraInviteePermissions: Set[OrganizationPermission] = Set(OrganizationPermission.VIEW_ORGANIZATION, OrganizationPermission.VIEW_MEMBERS)
-  def defaultOrganizationPermissions(orgRoleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = orgRoleOpt match {
+  val extraInviteePermissions: Set[OrganizationPermission] = Set(OrganizationPermission.VIEW_ORGANIZATION)
+  def settinglessOrganizationPermissions(orgRoleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = orgRoleOpt match {
     case None => Set(
-      OrganizationPermission.VIEW_ORGANIZATION,
-      OrganizationPermission.VIEW_MEMBERS
+      OrganizationPermission.VIEW_ORGANIZATION
     )
     case Some(OrganizationRole.MEMBER) => Set(
       OrganizationPermission.VIEW_ORGANIZATION,
-      OrganizationPermission.ADD_LIBRARIES,
-      OrganizationPermission.REMOVE_LIBRARIES,
-      OrganizationPermission.INVITE_MEMBERS,
-      OrganizationPermission.VIEW_MEMBERS,
-      OrganizationPermission.MESSAGE_ORGANIZATION,
-      OrganizationPermission.PUBLISH_LIBRARIES
+      OrganizationPermission.ADD_LIBRARIES
     )
     case Some(OrganizationRole.ADMIN) => Set(
       OrganizationPermission.VIEW_ORGANIZATION,
-      OrganizationPermission.EDIT_ORGANIZATION,
-      OrganizationPermission.INVITE_MEMBERS,
       OrganizationPermission.MODIFY_MEMBERS,
       OrganizationPermission.REMOVE_MEMBERS,
       OrganizationPermission.ADD_LIBRARIES,
-      OrganizationPermission.VIEW_MEMBERS,
-      OrganizationPermission.REMOVE_LIBRARIES,
-      OrganizationPermission.MESSAGE_ORGANIZATION,
-      OrganizationPermission.PUBLISH_LIBRARIES,
-      OrganizationPermission.MANAGE_PLAN,
-      OrganizationPermission.EXPORT_KEEPS
+      OrganizationPermission.MANAGE_PLAN
     )
   }
 

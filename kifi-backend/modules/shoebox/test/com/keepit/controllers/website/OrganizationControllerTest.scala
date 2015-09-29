@@ -103,19 +103,19 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         val ownerRequest = route.getOrganization(publicId)
         val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
         status(ownerResponse) === OK
-        (Json.parse(contentAsString(ownerResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === permissionCommander.defaultOrganizationPermissions(Some(OrganizationRole.ADMIN))
+        (Json.parse(contentAsString(ownerResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === permissionCommander.settinglessOrganizationPermissions(Some(OrganizationRole.ADMIN))
 
         inject[FakeUserActionsHelper].setUser(member)
         val memberRequest = route.getOrganization(publicId)
         val memberResponse = controller.getOrganization(publicId)(memberRequest)
         status(memberResponse) === OK
-        (Json.parse(contentAsString(memberResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === permissionCommander.defaultOrganizationPermissions(Some(OrganizationRole.MEMBER))
+        (Json.parse(contentAsString(memberResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === permissionCommander.settinglessOrganizationPermissions(Some(OrganizationRole.MEMBER))
 
         inject[FakeUserActionsHelper].setUser(rando)
         val randoRequest = route.getOrganization(publicId)
         val randoResponse = controller.getOrganization(publicId)(randoRequest)
         status(randoResponse) === OK
-        (Json.parse(contentAsString(randoResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === permissionCommander.defaultOrganizationPermissions(None)
+        (Json.parse(contentAsString(randoResponse)) \ "membership" \ "permissions").as[Set[OrganizationPermission]] === permissionCommander.settinglessOrganizationPermissions(None)
       }
       "serve up the right number of libraries depending on viewer permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>

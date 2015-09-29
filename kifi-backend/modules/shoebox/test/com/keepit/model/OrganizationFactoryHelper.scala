@@ -23,6 +23,7 @@ object OrganizationFactoryHelper {
       }
 
       injector.getInstance(classOf[PlanManagementCommander]).createAndInitializePaidAccountForOrganization(orgTemplate.id.get, plan.id.get, org.ownerId, session)
+      injector.getInstance(classOf[OrganizationConfigurationRepo]).save(OrganizationConfiguration(organizationId = orgTemplate.id.get, settings = plan.defaultSettings))
 
       val userRepo = injector.getInstance(classOf[UserRepo])
       assume(userRepo.get(org.ownerId).id.isDefined)

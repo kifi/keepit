@@ -25,6 +25,21 @@ case class OrganizationSettings(
     case (Feature.EditOrganization, s: FeatureSetting[Feature.EditOrganization.type]) => this.copy(editOrganization = s)
     case (Feature.ExportKeeps, s: FeatureSetting[Feature.ExportKeeps.type]) => this.copy(exportKeeps = s)
   }
+  def extraPermissionsFor(roleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = Map(
+    Feature.PublishLibraries.permission -> Feature.PublishLibrariesSetting.targetRoles(publishLibraries),
+    Feature.InviteMembers.permission -> Feature.InviteMembersSetting.targetRoles(inviteMembers),
+    Feature.MessageOrganization.permission -> Feature.MessageOrganizationSetting.targetRoles(messageOrganization),
+    Feature.ForceEditLibraries.permission -> Feature.ForceEditLibrariesSetting.targetRoles(forceEditLibraries),
+    Feature.ViewMembers.permission -> Feature.ViewMembersSetting.targetRoles(viewMembers),
+    Feature.RemoveLibraries.permission -> Feature.RemoveLibrariesSetting.targetRoles(removeLibraries),
+    Feature.CreateSlackIntegration.permission -> Feature.CreateSlackIntegrationSetting.targetRoles(createSlackIntegration),
+    Feature.EditOrganization.permission -> Feature.EditOrganizationSetting.targetRoles(editOrganization),
+    Feature.ExportKeeps.permission -> Feature.ExportKeepsSetting.targetRoles(exportKeeps)
+  ).collect {
+    case (permission, targets) if targets.contains(roleOpt) => permission
+  }.toSet
+
+  override def toString: String = Json.toJson(this).toString()
 }
 
 object OrganizationSettings {
@@ -95,6 +110,11 @@ object Feature {
     case object DISABLED extends FeatureSetting[PublishLibraries.type]("disabled")
     case object ADMINS extends FeatureSetting[PublishLibraries.type]("admins")
     case object MEMBERS extends FeatureSetting[PublishLibraries.type]("members")
+    def targetRoles(setting: FeatureSetting[PublishLibraries.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+    }
   }
 
   case object InviteMembers extends OrganizationPermissionFeature(OrganizationPermission.INVITE_MEMBERS)
@@ -104,6 +124,11 @@ object Feature {
     case object DISABLED extends FeatureSetting[InviteMembers.type]("disabled")
     case object ADMINS extends FeatureSetting[InviteMembers.type]("admins")
     case object MEMBERS extends FeatureSetting[InviteMembers.type]("members")
+    def targetRoles(setting: FeatureSetting[InviteMembers.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+    }
   }
 
   case object MessageOrganization extends OrganizationPermissionFeature(OrganizationPermission.MESSAGE_ORGANIZATION)
@@ -113,6 +138,11 @@ object Feature {
     case object DISABLED extends FeatureSetting[MessageOrganization.type]("disabled")
     case object ADMINS extends FeatureSetting[MessageOrganization.type]("admins")
     case object MEMBERS extends FeatureSetting[MessageOrganization.type]("members")
+    def targetRoles(setting: FeatureSetting[MessageOrganization.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+    }
   }
 
   case object ForceEditLibraries extends OrganizationPermissionFeature(OrganizationPermission.FORCE_EDIT_LIBRARIES)
@@ -122,6 +152,11 @@ object Feature {
     case object DISABLED extends FeatureSetting[ForceEditLibraries.type]("disabled")
     case object ADMINS extends FeatureSetting[ForceEditLibraries.type]("admins")
     case object MEMBERS extends FeatureSetting[ForceEditLibraries.type]("members")
+    def targetRoles(setting: FeatureSetting[ForceEditLibraries.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+    }
   }
 
   case object ViewMembers extends OrganizationPermissionFeature(OrganizationPermission.VIEW_MEMBERS)
@@ -132,6 +167,12 @@ object Feature {
     case object ADMINS extends FeatureSetting[ViewMembers.type]("admins")
     case object MEMBERS extends FeatureSetting[ViewMembers.type]("members")
     case object ANYONE extends FeatureSetting[ViewMembers.type]("anyone")
+    def targetRoles(setting: FeatureSetting[ViewMembers.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+      case ANYONE => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER), None)
+    }
   }
 
   case object RemoveLibraries extends OrganizationPermissionFeature(OrganizationPermission.REMOVE_LIBRARIES)
@@ -141,6 +182,11 @@ object Feature {
     case object DISABLED extends FeatureSetting[RemoveLibraries.type]("disabled")
     case object ADMINS extends FeatureSetting[RemoveLibraries.type]("admins")
     case object MEMBERS extends FeatureSetting[RemoveLibraries.type]("members")
+    def targetRoles(setting: FeatureSetting[RemoveLibraries.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+    }
   }
 
   case object CreateSlackIntegration extends OrganizationPermissionFeature(OrganizationPermission.CREATE_SLACK_INTEGRATION)
@@ -150,6 +196,11 @@ object Feature {
     case object DISABLED extends FeatureSetting[CreateSlackIntegration.type]("disabled")
     case object ADMINS extends FeatureSetting[CreateSlackIntegration.type]("admins")
     case object MEMBERS extends FeatureSetting[CreateSlackIntegration.type]("members")
+    def targetRoles(setting: FeatureSetting[CreateSlackIntegration.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+    }
   }
 
   case object EditOrganization extends OrganizationPermissionFeature(OrganizationPermission.EDIT_ORGANIZATION)
@@ -159,6 +210,11 @@ object Feature {
     case object DISABLED extends FeatureSetting[EditOrganization.type]("disabled")
     case object ADMINS extends FeatureSetting[EditOrganization.type]("admins")
     case object MEMBERS extends FeatureSetting[EditOrganization.type]("members")
+    def targetRoles(setting: FeatureSetting[EditOrganization.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+    }
   }
 
   case object ExportKeeps extends OrganizationPermissionFeature(OrganizationPermission.EXPORT_KEEPS)
@@ -168,6 +224,11 @@ object Feature {
     case object DISABLED extends FeatureSetting[ExportKeeps.type]("disabled")
     case object ADMINS extends FeatureSetting[ExportKeeps.type]("admins")
     case object MEMBERS extends FeatureSetting[ExportKeeps.type]("members")
+    def targetRoles(setting: FeatureSetting[ExportKeeps.type]): Set[Option[OrganizationRole]] = setting match {
+      case DISABLED => Set.empty
+      case ADMINS => Set(Some(OrganizationRole.ADMIN))
+      case MEMBERS => Set(Some(OrganizationRole.ADMIN), Some(OrganizationRole.MEMBER))
+    }
   }
 }
 
