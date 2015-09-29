@@ -79,7 +79,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     $slider = $(k.render('html/keeper/keeper', {
       'bgDir': api.url('images/keeper'),
       'isKept': kept,
-      'isPrivate': kept === 'private',
+      'keptState': kept || 'unkept',
       'boxCount': count,
       'boxOpen': /^\/messages(?:$|:)/.test(locator)
     }));
@@ -511,7 +511,7 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       if ($slider) {
         var $btn = $slider.find('.kifi-keep-btn');
         if ('kept' in o) {
-          $btn.removeClass('kifi-unkept kifi-private kifi-public').addClass('kifi-' + (o.kept || 'unkept'));
+          $btn.removeClass('kifi-unkept kifi-private kifi-public kifi-organization').addClass('kifi-' + (o.kept || 'unkept'));
         }
         if (o.fail && !$btn.hasClass('kifi-shake')) {
           $btn.one('animationend', $.fn.removeClass.bind($btn, 'kifi-shake'))
