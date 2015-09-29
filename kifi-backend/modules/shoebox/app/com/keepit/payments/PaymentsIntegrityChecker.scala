@@ -55,6 +55,7 @@ class PaymentsIntegrityChecker @Inject() (
 
         val perceivedStateByUser: Map[Id[User], Boolean] = eventsByUser.map {
           case (userId, events) =>
+            log.info(s"[AEIC] Processing ${events.length} events for $userId on $orgId.")
             val initialEvent: AccountEvent = events.head
             initialEvent.action match {
               case AccountEventAction.UserAdded(_) =>
@@ -114,7 +115,7 @@ class PaymentsIntegrityChecker @Inject() (
         }
         case Success(None) => log.info(s"[AEIC] Could not process org $orgId due to account being locked.")
         case Failure(ex) => {
-          log.info(s"[AEIC] An error occured during the check: ${ex.getMessage()}. Freezing Account", ex)
+          log.info(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account", ex)
           freezeAccount(orgId)
         }
       }
