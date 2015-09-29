@@ -42,6 +42,8 @@ angular.module('kifi')
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId'),
+      getBillingContacts: get(shoebox, '/admin/billing/contacts?pubId=:pubId'),
+      setBillingContacts: post(shoebox, '/admin/billing/contacts?pubId=:pubId'),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
 
@@ -53,6 +55,7 @@ angular.module('kifi')
       removeKeepFromLibrary: del(shoebox, '/libraries/:id/keeps/:keepId'),
       removeManyKeepsFromLibrary: post(shoebox, '/libraries/:id/keeps/delete'),
       changeKeepImage: post(shoebox, '/libraries/:id/keeps/:keepId/image'),
+      exportOrgKeeps: post(shoebox, '/keeps/organizationExport'),
 
       getLibraryShareSuggest: get(shoebox, '/libraries/:id/members/suggest?n=30', 30),
       updateLibraryMembership: post(shoebox, '/libraries/:id/members/:uid/access'),

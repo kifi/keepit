@@ -141,7 +141,23 @@ angular.module('kifi')
         url: '/settings',
         controller: 'OrgProfileSettingsCtrl',
         templateUrl: 'orgProfile/orgProfileSettings.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        'abstract': true
+      })
+      .state('orgProfile.settings.team', {
+        url: '',
+        controller: 'TeamSettingsCtrl',
+        templateUrl: 'teamSettings/teamSettings.tpl.html'
+      })
+      .state('orgProfile.settings.export', {
+        url: '/export',
+        controller: 'ExportKeepsCtrl',
+        templateUrl: 'teamSettings/exportKeeps.tpl.html'
+      })
+      .state('orgProfile.settings.contacts', {
+        url: '/contacts',
+        controller: 'BillingContactsCtrl',
+        templateUrl: 'teamSettings/billingContacts.tpl.html'
       })
       .state('teams', {
         url: '/teams',

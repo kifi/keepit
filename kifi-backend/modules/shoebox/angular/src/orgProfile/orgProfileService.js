@@ -126,6 +126,12 @@ angular.module('kifi')
           return response.data;
         });
       },
+      exportOrgKeeps: function (format, orgIds) {
+        return net.exportOrgKeeps({ format: format, orgIds: orgIds })
+        .then(function (response) {
+          return response.data;
+        });
+      },
 
       getCommonTrackingAttributes: function (organization) {
         var defaultAttributes = {
