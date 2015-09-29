@@ -11,7 +11,7 @@ import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URI
+import com.keepit.common.net.{ NonOKResponseException, URI }
 import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
@@ -137,35 +137,26 @@ class S3ImageStoreImpl @Inject() (
     if (config.isLocal) {
       Promise.successful(Seq()).future
     } else {
-      val useDefaultImage = getPictureUrl(None).isEmpty
       val actualPictureName = pictureName getOrElse UserPicture.generateNewFilename
       // todo: Grab largest image social network allows, do resizing ourselves (the same way we do for uploaded images)
-      val future = Future.sequence((S3UserPictureConfig.sizes.map(Some(_)) :+ None).map { size =>
-        val originalImageUrl = getPictureUrl(size) getOrElse S3UserPictureConfig.defaultImage
-        WS.url(originalImageUrl).withRequestTimeout(120000).get().flatMap { response =>
-          if (response.status != 200) {
-            WS.url(S3UserPictureConfig.defaultImage).withRequestTimeout(120000).get().map { response1 =>
-              (response1, true)
+      Future.sequence((S3UserPictureConfig.sizes.map(Some(_)) :+ None).flatMap { size =>
+        getPictureUrl(size).map { originalImageUrl =>
+          val future = WS.url(originalImageUrl).withRequestTimeout(120000).get().map {
+            case response if response.status == 200 => Some {
+              val key = keyByExternalId(sizeName(size), externalId, actualPictureName)
+              val putObj = uploadToS3(key, response.underlying[NettyResponse].getResponseBodyAsStream, label = originalImageUrl)
+              if (putObj.isSuccess) {
+                updateUserPictureRecord(userId, actualPictureName, pictureSource, setDefault, None)
+              }
+              (actualPictureName, putObj)
             }
-          } else {
-            Future.successful((response, useDefaultImage))
+            case nonOkResponse => None //ignore
           }
-        }.map {
-          case (response, usedDefault) =>
-            val usedImage: String = if (usedDefault) S3UserPictureConfig.defaultName else actualPictureName
-            val key = keyByExternalId(sizeName(size), externalId, usedImage)
-            val putObj = uploadToS3(key, response.underlying[NettyResponse].getResponseBodyAsStream, label = originalImageUrl)
-            (usedImage, putObj)
+
+          future onFailure { case e => airbrake.notify(s"Failed to upload picture $pictureName - $externalId from $pictureSource to S3", e) }
+          future
         }
-      })
-      future onComplete {
-        case Success(a) =>
-          val usedImage = if (a.exists(_._1 == S3UserPictureConfig.defaultName)) S3UserPictureConfig.defaultName else actualPictureName
-          updateUserPictureRecord(userId, usedImage, pictureSource, setDefault, None)
-        case Failure(e) =>
-          airbrake.notify(s"Failed to upload picture $pictureName - $externalId from $pictureSource to S3", e)
-      }
-      future
+      }).map(_.flatten)
     }
   }
 
