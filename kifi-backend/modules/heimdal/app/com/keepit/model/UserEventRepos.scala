@@ -89,8 +89,8 @@ class UserOrgValuesAugmentor(eventContextHelper: EventContextHelper) extends Eve
   }
 }
 
-class UserContentViewedAugmentor(eventContextHelper: EventContextHelper)(implicit val publicIdConfiguration: PublicIdConfiguration) extends EventAugmentor[UserEvent] {
-  def isDefinedAt(userEvent: UserEvent) = userEvent.eventType == UserEventTypes.VIEWED_CONTENT
+class UserKeepViewedAugmentor(eventContextHelper: EventContextHelper)(implicit val publicIdConfiguration: PublicIdConfiguration) extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = userEvent.eventType == UserEventTypes.VIEWED_CONTENT && userEvent.context.get[String]("contentType").contains("keep")
   def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
     val userId = userEvent.userId
     val orgIdOpt = userEvent.context.get[String]("orgId").flatMap(rawId =>
@@ -101,15 +101,29 @@ class UserContentViewedAugmentor(eventContextHelper: EventContextHelper)(implici
     )
 
     val orgPropsFut = orgIdOpt match {
-      case Some(orgId) => eventContextHelper.getOrgEventValues(orgId, userId)
+      case Some(orgId) => eventContextHelper.getOrgEventValues(orgId, userId).recover { case _ => Seq.empty[(String, ContextData)] }
       case None => Future.successful(Seq.empty[(String, ContextData)])
     }
     val libPropsFut = libIdOpt match {
-      case Some(libraryId) => eventContextHelper.getLibraryEventValues(libraryId, userId)
+      case Some(libraryId) => eventContextHelper.getLibraryEventValues(libraryId, userId).recover { case _ => Seq.empty[(String, ContextData)] }
       case None => Future.successful(Seq.empty[(String, ContextData)])
     }
 
     for (orgProps <- orgPropsFut; libProps <- libPropsFut) yield orgProps ++ libProps
+  }
+}
+
+class UserDiscussionViewedAugmentor(eventContextHelper: EventContextHelper)(implicit val publicIdConfiguration: PublicIdConfiguration) extends EventAugmentor[UserEvent] {
+  def isDefinedAt(userEvent: UserEvent) = userEvent.eventType == UserEventTypes.VIEWED_CONTENT && userEvent.context.get[String]("contentType").contains("discussion")
+  def apply(userEvent: UserEvent): Future[Seq[(String, ContextData)]] = {
+    val orgIdOptFut = userEvent.context.get[String]("discussionId").map { threadId =>
+      eventContextHelper.getOrganizationIdByExtThreadId(threadId)
+    }.getOrElse { Future.successful(None) }
+
+    orgIdOptFut.flatMap {
+      case None => Future.successful(Seq.empty[(String, ContextData)])
+      case Some(orgId) => eventContextHelper.getOrgEventValues(orgId, userEvent.userId)
+    }
   }
 }
 

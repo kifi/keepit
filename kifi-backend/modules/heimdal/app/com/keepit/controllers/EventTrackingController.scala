@@ -75,7 +75,9 @@ class EventTrackingController @Inject() (
       new UserValuesAugmentor(shoeboxClient),
       new UserKifiCampaignIdAugmentor(shoeboxClient),
       new UserOrgValuesAugmentor(eventContextHelper),
-      new UserContentViewedAugmentor(eventContextHelper))
+      new UserKeepViewedAugmentor(eventContextHelper),
+      new UserDiscussionViewedAugmentor(eventContextHelper)
+    )
 
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
 
