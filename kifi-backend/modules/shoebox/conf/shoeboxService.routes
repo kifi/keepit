@@ -1073,6 +1073,7 @@ GET     /profile                   @com.keepit.controllers.website.KifiSiteRoute
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /teams                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectFromPricing
 GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser

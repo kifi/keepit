@@ -86,7 +86,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         case class beLoginRedirect(expectedUrl: String) extends Matcher[Option[Future[Result]]] {
           def apply[T <: Option[Future[Result]]](x: Expectable[T]) = {
             x.value map { resultF =>
-              val expectedStatus = 303
+              val expectedStatus = SEE_OTHER
               val resStatus = status(resultF)
               if (resStatus != expectedStatus) {
                 result(false, "", s"expected status $expectedStatus but was $resStatus", x)
@@ -158,7 +158,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/abez/libraries/following")) must beWebApp
         route(FakeRequest("GET", "/abez/libraries/invited")) must beLoginRedirect("/me/libraries/invited")
         route(FakeRequest("GET", "/abez/libraries1234/invited")) must be404
-        route(FakeRequest("GET", "/leo1221")) must beRedirect(303, "/l%C3%A9o1221")
+        route(FakeRequest("GET", "/leo1221")) must beRedirect(SEE_OTHER, "/l%C3%A9o1221")
         route(FakeRequest("GET", "/léo1221")) must beWebApp
         route(FakeRequest("GET", "/léo1222")) must be404
 
@@ -171,7 +171,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/léo1221/libraries/invited")) must be404
 
         userCommander.setUsername(user1.id.get, Username("abe.z1234"))
-        route(FakeRequest("GET", "/abez")) must beRedirect(301, "/abe.z1234")
+        route(FakeRequest("GET", "/abez")) must beRedirect(MOVED_PERMANENTLY, "/abe.z1234")
         route(FakeRequest("GET", "/abe.z1234")) must beWebApp
         route(FakeRequest("GET", "/abe.z1234/libraries")) must beWebApp
         route(FakeRequest("GET", "/abe.z1234/libraries/following")) must beWebApp
@@ -187,12 +187,12 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/abe.z1234/awesome-lib")) must beWebApp
         route(FakeRequest("GET", "/abe.z1234/awesome-lib?auth=abcdefghiklmnop")) must beWebApp
         route(FakeRequest("GET", "/abe.z1234/awesome-lib/find?q=weee")) must beWebApp
-        route(FakeRequest("GET", "/abeZ1234/awesome-lib")) must beRedirect(303, "/abe.z1234/awesome-lib")
-        route(FakeRequest("GET", "/abeZ1234/awesome-lib?auth=abcdefghiklmnop")) must beRedirect(303, "/abe.z1234/awesome-lib?auth=abcdefghiklmnop")
-        route(FakeRequest("GET", "/abeZ1234/awesome-lib/find?q=weee")) must beRedirect(303, "/abe.z1234/awesome-lib/find?q=weee")
+        route(FakeRequest("GET", "/abeZ1234/awesome-lib")) must beRedirect(SEE_OTHER, "/abe.z1234/awesome-lib")
+        route(FakeRequest("GET", "/abeZ1234/awesome-lib?auth=abcdefghiklmnop")) must beRedirect(SEE_OTHER, "/abe.z1234/awesome-lib?auth=abcdefghiklmnop")
+        route(FakeRequest("GET", "/abeZ1234/awesome-lib/find?q=weee")) must beRedirect(SEE_OTHER, "/abe.z1234/awesome-lib/find?q=weee")
 
         libraryCommander.modifyLibrary(library.id.get, library.ownerId, LibraryModifications(slug = Some("most-awesome-lib")))
-        route(FakeRequest("GET", "/abe.z1234/awesome-lib")) must beRedirect(301, "/abe.z1234/most-awesome-lib")
+        route(FakeRequest("GET", "/abe.z1234/awesome-lib")) must beRedirect(MOVED_PERMANENTLY, "/abe.z1234/most-awesome-lib")
         route(FakeRequest("GET", "/abe.z1234/most-awesome-lib")) must beWebApp
 
         // Logged-in page routes
@@ -210,8 +210,8 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/me/libraries/following")) must beLoginRedirect("/me/libraries/following")
 
         actionsHelper.setUser(user1)
-        route(FakeRequest("GET", "/me")) must beRedirect(303, "/abez")
-        route(FakeRequest("GET", "/me/libraries/invited")) must beRedirect(303, "/abez/libraries/invited")
+        route(FakeRequest("GET", "/me")) must beRedirect(SEE_OTHER, "/abez")
+        route(FakeRequest("GET", "/me/libraries/invited")) must beRedirect(SEE_OTHER, "/abez/libraries/invited")
 
         // Redirects (logged out)
         actionsHelper.unsetUser
@@ -229,17 +229,17 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
         // Redirects (logged in)
         actionsHelper.setUser(user1)
-        route(FakeRequest("GET", "/recommendations")) must beRedirect(301, "/")
-        route(FakeRequest("GET", "/connections")) must beRedirect(303, "/abez/connections")
-        route(FakeRequest("GET", "/friends")) must beRedirect(303, "/abez/connections")
-        route(FakeRequest("GET", "/friends/invite")) must beRedirect(301, "/invite")
-        route(FakeRequest("GET", "/friends/requests")) must beRedirect(303, "/abez/connections")
-        route(FakeRequest("GET", "/friends/requests/email")) must beRedirect(303, "/abez/connections")
-        route(FakeRequest("GET", "/friends/requests/linkedin")) must beRedirect(303, "/abez/connections")
-        route(FakeRequest("GET", "/friends/requests/facebook")) must beRedirect(303, "/abez/connections")
-        route(FakeRequest("GET", "/friends/requests/refresh")) must beRedirect(303, "/abez/connections")
-        route(FakeRequest("GET", "/friends?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
-        route(FakeRequest("GET", "/invite?friend=" + user2.externalId)) must beRedirect(303, "/l%C3%A9o1221?intent=connect")
+        route(FakeRequest("GET", "/recommendations")) must beRedirect(MOVED_PERMANENTLY, "/")
+        route(FakeRequest("GET", "/connections")) must beRedirect(SEE_OTHER, "/abez/connections")
+        route(FakeRequest("GET", "/friends")) must beRedirect(SEE_OTHER, "/abez/connections")
+        route(FakeRequest("GET", "/friends/invite")) must beRedirect(MOVED_PERMANENTLY, "/invite")
+        route(FakeRequest("GET", "/friends/requests")) must beRedirect(SEE_OTHER, "/abez/connections")
+        route(FakeRequest("GET", "/friends/requests/email")) must beRedirect(SEE_OTHER, "/abez/connections")
+        route(FakeRequest("GET", "/friends/requests/linkedin")) must beRedirect(SEE_OTHER, "/abez/connections")
+        route(FakeRequest("GET", "/friends/requests/facebook")) must beRedirect(SEE_OTHER, "/abez/connections")
+        route(FakeRequest("GET", "/friends/requests/refresh")) must beRedirect(SEE_OTHER, "/abez/connections")
+        route(FakeRequest("GET", "/friends?friend=" + user2.externalId)) must beRedirect(SEE_OTHER, "/l%C3%A9o1221?intent=connect")
+        route(FakeRequest("GET", "/invite?friend=" + user2.externalId)) must beRedirect(SEE_OTHER, "/l%C3%A9o1221?intent=connect")
 
         // user-or-orgs
         val orgLibrary = db.readWrite { implicit session =>
@@ -265,6 +265,17 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/kifiorghandle/members")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/libraries")) must beWebApp
         route(FakeRequest("GET", "/kifiorghandle/kifi-lib")) must beWebApp
+
+        // for pricing page:
+        // non-users get redirected to login
+        actionsHelper.unsetUser()
+        route(FakeRequest("GET", "/pricing")) must beLoginRedirect("/pricing")
+        // for someone in an org, it redirects them to that org's plan page
+        actionsHelper.setUser(user1)
+        route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/kifiorghandle/settings/plan")
+        // for someone without an org, it redirects to org creation
+        actionsHelper.setUser(user2)
+        route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/teams/new")
 
         // catching mobile
         {

@@ -22,6 +22,8 @@ import scala.concurrent.Future
 class KifiSiteRouter @Inject() (
   db: Database,
   userRepo: UserRepo,
+  orgRepo: OrganizationRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
   userCommander: UserCommander,
   handleCommander: HandleCommander,
   val userIpAddressCommander: UserIpAddressCommander,
@@ -54,6 +56,17 @@ class KifiSiteRouter @Inject() (
 
   def redirectFromFriends(friend: Option[String]) = WebAppPage { implicit request => // for old emails
     redirectUserToProfileToConnect(friend, request) getOrElse redirUserToOwnProfile("/connections", request)
+  }
+
+  def redirectFromPricing = WebAppPage { implicit request =>
+    request match {
+      case r: NonUserRequest[_] => redirectToLogin("/pricing", r)
+      case u: UserRequest[_] =>
+        val orgToUpgrade = db.readOnlyReplica { implicit session =>
+          orgMembershipRepo.getAllByUserId(u.userId).sortBy(_.role).map(_.organizationId).headOption.map(orgRepo.get)
+        }
+        orgToUpgrade.map { org => Redirect(s"/${org.handle.urlEncoded}/settings/plan") } getOrElse Redirect("/teams/new")
+    }
   }
 
   def handleInvitePage(friend: Option[String]) = WebAppPage { implicit request =>
