@@ -30,6 +30,7 @@ class EventContextHelperImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     orgTrackingValuesCache: OrgTrackingValuesCache,
     orgMessageCountCache: OrganizationMessageCountCache,
+    orgMemberWithMostClickedKeepsCache: OrgMemberWithMostClickedKeepsCache,
     shoebox: ShoeboxServiceClient,
     eliza: ElizaServiceClient,
     helprankCommander: HelpRankCommander,
@@ -51,12 +52,13 @@ class EventContextHelperImpl @Inject() (
 
   def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]] = {
     val shoeboxValuesFut = getOrgTrackingValues(orgId)
-    val membersFut = shoebox.getOrganizationMembers(orgId)
 
-    val userWithMostClickedKeepsFut = membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
+    val userWithMostClickedKeepsFut = orgMemberWithMostClickedKeepsCache.getOrElseFuture(OrgMemberWithMostClickedKeepsKey(orgId)) {
+      val membersFut = shoebox.getOrganizationMembers(orgId)
+      membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
+    }
     for {
       shoeboxValues <- shoeboxValuesFut
-      members <- membersFut
       userWithMostClickedKeeps <- userWithMostClickedKeepsFut
     } yield {
       Seq(
@@ -132,3 +134,12 @@ case class OrganizationMessageCountKey(id: Id[Organization]) extends Key[Int] {
 
 class OrganizationMessageCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[OrganizationMessageCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class OrgMemberWithMostClickedKeepsKey(id: Id[Organization]) extends Key[Option[Id[User]]] {
+  override val version = 1
+  val namespace = "org_member_most_clicked_keeps"
+  def toKey(): String = id.id.toString
+}
+
+class OrgMemberWithMostClickedKeepsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrgMemberWithMostClickedKeepsKey, Option[Id[User]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
