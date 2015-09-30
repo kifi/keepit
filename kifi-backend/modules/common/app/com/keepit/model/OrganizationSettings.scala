@@ -5,7 +5,7 @@ import play.api.libs.json._
 case class OrganizationSettings(kvs: Set[FeatureSettingPair[_ <: Feature]]) {
   def setAll(newKvs: Set[FeatureSettingPair[_ <: Feature]]): OrganizationSettings = {
     val newFeatures = newKvs.map(_.feature)
-    this.copy(kvs = kvs.filter(kv => newFeatures.contains(kv.feature)) ++ newKvs)
+    this.copy(kvs = kvs.filter(kv => !newFeatures.contains(kv.feature)) ++ newKvs)
   }
 
   def set[F <: Feature](newKvs: (F, FeatureSetting[F])*): OrganizationSettings = setAll(newKvs.map(kv => FeatureSettingPair(kv._1, kv._2)).toSet)
@@ -26,7 +26,7 @@ object OrganizationSettings {
       jsv.validate[JsObject].map { obj =>
         OrganizationSettings(obj.fieldSet.map { case (f, s) =>
           val feature = Feature(f)
-          val setting = feature.toSetting(s.as[String])
+          val setting = s.as(feature.settingFormat)
           FeatureSettingPair(feature.instance, setting)
         }.toSet)
       }
@@ -42,10 +42,12 @@ sealed trait Feature { self =>
   def instance: F = self
   def value: String
   def settings: Set[FeatureSetting[F]]
-  def toSetting(x: String): FeatureSetting[F] = settings.map(x => x.value -> x).toMap.apply(x)
   def permissions: Set[OrganizationPermission]
-  implicit def settingFormat: Format[FeatureSetting[F]] = Format(__.read[String].map(toSetting), Writes { x => JsString(x.value) } )
+
+  def toSetting(x: String): Option[FeatureSetting[F]] = settings.find(_.value == x)
+  implicit def settingFormat: Format[FeatureSetting[F]] = Format(__.read[String].map(toSetting(_).get), Writes { x => JsString(x.value) } )
 }
+
 sealed abstract class FeatureSetting[F <: Feature](val value: String) {
   def rolesAffected: Set[Option[OrganizationRole]]
 }
