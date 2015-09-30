@@ -117,14 +117,22 @@ class KeepsController @Inject() (
     }.getOrElse(Future.successful(BadRequest))
   }
 
-  def exportPersonalKeeps() = UserAction.async(parse.tolerantJson) { request =>
-    val format = (request.body \ "format").as[KeepExportFormat]
-    keepExportCommander.exportKeeps(PersonalKeepExportRequest(request.userId)).map { response =>
-      format match {
-        case KeepExportFormat.JSON => Ok(response.get.formatAsJson)
-        case KeepExportFormat.HTML => Ok(response.get.formatAsHtml)
+  def exportPersonalKeeps() = UserAction.async(parse.anyContent) { request =>
+    request.body.asFormUrlEncoded.flatMap { form =>
+      form.get("format").flatMap(_.headOption.map(KeepExportFormat.apply))
+    }.orElse {
+      request.body.asJson.flatMap { json =>
+        (json \ "format").asOpt[KeepExportFormat]
       }
-    }
+    }.map {
+      case (format) =>
+        keepExportCommander.exportKeeps(PersonalKeepExportRequest(request.userId)).map { response =>
+          format match {
+            case KeepExportFormat.JSON => Ok(response.get.formatAsJson)
+            case KeepExportFormat.HTML => Ok(response.get.formatAsHtml)
+          }
+        }
+    }.getOrElse(Future.successful(BadRequest))
   }
 
   def tagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, true))
