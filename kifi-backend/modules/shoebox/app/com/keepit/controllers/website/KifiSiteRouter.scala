@@ -76,7 +76,10 @@ class KifiSiteRouter @Inject() (
 
   def generalRedirect(data: String) = MaybeUserAction { implicit request =>
     val linkOpt = deepLinkRouter.generateRedirectUrl(Json.parse(data).as[JsObject])
-    linkOpt.map(path => Redirect(path.relative)).getOrElse(NotFound)
+    linkOpt.map(path => Redirect("/" + path.relative)).getOrElse {
+      airbrake.notify(s"Could not figure out how to redirect deep-link: ${data}")
+      Redirect("/get")
+    }
   }
 
   def handleInvitePage(friend: Option[String]) = WebAppPage { implicit request =>
