@@ -1,0 +1,26 @@
+<div ng-if="viewer.membership.role === 'admin' && billingState.credit > 0" kf-credit-banner credit="{{ billingState.credit }}"></div>
+<div class="kf-container kf-team-settings-fields">
+  <div class="kf-container-header">
+    <h1 id="team-settings">Team Settings</h1>
+  </div>
+  <div class="kf-container-main">
+    <section ng-repeat="section in settingsSectionTemplateData">
+      <h2 class="kf-team-settings-heading" id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
+      <div ng-repeat="field in section.fields" class="kf-row">
+        <div class="kf-main-pane">
+          <h3 class="kf-team-settings-heading" id="{{ field.fieldKey }}">{{ field.title }}</h3>
+          <p class="kf-team-settings-desc">{{ field.description }}</p>
+        </div>
+        <div class="kf-side-pane">
+          <select
+            class="kf-team-settings-select"
+            ng-model="settings[field.fieldKey].setting"
+            ng-disabled="!settings[field.fieldKey].editable"
+            ng-options="option.value as option.label for option in field.selectOptions"
+            ng-change="updateSettings()"
+          ></select>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
