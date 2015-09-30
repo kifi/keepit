@@ -911,7 +911,8 @@ POST          /admin/payments/grantExtraCredit             @com.keepit.controlle
 POST          /admin/payments/processOrgNow                @com.keepit.controllers.admin.AdminPaymentsController.processOrgNow(orgId: Id[Organization])
 POST          /admin/payments/changePlanForOrg             @com.keepit.controllers.admin.AdminPaymentsController.changePlanForOrg(orgId: Id[Organization])
 GET           /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCardView(orgId: Id[Organization])
-POST          /admin/payments/addCreditCard               @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
+POST          /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
+GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
 
 
 ##########################################

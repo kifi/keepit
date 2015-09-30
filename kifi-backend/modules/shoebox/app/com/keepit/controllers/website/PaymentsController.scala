@@ -124,6 +124,5 @@ class PaymentsController @Inject() (
       }
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))
     }
-
   }
 }
