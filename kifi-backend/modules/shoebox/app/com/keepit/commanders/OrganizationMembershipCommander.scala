@@ -263,6 +263,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
       organizationMembershipRepo.deactivate(membership)
+      val invites = organizationInviteRepo.getByOrgIdAndInviterId(request.orgId, request.targetId)
+      invites.foreach(organizationInviteRepo.deactivate)
     }
     planCommander.registerRemovedUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
     val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }

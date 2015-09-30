@@ -22,6 +22,7 @@ trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
   def getByInviteeIdAndDecision(inviteeId: Id[User], decision: InvitationDecision, excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Set[OrganizationInvite]
   def getByInviter(inviterId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
   def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite]
+  def getByOrgIdAndInviterId(organizationId: Id[Organization], inviterId: Id[User], excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Seq[OrganizationInvite]
   def getLastSentByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Option[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndUserId(organizationId: Id[Organization], inviterId: Id[User], userId: Id[User], includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
   def getLastSentByOrgIdAndInviterIdAndEmailAddress(organizationId: Id[Organization], inviterId: Id[User], emailAddress: EmailAddress, includeStates: Set[State[OrganizationInvite]])(implicit s: RSession): Option[OrganizationInvite]
@@ -186,6 +187,10 @@ class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock
   }
   def getByOrgIdAndUserId(organizationId: Id[Organization], userId: Id[User], state: State[OrganizationInvite] = OrganizationInviteStates.ACTIVE)(implicit s: RSession): Seq[OrganizationInvite] = {
     getByOrgIdAndUserIdCompiled(organizationId, userId, state).list
+  }
+
+  def getByOrgIdAndInviterId(organizationId: Id[Organization], inviterId: Id[User], excludeState: Option[State[OrganizationInvite]] = Some(OrganizationInviteStates.INACTIVE))(implicit s: RSession): Seq[OrganizationInvite] = {
+    rows.filter(row => row.organizationId === organizationId && row.inviterId === inviterId && row.state =!= excludeState.orNull).run
   }
 
   def getLastSentByOrgIdAndUserIdCompiled(organizationId: Column[Id[Organization]], userId: Column[Id[User]], state: State[OrganizationInvite]) = Compiled {
