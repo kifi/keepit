@@ -8,7 +8,7 @@ case class OrganizationSettings(kvs: Set[FeatureSettingPair[_ <: FeatureKind]]) 
     this.copy(kvs = kvs.filter(kv => !newFeatures.contains(kv.feature)) ++ newKvs)
   }
 
-  def set[K <: FeatureKind](newKvs: (Feature[K], FeatureSetting[K])*): OrganizationSettings = setAll(newKvs.map(kv => FeatureSettingPair(kv._1, kv._2)).toSet)
+  def withSettings[K <: FeatureKind](newKvs: (Feature[K], FeatureSetting[K])*): OrganizationSettings = setAll(newKvs.map(kv => FeatureSettingPair(kv._1, kv._2)).toSet)
 
   def extraPermissionsFor(roleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = kvs.collect {
     case FeatureSettingPair(feature: PermissionFeature, setting: PermissionFeatureSetting) if setting.roles.contains(roleOpt) => feature.permission
