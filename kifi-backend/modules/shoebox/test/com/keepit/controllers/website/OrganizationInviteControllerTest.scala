@@ -13,7 +13,7 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsString, JsValue, Json }
+import play.api.libs.json.{ JsNull, JsString, JsValue, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -184,18 +184,18 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
         }
       }
 
-      "fail on member trying to elevate permissions" in {
+      "fail on member without permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           implicit val config = inject[PublicIdConfiguration]
           val (inviter, org) = db.readWrite { implicit session =>
             val inviter = UserFactory.user().withName("Mr", "Inviter").saved
             val owner = UserFactory.user().withName("Kifi", "Kifi").saved
-            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter)).withHandle(OrganizationHandle("kifi")).saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter)).withHandle(OrganizationHandle("kifi")).withWeakMembers().saved
             (inviter, org)
           }
 
           inject[FakeUserActionsHelper].setUser(inviter)
-          val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(Json.obj("role" -> OrganizationRole.ADMIN))
+          val request = route.createAnonymousInviteToOrganization(Organization.publicId(org.id.get)).withBody(JsNull)
           val result = controller.createAnonymousInviteToOrganization(Organization.publicId(org.id.get))(request)
 
           result === OrganizationFail.INSUFFICIENT_PERMISSIONS

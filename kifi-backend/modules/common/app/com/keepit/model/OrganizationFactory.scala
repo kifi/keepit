@@ -36,6 +36,8 @@ object OrganizationFactory {
 
     // This method makes it so an org's members cannot invite, useful for testing
     def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + FeatureSettingPair(Feature.InviteMembers, Feature.InviteMembers.ADMINS))
+    // admins can force-edit
+    def withStrongAdmins() = this.copy(nonstandardSettings = nonstandardSettings + FeatureSettingPair(Feature.ForceEditLibraries, Feature.ForceEditLibraries.ADMINS))
     def secret() = this.copy(nonstandardSettings = nonstandardSettings + FeatureSettingPair(Feature.ViewOrganization, Feature.ViewOrganization.MEMBERS) + FeatureSettingPair(Feature.ViewMembers, Feature.ViewMembers.MEMBERS))
   }
 }

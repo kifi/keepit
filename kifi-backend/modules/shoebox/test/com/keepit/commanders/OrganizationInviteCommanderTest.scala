@@ -91,22 +91,6 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           organizationFail === OrganizationFail.INSUFFICIENT_PERMISSIONS
         }
       }
-      "the inviter is not a member" in {
-        withDb(modules: _*) { implicit injector =>
-          val (org, _) = setup
-          val invitees = Set.empty[Either[Id[User], EmailAddress]]
-          val notAMember = db.readWrite { implicit session =>
-            UserFactory.user.withName("James", "Bond").saved
-          }
-          val inviteeEmails = invitees.collect { case Right(email) => email }
-          val inviteeUserIds = invitees.collect { case Left(userId) => userId }
-          val result = Await.result(orgInviteCommander.inviteToOrganization(OrganizationInviteSendRequest(org.id.get, notAMember.id.get, inviteeEmails, inviteeUserIds, None)), Duration.Inf)
-
-          result must beLeft
-          val organizationFail = result.left.get
-          organizationFail === OrganizationFail.NOT_A_MEMBER
-        }
-      }
     }
 
     "convert email invitations to userId after user verifies email" in {
