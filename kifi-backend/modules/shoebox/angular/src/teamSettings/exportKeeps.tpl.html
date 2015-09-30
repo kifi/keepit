@@ -11,7 +11,7 @@
       <p>
         Select which format you'd like the export to be in:
       </p>
-      <form method="POST" action="{{ actionUrl }}">
+      <form method="POST" action="{{ actionUrl }}" ng-submit="submitExportRequest()">
         <div>
           <label>
             <input
@@ -41,6 +41,11 @@
           class="kf-button kf-button-large"
           ng-disabled="{{ !canExportKeeps }}"
         >Export</button>
+        <span
+          ng-if="successMessage"
+          class="kf-export-keeps-message"
+          ng-bind="successMessage"
+        ></span>
       </form>
     </div>
   </div>

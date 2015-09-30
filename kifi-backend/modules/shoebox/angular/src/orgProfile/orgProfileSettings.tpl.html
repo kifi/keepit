@@ -20,8 +20,19 @@
           </li>
         </ul>
       </li>
-      <li><a class="kf-link" ui-sref="orgProfile.settings.contacts">Billing Contacts</a></li>
-      <li><a class="kf-link" ui-sref="orgProfile.settings.export">Export Keeps</a></li>
+      <li>
+        <a
+          class="kf-link"
+          ui-sref="orgProfile.settings.contacts"
+        >Billing Contacts</a>
+      </li>
+      <li>
+        <a
+          class="kf-link"
+          ui-sref="orgProfile.settings.export"
+          ng-if="canExportKeeps"
+        >Export Keeps</a>
+      </li>
       <!-- <li><a class="kf-link" href="#team-plan">Team Plan</a></li>
       <li><a class="kf-link" href="#credit-card">Credit Card</a></li>
       <li><a class="kf-link" href="#history">History</a></li> -->

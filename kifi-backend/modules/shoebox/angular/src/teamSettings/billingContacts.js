@@ -11,7 +11,7 @@ angular.module('kifi')
     $scope.billingContactModel = {};
 
     var getOrgAdmins = orgProfileService
-    .getOrgMembers($scope.profile.id, 1, 30)
+    .getOrgMembers($scope.profile.id, 0, 30)
     .then(function (membersData) {
       return membersData.members.filter(function (m) {
         return m.role === 'admin';
