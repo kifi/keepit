@@ -60,14 +60,9 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         withDb(modules: _*) { implicit injector =>
           val (org, owner) = setup
           val invitees: Set[Either[Id[User], EmailAddress]] = Set(Left(owner.id.get))
-          val inviter = db.readWrite { implicit session =>
-            val bond = UserFactory.user().withName("James", "Bond").saved
-            // TODO(ryan): [NOW] give the org members invite permissions
-            bond
-          }
           val inviteeEmails = invitees.collect { case Right(email) => email }
           val inviteeUserIds = invitees.collect { case Left(userId) => userId }
-          val orgInvite = OrganizationInviteSendRequest(org.id.get, inviter.id.get, inviteeEmails, inviteeUserIds, Some("inviting the owner, what a shmuck"))
+          val orgInvite = OrganizationInviteSendRequest(org.id.get, owner.id.get, inviteeEmails, inviteeUserIds, Some("inviting the owner, what a shmuck"))
           val result = Await.result(orgInviteCommander.inviteToOrganization(orgInvite), Duration.Inf)
 
           result must beLeft

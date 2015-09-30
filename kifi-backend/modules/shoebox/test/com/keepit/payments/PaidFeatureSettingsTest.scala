@@ -37,7 +37,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
   implicit val context = HeimdalContext.empty
   implicit def pubIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
-  private def planManagementCommander(implicit injector: Injector) = inject[PlanManagementCommander]
 
   def setup()(implicit injector: Injector) = {
     db.readWrite { implicit session =>
@@ -208,7 +207,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
   "edit organization permission" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
-        val planManagementCommander = inject[PlanManagementCommander]
         val (org, owner, admin, member, nonMember) = setup()
 
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
@@ -237,7 +235,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
   "move org libraries permission" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
-        val planManagementCommander = inject[PlanManagementCommander]
         val (org, owner, admin, member, _) = setup()
 
         // Initially, removing libraries is completely disabled
@@ -278,7 +275,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
   "create slack integration permission" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
-        val planManagementCommander = inject[PlanManagementCommander]
         val (org, owner, admin, member, _) = setup()
 
         // Initially, only admins
@@ -315,7 +311,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
   "export keeps permission" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
-        val planManagementCommander = inject[PlanManagementCommander]
         val (org, owner, admin, member, _) = setup()
 
         // Initially, only admins
@@ -343,7 +338,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
   "group messaging permission" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
-        val planManagementCommander = inject[PlanManagementCommander]
         val (org, owner, admin, member, nonMember) = setup()
 
         // Initially, totally disabled

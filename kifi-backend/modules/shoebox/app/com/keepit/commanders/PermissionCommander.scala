@@ -135,9 +135,9 @@ class PermissionCommanderImpl @Inject() (
       OrganizationPermission.ADD_LIBRARIES
     )
     case Some(OrganizationRole.ADMIN) => Set(
+      OrganizationPermission.ADD_LIBRARIES,
       OrganizationPermission.MODIFY_MEMBERS,
       OrganizationPermission.REMOVE_MEMBERS,
-      OrganizationPermission.ADD_LIBRARIES,
       OrganizationPermission.MANAGE_PLAN
     )
   }

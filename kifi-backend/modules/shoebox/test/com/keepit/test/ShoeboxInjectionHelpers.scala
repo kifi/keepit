@@ -9,7 +9,7 @@ import com.keepit.common.db.FakeSlickSessionProvider
 import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
 import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
-import com.keepit.payments.PaidPlanRepo
+import com.keepit.payments.{ PlanManagementCommander, PaidPlanRepo }
 
 trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
 
@@ -74,4 +74,5 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def keepExportCommander(implicit injector: Injector) = inject[KeepExportCommander].asInstanceOf[KeepExportCommanderImpl]
   def orgConfigRepo(implicit injector: Injector) = inject[OrganizationConfigurationRepo]
   def paidPlanRepo(implicit injector: Injector) = inject[PaidPlanRepo]
+  def planManagementCommander(implicit injector: Injector) = inject[PlanManagementCommander]
 }
