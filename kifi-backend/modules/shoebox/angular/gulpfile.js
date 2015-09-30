@@ -3,6 +3,7 @@
  ********************************************************/
 
 var gulp = require('gulp');
+var plumber = require('gulp-plumber');
 var stylus = require('gulp-stylus');
 var rimraf = require('gulp-rimraf');
 var runSequence = require('run-sequence');
@@ -300,13 +301,15 @@ gulp.task('svg-sprite', function() {
 
 gulp.task('styles', function () {
   return gulp.src(stylFiles, {base: './'})
+    .pipe(gulpif(!isProdMode, plumber({errorHandler: true})))
     .pipe(cache(stylesCache))
     .pipe(stylus({use: [nib()], import: ['nib', __dirname + '/src/common/build-css/*.styl']}))
     .pipe(remember(stylesCache))
     .pipe(order())
     .pipe(concat(pkgName + '.css'))
     .pipe(gulpif(!isProdMode, gulp.dest(outDir)))
-    .pipe(gulpif(isProdMode, makeMinCss()));
+    .pipe(gulpif(isProdMode, makeMinCss()))
+    .pipe(gulpif(!isProdMode, plumber.stop()));
 });
 
 gulp.task('jshint', function () {
