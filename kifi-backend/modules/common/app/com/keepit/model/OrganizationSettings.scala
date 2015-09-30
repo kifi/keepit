@@ -48,9 +48,7 @@ sealed trait Feature { self =>
   implicit def settingFormat: Format[FeatureSetting[F]] = Format(__.read[String].map(toSetting(_).get), Writes { x => JsString(x.value) } )
 }
 
-sealed abstract class FeatureSetting[F <: Feature](val value: String) {
-  def rolesAffected: Set[Option[OrganizationRole]]
-}
+sealed abstract class FeatureSetting[F <: Feature](val value: String, val rolesAffected: Set[Option[OrganizationRole]])
 
 class FeatureSettingPair[F <: Feature](val feature: F, val setting: FeatureSetting[F]) {
   def permissionsFor(roleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = {
@@ -85,9 +83,9 @@ object Feature {
     val value = OrganizationPermission.PUBLISH_LIBRARIES.value
     def permissions = Set(OrganizationPermission.PUBLISH_LIBRARIES)
 
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS)
   }
 
@@ -96,9 +94,9 @@ object Feature {
     val value = OrganizationPermission.INVITE_MEMBERS.value
     def permissions = Set(OrganizationPermission.INVITE_MEMBERS)
 
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS)
   }
 
@@ -107,9 +105,9 @@ object Feature {
     val value = OrganizationPermission.MESSAGE_ORGANIZATION.value
     def permissions = Set(OrganizationPermission.MESSAGE_ORGANIZATION)
 
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS)
   }
 
@@ -118,9 +116,9 @@ object Feature {
     val value = OrganizationPermission.FORCE_EDIT_LIBRARIES.value
     def permissions = Set(OrganizationPermission.FORCE_EDIT_LIBRARIES)
 
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS)
   }
 
@@ -129,8 +127,8 @@ object Feature {
     val value = OrganizationPermission.VIEW_ORGANIZATION.value
     def permissions = Set(OrganizationPermission.VIEW_ORGANIZATION)
 
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
-    case object ANYONE extends FeatureSetting[F]("anyone") { val rolesAffected = OrganizationRole.ANYONE_UP }
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
+    case object ANYONE extends FeatureSetting[F]("anyone")(OrganizationRole.ANYONE_UP)
     val settings: Set[FeatureSetting[F]] = Set(MEMBERS, ANYONE)
   }
 
@@ -139,10 +137,10 @@ object Feature {
     val value = OrganizationPermission.VIEW_MEMBERS.value
     def permissions = Set(OrganizationPermission.VIEW_MEMBERS)
 
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
-    case object ANYONE extends FeatureSetting[F]("anyone") { val rolesAffected = OrganizationRole.ANYONE_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
+    case object ANYONE extends FeatureSetting[F]("anyone")(OrganizationRole.ANYONE_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS, ANYONE)
   }
 
@@ -150,9 +148,9 @@ object Feature {
     type F = RemoveLibraries.type
     val value = OrganizationPermission.REMOVE_LIBRARIES.value
     def permissions = Set(OrganizationPermission.REMOVE_LIBRARIES)
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS)
   }
 
@@ -160,9 +158,9 @@ object Feature {
     type F = CreateSlackIntegration.type
     val value = OrganizationPermission.CREATE_SLACK_INTEGRATION.value
     def permissions = Set(OrganizationPermission.CREATE_SLACK_INTEGRATION)
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS)
   }
 
@@ -170,9 +168,9 @@ object Feature {
     type F = EditOrganization.type
     val value = OrganizationPermission.EDIT_ORGANIZATION.value
     def permissions = Set(OrganizationPermission.EDIT_ORGANIZATION)
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS)
   }
 
@@ -181,9 +179,9 @@ object Feature {
     val value = OrganizationPermission.EXPORT_KEEPS.value
     def permissions = Set(OrganizationPermission.EXPORT_KEEPS)
 
-    case object DISABLED extends FeatureSetting[F]("disabled") { val rolesAffected = OrganizationRole.NOONE }
-    case object ADMINS extends FeatureSetting[F]("admins") { val rolesAffected = OrganizationRole.ADMINS_UP }
-    case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
+    case object DISABLED extends FeatureSetting[F]("disabled")(OrganizationRole.NOONE)
+    case object ADMINS extends FeatureSetting[F]("admins")(OrganizationRole.ADMINS_UP)
+    case object MEMBERS extends FeatureSetting[F]("members")(OrganizationRole.MEMBERS_UP)
     val settings: Set[FeatureSetting[F]] = Set(DISABLED, ADMINS, MEMBERS)
   }
 }
