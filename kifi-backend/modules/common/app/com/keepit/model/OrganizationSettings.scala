@@ -127,7 +127,7 @@ object Feature {
   case object ViewOrganization extends Feature {
     type F = ViewOrganization.type
     val value = OrganizationPermission.VIEW_ORGANIZATION.value
-    def permissions = Set(OrganizationPermission.VIEW_MEMBERS)
+    def permissions = Set(OrganizationPermission.VIEW_ORGANIZATION)
 
     case object MEMBERS extends FeatureSetting[F]("members") { val rolesAffected = OrganizationRole.MEMBERS_UP }
     case object ANYONE extends FeatureSetting[F]("anyone") { val rolesAffected = OrganizationRole.ANYONE_UP }

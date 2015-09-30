@@ -39,14 +39,18 @@ class PermissionCommanderImpl @Inject() (
   }
 
   private def computeOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
-    val roleOpt = userIdOpt.flatMap { userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.role) }
-    val basePermissions = settinglessOrganizationPermissions(roleOpt)
-    val hasOrganizationInvite = userIdOpt.exists { userId => orgInviteRepo.getByOrgIdAndUserId(orgId, userId).nonEmpty }
+    val org = orgRepo.get(orgId)
+    if (org.isInactive) Set.empty
+    else {
+      val roleOpt = userIdOpt.flatMap { userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.role) }
+      val basePermissions = settinglessOrganizationPermissions(roleOpt)
+      val hasOrganizationInvite = userIdOpt.exists { userId => orgInviteRepo.getByOrgIdAndUserId(orgId, userId).nonEmpty }
 
-    val inviteBasedPermissions = if (hasOrganizationInvite) extraInviteePermissions else Set.empty
-    val settingsBasedPermissions = orgConfigRepo.getByOrgId(orgId).settings.extraPermissionsFor(roleOpt)
+      val inviteBasedPermissions = if (hasOrganizationInvite) extraInviteePermissions else Set.empty
+      val settingsBasedPermissions = orgConfigRepo.getByOrgId(orgId).settings.extraPermissionsFor(roleOpt)
 
-    basePermissions ++ inviteBasedPermissions ++ settingsBasedPermissions
+      basePermissions ++ inviteBasedPermissions ++ settingsBasedPermissions
+    }
   }
 
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
@@ -126,15 +130,11 @@ class PermissionCommanderImpl @Inject() (
 
   val extraInviteePermissions: Set[OrganizationPermission] = Set(OrganizationPermission.VIEW_ORGANIZATION)
   def settinglessOrganizationPermissions(orgRoleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = orgRoleOpt match {
-    case None => Set(
-      OrganizationPermission.VIEW_ORGANIZATION
-    )
+    case None => Set.empty
     case Some(OrganizationRole.MEMBER) => Set(
-      OrganizationPermission.VIEW_ORGANIZATION,
       OrganizationPermission.ADD_LIBRARIES
     )
     case Some(OrganizationRole.ADMIN) => Set(
-      OrganizationPermission.VIEW_ORGANIZATION,
       OrganizationPermission.MODIFY_MEMBERS,
       OrganizationPermission.REMOVE_MEMBERS,
       OrganizationPermission.ADD_LIBRARIES,
