@@ -235,8 +235,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         org.id.get
       ))
     }
-
-    // TODO: handle push notifications to mobile.
   }
 
   def authorizeInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit session: RSession): Boolean = {
@@ -308,8 +306,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
-    val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
       val title = s"${invitee.firstName} accepted your invitation to join ${org.abbreviatedName}!"
       val inviterId = invite.inviterId
