@@ -1,3 +1,58 @@
 .kf-user-profile
   margin: 0 auto
   text-align: center
+  
+.kf-up-tab-a
+  display: inline-block
+  padding: 6px 10px
+  color: #9fa3aa
+  background-color: alpha(#fff, 5%)
+  border-top-left-radius: 5px
+  border-top-right-radius: 5px
+  padding-left: 20px
+  padding-right: 20px
+
+  &:not(.active)[href]:hover
+    background-color: alpha(#fff, 10%)
+
+  &:not([href])
+    color: accentGreen
+    cursor: default
+
+  &:focus
+    outline: none
+
+  &.active
+    background: appBackgroundColor
+    color: textBlackColor
+  
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    padding: 3px 5px
+
+  .kf-up-tab-count
+  .kf-up-tab-name
+    display: inline-block
+    vertical-align: middle
+    
+.kf-up-tab-count
+  line-height: 24px
+  font-size: 14px
+  margin-right: 5px
+
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    line-height: 15px
+    font-size: 11px
+
+
+.kf-up-tab-name
+  line-height: 24px
+  font-size: 14px
+  
+
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    line-height: 12px
+    font-size: 7px
+
+.kf-up-tab-a-left-space
+  margin-left:25px
+

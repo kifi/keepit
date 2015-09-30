@@ -162,7 +162,6 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         contentType(result2) must beSome("application/json")
         val expected = Json.obj(
           "auto_show_guide" -> JsNull,
-          "auto_show_persona" -> JsNull,
           "show_delighted_question" -> false,
           "use_minimal_keep_card" -> JsNull,
           "has_no_password" -> JsNull)

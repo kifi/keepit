@@ -64,7 +64,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           commander.createAndInitializePaidAccountForOrganization(orgId, plan.id.get, userId, session)
           val account = accountRepo.get(accountId)
           account.activeUsers === 1
-          account.credit === computePartialCost(planPrice, account.billingCycleStart, billingCycle).negative
+          account.credit === DollarAmount.wholeDollars(50) + computePartialCost(planPrice, account.billingCycleStart, billingCycle).negative
           account.lockedForProcessing === false
 
           //"fast forward" to test proration
@@ -91,7 +91,6 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount.credit
         }
 
-        currentCredit.cents must be_<(0)
         commander.grantSpecialCredit(orgId, currentCredit.negative, None, None)
 
         db.readOnlyMaster { implicit session =>

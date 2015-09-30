@@ -22,44 +22,27 @@ cardBorderRadius = 16px
     // maintains page height and thus window scroll position while the list
     // is temporarily empty during sub-tab navigations
     min-height: 100vh
-
-.kf-upl-nav
-  display: table
-  width: 75%
-  max-width: 600px
-  margin: 0 auto
-  border-radius: 6px
-  background: #cbcbcb
+    
+.kf-up-tab-container
+  background: pageHeaderColor
+  color: #fff
+  position: relative
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    border-radius: 4px
+    padding-bottom: 12px
 
-.kf-upl-nav-link
-  display: table-cell
-  border-radius: '%s' % inherit  // github.com/tj/nib/issues/271
-  width: 33%
-  height: 38px
-  line-height: 38px
-  font-size: 13px
-  color: #333539
-  font-weight: bold
-  text-transform: uppercase
+.kf-up-tab
+  text-align: center
+  margin-bottom: 10px auto 0
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
-    height: 24px
-    line-height: 24px
-    font-size: 10px
+    margin-top: 2px
 
-  &.kf-selected
-    background: #fff
-    color: #000
-    outline: none
-
-  &:not(.kf-selected):hover
-    background: #d0d0d0
-
-  &.kf-my::before
-    content: 'My '
+  @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
+    &::before
+      transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
+      
+ 
 
 .kf-upl-empty
   padding: 30px

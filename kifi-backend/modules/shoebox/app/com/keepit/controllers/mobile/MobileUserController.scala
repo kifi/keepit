@@ -164,7 +164,7 @@ class MobileUserController @Inject() (
     if (newPassword.length < 7) {
       BadRequest(Json.obj("error" -> "bad_new_password"))
     } else {
-      userCommander.doChangePassword(request.userId, oldPassword, newPassword) match {
+      userCommander.changePassword(request.userId, newPassword, oldPassword = oldPassword) match {
         case Failure(e) => Forbidden(Json.obj("code" -> e.getMessage))
         case Success(_) => Ok(Json.obj("code" -> "password_changed"))
       }
@@ -352,7 +352,7 @@ class MobileUserController @Inject() (
 
   def getPendingRequests(before: Option[DateTime], limit: Int) = UserAction { implicit request =>
     val (pending, pendingTotal) = userInboxCommander.getPendingRequests(request.userId, before, limit)
-    val result = Json.obj("pending" -> pending, "pendingTotal" -> pendingTotal)
+    val result = Json.obj("pendingTotal" -> pendingTotal, "pending" -> pending)
     Ok(result)
   }
 }

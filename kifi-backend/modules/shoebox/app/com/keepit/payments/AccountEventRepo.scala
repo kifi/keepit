@@ -41,25 +41,41 @@ class AccountEventRepoImpl @Inject() (
   implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, String](_.id, EventGroup(_))
 
   type RepoImpl = AccountEventTable
+
   class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "account_event") {
     def eventGroup = column[EventGroup]("event_group", O.NotNull)
+
     def eventTime = column[DateTime]("event_time", O.NotNull)
+
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
+
     def billingRelated = column[Boolean]("billing_related", O.NotNull)
+
     def whoDunnit = column[Option[Id[User]]]("whodunnit", O.Nullable)
+
     def whoDunnitExtra = column[JsValue]("whodunnit_extra", O.NotNull)
+
     def kifiAdminInvolved = column[Option[Id[User]]]("kifi_admin_involved", O.Nullable)
+
     def eventType = column[String]("event_type", O.NotNull)
+
     def eventTypeExtras = column[JsValue]("event_type_extras", O.NotNull)
+
     def creditChange = column[DollarAmount]("credit_change", O.NotNull)
+
     def paymentMethod = column[Option[Id[PaymentMethod]]]("payment_method", O.Nullable)
+
     def paymentCharge = column[Option[DollarAmount]]("payment_charge", O.Nullable)
+
     def memo = column[Option[String]]("memo", O.Nullable)
+
     def chargeId = column[Option[String]]("charge_id", O.Nullable)
+
     def * = (id.?, createdAt, updatedAt, state, eventGroup, eventTime, accountId, billingRelated, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
 
   def table(tag: Tag) = new AccountEventTable(tag)
+
   initTable()
 
   override def deleteCache(accountEvent: AccountEvent)(implicit session: RSession): Unit = {}

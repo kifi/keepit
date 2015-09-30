@@ -1,6 +1,8 @@
 package com.keepit.eliza.social
 
-import com.keepit.social.{ SocialId, SocialNetworkType }
+import com.keepit.common.db.Id
+import com.keepit.model.User
+import com.keepit.social.{ UserIdentity, SocialId, SocialNetworkType }
 import securesocial.core.{ AuthenticationMethod, SocialUser, IdentityId }
 
 object FakeSecureSocial {
@@ -31,5 +33,7 @@ object FakeSecureSocial {
     avatarUrl = None,
     authMethod = FAKE_AUTH_METHOD
   )
+
+  def fakeUserIdentity(userId: Option[Id[User]]) = UserIdentity(userId, FAKE_SOCIAL_USER)
 
 }

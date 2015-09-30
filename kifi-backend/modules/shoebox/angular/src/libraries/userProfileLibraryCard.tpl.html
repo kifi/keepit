@@ -8,19 +8,19 @@
     on-hover="onHoverUpsellMembers()"
     class="kf-upl-card-upsell"
   >
-    <span ng-if="getMeOrg().planName.toLowerCase().indexOf('paid') === -1">
-      Enable admins or all team members to edit library settings by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">Upgrading to Premium</a>.
-    </span>
     <span ng-if="getMeOrg().planName.toLowerCase().indexOf('paid') !== -1">
       <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
-        Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: lib.org.handle })">settings</a>
+        Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
       </span>
       <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().settings.force_edit_libraries.setting === ORG_SETTING_VALUE.ADMIN">
-        Admins and the library owner can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: lib.org.handle })">settings</a>
+        Admins and the library owner can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
       </span>
       <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().settings.force_edit_libraries.setting === ORG_SETTING_VALUE.MEMBER">
-        All team members can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: lib.org.handle })">settings</a>
+        All team members can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
       </span>
+    </span>
+    <span ng-if="getMeOrg().planName.toLowerCase().indexOf('paid') === -1">
+      Enable admins or all team members to edit library settings by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">Upgrading to Premium</a>
     </span>
   </span>
   <a class="kf-upl-card-setting svg-settings-gear" ng-if="hasPermission(LIB_PERMISSION.EDIT_LIBRARY)" href="javascript:" ng-click="openModifyLibrary(lib, currentPageOrigin)"></a>

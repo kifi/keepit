@@ -74,9 +74,7 @@ angular.module('kifi')
       return libraryLazyLoader.hasMore();
     };
 
-    $scope.showInvitedLibraries = function () {
-      return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
-    };
+    
 
     $scope.openCreateLibrary = function () {
       function addNewLibAnimationClass(newLibrary) {
