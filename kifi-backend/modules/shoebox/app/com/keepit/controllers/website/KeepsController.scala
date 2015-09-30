@@ -128,8 +128,8 @@ class KeepsController @Inject() (
       case (format) =>
         keepExportCommander.exportKeeps(PersonalKeepExportRequest(request.userId)).map { response =>
           format match {
-            case KeepExportFormat.JSON => Ok(response.get.formatAsJson)
-            case KeepExportFormat.HTML => Ok(response.get.formatAsHtml)
+            case KeepExportFormat.JSON => Ok(response.get.formatAsJson).withHeaders("Content-Disposition" -> "attachment; filename=\"kifi_export.json\"")
+            case KeepExportFormat.HTML => Ok(response.get.formatAsHtml).withHeaders("Content-Disposition" -> "attachment; filename=\"kifi_export.html\"")
           }
         }
     }.getOrElse(Future.successful(BadRequest))
