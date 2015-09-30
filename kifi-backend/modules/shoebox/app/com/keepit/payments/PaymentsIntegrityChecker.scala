@@ -45,7 +45,7 @@ class PaymentsIntegrityChecker @Inject() (
 
         val account = paidAccountRepo.getByOrgId(orgId)
         val accountId = account.id.get
-        val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMemebershipEventsInOrder(accountId).groupBy { event =>
+        val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMembershipEventsInOrder(accountId).groupBy { event =>
           event.action match {
             case AccountEventAction.UserAdded(userId) => userId
             case AccountEventAction.UserRemoved(userId) => userId

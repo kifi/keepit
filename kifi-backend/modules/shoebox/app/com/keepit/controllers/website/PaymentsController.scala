@@ -111,8 +111,8 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getEvents(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val infos = planCommander.getAccountEvents(request.orgId, offset, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
+  def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+    val infos = planCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
     Ok(Json.obj("events" -> infos))
   }
 
@@ -124,6 +124,5 @@ class PaymentsController @Inject() (
       }
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))
     }
-
   }
 }

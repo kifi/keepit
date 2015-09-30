@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
-import com.keepit.model._
+import com.keepit.model.{ UserRepo, OrganizationRepo, OrganizationStates, Organization, User }
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
@@ -21,6 +21,7 @@ class AdminPaymentsController @Inject() (
     implicit val executionContext: ExecutionContext,
     organizationRepo: OrganizationRepo,
     paidAccountRepo: PaidAccountRepo,
+    accountEventRepo: AccountEventRepo,
     userRepo: UserRepo,
     planCommander: PlanManagementCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
@@ -140,6 +141,7 @@ class AdminPaymentsController @Inject() (
       (accountEvent.whoDunnit.map(userRepo.get), accountEvent.kifiAdminInvolved.map(userRepo.get))
     }
     AdminAccountEventView(
+      eventId = accountEvent.id.get,
       action = accountEvent.action,
       eventTime = accountEvent.eventTime,
       billingRelated = accountEvent.billingRelated,
@@ -147,30 +149,34 @@ class AdminPaymentsController @Inject() (
       adminInvolved = adminInvolved,
       creditChange = accountEvent.creditChange,
       paymentCharge = accountEvent.paymentCharge,
-      memo = accountEvent.memo
-    )
+      memo = accountEvent.memo)
   }
 
-  def asPlayHtml(obj: Any) = HtmlFormat.raw(obj.toString)
+  private def asPlayHtml(obj: Any) = HtmlFormat.raw(obj.toString)
 
   def getAccountActivity(orgId: Id[Organization], page: Int) = AdminUserAction { implicit request =>
     val PAGE_SIZE = 50
-    val events = planCommander.getAccountEvents(orgId, page * PAGE_SIZE, (page + 1) * PAGE_SIZE, onlyRelatedToBillingFilter = None)
-      .map { createAdminAccountEventView }
-    val org = db.readOnlyMaster { implicit s => organizationRepo.get(orgId) }
+    val (allEvents, org) = db.readOnlyMaster { implicit s =>
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val allEvents = accountEventRepo.getByAccountAndState(account.id.get, AccountEventStates.ACTIVE)
+      val org = organizationRepo.get(orgId)
+      (allEvents, org)
+    }
+    val pagedEvents = allEvents.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).map(createAdminAccountEventView)
     Ok(views.html.admin.accountActivity(
       orgId,
-      events,
+      pagedEvents,
       s"Account Activity for ${org.name}",
       { page: Int => com.keepit.controllers.admin.routes.AdminPaymentsController.getAccountActivity(orgId, page) }.andThen(asPlayHtml),
       page,
-      events.length,
+      allEvents.length,
       PAGE_SIZE))
   }
 
 }
 
 case class AdminAccountEventView(
+  eventId: Id[AccountEvent],
   action: AccountEventAction,
   eventTime: DateTime,
   billingRelated: Boolean,

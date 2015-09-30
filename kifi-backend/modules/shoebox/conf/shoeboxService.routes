@@ -559,7 +559,7 @@ POST          /site/admin/billing/contacts                      @com.keepit.cont
 GET           /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
-GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], offset: Int, limit: Int)
+GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int)
 GET           /site/admin/billing/eventsBefore                  @com.keepit.controllers.website.PaymentsController.getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[com.keepit.payments.AccountEvent])
 
 ##########################################

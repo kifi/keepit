@@ -227,9 +227,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def notifyInviteeAboutInvitationToJoinOrganization(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
-    val userImage = s3ImageStore.avatarUrlByUser(inviter)
-    val orgLink = s"""https://www.kifi.com/${org.handle.value}"""
-
     invitees.foreach { invitee =>
       elizaClient.sendNotificationEvent(OrgNewInvite(
         Recipient(invitee),
