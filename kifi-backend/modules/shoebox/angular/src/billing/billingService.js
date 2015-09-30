@@ -21,7 +21,11 @@ angular.module('kifi')
         .then(getResponseData);
       },
       setBillingContacts: function (pubId, contacts) {
-        return net.setBillingContacts(pubId, contacts);
+        return net
+        .setBillingContacts(pubId, contacts)
+        ['finally'](function () {
+          net.getBillingContacts.clearCache();
+        });
       }
     };
 

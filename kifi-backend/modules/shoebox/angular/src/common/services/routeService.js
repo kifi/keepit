@@ -88,6 +88,7 @@ angular.module('kifi')
         });
       },
       exportKeeps: route('/keeps/export'),
+      exportOrganizationKeeps: route('/keeps/organizationExport'),
       postDelightedAnswer: route('/user/delighted/answer'),
       cancelDelightedSurvey: route('/user/delighted/cancel'),
       userCloseAccount: route('/user/close'),
@@ -216,7 +217,7 @@ angular.module('kifi')
       getMutualConnections: function (userId) {
         return route('/users/' + userId + '/connections/mutual');
       },
-      
+
       /////////////////////////////
       // Static Pages            //
       /////////////////////////////

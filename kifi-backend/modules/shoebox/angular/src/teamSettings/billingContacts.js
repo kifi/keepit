@@ -35,6 +35,8 @@ angular.module('kifi')
 
 
     $scope.setBillingContacts = function () {
+      $window.addEventListener('beforeunload', onBeforeUnload);
+
       var contactList = Object.keys($scope.billingContactModel).map(function (key) {
         return $scope.billingContactModel[key];
       });
@@ -52,7 +54,16 @@ angular.module('kifi')
           text: response.statusText + ': There was an error saving your settings',
           type: 'red'
         });
+      })
+      ['finally'](function () {
+        $window.removeEventListener('beforeunload', onBeforeUnload);
       });
     };
+
+    function onBeforeUnload(e) {
+      var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
+      (e || $window.event).returnValue = message;
+      return message;
+    }
   }
 ]);

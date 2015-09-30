@@ -160,8 +160,10 @@ angular.module('kifi')
       return flatSettings;
     }
 
-    function onBeforeUnload() {
-      return 'We\'re still saving your settings. Are you sure you wish to leave this page?';
+    function onBeforeUnload(e) {
+      var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
+      (e || $window.event).returnValue = message;
+      return message;
     }
 
     if ($scope.viewer.membership.role === 'admin') {

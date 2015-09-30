@@ -42,7 +42,7 @@ angular.module('kifi')
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId'),
-      getBillingContacts: get(shoebox, '/admin/billing/contacts?pubId=:pubId'),
+      getBillingContacts: get(shoebox, '/admin/billing/contacts?pubId=:pubId', 30),
       setBillingContacts: post(shoebox, '/admin/billing/contacts?pubId=:pubId'),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),

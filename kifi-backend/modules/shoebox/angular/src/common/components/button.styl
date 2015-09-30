@@ -15,6 +15,10 @@
   &:active
     background: darken(#f3f3f3, 5%)
 
+  &[disabled]
+    color: #999
+    background: #ddd linear-gradient(alpha(#fff, 0), alpha(#fff, .5))
+
   span
   .symbol-sprite
     display: inline-block

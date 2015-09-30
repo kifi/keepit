@@ -1,21 +1,24 @@
-<div class="kf-ops-export">
+<div class="kf-export-keeps">
   <div class="kf-container">
     <div class="kf-container-header">
       <h1>Export team keeps</h1>
     </div>
-    <div class="kf-container-body">
+    <div class="kf-container-body kf-export-keeps-container">
       <p>
         Export all {{ profile.name }}'s keeps within libraries that are public or visibile to your team.
         Keeps will include the URL, date of keep, library, and tags.
+      </p>
+      <p>
         Select which format you'd like the export to be in:
       </p>
-      <form method="POST" action="https://www.kifi.com/site/keeps/organizationExport">
+      <form method="POST" action="{{ actionUrl }}">
         <div>
           <label>
             <input
               type="radio"
               name="format"
               ng-model="exportState.format"
+              ng-disabled="{{ !canExportKeeps }}"
               value="html"
             />
             <span>Netscape HTML</span>
@@ -27,13 +30,17 @@
               type="radio"
               name="format"
               ng-model="exportState.format"
+              ng-disabled="{{ !canExportKeeps }}"
               value="json"
             />
             <span>JSON</span>
           </label>
         </div>
         <input type="hidden" name="orgIds" ng-attr-value="{{ profile.id }}"/>
-        <button class="kf-button">Export</button>
+        <button
+          class="kf-button kf-button-large"
+          ng-disabled="{{ !canExportKeeps }}"
+        >Export</button>
       </form>
     </div>
   </div>
