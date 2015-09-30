@@ -311,11 +311,20 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
-    val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
       val title = s"${invitee.firstName} accepted your invitation to join ${org.abbreviatedName}!"
       val inviterId = invite.inviterId
+
+      invite.userId.foreach { inviteeId =>
+        elizaClient.sendNotificationEvent(
+          OrgInviteAccepted(
+            recipient = Recipient(inviterId),
+            time = currentDateTime,
+            accepterId = inviteeId,
+            invite.organizationId)
+        )
+      }
+
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
         elizaClient.sendUserPushNotification(

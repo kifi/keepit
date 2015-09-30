@@ -28,12 +28,12 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
         }
 
         val interactionSeq = Seq(
-          (UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER),
-          (UserRecipient(user3.id.get), UserInteraction.MESSAGE_USER),
-          (EmailRecipient(user4), UserInteraction.MESSAGE_USER),
-          (UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER),
-          (UserRecipient(user3.id.get), UserInteraction.MESSAGE_USER),
-          (UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
+          (UserInteractionRecipient(user2.id.get), UserInteraction.MESSAGE_USER),
+          (UserInteractionRecipient(user3.id.get), UserInteraction.MESSAGE_USER),
+          (EmailInteractionRecipient(user4), UserInteraction.MESSAGE_USER),
+          (UserInteractionRecipient(user2.id.get), UserInteraction.MESSAGE_USER),
+          (UserInteractionRecipient(user3.id.get), UserInteraction.MESSAGE_USER),
+          (UserInteractionRecipient(user2.id.get), UserInteraction.MESSAGE_USER)
         )
         userInteractionCommander.addInteractions(user1.id.get, interactionSeq)
 
@@ -57,11 +57,11 @@ class UserInteractionCommanderTest extends Specification with ShoeboxTestInjecto
         val sortedScores = userInteractionCommander.getRecentInteractions(user1.id.get)
         val scoresOnly = sortedScores.map(_.score)
         scoresOnly === scoresOnly.sorted.reverse
-        sortedScores.map(_.recipient).toList === List(UserRecipient(user2.id.get), UserRecipient(user3.id.get), EmailRecipient(user4))
+        sortedScores.map(_.recipient).toList === List(UserInteractionRecipient(user2.id.get), UserInteractionRecipient(user3.id.get), EmailInteractionRecipient(user4))
 
         // test interaction array keeps X most recent interactions
         for (i <- 1 to UserInteraction.maximumInteractions) {
-          userInteractionCommander.addInteractions(user1.id.get, Seq((UserRecipient(user2.id.get), UserInteraction.MESSAGE_USER)))
+          userInteractionCommander.addInteractions(user1.id.get, Seq((UserInteractionRecipient(user2.id.get), UserInteraction.MESSAGE_USER)))
         }
         db.readOnlyMaster { implicit session =>
           userValueRepo.getValue(user1.id.get, UserValues.recentInteractions).as[List[JsObject]].size === UserInteraction.maximumInteractions
