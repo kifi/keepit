@@ -64,7 +64,7 @@ trait PlanManagementCommander {
   def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution): Try[AccountEvent]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
 
-  def getAccountEvents(orgId: Id[Organization], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
+  def getAccountEvents(orgId: Id[Organization], offset: Int, limit: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
 
   def getAccountFeatureSettings(orgId: Id[Organization]): AccountFeatureSettingsResponse
@@ -491,9 +491,9 @@ class PlanManagementCommanderImpl @Inject() (
     getActivePaymentMethods(orgId).find(_.default)
   }
 
-  def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEvents(orgId: Id[Organization], offset: Int, limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getEvents(accountId, limit, onlyRelatedToBilling)
+    accountEventRepo.getEvents(accountId, offset, limit, onlyRelatedToBilling)
   }
 
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
