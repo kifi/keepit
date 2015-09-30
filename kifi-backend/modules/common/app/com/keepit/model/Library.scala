@@ -226,12 +226,12 @@ object LibraryPathHelper {
 
   def formatLibraryPath(owner: BasicUser, orgHandleOpt: Option[OrganizationHandle], slug: LibrarySlug): String = {
     val handle = getHandle(owner, orgHandleOpt)
-    s"/${handle.value}/${slug.value}"
+    s"${handle.value}/${slug.value}"
   }
 
   def formatLibraryPathUrlEncoded(owner: BasicUser, orgHandleOpt: Option[OrganizationHandle], slug: LibrarySlug): String = {
     val handle = getHandle(owner, orgHandleOpt)
-    s"/${handle.urlEncoded}/${slug.urlEncoded}"
+    s"${handle.urlEncoded}/${slug.urlEncoded}"
   }
 }
 
