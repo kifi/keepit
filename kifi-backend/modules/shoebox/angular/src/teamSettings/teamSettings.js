@@ -133,7 +133,7 @@ angular.module('kifi')
       var items = Array.prototype.slice.apply(arguments);
       var options = [ // This is what the <select>s will read from
         { label: 'Admins only', value: ORG_SETTING_VALUE.ADMIN },
-        { label: 'Members only', value: ORG_SETTING_VALUE.MEMBER },
+        { label: 'All members', value: ORG_SETTING_VALUE.MEMBER },
         { label: 'Anyone', value: ORG_SETTING_VALUE.ANYONE },
         { label: 'No one', value: ORG_SETTING_VALUE.DISABLED }
       ];
