@@ -2,12 +2,14 @@
 
 angular.module('kifi')
 
-.constant('userProfilePageNames', {  // for tracking
+.constant('userProfilePageNames', {  // for tracking & tabs
   own: 'OwnedLibraries',
   following: 'FollowedLibraries',
   invited: 'InvitedLibraries',
-  connections: 'Connections'
+  connections: 'Connections',
+  followers: 'Followers'
 })
+
 
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$window', 'profile',
@@ -17,6 +19,12 @@ angular.module('kifi')
             inviteService, originTrackingService, profileService, installService,
             modalService, initParams, userProfilePageNames) {
 
+    $scope.libraryType = $state.current.name.split('.').pop();
+
+    $scope.showInvitedLibraries = function () {
+      return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
+    };
+    
     //
     // Internal functions.
     //
@@ -62,17 +70,23 @@ angular.module('kifi')
 
       $analytics.eventTrack($rootScope.userLoggedIn ? 'user_clicked_page' : 'visitor_clicked_page', profileEventTrackAttributes);
     }
+    
 
     //
     // Watches and listeners.
     //
-
+    
+ 
     [
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
         // When routing among the nested states, track page view again.
         if (/^userProfile/.test(toState.name) && /^userProfile/.test(fromState.name) && toParams.handle === fromParams.handle) {
           trackPageView();
           setCurrentPageOrigin();
+        }
+        if (/^userProfile\.libraries\./.test(toState.name)) {
+          $scope.libraryType = toState.name.split('.').pop();
+          
         }
       }),
       $rootScope.$on('getCurrentLibrary', function (e, args) {
