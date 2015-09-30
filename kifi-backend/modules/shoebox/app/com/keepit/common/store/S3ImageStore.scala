@@ -86,25 +86,18 @@ class S3ImageStoreImpl @Inject() (
       user.userPictureId match {
         case None =>
           // No picture uploaded, wait for it
-          val sui = db.readOnlyMaster { implicit s =>
+          val suiOpt = db.readOnlyMaster { implicit s =>
             val suis = suiRepo.getByUser(user.id.get)
             // If user has no picture, this is the preference order for social networks:
-            val suiOpt = suis.find(_.networkType == SocialNetworks.FACEBOOK).find(_.networkType == SocialNetworks.TWITTER).orElse(suis.find(_.networkType == SocialNetworks.LINKEDIN))
-            suiOpt.getOrElse {
-              if (suis.isEmpty) throw new Exception(s"user has no social users attached: $user")
-              suis.head
-            }
+            suis.find(_.networkType == SocialNetworks.FACEBOOK).find(_.networkType == SocialNetworks.TWITTER).orElse(suis.find(_.networkType == SocialNetworks.LINKEDIN))
           }
-          if (sui.networkType != SocialNetworks.FORTYTWO) {
-            uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(sui.networkType), None, setDefault = true)(sui.getPictureUrl).map {
+          if (suiOpt.exists(_.networkType != SocialNetworks.FORTYTWO)) {
+            uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(suiOpt.get.networkType), None, setDefault = true)(suiOpt.get.getPictureUrl).map {
               case res =>
                 avatarUrlByExternalId(width, user.externalId, res.head._1)
             }
           } else {
-            uploadRemotePicture(user.id.get, user.externalId, UserPictureSource(sui.networkType), None, setDefault = false)(sui.getPictureUrl)
-            val preferredSize = width.map(w => ImageSize(w, w))
-            val pictureUrl = sui.getPictureUrl(preferredSize) getOrElse S3UserPictureConfig.defaultImage
-            Future.successful(pictureUrl)
+            Future.successful(S3UserPictureConfig.defaultImage)
           }
         case Some(userPicId) =>
           // We have an image so serve that one, even if it might be outdated
