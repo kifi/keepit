@@ -163,7 +163,7 @@ angular.module('kifi')
       return 'We\'re still saving your settings. Are you sure you wish to leave this page?';
     }
 
-    if ($scope.membership.role === 'admin') {
+    if ($scope.viewer.membership.role === 'admin') {
       billingService
       .getBillingState($scope.profile.id)
       .then(function (stateData) {
