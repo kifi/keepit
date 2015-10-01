@@ -1,6 +1,13 @@
+.kf-team-settings-field
+  margin-top: 20px
 
 h2.kf-team-settings-heading
   heading_lg()
+  margin-top: 15px
+
+  // Don't have two margins
+  + .kf-team-settings-field
+    margin-top: 0
 
 h3.kf-team-settings-heading
   font-size: 16px
@@ -9,7 +16,7 @@ h3.kf-team-settings-heading
   margin-top: 15px
 
 .kf-team-settings-desc
-  margin: 10px 0 20px
+  margin: 10px 0 5px
   font-size: 14px
   color: #666
 

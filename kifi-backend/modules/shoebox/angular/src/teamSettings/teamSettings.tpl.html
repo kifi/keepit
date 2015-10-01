@@ -5,8 +5,8 @@
   </div>
   <div class="kf-container-main">
     <section ng-repeat="section in settingsSectionTemplateData">
-      <h2 class="kf-team-settings-heading" id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
-      <div ng-repeat="field in section.fields" class="kf-row">
+      <h2 class="kf-team-settings-heading" id="{{ getHeadingAnchor(section.heading) }}" ng-show="section.heading">{{ section.heading }}</h2>
+      <div ng-repeat="field in section.fields" class="kf-row kf-team-settings-field">
         <div class="kf-main-pane">
           <h3 class="kf-team-settings-heading" id="{{ field.fieldKey }}">{{ field.title }}</h3>
           <p class="kf-team-settings-desc">{{ field.description }}</p>

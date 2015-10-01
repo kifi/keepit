@@ -28,19 +28,19 @@
           >Integrations</a>
         </li>
         <!-- -->
-        <li class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'payment-plan' }">
+        <li ng-if="isAdminExperiment" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'payment-plan' }">
           <a
             class="kf-link"
             ui-sref="orgProfile.settings.plan"
           >Payment Plan</a>
         </li>
-        <li class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
+        <li ng-if="isAdminExperiment"  class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
           <a
             class="kf-link"
             ui-sref="orgProfile.settings.contacts"
           >Billing Contacts</a>
         </li>
-        <li class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'export-keeps' }">
+        <li ng-if="isAdminExperiment"  class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'export-keeps' }">
           <a
             class="kf-link"
             ui-sref="orgProfile.settings.export"
