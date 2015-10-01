@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.NonOKResponseException
-import com.keepit.eliza.{ LibraryPushNotificationCategory, UserPushNotificationCategory }
+import com.keepit.eliza.{ OrgPushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory }
 import com.keepit.eliza.commanders.MessagingAnalytics
 import com.keepit.model.{ Library, User }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -93,7 +93,7 @@ class AppBoy @Inject() (
         val pushType = lupn.category match {
           case LibraryPushNotificationCategory.LibraryChanged => "lr"
           case LibraryPushNotificationCategory.LibraryInvitation => "li"
-          case _ => "lr"
+          case _ => airbrake.notify(s"unsupported library push notification category ${lupn.category.name}"); "lr"
         }
         val withLid = json.as[JsObject] ++ Json.obj("t" -> pushType, "lid" -> Library.publicId(lupn.libraryId).id)
         deviceType match {
@@ -107,9 +107,16 @@ class AppBoy @Inject() (
           case UserPushNotificationCategory.UserConnectionRequest => "fr"
           case UserPushNotificationCategory.ContactJoined => "us"
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
-          case _ => "us"
+          case UserPushNotificationCategory.NewOrganizationMember => "om"
+          case _ => airbrake.notify(s"unsupported user push notification category ${upn.category.name}"); "us"
         }
         json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
+      case opn: OrgPushNotification =>
+        val pushType = opn.category match {
+          case OrgPushNotificationCategory.OrganizationInvitation => "oi"
+          case _ => airbrake.notify(s"unsupported org push notification category ${opn.category.name}"); "oi"
+        }
+        json.as[JsObject] ++ Json.obj("t" -> pushType)
       case _ =>
         throw new Exception(s"Don't recognize push notification $notification")
     }
@@ -157,6 +164,8 @@ class AppBoy @Inject() (
         log.info(s"[AppBoy] sending UserPushNotification to user $userId user ${upn.username}:${upn.userExtId} message ${upn.message} with $json")
       case mcpn: MessageCountPushNotification =>
         log.info(s"[AppBoy] sending MessageCountPushNotification to user $userId with $json")
+      case opn: OrgPushNotification =>
+        log.info(s"[AppBoy] sending OrgPushNotification to user $userId message ${opn.message} with $json")
     }
 
     if (prodDevices.size > 0) {
