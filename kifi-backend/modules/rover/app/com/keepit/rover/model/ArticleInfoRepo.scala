@@ -4,7 +4,7 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingPlugin, SequencingActor }
-import com.keepit.rover.article.policy.FailureRecoveryPolicy
+import com.keepit.rover.article.policy.{FetchSchedulingPolicy, FailureRecoveryPolicy}
 import com.keepit.rover.article._
 import com.keepit.model._
 import com.keepit.rover.sensitivity.{ UriSensitivityKey, UriSensitivityCache }
@@ -202,7 +202,7 @@ class ArticleInfoRepoImpl @Inject() (
 
   private def onLatestArticle[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A])(implicit session: RWSession): Unit = {
     if (kind != EmbedlyArticle) {
-      refresh(uriId, EmbedlyArticle, ifLastFetchOlderThan = 1 day)
+      refresh(uriId, EmbedlyArticle, ifLastFetchOlderThan = FetchSchedulingPolicy.embedlyRefreshOnContentChangeIfOlderThan)
     }
   }
 

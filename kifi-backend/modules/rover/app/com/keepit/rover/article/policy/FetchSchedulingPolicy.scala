@@ -41,4 +41,6 @@ object FetchSchedulingPolicy {
     intervalIncrement = 5 days,
     intervalDecrement = 5 days
   )
+  
+  val embedlyRefreshOnContentChangeIfOlderThan: Duration = 1 day
 }
