@@ -78,9 +78,9 @@ class S3ImageStoreImpl @Inject() (
 
   def getPictureUrl(width: Option[Int], user: User, pictureName: String): Future[String] = {
     if (config.isLocal) {
-      val sui = db.readOnlyReplica { implicit s => suiRepo.getByUser(user.id.get).head }
+      val sui = db.readOnlyReplica { implicit s => suiRepo.getByUser(user.id.get).headOption }
       val preferredSize = width.map(w => ImageSize(w, w))
-      val pictureUrl = sui.getPictureUrl(preferredSize) getOrElse S3UserPictureConfig.defaultImage
+      val pictureUrl = sui.flatMap(_.getPictureUrl(preferredSize)) getOrElse S3UserPictureConfig.defaultImage
       Future.successful(pictureUrl)
     } else {
       user.userPictureId match {
