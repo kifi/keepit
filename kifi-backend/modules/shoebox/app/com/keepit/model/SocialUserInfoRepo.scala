@@ -19,13 +19,11 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[Social
   def getByUsers(userIds: Seq[Id[User]])(implicit session: RSession): Seq[SocialUserInfo]
   def doNotUseSave(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
-  def getSocialUserByUser(id: Id[User])(implicit session: RSession): Seq[SocialUser]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
   def getBySocialIds(ids: Seq[SocialId])(implicit session: RSession): Seq[SocialUserInfo]
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo]
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo]
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo]
-  def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser]
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo]
   def getSocialUserBasicInfosByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserBasicInfo]
   def getAllUsersToRefresh()(implicit session: RSession): Seq[SocialUserInfo]
@@ -35,7 +33,6 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[Social
 class SocialUserInfoRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val socialUserCache: SocialUserCache,
   val countCache: SocialUserInfoCountCache,
   val networkCache: SocialUserInfoNetworkCache,
   val basicInfoCache: SocialUserBasicInfoCache,
@@ -97,9 +94,6 @@ class SocialUserInfoRepoImpl @Inject() (
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = deleteCache(socialUser)
 
   override def deleteCache(socialUser: SocialUserInfo)(implicit session: RSession): Unit = {
-    socialUser.userId map { userId =>
-      socialUserCache.remove(SocialUserKey(userId))
-    }
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
     socialUser.id map { id =>
       basicInfoCache.remove(SocialUserBasicInfoKey(id))
@@ -128,11 +122,6 @@ class SocialUserInfoRepoImpl @Inject() (
 
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
     (for (f <- rows if f.userId === userId && f.state === SocialUserInfoStates.APP_NOT_AUTHORIZED) yield f).list
-
-  def getSocialUserByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUser] =
-    socialUserCache.getOrElse(SocialUserKey(userId)) {
-      (for (f <- rows if f.userId === userId && f.state =!= SocialUserInfoStates.INACTIVE) yield f).list.map(_.credentials).flatten.toSeq
-    }
 
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo = try {
     networkCache.getOrElse(SocialUserInfoNetworkKey(networkType, id)) {
@@ -171,12 +160,6 @@ class SocialUserInfoRepoImpl @Inject() (
     networkCache.getOrElseOpt(SocialUserInfoNetworkKey(networkType, id)) {
       val hashed = socialIdToSocialHash(id)
       (for (f <- rows if (f.socialHash === hashed || f.socialHash.isEmpty) && f.socialId === id && f.networkType === networkType) yield f).firstOption
-    }
-
-  def getSocialUserOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUser] =
-    socialUserNetworkCache.getOrElseOpt(SocialUserNetworkKey(networkType, id)) {
-      val hashed = socialIdToSocialHash(id)
-      (for (f <- rows if (f.socialHash === hashed || f.socialHash.isEmpty) && f.socialId === id && f.networkType === networkType) yield f).firstOption.map(_.credentials).flatten
     }
 
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo] = {
