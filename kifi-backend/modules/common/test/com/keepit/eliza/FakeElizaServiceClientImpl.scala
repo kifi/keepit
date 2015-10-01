@@ -31,6 +31,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   protected def httpClient: com.keepit.common.net.HttpClient = ???
   var inbox = List.empty[NotificationEvent]
 
+  var completedNotifications = List.empty[Recipient]
+
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray) = Future.successful((): Unit)
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = Future.successful(1)
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int] = Future.successful(1)
@@ -90,6 +92,9 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]] = Future.successful(Set.empty)
 
-  def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean] = ???
+  def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean] = {
+    completedNotifications = recipient +: completedNotifications
+    Future.successful(true)
+  }
 
 }
