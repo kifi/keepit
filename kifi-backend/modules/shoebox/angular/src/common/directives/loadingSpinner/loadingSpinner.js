@@ -7,7 +7,9 @@ angular.module('kifi')
     return {
       restrict: 'A',
       templateUrl: 'common/directives/loadingSpinner/loadingSpinner.tpl.html',
-      scope: { hide: '=' },
+      scope: {
+        hide: '&'
+      },
       replace: true
     };
   }

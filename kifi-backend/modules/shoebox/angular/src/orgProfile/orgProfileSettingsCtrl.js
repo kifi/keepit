@@ -3,8 +3,9 @@
 angular.module('kifi')
 
 .controller('OrgProfileSettingsCtrl', [
-  '$window', '$scope', '$timeout', 'settings', 'ORG_PERMISSION',
-  function ($window, $scope, $timeout, settings, ORG_PERMISSION) {
+  '$window', '$scope', '$timeout', '$state', 'settings', 'ORG_PERMISSION',
+  function ($window, $scope, $timeout, $state, settings, ORG_PERMISSION) {
+    $scope.state = $state;
     $scope.settings = settings.settings;
     $scope.canExportKeeps = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) !== -1);
     function onHashChange() {
