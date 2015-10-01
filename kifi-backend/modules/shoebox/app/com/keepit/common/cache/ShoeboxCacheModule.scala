@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
-import com.keepit.social.{ BasicUserUserIdCache }
+import com.keepit.social.{ UserIdentityCache, BasicUserUserIdCache }
 import com.keepit.classify.{ DomainCache }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.usersegment.UserSegmentCache
@@ -113,18 +113,12 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
-  def socialUserCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
-
-  @Singleton
-  @Provides
   def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
-  @Singleton
-  @Provides
-  def socialUserNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new SocialUserNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+  @Provides @Singleton
+  def userIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserIdentityCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides

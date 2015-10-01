@@ -153,6 +153,7 @@ case class ShoeboxCacheProvider @Inject() (
   userIdCache: UserIdCache,
   socialUserNetworkCache: SocialUserInfoNetworkCache,
   socialUserCache: SocialUserInfoUserCache,
+  userIdentityCache: UserIdentityCache,
   userSessionExternalIdCache: UserSessionViewExternalIdCache,
   userConnectionsCache: UserConnectionIdCache,
   searchFriendsCache: SearchFriendsCache,
@@ -195,8 +196,10 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = {
-    call(Shoebox.internal.getUserIdentity(providerId = identityId.providerId, id = identityId.userId)).map { r =>
-      r.json.asOpt[UserIdentity]
+    cacheProvider.userIdentityCache.getOrElseFutureOpt(UserIdentityIdentityIdKey(identityId)) {
+      call(Shoebox.internal.getUserIdentity(providerId = identityId.providerId, id = identityId.userId)).map { r =>
+        r.json.asOpt[UserIdentity]
+      }
     }
   }
 
