@@ -5,6 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.controller._
 import com.keepit.common.core._
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -13,6 +14,7 @@ import com.keepit.common.mail.KifiMobileAppLinkFlag
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
+import play.api.libs.json.{ Json, JsObject, JsValue }
 import play.api.mvc.{ ActionFilter, Result }
 import securesocial.core.SecureSocial
 
@@ -23,6 +25,7 @@ class KifiSiteRouter @Inject() (
   db: Database,
   userRepo: UserRepo,
   orgRepo: OrganizationRepo,
+  libraryRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   userCommander: UserCommander,
   handleCommander: HandleCommander,
@@ -37,7 +40,9 @@ class KifiSiteRouter @Inject() (
   organizationAnalytics: OrganizationAnalytics,
   airbrake: AirbrakeNotifier,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  val userActionsHelper: UserActionsHelper)
+  val userActionsHelper: UserActionsHelper,
+  deepLinkRouter: DeepLinkRouter,
+  implicit val publicIdConfiguration: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
   def redirectUserTo(path: String) = WebAppPage { implicit request =>
@@ -66,6 +71,14 @@ class KifiSiteRouter @Inject() (
           orgMembershipRepo.getAllByUserId(u.userId).sortBy(_.role).map(_.organizationId).headOption.map(orgRepo.get)
         }
         orgToUpgrade.map { org => Redirect(s"/${org.handle.urlEncoded}/settings/plan") } getOrElse Redirect("/teams/new")
+    }
+  }
+
+  def generalRedirect(data: String) = MaybeUserAction { implicit request =>
+    val linkOpt = deepLinkRouter.generateRedirectUrl(Json.parse(data).as[JsObject])
+    linkOpt.map(path => Redirect("/" + path.relative)).getOrElse {
+      airbrake.notify(s"Could not figure out how to redirect deep-link: ${data}")
+      Redirect("/get")
     }
   }
 
