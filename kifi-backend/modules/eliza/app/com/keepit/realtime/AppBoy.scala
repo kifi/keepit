@@ -111,7 +111,7 @@ class AppBoy @Inject() (
           case _ => airbrake.notify(s"unsupported user push notification category ${upn.category.name}"); "us"
         }
         json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
-      case opn: OrgPushNotification =>
+      case opn: OrganizationPushNotification =>
         val pushType = opn.category match {
           case OrgPushNotificationCategory.OrganizationInvitation => "oi"
           case _ => airbrake.notify(s"unsupported org push notification category ${opn.category.name}"); "oi"
@@ -164,7 +164,7 @@ class AppBoy @Inject() (
         log.info(s"[AppBoy] sending UserPushNotification to user $userId user ${upn.username}:${upn.userExtId} message ${upn.message} with $json")
       case mcpn: MessageCountPushNotification =>
         log.info(s"[AppBoy] sending MessageCountPushNotification to user $userId with $json")
-      case opn: OrgPushNotification =>
+      case opn: OrganizationPushNotification =>
         log.info(s"[AppBoy] sending OrgPushNotification to user $userId message ${opn.message} with $json")
     }
 

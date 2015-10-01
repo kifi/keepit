@@ -19,7 +19,7 @@ import com.keepit.model._
 import com.keepit.notify.delivery.{ WsNotificationDelivery, NotificationJsonFormat }
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.notify.model.Recipient
-import com.keepit.realtime.{ OrgPushNotification, UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
+import com.keepit.realtime.{ OrganizationPushNotification, UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
 import com.keepit.common.concurrent.PimpMyFuture._
@@ -88,7 +88,7 @@ class MessagingCommander @Inject() (
   }
 
   def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int] = {
-    val notification = OrgPushNotification(message = Some(request.message), unvisitedCount = getUnreadUnmutedThreadCount(request.userId), category = request.category, experiment = request.pushNotificationExperiment)
+    val notification = OrganizationPushNotification(message = Some(request.message), unvisitedCount = getUnreadUnmutedThreadCount(request.userId), category = request.category, experiment = request.pushNotificationExperiment)
     notificationDeliveryCommander.sendPushNotification(request.userId, notification, request.force)
   }
 

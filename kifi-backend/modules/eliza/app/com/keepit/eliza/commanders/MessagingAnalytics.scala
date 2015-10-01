@@ -53,7 +53,7 @@ class MessagingAnalytics @Inject() (
     case simplePushNotification: SimplePushNotification => sentSimplePushNotification(userId, deviceType, simplePushNotification)
     case libraryUpdatePushNotification: LibraryUpdatePushNotification => sentLibraryUpdatePushNotification(userId, deviceType, libraryUpdatePushNotification)
     case userPushNotification: UserPushNotification => sentUserPushNotification(userId, deviceType, userPushNotification)
-    case orgPushNotification: OrgPushNotification => sentOrgPushNotification(userId, deviceType, orgPushNotification)
+    case orgPushNotification: OrganizationPushNotification => sentOrgPushNotification(userId, deviceType, orgPushNotification)
     case messageCountPushNotification: MessageCountPushNotification => //do nothing
   }
 
@@ -126,7 +126,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  private def sentOrgPushNotification(userId: Id[User], deviceType: DeviceType, notification: OrgPushNotification): Unit = {
+  private def sentOrgPushNotification(userId: Id[User], deviceType: DeviceType, notification: OrganizationPushNotification): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
