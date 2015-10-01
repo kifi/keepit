@@ -148,25 +148,29 @@ angular.module('kifi')
         url: '',
         controller: 'TeamSettingsCtrl',
         templateUrl: 'teamSettings/teamSettings.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        activenav: 'team-settings'
       })
       .state('orgProfile.settings.export', {
         url: '/export',
         controller: 'ExportKeepsCtrl',
         templateUrl: 'teamSettings/exportKeeps.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        activenav: 'export-keeps'
       })
       .state('orgProfile.settings.contacts', {
         url: '/contacts',
         controller: 'BillingContactsCtrl',
         templateUrl: 'teamSettings/billingContacts.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        activenav: 'billing-contacts'
       })
       .state('orgProfile.settings.plan', {
         url: '/plan',
         controller: 'PaymentPlanCtrl',
         templateUrl: 'teamSettings/paymentPlan.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        activenav: 'payment-plan'
       })
       .state('teams', {
         url: '/teams',

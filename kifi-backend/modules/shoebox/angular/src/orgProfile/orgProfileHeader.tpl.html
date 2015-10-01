@@ -74,7 +74,7 @@
           <a
             ng-if="plan.settings.membership.view_members.setting === ORG_SETTING_VALUE.ANYONE || membership.permissions.indexOf(ORG_PERMISSION.VIEW_MEMBERS) !== -1"
             class="kf-oph-stats-a kf-button-textonly"
-            ng-href="{{ '/' + profile.handle + '/members' }}"
+            ui-sref="orgProfile.members"
             ng-click="onClickTrack($event, 'clickedProfileMembers')"
             ng-class="{ 'active': state.current.activetab === 'members' }"
           >
