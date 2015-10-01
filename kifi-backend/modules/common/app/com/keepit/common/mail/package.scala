@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.{ Keep, Library, User }
 import com.keepit.social.BasicUser
+import play.api.libs.json.{ Json, JsObject }
 import play.twirl.api.Html
 
 object KifiMobileAppLinkFlag {
@@ -26,6 +27,7 @@ package object template {
     val lastName = TagLabel("lastName")
     val fullName = TagLabel("fullName")
     val avatarUrl = TagLabel("avatarUrl")
+    val libraryId = TagLabel("libraryId")
     val libraryName = TagLabel("libraryName")
     val libraryUrl = TagLabel("libraryUrl")
     val libraryOwnerFullName = TagLabel("libraryOwnerFullName")
@@ -78,17 +80,17 @@ package object template {
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
+    def profileLink(id: Id[User], content: String = "") = deepLink(Json.obj("t" -> "us", "uid" -> Tag1(tags.profileUrl, id).value), content, openInAppIfMobile = true)
+
     def profileUrl(id: Id[User]) = Tag1(tags.profileUrl, id).toHtml
 
     def profileUrl(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileUrl, id) + "?", content, openInAppIfMobile = true))
 
-    def profileUrl(user: BasicUser, content: String) = Html(appendTrackingParams(s"$baseUrl/${user.username.value}?", content, openInAppIfMobile = true))
-
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
-    def libraryUrl(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryUrl, id) + "?", content, openInAppIfMobile = true))
+    def libraryLink(id: Id[Library], content: String) = deepLink(Json.obj("t" -> "l", "lid" -> Tag1(tags.libraryId, id).value), "", openInAppIfMobile = true)
 
-    def libraryUrl(path: String, content: String) = Html(appendTrackingParams(Tag0(tags.baseUrl).value + path + "?", content, openInAppIfMobile = true))
+    def libraryUrl(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryUrl, id) + "?", content, openInAppIfMobile = true))
 
     def libraryOwnerFullName(id: Id[Library]) = Tag1(tags.libraryOwnerFullName, id).toHtml
 
@@ -123,9 +125,10 @@ package object template {
 
     def libraryImageUrl(path: String) = s"$cdnBaseUrl/$path"
 
-    def kifiFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
+    def kifiFriendsUrl(content: String) = deepLink(Json.obj("t" -> "fr"), content, openInAppIfMobile = true)
 
-    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(Tag1(tags.profileUrl, id) + s"?intent=connect&id=${userExternalId(id)}&invited&", content, openInAppIfMobile = true)
+    // TODO(ryan): is this actually what we want? Should we be going to that user's profile instead?
+    def acceptFriendUrl(id: Id[User], content: String) = deepLink(Json.obj("t" -> "fr"), content, openInAppIfMobile = true)
 
     private def connectNetworkUrl(network: String, content: String): Html = Html {
       s"$baseUrl/link/$network?${EmailTrackingParam.paramName}=${trackingParam(content)}"
@@ -133,13 +136,16 @@ package object template {
 
     def connectFacebookUrl(content: String) = connectNetworkUrl("facebook", content)
 
+    // Just opens the contact's profile
     def inviteContactUrl(id: Id[User], content: String) =
-      htmlUrl(Tag1(tags.profileUrl, id) + s"?intent=connect&id=${userExternalId(id)}&", content, openInAppIfMobile = true)
-
+      deepLink(Json.obj("t" -> "us", "uid" -> Tag1(tags.userExternalId, id).value), content, openInAppIfMobile = true)
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
-      htmlUrl(Tag1(tags.profileUrl, id) + s"?intent=connect&id=${userExternalId(id)}&", "pymk" + index, openInAppIfMobile = true)
+      deepLink(Json.obj("t" -> "us", "uid" -> Tag1(tags.userExternalId, id).value), "pymk" + index, openInAppIfMobile = true)
 
-    def invitedLibrariesUrl(id: Id[User], content: String) = htmlUrl(Tag1(tags.profileUrl, id) + s"/libraries/invited?", content, openInAppIfMobile = true)
+    def invitedLibrariesUrl(id: Id[User], content: String) =
+      deepLink(Json.obj("t" -> "il"), content, openInAppIfMobile = true)
+
+    def deepLink(data: JsObject, content: String, openInAppIfMobile: Boolean): Html = htmlUrl(s"$baseUrl/redir?data=${data.toString()}&", content, openInAppIfMobile)
 
     // wrap a url (String) in HTML (so tags aren't escaped)
     def htmlUrl(url: String, content: String, openInAppIfMobile: Boolean): Html =
@@ -147,16 +153,16 @@ package object template {
 
     // url param must end with a ? or &
     private def appendTrackingParams(url: String, content: String, openInAppIfMobile: Boolean): String = {
-      val lastUrlChar = url(url.size - 1)
+      val lastUrlChar = url.last
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
       val openInAppIfMobileDirective = if (openInAppIfMobile) KifiMobileAppLinkFlag.arg else ""
       s"${url}utm_source=$sourceTagStr&amp;utm_medium=$channelTagStr&amp;utm_campaign=$campaignTagStr&amp;utm_content=$content&amp;kcid=$kcidTagStr" +
         s"&amp;${EmailTrackingParam.paramName}=${trackingParam(content)}&amp;$openInAppIfMobileDirective"
     }
 
-    def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content, openInAppIfMobile = true)
+    def kifiUrl(content: String = "unknown") = deepLink(Json.obj("t" -> "h"), content, openInAppIfMobile = true)
 
-    val kifiAddress = "709 N Shoreline Blvd, Mountain View, CA 94043, USA"
+    val kifiAddress = "278 Hope St Suite D, Mountain View, CA 94041, USA"
     val kifiLogoUrl = kifiUrl("headerLogo")
     val kifiFooterUrl = kifiUrl("footerKifiLink")
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy", openInAppIfMobile = false)

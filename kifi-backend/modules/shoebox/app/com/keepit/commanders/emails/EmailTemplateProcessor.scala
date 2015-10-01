@@ -4,6 +4,7 @@ import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.commanders.{ PathCommander }
 import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -72,6 +73,7 @@ class EmailTemplateProcessorImpl @Inject() (
     emailTipProvider: Provider[EmailTipProvider],
     emailOptOutCommander: EmailOptOutCommander,
     implicit val defaultContext: ExecutionContext,
+    implicit val publicIdConfig: PublicIdConfiguration,
     private val airbrake: AirbrakeNotifier) extends EmailTemplateProcessor with Logging {
 
   /* for the lack of a better name, this is just a trait that encapsulates
@@ -202,6 +204,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.libraryUrl =>
           config.applicationBaseUrl + libPathCommander.getPathForLibrary(library)
         case tags.libraryName => library.name
+        case tags.libraryId => Library.publicId(library.id.get).id
         case tags.libraryOwnerFullName =>
           val libOwner = input.users(library.ownerId)
           libOwner.fullName
@@ -216,7 +219,7 @@ class EmailTemplateProcessorImpl @Inject() (
           val address = db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
           getUnsubUrl(address)
         case tags.unsubscribeEmailUrl => getUnsubUrl(tagWrapper.args(0).as[EmailAddress])
-        case tags.userExternalId => user.externalId.toString()
+        case tags.userExternalId => user.externalId.id
         case tags.title => emailToSend.title
         case tags.baseUrl => config.applicationBaseUrl
         case tags.kcid => emailToSend.urlKcidParam
