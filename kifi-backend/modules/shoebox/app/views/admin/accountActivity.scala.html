@@ -11,11 +11,12 @@ paginationSize: Int
     @views.html.admin.adminHelper.pagination(paginationPage, paginationCount, paginationSize, otherPagesRoute) {
         <table class="table table-condensed table-striped">
             <thead>
-                <th>Action</th><th>Event Time</th><th>Billing Related?</th><th>Who Done It?</th><th>Admin?</th><th>Credit Change</th><th>Payment Charge</th><th>Memo</th>
+                <th>Id</th><th>Action</th><th>Event Time</th><th>Billing Related?</th><th>Who Done It?</th><th>Admin?</th><th>Credit Change</th><th>Payment Charge</th><th>Memo</th>
             </thead>
             <tbody>
             @for(event <- events) {
                 <tr>
+                    <td>@{event.id}</td>
                     <td>@{event.action.eventType}</td>
                     <td>@adminHelper.dateTimeDisplay(event.eventTime)</td>
                     <td>@{event.billingRelated}</td>
