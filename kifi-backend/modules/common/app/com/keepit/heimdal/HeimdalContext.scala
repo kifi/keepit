@@ -269,6 +269,9 @@ class HeimdalContextBuilderFactory @Inject() (
   def withRequestInfo(request: RequestHeader): HeimdalContextBuilder = {
     val contextBuilder = apply()
     contextBuilder.addRequestInfo(request)
+    request.getQueryString("subsource").collect { case subsource if subsource.nonEmpty =>
+      contextBuilder.+=("subsource" -> subsource)
+    }
     contextBuilder
   }
 
