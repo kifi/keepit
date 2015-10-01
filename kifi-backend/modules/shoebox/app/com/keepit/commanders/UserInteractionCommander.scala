@@ -18,8 +18,8 @@ class UserInteractionCommander @Inject() (
     }.as[List[JsObject]]
 
     val newJson = recipients collect {
-      case (UserRecipient(id), interaction) => Json.obj("user" -> id, "action" -> interaction.value)
-      case (EmailRecipient(email), interaction) => Json.obj("email" -> email.address, "action" -> interaction.value)
+      case (UserInteractionRecipient(id), interaction) => Json.obj("user" -> id, "action" -> interaction.value)
+      case (EmailInteractionRecipient(email), interaction) => Json.obj("email" -> email.address, "action" -> interaction.value)
     }
 
     // append to head as most recent (will get the highest weight), remove from tail as least recent (lowest weight)
@@ -42,9 +42,9 @@ class UserInteractionCommander @Inject() (
         val action = (obj \ "action").as[String]
         val entity = (obj \ "user").asOpt[Id[User]] match {
           case Some(id) =>
-            UserRecipient(id)
+            UserInteractionRecipient(id)
           case None =>
-            EmailRecipient(EmailAddress((obj \ "email").as[String]))
+            EmailInteractionRecipient(EmailAddress((obj \ "email").as[String]))
         }
         (entity, calcInteractionScore(i, action))
       }
@@ -81,5 +81,5 @@ object UserInteraction {
 }
 
 sealed trait InteractionRecipient
-case class UserRecipient(id: Id[User]) extends InteractionRecipient
-case class EmailRecipient(address: EmailAddress) extends InteractionRecipient
+case class UserInteractionRecipient(id: Id[User]) extends InteractionRecipient
+case class EmailInteractionRecipient(address: EmailAddress) extends InteractionRecipient

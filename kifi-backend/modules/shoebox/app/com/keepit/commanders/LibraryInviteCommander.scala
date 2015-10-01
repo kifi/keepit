@@ -71,7 +71,7 @@ class LibraryInviteCommanderImpl @Inject() (
   }
 
   def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], invitee: User, lib: Library, owner: BasicUser): Unit = {
-    val invaiteeImage = s3ImageStore.avatarUrlByUser(invitee)
+    val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
     val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
       val title = if (invite.access == LibraryAccess.READ_WRITE) {

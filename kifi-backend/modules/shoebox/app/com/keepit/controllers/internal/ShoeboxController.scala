@@ -442,8 +442,8 @@ class ShoeboxController @Inject() (
     val interactions = request.body.as[Seq[JsValue]].map { j =>
       val interaction = UserInteraction.getAction((j \ "action").as[String])
       (j \ "user").asOpt[Id[User]] match {
-        case Some(id) => (UserRecipient(id), interaction)
-        case None => (EmailRecipient((j \ "email").as[EmailAddress]), interaction)
+        case Some(id) => (UserInteractionRecipient(id), interaction)
+        case None => (EmailInteractionRecipient((j \ "email").as[EmailAddress]), interaction)
       }
     }
     userInteractionCommander.addInteractions(userId, interactions)
