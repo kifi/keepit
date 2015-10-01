@@ -5,9 +5,9 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{ SequenceNumber, State, DbSequenceAssigner, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.time._
-import securesocial.core.SocialUser
+import securesocial.core.{ IdentityId, SocialUser }
 import org.joda.time.DateTime
-import com.keepit.social.{ SocialNetworks, SocialNetworkType, SocialId }
+import com.keepit.social._
 import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -35,7 +35,8 @@ class SocialUserInfoRepoImpl @Inject() (
   val clock: Clock,
   val countCache: SocialUserInfoCountCache,
   val networkCache: SocialUserInfoNetworkCache,
-  val basicInfoCache: SocialUserBasicInfoCache)
+  val basicInfoCache: SocialUserBasicInfoCache,
+  userIdentityCache: UserIdentityCache)
     extends DbRepo[SocialUserInfo] with DbRepoWithDelete[SocialUserInfo] with SeqNumberDbFunction[SocialUserInfo] with SocialUserInfoRepo {
 
   import db.Driver.simple._
@@ -94,6 +95,7 @@ class SocialUserInfoRepoImpl @Inject() (
 
   override def deleteCache(socialUser: SocialUserInfo)(implicit session: RSession): Unit = {
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
+    userIdentityCache.remove(UserIdentityIdentityIdKey(socialUser.networkType, socialUser.socialId))
     socialUser.id map { id =>
       basicInfoCache.remove(SocialUserBasicInfoKey(id))
     }

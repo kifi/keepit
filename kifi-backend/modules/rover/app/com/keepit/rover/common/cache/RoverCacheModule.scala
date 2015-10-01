@@ -12,7 +12,7 @@ import com.keepit.rover.model.{ RoverUrlRuleAllCache, RoverArticleImagesCache, R
 import com.keepit.rover.sensitivity.UriSensitivityCache
 import com.keepit.rover.store.UrlContentSignatureCache
 import com.keepit.shoebox.model.KeepImagesCache
-import com.keepit.social.BasicUserUserIdCache
+import com.keepit.social.{ UserIdentityCache, BasicUserUserIdCache }
 import com.keepit.search.{ ArticleSearchResultCache, InitialSearchIdCache, ActiveExperimentsCache }
 import com.keepit.common.usersegment.UserSegmentCache
 import scala.concurrent.duration._
@@ -59,6 +59,10 @@ case class RoverCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def userIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserIdentityCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
