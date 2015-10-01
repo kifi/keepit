@@ -1077,6 +1077,9 @@ GET     /pricing                   @com.keepit.controllers.website.KifiSiteRoute
 GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /redir                    @com.keepit.controllers.website.KifiSiteRouter.generalRedirect(data: String)
+
+// Note: If you add any routes below this /:handle they aren't going to get matched, since :handle will wildcard match anything
 GET     /:handle                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
@@ -1089,4 +1092,3 @@ GET     /:handle/:slug/rss        @com.keepit.controllers.website.LibraryFeedCon
 GET     /:handle/:slug/atom       @com.keepit.controllers.website.LibraryFeedController.libraryAtomFeed(handle: Handle, slug, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
 GET     /:handle/:slug             @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
 GET     /:handle/:slug/find        @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
-GET     /redir                    @com.keepit.controllers.website.KifiSiteRouter.generalRedirect(data: String)
