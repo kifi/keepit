@@ -16,6 +16,7 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.libs.json.{ Json, JsObject, JsValue }
 import play.api.mvc.{ ActionFilter, Result }
+import play.utils.UriEncoding
 import securesocial.core.SecureSocial
 import views.html
 import views.html.mobile.mobileAppRedirect
@@ -76,9 +77,10 @@ class KifiSiteRouter @Inject() (
     }
   }
 
-  def generalRedirect(data: String) = MaybeUserAction { implicit request =>
-    val linkOpt = deepLinkRouter.generateRedirectUrl(Json.parse(data).as[JsObject])
-    linkOpt.map(path => Ok(html.mobile.mobileAppRedirect(path.relative))).getOrElse {
+  def generalRedirect(dataStr: String) = MaybeUserAction { implicit request =>
+    val data = Json.parse(dataStr).as[JsObject]
+    val linkOpt = deepLinkRouter.generateRedirectUrl(data)
+    linkOpt.map(path => Ok(html.mobile.deepLinkRedirect(path.absolute, data))).getOrElse {
       airbrake.notify(s"Could not figure out how to redirect deep-link: $data")
       Redirect("/get")
     }
