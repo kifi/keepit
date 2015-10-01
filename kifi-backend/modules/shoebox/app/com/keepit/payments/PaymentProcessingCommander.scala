@@ -60,16 +60,18 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
     val emails = (account.emailContacts ++ userContacts).toSet.toSeq
 
+    val handle = org.primaryHandle.get.normalized.value
+
     lastFourFuture.map { lastFour =>
       val subject = "We've charged you card for your Kfi Organization ${org.name}"
       val htmlBody = """|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
-      |For more details please consult your account history at <a href="https://www.kifi.com/kifi/settings">https://www.kifi.com/kifi/settings<a>.
+      |For more details please consult your account history at <a href="https://www.kifi.com/$handle/settings">www.kifi.com/$handle/settings<a>.
       |
       |Thanks,
       |The Kifi Team
       """.stripMargin
       val textBody = """|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
-      |For more details please consult your account history at https://www.kifi.com/kifi/settings.
+      |For more details please consult your account history at https://www.kifi.com/$handle/settings.
       |
       |Thanks,
       |The Kifi Team
