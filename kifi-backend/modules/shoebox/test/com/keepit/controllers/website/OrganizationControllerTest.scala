@@ -103,19 +103,22 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
         val ownerRequest = route.getOrganization(publicId)
         val ownerResponse = controller.getOrganization(publicId)(ownerRequest)
         status(ownerResponse) === OK
-        (Json.parse(contentAsString(ownerResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.ADMIN)
+        val ownerPermissions = db.readOnlyMaster { implicit session => permissionCommander.getOrganizationPermissions(org.id.get, Some(owner.id.get)) }
+        (Json.parse(contentAsString(ownerResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === ownerPermissions
 
         inject[FakeUserActionsHelper].setUser(member)
         val memberRequest = route.getOrganization(publicId)
         val memberResponse = controller.getOrganization(publicId)(memberRequest)
         status(memberResponse) === OK
-        (Json.parse(contentAsString(memberResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forRole(OrganizationRole.MEMBER)
+        val memberPermissions = db.readOnlyMaster { implicit session => permissionCommander.getOrganizationPermissions(org.id.get, Some(member.id.get)) }
+        (Json.parse(contentAsString(memberResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === memberPermissions
 
         inject[FakeUserActionsHelper].setUser(rando)
         val randoRequest = route.getOrganization(publicId)
         val randoResponse = controller.getOrganization(publicId)(randoRequest)
         status(randoResponse) === OK
-        (Json.parse(contentAsString(randoResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === org.basePermissions.forNonmember
+        val randoPermissions = db.readOnlyMaster { implicit session => permissionCommander.getOrganizationPermissions(org.id.get, Some(rando.id.get)) }
+        (Json.parse(contentAsString(randoResponse)) \ "viewer" \ "permissions").as[Set[OrganizationPermission]] === randoPermissions
       }
       "serve up the right number of libraries depending on viewer permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
@@ -178,11 +181,11 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
             val user = UserFactory.user().saved
             val rando = UserFactory.user().saved
             for (i <- 1 to 10) {
-              val org = OrganizationFactory.organization().withOwner(user).withName("Justice League").withHandle(OrganizationHandle("justiceleague" + i)).saved
-              LibraryFactory.libraries(i).map(_.published().withOwner(user).withOrganizationIdOpt(org.id)).saved
-              if (i <= 5) {
-                inject[OrganizationRepo].save(org.hiddenFromNonmembers)
+              val org = {
+                val template = OrganizationFactory.organization().withOwner(user).withName("Justice League").withHandle(OrganizationHandle("justiceleague" + i))
+                if (i <= 5) template.secret().saved else template.saved
               }
+              LibraryFactory.libraries(i).map(_.published().withOwner(user).withOrganizationIdOpt(org.id)).saved
             }
             (user, rando)
           }
@@ -349,54 +352,6 @@ class OrganizationControllerTest extends Specification with ShoeboxTestInjector 
           val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
           val response = controller.modifyOrganization(publicId)(request)
           response === OrganizationFail.INVALID_MODIFY_NAME
-        }
-      }
-
-      "succeed for valid modifications" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner)
-          val publicId = Organization.publicId(org.id.get)
-
-          db.readOnlyMaster { implicit session =>
-            orgRepo.get(org.id.get).getNonmemberPermissions === Set(OrganizationPermission.VIEW_ORGANIZATION, OrganizationPermission.VIEW_MEMBERS)
-          }
-
-          val json =
-            """{ "permissions":
-                {
-                  "add": {"member": ["invite_members"] },
-                  "remove": {"none": ["view_organization", "view_members"]}
-                }
-               } """.stripMargin
-          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
-          val response = controller.modifyOrganization(publicId)(request)
-          status(response) === OK
-
-          db.readOnlyMaster { implicit session =>
-            val updatedOrg = orgRepo.get(org.id.get)
-            updatedOrg.getNonmemberPermissions === Set.empty
-            updatedOrg.getRolePermissions(OrganizationRole.MEMBER) === Organization.defaultBasePermissions.forRole(OrganizationRole.MEMBER) + OrganizationPermission.INVITE_MEMBERS
-            updatedOrg.getRolePermissions(OrganizationRole.ADMIN) === Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN)
-          }
-        }
-      }
-
-      "fail if you try and take away admin permissions" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner) = setupModify
-          inject[FakeUserActionsHelper].setUser(owner)
-          val publicId = Organization.publicId(org.id.get)
-
-          val json =
-            """{ "permissions":
-                {
-                  "remove": { "admin": ["remove_libraries"] }
-                }
-               } """.stripMargin
-          val request = route.modifyOrganization(publicId).withBody(Json.parse(json))
-          val response = controller.modifyOrganization(publicId)(request)
-          response === OrganizationFail.INVALID_MODIFY_PERMISSIONS
         }
       }
     }

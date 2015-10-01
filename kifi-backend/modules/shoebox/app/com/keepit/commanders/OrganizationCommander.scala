@@ -16,7 +16,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import com.keepit.payments.{ PlanManagementCommander, PaidPlan }
+import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -45,6 +45,8 @@ class OrganizationCommanderImpl @Inject() (
     db: Database,
     permissionCommander: PermissionCommander,
     orgRepo: OrganizationRepo,
+    orgConfigRepo: OrganizationConfigurationRepo,
+    paidPlanRepo: PaidPlanRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
@@ -177,9 +179,10 @@ class OrganizationCommanderImpl @Inject() (
       orgMembershipRepo.getByOrgIdAndUserId(orgId, viewerId)
     }
     val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
+    val permissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
     OrganizationViewerInfo(
       invite = inviteOpt,
-      permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember),
+      permissions = permissions,
       membership = membershipOpt.map(mem => OrganizationMembershipInfo(mem.role))
     )
   }
@@ -224,20 +227,14 @@ class OrganizationCommanderImpl @Inject() (
 
   private def validateModifications(modifications: OrganizationModifications): Option[OrganizationFail] = {
     val badName = modifications.name.exists(_.isEmpty)
-    val badPermissionsChange = modifications.permissionsDiff.exists { pdiff =>
-      def roleCannotSeeOrg = OrganizationRole.all.exists { role => pdiff.removed(Some(role)).contains(VIEW_ORGANIZATION) }
-      def messedWithAdmins = pdiff.added(Some(OrganizationRole.ADMIN)).nonEmpty || pdiff.removed(Some(OrganizationRole.ADMIN)).nonEmpty // not going to tackle this right now, but we may need to take this check off with new permissions e.g. FORCE_EDIT_LIBRARIES
-      roleCannotSeeOrg || messedWithAdmins
-    }
     val normalizedSiteUrl = modifications.site.map { url =>
       if (url.startsWith("http://") || url.startsWith("https://")) url
       else "https://" + url
     }
     val badSiteUrl = normalizedSiteUrl.exists(URI.parse(_).isFailure)
-    (badName, badPermissionsChange, badSiteUrl) match {
-      case (true, _, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
-      case (_, true, _) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
-      case (_, _, true) => Some(OrganizationFail.INVALID_MODIFY_SITEURL)
+    (badName, badSiteUrl) match {
+      case (true, _) => Some(OrganizationFail.INVALID_MODIFY_NAME)
+      case (_, true) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
       case _ => None
     }
   }
@@ -245,7 +242,6 @@ class OrganizationCommanderImpl @Inject() (
   private def organizationWithModifications(org: Organization, modifications: OrganizationModifications): Organization = {
     org.withName(modifications.name.getOrElse(org.name))
       .withDescription(modifications.description.orElse(org.description))
-      .applyPermissionsDiff(modifications.permissionsDiff.getOrElse(PermissionsDiff.empty))
       .withSite(modifications.site.orElse(org.site))
   }
 
@@ -259,8 +255,12 @@ class OrganizationCommanderImpl @Inject() (
             val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
             val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
             val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
+
+            val plan = paidPlanRepo.get(PaidPlan.DEFAULT)
+            val orgConfig = orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
+            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
+
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
-            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.requesterId, session).get
             val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
             Right(OrganizationCreateResponse(request, org, orgGeneralLibrary))
@@ -282,7 +282,6 @@ class OrganizationCommanderImpl @Inject() (
           val org = orgRepo.get(request.orgId)
 
           val modifiedOrg = organizationWithModifications(org, request.modifications)
-          if (request.modifications.permissionsDiff.isDefined) planManagementCommander.applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, modifiedOrg.basePermissions)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
         case Some(orgFail) => Left(orgFail)
@@ -365,9 +364,6 @@ class OrganizationCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val modifiedOrg = orgRepo.save(organizationWithModifications(org, modifications))
-      if (modifications.permissionsDiff.isDefined) {
-        planManagementCommander.applyNewBasePermissionsToMembers(org.id.get, org.basePermissions, modifiedOrg.basePermissions)
-      }
     }
   }
 
