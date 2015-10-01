@@ -106,10 +106,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
     val OrganizationInviteSendRequest(orgId, inviterId, inviteeAddresses, inviteeUserIds, message) = orgInvite
 
-    val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
-      organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
-    }
-
     val failOpt = db.readOnlyReplica { implicit session => getValidationError(orgInvite) }
 
     failOpt match {
