@@ -100,6 +100,9 @@ trait ElizaServiceClient extends ServiceClient {
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
 
   def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int]
+
+  def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
+
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -237,6 +240,12 @@ class ElizaServiceClientImpl @Inject() (
   def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = {
     call(Eliza.internal.getTotalMessageCountForGroup, body = Json.toJson(users), callTimeouts = longTimeout).map { response =>
       response.json.as[Int]
+    }
+  }
+
+  def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]] = {
+    call(Eliza.internal.getParticipantsByThreadExtId(threadExtId)).map { response =>
+      response.json.as[Set[Id[User]]]
     }
   }
 }

@@ -14,16 +14,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.heimdal.{ ContextStringData, HeimdalContextBuilder, HeimdalContext }
+import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
-import com.keepit.notify.delivery.{ WsNotificationDelivery, NotificationJsonFormat }
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.notify.model.Recipient
 import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
-import com.keepit.common.concurrent.PimpMyFuture._
-import scala.util.Try
 import com.keepit.common.core.anyExtensionOps
 
 import org.joda.time.DateTime
@@ -36,6 +33,7 @@ import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
 
 import scala.util.{ Success, Failure }
+import scala.util.Random
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -679,17 +677,10 @@ class MessagingCommander @Inject() (
 
     val moreContext = new HeimdalContextBuilder()
     val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
-      shoebox.hasOrganizationMembership(oid, userId).flatMap {
-        case true =>
-          //ignoring case of multiple org ids in the same chat, just picking the last one
-          moreContext += ("messagedWholeOrgId", ContextStringData(oid.toString))
-          shoebox.getOrganizationMembers(oid)
-        case false =>
-          Future.successful(Set.empty[Id[User]])
-      }
+      shoebox.getOrganizationMembers(oid)
     }).map(_.flatten)
 
-    moreContext.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => log.info(s"[OrgMessageTracking] should be tracking messagedWholeOrgId=$orgId") }
+    if (orgIds.nonEmpty) moreContext += ("messagedAllOrgId", Random.shuffle(orgIds).head.toString)
 
     val context = moreContext.addExistingContext(initContext).build
 

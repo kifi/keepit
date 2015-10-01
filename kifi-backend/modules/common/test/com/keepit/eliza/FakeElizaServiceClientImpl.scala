@@ -92,4 +92,6 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     inbox = event +: inbox
     Future.successful(())
   }
+
+  def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]] = Future.successful(Set.empty)
 }

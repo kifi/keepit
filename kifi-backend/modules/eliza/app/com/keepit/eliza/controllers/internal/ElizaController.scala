@@ -19,7 +19,7 @@ import play.api.libs.json.{ JsNumber, Json, JsObject, JsArray }
 
 import com.google.inject.Inject
 import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationDeliveryCommander, ElizaStatsCommander }
-import com.keepit.eliza.model.UserThreadStats
+import com.keepit.eliza.model.{ MessageThread, UserThreadStats }
 import com.keepit.common.db.slick._
 
 class ElizaController @Inject() (
@@ -135,6 +135,11 @@ class ElizaController @Inject() (
     val userIds = request.body.as[Set[Id[User]]]
     val totalMessages = elizaStatsCommander.getTotalMessageCountForGroup(userIds)
     Ok(Json.toJson(totalMessages))
+  }
+
+  def getParticipantsByThreadExtId(threadId: ExternalId[MessageThread]) = Action { request =>
+    val participants = elizaStatsCommander.getThreadByExtId(threadId).participants.map { _.allUsers }.getOrElse(Set.empty)
+    Ok(Json.toJson(participants))
   }
 
 }
