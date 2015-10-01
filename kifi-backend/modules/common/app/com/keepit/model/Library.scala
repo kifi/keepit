@@ -381,7 +381,8 @@ case class BasicLibraryDetails(
   keepCount: Int,
   membership: Option[LibraryMembershipInfo], // viewer
   ownerId: Id[User],
-  url: Path)
+  url: Path,
+  permissions: Set[LibraryPermission])
 
 sealed abstract class LibraryColor(val hex: String)
 object LibraryColor {

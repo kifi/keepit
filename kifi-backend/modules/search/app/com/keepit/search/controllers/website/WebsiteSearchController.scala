@@ -371,7 +371,8 @@ class WebsiteSearchController @Inject() (
                   "numKeeps" -> details.keepCount,
                   "membership" -> details.membership,
                   "memberCount" -> (details.numFollowers + details.numCollaborators), // deprecated
-                  "keepCount" -> details.keepCount // deprecated,
+                  "keepCount" -> details.keepCount, // deprecated,
+                  "permissions" -> details.permissions
                 )
             }
           })
