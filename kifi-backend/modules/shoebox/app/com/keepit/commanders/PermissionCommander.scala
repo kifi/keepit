@@ -66,7 +66,7 @@ class PermissionCommanderImpl @Inject() (
 
     val libPermissions = libraryPermissionsByAccess(lib, libAccessOpt)
     lib.organizationId.map { orgId =>
-      combineOrganizationAndLibraryPermissions(libPermissions, getOrganizationPermissions(orgId, userIdOpt))
+      combineOrganizationAndLibraryPermissions(lib, libPermissions, getOrganizationPermissions(orgId, userIdOpt))
     } getOrElse libPermissions
   }
 
@@ -77,7 +77,14 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.VIEW_LIBRARY
     ) ++ (if (!library.isSecret) Set(LibraryPermission.INVITE_FOLLOWERS) else Set.empty)
 
-    case Some(LibraryAccess.READ_WRITE) => Set(
+    case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) if library.isSystemLibrary => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.ADD_KEEPS,
+      LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.REMOVE_OWN_KEEPS
+    )
+
+    case Some(LibraryAccess.READ_WRITE) if library.canBeModified => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.INVITE_FOLLOWERS,
       LibraryPermission.ADD_KEEPS,
@@ -85,12 +92,6 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.REMOVE_OWN_KEEPS
     ) ++ (if (!library.whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
 
-    case Some(LibraryAccess.OWNER) if library.isSystemLibrary => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.ADD_KEEPS,
-      LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
-    )
     case Some(LibraryAccess.OWNER) if library.canBeModified => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.EDIT_LIBRARY,
@@ -105,9 +106,10 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.INVITE_COLLABORATORS
     )
   }
-  def combineOrganizationAndLibraryPermissions(libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
+
+  def combineOrganizationAndLibraryPermissions(lib: Library, libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
     val addedPermissions = Map[Boolean, Set[LibraryPermission]](
-      (libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)) ->
+      (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)) ->
         Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY)
     ).collect { case (true, ps) => ps }.flatten
 
