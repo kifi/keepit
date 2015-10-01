@@ -15,6 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.util.Random
 
 @ImplementedBy(classOf[EventContextHelperImpl])
 trait EventContextHelper {
@@ -118,7 +119,7 @@ class EventContextHelperImpl @Inject() (
         orgsByUserId.values.reduceLeftOption[Set[Id[Organization]]] {
           case (acc, orgSet) => acc.intersect(orgSet)
         }.flatMap {
-          case commonOrgs if commonOrgs.nonEmpty => Some(commonOrgs.last) // track an arbitrary common org
+          case commonOrgs if commonOrgs.nonEmpty => Some(Random.shuffle(commonOrgs).head) // track an arbitrary common org
           case _ => None
         }
       }

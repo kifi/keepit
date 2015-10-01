@@ -137,9 +137,8 @@ class ElizaController @Inject() (
     Ok(Json.toJson(totalMessages))
   }
 
-  def getParticipantsByThreadExtId(threadId: String) = Action { request =>
-    val threadExtId = ExternalId[MessageThread](threadId)
-    val participants = elizaStatsCommander.getThreadByExtId(threadExtId).participants.map { _.allUsers }.getOrElse(Set.empty)
+  def getParticipantsByThreadExtId(threadId: ExternalId[MessageThread]) = Action { request =>
+    val participants = elizaStatsCommander.getThreadByExtId(threadId).participants.map { _.allUsers }.getOrElse(Set.empty)
     Ok(Json.toJson(participants))
   }
 

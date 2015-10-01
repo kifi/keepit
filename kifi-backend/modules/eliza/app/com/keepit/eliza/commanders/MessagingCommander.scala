@@ -14,16 +14,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.heimdal.{ ContextStringData, HeimdalContextBuilder, HeimdalContext }
+import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
-import com.keepit.notify.delivery.{ WsNotificationDelivery, NotificationJsonFormat }
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.notify.model.Recipient
 import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
-import com.keepit.common.concurrent.PimpMyFuture._
-import scala.util.Try
 import com.keepit.common.core.anyExtensionOps
 
 import org.joda.time.DateTime
@@ -36,6 +33,7 @@ import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
 
 import scala.util.{ Success, Failure }
+import scala.util.Random
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -682,7 +680,7 @@ class MessagingCommander @Inject() (
       shoebox.getOrganizationMembers(oid)
     }).map(_.flatten)
 
-    if (orgIds.nonEmpty) moreContext += ("messagedAllOrgId", orgIds.last.toString)
+    if (orgIds.nonEmpty) moreContext += ("messagedAllOrgId", Random.shuffle(orgIds).head.toString)
 
     val context = moreContext.addExistingContext(initContext).build
 
