@@ -26,21 +26,12 @@ case class FetchSchedulingPolicy(
 }
 
 object FetchSchedulingPolicy {
-  def apply[A <: Article](implicit kind: ArticleKind[A]): FetchSchedulingPolicy = {
+  def get[A <: Article](implicit kind: ArticleKind[A]): Option[FetchSchedulingPolicy] = {
     kind match {
-      case EmbedlyArticle => embedlySchedulingPolicy
-      case _ => defaultSchedulingPolicy
+      case EmbedlyArticle => None // Embedly is special cased to save on API calls, refreshes are triggered on content changes detected by our own scrapers (see ArticleInfoRepo.onLatestArticle)
+      case _ => Some(defaultSchedulingPolicy)
     }
   }
-
-  private val embedlySchedulingPolicy = FetchSchedulingPolicy(
-    maxRandomDelay = 30 days,
-    initialInterval = 14 days,
-    minInterval = 7 days,
-    maxInterval = 120 days,
-    intervalIncrement = 0 days,
-    intervalDecrement = 0 days
-  )
 
   private val defaultSchedulingPolicy = FetchSchedulingPolicy(
     maxRandomDelay = 30 days,
@@ -50,4 +41,6 @@ object FetchSchedulingPolicy {
     intervalIncrement = 5 days,
     intervalDecrement = 5 days
   )
+  
+  val embedlyRefreshOnContentChangeIfOlderThan: Duration = 1 day
 }

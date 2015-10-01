@@ -4,8 +4,8 @@ import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingPlugin, SequencingActor }
-import com.keepit.rover.article.policy.FailureRecoveryPolicy
-import com.keepit.rover.article.{ ArticleInfoUriCache, ArticleInfoUriKey, Article, ArticleKind }
+import com.keepit.rover.article.policy.{FetchSchedulingPolicy, FailureRecoveryPolicy}
+import com.keepit.rover.article._
 import com.keepit.model._
 import com.keepit.rover.sensitivity.{ UriSensitivityKey, UriSensitivityCache }
 import org.joda.time.DateTime
@@ -16,7 +16,7 @@ import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.slick.jdbc.{ PositionedResult, GetResult }
 import scala.util.{ Success, Failure, Try }
 
@@ -186,7 +186,6 @@ class ArticleInfoRepoImpl @Inject() (
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastFetchingAt).update(lastFetchingAt)
   }
 
-  // todo(Léo): probably be smarter about this, we always get the Embedly response but we may still want to delay future fetches
   def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit = {
     getByUriAndKind(uriId, kind).foreach { articleInfo =>
       val withFetchComplete = articleInfo.withLatestFetchComplete
@@ -195,7 +194,25 @@ class ArticleInfoRepoImpl @Inject() (
         case Success(None) => saveSilently(withFetchComplete.withoutChange)
         case Success(Some(articleVersion)) => {
           save(withFetchComplete.withLatestArticle(articleVersion))
+          onLatestArticle(uriId, kind)
         }
+      }
+    }
+  }
+
+  private def onLatestArticle[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A])(implicit session: RWSession): Unit = {
+    if (kind != EmbedlyArticle) {
+      refresh(uriId, EmbedlyArticle, ifLastFetchOlderThan = FetchSchedulingPolicy.embedlyRefreshOnContentChangeIfOlderThan)
+    }
+  }
+
+  private def refresh[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], ifLastFetchOlderThan: Duration)(implicit session: RWSession): Unit = {
+    getByUriAndKind(uriId, kind).foreach { articleInfo =>
+      val now = clock.now()
+      val fetchedRecencyLimit = now.minusSeconds(ifLastFetchOlderThan.toSeconds.toInt)
+      val shouldRefreshNow = !(articleInfo.nextFetchAt.exists(_ isBefore now) || articleInfo.lastFetchedAt.exists(_ isAfter fetchedRecencyLimit))
+      if (shouldRefreshNow) {
+        saveSilently(articleInfo.copy(nextFetchAt = Some(now)))
       }
     }
   }
