@@ -3,11 +3,31 @@
   color: textBlackColor
 
   input[type="radio"]
-    margin: 5px 0
+    margin: 0 5px
 
-  button
-    margin: 5px 0
+  .kf-export-keeps-action
+    box-sizing: border-box
+    width: 90px
+    margin-top: 5px
+    transition: width .25s ease-out
+    white-space: nowrap
+
+    &.kf-export-keeps-action-exported
+      overflow: hidden
+      width: 130px
 
 .kf-export-keeps-message
-  margin-left: 5px
   color: accentGreen
+
+.kf-export-keeps-form
+  text-align: center
+
+.kf-export-keeps-format
+  display: inline-block
+  padding: 15px 10px
+
+  & + &
+    margin-left: 10px
+
+  input
+    margin-right: 5px
