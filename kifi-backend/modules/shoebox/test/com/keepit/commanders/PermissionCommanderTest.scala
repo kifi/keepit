@@ -62,6 +62,37 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
           1 === 1
         }
       }
+      "for org owners and members" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val systemLibs = {
+              val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+              val orgGeneralLib = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
+              Set(orgGeneralLib)
+            }
+            for (lib <- systemLibs) {
+              permissionCommander.getLibraryPermissions(lib.id.get, Some(owner.id.get)) === Set(
+                LibraryPermission.VIEW_LIBRARY,
+                LibraryPermission.ADD_KEEPS,
+                LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.REMOVE_OWN_KEEPS
+              )
+              permissionCommander.getLibraryPermissions(lib.id.get, Some(member.id.get)) === Set(
+                LibraryPermission.VIEW_LIBRARY,
+                LibraryPermission.ADD_KEEPS,
+                LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.REMOVE_OWN_KEEPS
+              )
+              permissionCommander.getLibraryPermissions(lib.id.get, Some(rando.id.get)) === Set.empty
+              permissionCommander.getLibraryPermissions(lib.id.get, None) === Set.empty
+            }
+          }
+          1 === 1
+        }
+      }
     }
     "handle personal user created library permissions" in {
       def setupLibs()(implicit injector: Injector, session: RWSession) = {
