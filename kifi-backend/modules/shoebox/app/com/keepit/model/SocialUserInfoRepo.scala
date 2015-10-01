@@ -35,8 +35,7 @@ class SocialUserInfoRepoImpl @Inject() (
   val clock: Clock,
   val countCache: SocialUserInfoCountCache,
   val networkCache: SocialUserInfoNetworkCache,
-  val basicInfoCache: SocialUserBasicInfoCache,
-  val socialUserNetworkCache: SocialUserNetworkCache)
+  val basicInfoCache: SocialUserBasicInfoCache)
     extends DbRepo[SocialUserInfo] with DbRepoWithDelete[SocialUserInfo] with SeqNumberDbFunction[SocialUserInfo] with SocialUserInfoRepo {
 
   import db.Driver.simple._
@@ -98,7 +97,6 @@ class SocialUserInfoRepoImpl @Inject() (
     socialUser.id map { id =>
       basicInfoCache.remove(SocialUserBasicInfoKey(id))
     }
-    socialUserNetworkCache.remove(SocialUserNetworkKey(socialUser.networkType, socialUser.socialId))
     countCache.remove(SocialUserInfoCountKey())
   }
 
