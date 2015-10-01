@@ -56,11 +56,11 @@ case class RoverArticleInfo(
     lastImageProcessingAt = None
   )
 
-  private def schedulingPolicy = FetchSchedulingPolicy(articleKind)
+  private def schedulingPolicy: Option[FetchSchedulingPolicy] = FetchSchedulingPolicy.get(articleKind)
 
   def initializeSchedulingPolicy: RoverArticleInfo = copy(
     nextFetchAt = Some(currentDateTime),
-    fetchInterval = Some(schedulingPolicy.initialInterval)
+    fetchInterval = schedulingPolicy.map(_.initialInterval)
   )
 
   def withLatestFetchComplete: RoverArticleInfo = copy(
@@ -79,9 +79,10 @@ case class RoverArticleInfo(
   }
 
   def withLatestArticle(version: ArticleVersion): RoverArticleInfo = {
-    val decreasedFetchInterval = fetchInterval.map(schedulingPolicy.decreaseInterval)
+    val decreasedFetchInterval = schedulingPolicy.flatMap(policy => fetchInterval.map(policy.decreaseInterval))
+    val updatedNextFetchAt = schedulingPolicy.flatMap(policy => decreasedFetchInterval.map(policy.nextFetch))
     copy(
-      nextFetchAt = decreasedFetchInterval.map(schedulingPolicy.nextFetch),
+      nextFetchAt = updatedNextFetchAt,
       fetchInterval = decreasedFetchInterval,
       latestVersion = Some(version),
       oldestVersion = oldestVersion orElse Some(version),
@@ -92,9 +93,10 @@ case class RoverArticleInfo(
   }
 
   def withoutChange: RoverArticleInfo = {
-    val increasedFetchInterval = fetchInterval.map(schedulingPolicy.increaseInterval)
+    val increasedFetchInterval = schedulingPolicy.flatMap(policy => fetchInterval.map(policy.increaseInterval))
+    val updatedNextFetchAt = schedulingPolicy.flatMap(policy => increasedFetchInterval.map(policy.nextFetch))
     copy(
-      nextFetchAt = increasedFetchInterval.map(schedulingPolicy.nextFetch),
+      nextFetchAt = updatedNextFetchAt,
       fetchInterval = increasedFetchInterval,
       failureCount = 0,
       failureInfo = None
