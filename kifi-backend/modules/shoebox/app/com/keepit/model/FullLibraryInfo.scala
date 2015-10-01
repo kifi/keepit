@@ -98,6 +98,7 @@ object LibraryInitialValues {
   def forOrgGeneralLibrary(org: Organization): LibraryInitialValues = {
     LibraryInitialValues(
       name = "General",
+      description = Some("This library is for keeps the entire team should know about.  All team members are in this library."),
       visibility = LibraryVisibility.ORGANIZATION,
       slug = "general",
       kind = Some(LibraryKind.SYSTEM_ORG_GENERAL),
