@@ -131,62 +131,44 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
     "modify members in org" in {
       withDb() { implicit injector =>
-        val orgRepo = inject[OrganizationRepo]
-        val orgMembershipRepo = inject[OrganizationMembershipRepo]
-
-        val org = db.readWrite { implicit session =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](4), role = OrganizationRole.MEMBER))
-          org
+        val (org, owner, admin, member, rando) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val admin = UserFactory.user().saved
+          val member = UserFactory.user().saved
+          val rando = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(owner).withAdmins(Seq(admin)).withMembers(Seq(member)).saved
+          (org, owner, admin, member, rando)
         }
-        val orgId = org.id.get
+        val ownerModMember = OrganizationMembershipModifyRequest(org.id.get, owner.id.get, member.id.get, OrganizationRole.ADMIN)
+        orgMembershipCommander.modifyMembership(ownerModMember) must beRight
 
-        val orgMembershipCommander = inject[OrganizationMembershipCommander]
-
-        val ownerModMember = OrganizationMembershipModifyRequest(orgId, Id[User](1), Id[User](2), OrganizationRole.ADMIN)
-        orgMembershipCommander.modifyMembership(ownerModMember) must haveClass[Right[OrganizationFail, OrganizationMembershipModifyResponse]]
-
-        // 2 is now an OWNER, try to set him back to MEMBER
-        val memberModOwner = OrganizationMembershipModifyRequest(orgId, Id[User](3), Id[User](2), OrganizationRole.MEMBER)
+        // member is now an ADMIN, try to set him back to MEMBER
+        val memberModOwner = OrganizationMembershipModifyRequest(org.id.get, admin.id.get, member.id.get, OrganizationRole.MEMBER)
         orgMembershipCommander.modifyMembership(memberModOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
         // Try to modify a random user
-        val memberModUser = OrganizationMembershipModifyRequest(orgId, Id[User](3), Id[User](42), OrganizationRole.MEMBER)
+        val memberModUser = OrganizationMembershipModifyRequest(org.id.get, admin.id.get, rando.id.get, OrganizationRole.MEMBER)
         orgMembershipCommander.modifyMembership(memberModOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS) // TODO: this should fail differently
       }
     }
 
     "remove members from org" in {
       withDb() { implicit injector =>
-        val orgRepo = inject[OrganizationRepo]
-        val orgMembershipRepo = inject[OrganizationMembershipRepo]
-        val planCommander = inject[PlanManagementCommander]
-
-        val org = db.readWrite { implicit session =>
-          val org = orgRepo.save(Organization(ownerId = Id[User](1), name = "Luther Corp.", primaryHandle = None, description = None, site = None))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](1), role = OrganizationRole.ADMIN))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](2), role = OrganizationRole.MEMBER))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](3), role = OrganizationRole.MEMBER))
-          orgMembershipRepo.save(org.newMembership(userId = Id[User](4), role = OrganizationRole.MEMBER))
-          PaidPlanFactory.paidPlan().saved
-          planCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, org.ownerId, session)
-          org
+        val (org, owner, member, rando) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val member = UserFactory.user().saved
+          val rando = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+          (org, owner, member, rando)
         }
-        val orgId = org.id.get
-
-        val orgMembershipCommander = inject[OrganizationMembershipCommander]
-
-        val ownerDelMember = OrganizationMembershipRemoveRequest(orgId, Id[User](1), Id[User](2))
-        orgMembershipCommander.removeMembership(ownerDelMember) === Right(OrganizationMembershipRemoveResponse(ownerDelMember))
-
-        val memberDelOwner = OrganizationMembershipRemoveRequest(orgId, Id[User](3), Id[User](1))
+        val memberDelOwner = OrganizationMembershipRemoveRequest(org.id.get, member.id.get, owner.id.get)
         orgMembershipCommander.removeMembership(memberDelOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
-        val memberDelNone = OrganizationMembershipRemoveRequest(orgId, Id[User](3), Id[User](2))
-        orgMembershipCommander.removeMembership(memberDelNone) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        val memberDelRando = OrganizationMembershipRemoveRequest(org.id.get, member.id.get, rando.id.get)
+        orgMembershipCommander.removeMembership(memberDelRando) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        val ownerDelMember = OrganizationMembershipRemoveRequest(org.id.get, owner.id.get, member.id.get)
+        orgMembershipCommander.removeMembership(ownerDelMember) must beRight
 
         // there are futures running in the background that will blow up if the test ends and the db is dumped
         inject[WatchableExecutionContext].drain()
@@ -200,7 +182,7 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         val (org, owner, member) = db.readWrite { implicit session =>
           val owner = UserFactory.user().saved
           val member = UserFactory.user().saved
-          val org = OrganizationFactory.organization().withName("Luther Corp.").withOwner(owner).withMembers(Seq(member)).saved
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
           (org, owner, member)
         }
 

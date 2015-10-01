@@ -60,15 +60,9 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         withDb(modules: _*) { implicit injector =>
           val (org, owner) = setup
           val invitees: Set[Either[Id[User], EmailAddress]] = Set(Left(owner.id.get))
-          val inviter = db.readWrite { implicit session =>
-            val bond = UserFactory.user().withName("James", "Bond").saved
-            val membership: OrganizationMembership = org.newMembership(userId = bond.id.get, role = OrganizationRole.MEMBER)
-            orgMembershipRepo.save(membership.copy(permissions = membership.permissions + OrganizationPermission.INVITE_MEMBERS))
-            bond
-          }
           val inviteeEmails = invitees.collect { case Right(email) => email }
           val inviteeUserIds = invitees.collect { case Left(userId) => userId }
-          val orgInvite = OrganizationInviteSendRequest(org.id.get, inviter.id.get, inviteeEmails, inviteeUserIds, Some("inviting the owner, what a shmuck"))
+          val orgInvite = OrganizationInviteSendRequest(org.id.get, owner.id.get, inviteeEmails, inviteeUserIds, Some("inviting the owner, what a shmuck"))
           val result = Await.result(orgInviteCommander.inviteToOrganization(orgInvite), Duration.Inf)
 
           result must beLeft
@@ -95,22 +89,6 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
           result must beLeft
           val organizationFail = result.left.get
           organizationFail === OrganizationFail.INSUFFICIENT_PERMISSIONS
-        }
-      }
-      "the inviter is not a member" in {
-        withDb(modules: _*) { implicit injector =>
-          val (org, _) = setup
-          val invitees = Set.empty[Either[Id[User], EmailAddress]]
-          val notAMember = db.readWrite { implicit session =>
-            UserFactory.user.withName("James", "Bond").saved
-          }
-          val inviteeEmails = invitees.collect { case Right(email) => email }
-          val inviteeUserIds = invitees.collect { case Left(userId) => userId }
-          val result = Await.result(orgInviteCommander.inviteToOrganization(OrganizationInviteSendRequest(org.id.get, notAMember.id.get, inviteeEmails, inviteeUserIds, None)), Duration.Inf)
-
-          result must beLeft
-          val organizationFail = result.left.get
-          organizationFail === OrganizationFail.NOT_A_MEMBER
         }
       }
     }
