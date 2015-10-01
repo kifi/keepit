@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.twirl.api.HtmlFormat
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure }
 
 import com.google.inject.Inject
@@ -116,8 +116,16 @@ class AdminPaymentsController @Inject() (
     }
   }
 
-  def addCreditCardView(orgId: Id[Organization]) = AdminUserAction { request =>
-    Ok(views.html.admin.addCreditCard(orgId))
+  def addCreditCardView(orgId: Id[Organization]) = AdminUserAction.async { request =>
+    val currentCardFuture = planCommander.getDefaultPaymentMethod(orgId) match {
+      case Some(pm) => {
+        stripeClient.getLastFourDigitsOfCard(pm.stripeToken).map { lastFour => s"*${lastFour}" }
+      }
+      case None => Future.successful("N/A")
+    }
+    currentCardFuture.map { lastFour =>
+      Ok(views.html.admin.addCreditCard(orgId, lastFour))
+    }
   }
 
   def addCreditCard(orgId: Id[Organization]) = AdminUserAction.async { request =>
