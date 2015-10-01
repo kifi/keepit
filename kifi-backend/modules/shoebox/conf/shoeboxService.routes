@@ -1078,6 +1078,8 @@ GET     /organizations             @com.keepit.controllers.website.KifiSiteRoute
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /redir                    @com.keepit.controllers.website.KifiSiteRouter.generalRedirect(data: String)
+
+// Note: If you add any routes below this /:handle they aren't going to get matched, since :handle will wildcard match anything
 GET     /:handle                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
