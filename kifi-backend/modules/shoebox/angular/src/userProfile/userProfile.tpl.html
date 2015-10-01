@@ -3,7 +3,7 @@
   <!--maybe this could be abstracted to be more easily used as a tab for more places-->
   <div class="kf-up-tab-container">
     <nav class="kf-up-tab">
-      <button
+      <a
         class="kf-up-tab-a kf-button-textonly"
         ui-sref="userProfile.libraries.own"
         ng-class="{ 'active': currentPageName === 'OwnedLibraries'}"
@@ -11,8 +11,8 @@
       >
         <div class="kf-up-tab-count">{{profile.numLibraries|num}}</div>
         <div class="kf-up-tab-name" >Libraries</div>
-      </button>
-      <button
+      </a>
+      <a
         class="kf-up-tab-a kf-button-textonly"
         ui-sref="userProfile.libraries.following"
         ng-click="trackLibraryNav('following')"
@@ -20,8 +20,8 @@
       >
         <div class="kf-up-tab-count">{{profile.numFollowedLibraries|num}}</div>
         <div class="kf-up-tab-name">Following</div>
-      </button>
-      <button
+      </a>
+      <a
         class="kf-up-tab-a kf-button-textonly"
         ui-sref="userProfile.libraries.invited"
         ng-click="onClickTrack($event, 'clickedProfileLibraries')"
@@ -30,9 +30,9 @@
       >
         <div class="kf-up-tab-count">{{profile.numInvitedLibraries|num}}</div>
         <div class="kf-up-tab-name">Invited</div>
-      </button>
-      
-      <button
+      </a>
+
+      <a
         class="kf-up-tab-a kf-up-tab-a-left-space kf-button-textonly"
         ng-class="{ 'active': currentPageName === 'Connections'}"
         ui-sref="userProfile.connections"
@@ -42,8 +42,8 @@
       >
         <div class="kf-up-tab-count">{{profile.numConnections|num}}</div>
         <div class="kf-up-tab-name">Connections</div>
-      </button>
-      <button
+      </a>
+      <a
         class="kf-up-tab-a  kf-button-textonly"
         ui-sref="userProfile.followers"
         ng-click="onClickTrack($event, 'clickedProfileFollowers')"
@@ -53,8 +53,8 @@
       >
         <div class="kf-up-tab-count">{{profile.numFollowers|num}}</div>
         <div class="kf-up-tab-name">Followers</div>
-      </button>
-            
+      </a>
+
     </nav>
   </div>
   <div class="kf-user-profile-content">

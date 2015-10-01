@@ -229,8 +229,8 @@ angular.module('kifi')
 ])
 
 .directive('kfProfileExportKeeps', [
-  'routeService',
-  function (routeService) {
+  'routeService', '$sce',
+  function (routeService, $sce) {
     return {
       restrict: 'A',
       replace: true,
@@ -238,7 +238,7 @@ angular.module('kifi')
       templateUrl: 'profile/profileExportKeeps.tpl.html',
       link: function (scope) {
         scope.getExportUrl = function () {
-          return routeService.exportKeeps;
+          return $sce.trustAsResourceUrl(routeService.exportPersonalKeeps);
         };
 
         scope.exportKeeps = function () {

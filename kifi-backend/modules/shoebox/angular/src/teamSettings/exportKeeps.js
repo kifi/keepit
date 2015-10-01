@@ -10,10 +10,10 @@ angular.module('kifi')
     };
     $scope.actionUrl = $sce.trustAsResourceUrl(routeService.exportOrganizationKeeps);
     $scope.canExportKeeps = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) !== -1);
-    $scope.successMessage = '';
+    $scope.exported = false;
 
     $scope.submitExportRequest = function () {
-      $scope.successMessage = 'You can find the file in your downloads folder.';
+      $scope.exported = true;
     };
   }
 ]);
