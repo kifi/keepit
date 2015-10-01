@@ -182,7 +182,7 @@ class UserController @Inject() (
     if (newPassword.length < 7) {
       BadRequest(Json.obj("error" -> "bad_new_password"))
     } else {
-      userCommander.doChangePassword(request.userId, oldPasswordOpt, newPassword) match {
+      userCommander.changePassword(request.userId, newPassword, oldPassword = oldPasswordOpt) match {
         case Failure(e) => Forbidden(Json.obj("error" -> e.getMessage))
         case Success(_) => Ok(Json.obj("success" -> true))
       }
@@ -326,10 +326,10 @@ class UserController @Inject() (
     import UserValueName._
     Set(
       AUTO_SHOW_GUIDE,
-      AUTO_SHOW_PERSONA,
       SHOW_DELIGHTED_QUESTION,
       HAS_NO_PASSWORD,
-      USE_MINIMAL_KEEP_CARD
+      USE_MINIMAL_KEEP_CARD,
+      HAS_SEEN_FTUE
     )
   }
 

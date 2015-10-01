@@ -1,5 +1,4 @@
 <div>
-  <h2 class="kf-upul-title">{{listTitle}}</h2>
   <div class="kf-upul" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMore()" scroll-next="fetchMore()">
     <ul class="kf-upul-cards">
       <li kf-user-card="user" mutual-user-info="user.id === me.id ? $parent.$parent.$parent.profile : null" ng-repeat="user in users"></li>

@@ -24,24 +24,31 @@
 
 .kf-ops-main
   flex: 9
-
-  h2
-    heading_lg()
-
-  h3
-    font-size: 16px
-
-.kf-ops-setting-select
-  width: 100%
+  position: relative
 
 .kf-ops-push
   display: block
   height: 80vh
 
-.kf-ops-main-fields
-  margin-top: 15px
+.kf-ops-main > [ui-view]
+  width: 100%
 
-.kf-ops-setting-desc
-  margin: 10px 0 20px
-  font-size: 14px
-  color: #666
+  &.ng-enter
+  &.ng-leave
+    position: absolute
+    transition: .5s
+
+  &.ng-enter
+    opacity: 0
+    transform: translate(40vw, 0)
+
+  &.ng-enter-active
+    opacity: 1
+    transform: translate(0, 0)
+
+  &.ng-leave
+    transition: .25s
+    opacity: 1
+
+  &.ng-leave-active
+    opacity: 0

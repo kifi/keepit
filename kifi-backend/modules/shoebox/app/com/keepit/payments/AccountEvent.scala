@@ -31,7 +31,7 @@ trait AccountEventAction {
   def toDbRow: (String, JsValue)
 }
 
-object AccountEventAction { //There is probably a deeper type hirachy that can be used here...
+object AccountEventAction { //There is probably a deeper type hierachy that can be used here...
 
   trait Payloadless { self: AccountEventAction =>
     def toDbRow: (String, JsValue) = (eventType, JsNull)

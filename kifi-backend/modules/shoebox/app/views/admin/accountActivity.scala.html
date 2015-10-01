@@ -1,0 +1,33 @@
+@(orgId: Id[Organization],
+events: Seq[com.keepit.controllers.admin.AdminAccountEventView],
+title: String,
+otherPagesRoute: Int => Html,
+paginationPage: Int,
+paginationCount: Int,
+paginationSize: Int
+)(implicit request: com.keepit.common.controller.UserRequest[_])
+@views.html.admin.admin(title, stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
+    <body><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId)">Back to Org Admin Page</a></body><br>
+    @views.html.admin.adminHelper.pagination(paginationPage, paginationCount, paginationSize, otherPagesRoute) {
+        <table class="table table-condensed table-striped">
+            <thead>
+                <th>Id</th><th>Action</th><th>Event Time</th><th>Billing Related?</th><th>Who Done It?</th><th>Admin?</th><th>Credit Change</th><th>Payment Charge</th><th>Memo</th>
+            </thead>
+            <tbody>
+            @for(event <- events) {
+                <tr>
+                    <td>@{event.id}</td>
+                    <td>@{event.action.eventType}</td>
+                    <td>@adminHelper.dateTimeDisplay(event.eventTime)</td>
+                    <td>@{event.billingRelated}</td>
+                    <td>@event.whoDunnit.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
+                    <td>@event.adminInvolved.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
+                    <td>@{event.creditChange.cents * 100}</td>
+                    <td>@{event.paymentCharge.map(_.cents).getOrElse(0) * 100}</td>
+                    <td>@{event.memo.getOrElse("")}</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+}

@@ -45,7 +45,7 @@ class PaymentsIntegrityChecker @Inject() (
 
         val account = paidAccountRepo.getByOrgId(orgId)
         val accountId = account.id.get
-        val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMemebershipEventsInOrder(accountId).groupBy { event =>
+        val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMembershipEventsInOrder(accountId).groupBy { event =>
           event.action match {
             case AccountEventAction.UserAdded(userId) => userId
             case AccountEventAction.UserRemoved(userId) => userId
@@ -55,6 +55,7 @@ class PaymentsIntegrityChecker @Inject() (
 
         val perceivedStateByUser: Map[Id[User], Boolean] = eventsByUser.map {
           case (userId, events) =>
+            log.info(s"[AEIC] Processing ${events.length} events for $userId on $orgId.")
             val initialEvent: AccountEvent = events.head
             initialEvent.action match {
               case AccountEventAction.UserAdded(_) =>
@@ -100,8 +101,10 @@ class PaymentsIntegrityChecker @Inject() (
 
   def checkMemberships(): Unit = {
     //the following two lines will need adjustment as the number of organizations grow
-    val modulus = 7 //days of the week
-    val partition = clock.now.getDayOfWeek() - 1 //what to do today
+    //val modulus = 7 //days of the week
+    val modulus = 1
+    //val partition = clock.now.getDayOfWeek() - 1 //what to do today
+    val partition = 0
     val orgIds = db.readOnlyReplica { implicit session => organizationRepo.getIdSubsetByModulus(modulus, partition) }
     orgIds.foreach { orgId =>
       processMembershipsForAccount(orgId) match {
@@ -112,7 +115,7 @@ class PaymentsIntegrityChecker @Inject() (
         }
         case Success(None) => log.info(s"[AEIC] Could not process org $orgId due to account being locked.")
         case Failure(ex) => {
-          log.info(s"[AEIC] An error occured during the check: ${ex.getMessage()}. Freezing Account", ex)
+          log.info(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account", ex)
           freezeAccount(orgId)
         }
       }

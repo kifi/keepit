@@ -1,0 +1,51 @@
+<div class="kf-export-keeps">
+  <div class="kf-container">
+    <div class="kf-container-header">
+      <h1>Export team keeps</h1>
+    </div>
+    <div class="kf-container-body kf-export-keeps-container">
+      <p>
+        Export all {{ profile.name }}'s keeps within libraries that are public or visibile to your team.
+        Keeps will include the URL, date of keep, library, and tags.
+      </p>
+      <p>
+        Select which format you'd like the export to be in:
+      </p>
+      <form method="POST" action="{{ actionUrl }}" ng-submit="submitExportRequest()" class="kf-export-keeps-form">
+        <div class="kf-export-keeps-formats">
+          <label class="kf-export-keeps-format">
+            <input
+              type="radio"
+              name="format"
+              ng-model="exportState.format"
+              ng-disabled="{{ !canExportKeeps }}"
+              value="html"
+            />
+            <span>Netscape HTML</span>
+          </label>
+          <label class="kf-export-keeps-format">
+            <input
+              type="radio"
+              name="format"
+              ng-model="exportState.format"
+              ng-disabled="{{ !canExportKeeps }}"
+              value="json"
+            />
+            <span>JSON</span>
+          </label>
+        </div>
+        <input type="hidden" name="orgIds" ng-attr-value="{{ profile.id }}"/>
+        <button
+          class="kf-button kf-button-large kf-export-keeps-action"
+          ng-class="{ 'kf-export-keeps-action-exported': exported }"
+          ng-disabled="{{ !canExportKeeps }}"
+          ng-bind="exported ? 'Export Again' : 'Export'"
+        ></button>
+        <p
+          ng-if="exported"
+          class="kf-export-keeps-message"
+        >You can find the file in your Downloads folder</p>
+      </form>
+    </div>
+  </div>
+</div>

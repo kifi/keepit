@@ -87,7 +87,9 @@ angular.module('kifi')
           pictureUrl: 'true'
         });
       },
-      exportKeeps: route('/keeps/export'),
+      exportKeeps: route('/keeps/export'), // DEPRECATED 2015-09-30. use exportPersonalKeeps
+      exportPersonalKeeps: route('/keeps/personalExport'),
+      exportOrganizationKeeps: route('/keeps/organizationExport'),
       postDelightedAnswer: route('/user/delighted/answer'),
       cancelDelightedSurvey: route('/user/delighted/cancel'),
       userCloseAccount: route('/user/close'),
@@ -216,7 +218,7 @@ angular.module('kifi')
       getMutualConnections: function (userId) {
         return route('/users/' + userId + '/connections/mutual');
       },
-      
+
       /////////////////////////////
       // Static Pages            //
       /////////////////////////////

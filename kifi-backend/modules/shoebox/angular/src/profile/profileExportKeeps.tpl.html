@@ -1,6 +1,27 @@
 <div>
-  <h5>For all of your Keeps, the URL, date kept, and tags will be included in an HTML netscape format file</h5>
-  <a class="profile-export" ng-href="{{getExportUrl()}}" ng-click="exportKeeps()" target="_self" ng-class="{'export-first':!exported, 'export-again':exported}">{{getExportButtonText()}}</a>
+  <p class="profile-section-subheading kf-profile-export-subheading">For all of your Keeps, the URL, date kept, and tags will be included in an HTML netscape format file, or in JSON</p>
+  <form method="POST" action="{{ getExportUrl() }}">
+    <div>
+      <label class="kf-profile-export-format">
+        <input
+          type="radio"
+          name="format"
+          value="html"
+          checked
+        />
+        <span>Netscape HTML</span>
+      </label>
+      <label class="kf-profile-export-format">
+        <input
+          type="radio"
+          name="format"
+          value="json"
+        />
+        <span>JSON</span>
+      </label>
+    </div>
+    <button class="kf-button kf-button-large" ng-click="exportKeeps()">{{ getExportButtonText() }}</button>
+  </form>
   <p>
   <span class="profile-export-status" ng-show="exported">
     <span class="profile-placeholder">&nbsp;</span>

@@ -141,7 +141,8 @@ class LibraryInfoCommanderImpl @Inject() (
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
         val membershipOpt = membershipsByLibraryId.get(libId).flatten
         val path = libPathCommander.pathForLibrary(lib)
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(createMembershipInfo), lib.ownerId, path)
+        val permissions = permissionCommander.getLibraryPermissions(libId, viewerId)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(createMembershipInfo), lib.ownerId, path, permissions)
       }.toMap
     }
   }
@@ -269,6 +270,10 @@ class LibraryInfoCommanderImpl @Inject() (
       } toMap
     }
 
+    val permissionsByLibraryId = db.readOnlyMaster { implicit s =>
+      libraries.map { lib => lib.id.get -> permissionCommander.getLibraryPermissions(lib.id.get, viewerUserIdOpt) }
+    }.toMap
+
     val futureFullLibraryInfos = libraries.map { lib =>
       val libId = lib.id.get
       for {
@@ -286,12 +291,11 @@ class LibraryInfoCommanderImpl @Inject() (
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
         val attr = getSourceAttribution(libId)
-
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
         }
-        lib.id.get -> FullLibraryInfo(
-          id = Library.publicId(lib.id.get),
+        libId -> FullLibraryInfo(
+          id = Library.publicId(libId),
           name = lib.name,
           owner = owner,
           description = lib.description,
@@ -314,8 +318,9 @@ class LibraryInfoCommanderImpl @Inject() (
           path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = orgViewOpt.map(_.basicOrganization.handle), slug = lib.slug),
           org = orgViewOpt,
           orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None,
-          membership = membershipByLibraryId.flatMap(_.get(lib.id.get)),
-          invite = inviteByLibraryId.flatMap(_.get(lib.id.get))
+          membership = membershipByLibraryId.flatMap(_.get(libId)),
+          invite = inviteByLibraryId.flatMap(_.get(libId)),
+          permissions = permissionsByLibraryId(libId)
         )
       }
     }
@@ -526,6 +531,7 @@ class LibraryInfoCommanderImpl @Inject() (
               following = None,
               membership = None,
               invite = None,
+              permissions = Set.empty,
               caption = extraInfo.caption,
               modifiedAt = lib.updatedAt,
               path = info.path,
@@ -546,12 +552,12 @@ class LibraryInfoCommanderImpl @Inject() (
 
   @AlertingTimer(2 seconds)
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfos")
-  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
+  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerIdOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
     val libIds = libs.map(_.id.get).toSet
-    val membershipsToLibsMap = viewerOpt.map { viewerId =>
+    val membershipsToLibsMap = viewerIdOpt.map { viewerId =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewerId)
     } getOrElse Map.empty
-    val orgViews = organizationCommander.getBasicOrganizationViews(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerOpt, authTokenOpt = None)
+    val orgViews = organizationCommander.getBasicOrganizationViews(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerIdOpt, authTokenOpt = None)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -575,14 +581,17 @@ class LibraryInfoCommanderImpl @Inject() (
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val membershipInfoOpt = membershipOpt.map(createMembershipInfo)
-      val inviteInfoOpt = createInviteInfo(lib.id.get, viewerOpt, None)
+      val inviteInfoOpt = createInviteInfo(lib.id.get, viewerIdOpt, None)
 
       val isFollowing = if (withFollowing && membershipOpt.isDefined) {
         Some(membershipOpt.isDefined)
       } else {
         None
       }
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, path, orgViewOpt)
+
+      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, viewerIdOpt)
+
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, permissions, path, orgViewOpt)
     }
   }
 
@@ -616,6 +625,8 @@ class LibraryInfoCommanderImpl @Inject() (
         airbrake.notify(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue? does the owner has a library membership object?")
       }
 
+      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, Some(viewerId))
+
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),
         name = lib.name,
@@ -635,6 +646,7 @@ class LibraryInfoCommanderImpl @Inject() (
         following = None, // not needed
         membership = None, // not needed
         invite = None, // not needed
+        permissions = permissions,
         path = path,
         modifiedAt = lib.updatedAt,
         org = basicOrgViewOpt,
@@ -645,7 +657,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
   @StatsdTiming("libraryInfoCommander.createLibraryCardInfo")
   private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], path: String, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
+    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], permissions: Set[LibraryPermission], path: String, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
     LibraryCardInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -664,6 +676,7 @@ class LibraryInfoCommanderImpl @Inject() (
       following = isFollowing,
       membership = membershipInfoOpt,
       invite = inviteInfoOpt,
+      permissions = permissions,
       modifiedAt = lib.updatedAt,
       kind = lib.kind,
       path = path,

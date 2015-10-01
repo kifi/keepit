@@ -172,12 +172,16 @@ class OrganizationCommanderImpl @Inject() (
       numLibraries = numLibraries)
   }
 
-  private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationMembershipInfo = {
+  private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationViewerInfo = {
     val membershipOpt = viewerIdOpt.flatMap { viewerId =>
       orgMembershipRepo.getByOrgIdAndUserId(orgId, viewerId)
     }
     val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
-    OrganizationMembershipInfo(isInvited = inviteOpt.isDefined, invite = inviteOpt, role = membershipOpt.map(_.role), permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember))
+    OrganizationViewerInfo(
+      invite = inviteOpt,
+      permissions = membershipOpt.map(_.permissions).getOrElse(orgRepo.get(orgId).basePermissions.forNonmember),
+      membership = membershipOpt.map(mem => OrganizationMembershipInfo(mem.role))
+    )
   }
 
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo] = {

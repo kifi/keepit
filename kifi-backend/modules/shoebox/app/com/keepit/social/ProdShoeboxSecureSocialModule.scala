@@ -6,9 +6,8 @@ import securesocial.controllers.TemplatesPlugin
 import com.keepit.common.social.{ ShoeboxTemplatesPlugin }
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.healthcheck.{ AirbrakeNotifier }
 import com.keepit.common.store.S3ImageStore
-import com.keepit.heimdal.{ HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.common.time.Clock
 import com.keepit.commanders.{ UserCreationCommander, UserEmailAddressCommander, UserCommander, LocalUserExperimentCommander }
 import play.api.Play.current
@@ -26,10 +25,10 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
   @Provides
   def secureSocialAuthenticatorPlugin(
     db: Database,
-    suiRepo: SocialUserInfoRepo,
-    usRepo: UserSessionRepo,
+    userSessionRepo: UserSessionRepo,
+    userIdentityHelper: UserIdentityHelper,
     airbrake: AirbrakeNotifier,
-    app: play.api.Application): SecureSocialAuthenticatorPlugin = new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, airbrake, app)
+    app: play.api.Application): SecureSocialAuthenticatorPlugin = new SecureSocialAuthenticatorPluginImpl(db, userSessionRepo, userIdentityHelper, airbrake, app)
 
   @Singleton
   @Provides
@@ -42,12 +41,12 @@ trait ShoeboxSecureSocialModule extends SecureSocialModule {
     airbrake: AirbrakeNotifier,
     emailRepo: UserEmailAddressRepo,
     socialGraphPlugin: SocialGraphPlugin,
-    userCommander: UserCommander,
     userCreationCommander: UserCreationCommander,
     userExperimentCommander: LocalUserExperimentCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
+    userIdentityHelper: UserIdentityHelper,
     clock: Clock): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
-    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCommander, userCreationCommander, userExperimentCommander, userEmailAddressCommander, clock
+    db, socialUserInfoRepo, userRepo, userCredRepo, imageStore, airbrake, emailRepo, socialGraphPlugin, userCreationCommander, userExperimentCommander, userEmailAddressCommander, userIdentityHelper, clock
   )
 
   @Singleton

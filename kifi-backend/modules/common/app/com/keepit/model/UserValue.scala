@@ -80,9 +80,9 @@ object UserValueName {
   // Site user preferences
   val USE_MINIMAL_KEEP_CARD = UserValueName("use_minimal_keep_card")
   val AUTO_SHOW_GUIDE = UserValueName("auto_show_guide")
-  val AUTO_SHOW_PERSONA = UserValueName("auto_show_persona") // for new users, show who-are-you modal on page land
   val HAS_NO_PASSWORD = UserValueName("has_no_password")
   val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
+  val HAS_SEEN_FTUE = UserValueName("has_seen_ftue")
 
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
 

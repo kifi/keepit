@@ -911,7 +911,8 @@ POST          /admin/payments/grantExtraCredit             @com.keepit.controlle
 POST          /admin/payments/processOrgNow                @com.keepit.controllers.admin.AdminPaymentsController.processOrgNow(orgId: Id[Organization])
 POST          /admin/payments/changePlanForOrg             @com.keepit.controllers.admin.AdminPaymentsController.changePlanForOrg(orgId: Id[Organization])
 GET           /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCardView(orgId: Id[Organization])
-POST          /admin/payments/addCreditCard               @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
+POST          /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
+GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
 
 
 ##########################################
@@ -932,8 +933,9 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 ##########################################
 
 GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
-GET     /internal/guiceGraph                          @com.keepit.controllers.admin.AdminHealthController.getGuiceGraph()
 
+GET     /internal/shoebox/auth/getUserIdentity                         @com.keepit.controllers.internal.ShoeboxController.getUserIdentity(providerId: String, id: String)
+GET     /internal/shoebox/auth/getUserIdentityByUserId                 @com.keepit.controllers.internal.ShoeboxController.getUserIdentityByUserId(userId: Id[User])
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIByURL()
@@ -951,7 +953,6 @@ GET     /internal/shoebox/database/getExperimentGenerators             @com.keep
 GET     /internal/shoebox/database/getNormalizedUriUpdates             @com.keepit.controllers.internal.ShoeboxDataPipeController.getNormalizedUriUpdates(lowSeq: SequenceNumber[ChangedURI], highSeq: SequenceNumber[ChangedURI])
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.internal.ShoeboxController.getConnectedUsers(userId: Id[User])
-GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.internal.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.internal.ShoeboxDataPipeController.getBookmarksChanged(seqNum: SequenceNumber[Keep], fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.internal.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
@@ -988,7 +989,6 @@ GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.internal.ShoeboxController.getExperiments
 GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.internal.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.internal.ShoeboxController.saveExperiment
-GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.internal.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/getPrimaryOrg      @com.keepit.controllers.internal.ShoeboxController.getPrimaryOrg(id: Id[User])
 GET     /internal/shoebox/database/sessionViewByExternalId @com.keepit.controllers.internal.ShoeboxController.getSessionViewByExternalId(sessionId: UserSessionExternalId)
@@ -1073,6 +1073,7 @@ GET     /profile                   @com.keepit.controllers.website.KifiSiteRoute
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /teams                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectFromPricing
 GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
@@ -1088,3 +1089,4 @@ GET     /:handle/:slug/rss        @com.keepit.controllers.website.LibraryFeedCon
 GET     /:handle/:slug/atom       @com.keepit.controllers.website.LibraryFeedController.libraryAtomFeed(handle: Handle, slug, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
 GET     /:handle/:slug             @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
 GET     /:handle/:slug/find        @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
+GET     /redir                    @com.keepit.controllers.website.KifiSiteRouter.generalRedirect(data: String)

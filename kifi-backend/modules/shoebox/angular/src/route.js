@@ -107,7 +107,7 @@ angular.module('kifi')
           settings: [
             'orgProfileService', 'profile', 'messageTicker', 'ORG_PERMISSION',
             function (orgProfileService, profile, messageTicker, ORG_PERMISSION) {
-              if (profile.membership.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
+              if (profile.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
                 return orgProfileService
                 .getOrgSettings(profile.organization.id)
                 ['catch'](function(response) {
@@ -141,6 +141,31 @@ angular.module('kifi')
         url: '/settings',
         controller: 'OrgProfileSettingsCtrl',
         templateUrl: 'orgProfile/orgProfileSettings.tpl.html',
+        activetab: 'settings',
+        'abstract': true
+      })
+      .state('orgProfile.settings.team', {
+        url: '',
+        controller: 'TeamSettingsCtrl',
+        templateUrl: 'teamSettings/teamSettings.tpl.html',
+        activetab: 'settings'
+      })
+      .state('orgProfile.settings.export', {
+        url: '/export',
+        controller: 'ExportKeepsCtrl',
+        templateUrl: 'teamSettings/exportKeeps.tpl.html',
+        activetab: 'settings'
+      })
+      .state('orgProfile.settings.contacts', {
+        url: '/contacts',
+        controller: 'BillingContactsCtrl',
+        templateUrl: 'teamSettings/billingContacts.tpl.html',
+        activetab: 'settings'
+      })
+      .state('orgProfile.settings.plan', {
+        url: '/plan',
+        controller: 'PaymentPlanCtrl',
+        templateUrl: 'teamSettings/paymentPlan.tpl.html',
         activetab: 'settings'
       })
       .state('teams', {
