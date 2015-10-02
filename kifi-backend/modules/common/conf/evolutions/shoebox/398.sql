@@ -15,7 +15,7 @@ CREATE TABLE organization_configuration (
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
     state varchar(20) NOT NULL,
-    organization_id bigint(2) NOT NULL,
+    organization_id bigint(20) NOT NULL,
     settings text NOT NULL,
 
     PRIMARY KEY(id),
