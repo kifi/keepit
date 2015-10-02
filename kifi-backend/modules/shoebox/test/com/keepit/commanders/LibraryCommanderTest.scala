@@ -409,7 +409,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
 
           // However, if we give the admin force-edit permissions
           val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-          planManagementCommander.setAccountFeatureSettings(org.id.get, orgOwner.id.get, orgSettings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.ADMINS)).get
+          orgCommander.setAccountFeatureSettings(org.id.get, orgOwner.id.get, orgSettings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.ADMINS)) must beRight
 
           // They still can't steal the library
           libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifications(space = Some(orgOwner.id.get))) must beLeft

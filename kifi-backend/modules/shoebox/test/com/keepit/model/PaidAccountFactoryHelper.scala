@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.Injector
+import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.PaidAccountFactory.PartialPaidAccount
 import com.keepit.payments.{ PlanManagementCommander, PaidAccount, PaidAccountRepo, PaidPlanRepo }
@@ -13,7 +14,7 @@ object PaidAccountFactoryHelper {
       // propagate feature settings to org permissions
       val org = injector.getInstance(classOf[OrganizationRepo]).get(account.orgId)
       val settings = injector.getInstance(classOf[PaidPlanRepo]).get(account.planId).defaultSettings
-      injector.getInstance(classOf[PlanManagementCommander]).unsafeSetAccountFeatureSettings(orgId = org.id.get, settings = settings)
+      injector.getInstance(classOf[OrganizationCommander]).unsafeSetAccountFeatureSettings(orgId = org.id.get, settings = settings)
       account
     }
   }

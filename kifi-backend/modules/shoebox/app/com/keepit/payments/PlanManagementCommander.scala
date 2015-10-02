@@ -67,10 +67,6 @@ trait PlanManagementCommander {
   def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
 
-  def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse
-  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings): Try[OrganizationSettingsResponse]
-  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse
-
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
 
@@ -571,45 +567,6 @@ class PlanManagementCommanderImpl @Inject() (
       paymentCharge = event.paymentCharge.map(_.cents).getOrElse(0),
       memo = event.memo
     )
-  }
-
-  def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse = {
-    db.readOnlyReplica { implicit session =>
-      val config = orgConfigRepo.getByOrgId(orgId)
-      OrganizationSettingsResponse(config)
-    }
-  }
-
-  def validateOrganizationSettings(orgId: Id[Organization], userId: Id[User], newSettings: OrganizationSettings)(implicit session: RSession): Option[OrganizationFail] = {
-    def userHasPermission = permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.MANAGE_PLAN)
-    def settingsAreValid = {
-      val currentSettings = orgConfigRepo.getByOrgId(orgId).settings
-      val editedFeatures = currentSettings diff newSettings
-
-      val orgAccount = paidAccountRepo.getByOrgId(orgId)
-      val editableFeatures = paidPlanRepo.get(orgAccount.planId).editableFeatures
-      editedFeatures subsetOf editableFeatures
-    }
-    if (!userHasPermission) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-    else if (!settingsAreValid) Some(OrganizationFail.INVALID_SETTINGS)
-    else None
-  }
-
-  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings): Try[OrganizationSettingsResponse] = {
-    val validation = db.readOnlyReplica { implicit session => validateOrganizationSettings(orgId, userId, settings) }
-    validation match {
-      case Some(fail) => Failure(fail)
-      case None => db.readWrite { implicit session =>
-        val response = unsafeSetAccountFeatureSettings(orgId, settings)
-        Success(response)
-      }
-    }
-  }
-
-  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
-    val currentConfig = orgConfigRepo.getByOrgId(orgId)
-    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
-    OrganizationSettingsResponse(newConfig)
   }
 }
 

@@ -85,7 +85,7 @@ object OrganizationFail {
   case object INVITATION_NOT_FOUND extends OrganizationFail(BAD_REQUEST, "invitation_not_found_siteurl")
   case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
   case object INVALID_AUTHTOKEN extends OrganizationFail(UNAUTHORIZED, "invalid_authtoken")
-  case object INVALID_SETTINGS extends OrganizationFail(FORBIDDEN, "invalid_settings")
+  case object MODIFYING_UNEDITABLE_SETTINGS extends OrganizationFail(FORBIDDEN, "modifying_uneditable_settings")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -96,9 +96,13 @@ object OrganizationFail {
       case INVALID_PUBLIC_ID.message => INVALID_PUBLIC_ID
       case BAD_PARAMETERS.message => BAD_PARAMETERS
       case INVALID_MODIFICATIONS.message => INVALID_MODIFICATIONS
+      case INVALID_MODIFY_NAME.message => INVALID_MODIFY_NAME
+      case INVALID_MODIFY_PERMISSIONS.message => INVALID_MODIFY_PERMISSIONS
+      case INVALID_MODIFY_SITEURL.message => INVALID_MODIFY_SITEURL
       case INVITATION_NOT_FOUND.message => INVITATION_NOT_FOUND
       case ALREADY_A_MEMBER.message => ALREADY_A_MEMBER
       case INVALID_AUTHTOKEN.message => INVALID_AUTHTOKEN
+      case MODIFYING_UNEDITABLE_SETTINGS.message => MODIFYING_UNEDITABLE_SETTINGS
     }
   }
 }

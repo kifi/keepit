@@ -55,7 +55,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val (org, owner, admin, member, _) = setup()
 
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.PublishLibraries -> FeatureSetting.ADMINS)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.PublishLibraries -> FeatureSetting.ADMINS)) must beRight
 
         // owner can create public libraries
         val ownerCreateRequest = LibraryInitialValues(name = "Alphabet Soup", slug = "alphabet", visibility = LibraryVisibility.PUBLISHED, space = Some(LibrarySpace(owner.id.get, org.id)))
@@ -84,7 +84,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // admins can alter feature settings
         val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.PublishLibraries -> FeatureSetting.MEMBERS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.PublishLibraries -> FeatureSetting.MEMBERS)) must beRight
 
         val memberModifyRequest2 = LibraryModifications(visibility = Some(LibraryVisibility.PUBLISHED))
         val memberLibResponse4 = libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest2)
@@ -99,7 +99,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val (org, owner, admin, member, _) = setup()
 
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.InviteMembers -> FeatureSetting.ADMINS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.InviteMembers -> FeatureSetting.ADMINS)) must beRight
 
         val invitees = db.readWrite { implicit session => UserFactory.users(3).saved }
 
@@ -118,7 +118,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // admins can alter feature settings
         val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.InviteMembers -> FeatureSetting.MEMBERS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.InviteMembers -> FeatureSetting.MEMBERS)) must beRight
 
         val memberInviteRequest2 = OrganizationInviteSendRequest(org.id.get, member.id.get, targetEmails = Set.empty, targetUserIds = Set(invitees(2).id.get))
         val memberInviteResponse2 = Await.result(orgInviteCommander.inviteToOrganization(memberInviteRequest2), Duration(5, "seconds"))
@@ -134,7 +134,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val (org, owner, admin, member, _) = setup()
 
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.ADMINS)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.ADMINS)) must beRight
 
         val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withOrganization(org).saved }
 
@@ -149,7 +149,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
 
         val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.MEMBERS)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.MEMBERS)) must beRight
 
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
       }
@@ -162,7 +162,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val (org, owner, admin, member, nonMember) = setup()
 
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.ViewMembers -> FeatureSetting.MEMBERS)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.ViewMembers -> FeatureSetting.MEMBERS)) must beRight
 
         val testRoute = com.keepit.controllers.website.routes.OrganizationMembershipController.getMembers(Organization.publicId(org.id.get)).url
         val organizationMembershipController = inject[OrganizationMembershipController]
@@ -193,7 +193,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         (contentAsJson(nonMemberMobileResult1) \ "error").as[String] must equalTo("insufficient_permissions")
 
         val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.ViewMembers -> FeatureSetting.ANYONE)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.ViewMembers -> FeatureSetting.ANYONE)) must beRight
 
         val nonMemberResult2 = organizationMembershipController.getMembers(Organization.publicId(org.id.get), 0, 30)(nonMemberRequest)
         status(nonMemberResult2) must equalTo(OK)
@@ -210,7 +210,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val (org, owner, admin, member, nonMember) = setup()
 
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.EditOrganization -> FeatureSetting.ADMINS)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.EditOrganization -> FeatureSetting.ADMINS)) must beRight
 
         val organizationCommander = inject[OrganizationCommander]
 
@@ -225,7 +225,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         memberResponse.left.get must equalTo(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
         val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, owner.id.get, orgSettings.withSettings(Feature.EditOrganization -> FeatureSetting.MEMBERS))
+        orgCommander.setAccountFeatureSettings(org.id.get, owner.id.get, orgSettings.withSettings(Feature.EditOrganization -> FeatureSetting.MEMBERS)) must beRight
 
         organizationCommander.modifyOrganization(memberModifyRequest) must beRight
       }
@@ -239,7 +239,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // Initially, removing libraries is completely disabled
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.RemoveLibraries -> FeatureSetting.DISABLED)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.RemoveLibraries -> FeatureSetting.DISABLED)) must beRight
 
         val (ownerLibrary, adminLibrary, memberLibrary) = db.readWrite { implicit session =>
           (LibraryFactory.library().withOwner(owner).withOrganization(org).saved,
@@ -258,14 +258,14 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beLeft
 
         val orgSettings1 = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings1.withSettings(Feature.RemoveLibraries -> FeatureSetting.ADMINS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings1.withSettings(Feature.RemoveLibraries -> FeatureSetting.ADMINS)) must beRight
 
         libraryCommander.modifyLibrary(ownerLibrary.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(adminLibrary.id.get, admin.id.get, adminModifyRequest) must beRight
         libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beLeft
 
         val orgSettings2 = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings2.withSettings(Feature.RemoveLibraries -> FeatureSetting.MEMBERS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings2.withSettings(Feature.RemoveLibraries -> FeatureSetting.MEMBERS)) must beRight
 
         libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beRight
       }
@@ -279,7 +279,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // Initially, only admins
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.CreateSlackIntegration -> FeatureSetting.ADMINS)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.CreateSlackIntegration -> FeatureSetting.ADMINS)) must beRight
 
         val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withCollaborators(Seq(admin, member)).withOrganization(org).saved }
 
@@ -301,7 +301,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
 
         val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.CreateSlackIntegration -> FeatureSetting.MEMBERS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.CreateSlackIntegration -> FeatureSetting.MEMBERS)) must beRight
 
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
       }
@@ -315,7 +315,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // Initially, only admins
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.ExportKeeps -> FeatureSetting.ADMINS)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.ExportKeeps -> FeatureSetting.ADMINS)) must beRight
 
         val keepExportCommander = inject[KeepExportCommander]
 
@@ -328,7 +328,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         Await.result(keepExportCommander.exportKeeps(memberExportRequest), Duration(3, SECONDS)) must beFailedTry
 
         val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.ExportKeeps -> FeatureSetting.MEMBERS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.ExportKeeps -> FeatureSetting.MEMBERS)) must beRight
 
         Await.result(keepExportCommander.exportKeeps(memberExportRequest), Duration(3, SECONDS)) must beSuccessfulTry
       }
@@ -342,7 +342,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // Initially, totally disabled
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.MessageOrganization -> FeatureSetting.DISABLED)).get
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.MessageOrganization -> FeatureSetting.DISABLED)) must beRight
 
         val mobileRoute = com.keepit.controllers.mobile.routes.MobileContactsController.searchForAllContacts(query = None, limit = None).url
         val extRoute = com.keepit.controllers.ext.routes.ExtUserController.searchForContacts(query = None, limit = None).url
@@ -395,7 +395,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // allow admins to send group messages
         val orgSettings1 = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings1.withSettings(Feature.MessageOrganization -> FeatureSetting.ADMINS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings1.withSettings(Feature.MessageOrganization -> FeatureSetting.ADMINS)) must beRight
 
         inject[FakeUserActionsHelper].setUser(owner)
         val ownerMobileRequest2 = FakeRequest("GET", mobileRoute)
@@ -441,7 +441,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // members can send group messages
         val orgSettings2 = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        planManagementCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings2.withSettings(Feature.MessageOrganization -> FeatureSetting.MEMBERS))
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings2.withSettings(Feature.MessageOrganization -> FeatureSetting.MEMBERS)) must beRight
 
         inject[FakeUserActionsHelper].setUser(owner)
         val ownerMobileRequest3 = FakeRequest("GET", mobileRoute)

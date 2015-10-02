@@ -83,7 +83,7 @@ class PaymentsController @Inject() (
   }
 
   def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val response = planCommander.getAccountFeatureSettings(request.orgId)
+    val response = orgCommander.getAccountFeatureSettings(request.orgId)
     val result = ExternalOrganizationConfiguration(
       Organization.publicId(response.config.organizationId),
       response.config.settings
@@ -95,12 +95,15 @@ class PaymentsController @Inject() (
     request.body.validate[OrganizationSettings] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
       case JsSuccess(settings, _) =>
-        val response = planCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings).get
-        val result = ExternalOrganizationConfiguration(
-          Organization.publicId(response.config.organizationId),
-          response.config.settings
-        )
-        Ok(Json.toJson(result))
+        orgCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings) match {
+          case Left(fail) => fail.asErrorResponse
+          case Right(response) =>
+            val result = ExternalOrganizationConfiguration(
+              Organization.publicId(response.config.organizationId),
+              response.config.settings
+            )
+            Ok(Json.toJson(result))
+        }
     }
   }
 

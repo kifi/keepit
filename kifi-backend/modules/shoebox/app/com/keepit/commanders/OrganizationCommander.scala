@@ -13,10 +13,10 @@ import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.OrganizationPermission.{ EDIT_ORGANIZATION, VIEW_ORGANIZATION }
+import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan }
+import com.keepit.payments.{ PaidAccountRepo, PaidPlanRepo, PlanManagementCommander, PaidPlan }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
@@ -29,15 +29,20 @@ trait OrganizationCommander {
   def getBasicOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], BasicOrganizationView]
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
+  def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
   def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
+  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings): Either[OrganizationFail, OrganizationSettingsResponse]
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse]
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse]
+
   def unsafeModifyOrganization(request: UserRequest[_], orgId: Id[Organization], modifications: OrganizationModifications): Unit
+  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse
   def getOrgTrackingValues(orgId: Id[Organization]): OrgTrackingValues
+
 }
 
 @Singleton
@@ -47,6 +52,7 @@ class OrganizationCommanderImpl @Inject() (
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     paidPlanRepo: PaidPlanRepo,
+    paidAccountRepo: PaidAccountRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
@@ -134,6 +140,13 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
+  def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse = {
+    db.readOnlyReplica { implicit session =>
+      val config = orgConfigRepo.getByOrgId(orgId)
+      OrganizationSettingsResponse(config)
+    }
+  }
+
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     val viewerPermissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
     if (!viewerPermissions.contains(OrganizationPermission.VIEW_ORGANIZATION)) {
@@ -215,6 +228,11 @@ class OrganizationCommanderImpl @Inject() (
         if (!permissions.contains(EDIT_ORGANIZATION)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         else validateModifications(modifications)
 
+      case OrganizationSettingsRequest(orgId, requesterId, settings) =>
+        val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(requesterId))
+        if (!permissions.contains(MANAGE_PLAN)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else validateOrganizationSettings(orgId, settings)
+
       case OrganizationDeleteRequest(requesterId, orgId) =>
         if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         else None
@@ -237,6 +255,19 @@ class OrganizationCommanderImpl @Inject() (
       case (_, true) => Some(OrganizationFail.INVALID_MODIFY_PERMISSIONS)
       case _ => None
     }
+  }
+
+  private def validateOrganizationSettings(orgId: Id[Organization], newSettings: OrganizationSettings)(implicit session: RSession): Option[OrganizationFail] = {
+    def onlyModifyingEditableSettings = {
+      val currentSettings = orgConfigRepo.getByOrgId(orgId).settings
+      val editedFeatures = currentSettings diff newSettings
+
+      val orgAccount = paidAccountRepo.getByOrgId(orgId)
+      val editableFeatures = paidPlanRepo.get(orgAccount.planId).editableFeatures
+      editedFeatures subsetOf editableFeatures
+    }
+    if (!onlyModifyingEditableSettings) Some(OrganizationFail.MODIFYING_UNEDITABLE_SETTINGS)
+    else None
   }
 
   private def organizationWithModifications(org: Organization, modifications: OrganizationModifications): Organization = {
@@ -285,6 +316,17 @@ class OrganizationCommanderImpl @Inject() (
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
         case Some(orgFail) => Left(orgFail)
+      }
+    }
+  }
+  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings): Either[OrganizationFail, OrganizationSettingsResponse] = {
+    // TODO(ryan): change this so that it takes an OrganizationSettingsRequest
+    val validation = db.readOnlyReplica { implicit session => getValidationError(OrganizationSettingsRequest(orgId, userId, settings)) }
+    validation match {
+      case Some(fail) => Left(fail)
+      case None => db.readWrite { implicit session =>
+        val response = unsafeSetAccountFeatureSettings(orgId, settings)
+        Right(response)
       }
     }
   }
@@ -376,5 +418,11 @@ class OrganizationCommanderImpl @Inject() (
       val collabLibCount = libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_WRITE).count { case (_, memberCount) => memberCount > 0 }
       OrgTrackingValues(libraryCount, keepCount, inviteCount, collabLibCount)
     }
+  }
+
+  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
+    val currentConfig = orgConfigRepo.getByOrgId(orgId)
+    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
+    OrganizationSettingsResponse(newConfig)
   }
 }
