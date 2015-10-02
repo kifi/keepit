@@ -43,7 +43,7 @@ case class EmailToSend(
     from: EmailAddress,
     fromName: Option[Either[Id[User], String]] = Some(Right("Kifi")),
     to: Either[Id[User], EmailAddress],
-    cc: Seq[EmailAddress] = Seq[EmailAddress](),
+    cc: Seq[EmailAddress] = Seq.empty[EmailAddress],
     subject: String,
     htmlTemplate: Html,
     textTemplate: Option[Html] = None,

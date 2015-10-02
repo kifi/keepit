@@ -20,7 +20,7 @@
             }@if(idx < followerNames.size - 1 && followerNames.size > 2){,}
           }
           followed your library
-          <a href="@libraryLink(libInfoView.libraryId, "othersFollowedMyLibrary")" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
+          <a href="@libraryLink(LibraryDeepLinkType.View, libInfoView.libraryId, "othersFollowedMyLibrary")" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
         </td>
       </tr>
       <tr>

@@ -3,7 +3,7 @@ package com.keepit.common.mail
 import com.google.common.html.HtmlEscapers
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.{ Keep, Library, User }
+import com.keepit.model.{ Organization, Keep, Library, User }
 import com.keepit.social.BasicUser
 import play.api.libs.json.{ Json, JsObject }
 import play.twirl.api.Html
@@ -27,6 +27,7 @@ package object template {
     val lastName = TagLabel("lastName")
     val fullName = TagLabel("fullName")
     val avatarUrl = TagLabel("avatarUrl")
+    val organizationId = TagLabel("organizationId")
     val libraryId = TagLabel("libraryId")
     val libraryName = TagLabel("libraryName")
     val libraryUrl = TagLabel("libraryUrl")
@@ -86,9 +87,29 @@ package object template {
 
     def profileUrl(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileUrl, id) + "?", content, openInAppIfMobile = true))
 
+    def organizationId(id: Id[Organization]) = Tag1(tags.organizationId, id).value
+
+    sealed abstract class OrganizationDeepLinkType(val value: String)
+    object OrganizationDeepLinkType {
+      case object Invite extends OrganizationDeepLinkType("oi")
+    }
+    def organizationLink(deepLinkType: OrganizationDeepLinkType, id: Id[Organization], authToken: String, content: String = "", openInAppIfMobile: Boolean = false) =
+      deepLink(Json.obj("t" -> deepLinkType.value, "oid" -> organizationId(id), "at" -> authToken), content, openInAppIfMobile)
+
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
-    def libraryLink(id: Id[Library], content: String) = deepLink(Json.obj("t" -> "l", "lid" -> Tag1(tags.libraryId, id).value), "", openInAppIfMobile = true)
+    // deepLinkType needs to encode the reason we are redirecting to a library
+    //    1. for an invite => "li"
+    //    2. because it was recommended => "lr"
+    //    2. because we are presenting stats on it => "lv"
+    sealed abstract class LibraryDeepLinkType(val value: String)
+    object LibraryDeepLinkType {
+      case object Invite extends LibraryDeepLinkType("li")
+      case object Recommendation extends LibraryDeepLinkType("lr")
+      case object View extends LibraryDeepLinkType("lv")
+    }
+    def libraryLink(deepLinkType: LibraryDeepLinkType, id: Id[Library], content: String) =
+      deepLink(Json.obj("t" -> deepLinkType.value, "lid" -> Tag1(tags.libraryId, id).value), "", openInAppIfMobile = true)
 
     def libraryUrl(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryUrl, id) + "?", content, openInAppIfMobile = true))
 
@@ -127,7 +148,6 @@ package object template {
 
     def kifiFriendsUrl(content: String) = deepLink(Json.obj("t" -> "fr"), content, openInAppIfMobile = true)
 
-    // TODO(ryan): is this actually what we want? Should we be going to that user's profile instead?
     def acceptFriendUrl(id: Id[User], content: String) = deepLink(Json.obj("t" -> "fr"), content, openInAppIfMobile = true)
 
     private def connectNetworkUrl(network: String, content: String): Html = Html {
