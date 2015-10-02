@@ -105,7 +105,7 @@
             ui-sref="orgProfile.settings.team"
             ng-click="onClickTrack($event, 'clickedProfileSettings')"
             ng-class="{ 'active': state.current.activetab ==='settings'}"
-            ng-if="!readonly && viewer.membership.role === 'admin' && isKifiAdmin"
+            ng-if="!readonly && viewer.membership.role === 'admin'"
           >
             <div class="kf-oph-stats-name">Settings</div>
           </a>

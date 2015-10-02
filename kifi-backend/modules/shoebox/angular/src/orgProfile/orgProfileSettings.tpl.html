@@ -1,5 +1,5 @@
 <main class="kf-ops kf-wrapper">
-  <div class="kf-row">
+  <div class="kf-row kf-ops-row">
     <div class="kf-container kf-ops-nav">
       <div class="kf-container-header">
         <h1>Navigation</h1>
@@ -40,7 +40,7 @@
             ui-sref="orgProfile.settings.contacts"
           >Billing Contacts</a>
         </li>
-        <li ng-if="isAdminExperiment"  class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'export-keeps' }">
+        <li ng-if="isAdminExperiment && canExportKeeps"  class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'export-keeps' }">
           <a
             class="kf-link"
             ui-sref="orgProfile.settings.export"

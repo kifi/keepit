@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
-  '$window', '$scope', 'orgProfileService', 'profileService', 'billingService',
-  'messageTicker', 'ORG_SETTING_VALUE',
-  function ($window, $scope, orgProfileService, profileService, billingService,
-            messageTicker, ORG_SETTING_VALUE) {
+  '$window', '$rootScope', '$scope', 'orgProfileService', 'profileService',
+  'billingService', 'messageTicker', 'ORG_SETTING_VALUE',
+  function ($window, $rootScope, $scope, orgProfileService, profileService,
+            billingService, messageTicker, ORG_SETTING_VALUE) {
     $scope.settingsSectionTemplateData = [
       {
         heading: '',
@@ -96,6 +96,14 @@ angular.module('kifi')
             ),
             fieldKey: 'create_slack_integration',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+          },
+          {
+            title: 'Who can export team keeps?',
+            description: (
+              'Download all of your team\'s keeps for safe keeping'
+            ),
+            fieldKey: 'export_keeps',
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           }
         ]
       }
@@ -166,7 +174,7 @@ angular.module('kifi')
       return message;
     }
 
-    if ($scope.viewer.membership.role === 'admin') {
+    if ($scope.viewer.membership && $scope.viewer.membership.role === 'admin') {
       billingService
       .getBillingState($scope.profile.id)
       .then(function (stateData) {
