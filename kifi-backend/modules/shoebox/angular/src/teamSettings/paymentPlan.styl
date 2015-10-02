@@ -1,0 +1,92 @@
+freePlanColor = #8A74B9
+basicPlanColor = #1067BD
+enterprisePlanColor = #118730
+
+.kf-team-plan-cards
+  justify-content: space-around
+
+.kf-team-plan-card
+  box-sizing: border-box
+  position: relative
+  display: inline-block
+  width: 160px
+  height: 160px  * (7/5)
+  margin: 5px
+  padding: 5px 10px
+  border-radius: 12px
+  box-shadow: 2px 2px 15px 2px rgba(0, 0, 0, .5)
+  font-size: 12px
+  text-align: center
+  color: #fff
+
+.kf-team-plan-card-description
+  margin: 0
+  font-smoothing: antialiased
+
+  + .kf-team-plan-card-description
+    margin-top: 5px
+
+.kf-team-plan-card-title
+  heading_lg()
+  font-weight: bold
+
+.kf-team-plan-card-cost
+  position: relative
+  display: inline-block
+  font-size: 36px
+  font-weight: bold
+
+  &::first-letter
+    font-size: 48px
+
+  &:before
+    content: '$'
+    position: absolute
+    top: 0
+    right: 100%
+    font-size: 24px
+
+.kf-team-plan-card-bottom
+  position: absolute
+  right: 0
+  bottom: 0
+  left: 0
+  margin-bottom: 10px
+
+.kf-team-plan-card-cta
+  margin-top: 8px
+  padding: 5px 10px
+  background: none
+  border: 1px solid #fff
+  border-radius: 5px
+  color: #fff
+  font-size: 14px
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, .15)
+  transition: box-shadow .33s
+  font-smoothing: antialiased
+
+  &:hover
+    box-shadow: 0 0 8px 4px rgba(0, 0, 0, .15)
+    text-decoration: underline
+
+  &:active
+    transition: none
+    box-shadow: 0 0 4px 2px rgba(0, 0, 0, .15)
+
+.kf-team-plan-card-soon
+  width: 160px
+  padding: 18px 0
+  margin: 0 -10px
+  background-color: rgba(255, 255, 255, .25)
+  font-size: 18px
+  font-smoothing: antialiased
+
+
+.kf-team-plan-card-free
+  background-color: freePlanColor
+
+.kf-team-plan-card-basic
+  background-color: basicPlanColor
+
+.kf-team-plan-card-enterprise
+  background-color: enterprisePlanColor
