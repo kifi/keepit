@@ -93,11 +93,11 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
           val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
-          status(result) must equalTo(NO_CONTENT)
+          result === OrganizationFail.NO_VALID_INVITATIONS
         }
       }
 
-      "succeed on member with invite rights" in {
+      "fail when trying to elevate role above inviters role" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val orgId = Id[Organization](1)
           val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
@@ -108,56 +108,14 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             val org = OrganizationFactory.organization().withOwner(owner).withHandle(OrganizationHandle("kifi")).saved
             inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER).withPermissions(Set(OrganizationPermission.INVITE_MEMBERS)))
 
-            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
+            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = invitee.id, role = OrganizationRole.ADMIN))
             (invitee, invite)
           }
 
           inject[FakeUserActionsHelper].setUser(invitee)
           val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
           val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
-          status(result) must equalTo(NO_CONTENT)
-        }
-      }
-
-      "succeed when an invite is active, regardless of the inviter's current permissions" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val orgId = Id[Organization](1)
-          val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
-          val (invitee, invite) = db.readWrite { implicit session =>
-            val invitee = UserFactory.user().withName("New", "Guy").saved
-            val inviter = UserFactory.user().withName("Mr", "Inviter").saved
-            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
-            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter)).withWeakMembers().saved
-
-            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
-            (invitee, invite)
-          }
-
-          inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
-          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
-          status(result) must equalTo(NO_CONTENT)
-        }
-      }
-
-      "succeed when an invite is active, regardless of the inviter's current membership" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val orgId = Id[Organization](1)
-          val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
-          val (invitee, invite) = db.readWrite { implicit session =>
-            val invitee = UserFactory.user().withName("New", "Guy").saved
-            val owner = UserFactory.user().withName("Kifi", "Kifi").saved
-            val nonMember = UserFactory.user().withName("Not", "EvenAMember").saved
-            val org = OrganizationFactory.organization().withOwner(owner).withWeakMembers().saved
-
-            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = nonMember.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
-            (invitee, invite)
-          }
-
-          inject[FakeUserActionsHelper].setUser(invitee)
-          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
-          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
-          status(result) must equalTo(NO_CONTENT)
+          result === OrganizationFail.NO_VALID_INVITATIONS
         }
       }
 
