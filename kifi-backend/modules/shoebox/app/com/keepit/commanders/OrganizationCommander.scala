@@ -12,6 +12,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImagePath, ImageSize }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION, VIEW_ORGANIZATION }
 import com.keepit.model._
@@ -74,6 +75,7 @@ class OrganizationCommanderImpl @Inject() (
     handleCommander: HandleCommander,
     planManagementCommander: PlanManagementCommander,
     basicOrganizationIdCache: BasicOrganizationIdCache,
+    eliza: ElizaServiceClient,
     implicit val executionContext: ExecutionContext) extends OrganizationCommander with Logging {
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
@@ -331,6 +333,17 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
+  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
+    val currentConfig = orgConfigRepo.getByOrgId(orgId)
+    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
+    if (currentConfig.settings.diff(newConfig.settings).nonEmpty) refreshAllMembersExt(orgId)
+    OrganizationSettingsResponse(newConfig)
+  }
+
+  private def refreshAllMembersExt(orgId: Id[Organization])(implicit session: RWSession): Unit = { // permissions may have changed, refresh the members' ext org data
+    orgMembershipRepo.getAllByOrgId(orgId).foreach(mem => eliza.flush(mem.userId))
+  }
+
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse] = {
     val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
     validationError match {
@@ -418,11 +431,5 @@ class OrganizationCommanderImpl @Inject() (
       val collabLibCount = libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_WRITE).count { case (_, memberCount) => memberCount > 0 }
       OrgTrackingValues(libraryCount, keepCount, inviteCount, collabLibCount)
     }
-  }
-
-  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
-    val currentConfig = orgConfigRepo.getByOrgId(orgId)
-    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
-    OrganizationSettingsResponse(newConfig)
   }
 }

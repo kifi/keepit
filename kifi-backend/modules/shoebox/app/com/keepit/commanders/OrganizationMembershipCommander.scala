@@ -244,7 +244,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
       libraryMembershipCommander.joinLibrary(request.targetId, lib.id.get)
     }
     planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
-    elizaServiceClient.sendToUser(request.targetId, Json.arr("flush"))
+    elizaServiceClient.flush(request.targetId)
 
     OrganizationMembershipAddResponse(request, newMembership)
   }

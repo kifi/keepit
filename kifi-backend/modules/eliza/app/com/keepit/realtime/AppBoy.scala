@@ -105,10 +105,8 @@ class AppBoy @Inject() (
       case upn: UserPushNotification =>
         val pushType = upn.category match {
           case UserPushNotificationCategory.UserConnectionRequest => "fr"
-          case UserPushNotificationCategory.ContactJoined => "us"
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
-          case UserPushNotificationCategory.NewOrganizationMember => "om"
-          case _ => throw new Exception(s"unsupported user push notification category ${upn.category.name}")
+          case _ => "us" // show the user's profile, the specific category doesn't determine anything
         }
         json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case opn: OrganizationPushNotification =>

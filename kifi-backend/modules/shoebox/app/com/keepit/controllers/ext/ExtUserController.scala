@@ -30,10 +30,7 @@ class ExtUserController @Inject() (
 
     val orgsToInclude = {
       val orgsUserIsIn = db.readOnlyReplica { implicit s =>
-        orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId)
-          .filter { orgId =>
-            permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
-          }
+        orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId) // (10/2/15) don't filter orgs on OrganizationPermission.GROUP_MESSAGING, the ext should disable the action
       }
       val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
       val orgsToShow = query.getOrElse("") match {
