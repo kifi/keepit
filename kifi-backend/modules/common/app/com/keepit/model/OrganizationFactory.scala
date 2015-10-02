@@ -21,7 +21,8 @@ object OrganizationFactory {
       admins: Seq[User] = Seq.empty[User],
       members: Seq[User] = Seq.empty[User],
       invitedUsers: Seq[User] = Seq.empty[User],
-      invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress]) {
+      invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress],
+      nonstandardSettings: Map[Feature, FeatureSetting] = Map.empty) {
 
     def withName(newName: String) = this.copy(org = org.withName(newName))
     def withOwner(newOwner: User) = this.copy(org = org.withOwner(newOwner.id.get))
@@ -32,10 +33,11 @@ object OrganizationFactory {
     def withInvitedUsers(newInvitedUsers: Seq[User]) = this.copy(invitedUsers = newInvitedUsers)
     def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = newInvitedEmails)
     def withHandle(newHandle: OrganizationHandle): PartialOrganization = this.copy(org = org.copy(primaryHandle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
-    def withBasePermissions(newBasePermissions: BasePermissions) = this.copy(org = org.copy(basePermissions = newBasePermissions))
 
     // This method makes it so an org's members cannot invite, useful for testing
-    def withWeakMembers() = this.copy(org = org.applyPermissionsDiff(PermissionsDiff.justRemove(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.INVITE_MEMBERS))))
-    def secret() = this.copy(org = org.hiddenFromNonmembers)
+    def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.InviteMembers -> FeatureSetting.ADMINS))
+    // admins can force-edit
+    def withStrongAdmins() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ForceEditLibraries -> FeatureSetting.ADMINS))
+    def secret() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ViewOrganization -> FeatureSetting.MEMBERS) + (Feature.ViewMembers -> FeatureSetting.MEMBERS))
   }
 }

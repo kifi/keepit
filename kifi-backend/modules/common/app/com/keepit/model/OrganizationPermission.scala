@@ -38,15 +38,6 @@ object OrganizationPermission {
     MANAGE_PLAN
   )
 
-  def orgPermissionsToLibraryPermissions: Map[OrganizationPermission, Set[LibraryPermission]] = Map(
-    REMOVE_LIBRARIES -> Set(LibraryPermission.DELETE_LIBRARY, LibraryPermission.MOVE_LIBRARY),
-    FORCE_EDIT_LIBRARIES -> Set(LibraryPermission.EDIT_LIBRARY),
-    EXPORT_KEEPS -> Set(LibraryPermission.EXPORT_KEEPS),
-    CREATE_SLACK_INTEGRATION -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
-  )
-
-  def toLibraryPermissionsOpt(orgPermission: OrganizationPermission): Option[Set[LibraryPermission]] = orgPermissionsToLibraryPermissions.get(orgPermission)
-
   implicit val format: Format[OrganizationPermission] =
     Format(__.read[String].map(OrganizationPermission(_)), new Writes[OrganizationPermission] {
       def writes(o: OrganizationPermission) = JsString(o.value)
@@ -64,14 +55,12 @@ object OrganizationPermission {
       case ADD_LIBRARIES.value => ADD_LIBRARIES
       case PUBLISH_LIBRARIES.value => PUBLISH_LIBRARIES
       case REMOVE_LIBRARIES.value => REMOVE_LIBRARIES
-      case "edit_libraries" => FORCE_EDIT_LIBRARIES // for temp backwards compatibility
+      case "edit_libraries" => FORCE_EDIT_LIBRARIES
       case FORCE_EDIT_LIBRARIES.value => FORCE_EDIT_LIBRARIES
       case GROUP_MESSAGING.value => GROUP_MESSAGING
       case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
       case MANAGE_PLAN.value => MANAGE_PLAN
-      case _ =>
-        VIEW_ORGANIZATION
     }
   }
 

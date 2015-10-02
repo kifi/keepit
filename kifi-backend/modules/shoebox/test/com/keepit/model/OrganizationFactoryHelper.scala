@@ -3,9 +3,6 @@ package com.keepit.model
 import com.google.inject.Injector
 import com.keepit.commanders.HandleCommander
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.images.RawImageInfo
-import com.keepit.common.store.ImagePath
-import com.keepit.model.ImageSource.UserUpload
 import com.keepit.model.OrganizationFactory.PartialOrganization
 import com.keepit.payments._
 import com.keepit.model.PaidPlanFactoryHelper._
@@ -23,6 +20,8 @@ object OrganizationFactoryHelper {
       }
 
       injector.getInstance(classOf[PlanManagementCommander]).createAndInitializePaidAccountForOrganization(orgTemplate.id.get, plan.id.get, org.ownerId, session)
+      val initialSettings = plan.defaultSettings.setAll(partialOrganization.nonstandardSettings)
+      injector.getInstance(classOf[OrganizationConfigurationRepo]).save(OrganizationConfiguration(organizationId = orgTemplate.id.get, settings = initialSettings))
 
       val userRepo = injector.getInstance(classOf[UserRepo])
       assume(userRepo.get(org.ownerId).id.isDefined)

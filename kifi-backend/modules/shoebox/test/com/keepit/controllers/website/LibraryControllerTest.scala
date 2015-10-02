@@ -350,12 +350,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           val (orgOwner, libOwner, lib, org) = db.readWrite { implicit session =>
             val orgOwner = UserFactory.user().saved
             val libOwner = UserFactory.user().saved
-            val org = OrganizationFactory.organization().withOwner(orgOwner).withMembers(Seq(libOwner)).saved
+            val org = OrganizationFactory.organization().withOwner(orgOwner).withMembers(Seq(libOwner)).withStrongAdmins().saved
             val lib = LibraryFactory.library().withOwner(libOwner).withCollaborators(Seq(orgOwner)).withOrganization(org).saved
-
-            val ownerMembership = orgMembershipRepo.getByOrgIdAndUserId(org.id.get, orgOwner.id.get).get
-            orgMembershipRepo.save(ownerMembership.withPermissions(ownerMembership.permissions + FORCE_EDIT_LIBRARIES))
-
             (orgOwner, libOwner, lib, org)
           }
 
@@ -596,11 +592,13 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         implicit val basicOrgViewReads = BasicOrganizationView.testReads
 
+        val permissions = db.readOnlyMaster { implicit session => permissionCommander.getOrganizationPermissions(org1.id.get, user1.id) }
+
         val resultJson = contentAsJson(result1)
         (resultJson \ "library" \ "org").as[Option[BasicOrganizationView]] must equalTo(Some(
           BasicOrganizationView(
             BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg")),
-            OrganizationViewerInfo(invite = None, Organization.defaultBasePermissions.forRole(OrganizationRole.ADMIN), Some(OrganizationMembershipInfo(OrganizationRole.ADMIN)))
+            OrganizationViewerInfo(invite = None, permissions, Some(OrganizationMembershipInfo(OrganizationRole.ADMIN)))
           )
         ))
         (resultJson \ "library" \ "orgMemberAccess").as[Option[LibraryAccess]] must equalTo(Some(LibraryAccess.READ_WRITE))
