@@ -17,7 +17,7 @@ angular.module('kifi')
               'Select who is able to edit your team name, logo, description, and URL'
             ),
             fieldKey: 'edit_organization',
-            selectOptions: getOptions(ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLE, ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
           }
         ]
       },
@@ -41,7 +41,7 @@ angular.module('kifi')
               ' visibility, title, and membership.'
             ),
             fieldKey: 'force_edit_libraries',
-            selectOptions: getOptions('disabled', 'admin', 'member')
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           },
           {
             title: 'Who can move libraries out of the team page?',
@@ -65,7 +65,7 @@ angular.module('kifi')
               ' search engine\'s results like Google.'
             ),
             fieldKey: 'view_members',
-            selectOptions: getOptions(ORG_SETTING_VALUE.ANYONE, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.ANYONE, ORG_SETTING_VALUE.MEMBER)
           },
           {
             title: 'Who can invite members to join the team?',
@@ -74,7 +74,7 @@ angular.module('kifi')
               ' In most scenarios they can also keep to any public or team visible library.'
             ),
             fieldKey: 'invite_members',
-            selectOptions: getOptions(ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           },
           {
             title: 'Who can message everyone in the team?',
