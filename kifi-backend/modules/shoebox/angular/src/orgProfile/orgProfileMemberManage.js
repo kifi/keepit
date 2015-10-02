@@ -92,6 +92,7 @@ angular.module('kifi')
     $scope.thisViewer = $scope.viewer;
     $scope.organization = organization;
     $scope.canInvite = $scope.thisViewer.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
+    $scope.canViewMembers = $scope.thisViewer.permissions.indexOf(ORG_PERMISSION.VIEW_MEMBERS) > -1;
     $scope.me = profileService.me;
 
     function resetAndFetch() {
@@ -110,7 +111,7 @@ angular.module('kifi')
       .then(function (members) {
         $scope.members = members;
       })
-      ['catch'](handleErrorResponse);
+      ['catch'](modalService.openGenericErrorModal);
     };
 
     $scope.$on('resetAndFetch', function() {
@@ -273,6 +274,10 @@ angular.module('kifi')
     }
     $scope.$on('childOpenInviteModal', $scope.openInviteModal);
 
-    resetAndFetch();
+    if ($scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_MEMBERS) > -1) {
+      resetAndFetch();
+    } else {
+      $rootScope.$emit('errorImmediately');
+    }
   }
 ]);

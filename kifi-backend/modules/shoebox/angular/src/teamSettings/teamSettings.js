@@ -17,7 +17,7 @@ angular.module('kifi')
               'Select who is able to edit your team name, logo, description, and URL'
             ),
             fieldKey: 'edit_organization',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLE, ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
           }
         ]
       },
@@ -140,20 +140,20 @@ angular.module('kifi')
     function getOptions() {
       var items = Array.prototype.slice.apply(arguments);
       var options = [ // This is what the <select>s will read from
+        { label: 'No one', value: ORG_SETTING_VALUE.DISABLED },
         { label: 'Admins only', value: ORG_SETTING_VALUE.ADMIN },
         { label: 'All members', value: ORG_SETTING_VALUE.MEMBER },
-        { label: 'Anyone', value: ORG_SETTING_VALUE.ANYONE },
-        { label: 'No one', value: ORG_SETTING_VALUE.DISABLED }
+        { label: 'Anyone', value: ORG_SETTING_VALUE.ANYONE }
       ];
 
-      return items.map(function (item) {
-        // Grab the option matching the value from items
-        var match = options.filter(function (o) {
+      // If an option isn't in the list of items, discard it.
+      return options.filter(function (o) {
+        var desired = items.filter(function (item) {
           return o.value === item;
         }).pop();
 
-        return match;
-      }).filter(Boolean); // filter out non-matches
+        return !!desired;
+      });
     }
 
     // Transform

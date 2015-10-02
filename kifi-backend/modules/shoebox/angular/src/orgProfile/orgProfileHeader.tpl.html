@@ -72,7 +72,7 @@
             <div class="kf-oph-stats-name">Libraries</div>
           </a>
           <a
-            ng-if="plan.settings.membership.view_members.setting === ORG_SETTING_VALUE.ANYONE || membership.permissions.indexOf(ORG_PERMISSION.VIEW_MEMBERS) !== -1"
+            ng-if="plan.settings.membership.view_members.setting === ORG_SETTING_VALUE.ANYONE || canViewMembers"
             class="kf-oph-stats-a kf-button-textonly"
             ui-sref="orgProfile.members"
             ng-click="onClickTrack($event, 'clickedProfileMembers')"
