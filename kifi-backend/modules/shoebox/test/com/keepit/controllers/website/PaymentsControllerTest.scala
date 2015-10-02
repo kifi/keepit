@@ -9,6 +9,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
+import com.keepit.payments.FakeStripeClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.JsObject
@@ -25,7 +26,8 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   val controllerTestModules = Seq(
     FakeHeimdalServiceClientModule(),
     FakeABookServiceClientModule(),
-    FakeSocialGraphModule()
+    FakeSocialGraphModule(),
+    FakeStripeClientModule()
   )
 
   "PaymentsController" should {
@@ -44,9 +46,8 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val response = controller.getAccountFeatureSettings(publicId)(request)
           val payload = contentAsJson(response).as[JsObject]
 
-          println(payload)
           (payload \ "name").as[String] === "test"
-          ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "setting").as[String] === "anyone"
+          ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "setting").as[String] === "members"
           ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "editable").as[Boolean] === true
         }
       }
