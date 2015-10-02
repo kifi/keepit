@@ -1,6 +1,5 @@
 package com.keepit.model
 
-import com.keepit.common.crypto.PublicId
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -25,13 +24,13 @@ case class OrganizationConfiguration(
 object OrganizationConfigurationStates extends States[OrganizationConfiguration]
 
 case class ExternalOrganizationConfiguration(
-  organizationId: PublicId[Organization],
+  planName: String,
   settings: OrganizationSettingsWithEditability)
 
 object ExternalOrganizationConfiguration {
   implicit val writes: Writes[ExternalOrganizationConfiguration] = Writes { config =>
     Json.obj(
-      "id" -> config.organizationId,
+      "name" -> config.planName,
       "settings" -> config.settings
     )
   }

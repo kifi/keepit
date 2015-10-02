@@ -86,12 +86,10 @@ class PaymentsController @Inject() (
 
   def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     val response = orgCommander.getAccountFeatureSettings(request.orgId)
-    val editableFeatures = db.readOnlyMaster { implicit session =>
-      paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId).editableFeatures
-    }
+    val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
     val result = ExternalOrganizationConfiguration(
-      Organization.publicId(response.config.organizationId),
-      OrganizationSettingsWithEditability(response.config.settings, editableFeatures)
+      plan.name.name,
+      OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures)
     )
     Ok(Json.toJson(result))
   }
@@ -103,12 +101,10 @@ class PaymentsController @Inject() (
         orgCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings) match {
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
-            val editableFeatures = db.readOnlyMaster { implicit session =>
-              paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId).editableFeatures
-            }
+            val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
             val result = ExternalOrganizationConfiguration(
-              Organization.publicId(response.config.organizationId),
-              OrganizationSettingsWithEditability(response.config.settings, editableFeatures)
+              plan.name.name,
+              OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures)
             )
             Ok(Json.toJson(result))
         }
