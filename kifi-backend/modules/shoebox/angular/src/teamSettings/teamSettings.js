@@ -103,7 +103,7 @@ angular.module('kifi')
               'Download all of your team\'s keeps for safe keeping'
             ),
             fieldKey: 'export_keeps',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN)
           }
         ]
       }
