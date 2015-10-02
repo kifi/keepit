@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('OrgProfileMemberManageCtrl', [
-  '$rootScope', '$scope', '$stateParams', 'profile', 'profileService',
+  '$rootScope', '$scope', '$state', '$stateParams', 'profile', 'profileService',
   'orgProfileService', 'modalService', 'Paginator', 'net', 'ORG_PERMISSION',
-  function($rootScope, $scope, $stateParams, profile, profileService,
+  function($rootScope, $scope, $state, $stateParams, profile, profileService,
            orgProfileService, modalService, Paginator, net, ORG_PERMISSION) {
     function memberPageAnalytics(args) {
       args = _.extend(args, { type: 'orgMembers' });
@@ -61,6 +61,8 @@ angular.module('kifi')
         var action = (profileService.me.id === member.id ? 'clickedLeaveOrg' : 'clickedRemoveOrg');
         memberPageAnalytics({ action: action, orgMember: member.username });
         removeMemberFromPage(member);
+        orgProfileService.invalidateOrgProfileCache();
+        $state.go('orgProfile.libraries', { reload: true });
       })
       ['catch'](handleErrorResponse);
     }
