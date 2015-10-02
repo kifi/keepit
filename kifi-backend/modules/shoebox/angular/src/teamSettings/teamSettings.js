@@ -96,6 +96,14 @@ angular.module('kifi')
             ),
             fieldKey: 'create_slack_integration',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+          },
+          {
+            title: 'Who can export team keeps?',
+            description: (
+              'Download all of your team\'s keeps for safe keeping'
+            ),
+            fieldKey: 'export_keeps',
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           }
         ]
       }

@@ -1,9 +1,7 @@
 <div ng-if="viewer.membership.role === 'admin' && billingState.credit > 0" kf-credit-banner credit="{{ billingState.credit }}"></div>
 <div class="kf-container kf-team-settings-fields">
-  <div class="kf-container-header">
-    <h1 id="team-settings">Team Settings</h1>
-  </div>
   <div class="kf-container-main">
+    <h1 class="kf-team-settings-top-header">Team Settings</h1>
     <section ng-repeat="section in settingsSectionTemplateData">
       <h2 class="kf-team-settings-heading" id="{{ getHeadingAnchor(section.heading) }}" ng-show="section.heading">{{ section.heading }}</h2>
       <div ng-repeat="field in section.fields" class="kf-row kf-team-settings-field">
