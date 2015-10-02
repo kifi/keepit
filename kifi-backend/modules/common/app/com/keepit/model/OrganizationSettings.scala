@@ -39,12 +39,6 @@ object OrganizationSettings {
   )
 }
 
-sealed abstract class FeatureKind
-object FeatureKind {
-  case object PermissionKind extends FeatureKind
-  type Permission = PermissionKind.type
-}
-
 sealed trait Feature {
   val value: String
   def settings: Set[FeatureSetting]
@@ -56,9 +50,9 @@ sealed trait FeatureWithPermissions {
   val permission: OrganizationPermission
 
   def affectedRoles(setting: FeatureSetting): Set[Option[OrganizationRole]] = setting match {
-    case FeatureSetting.MEMBERS => OrganizationRole.MEMBERS_UP
-    case FeatureSetting.ADMINS => OrganizationRole.ADMINS_UP
-    case FeatureSetting.ANYONE => OrganizationRole.ANYONE_UP
+    case FeatureSetting.MEMBERS => OrganizationRole.memberSet
+    case FeatureSetting.ADMINS => OrganizationRole.adminSet
+    case FeatureSetting.ANYONE => OrganizationRole.totalSet
     case _ => Set.empty
   }
   def extraPermissionsFor(roleOpt: Option[OrganizationRole], setting: FeatureSetting): Set[OrganizationPermission] = {

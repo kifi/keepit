@@ -72,10 +72,10 @@ object OrganizationRole {
   def all: Set[OrganizationRole] = Set(ADMIN, MEMBER)
   def allOpts: Set[Option[OrganizationRole]] = all.map(Some(_)) ++ Set(None)
 
-  val NOONE: Set[Option[OrganizationRole]] = Set.empty[Option[OrganizationRole]]
-  val ADMINS_UP: Set[Option[OrganizationRole]] = Set(Some(ADMIN))
-  val MEMBERS_UP: Set[Option[OrganizationRole]] = Set(Some(ADMIN), Some(MEMBER))
-  val ANYONE_UP: Set[Option[OrganizationRole]] = Set(Some(ADMIN), Some(MEMBER), None)
+  val emptySet: Set[Option[OrganizationRole]] = Set.empty[Option[OrganizationRole]]
+  val adminSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN))
+  val memberSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN), Some(MEMBER))
+  val totalSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN), Some(MEMBER), None)
 }
 
 case class IngestableOrganizationMembership(
