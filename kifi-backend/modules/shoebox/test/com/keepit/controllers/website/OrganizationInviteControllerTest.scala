@@ -312,9 +312,8 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val jsonInput = Json.parse(
             s"""{ "invites": [
              |{ "id":  "${notAMember2.externalId.id}"}
-                             |]}""".stripMargin)
+             |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
-          println("here")
           val response = controller.inviteUsers(publicId)(request)
 
           response === OrganizationFail.INSUFFICIENT_PERMISSIONS
