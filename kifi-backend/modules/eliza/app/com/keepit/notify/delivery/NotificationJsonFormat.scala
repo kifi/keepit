@@ -1,6 +1,6 @@
 package com.keepit.notify.delivery
 
-import com.google.inject.Inject
+import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.JsObjectExtensionOps
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.db.slick.Database
@@ -23,6 +23,7 @@ import com.keepit.common.time._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.control.NonFatal
 
+@Singleton
 class NotificationJsonFormat @Inject() (
     db: Database,
     shoeboxServiceClient: ShoeboxServiceClient,
