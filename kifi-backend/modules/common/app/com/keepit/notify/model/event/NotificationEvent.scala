@@ -5,6 +5,7 @@ import com.keepit.model._
 import com.keepit.notify.model._
 import com.keepit.social.SocialNetworkType
 import org.joda.time.DateTime
+import play.api.data.validation.ValidationError
 import play.api.libs.json._
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
@@ -44,6 +45,7 @@ object NotificationEvent {
 case class NewConnectionInvite(
   recipient: Recipient,
   time: DateTime,
+  inviteeId: Id[User],
   inviterId: Id[User]) extends NotificationEvent {
 
   type N = NewConnectionInvite
@@ -51,15 +53,31 @@ case class NewConnectionInvite(
 
 }
 
-object NewConnectionInvite extends NonGroupingNotificationKind[NewConnectionInvite] {
+object NewConnectionInvite extends GroupingNotificationKind[NewConnectionInvite, (Id[User], Id[User])] {
 
   override val name: String = "new_connection_invite"
+
+  // For compatibility with previous connection invites without invitee
+  val inviteeFormat: OFormat[Id[User]] = OFormat(
+    js =>
+      (js \ "inviteeId").validate[Id[User]]
+        .orElse((js \ "recipient").validate[Recipient].collect(ValidationError("expected recipient to be a user")) {
+          case UserRecipient(id, _) => id
+        }),
+    id => Json.obj("inviteeId" -> id)
+  )
 
   override implicit val format = (
     (__ \ "recipient").format[Recipient] and
     (__ \ "time").format[DateTime] and
+    inviteeFormat and
     (__ \ "inviterId").format[Id[User]]
   )(NewConnectionInvite.apply, unlift(NewConnectionInvite.unapply))
+
+  override def getIdentifier(that: NewConnectionInvite): (Id[User], Id[User]) = that.inviterId -> that.inviteeId
+
+  override def shouldGroupWith(newEvent: NewConnectionInvite, existingEvents: Set[NewConnectionInvite]): Boolean =
+    Set(newEvent.inviterId -> newEvent.inviteeId) == existingEvents.map(evt => evt.inviterId -> evt.inviteeId)
 
 }
 
@@ -250,7 +268,7 @@ case class NewMessage(
 
 }
 
-object NewMessage extends NotificationKind[NewMessage] {
+object NewMessage extends GroupingNotificationKind[NewMessage, Long] {
 
   override val name: String = "new_message"
 
@@ -262,12 +280,12 @@ object NewMessage extends NotificationKind[NewMessage] {
     (__ \ "messageId").format[Long]
   )(NewMessage.apply, unlift(NewMessage.unapply))
 
-  override def groupIdentifier(event: NewMessage): Option[String] = Some(event.messageThreadId.toString)
-
   override def shouldGroupWith(newEvent: NewMessage, existingEvents: Set[NewMessage]): Boolean = {
     val existing = existingEvents.head
     existing.messageThreadId == newEvent.messageThreadId
   }
+
+  override def getIdentifier(that: NewMessage): Long = that.messageId
 
 }
 

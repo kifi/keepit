@@ -64,15 +64,6 @@ class FriendRequestRepoImpl @Inject() (
     friendRequestCountCache.remove(FriendRequestCountKey(model.recipientId))
   }
 
-  override def save(model: FriendRequest)(implicit s: RWSession): FriendRequest = {
-    s.onTransactionSuccess {
-      if (model.state == FriendRequestStates.IGNORED || model.state == FriendRequestStates.ACCEPTED) {
-        model.messageHandle.foreach { id => elizaClient.unsendNotification(id) }
-      }
-    }(ExecutionContext.immediate)
-    super.save(model)
-  }
-
   def getBySender(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Seq[FriendRequest] = {
     (for (fr <- rows if fr.senderId === userId && fr.state.inSet(states)) yield fr).list
   }

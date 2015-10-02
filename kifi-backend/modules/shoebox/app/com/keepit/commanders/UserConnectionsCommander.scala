@@ -51,6 +51,7 @@ class UserConnectionsCommander @Inject() (
       userRepo.getOpt(id) map { sender =>
         friendRequestRepo.getBySenderAndRecipient(sender.id.get, userId) map { friendRequest =>
           friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+          elizaServiceClient.completeNotification(NewConnectionInvite, friendRequest.senderId -> friendRequest.recipientId, Recipient(friendRequest.recipientId))
           (true, "friend_request_ignored")
         } getOrElse (false, "friend_request_not_found")
       } getOrElse (false, "user_not_found")
@@ -182,6 +183,7 @@ class UserConnectionsCommander @Inject() (
       currentDateTime,
       myUserId
     ))
+    elizaServiceClient.completeNotification(NewConnectionInvite, friend.id.get -> myUserId, Recipient(friend))
 
     emailF flatMap (_ => notifF)
   }
@@ -199,8 +201,9 @@ class UserConnectionsCommander @Inject() (
     val friendReqF = elizaServiceClient.sendNotificationEvent(NewConnectionInvite(
       Recipient(recipient),
       currentDateTime,
+      recipient.id.get,
       myUser.id.get
-    )) map { id =>
+    )) map { _ =>
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipient.id.get, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
         elizaServiceClient.sendUserPushNotification(

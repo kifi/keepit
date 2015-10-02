@@ -10,6 +10,7 @@ import com.keepit.common.routes.Eliza
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.net.{ CallTimeouts, HttpClient }
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.notify.model.{Recipient, GroupingNotificationKind}
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
@@ -72,9 +73,9 @@ trait ElizaServiceClient extends ServiceClient {
 
   def connectedClientCount: Future[Seq[Int]]
 
-  def unsendNotification(messageHandle: Id[MessageHandle]): Unit
-
   def sendNotificationEvent(event: NotificationEvent): Future[Unit]
+
+  def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean]
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
 
@@ -162,14 +163,21 @@ class ElizaServiceClientImpl @Inject() (
 
   val longTimeout = CallTimeouts(responseTimeout = Some(10000), maxWaitTime = Some(10000), maxJsonParseTime = Some(10000))
 
-  def unsendNotification(messageHandle: Id[MessageHandle]): Unit = {
-    //yes, we really want this one to get through. considering pushing the message to SQS later on.
-    call(Eliza.internal.unsendNotification(messageHandle), attempts = 6, callTimeouts = longTimeout)
-  }
-
   def sendNotificationEvent(event: NotificationEvent): Future[Unit] = {
     val payload = Json.toJson(event)
     call(Eliza.internal.sendNotificationEvent(), payload).imap(_ => ())
+  }
+
+  def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean] = {
+    val groupIdentifier = kind.gid.serialize(params)
+    val payload = Json.obj(
+      "recipient" -> recipient,
+      "kind" -> kind,
+      "groupIdentifier" -> groupIdentifier
+    )
+    call(Eliza.internal.completeNotification(), payload).map { resp =>
+       Json.parse(resp.body).as[Boolean]
+    }
   }
 
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]] = {

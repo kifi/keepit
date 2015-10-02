@@ -5,7 +5,6 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
 import com.keepit.notify.info._
-import com.keepit.notify.model.{ NotificationId, notificationIdMapFormat }
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId

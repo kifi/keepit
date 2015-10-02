@@ -6,12 +6,12 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
+import com.keepit.eliza.commanders.NotificationCommander
 import com.keepit.eliza.controllers.shared.SharedWsMessagingController
 import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.eliza.ws.MockWebSocket
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.{ User, UserExperiment, UserExperimentType, SocialUserInfo }
-import com.keepit.notify.NotificationProcessing
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.DepressedRobotGrumble
 import com.keepit.rover.FakeRoverServiceClientModule
@@ -51,7 +51,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
 
         socket.out
 
-        val processing = inject[NotificationProcessing]
+        val processing = inject[NotificationCommander]
 
         processing.processNewEvent(DepressedRobotGrumble(
           Recipient(Id[User](1)),
@@ -79,7 +79,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
 
         socket.out
 
-        val processing = inject[NotificationProcessing]
+        val processing = inject[NotificationCommander]
 
         processing.processNewEvent(DepressedRobotGrumble(
           Recipient(Id[User](1)),
@@ -110,7 +110,7 @@ class ElizaNotificationTest extends Specification with ElizaApplicationInjector 
 
         socket.out
 
-        val processing = inject[NotificationProcessing]
+        val processing = inject[NotificationCommander]
 
         processing.processNewEvent(DepressedRobotGrumble(
           Recipient(Id[User](1)),
