@@ -23,8 +23,9 @@ angular.module('kifi')
       setBillingContacts: function (pubId, contacts) {
         return net
         .setBillingContacts(pubId, contacts)
-        ['finally'](function () {
+        .then(function (response) {
           net.getBillingContacts.clearCache();
+          return response;
         });
       }
     };
