@@ -184,6 +184,11 @@ angular.module('kifi', [
           $scope.errorParams = toParams;
         }
       });
+
+      $rootScope.$on('errorImmediately', function (error, params) {
+        $scope.errorStatus = error.status || 404;
+        $scope.errorParams = params;
+      });
     }
 
     function paramsDiffer(stateName, p1, p2) {

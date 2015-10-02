@@ -108,15 +108,7 @@ angular.module('kifi')
             'orgProfileService', 'profile', 'messageTicker', 'ORG_PERMISSION',
             function (orgProfileService, profile, messageTicker, ORG_PERMISSION) {
               if (profile.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
-                return orgProfileService
-                .getOrgSettings(profile.organization.id)
-                ['catch'](function(response) {
-                  messageTicker({
-                    text: response.statusText + ': Could not retrieve your settings. Please refresh and try again',
-                    type: 'red',
-                    delay: 0
-                  });
-                });
+                return orgProfileService.getOrgSettings(profile.organization.id);
               } else {
                 return {};
               }
