@@ -342,7 +342,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // Initially, totally disabled
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.MessageOrganization -> FeatureSetting.DISABLED)) must beRight
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, initOrgSettings.withSettings(Feature.GroupMessaging -> FeatureSetting.DISABLED)) must beRight
 
         val mobileRoute = com.keepit.controllers.mobile.routes.MobileContactsController.searchForAllContacts(query = None, limit = None).url
         val extRoute = com.keepit.controllers.ext.routes.ExtUserController.searchForContacts(query = None, limit = None).url
@@ -395,7 +395,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // allow admins to send group messages
         val orgSettings1 = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings1.withSettings(Feature.MessageOrganization -> FeatureSetting.ADMINS)) must beRight
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings1.withSettings(Feature.GroupMessaging -> FeatureSetting.ADMINS)) must beRight
 
         inject[FakeUserActionsHelper].setUser(owner)
         val ownerMobileRequest2 = FakeRequest("GET", mobileRoute)
@@ -441,7 +441,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         // members can send group messages
         val orgSettings2 = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings2.withSettings(Feature.MessageOrganization -> FeatureSetting.MEMBERS)) must beRight
+        orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings2.withSettings(Feature.GroupMessaging -> FeatureSetting.MEMBERS)) must beRight
 
         inject[FakeUserActionsHelper].setUser(owner)
         val ownerMobileRequest3 = FakeRequest("GET", mobileRoute)

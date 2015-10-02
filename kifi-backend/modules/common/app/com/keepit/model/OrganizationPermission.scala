@@ -16,7 +16,7 @@ object OrganizationPermission {
   case object PUBLISH_LIBRARIES extends OrganizationPermission("publish_libraries")
   case object REMOVE_LIBRARIES extends OrganizationPermission("remove_libraries")
   case object FORCE_EDIT_LIBRARIES extends OrganizationPermission("force_edit_libraries")
-  case object MESSAGE_ORGANIZATION extends OrganizationPermission("message_organization")
+  case object GROUP_MESSAGING extends OrganizationPermission("group_messaging")
   case object EXPORT_KEEPS extends OrganizationPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends OrganizationPermission("create_slack_integration")
   case object MANAGE_PLAN extends OrganizationPermission("manage_plan")
@@ -32,20 +32,11 @@ object OrganizationPermission {
     PUBLISH_LIBRARIES,
     REMOVE_LIBRARIES,
     FORCE_EDIT_LIBRARIES,
-    MESSAGE_ORGANIZATION,
+    GROUP_MESSAGING,
     EXPORT_KEEPS,
     CREATE_SLACK_INTEGRATION,
     MANAGE_PLAN
   )
-
-  def orgPermissionsToLibraryPermissions: Map[OrganizationPermission, Set[LibraryPermission]] = Map(
-    REMOVE_LIBRARIES -> Set(LibraryPermission.DELETE_LIBRARY, LibraryPermission.MOVE_LIBRARY),
-    FORCE_EDIT_LIBRARIES -> Set(LibraryPermission.EDIT_LIBRARY),
-    EXPORT_KEEPS -> Set(LibraryPermission.EXPORT_KEEPS),
-    CREATE_SLACK_INTEGRATION -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
-  )
-
-  def toLibraryPermissionsOpt(orgPermission: OrganizationPermission): Option[Set[LibraryPermission]] = orgPermissionsToLibraryPermissions.get(orgPermission)
 
   implicit val format: Format[OrganizationPermission] =
     Format(__.read[String].map(OrganizationPermission(_)), new Writes[OrganizationPermission] {
@@ -66,13 +57,10 @@ object OrganizationPermission {
       case REMOVE_LIBRARIES.value => REMOVE_LIBRARIES
       case "edit_libraries" => FORCE_EDIT_LIBRARIES
       case FORCE_EDIT_LIBRARIES.value => FORCE_EDIT_LIBRARIES
-      case "group_messaging" => MESSAGE_ORGANIZATION
-      case MESSAGE_ORGANIZATION.value => MESSAGE_ORGANIZATION
+      case GROUP_MESSAGING.value => GROUP_MESSAGING
       case EXPORT_KEEPS.value => EXPORT_KEEPS
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
       case MANAGE_PLAN.value => MANAGE_PLAN
-      case _ =>
-        VIEW_ORGANIZATION
     }
   }
 

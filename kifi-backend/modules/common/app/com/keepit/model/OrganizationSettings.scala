@@ -78,7 +78,7 @@ object Feature {
   val all: Set[Feature] = Set(
     PublishLibraries,
     InviteMembers,
-    MessageOrganization,
+    GroupMessaging,
     ForceEditLibraries,
     ViewOrganization,
     ViewMembers,
@@ -107,9 +107,9 @@ object Feature {
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
   }
 
-  case object MessageOrganization extends Feature with FeatureWithPermissions {
-    val value = OrganizationPermission.MESSAGE_ORGANIZATION.value
-    val permission = OrganizationPermission.MESSAGE_ORGANIZATION
+  case object GroupMessaging extends Feature with FeatureWithPermissions {
+    val value = OrganizationPermission.GROUP_MESSAGING.value
+    val permission = OrganizationPermission.GROUP_MESSAGING
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
   }
 

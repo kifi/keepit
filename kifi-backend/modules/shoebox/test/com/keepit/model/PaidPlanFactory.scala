@@ -13,7 +13,7 @@ object PaidPlanFactory {
   val testPlanSettings: OrganizationSettings = OrganizationSettings.empty.setAll(Map(
     Feature.PublishLibraries -> FeatureSetting.MEMBERS,
     Feature.InviteMembers -> FeatureSetting.MEMBERS,
-    Feature.MessageOrganization -> FeatureSetting.MEMBERS,
+    Feature.GroupMessaging -> FeatureSetting.MEMBERS,
     Feature.ForceEditLibraries -> FeatureSetting.DISABLED,
     Feature.ViewOrganization -> FeatureSetting.ANYONE,
     Feature.ViewMembers -> FeatureSetting.ANYONE,

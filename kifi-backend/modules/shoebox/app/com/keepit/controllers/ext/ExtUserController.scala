@@ -32,7 +32,7 @@ class ExtUserController @Inject() (
       val orgsUserIsIn = db.readOnlyReplica { implicit s =>
         orgMemberRepo.getAllByUserId(request.userId).map(_.organizationId)
           .filter { orgId =>
-            permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.MESSAGE_ORGANIZATION)
+            permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
           }
       }
       val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
