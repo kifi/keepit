@@ -5,7 +5,7 @@ import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, Use
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.model.{ OrganizationSettings, ExternalOrganizationConfiguration, OrganizationPermission, Organization }
+import com.keepit.model._
 import com.keepit.commanders.{ PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
 
@@ -25,6 +25,8 @@ class PaymentsController @Inject() (
     orgCommander: OrganizationCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
+    paidPlanRepo: PaidPlanRepo,
+    paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
@@ -84,23 +86,29 @@ class PaymentsController @Inject() (
 
   def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     val response = orgCommander.getAccountFeatureSettings(request.orgId)
+    val editableFeatures = db.readOnlyMaster { implicit session =>
+      paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId).editableFeatures
+    }
     val result = ExternalOrganizationConfiguration(
       Organization.publicId(response.config.organizationId),
-      response.config.settings
+      OrganizationSettingsWithEditability(response.config.settings, editableFeatures)
     )
     Ok(Json.toJson(result))
   }
 
   def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN)(parse.tolerantJson) { request =>
-    request.body.validate[OrganizationSettings] match {
+    request.body.validate[OrganizationSettings](OrganizationSettings.siteFormat) match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
       case JsSuccess(settings, _) =>
         orgCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings) match {
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
+            val editableFeatures = db.readOnlyMaster { implicit session =>
+              paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId).editableFeatures
+            }
             val result = ExternalOrganizationConfiguration(
               Organization.publicId(response.config.organizationId),
-              response.config.settings
+              OrganizationSettingsWithEditability(response.config.settings, editableFeatures)
             )
             Ok(Json.toJson(result))
         }

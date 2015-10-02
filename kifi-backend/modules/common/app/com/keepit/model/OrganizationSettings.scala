@@ -16,13 +16,11 @@ case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
       case (feature, setting) if that.kvs(feature) != setting => feature
     }.toSet
   }
-
-  override def toString: String = Json.toJson(this).toString()
 }
 
 object OrganizationSettings {
   val empty = OrganizationSettings(Map.empty)
-  implicit val format: Format[OrganizationSettings] = Format(
+  val dbFormat: Format[OrganizationSettings] = Format(
     Reads { jsv =>
       jsv.validate[JsObject].map { obj =>
         OrganizationSettings(obj.fieldSet.map {
@@ -37,6 +35,17 @@ object OrganizationSettings {
       Json.toJson(orgSettings.kvs.map { case (feature, setting) => feature.value -> setting.value })
     }
   )
+
+  val siteFormat = dbFormat
+}
+
+case class OrganizationSettingsWithEditability(settings: OrganizationSettings, editableFeatures: Set[Feature])
+object OrganizationSettingsWithEditability {
+  implicit val writes: Writes[OrganizationSettingsWithEditability] = Writes { orgSWE =>
+    JsObject(orgSWE.settings.kvs.map {
+      case (feature, setting) => feature.value -> Json.obj("setting" -> setting.value, "editable" -> orgSWE.editableFeatures.contains(feature))
+    }.toSeq)
+  }
 }
 
 sealed trait Feature {

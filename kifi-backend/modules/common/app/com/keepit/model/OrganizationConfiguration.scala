@@ -26,7 +26,7 @@ object OrganizationConfigurationStates extends States[OrganizationConfiguration]
 
 case class ExternalOrganizationConfiguration(
   organizationId: PublicId[Organization],
-  settings: OrganizationSettings)
+  settings: OrganizationSettingsWithEditability)
 
 object ExternalOrganizationConfiguration {
   implicit val writes: Writes[ExternalOrganizationConfiguration] = Writes { config =>

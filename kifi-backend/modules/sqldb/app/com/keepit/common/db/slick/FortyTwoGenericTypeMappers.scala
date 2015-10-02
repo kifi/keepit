@@ -92,8 +92,8 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val usernameTypeMapper = MappedColumnType.base[Username, String](_.value, Username.apply)
   implicit val organizationHandleTypeMapper = MappedColumnType.base[OrganizationHandle, String](_.value, OrganizationHandle.apply)
   implicit val organizationSettingsTypeMapper = MappedColumnType.base[OrganizationSettings, String](
-    { obj => Json.stringify(Json.toJson(obj)) },
-    { str => Json.parse(str).as[OrganizationSettings] }
+    { obj => Json.stringify(Json.toJson(obj)(OrganizationSettings.dbFormat)) },
+    { str => Json.parse(str).as[OrganizationSettings](OrganizationSettings.dbFormat) }
   )
   implicit val libraryKindTypeMapper = MappedColumnType.base[LibraryKind, String](_.value, LibraryKind.apply)
   implicit val userValueNameTypeMapper = MappedColumnType.base[UserValueName, String](_.name, UserValueName.apply)
