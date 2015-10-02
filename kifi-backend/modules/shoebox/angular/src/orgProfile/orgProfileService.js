@@ -81,6 +81,8 @@ angular.module('kifi')
       setOrgSettings: function(orgId, data) {
         return net.setOrgSettings(orgId, data).then(function (response) {
           net.getOrgSettings.clearCache();
+          invalidateOrgProfileCache();
+
           return response.data;
         });
       },

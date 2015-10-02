@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
-  '$window', '$rootScope', '$scope', 'orgProfileService', 'profileService',
+  '$window', '$rootScope', '$scope', '$state', 'orgProfileService', 'profileService',
   'billingService', 'messageTicker', 'ORG_SETTING_VALUE',
-  function ($window, $rootScope, $scope, orgProfileService, profileService,
+  function ($window, $rootScope, $scope, $state, orgProfileService, profileService,
             billingService, messageTicker, ORG_SETTING_VALUE) {
     $scope.settingsSectionTemplateData = [
       {
@@ -121,6 +121,7 @@ angular.module('kifi')
         });
         profileService.fetchMe();
         $scope.settings = settingsData.settings;
+        $state.reload();
       })
       ['catch'](function(response) {
         messageTicker({
