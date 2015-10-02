@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.URI
-import com.keepit.eliza.{ SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
+import com.keepit.eliza.{ OrgPushNotificationRequest, SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -18,7 +18,7 @@ import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.notify.model.Recipient
-import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
+import com.keepit.realtime.{ OrganizationPushNotification, UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
 import com.keepit.common.core.anyExtensionOps
@@ -83,6 +83,11 @@ class MessagingCommander @Inject() (
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int] = {
     val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
     notificationDeliveryCommander.sendPushNotification(userId, notification, force)
+  }
+
+  def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int] = {
+    val notification = OrganizationPushNotification(message = Some(request.message), unvisitedCount = getUnreadUnmutedThreadCount(request.userId), category = request.category, experiment = request.pushNotificationExperiment)
+    notificationDeliveryCommander.sendPushNotification(request.userId, notification, request.force)
   }
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Future[Seq[ElizaThreadInfo]] = {

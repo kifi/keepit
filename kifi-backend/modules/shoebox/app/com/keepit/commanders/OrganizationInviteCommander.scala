@@ -18,7 +18,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
+import com.keepit.eliza.{ OrgPushNotificationRequest, OrgPushNotificationCategory, SimplePushNotificationCategory, ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
@@ -105,10 +105,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
     val OrganizationInviteSendRequest(orgId, inviterId, inviteeAddresses, inviteeUserIds, message) = orgInvite
-
-    val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
-      organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
-    }
 
     val failOpt = db.readOnlyReplica { implicit session => getValidationError(orgInvite) }
 
@@ -227,16 +223,22 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def notifyInviteeAboutInvitationToJoinOrganization(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
-    invitees.foreach { invitee =>
+    invitees.foreach { inviteeId =>
       elizaClient.sendNotificationEvent(OrgNewInvite(
-        Recipient(invitee),
+        Recipient(inviteeId),
         currentDateTime,
         inviter.id.get,
         org.id.get
       ))
+      val basicInvitee = db.readOnlyReplica { implicit s => basicUserRepo.load(inviteeId) }
+      val request = OrgPushNotificationRequest(
+        userId = inviteeId,
+        message = s"${basicInvitee.fullName}, please join our ${org.name} team on Kifi!",
+        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+        category = OrgPushNotificationCategory.OrganizationInvitation
+      )
+      elizaClient.sendOrgPushNotification(request)
     }
-
-    // TODO: handle push notifications to mobile.
   }
 
   def authorizeInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit session: RSession): Boolean = {

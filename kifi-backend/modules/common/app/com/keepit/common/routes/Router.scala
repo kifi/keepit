@@ -233,6 +233,7 @@ object Eliza extends Service {
     def sendGeneralPushNotification() = ServiceRoute(POST, "/internal/eliza/sendGeneralPushNotification")
     def sendLibraryPushNotification() = ServiceRoute(POST, "/internal/eliza/sendLibraryPushNotification")
     def sendUserPushNotification() = ServiceRoute(POST, "/internal/eliza/sendUserPushNotification")
+    def sendOrgPushNotification() = ServiceRoute(POST, "/internal/eliza/sendOrgPushNotification")
     def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
     def sendToAllUsers() = ServiceRoute(POST, "/internal/eliza/sendToAllUsers")

@@ -14,11 +14,13 @@ import com.keepit.notify.model.{Recipient, GroupingNotificationKind}
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.search.index.message.ThreadContent
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.kifi.macros.json
 
 import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 import com.google.inject.Inject
 import com.google.inject.util.Providers
@@ -31,10 +33,12 @@ import com.keepit.common.core._
 sealed case class LibraryPushNotificationCategory(name: String)
 sealed case class UserPushNotificationCategory(name: String)
 sealed case class SimplePushNotificationCategory(name: String)
+sealed case class OrgPushNotificationCategory(name: String)
 
 object SimplePushNotificationCategory {
   val PersonaUpdate = SimplePushNotificationCategory("PersonaUpdate")
   val HailMerryUpdate = SimplePushNotificationCategory("HailMerryUpdate")
+  val OrganizationInvitation = SimplePushNotificationCategory("OrganizationInvitation")
 }
 
 object UserPushNotificationCategory {
@@ -53,12 +57,38 @@ object LibraryPushNotificationCategory {
   val LibraryInvitation = LibraryPushNotificationCategory("LibraryInvitation")
 }
 
+object OrgPushNotificationCategory {
+  val OrganizationInvitation = OrgPushNotificationCategory("OrganizationInvitation")
+  implicit val format = new Format[OrgPushNotificationCategory] {
+    def reads(json: JsValue) = json.as[String] match {
+      case "OrganizationInvitation" => JsSuccess(OrgPushNotificationCategory("OrganizationInvitation"))
+    }
+    def writes(o: OrgPushNotificationCategory) = JsString(o.name)
+  }
+}
+
 case class PushNotificationExperiment(name: String)
 object PushNotificationExperiment {
   val Experiment1 = PushNotificationExperiment("Experiment1")
   val Experiment2 = PushNotificationExperiment("Experiment2")
   val All = Seq(Experiment1, Experiment2)
   implicit val format = Json.format[PushNotificationExperiment]
+}
+
+case class OrgPushNotificationRequest( // pretty bare right now, add org-specific fields as needed
+  userId: Id[User],
+  message: String,
+  pushNotificationExperiment: PushNotificationExperiment,
+  category: OrgPushNotificationCategory,
+  force: Boolean = false)
+object OrgPushNotificationRequest {
+  implicit val format: Format[OrgPushNotificationRequest] = (
+    (__ \ 'userId).format[Id[User]] and
+    (__ \ 'message).format[String] and
+    (__ \ 'pushNotificationExperiment).format[PushNotificationExperiment] and
+    (__ \ 'category).format[OrgPushNotificationCategory] and
+    (__ \ 'force).format[Boolean]
+  )(OrgPushNotificationRequest.apply, unlift(OrgPushNotificationRequest.unapply))
 }
 
 trait ElizaServiceClient extends ServiceClient {
@@ -70,6 +100,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean = false): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean = false): Future[Int]
+  def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int]
 
   def connectedClientCount: Future[Seq[Int]]
 
@@ -137,6 +168,10 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.sendGeneralPushNotification, payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
     }
+  }
+
+  def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int] = {
+    call(Eliza.internal.sendOrgPushNotification, Json.toJson(request), callTimeouts = longTimeout).map(response => response.body.toInt)
   }
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit] = {

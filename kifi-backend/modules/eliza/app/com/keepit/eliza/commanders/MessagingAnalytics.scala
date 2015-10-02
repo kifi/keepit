@@ -53,6 +53,7 @@ class MessagingAnalytics @Inject() (
     case simplePushNotification: SimplePushNotification => sentSimplePushNotification(userId, deviceType, simplePushNotification)
     case libraryUpdatePushNotification: LibraryUpdatePushNotification => sentLibraryUpdatePushNotification(userId, deviceType, libraryUpdatePushNotification)
     case userPushNotification: UserPushNotification => sentUserPushNotification(userId, deviceType, userPushNotification)
+    case orgPushNotification: OrganizationPushNotification => sentOrgPushNotification(userId, deviceType, orgPushNotification)
     case messageCountPushNotification: MessageCountPushNotification => //do nothing
   }
 
@@ -108,6 +109,24 @@ class MessagingAnalytics @Inject() (
   }
 
   private def sentUserPushNotification(userId: Id[User], deviceType: DeviceType, notification: UserPushNotification): Unit = {
+    val sentAt = currentDateTime
+    SafeFuture {
+      val contextBuilder = heimdalContextBuilder()
+      contextBuilder += ("action", "sent")
+      contextBuilder += ("channel", push)
+      contextBuilder.addNotificationCategory(NotificationCategory.User.MESSAGE)
+      contextBuilder += ("global", false)
+      contextBuilder += ("category", "simple")
+      contextBuilder += ("subcategory", notification.category.name)
+      contextBuilder += ("user", userId.id)
+      contextBuilder += ("os", deviceType.name)
+      contextBuilder += ("exp_engagement_push", notification.experiment.name)
+      contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
+      heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
+    }
+  }
+
+  private def sentOrgPushNotification(userId: Id[User], deviceType: DeviceType, notification: OrganizationPushNotification): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
