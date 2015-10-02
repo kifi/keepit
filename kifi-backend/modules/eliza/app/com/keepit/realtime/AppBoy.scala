@@ -93,7 +93,7 @@ class AppBoy @Inject() (
         val pushType = lupn.category match {
           case LibraryPushNotificationCategory.LibraryChanged => "lr"
           case LibraryPushNotificationCategory.LibraryInvitation => "li"
-          case _ => airbrake.notify(s"unsupported library push notification category ${lupn.category.name}"); "lr"
+          case _ => throw new Exception(s"unsupported library push notification category ${lupn.category.name}")
         }
         val withLid = json.as[JsObject] ++ Json.obj("t" -> pushType, "lid" -> Library.publicId(lupn.libraryId).id)
         deviceType match {
@@ -108,13 +108,13 @@ class AppBoy @Inject() (
           case UserPushNotificationCategory.ContactJoined => "us"
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
           case UserPushNotificationCategory.NewOrganizationMember => "om"
-          case _ => airbrake.notify(s"unsupported user push notification category ${upn.category.name}"); "us"
+          case _ => throw new Exception(s"unsupported user push notification category ${upn.category.name}")
         }
         json.as[JsObject] ++ Json.obj("t" -> pushType, "uid" -> upn.userExtId, "un" -> upn.username.value, "purl" -> upn.pictureUrl)
       case opn: OrganizationPushNotification =>
         val pushType = opn.category match {
           case OrgPushNotificationCategory.OrganizationInvitation => "oi"
-          case _ => airbrake.notify(s"unsupported org push notification category ${opn.category.name}"); "oi"
+          case _ => throw new Exception(s"unsupported org push notification category ${opn.category.name}")
         }
         json.as[JsObject] ++ Json.obj("t" -> pushType)
       case _ =>
