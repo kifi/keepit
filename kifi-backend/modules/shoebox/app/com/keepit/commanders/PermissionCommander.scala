@@ -119,7 +119,9 @@ class PermissionCommanderImpl @Inject() (
   def combineOrganizationAndLibraryPermissions(lib: Library, libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
     val addedPermissions = Map[Boolean, Set[LibraryPermission]](
       (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)) ->
-        Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY)
+        Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY),
+      (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)) ->
+        Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
     ).collect { case (true, ps) => ps }.flatten
 
     val removedPermissions = Map[Boolean, Set[LibraryPermission]](
