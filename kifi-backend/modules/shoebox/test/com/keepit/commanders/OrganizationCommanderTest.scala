@@ -153,6 +153,41 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === ownerModifyResponse.right.get.modifiedOrg
         }
       }
+
+      "modify an organization's base permissions" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, member, rando1, rando2) = db.readWrite { implicit session =>
+            val Seq(owner, member, rando1, rando2) = UserFactory.users(4).saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+            (org, owner, member, rando1, rando2)
+          }
+
+          // Member adds rando, succeeds because of default invite permissions
+          val memberAddRando1 = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = member.id.get, targetId = rando1.id.get, newRole = OrganizationRole.MEMBER)
+          orgMembershipCommander.addMembership(memberAddRando1) must beRight
+
+          // The owner decides that members are too irresponsible and should not invite others
+
+          // An owner can change the base permissions so that members CANNOT do this
+          val permissionsDiff = PermissionsDiff.justRemove(Some(OrganizationRole.MEMBER) -> Set(OrganizationPermission.INVITE_MEMBERS))
+          val orgModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = owner.id.get,
+            modifications = OrganizationModifications(permissionsDiff = Some(permissionsDiff)))
+          val orgModifyResponse = orgCommander.modifyOrganization(orgModifyRequest)
+          orgModifyResponse must beRight
+
+          orgModifyResponse.right.get.request === orgModifyRequest
+          orgModifyResponse.right.get.modifiedOrg.basePermissions === org.basePermissions.applyPermissionsDiff(permissionsDiff)
+          orgModifyResponse.right.get.modifiedOrg.basePermissions.forRole(OrganizationRole.MEMBER) === Organization.defaultBasePermissions.forRole(OrganizationRole.MEMBER) - OrganizationPermission.INVITE_MEMBERS
+
+          // Now the member should not be able to invite others
+          val memberAddRando2 = OrganizationMembershipAddRequest(orgId = org.id.get, requesterId = member.id.get, targetId = rando2.id.get, newRole = OrganizationRole.MEMBER)
+          orgMembershipCommander.addMembership(memberAddRando2) must beLeft
+
+          val allMembers = db.readOnlyMaster { implicit session => orgMembershipRepo.getAllByOrgId(org.id.get) }
+          allMembers.size === 3
+          allMembers.map(_.userId) === Set(owner, member, rando1).map(_.id.get)
+        }
+      }
     }
 
     "delete an organization" in {

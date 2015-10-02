@@ -74,6 +74,27 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
         }
       }
 
+      "fail from member without invite rights" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val orgId = Id[Organization](1)
+          val publicOrgId = Organization.publicId(orgId)(inject[PublicIdConfiguration])
+          val (invitee, invite) = db.readWrite { implicit session =>
+            val invitee = UserFactory.user().saved
+            val inviter = UserFactory.user().saved
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter)).withWeakMembers().saved
+
+            val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = inviter.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
+            (invitee, invite)
+          }
+
+          inject[FakeUserActionsHelper].setUser(invitee)
+          val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
+          val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
+          result === OrganizationFail.NO_VALID_INVITATIONS
+        }
+      }
+
       "fail on bad public id" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val invitee = db.readWrite { implicit session =>
@@ -230,41 +251,40 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val owner = UserFactory.user().saved
           val inviter = UserFactory.user().saved
           userEmailAddressCommander.intern(inviter.id.get, EmailAddress("inviter@kifi.com")).get
-          val cannotInvite = UserFactory.user().saved
-          val notAMember = UserFactory.user().saved
-          val notAMember2 = UserFactory.user().saved
-          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter, cannotInvite)).withWeakMembers().saved
+          val cannot_invite = UserFactory.user().saved
+          val not_a_member = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter, cannot_invite)).withWeakMembers().saved
 
           val inviterMembership = inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, inviter.id.get).get
           inject[OrganizationMembershipRepo].save(inviterMembership.withPermissions(Set(OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)))
 
-          (org, owner, inviter, cannotInvite, notAMember, notAMember2)
+          (org, owner, inviter, cannot_invite, not_a_member)
         }
       }
 
       "succeed for member that has invite permissions" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, inviter, cannotInvite, notAMember, _) = setupInviters()
+          val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
           inject[FakeUserActionsHelper].setUser(inviter)
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${notAMember.externalId.id}"}
+               |{ "id":  "${not_a_member.externalId.id}"}
                |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)
 
           val content = contentAsString(response)
           status(response) === OK
-          content must contain(notAMember.externalId.id)
+          content must contain(not_a_member.externalId.id)
         }
       }
 
       "fail on badly formed inputs" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, inviter, cannotInvite, nonMember, _) = setupInviters()
+          val (org, owner, inviter, cannot_invite, nonMember) = setupInviters()
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
@@ -286,33 +306,15 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
 
       "fail for member without invite rights" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, inviter, cannotInvite, notAMember, _) = setupInviters()
+          val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
           implicit val config = inject[PublicIdConfiguration]
           val publicId = Organization.publicId(org.id.get)
 
-          inject[FakeUserActionsHelper].setUser(cannotInvite)
+          inject[FakeUserActionsHelper].setUser(cannot_invite)
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${notAMember.externalId.id}"}
-               |]}""".stripMargin)
-          val request = route.inviteUsers(publicId).withBody(jsonInput)
-          val response = controller.inviteUsers(publicId)(request)
-
-          response === OrganizationFail.INSUFFICIENT_PERMISSIONS
-        }
-      }
-
-      "fail for requester who's not a member" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, inviter, cannotInvite, notAMember, notAMember2) = setupInviters()
-          implicit val config = inject[PublicIdConfiguration]
-          val publicId = Organization.publicId(org.id.get)
-
-          inject[FakeUserActionsHelper].setUser(notAMember)
-          val jsonInput = Json.parse(
-            s"""{ "invites": [
-             |{ "id":  "${notAMember2.externalId.id}"}
-             |]}""".stripMargin)
+               |{ "id":  "${not_a_member.externalId.id}"}
+                                                         |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)
 
@@ -322,7 +324,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
 
       "fail on bad public id" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, inviter, cannotInvite, notAMember, _) = setupInviters()
+          val (org, owner, inviter, cannot_invite, not_a_member) = setupInviters()
           implicit val config = inject[PublicIdConfiguration]
           // guaranteed to be random, because it was generated with a random number generator.
           val publicId = PublicId[Organization]("2267")
@@ -330,7 +332,7 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           inject[FakeUserActionsHelper].setUser(inviter)
           val jsonInput = Json.parse(
             s"""{ "invites": [
-               |{ "id":  "${notAMember.externalId.id}"}
+               |{ "id":  "${not_a_member.externalId.id}"}
                                                          |]}""".stripMargin)
           val request = route.inviteUsers(publicId).withBody(jsonInput)
           val response = controller.inviteUsers(publicId)(request)

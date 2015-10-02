@@ -299,11 +299,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       db.readWrite { implicit s =>
         // Notify inviters on organization joined.
         val organization = organizationRepo.get(orgId)
-        val basicInvitee = userRepo.get(userId)
-
-        val invitesWithActiveInviter = invitations.filter(invite => organizationMembershipRepo.getByOrgIdAndUserId(orgId, invite.inviterId).isDefined)
-        notifyInviterOnOrganizationInvitationAcceptance(invitesWithActiveInviter, basicInvitee, organization)
-
+        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization)
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
           if (authTokenOpt.exists(_.nonEmpty)) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)

@@ -99,6 +99,8 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
     "add members to org" in {
       withDb() { implicit injector =>
+        val orgRepo = inject[OrganizationRepo]
+        val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
         val (org, owner, user1, user2, rando) = db.readWrite { implicit session =>
           val owner = UserFactory.user().saved
@@ -112,6 +114,14 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
         val ownerAddUser = OrganizationMembershipAddRequest(org.id.get, owner.id.get, user1.id.get, OrganizationRole.MEMBER)
         orgMembershipCommander.addMembership(ownerAddUser).isRight === true
+
+        // members can't add owners
+        val memberAddUserAsOwner = OrganizationMembershipAddRequest(org.id.get, user1.id.get, user2.id.get, OrganizationRole.ADMIN)
+        orgMembershipCommander.addMembership(memberAddUserAsOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+        // random people can't add members either
+        val randoAddUser = OrganizationMembershipAddRequest(org.id.get, rando.id.get, user2.id.get, OrganizationRole.MEMBER)
+        orgMembershipCommander.addMembership(randoAddUser) === Left(OrganizationFail.NOT_A_MEMBER)
 
         // can't add someone who is already a member
         val memberAddMember = OrganizationMembershipAddRequest(org.id.get, user1.id.get, owner.id.get, OrganizationRole.MEMBER)
