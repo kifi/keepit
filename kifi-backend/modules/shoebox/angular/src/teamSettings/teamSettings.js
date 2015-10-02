@@ -174,7 +174,7 @@ angular.module('kifi')
       return message;
     }
 
-    if ($scope.viewer && $scope.viewer.membership && $scope.viewer.membership.role === 'admin') {
+    if ($scope.viewer.membership && $scope.viewer.membership.role === 'admin') {
       billingService
       .getBillingState($scope.profile.id)
       .then(function (stateData) {

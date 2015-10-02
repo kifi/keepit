@@ -26,7 +26,7 @@ angular.module('kifi')
       $window.removeEventListener('hashchange', onHashChange);
     });
 
-    if (!($scope.viewer && $scope.viewer.membership && $scope.viewer.membership.role === 'admin')) {
+    if (!$scope.viewer.membership || $scope.viewer.membership.role !== 'admin') {
       $rootScope.$emit('errorImmediately');
     }
   }
