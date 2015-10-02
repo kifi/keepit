@@ -284,6 +284,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withCollaborators(Seq(admin, member)).withOrganization(org).saved }
 
         val libraryCommander = inject[LibraryCommander]
+        val libraryController = inject[LibraryController]
 
         val ownerModifyRequest = LibraryModifications(subscriptions = Some(Seq(LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk")))))
 
@@ -304,6 +305,13 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         orgCommander.setAccountFeatureSettings(org.id.get, admin.id.get, orgSettings.withSettings(Feature.CreateSlackIntegration -> FeatureSetting.MEMBERS)) must beRight
 
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
+
+        inject[FakeUserActionsHelper].setUser(member)
+        val testRoute = com.keepit.controllers.website.routes.LibraryController.getLibraryById(Library.publicId(library.id.get), showPublishedLibraries = true, is = None).url
+        val memberRequest = FakeRequest("GET", testRoute)
+        val memberResult = libraryController.getLibraryById(Library.publicId(library.id.get), showPublishedLibraries = true, imageSize = None)(memberRequest)
+        status(memberResult) must equalTo(OK)
+        (contentAsJson(memberResult) \ "library" \ "permissions").as[Set[LibraryPermission]] must contain(LibraryPermission.CREATE_SLACK_INTEGRATION)
       }
     }
   }
