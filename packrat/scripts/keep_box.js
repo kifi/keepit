@@ -537,16 +537,22 @@ k.keepBox = k.keepBox || (function () {
     var organizations = $box.data('organizations');
     var matches = organizations.filter(idIs(newLocation));
     var isOrganization = (matches.length !== 0);
+    var canPublish = !isOrganization || matches[0].viewer.permissions.indexOf('publish_libraries') !== -1;
 
     var el = $(this).closest('.kifi-keep-box-new-lib-location-item')[0];
     selectItem(el, '.kifi-keep-box-new-lib-locations');
 
     if (isOrganization) {
       $box.find('.kifi-organization-name').html(matches[0].name);
-    } else {
-      $box.find('[name="kifi-visibility"][value="published"]').focus().click();
+    } else if ($box.find('[name="kifi-visibility"][value="organization"]:checked').length === 1) {
+      $box.find('[name="kifi-visibility"][value="secret"]').focus().click();
     }
     $box.find('[name="kifi-visibility"][value="organization"]').prop('disabled', !isOrganization);
+
+    if (!canPublish && $box.find('[name="kifi-visibility"][value="published"]:checked').length === 1) {
+      $box.find('[name="kifi-visibility"][value="organization"]').focus().click();
+    }
+    $box.find('[name="kifi-visibility"][value="published"]').prop('disabled', !canPublish);
 
     api.port.emit('track_pane_click', {
       type: 'createLibrary',
