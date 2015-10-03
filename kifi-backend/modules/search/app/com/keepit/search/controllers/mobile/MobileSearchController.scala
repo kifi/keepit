@@ -178,6 +178,7 @@ class MobileSearchController @Inject() (
           val libraryOwnerIds = relevantLibraryRecordsAndVisibility.values.map(_._1.ownerId)
           shoeboxClient.getBasicUsers((userIds ++ libraryOwnerIds).toSeq)
         }
+        val futureOrganizations = shoeboxClient.getBasicOrganizationsByIds(relevantLibraryRecordsAndVisibility.values.flatMap(_._1.orgId).toSet)
         val libraryMembershipSearcher = libraryMembershipIndexer.getSearcher
         val publishedLibrariesCountByMember = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByMember(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
         val publishedLibrariesCountByCollaborator = userSearchResult.hits.map { hit => hit.id -> LibraryMembershipIndexable.countPublishedLibrariesByCollaborator(librarySearcher, libraryMembershipSearcher, hit.id) }.toMap
@@ -186,6 +187,7 @@ class MobileSearchController @Inject() (
           mutualFriendsByUser <- futureMutualFriendsByUser
           friends <- futureFriends
           users <- futureUsers
+          organizations <- futureOrganizations
         } yield {
           Json.obj(
             "context" -> IdFilterCompressor.fromSetToBase64(userSearchResult.idFilter),
@@ -195,7 +197,8 @@ class MobileSearchController @Inject() (
                 relevantLibraryRecordsAndVisibility.get(libraryId).map {
                   case (record, visibility, _) =>
                     val owner = users(record.ownerId)
-                    val library = makeBasicLibrary(record, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
+                    val organization = record.orgId.map(organizations(_))
+                    val library = makeBasicLibrary(record, visibility, owner, organization)
                     Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "visibility" -> library.visibility)
                 }
               }
