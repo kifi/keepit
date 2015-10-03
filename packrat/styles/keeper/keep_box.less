@@ -633,6 +633,10 @@
   text-align: center;
   cursor: pointer;
 
+  [disabled] ~ span {
+    cursor: no-drop;
+  }
+
   &.kifi-keep-box-new-lib-visibility-item-no-orgs:hover [disabled] ~ .kifi-keep-box-new-lib-visibility-label {
     text-decoration: underline !important;
     color: #7daff1;
@@ -640,6 +644,9 @@
 }
 
 .kifi-keep-box-new-lib-visibility-label {
+  display: inline-block;
+  width: 100%;
+  height: 30px;
   transition: color .3s ease-out;
 
   :checked ~ & {
@@ -694,7 +701,8 @@
   width: 25px;
   height: 35px;
   margin: 0 auto;
-  background-size: initial;
+  padding: 0 32px;
+  background-size: 65% 65%!important;
 
   [disabled] ~ & {
     opacity: .15;
