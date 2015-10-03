@@ -42,7 +42,7 @@ object Path {
   def alreadyEncoded(value: String): EncodedPath = new EncodedPath(URLDecoder.decode(value, UTF8))
 
   implicit val format: Format[Path] = Format(
-    __.read[String].map(str => alreadyEncoded(str.substring(base.length))),
+    __.read[String].map(str => str.substring(base.length)),
     Writes(path => JsString(path.absolute))
   )
 
