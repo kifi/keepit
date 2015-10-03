@@ -169,6 +169,9 @@ function amplitudeEvent(mixpanelEvent, insertId) {
     event[amplitudeKey] = mixpanelEvent.properties[mixpanelKey];
   });
 
+  // copy the system "os" property to also be an event property
+  event.event_properties.operating_system = mixpanelEvent.properties.os;
+
   // amplitude will automatically dedupe events with the same insert_id:
   //   "a unique identifier for the event being inserted; we will deduplicate
   //    events with the same insert_id sent within 24 hours of each other"
