@@ -43,7 +43,7 @@ object Path {
 
   implicit val format: Format[Path] = Format(
     __.read[String].map(str => alreadyEncoded(str.substring(base.length))),
-    Writes(path => JsString(path.encode.absolute))
+    Writes(path => JsString(path.absolute))
   )
 
   implicit val encodedFormat: Format[EncodedPath] = Format(
