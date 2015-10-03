@@ -170,7 +170,9 @@ function amplitudeEvent(mixpanelEvent, insertId) {
   });
 
   // copy the system "os" property to also be an event property
-  event.event_properties.operating_system = mixpanelEvent.properties.os;
+  if (mixpanelEvent.properties.os) {
+    event.event_properties.operating_system = mixpanelEvent.properties.os;
+  }
 
   // amplitude will automatically dedupe events with the same insert_id:
   //   "a unique identifier for the event being inserted; we will deduplicate
@@ -200,6 +202,8 @@ function modifyViewedPageOrPaneEvent(mixpanelEvent, amplitudeEvent) {
     amplitudeEvent.event_properties.type = 'settings';
   } else if (typeProperty === '/tags/manage') {
     amplitudeEvent.event_properties.type = 'manageTags';
+  } else if (_.startsWith(typeProperty, '/?m=0')) {
+    amplitudeEvent.event_properties.type = 'home_feed:successful_signup';
   }
 
   if (amplitudeEvent.event_type.indexOf('user_') === 0) {
@@ -286,7 +290,7 @@ function sendAmplitudeEvent(event) {
 
 function fakeApiWorker(task, done) {
   setTimeout(function() {
-    done(null, task.event);
+    done(null, {event: task.event});
   }, 2);
 }
 

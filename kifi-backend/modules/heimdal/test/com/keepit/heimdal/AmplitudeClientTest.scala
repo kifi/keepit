@@ -42,7 +42,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val amplitude = inject[AmplitudeClient]
       val now = currentDateTime
 
-      val userKept = new UserEvent(testUserId, heimdalContext(), UserEventTypes.KEPT, now)
+      val userKept = new UserEvent(testUserId, heimdalContext("os" -> ContextStringData("Windows 95")), UserEventTypes.KEPT, now)
       val userRecoAction = new UserEvent(testUserId, heimdalContext(), UserEventTypes.RECOMMENDATION_USER_ACTION, now)
       val userUsedKifi = new UserEvent(testUserId, heimdalContext(), UserEventTypes.USED_KIFI, now)
       val nonUserMessaged: NonUserEvent = new NonUserEvent("foo@bar.com", NonUserKinds.email, heimdalContext(), NonUserEventTypes.MESSAGED)
@@ -55,6 +55,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val userViewedPane = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("libraryChooser")), UserEventTypes.VIEWED_PANE, now)
       val userViewedPage1 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/josh")), UserEventTypes.VIEWED_PAGE, now)
       val userViewedPage2 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/settings")), UserEventTypes.VIEWED_PAGE, now)
+      val userViewedPage3 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/?m=0")), UserEventTypes.VIEWED_PAGE, now)
 
       val visitorViewedPane1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("login")), UserEventTypes.VIEWED_PANE, now)
       val visitorViewedPage1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("signupLibrary")), UserEventTypes.VIEWED_PAGE, now)
@@ -66,6 +67,8 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
           case dat: AmplitudeEventSent =>
             dat.eventData \\ "installation_id" === Seq(JsString("123"))
             dat.eventData \\ "created_at" === Seq(JsString("2015-06-22T06:59:01"))
+            dat.eventData \ "os_name" === JsString("Windows 95")
+            dat.eventData \\ "operating_system" === Seq(JsString("Windows 95"))
         },
         amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
         amplitude.track(userRecoAction) map { case _: AmplitudeEventSkipped => () },
@@ -120,7 +123,11 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
             dat.eventData \\ "type" === Seq(JsString("signupLibrary"))
         },
         amplitude.track(userViewedPage1) map { case _: AmplitudeEventSkipped => () },
-        amplitude.track(userViewedPage2) map { case _: AmplitudeEventSent => () }
+        amplitude.track(userViewedPage2) map { case _: AmplitudeEventSent => () },
+        amplitude.track(userViewedPage3) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \\ "type" === Seq(JsString("home_feed:successful_signup"))
+        }
       )
 
       val eventsF = Future.sequence(eventsFList)
