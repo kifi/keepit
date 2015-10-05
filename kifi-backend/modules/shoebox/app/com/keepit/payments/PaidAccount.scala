@@ -27,7 +27,7 @@ object DollarAmount {
 @json
 case class SimpleAccountContactInfo(who: BasicUser, enabled: Boolean)
 
-case class PaidAccount(
+private[payments] case class PaidAccount(
     id: Option[Id[PaidAccount]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
