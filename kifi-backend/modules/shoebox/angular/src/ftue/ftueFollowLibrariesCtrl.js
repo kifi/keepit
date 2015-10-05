@@ -42,9 +42,6 @@ angular.module('kifi')
         $state.go('home.feed');
       };
 
-      $scope.test = function() {
-
-      }
 
       $scope.onClickedFollowBtn = function () {
 
