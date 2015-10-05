@@ -230,12 +230,12 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val htmlBody = mail.htmlBody.value
         htmlBody must contain("Hi Jane")
         htmlBody must contain("Homer Simpson just joined")
-        htmlBody must contain(s"""/redir?data={"t":"us","uid":"${user1.externalId}"}""")
+        htmlBody must contain("/homer?intent=connect")
 
         val textBody = mail.textBody.get.value
         textBody must contain("Hi Jane")
         textBody must contain("Homer Simpson just joined")
-        htmlBody must contain(s"""/redir?data={"t":"us","uid":"${user1.externalId}"}""")
+        textBody must contain("/homer?intent=connect")
 
         NotificationCategory.fromElectronicMailCategory(mail.category) === NotificationCategory.User.CONTACT_JOINED
       }

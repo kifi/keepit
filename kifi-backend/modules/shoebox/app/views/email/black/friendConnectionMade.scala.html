@@ -26,7 +26,7 @@
       <table width="100%" border="0" cellspacing="0" cellpadding="0" align="left">
         <tr>
           <td valign="top" align="center" class="img-50">
-            <a href="@profileLink(otherUserId, "friendConnectionMade")"><img src="@avatarUrl(otherUserId)" alt="@fullName(otherUserId)" width="73" height="73" style="display:block;" border="0"/></a>
+            <a href="@profileUrl(otherUserId, "friendConnectionMade")"><img src="@avatarUrl(otherUserId)" alt="@fullName(otherUserId)" width="73" height="73" style="display:block;" border="0"/></a>
           </td>
           <td width="39">&nbsp;</td>
           <td align="left" valign="top">
@@ -38,7 +38,7 @@
               <tr>
                 <td align="left">
                   @email.tags.roundedContainer(150, 40, 8, "#41c381", "left") {
-                    <a href="@profileLink(otherUserId, "friendConnectionMade")" style="font:bold 16px/26px Arial,sans-serif;color:#fff;text-decoration:none;display:block">View Profile</a>
+                    <a href="@profileUrl(otherUserId, "friendConnectionMade")" style="font:bold 16px/26px Arial,sans-serif;color:#fff;text-decoration:none;display:block">View Profile</a>
                   }
                 </td>
               </tr>
