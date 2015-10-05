@@ -108,6 +108,56 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
     }
 
+<<<<<<< HEAD
+=======
+    "modify an organization" in {
+      "handle modify permissions correctly" in {
+        withDb(modules: _*) { implicit injector =>
+          val orgRepo = inject[OrganizationRepo]
+          val orgCommander = inject[OrganizationCommander]
+          val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
+          val users = db.readWrite { implicit session =>
+            PaidPlanFactory.paidPlan().saved
+            UserFactory.users(3).saved
+          }
+
+          val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
+          val createResponse = orgCommander.createOrganization(createRequest)
+          createResponse must beRight
+          val org = createResponse.right.get.newOrg
+
+          db.readWrite { implicit session =>
+            orgMembershipRepo.save(org.newMembership(userId = users(1).id.get, role = OrganizationRole.MEMBER))
+          }
+
+          // Random non-members shouldn't be able to modify the org
+          val nonmemberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(2).id.get,
+            modifications = OrganizationModifications(name = Some("User 42 Rules!")))
+          val nonmemberModifyResponse = orgCommander.modifyOrganization(nonmemberModifyRequest)
+          nonmemberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+          // Neither should a generic member
+          val memberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(1).id.get,
+            modifications = OrganizationModifications(name = Some("User 2 Rules!")))
+          val memberModifyResponse = orgCommander.modifyOrganization(memberModifyRequest)
+          memberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+          // An owner can do whatever they want
+          val ownerModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
+            modifications = OrganizationModifications(name = Some("The view is nice from up here"), site = Some("www.kifi.com")))
+          val ownerModifyResponse = orgCommander.modifyOrganization(ownerModifyRequest)
+          ownerModifyResponse must beRight
+          ownerModifyResponse.right.get.request === ownerModifyRequest
+          ownerModifyResponse.right.get.modifiedOrg.name === "The view is nice from up here"
+          ownerModifyResponse.right.get.modifiedOrg.site.get === "www.kifi.com"
+
+          db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === ownerModifyResponse.right.get.modifiedOrg
+        }
+      }
+    }
+
+>>>>>>> parent of b1afbcf... Revert "org invites are valid even after the inviter leaves or loses permissions"
     "delete an organization" in {
       "handle permissions correctly" in {
         withDb(modules: _*) { implicit injector =>
