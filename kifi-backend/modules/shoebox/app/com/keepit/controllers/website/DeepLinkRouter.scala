@@ -20,8 +20,6 @@ class DeepLinkRouter @Inject() (
 
   def generateRedirectUrl(data: JsObject): Option[Path] = {
     (data \ "t").as[String] match {
-      // TODO(ryan): I think all of these should be added
-      // START_LIST
       case "vh" => Some(Path("")) // view home
       case "vf" => Some(Path("friends")) // view friends
       case "il" => Some(Path("/me/libraries/invited")) // view invited libraries
@@ -29,8 +27,6 @@ class DeepLinkRouter @Inject() (
         val orgIdOpt = (data \ "oid").asOpt[PublicId[Organization]].flatMap(pubId => Organization.decodePublicId(pubId).toOption)
         val orgOpt = orgIdOpt.map { orgId => db.readOnlyReplica { implicit session => orgRepo.get(orgId) } }
         orgOpt.map(org => pathCommander.pathForOrganization(org))
-      // END_LIST
-
       case "fr" => Some(Path("friends/requests"))
       case "lr" | "li" | "lg" =>
         val libIdOpt = (data \ "lid").asOpt[PublicId[Library]].flatMap(pubId => Library.decodePublicId(pubId).toOption)

@@ -74,7 +74,7 @@ class FriendRecommendationsEmailTipTest extends Specification with ShoeboxTestIn
 
         // Friend Recommendations
         friends.slice(1, 4).foreach { user =>
-          html must contain(s"""<%kf% ["profileUrl",${user.id.get}] %kf%>?intent=connect""")
+          html must contain(s"""{"t":"us","uid":<%kf% ["userExternalId",${user.id.get}] %kf%>""")
         }
         // b/c user doesn't have an avatar
         html must not contain friends(0).externalId.toString

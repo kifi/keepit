@@ -2,7 +2,7 @@
 @import com.keepit.common.mail.template.helpers._
 @import play.api.libs.json._
 
-@homeUrl = @{deepLink(Json.obj("t" -> "h"), "kifiHome", false)}
+@homeUrl = @{kifiUrl("kifiHome")}
 @howKifiWorksUrl = @{htmlUrl("https://www.kifi.com/how_it_works?", "howKifiWorks", false)}
 @eishayKifiUrl = @{profileUrl(Id[User](1), "eishayProf")}
 
