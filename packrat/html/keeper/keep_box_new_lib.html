@@ -26,18 +26,24 @@
   <div class="kifi-keep-box-new-lib-visibility{{#secret}} kifi-secret{{/secret}}{{#organization}} kifi-organization{{/organization}}">
     <label class="kifi-keep-box-new-lib-visibility-item">
       <input name="kifi-visibility" type="radio" value="published"/>
-      <span class="kifi-keep-box-globe-icon"></span>
-      <span class="kifi-keep-box-new-lib-visibility-label">Public</span>
+      <div class="kifi-keep-box-new-lib-visibility-item-visual">
+        <span class="kifi-keep-box-globe-icon"></span>
+        <span class="kifi-keep-box-new-lib-visibility-label">Public</span>
+      </div>
     </label>
     <label class="kifi-keep-box-new-lib-visibility-item">
       <input name="kifi-visibility" type="radio" value="organization" {{^organizations.0}}disabled{{/organizations.0}}/>
-      <span class="kifi-keep-box-org-icon"></span>
-      <span class="kifi-keep-box-new-lib-visibility-label">Team</span>
+      <div class="kifi-keep-box-new-lib-visibility-item-visual">
+        <span class="kifi-keep-box-org-icon"></span>
+        <span class="kifi-keep-box-new-lib-visibility-label">Team</span>
+      </div>
     </label>
     <label class="kifi-keep-box-new-lib-visibility-item">
+      <div class="kifi-keep-box-new-lib-visibility-item-visual">
       <input name="kifi-visibility" type="radio" value="secret"/>
-      <span class="kifi-keep-box-lock-icon"></span>
-      <span class="kifi-keep-box-new-lib-visibility-label">Private</span>
+        <span class="kifi-keep-box-lock-icon"></span>
+        <span class="kifi-keep-box-new-lib-visibility-label">Private</span>
+      </div>
     </label>
     <div class="kifi-keep-box-new-lib-visibility-descriptions">
       <p class="kifi-keep-box-new-lib-visibility-description kifi-published">Anyone can see and follow this library.</p>

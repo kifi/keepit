@@ -606,7 +606,10 @@
   input {
     position: absolute; // take it out of the flow
   }
+}
 
+.kifi-keep-box-new-lib-visibility-item-visual,
+.kifi-keep-box-new-lib-location-item {
   &.kifi-selected,
   &:hover{
     background-color: #e8e8e8;
@@ -629,29 +632,38 @@
   float: left;
   width: 33.333333333%;
   height: 65px;
-  padding: 5px;
   text-align: center;
-  cursor: pointer;
 
-  [disabled] ~ span {
-    cursor: no-drop;
-  }
-
-  &.kifi-keep-box-new-lib-visibility-item-no-orgs:hover [disabled] ~ .kifi-keep-box-new-lib-visibility-label {
+  &.kifi-keep-box-new-lib-visibility-item-no-orgs:hover [disabled] ~ .kifi-keep-box-new-lib-visibility-item-visual .kifi-keep-box-new-lib-visibility-label {
     text-decoration: underline !important;
     color: #7daff1;
   }
 }
 
-.kifi-keep-box-new-lib-visibility-label {
-  display: inline-block;
+.kifi-keep-box-new-lib-visibility-item-visual {
+  box-sizing: border-box;
   width: 100%;
-  height: 30px;
-  transition: color .3s ease-out;
+  height: 100%;
+  padding: 5px;
+  cursor: pointer;
 
   :checked ~ & {
     font-weight: bold;
   }
+
+  [disabled] ~ & {
+    background: 0;
+    cursor: no-drop;
+
+    &:active {
+      background: 0;
+    }
+  }
+}
+
+.kifi-keep-box-new-lib-visibility-label {
+  display: inline-block;
+  transition: color .3s ease-out;
 }
 
 .kifi-keep-box-new-lib-visibility-descriptions {
@@ -701,13 +713,13 @@
   width: 25px;
   height: 35px;
   margin: 0 auto;
-  padding: 0 32px;
-  background-size: 65% 65%!important;
+  background-size: initial;
 
-  [disabled] ~ & {
+  [disabled] ~ .kifi-keep-box-new-lib-visibility-item-visual & {
     opacity: .15;
   }
 }
+
 .kifi-keep-box-lock-icon {
   @vis-color: #f06463;
   @lock-url: %(@svgLibCardLockDataUrl, #000);
@@ -715,7 +727,7 @@
   width: 15px;
   background: url(@lock-url) center no-repeat;
 
-  :checked ~ & {
+  :checked ~ .kifi-keep-box-new-lib-visibility-item-visual & {
     background: url(@lock-selected-url) center no-repeat;
 
     & + span {
@@ -729,7 +741,7 @@
   @org-selected-url: %(@svgLibCardOrgPrivateDataUrl, #daa520);
   background: url(@org-url) center no-repeat;
 
-  :checked ~ & {
+  :checked ~ .kifi-keep-box-new-lib-visibility-item-visual & {
     background: url(@org-selected-url) center no-repeat;
 
     & + span {
@@ -743,7 +755,7 @@
   @globe-selected-url: %(@svgLibCardGlobeDataUrl, #56b263);
   background: url(@globe-url) center no-repeat;
 
-  :checked ~ & {
+  :checked ~ .kifi-keep-box-new-lib-visibility-item-visual & {
     background: url(@globe-selected-url) center no-repeat;
 
     & + span {
