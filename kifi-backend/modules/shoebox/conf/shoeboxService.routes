@@ -465,9 +465,6 @@ GET     /site/libraries/:ids/images         @com.keepit.controllers.website.Libr
 GET     /site/libraries/recos/top           @com.keepit.controllers.website.LibraryRecommendationsController.topLibRecos()
 POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
-GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
-POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
-
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 POST    /site/user/me/username      @com.keepit.controllers.website.UserController.updateUsername()
@@ -1082,6 +1079,9 @@ GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRoute
 GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:handle/members           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/settings          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/plan     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/contacts @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/export   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
