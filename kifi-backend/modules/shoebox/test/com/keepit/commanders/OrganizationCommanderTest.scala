@@ -108,8 +108,6 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
     }
 
-<<<<<<< HEAD
-=======
     "modify an organization" in {
       "handle modify permissions correctly" in {
         withDb(modules: _*) { implicit injector =>
@@ -157,7 +155,6 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
       }
     }
 
->>>>>>> parent of b1afbcf... Revert "org invites are valid even after the inviter leaves or loses permissions"
     "delete an organization" in {
       "handle permissions correctly" in {
         withDb(modules: _*) { implicit injector =>

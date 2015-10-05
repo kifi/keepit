@@ -224,22 +224,11 @@ class OrganizationInviteControllerTest extends Specification with ShoeboxTestInj
           val owner = UserFactory.user().saved
           val inviter = UserFactory.user().saved
           userEmailAddressCommander.intern(inviter.id.get, EmailAddress("inviter@kifi.com")).get
-<<<<<<< HEAD
-          val cannot_invite = UserFactory.user().saved
-          val not_a_member = UserFactory.user().saved
-          val org = OrganizationFactory.organization().withOwner(owner).withAdmins(Seq(inviter)).withMembers(Seq(cannot_invite)).withWeakMembers().saved
-          (org, owner, inviter, cannot_invite, not_a_member)
-=======
           val cannotInvite = UserFactory.user().saved
           val notAMember = UserFactory.user().saved
           val notAMember2 = UserFactory.user().saved
-          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter, cannotInvite)).withWeakMembers().saved
-
-          val inviterMembership = inject[OrganizationMembershipRepo].getByOrgIdAndUserId(org.id.get, inviter.id.get).get
-          inject[OrganizationMembershipRepo].save(inviterMembership.withPermissions(Set(OrganizationPermission.INVITE_MEMBERS, OrganizationPermission.VIEW_ORGANIZATION)))
-
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(cannotInvite)).withAdmins(Seq(inviter)).withWeakMembers().saved
           (org, owner, inviter, cannotInvite, notAMember, notAMember2)
->>>>>>> parent of b1afbcf... Revert "org invites are valid even after the inviter leaves or loses permissions"
         }
       }
 
