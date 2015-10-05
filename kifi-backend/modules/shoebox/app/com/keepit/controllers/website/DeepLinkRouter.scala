@@ -23,12 +23,12 @@ class DeepLinkRouter @Inject() (
       case "vh" => Some(Path("")) // view home
       case "vf" => Some(Path("friends")) // view friends
       case "il" => Some(Path("/me/libraries/invited")) // view invited libraries
+      case "fr" => Some(Path("friends/requests"))
       case "oi" => // org invite
         val orgIdOpt = (data \ "oid").asOpt[PublicId[Organization]].flatMap(pubId => Organization.decodePublicId(pubId).toOption)
         val orgOpt = orgIdOpt.map { orgId => db.readOnlyReplica { implicit session => orgRepo.get(orgId) } }
         orgOpt.map(org => pathCommander.pathForOrganization(org))
-      case "fr" => Some(Path("friends/requests"))
-      case "lr" | "li" | "lg" =>
+      case "lr" | "li" | "lv" =>
         val libIdOpt = (data \ "lid").asOpt[PublicId[Library]].flatMap(pubId => Library.decodePublicId(pubId).toOption)
         val libOpt = libIdOpt.map { libId => db.readOnlyReplica { implicit session => libraryRepo.get(libId) } }
         libOpt.map(lib => pathCommander.pathForLibrary(lib))
