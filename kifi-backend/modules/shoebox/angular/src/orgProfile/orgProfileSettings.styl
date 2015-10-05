@@ -2,16 +2,6 @@
   padding-top: 35px
   text-align: left
 
-  // Prevent the fixed header from covering up any #anchored headings.
-  // via https://css-tricks.com/hash-tag-links-padding/
-  h1,h2,h3,h4
-    &[id]:before
-      display: block
-      content: " "
-      margin-top: -60px
-      height: 60px
-      visibility: hidden
-
   .kf-ops-row
     flex-direction: column
 

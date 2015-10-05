@@ -9,7 +9,7 @@ angular.module('kifi')
             billingService, messageTicker, ORG_SETTING_VALUE) {
     $scope.settingsSectionTemplateData = [
       {
-        heading: '',
+        heading: 'Team Settings',
         fields: [
           {
             title: 'Who can change team settings?',
@@ -182,5 +182,7 @@ angular.module('kifi')
         $scope.billingState = stateData;
       });
     }
+
+    $scope.kifiAdmin = (profileService.me.experiments.indexOf('admin') !== -1);
   }
 ]);
