@@ -440,7 +440,8 @@ var api = (function createApi() {
         log('#a80', '[inject] %i fail', page.id, err.message);
         if (err.message === 'The tab was closed.' ||
             err.message === 'The extensions gallery cannot be scripted.' ||
-            err.message === 'Cannot access a chrome:// URL') {
+            err.message === 'Cannot access a chrome:// URL' ||
+            err.message.indexOf('Cannot access contents of url') === 0) {
           injected = {};
           done();
         } else {  // tab closed?
