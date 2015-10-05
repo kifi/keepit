@@ -517,10 +517,10 @@ k.keepBox = k.keepBox || (function () {
         var teamId = $box.find('[name="kifi-location"]:checked').val();
         var team = $box.data('organizations').filter(idIs(teamId)).pop();
         var teamName = (team && team.name) || 'Your team';
-        title = 'Disabled';
-        message = teamName + ' has disabled<br />publicly visible libraries.';
+        title = 'Not applicable';
+        message = teamName + ' has disabled creation of<br />publicly visible libraries.';
       } else if ($this.find('[disabled][value="organization"]').length === 1) {
-        title = 'Disabled';
+        title = 'Not applicable';
         message = 'Select a team to create<br />a team visible library.';
       } else {
         return;
