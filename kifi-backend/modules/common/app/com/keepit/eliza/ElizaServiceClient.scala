@@ -97,6 +97,8 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUser(userId: Id[User], data: JsArray): Future[Unit]
   def sendToAllUsers(data: JsArray): Unit
 
+  def flush(userId: Id[User]): Future[Unit]
+
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int]
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean = false): Future[Int]
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean = false): Future[Int]
@@ -146,7 +148,6 @@ class ElizaServiceClientImpl @Inject() (
     extends ElizaServiceClient with Logging {
 
   def sendUserPushNotification(userId: Id[User], message: String, recipient: User, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
-    implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "message" -> message, "recipientId" -> recipient.externalId, "username" -> recipient.username.value, "pictureUrl" -> Json.toJson(recipient.pictureName.getOrElse(S3UserPictureConfig.defaultName)), "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name)
     call(Eliza.internal.sendUserPushNotification(), payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
@@ -154,8 +155,6 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean = false): Future[Int] = {
-    implicit val userFormatter = Id.format[User]
-    implicit val libraryFormatter = Id.format[Library]
     val payload = Json.obj("userId" -> userId, "message" -> message, "libraryId" -> libraryId, "libraryUrl" -> libraryUrl, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name, "force" -> force)
     call(Eliza.internal.sendLibraryPushNotification, payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
@@ -163,7 +162,6 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean = false): Future[Int] = {
-    implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "message" -> message, "pushNotificationExperiment" -> pushNotificationExperiment, "category" -> category.name, "force" -> force)
     call(Eliza.internal.sendGeneralPushNotification, payload, callTimeouts = longTimeout).map { response =>
       response.body.toInt
@@ -175,19 +173,22 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit] = {
-    implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "data" -> data)
     Future.sequence(broadcast(Eliza.internal.sendToUserNoBroadcast, payload).values).map(_ => ())
   }
 
   def sendToUser(userId: Id[User], data: JsArray): Future[Unit] = {
-    implicit val userFormatter = Id.format[User]
     val payload = Json.obj("userId" -> userId, "data" -> data)
     call(Eliza.internal.sendToUser, payload).map(_ => ())
   }
 
   def sendToAllUsers(data: JsArray): Unit = {
     broadcast(Eliza.internal.sendToAllUsers, data)
+  }
+
+  def flush(userId: Id[User]): Future[Unit] = {
+    val payload = Json.obj("userId" -> userId, "data" -> Json.arr("flush"))
+    call(Eliza.internal.sendToUser, payload).map(_ => ())
   }
 
   def connectedClientCount: Future[Seq[Int]] = {
