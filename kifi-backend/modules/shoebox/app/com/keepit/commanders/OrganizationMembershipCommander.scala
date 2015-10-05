@@ -191,7 +191,6 @@ class OrganizationMembershipCommanderImpl @Inject() (
     val requesterPermissions = permissionCommander.getOrganizationPermissions(request.orgId, Some(request.requesterId))
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
-<<<<<<< HEAD
     requesterOpt match {
       case None => Some(OrganizationFail.NOT_A_MEMBER)
       case Some(requester) =>
@@ -215,30 +214,6 @@ class OrganizationMembershipCommanderImpl @Inject() (
             if (!(requesterIsOwner || requesterRemovingSelf || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
             else None
         }
-=======
-    (requesterOpt, request) match {
-
-      case (_, OrganizationMembershipAddRequest(_, _, _, _)) =>
-        // we validate requester membership and permissions upon invite creation, and these invites remain valid despite future changes
-        // if this.addMembership is ever called outside of an "invite sent -> invite accepted" context, we  need to add special validation for those requests
-        if (targetOpt.isDefined) Some(OrganizationFail.ALREADY_A_MEMBER)
-        else None
-
-      case (Some(requester), OrganizationMembershipModifyRequest(_, _, _, newRole)) =>
-        val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
-        val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(MODIFY_MEMBERS)
-        if (!(requesterIsOwner || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        else None
-
-      case (Some(requester), OrganizationMembershipRemoveRequest(_, _, _)) =>
-        val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
-        val requesterRemovingSelf = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
-        val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requester.permissions.contains(REMOVE_MEMBERS)
-        if (!(requesterIsOwner || requesterRemovingSelf || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        else None
-
-      case (None, _) => Some(OrganizationFail.NOT_A_MEMBER)
->>>>>>> parent of b1afbcf... Revert "org invites are valid even after the inviter leaves or loses permissions"
     }
   }
 
