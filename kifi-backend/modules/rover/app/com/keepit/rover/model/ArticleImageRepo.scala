@@ -87,12 +87,12 @@ class ArticleImageRepoImpl @Inject() (
 
   def intern[A <: Article](url: String, uriId: Id[NormalizedURI], kind: ArticleKind[A], imageHash: ImageHash, imageUrl: String, version: ArticleVersion)(implicit session: RWSession): ArticleImage = {
     getByUrlAndKindAndImageHash(url, kind, imageHash) match {
-      case Some(existingImage) => {
-        val updatedImage = existingImage.copy(state = ArticleImageStates.ACTIVE, imageUrl = imageUrl, version = version, fetchedAt = currentDateTime)
+      case Some(existingImage) if existingImage.isActive => {
+        val updatedImage = existingImage.copy(imageUrl = imageUrl, version = version, fetchedAt = currentDateTime)
         save(updatedImage)
       }
-      case None => {
-        val newImage = ArticleImage(url, uriId, kind, version, imageUrl, imageHash)
+      case inactiveImageOpt => {
+        val newImage = ArticleImage(url, uriId, kind, version, imageUrl, imageHash).copy(id = inactiveImageOpt.flatMap(_.id))
         save(newImage)
       }
     }

@@ -23,13 +23,8 @@ class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImag
               articleInfoRepo.save(articleInfo.copy(uriId = uriId))
             }
           }
-
-          case Some(inactiveArticleInfo) => {
-            val reactivatedInfo = inactiveArticleInfo.clean.copy(state = ArticleInfoStates.ACTIVE, uriId = uriId).initializeSchedulingPolicy
-            articleInfoRepo.save(reactivatedInfo)
-          }
-          case None => {
-            val newInfo = RoverArticleInfo.initialize(uriId, url, kind)
+          case inactiveArticleInfoOpt => {
+            val newInfo = RoverArticleInfo.initialize(uriId, url, kind).copy(id = inactiveArticleInfoOpt.flatMap(_.id))
             articleInfoRepo.save(newInfo)
           }
         }
