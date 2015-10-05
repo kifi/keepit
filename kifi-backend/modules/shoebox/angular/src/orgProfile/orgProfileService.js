@@ -20,10 +20,10 @@ angular.module('kifi')
 })
 
 .constant('ORG_SETTING_VALUE', {
-  ADMIN: 'admin',
-  MEMBER: 'member',
-  ANYONE: 'anyone',
-  DISABLED: 'disabled'
+  DISABLED: 'disabled',
+  ADMIN: 'admins',
+  MEMBER: 'members',
+  ANYONE: 'anyone'
 })
 
 .factory('orgProfileService', [
@@ -81,6 +81,8 @@ angular.module('kifi')
       setOrgSettings: function(orgId, data) {
         return net.setOrgSettings(orgId, data).then(function (response) {
           net.getOrgSettings.clearCache();
+          invalidateOrgProfileCache();
+
           return response.data;
         });
       },

@@ -18,7 +18,7 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.TemplateOptions._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
-import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
+import com.keepit.eliza.{ OrgPushNotificationRequest, OrgPushNotificationCategory, SimplePushNotificationCategory, ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
@@ -51,6 +51,7 @@ trait OrganizationInviteCommander {
 class OrganizationInviteCommanderImpl @Inject() (db: Database,
     airbrake: AirbrakeNotifier,
     organizationRepo: OrganizationRepo,
+    permissionCommander: PermissionCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     organizationInviteRepo: OrganizationInviteRepo,
@@ -75,11 +76,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
     val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
 
-    val validateRequester = requesterOpt match {
-      case None => Some(OrganizationFail.NOT_A_MEMBER)
-      case Some(membership) if !membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) => Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-      case _ => None
-    }
+    val validateRequester = if (!permissionCommander.getOrganizationPermissions(request.orgId, Some(request.requesterId)).contains(OrganizationPermission.INVITE_MEMBERS)) {
+      Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+    } else None
 
     validateRequester match {
       case Some(invalidRequester) => Some(invalidRequester)
@@ -105,10 +104,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def inviteToOrganization(orgInvite: OrganizationInviteSendRequest)(implicit eventContext: HeimdalContext): Future[Either[OrganizationFail, Set[Either[BasicUser, RichContact]]]] = {
     val OrganizationInviteSendRequest(orgId, inviterId, inviteeAddresses, inviteeUserIds, message) = orgInvite
-
-    val inviterMembershipOpt = db.readOnlyMaster { implicit session =>
-      organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
-    }
 
     val failOpt = db.readOnlyReplica { implicit session => getValidationError(orgInvite) }
 
@@ -227,16 +222,22 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def notifyInviteeAboutInvitationToJoinOrganization(org: Organization, orgOwner: BasicUser, inviter: User, invitees: Set[Id[User]]) {
-    invitees.foreach { invitee =>
+    invitees.foreach { inviteeId =>
       elizaClient.sendNotificationEvent(OrgNewInvite(
-        Recipient(invitee),
+        Recipient(inviteeId),
         currentDateTime,
         inviter.id.get,
         org.id.get
       ))
+      val basicInvitee = db.readOnlyReplica { implicit s => basicUserRepo.load(inviteeId) }
+      val request = OrgPushNotificationRequest(
+        userId = inviteeId,
+        message = s"${basicInvitee.fullName}, please join our ${org.name} team on Kifi!",
+        pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+        category = OrgPushNotificationCategory.OrganizationInvitation
+      )
+      elizaClient.sendOrgPushNotification(request)
     }
-
-    // TODO: handle push notifications to mobile.
   }
 
   def authorizeInvitation(orgId: Id[Organization], userId: Id[User], authToken: String)(implicit session: RSession): Boolean = {
@@ -308,11 +309,20 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def notifyInviterOnOrganizationInvitationAcceptance(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
-    val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val orgImageOpt = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ProcessedImageSize.Medium.idealSize)
     invitesToAlert foreach { invite =>
       val title = s"${invitee.firstName} accepted your invitation to join ${org.abbreviatedName}!"
       val inviterId = invite.inviterId
+
+      invite.userId.foreach { inviteeId =>
+        elizaClient.sendNotificationEvent(
+          OrgInviteAccepted(
+            recipient = Recipient(inviterId),
+            time = currentDateTime,
+            accepterId = inviteeId,
+            invite.organizationId)
+        )
+      }
+
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(inviterId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
         elizaClient.sendUserPushNotification(
@@ -334,16 +344,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
 
   def createGenericInvite(orgId: Id[Organization], inviterId: Id[User])(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationInvite] = {
     db.readWrite { implicit session =>
-      val membershipOpt = organizationMembershipRepo.getByOrgIdAndUserId(orgId, inviterId)
-      membershipOpt match {
-        case Some(membership) if membership.hasPermission(OrganizationPermission.INVITE_MEMBERS) =>
-          val invite = organizationInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId))
-
-          // tracking
-          organizationAnalytics.trackSentOrganizationInvites(inviterId, organizationRepo.get(orgId), Set(invite))
-          Right(invite)
-        case Some(membership) => Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        case None => Left(OrganizationFail.NOT_A_MEMBER)
+      if (!permissionCommander.getOrganizationPermissions(orgId, Some(inviterId)).contains(OrganizationPermission.INVITE_MEMBERS)) {
+        Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+      } else {
+        val invite = organizationInviteRepo.save(OrganizationInvite(organizationId = orgId, inviterId = inviterId))
+        organizationAnalytics.trackSentOrganizationInvites(inviterId, organizationRepo.get(orgId), Set(invite))
+        Right(invite)
       }
     }
   }

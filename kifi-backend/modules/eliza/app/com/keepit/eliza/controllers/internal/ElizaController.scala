@@ -19,7 +19,7 @@ import play.api.libs.json.{ JsNumber, Json, JsObject, JsArray }
 
 import com.google.inject.Inject
 import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationDeliveryCommander, ElizaStatsCommander }
-import com.keepit.eliza.model.UserThreadStats
+import com.keepit.eliza.model.{ MessageThread, UserThreadStats }
 import com.keepit.common.db.slick._
 
 class ElizaController @Inject() (
@@ -76,9 +76,16 @@ class ElizaController @Inject() (
     val message = (req \ "message").as[String]
     val category = SimplePushNotificationCategory((req \ "category").as[String])
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
-    val force = (req \ "force").asOpt[Boolean] //backward compatibility. remove option when done deploing shoebox
+    val force = (req \ "force").asOpt[Boolean] //backward compatibility. remove option when done deploying shoebox
     messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
       Ok(JsNumber(deviceCount))
+    }
+  }
+
+  def sendOrgPushNotification() = Action.async(parse.tolerantJson) { request =>
+    val pushNotifRequest = request.body.as[OrgPushNotificationRequest]
+    messagingCommander.sendOrgPushNotification(pushNotifRequest).map {
+      deviceCount => Ok(JsNumber(deviceCount))
     }
   }
 
@@ -135,6 +142,11 @@ class ElizaController @Inject() (
     val userIds = request.body.as[Set[Id[User]]]
     val totalMessages = elizaStatsCommander.getTotalMessageCountForGroup(userIds)
     Ok(Json.toJson(totalMessages))
+  }
+
+  def getParticipantsByThreadExtId(threadId: ExternalId[MessageThread]) = Action { request =>
+    val participants = elizaStatsCommander.getThreadByExtId(threadId).participants.map { _.allUsers }.getOrElse(Set.empty)
+    Ok(Json.toJson(participants))
   }
 
 }

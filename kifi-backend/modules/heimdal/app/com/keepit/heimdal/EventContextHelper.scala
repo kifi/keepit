@@ -15,6 +15,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.util.Random
 
 @ImplementedBy(classOf[EventContextHelperImpl])
 trait EventContextHelper {
@@ -23,12 +24,14 @@ trait EventContextHelper {
   def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]]
   def getOrgEventValues(orgId: Id[Organization], userId: Id[User]): Future[Seq[(String, ContextData)]]
   def getLibraryEventValues(libraryId: Id[Library], userId: Id[User]): Future[Seq[(String, ContextData)]]
+  def getOrganizationIdByExtThreadId(threadExtId: String): Future[Option[Id[Organization]]]
 }
 
 class EventContextHelperImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     orgTrackingValuesCache: OrgTrackingValuesCache,
     orgMessageCountCache: OrganizationMessageCountCache,
+    orgMemberWithMostClickedKeepsCache: OrgMemberWithMostClickedKeepsCache,
     shoebox: ShoeboxServiceClient,
     eliza: ElizaServiceClient,
     helprankCommander: HelpRankCommander,
@@ -50,12 +53,13 @@ class EventContextHelperImpl @Inject() (
 
   def getOrgUserValues(orgId: Id[Organization]): Future[Seq[(String, ContextData)]] = {
     val shoeboxValuesFut = getOrgTrackingValues(orgId)
-    val membersFut = shoebox.getOrganizationMembers(orgId)
 
-    val userWithMostClickedKeepsFut = membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
+    val userWithMostClickedKeepsFut = orgMemberWithMostClickedKeepsCache.getOrElseFuture(OrgMemberWithMostClickedKeepsKey(orgId)) {
+      val membersFut = shoebox.getOrganizationMembers(orgId)
+      membersFut.map(helprankCommander.getUserWithMostClickedKeeps)
+    }
     for {
       shoeboxValues <- shoeboxValuesFut
-      members <- membersFut
       userWithMostClickedKeeps <- userWithMostClickedKeepsFut
     } yield {
       Seq(
@@ -108,6 +112,19 @@ class EventContextHelperImpl @Inject() (
       libraryStatusOpt.map(libraryStatus => Seq(("libraryStatus", libraryStatus))).getOrElse(Seq.empty)
     }
   }
+
+  def getOrganizationIdByExtThreadId(threadExtId: String): Future[Option[Id[Organization]]] = {
+    eliza.getParticipantsByThreadExtId(threadExtId).flatMap { userIds =>
+      shoebox.getOrganizationsForUsers(userIds).map { orgsByUserId =>
+        orgsByUserId.values.reduceLeftOption[Set[Id[Organization]]] {
+          case (acc, orgSet) => acc.intersect(orgSet)
+        }.flatMap {
+          case commonOrgs if commonOrgs.nonEmpty => Some(Random.shuffle(commonOrgs).head) // track an arbitrary common org
+          case _ => None
+        }
+      }
+    }
+  }
 }
 
 case class OrganizationMessageCountKey(id: Id[Organization]) extends Key[Int] {
@@ -118,3 +135,12 @@ case class OrganizationMessageCountKey(id: Id[Organization]) extends Key[Int] {
 
 class OrganizationMessageCountCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[OrganizationMessageCountKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class OrgMemberWithMostClickedKeepsKey(id: Id[Organization]) extends Key[Option[Id[User]]] {
+  override val version = 1
+  val namespace = "org_member_most_clicked_keeps"
+  def toKey(): String = id.id.toString
+}
+
+class OrgMemberWithMostClickedKeepsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrgMemberWithMostClickedKeepsKey, Option[Id[User]]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

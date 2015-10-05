@@ -1,0 +1,45 @@
+.kf-ftue
+  display: flex
+  margin: 0 auto
+  justify-content: center
+  align-items: center
+  flex-direction: column
+  flex-flow: column-wrap
+
+  @media (min-width: appMinWidth)
+    align-items: initial
+    flex-direction: row
+    flex-flow: row wrap
+
+
+.kf-ftue-header-bar {
+  padding: 10px 0;
+  height: 46px;
+  z-index: 10002;
+  position: absolute;
+  left: 0;
+  width: 100%;
+  top: 0;
+  z-index: 500;
+  text-align: center;
+  border-bottom: 1px solid #E3E1E1;
+}
+
+.kf-ftue-header-bar .kf-ftue-header-wrapper {
+  position: relative;
+  height: 100%;
+  width: 90%;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.kifi-logo {
+  display: inline-block;
+  vertical-align: top;
+  width: 110px;
+  height: 45px;
+  background: url(/img/kifi-header-logo.png) no-repeat;
+  background-size: cover;
+}
+
+

@@ -9,8 +9,8 @@ angular.module('kifi')
             orgProfileService, originTrackingService, settings) {
     $window.document.title = profile.organization.name + ' • Kifi';
     $scope.profile = _.cloneDeep(profile.organization);
-    $scope.viewer = _.cloneDeep(profile.viewer);
-    $scope.settings = _.cloneDeep(settings);
+    $scope.viewer = profile.viewer;
+    $scope.settings = settings;
   function trackPageView(attributes) {
     var url = $analytics.settings.pageTracking.basePath + $location.url();
 

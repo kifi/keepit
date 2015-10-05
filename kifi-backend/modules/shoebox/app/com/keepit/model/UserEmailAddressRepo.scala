@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SequencingPlugin, SchedulingProperties }
+import com.keepit.social.{ UserIdentityIdentityIdKey, UserIdentityCache }
 import org.joda.time.DateTime
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
@@ -30,7 +31,8 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
 class UserEmailAddressRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    userRepo: UserRepo) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
+    userRepo: UserRepo,
+    userIdentityCache: UserIdentityCache) extends DbRepo[UserEmailAddress] with DbRepoWithDelete[UserEmailAddress] with SeqNumberDbFunction[UserEmailAddress] with UserEmailAddressRepo {
 
   import db.Driver.simple._
 
@@ -59,7 +61,9 @@ class UserEmailAddressRepoImpl @Inject() (
     super.save(toSave)
   }
 
-  override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {}
+  override def deleteCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
+    userIdentityCache.remove(UserIdentityIdentityIdKey(emailAddress.address))
+  }
   override def invalidateCache(emailAddress: UserEmailAddress)(implicit session: RSession): Unit = {
     deleteCache(emailAddress)
   }

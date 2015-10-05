@@ -309,6 +309,14 @@ angular.module('kifi')
 
         return deferred.promise;
       },
+      
+      getFtueLibraries: function () {
+        return net.getFtueLibraries();
+      },
+
+      joinLibraries: function(libraryIds) {
+        return net.joinLibraries(libraryIds);
+      },
 
       trackEvent: function (eventName, library, attributes) {
         var defaultAttributes = api.getCommonTrackingAttributes(library);

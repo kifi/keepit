@@ -285,11 +285,11 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         val interactions = Seq(
-          (UserRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY),
-          (UserRecipient(u2.id.get), UserInteraction.MESSAGE_USER),
-          (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
-          (EmailRecipient(u4), UserInteraction.INVITE_LIBRARY),
-          (EmailRecipient(u5), UserInteraction.INVITE_LIBRARY))
+          (UserInteractionRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY),
+          (UserInteractionRecipient(u2.id.get), UserInteraction.MESSAGE_USER),
+          (UserInteractionRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
+          (EmailInteractionRecipient(u4), UserInteraction.INVITE_LIBRARY),
+          (EmailInteractionRecipient(u5), UserInteraction.INVITE_LIBRARY))
         userInteractionCommander.addInteractions(u1.id.get, interactions)
 
         val abookClient = inject[ABookServiceClient].asInstanceOf[FakeABookServiceClientImpl]
@@ -325,9 +325,9 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
 
         // Make Squidward be suggested first, because of recent interactions
         val interactions2 = Seq(
-          (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
-          (UserRecipient(u3.id.get), UserInteraction.MESSAGE_USER),
-          (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY))
+          (UserInteractionRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
+          (UserInteractionRecipient(u3.id.get), UserInteraction.MESSAGE_USER),
+          (UserInteractionRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY))
         userInteractionCommander.addInteractions(u1.id.get, interactions2)
 
         val res1redux = search("s") // "one letter" -- abook skipped
@@ -363,10 +363,10 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         val interactions = Seq(
-          (UserRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY),
-          (UserRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
-          (EmailRecipient(u4), UserInteraction.INVITE_LIBRARY),
-          (EmailRecipient(u5), UserInteraction.INVITE_LIBRARY))
+          (UserInteractionRecipient(u2.id.get), UserInteraction.INVITE_LIBRARY),
+          (UserInteractionRecipient(u3.id.get), UserInteraction.INVITE_LIBRARY),
+          (EmailInteractionRecipient(u4), UserInteraction.INVITE_LIBRARY),
+          (EmailInteractionRecipient(u5), UserInteraction.INVITE_LIBRARY))
         userInteractionCommander.addInteractions(u1.id.get, interactions)
 
         val contacts = Seq(

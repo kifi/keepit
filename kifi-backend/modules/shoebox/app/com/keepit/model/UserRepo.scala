@@ -54,12 +54,14 @@ class UserRepoImpl @Inject() (
   val clock: Clock,
   val externalIdCache: UserExternalIdCache,
   val idCache: UserIdCache,
+  userIdentityCache: UserIdentityCache,
   airbrake: AirbrakeNotifier,
   basicUserCache: BasicUserUserIdCache,
   userMetadataCache: UserMetadataCache,
   usernameCache: UsernameCache,
   heimdal: HeimdalServiceClient,
-  expRepoProvider: Provider[UserExperimentRepoImpl])
+  expRepoProvider: Provider[UserExperimentRepoImpl],
+  emailRepo: Provider[UserEmailAddressRepo])
     extends DbRepo[User] with DbRepoWithDelete[User] with UserRepo with ExternalIdColumnDbFunction[User] with SeqNumberDbFunction[User] with Logging {
 
   import scala.slick.lifted.Query
@@ -152,6 +154,9 @@ class UserRepoImpl @Inject() (
         usernameCache.remove(UsernameKey(username.original))
         basicUserCache.remove(BasicUserUserIdKey(id))
       }
+      emailRepo.get().getAllByUser(id).foreach { email =>
+        userIdentityCache.remove(UserIdentityIdentityIdKey(email.address))
+      }
     }
     invalidateMixpanel(user.withState(UserStates.INACTIVE))
   }
@@ -164,6 +169,9 @@ class UserRepoImpl @Inject() (
         user.primaryUsername.foreach { username =>
           usernameCache.set(UsernameKey(username.original), user)
           basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
+        }
+        emailRepo.get().getAllByUser(id).foreach { email =>
+          userIdentityCache.remove(UserIdentityIdentityIdKey(email.address))
         }
       }
       externalIdCache.set(UserExternalIdKey(user.externalId), user)

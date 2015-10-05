@@ -122,15 +122,6 @@ case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInf
 class SocialUserInfoUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class SocialUserKey(userId: Id[User]) extends Key[Seq[SocialUser]] {
-  val namespace = "social_user_by_userid"
-  override val version = 1
-  def toKey(): String = userId.id.toString
-}
-
-class SocialUserCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SocialUserKey, Seq[SocialUser]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
   override val version = 5
   val namespace = "social_user_info_by_network_and_id"
@@ -139,15 +130,6 @@ case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId
 
 class SocialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[SocialUserInfoNetworkKey, SocialUserInfo](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
-
-case class SocialUserNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUser] {
-  override val version = 1
-  val namespace = "social_user_by_network_and_id"
-  def toKey(): String = networkType.name.toString + "_" + id.id
-}
-
-class SocialUserNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[SocialUserNetworkKey, SocialUser](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class SocialUserBasicInfoKey(id: Id[SocialUserInfo]) extends Key[SocialUserBasicInfo] {
   val namespace = "social_user_basic_info"

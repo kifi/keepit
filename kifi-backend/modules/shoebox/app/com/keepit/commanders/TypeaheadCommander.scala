@@ -367,8 +367,8 @@ class TypeaheadCommander @Inject() (
     val allRecentInteractions = interactionCommander.getRecentInteractions(userId)
     val relevantInteractions = limit.map(allRecentInteractions.take(_)) getOrElse allRecentInteractions
     val (userIds, emailAddresses) = relevantInteractions.foldLeft((Seq.empty[Id[User]], Seq.empty[EmailAddress])) {
-      case ((userIds, emailAddresses), InteractionInfo(UserRecipient(userId), _)) => (userIds :+ userId, emailAddresses)
-      case ((userIds, emailAddresses), InteractionInfo(EmailRecipient(emailAddress), _)) => (userIds, emailAddresses :+ emailAddress)
+      case ((userIds, emailAddresses), InteractionInfo(UserInteractionRecipient(userId), _)) => (userIds :+ userId, emailAddresses)
+      case ((userIds, emailAddresses), InteractionInfo(EmailInteractionRecipient(emailAddress), _)) => (userIds, emailAddresses :+ emailAddress)
     }
 
     val usersById = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(userIds.toSet) }

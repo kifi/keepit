@@ -7,20 +7,19 @@ import com.keepit.common.service.ServiceType
 import com.keepit.eliza.commanders.{ MessagingAnalytics, NotificationCommander }
 import com.keepit.eliza.model.{ MessageThread, Message }
 import com.keepit.model.NotificationCategory
-import com.keepit.notify.NotificationProcessing
-import com.keepit.notify.model.UserRecipient
+import com.keepit.notify.model.{ Recipient, GroupingNotificationKind, NKind, UserRecipient }
 import com.keepit.notify.model.event.NotificationEvent
 import play.api.libs.json.Json
 import play.api.mvc.{ Action, Controller }
 
 @Singleton
 class NotificationController @Inject() (
-    val notificationProcessing: NotificationProcessing,
+    notificationCommander: NotificationCommander,
     messagingAnalytics: MessagingAnalytics) extends ElizaServiceController {
 
   def postEvent = Action(parse.json) { implicit request =>
     val event = request.body.as[NotificationEvent]
-    val notif = notificationProcessing.processNewEvent(event)
+    val notif = notificationCommander.processNewEvent(event)
     event.recipient match {
       case UserRecipient(id, _) =>
         notif foreach { notifWithItems =>
@@ -31,9 +30,18 @@ class NotificationController @Inject() (
             NotificationCategory("new_system")
           )
         }
-
+      case _ =>
     }
     Ok(Json.toJson(notif.map(_.notification)))
+  }
+
+  def completeNotification = Action(parse.json) { implicit request =>
+    val body = request.body
+    val recipient = (body \ "recipient").as[Recipient]
+    val kind = (body \ "kind").as[NKind]
+    val groupIdentifier = (body \ "groupIdentifier").as[String]
+    val result = notificationCommander.completeNotification(kind, groupIdentifier, recipient)
+    Ok(Json.toJson(result))
   }
 
 }

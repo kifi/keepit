@@ -202,7 +202,8 @@ angular.module('kifi')
         path: library.path,
         membership: library.membership,
         modifiedAt: library.modifiedAt,
-        reason: followers.length || library.modifiedAt ? '' : 'topic'
+        reason: followers.length || library.modifiedAt ? '' : 'topic',
+        permissions: library.permissions
       };
     }
 

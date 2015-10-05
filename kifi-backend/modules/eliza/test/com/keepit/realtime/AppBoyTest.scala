@@ -8,7 +8,7 @@ import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule }
 import com.keepit.common.store.FakeElizaStoreModule
-import com.keepit.eliza.FakeElizaServiceClientModule
+import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, LibraryPushNotificationCategory, FakeElizaServiceClientModule }
 import com.keepit.eliza.model.MessageThread
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
@@ -139,7 +139,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val lib1 = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveLibraries(Library(name = "lib1", slug = LibrarySlug("lib1"), ownerId = user1.id.get, visibility = LibraryVisibility.PUBLISHED, memberCount = 1, keepCount = 0)).head
         val pubLibId1 = Library.publicId(lib1.id.get)(inject[PublicIdConfiguration])
 
-        val notification = LibraryUpdatePushNotification(unvisitedCount = 3, message = Some("pika"), libraryId = lib1.id.get, libraryUrl = LibraryPathHelper.formatLibraryPath(BasicUser.fromUser(user1), None, lib1.slug), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = null, experiment = null)
+        val notification = LibraryUpdatePushNotification(unvisitedCount = 3, message = Some("pika"), libraryId = lib1.id.get, libraryUrl = LibraryPathHelper.formatLibraryPath(BasicUser.fromUser(user1), None, lib1.slug), sound = Some(MobilePushNotifier.DefaultNotificationSound), category = LibraryPushNotificationCategory.LibraryChanged, experiment = PushNotificationExperiment.Experiment1)
         val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification, false)
         Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
@@ -189,7 +189,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
         val (user1, deviceApple, deviceAndroid) = setupData
         appBoyClient.jsons.size === 0
 
-        val notification = UserPushNotification(unvisitedCount = 3, message = Some("pika"), username = Username("joe"), userExtId = user1.externalId, pictureUrl = "http://www.asdf.com/asdfasdf", sound = None, category = null, experiment = null)
+        val notification = UserPushNotification(unvisitedCount = 3, message = Some("pika"), username = Username("joe"), userExtId = user1.externalId, pictureUrl = "http://www.asdf.com/asdfasdf", sound = None, category = UserPushNotificationCategory.ContactJoined, experiment = PushNotificationExperiment.Experiment1)
         val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification, false)
         Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1

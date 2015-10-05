@@ -2,7 +2,6 @@
   display: inline-block
   padding: 0
   border: 0
-  color: accentGreen
   background: 0
   cursor: pointer
 
@@ -11,6 +10,24 @@
 .kf-link-underline
   text-decoration: underline
 
+.kf-link-parent:hover:not(:active)
+.kf-link-underline:hover:not(:active)
+  text-decoration: none
+
 .kf-link-parent:hover:not(:active) .kf-link
 .kf-link:hover:not(:active)
-  color: lighten(accentGreen, 20%)
+  color: darken(accentGreen, 20%)
+
+kf-link-color(linkColor)
+  &.kf-link
+    color: linkColor
+
+  &.kf-link-parent:hover:not(:active) .kf-link
+  &.kf-link:hover:not(:active)
+    color: lighten(linkColor, 20%)
+
+// regular
+kf-link-color(accentGreen)
+
+.kf-link-white
+  kf-link-color(#fff)

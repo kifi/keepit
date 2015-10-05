@@ -7,6 +7,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import com.keepit.social.{ UserIdentityIdentityIdKey, UserIdentityCache }
 import securesocial.core.{ Registry, PasswordInfo }
 
 @ImplementedBy(classOf[UserCredRepoImpl])
@@ -17,7 +18,7 @@ trait UserCredRepo extends Repo[UserCred] with RepoWithDelete[UserCred] {
 }
 
 @Singleton
-class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[UserCred] with DbRepoWithDelete[UserCred] with UserCredRepo with Logging {
+class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock, emailRepo: UserEmailAddressRepo, userIdentityCache: UserIdentityCache) extends DbRepo[UserCred] with DbRepoWithDelete[UserCred] with UserCredRepo with Logging {
 
   import db.Driver.simple._
 
@@ -31,8 +32,13 @@ class UserCredRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   def table(tag: Tag) = new UserCredTable(tag)
   initTable()
 
-  override def deleteCache(model: UserCred)(implicit session: RSession): Unit = {}
-  override def invalidateCache(model: UserCred)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: UserCred)(implicit session: RSession): Unit = {
+    emailRepo.getAllByUser(model.userId).foreach { email =>
+      userIdentityCache.remove(UserIdentityIdentityIdKey(email.address))
+    }
+  }
+
+  override def invalidateCache(model: UserCred)(implicit session: RSession): Unit = deleteCache(model)
 
   def findByUserIdOpt(id: Id[User], excludeState: Option[State[UserCred]] = Some(UserCredStates.INACTIVE))(implicit session: RSession): Option[UserCred] = {
     val q = for { c <- rows if c.userId === id && c.state =!= excludeState.orNull } yield c

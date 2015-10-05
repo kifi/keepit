@@ -19,7 +19,7 @@ import com.keepit.common.store.{ S3ImageStore, ImageSize }
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.notify.NotificationInfoModel
-import com.keepit.notify.model.{ NotificationId, NotificationKind }
+import com.keepit.notify.model.{ NotificationKind }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -442,8 +442,8 @@ class ShoeboxController @Inject() (
     val interactions = request.body.as[Seq[JsValue]].map { j =>
       val interaction = UserInteraction.getAction((j \ "action").as[String])
       (j \ "user").asOpt[Id[User]] match {
-        case Some(id) => (UserRecipient(id), interaction)
-        case None => (EmailRecipient((j \ "email").as[EmailAddress]), interaction)
+        case Some(id) => (UserInteractionRecipient(id), interaction)
+        case None => (EmailInteractionRecipient((j \ "email").as[EmailAddress]), interaction)
       }
     }
     userInteractionCommander.addInteractions(userId, interactions)
@@ -556,11 +556,14 @@ class ShoeboxController @Inject() (
   }
 
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = Action { request =>
-    val (membershipOpt, candidateOpt) = db.readOnlyReplica { implicit session =>
-      (orgMembershipRepo.getByOrgIdAndUserId(orgId, userId), orgCandidateRepo.getByUserAndOrg(userId, orgId))
+    val (membershipOpt, candidateOpt, permissions) = db.readOnlyReplica { implicit session =>
+      val membershipOpt = orgMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+      val candidateOpt = orgCandidateRepo.getByUserAndOrg(userId, orgId)
+      val permissions = permissionCommander.getOrganizationPermissions(orgId, Some(userId))
+      (membershipOpt, candidateOpt, permissions)
     }
     val inviteOpt = organizationInviteCommander.getLastSentByOrganizationIdAndInviteeId(orgId, userId)
-    Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), membershipOpt.map(_.permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
+    Ok(Json.toJson(OrganizationUserRelationship(orgId, userId, membershipOpt.map(_.role), Some(permissions), inviteOpt.isDefined, candidateOpt.isDefined)))
   }
 
   def getUserPermissionsByOrgId() = Action(parse.tolerantJson) { request =>

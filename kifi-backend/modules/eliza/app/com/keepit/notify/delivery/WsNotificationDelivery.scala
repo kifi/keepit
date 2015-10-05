@@ -1,6 +1,6 @@
 package com.keepit.notify.delivery
 
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Singleton, Inject }
 import com.keepit.eliza.commanders.NotificationDeliveryCommander
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems, Notification, NotificationItem }
@@ -15,18 +15,18 @@ import play.api.libs.json.Json
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
 
+@Singleton
 class WsNotificationDelivery @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     notificationRouter: WebSocketRouter,
-    legacyNotificationCheck: LegacyNotificationCheck,
     notificationInfoGenerator: NotificationInfoGenerator,
-    elizaNotificationInfo: NotificationJsonFormat,
+    notificationJsonFormat: Provider[NotificationJsonFormat],
     implicit val executionContext: ExecutionContext) {
 
   def deliver(recipient: Recipient, notif: NotificationWithItems): Future[Unit] = {
     notificationInfoGenerator.generateInfo(Seq(notif)).flatMap { infos =>
-      elizaNotificationInfo.extendedJson(infos.head).map { notifJson =>
-        legacyNotificationCheck.ifUserExperiment(recipient) {
+      notificationJsonFormat.get.extendedJson(infos.head).map { notifJson =>
+        recipient match {
           case UserRecipient(user, _) => notificationRouter.sendToUser(user, Json.arr("notification", notifJson.json))
           case _ =>
         }

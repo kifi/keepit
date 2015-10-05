@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ InvalidDatabaseEncodingException, Repo, DbRe
 import com.keepit.common.db.{ State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.time.Clock
-import com.keepit.model.Name
+import com.keepit.model.{ OrganizationSettings, Name, Feature }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import play.api.libs.json.{ JsArray, Json }
@@ -25,14 +25,9 @@ class PaidPlanRepoImpl @Inject() (
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
   implicit val billingCycleColumnType = MappedColumnType.base[BillingCycle, Int](_.month, BillingCycle(_))
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
-  implicit val featuresColumnType = MappedColumnType.base[Set[PlanFeature], String](
+  implicit val featureSetTypeMapper = MappedColumnType.base[Set[Feature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
-    { str =>
-      Json.parse(str) match {
-        case x: JsArray => x.value.map(_.as[PlanFeature]).toSet
-        case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for Set of PlanFeature")
-      }
-    }
+    { str => Json.parse(str).as[Set[Feature]] }
   )
 
   type RepoImpl = PaidPlanTable
@@ -41,8 +36,9 @@ class PaidPlanRepoImpl @Inject() (
     def name = column[Name[PaidPlan]]("name", O.NotNull)
     def billingCycle = column[BillingCycle]("billing_cycle", O.NotNull)
     def pricePerCyclePerUser = column[DollarAmount]("price_per_user_per_cycle", O.NotNull)
-    def features = column[Set[PlanFeature]]("features", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, kind, name, billingCycle, pricePerCyclePerUser, features) <> ((PaidPlan.apply _).tupled, PaidPlan.unapply _)
+    def editableFeatures = column[Set[Feature]]("editable_features", O.NotNull)
+    def defaultSettings = column[OrganizationSettings]("default_settings", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, state, kind, name, billingCycle, pricePerCyclePerUser, editableFeatures, defaultSettings) <> ((PaidPlan.apply _).tupled, PaidPlan.unapply _)
   }
 
   def table(tag: Tag) = new PaidPlanTable(tag)

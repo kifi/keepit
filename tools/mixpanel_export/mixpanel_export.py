@@ -3,14 +3,17 @@
 from mixpanel import Mixpanel
 
 from datetime import datetime
-import requests
+import errno
 import os
+import requests
 import sys
 import urllib2
 import shutil
 
 MP_API_KEY = 'c17a5e3624c92cf4aa4d995b4b8bb589'
 MP_API_SECRET = '0b22bedb78ec2fa9d390110be35dfb2a'
+
+EXPORT_DIR = os.path.dirname(os.path.realpath(__file__)) + '/exports';
 
 class MixpanelDataExporter(object):
 
@@ -23,7 +26,7 @@ class MixpanelDataExporter(object):
             'to_date': to_date.strftime("%Y-%m-%d")
         }
 
-        save_as = "mixpanel-{}-{}.txt".format(from_date.strftime("%Y%m%d"), to_date.strftime("%Y%m%d"))
+        save_as = EXPORT_DIR + "/mixpanel-{}-{}.txt".format(from_date.strftime("%Y%m%d"), to_date.strftime("%Y%m%d"))
         if os.path.isfile(save_as):
             print "File already exists: %s" % save_as
         else:
@@ -68,14 +71,25 @@ class MixpanelDataExporter(object):
 
 def printUsage():
     print "Usage: %s YYYY-MM-DD YYYY-MM-DD" % sys.argv[0]
+    print "\nexport raw logs from mixpanel between 2 dates (inclusive)"
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
 
 if __name__ == '__main__':
+    mkdir_p(EXPORT_DIR)
+
     api = Mixpanel(MP_API_KEY, MP_API_SECRET)
     exporter = MixpanelDataExporter(api)
 
     if len(sys.argv) != 3:
         printUsage()
-        process.exit(1)
+        sys.exit(1)
 
     from_date = datetime.strptime(sys.argv[1], "%Y-%m-%d")
     to_date = datetime.strptime(sys.argv[2], "%Y-%m-%d")

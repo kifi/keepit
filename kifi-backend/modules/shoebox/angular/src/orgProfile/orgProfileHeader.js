@@ -29,6 +29,7 @@ angular.module('kifi')
       scope.authTokenQueryString = authToken ? 'authToken='+authToken : '';
 
       scope.readonly = scope.viewer.permissions.indexOf(ORG_PERMISSION.EDIT_ORGANIZATION) === -1;
+      scope.canViewMembers = scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_MEMBERS) > -1;
       scope.acknowledgedInvite = false;
       scope.isKifiAdmin = profileService.me.experiments && profileService.me.experiments.indexOf('admin') > -1;
 

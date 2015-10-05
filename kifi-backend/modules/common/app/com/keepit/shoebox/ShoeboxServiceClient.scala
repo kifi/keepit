@@ -5,7 +5,6 @@ import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.store.ImageSize
 import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
 import com.keepit.notify.info._
-import com.keepit.notify.model.{ NotificationId, notificationIdMapFormat }
 import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
@@ -153,6 +152,7 @@ case class ShoeboxCacheProvider @Inject() (
   userIdCache: UserIdCache,
   socialUserNetworkCache: SocialUserInfoNetworkCache,
   socialUserCache: SocialUserInfoUserCache,
+  userIdentityCache: UserIdentityCache,
   userSessionExternalIdCache: UserSessionViewExternalIdCache,
   userConnectionsCache: UserConnectionIdCache,
   searchFriendsCache: SearchFriendsCache,
@@ -195,8 +195,10 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getUserIdentity(identityId: IdentityId): Future[Option[UserIdentity]] = {
-    call(Shoebox.internal.getUserIdentity(providerId = identityId.providerId, id = identityId.userId)).map { r =>
-      r.json.asOpt[UserIdentity]
+    cacheProvider.userIdentityCache.getOrElseFutureOpt(UserIdentityIdentityIdKey(identityId)) {
+      call(Shoebox.internal.getUserIdentity(providerId = identityId.providerId, id = identityId.userId)).map { r =>
+        r.json.asOpt[UserIdentity]
+      }
     }
   }
 

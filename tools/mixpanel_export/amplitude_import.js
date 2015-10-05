@@ -7,11 +7,30 @@ var async = require('async');
 var crypto = require('crypto');
 var https = require('https');
 var fs = require('fs');
+var LineByLineReader = require('line-by-line');
+var path = require('path');
 var Promise = require('bluebird');
 var querystring = require('querystring');
-var readline = require('readline');
+var winston = require('winston');
 
+var USE_FAKE_API = false;
 var AMPLITUDE_API_KEY = '5a7a940f68887487129b20a4cbf0622d';
+
+var filename = process.argv[2];
+if (!_.isString(filename) || !fs.statSync(filename).isFile()) {
+  console.error('USAGE: amplitude_import.js FILE');
+  process.exit(1);
+}
+
+// logging config
+var logfile = 'logs/' + path.basename(filename, '.txt') + '.log';
+var logger = new (winston.Logger)({
+  transports: [
+    new (winston.transports.Console)({ level: 'debug' }),
+    new (winston.transports.File)({ filename: logfile, level: 'info' })
+  ]
+});
+winston.addColors({debug: 'blue', info: 'green', warn: 'yellow', error: 'red'});
 
 // mixpanel properties we don't care about
 var deletedProperties = [
@@ -28,7 +47,13 @@ var deletedProperties = [
 var skippedEvents = ['user_old_slider_sliderShown', 'user_expanded_keeper', 'user_used_kifi',
   'user_reco_action', 'user_logged_in', 'visitor_expanded_keeper', 'visitor_reco_action',
   'visitor_viewed_notification', 'visitor_clicked_notification', /anonymous_/,
-  function(mpEvent) { return _.startsWith(mpEvent.properties.userAgent, 'Pingdom'); }
+  function(mpEvent) { return _.startsWith(mpEvent.properties.userAgent, 'Pingdom'); },
+  function(mpEvent) {
+    var typeProperty = mpEvent.properties.type;
+    // skip {user,visitor}_viewed_page events where the "type" property starts with a "/", with a few exceptions
+    return _.endsWith(mpEvent.event, '_viewed_page') && typeProperty.charAt(0) === '/' &&
+      typeProperty !== '/settings' && typeProperty !== '/tags/manage' && !_.startsWith(typeProperty, '/?m=0');
+  }
 ];
 
 // rename these mixpanel events to these amplitude events
@@ -107,6 +132,10 @@ function amplitudeEventName(mixpanelEvent) {
     return 'user_registered';
   } else if (mixpanelEvent.event === 'user_joined' && mixpanelEvent.properties.action === 'installed') {
     return 'user_installed';
+  } else if (mixpanelEvent.event === 'visitor_viewed_pane') {
+    return 'visitor_viewed_page';
+  } else if (mixpanelEvent.event === 'user_viewed_pane') {
+    return 'user_viewed_page';
   } else {
     return mixpanelEvent.event;
   }
@@ -145,7 +174,52 @@ function amplitudeEvent(mixpanelEvent, insertId) {
   //    events with the same insert_id sent within 24 hours of each other"
   event.insert_id = insertId;
 
+  // user_viewed_page/visitor_viewed_page or _pane events have special rewrite rules
+  if (/^(user|visitor)_viewed_pa[gn]e$/.test(mixpanelEvent.event)) {
+    event = modifyViewedPageOrPaneEvent(mixpanelEvent, event);
+  }
+
   return event;
+}
+
+var userViewedPagePaneTypes = ['libraryChooser', 'keepDetails', 'messages:all', 'composeMessage', 'createLibrary',
+  'chat', 'messages:unread', 'messages:page', 'messages:sent'];
+
+var userViewedPageModalTypes = ['importBrowserBookmarks', 'import3rdPartyBookmarks', 'addAKeep', 'getExtension', 'getMobile'];
+
+var visitorViewedPagePaneTypes = ['login'];
+
+var visitorViewedPageModalTypes = ['libraryLandingPopup', 'signupLibrary', 'signup2Library', 'forgotPassword', 'resetPassword'];
+
+function modifyViewedPageOrPaneEvent(mixpanelEvent, amplitudeEvent) {
+  var typeProperty = amplitudeEvent.event_properties.type;
+  if (typeProperty === '/settings') {
+    amplitudeEvent.event_properties.type = 'settings';
+  } else if (typeProperty === '/tags/manage') {
+    amplitudeEvent.event_properties.type = 'manageTags';
+  }
+
+  if (amplitudeEvent.event_type.indexOf('user_') === 0) {
+    if (userViewedPagePaneTypes.indexOf(typeProperty) >= 0 || /^guide\d+/.test(typeProperty)) {
+      amplitudeEvent.event_properties.page_type = 'pane';
+    } else if (userViewedPageModalTypes.indexOf(typeProperty) >= 0) {
+      amplitudeEvent.event_properties.page_type = 'modal';
+    } else {
+      amplitudeEvent.event_properties.page_type = 'page';
+    }
+  }
+
+  if (amplitudeEvent.event_type.indexOf('visitor_') === 0) {
+    if (visitorViewedPagePaneTypes.indexOf(typeProperty) >= 0) {
+      amplitudeEvent.event_properties.page_type = 'pane';
+    } else if (visitorViewedPageModalTypes.indexOf(typeProperty) >= 0) {
+      amplitudeEvent.event_properties.page_type = 'modal';
+    } else {
+      amplitudeEvent.event_properties.page_type = 'page';
+    }
+  }
+
+  return amplitudeEvent;
 }
 
 function isUserProperty(key, value) {
@@ -207,6 +281,12 @@ function sendAmplitudeEvent(event) {
   return httpsGet(endpoint);
 }
 
+function fakeApiWorker(task, done) {
+  setTimeout(function() {
+    done(null, task.event);
+  }, 2);
+}
+
 function apiWorker(task, done) {
   sendAmplitudeEvent(task.event)
     .then(handleApiResponse(task))
@@ -248,55 +328,93 @@ function hashString(str) {
 }
 
 // have no more than 50 requests in flight at a time
-var amplitudeApiQueue = async.queue(apiWorker, 50);
+var amplitudeApiQueue = async.queue(USE_FAKE_API ? fakeApiWorker : apiWorker, 100);
 var successCounter = 0;
-var failCounter = 0;
-
-function printQueueState() {
-  console.log("Amplitude API Queue: success=%d fail=%d pending=%d running=%d",
-    successCounter, failCounter, amplitudeApiQueue.length(), amplitudeApiQueue.running());
-}
-
-var filename = process.argv[2];
-if (!_.isString(filename) || !fs.statSync(filename).isFile()) {
-  console.error('USAGE: amplitude_import.js FILE');
-  process.exit(1);
-}
-
+var skipCounter = 0;
+var retryCount = 0;
+var eventsByTypeCounter = {};
 var failedEvents = [];
 
-var rd = readline.createInterface({
-  input: fs.createReadStream(filename),
-  output: process.stdout,
-  terminal: false
-});
+function printQueueState() {
+  logger.info("[api queue] success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
+    successCounter, failedEvents.length, amplitudeApiQueue.length(), amplitudeApiQueue.running(), skipCounter, retryCount);
+  logger.info("[summary]", eventsByTypeCounter);
+}
 
-setInterval(printQueueState, 1000);
+setInterval(printQueueState, 2000);
 
-rd.on('line', function(line) {
-  // TODO throttle reading lines to the pace we're sending API requests, we don't need to hold the whole file in memory
+var reader = new LineByLineReader(filename);
+
+// used to prevent the entire file from being loaded into memory
+setInterval(function() {
+  if (amplitudeApiQueue.length() > 500) {
+    reader.pause();
+  } else {
+    reader.resume();
+  }
+}, 20);
+
+function handleLine(line, retries) {
+  retries = retries || 0;
 
   var mpEvent = JSON.parse(line);
   if (isSkippedEvent(mpEvent)) {
+    skipCounter += 1;
     return;
   }
 
   var insertId = hashString(line);
   var event = amplitudeEvent(mpEvent, insertId);
+
   var task = {
     event: event
   };
 
   amplitudeApiQueue.push(task, function(err, result) {
     if (err) {
-      // TODO handle and retry on EHOSTUNREACH, ETIMEDOUT errors
-      failedEvents.push(err);
-      console.error('[ERROR]', err);
-      console.log('[MIXPANEL]', mpEvent);
-      failCounter += 1;
+      if (retries === 0) {
+        failedEvents.push([err, mpEvent]);
+      }
+
+      // retry events for these errors up to 5 times
+      if (retries < 5 && (err.errno === 'ECONNREFUSED' || err.errno === 'EHOSTUNREACH')) {
+        retryCount += 1;
+        setTimeout(function() {
+          retries += 1;
+          handleLine(line, retries);
+        }, 1000);
+      }
     } else {
       successCounter += 1;
-      //console.info('[DONE]', result);
+
+      var eventType = result.event.event_type;
+      if (eventsByTypeCounter[eventType] !== undefined) {
+        eventsByTypeCounter[eventType] += 1;
+      } else {
+        eventsByTypeCounter[eventType] = 1;
+      }
     }
   });
+}
+
+reader.on('line', handleLine);
+
+reader.on('end', function() {
+  logger.info('file reader done');
+});
+
+process.on('SIGINT', function() {
+  logger.info('SIGINT caught');
+
+  if (failedEvents.length > 0) {
+    failedEvents.forEach(function(arr) {
+      var err = arr[0];
+      logger.info('*************** error:', err.message, err.errno);
+      logger.info(arr[1]);
+    });
+  }
+
+  printQueueState();
+
+  process.exit();
 });

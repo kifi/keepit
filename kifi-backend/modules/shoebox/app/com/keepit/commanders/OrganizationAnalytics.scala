@@ -81,6 +81,7 @@ class OrganizationAnalytics @Inject() (heimdal: HeimdalServiceClient,
       val action = request match {
         case req: OrganizationCreateRequest => "created"
         case req: OrganizationModifyRequest => "edited"
+        case req: OrganizationSettingsRequest => "settings_changed"
         case req: OrganizationDeleteRequest => "deleted"
         case req: OrganizationTransferRequest => "transferred"
       }

@@ -149,7 +149,7 @@ class AdminPaymentsController @Inject() (
       (accountEvent.whoDunnit.map(userRepo.get), accountEvent.kifiAdminInvolved.map(userRepo.get))
     }
     AdminAccountEventView(
-      eventId = accountEvent.id.get,
+      id = accountEvent.id.get,
       action = accountEvent.action,
       eventTime = accountEvent.eventTime,
       billingRelated = accountEvent.billingRelated,
@@ -184,7 +184,7 @@ class AdminPaymentsController @Inject() (
 }
 
 case class AdminAccountEventView(
-  eventId: Id[AccountEvent],
+  id: Id[AccountEvent],
   action: AccountEventAction,
   eventTime: DateTime,
   billingRelated: Boolean,

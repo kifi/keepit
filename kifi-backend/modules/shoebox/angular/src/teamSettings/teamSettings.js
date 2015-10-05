@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
-  '$window', '$scope', 'orgProfileService', 'profileService', 'billingService',
-  'messageTicker', 'ORG_SETTING_VALUE',
-  function ($window, $scope, orgProfileService, profileService, billingService,
-            messageTicker, ORG_SETTING_VALUE) {
+  '$window', '$rootScope', '$scope', '$state', 'orgProfileService', 'profileService',
+  'billingService', 'messageTicker', 'ORG_SETTING_VALUE',
+  function ($window, $rootScope, $scope, $state, orgProfileService, profileService,
+            billingService, messageTicker, ORG_SETTING_VALUE) {
     $scope.settingsSectionTemplateData = [
       {
         heading: '',
@@ -17,7 +17,7 @@ angular.module('kifi')
               'Select who is able to edit your team name, logo, description, and URL'
             ),
             fieldKey: 'edit_organization',
-            selectOptions: getOptions(ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
           }
         ]
       },
@@ -41,7 +41,7 @@ angular.module('kifi')
               ' visibility, title, and membership.'
             ),
             fieldKey: 'force_edit_libraries',
-            selectOptions: getOptions('disabled', 'admin', 'member')
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           },
           {
             title: 'Who can move libraries out of the team page?',
@@ -74,7 +74,7 @@ angular.module('kifi')
               ' In most scenarios they can also keep to any public or team visible library.'
             ),
             fieldKey: 'invite_members',
-            selectOptions: getOptions(ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           },
           {
             title: 'Who can message everyone in the team?',
@@ -96,6 +96,14 @@ angular.module('kifi')
             ),
             fieldKey: 'create_slack_integration',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+          },
+          {
+            title: 'Who can export team keeps?',
+            description: (
+              'Download all of your team\'s keeps for safe keeping'
+            ),
+            fieldKey: 'export_keeps',
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN)
           }
         ]
       }
@@ -113,6 +121,7 @@ angular.module('kifi')
         });
         profileService.fetchMe();
         $scope.settings = settingsData.settings;
+        $state.reload();
       })
       ['catch'](function(response) {
         messageTicker({
@@ -132,20 +141,20 @@ angular.module('kifi')
     function getOptions() {
       var items = Array.prototype.slice.apply(arguments);
       var options = [ // This is what the <select>s will read from
+        { label: 'No one', value: ORG_SETTING_VALUE.DISABLED },
         { label: 'Admins only', value: ORG_SETTING_VALUE.ADMIN },
         { label: 'All members', value: ORG_SETTING_VALUE.MEMBER },
-        { label: 'Anyone', value: ORG_SETTING_VALUE.ANYONE },
-        { label: 'No one', value: ORG_SETTING_VALUE.DISABLED }
+        { label: 'Anyone', value: ORG_SETTING_VALUE.ANYONE }
       ];
 
-      return items.map(function (item) {
-        // Grab the option matching the value from items
-        var match = options.filter(function (o) {
+      // If an option isn't in the list of items, discard it.
+      return options.filter(function (o) {
+        var desired = items.filter(function (item) {
           return o.value === item;
         }).pop();
 
-        return match;
-      }).filter(Boolean); // filter out non-matches
+        return !!desired;
+      });
     }
 
     // Transform
@@ -166,7 +175,7 @@ angular.module('kifi')
       return message;
     }
 
-    if ($scope.viewer.membership.role === 'admin') {
+    if ($scope.viewer.membership && $scope.viewer.membership.role === 'admin') {
       billingService
       .getBillingState($scope.profile.id)
       .then(function (stateData) {

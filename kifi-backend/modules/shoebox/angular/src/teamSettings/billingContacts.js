@@ -9,6 +9,7 @@ angular.module('kifi')
             modalService, messageTicker) {
 
     $scope.billingContactModel = {};
+    $scope.admins = null;
 
     var getOrgAdmins = orgProfileService
     .getOrgMembers($scope.profile.id, 0, 30)

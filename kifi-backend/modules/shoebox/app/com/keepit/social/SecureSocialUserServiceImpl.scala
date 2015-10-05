@@ -28,7 +28,12 @@ import scala.concurrent.Future
 import scala.util.{ Success, Failure, Try }
 
 @Singleton
-class UserIdentityHelper @Inject() (userRepo: UserRepo, emailRepo: UserEmailAddressRepo, userCredRepo: UserCredRepo, socialUserInfoRepo: SocialUserInfoRepo) {
+class UserIdentityHelper @Inject() (
+    userRepo: UserRepo,
+    emailRepo: UserEmailAddressRepo,
+    userCredRepo: UserCredRepo,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    userIdentityCache: UserIdentityCache) {
   import SocialUserHelpers._
 
   def getOwnerId(identityId: IdentityId, emailAddress: Option[EmailAddress] = None)(implicit session: RSession): Option[Id[User]] = {
@@ -70,7 +75,7 @@ class UserIdentityHelper @Inject() (userRepo: UserRepo, emailRepo: UserEmailAddr
     }
   }
 
-  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = {
+  def getUserIdentity(identityId: IdentityId)(implicit session: RSession): Option[UserIdentity] = userIdentityCache.getOrElseOpt(UserIdentityIdentityIdKey(identityId)) {
     val socialId = SocialId(identityId.userId)
     val networkType = SocialNetworkType(identityId.providerId)
     networkType match {
@@ -334,7 +339,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
 
   private def authenticatorFromSession(session: UserSessionView, externalId: ExternalId[UserSession]): Authenticator = Authenticator(
     id = externalId.id,
-    identityId = IdentityId(session.socialId.id, session.provider.name),
+    identityId = getIdentityId(session),
     creationDate = session.createdAt,
     lastUsed = session.updatedAt,
     expirationDate = session.expires
@@ -401,21 +406,5 @@ class SecureSocialAuthenticatorPluginImpl @Inject() (
         sessionRepo.save(session.invalidated)
       }
     }
-  }
-}
-
-object SocialUserHelpers {
-  def parseNetworkType(identityId: IdentityId): SocialNetworkType = SocialNetworkType(identityId.providerId)
-  def parseNetworkType(socialUser: SocialUser): SocialNetworkType = parseNetworkType(socialUser.identityId)
-
-  def parseSocialId(identityId: IdentityId): SocialId = identityId.userId.trim match {
-    case socialId if socialId.nonEmpty => SocialId(socialId)
-    case _ => throw new IllegalArgumentException(s"Invalid social id from IdentityId: $identityId")
-  }
-  def parseSocialId(socialUser: SocialUser): SocialId = parseSocialId(socialUser.identityId)
-
-  def parseEmailAddress(socialUser: SocialUser): Try[EmailAddress] = socialUser.email match {
-    case None => Failure(new IllegalArgumentException(s"Email address not fount in SocialUser: $socialUser"))
-    case Some(address) => EmailAddress.validate(address)
   }
 }

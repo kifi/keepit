@@ -20,6 +20,7 @@ trait PermissionCommander {
 class PermissionCommanderImpl @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
+    orgConfigRepo: OrganizationConfigurationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgInviteRepo: OrganizationInviteRepo,
     userRepo: UserRepo,
@@ -32,15 +33,23 @@ class PermissionCommanderImpl @Inject() (
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 
   def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
+    // TODO(ryan): this needs to look in orgPermissionsCache by (orgId, userIdOpt) to see if the permissions are cached
+    // If not, it should compute them directly and add them to the cache
+    computeOrganizationPermissions(orgId, userIdOpt)
+  }
+
+  private def computeOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
     val org = orgRepo.get(orgId)
-    userIdOpt match {
-      case None => org.getNonmemberPermissions
-      case Some(userId) =>
-        orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.permissions) getOrElse {
-          val invites = orgInviteRepo.getByOrgIdAndUserId(orgId, userId)
-          if (invites.isEmpty) org.getNonmemberPermissions
-          else org.getNonmemberPermissions + OrganizationPermission.VIEW_ORGANIZATION
-        }
+    if (org.isInactive) Set.empty
+    else {
+      val roleOpt = userIdOpt.flatMap { userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).map(_.role) }
+      val basePermissions = settinglessOrganizationPermissions(roleOpt)
+      val hasOrganizationInvite = userIdOpt.exists { userId => orgInviteRepo.getByOrgIdAndUserId(orgId, userId).nonEmpty }
+
+      val inviteBasedPermissions = if (hasOrganizationInvite) extraInviteePermissions else Set.empty
+      val settingsBasedPermissions = orgConfigRepo.getByOrgId(orgId).settings.extraPermissionsFor(roleOpt)
+
+      basePermissions ++ inviteBasedPermissions ++ settingsBasedPermissions
     }
   }
 
@@ -66,7 +75,7 @@ class PermissionCommanderImpl @Inject() (
 
     val libPermissions = libraryPermissionsByAccess(lib, libAccessOpt)
     lib.organizationId.map { orgId =>
-      combineOrganizationAndLibraryPermissions(libPermissions, getOrganizationPermissions(orgId, userIdOpt))
+      combineOrganizationAndLibraryPermissions(lib, libPermissions, getOrganizationPermissions(orgId, userIdOpt))
     } getOrElse libPermissions
   }
 
@@ -77,7 +86,14 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.VIEW_LIBRARY
     ) ++ (if (!library.isSecret) Set(LibraryPermission.INVITE_FOLLOWERS) else Set.empty)
 
-    case Some(LibraryAccess.READ_WRITE) => Set(
+    case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) if library.isSystemLibrary => Set(
+      LibraryPermission.VIEW_LIBRARY,
+      LibraryPermission.ADD_KEEPS,
+      LibraryPermission.EDIT_OWN_KEEPS,
+      LibraryPermission.REMOVE_OWN_KEEPS
+    )
+
+    case Some(LibraryAccess.READ_WRITE) if library.canBeModified => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.INVITE_FOLLOWERS,
       LibraryPermission.ADD_KEEPS,
@@ -85,12 +101,6 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.REMOVE_OWN_KEEPS
     ) ++ (if (!library.whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
 
-    case Some(LibraryAccess.OWNER) if library.isSystemLibrary => Set(
-      LibraryPermission.VIEW_LIBRARY,
-      LibraryPermission.ADD_KEEPS,
-      LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
-    )
     case Some(LibraryAccess.OWNER) if library.canBeModified => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.EDIT_LIBRARY,
@@ -105,10 +115,13 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.INVITE_COLLABORATORS
     )
   }
-  def combineOrganizationAndLibraryPermissions(libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
+
+  def combineOrganizationAndLibraryPermissions(lib: Library, libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
     val addedPermissions = Map[Boolean, Set[LibraryPermission]](
-      (libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)) ->
-        Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY)
+      (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)) ->
+        Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY),
+      (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)) ->
+        Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
     ).collect { case (true, ps) => ps }.flatten
 
     val removedPermissions = Map[Boolean, Set[LibraryPermission]](
@@ -117,6 +130,20 @@ class PermissionCommanderImpl @Inject() (
     ).collect { case (true, ps) => ps }.flatten
 
     libPermissions ++ addedPermissions -- removedPermissions
+  }
+
+  val extraInviteePermissions: Set[OrganizationPermission] = Set(OrganizationPermission.VIEW_ORGANIZATION)
+  def settinglessOrganizationPermissions(orgRoleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = orgRoleOpt match {
+    case None => Set.empty
+    case Some(OrganizationRole.MEMBER) => Set(
+      OrganizationPermission.ADD_LIBRARIES
+    )
+    case Some(OrganizationRole.ADMIN) => Set(
+      OrganizationPermission.ADD_LIBRARIES,
+      OrganizationPermission.MODIFY_MEMBERS,
+      OrganizationPermission.REMOVE_MEMBERS,
+      OrganizationPermission.MANAGE_PLAN
+    )
   }
 
 }

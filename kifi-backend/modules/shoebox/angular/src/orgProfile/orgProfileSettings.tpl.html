@@ -1,48 +1,56 @@
 <main class="kf-ops kf-wrapper">
-  <div class="kf-row">
-    <ul class="kf-ops-nav">
-      <li>
-        <a class="kf-link" ui-sref="orgProfile.settings.team">Team Settings</a>
-        <ul class="kf-ops-nav-inner">
-          <li>
-            <a
-              class="kf-link"
-              ui-sref="orgProfile.settings.team({ '#': 'library-settings-' })"
-            >Library Settings</a>
-            <a
-              class="kf-link"
-              ui-sref="orgProfile.settings.team({ '#': 'member-settings-' })"
-            >Member Settings</a>
-            <a
-              class="kf-link"
-              ui-sref="orgProfile.settings.team({ '#': 'integrations-' })"
-            >Integrations</a>
-          </li>
-        </ul>
-      </li>
-      <li>
-        <a
-          class="kf-link"
-          ui-sref="orgProfile.settings.plan"
-        >Payment Plan</a>
-      </li>
-      <li>
-        <a
-          class="kf-link"
-          ui-sref="orgProfile.settings.contacts"
-        >Billing Contacts</a>
-      </li>
-      <li>
-        <a
-          class="kf-link"
-          ui-sref="orgProfile.settings.export"
-          ng-if="canExportKeeps"
-        >Export Keeps</a>
-      </li>
-      <!-- <li><a class="kf-link" href="#team-plan">Team Plan</a></li>
-      <li><a class="kf-link" href="#credit-card">Credit Card</a></li>
-      <li><a class="kf-link" href="#history">History</a></li> -->
-    </ul>
+  <div class="kf-row kf-ops-row">
+    <div class="kf-container kf-ops-nav">
+      <div class="kf-container-header">
+        <h1>Navigation</h1>
+      </div>
+      <ul>
+        <li class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'team-settings' }">
+          <a class="kf-link" ui-sref="orgProfile.settings.team">Team Settings</a>
+        </li>
+        <!-- sublisting -->
+        <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
+          <a
+            class="kf-link"
+            ui-sref="orgProfile.settings.team({ '#': 'library-settings-' })"
+          >Library Settings</a>
+        </li>
+        <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
+          <a
+            class="kf-link"
+            ui-sref="orgProfile.settings.team({ '#': 'member-settings-' })"
+          >Member Settings</a>
+        </li>
+        <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
+          <a
+            class="kf-link"
+            ui-sref="orgProfile.settings.team({ '#': 'integrations-' })"
+          >Integrations</a>
+        </li>
+        <!-- -->
+        <li ng-if="isAdminExperiment" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'payment-plan' }">
+          <a
+            class="kf-link"
+            ui-sref="orgProfile.settings.plan"
+          >Payment Plan</a>
+        </li>
+        <li ng-if="isAdminExperiment"  class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
+          <a
+            class="kf-link"
+            ui-sref="orgProfile.settings.contacts"
+          >Billing Contacts</a>
+        </li>
+        <li ng-if="canExportKeeps"  class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'export-keeps' }">
+          <a
+            class="kf-link"
+            ui-sref="orgProfile.settings.export"
+            ng-if="canExportKeeps"
+          >Export Keeps</a>
+        </li>
+        <!-- <li><a class="kf-link" href="#credit-card">Credit Card</a></li>
+        <li><a class="kf-link" href="#history">History</a></li> -->
+      </ul>
+    </div>
     <div class="kf-ops-main">
       <div ui-view></div>
       <div class="kf-ops-push"></div>

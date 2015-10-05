@@ -140,12 +140,18 @@ class ExtSearchController @Inject() (
 
     val futureBasicUsersAndLibraries = {
       val libraryOwnerIds = libraryRecordsAndVisibilityById.values.map(_._1.ownerId)
-      shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds).map { usersById =>
+      val futureUsers = shoeboxClient.getBasicUsers(userIds ++ libraryOwnerIds)
+      val futureOrganizations = shoeboxClient.getBasicOrganizationsByIds(libraryRecordsAndVisibilityById.values.flatMap(_._1.orgId).toSet)
+      for {
+        usersById <- futureUsers
+        organizationsById <- futureOrganizations
+      } yield {
         val users = userIds.map(usersById(_))
         val libraries = libraryIds.map { libId =>
           val (library, visibility, _) = libraryRecordsAndVisibilityById(libId)
           val owner = usersById(library.ownerId)
-          makeBasicLibrary(library, visibility, owner, None) // todo: after orgId is indexed into LibraryRecord, we can call shoebox and get orgInfo
+          val organization = library.orgId.map(organizationsById(_))
+          makeBasicLibrary(library, visibility, owner, organization)
         }
         (users, libraries)
       }

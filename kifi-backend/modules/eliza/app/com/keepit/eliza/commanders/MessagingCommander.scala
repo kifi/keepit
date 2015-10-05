@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.URI
-import com.keepit.eliza.{ SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
+import com.keepit.eliza.{ OrgPushNotificationRequest, SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -14,16 +14,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
-import com.keepit.heimdal.{ ContextStringData, HeimdalContextBuilder, HeimdalContext }
+import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
-import com.keepit.notify.delivery.{ WsNotificationDelivery, NotificationJsonFormat }
 import com.keepit.notify.model.event.NewMessage
 import com.keepit.notify.model.Recipient
-import com.keepit.realtime.{ UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
+import com.keepit.realtime.{ OrganizationPushNotification, UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
-import com.keepit.common.concurrent.PimpMyFuture._
-import scala.util.Try
 import com.keepit.common.core.anyExtensionOps
 
 import org.joda.time.DateTime
@@ -36,6 +33,7 @@ import java.util.concurrent.TimeoutException
 import com.keepit.common.db.slick.DBSession.RSession
 
 import scala.util.{ Success, Failure }
+import scala.util.Random
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 
@@ -85,6 +83,11 @@ class MessagingCommander @Inject() (
   def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int] = {
     val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
     notificationDeliveryCommander.sendPushNotification(userId, notification, force)
+  }
+
+  def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int] = {
+    val notification = OrganizationPushNotification(message = Some(request.message), unvisitedCount = getUnreadUnmutedThreadCount(request.userId), category = request.category, experiment = request.pushNotificationExperiment)
+    notificationDeliveryCommander.sendPushNotification(request.userId, notification, request.force)
   }
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Future[Seq[ElizaThreadInfo]] = {
@@ -179,24 +182,6 @@ class MessagingCommander @Inject() (
 
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
     db.readOnlyReplicaAsync { implicit session => userThreadRepo.checkUrisDiscussed(userId, uriIds) }
-  }
-
-  def deleteUserThreadsForMessageId(id: Id[Message]): Unit = {
-    val (threadExtId, userThreads): (ExternalId[MessageThread], Seq[UserThread]) = db.readOnlyMaster { implicit session =>
-      val message = messageRepo.get(id)
-      val threadId = message.thread
-      (message.threadExtId, userThreadRepo.getByThread(threadId))
-    }
-    if (userThreads.length != 1) {
-      airbrake.notify(s"Trying to delete notification for thread $threadExtId with not exactly one participant. Not permitted.")
-    } else {
-      userThreads.foreach { userThread =>
-        db.readWrite { implicit session =>
-          userThreadRepo.delete(userThread)
-        }
-        notificationDeliveryCommander.notifyRemoveThread(userThread.user, threadExtId)
-      }
-    }
   }
 
   private def constructNonUserRecipients(userId: Id[User], nonUsers: Seq[BasicContact]): Future[Seq[NonUserParticipant]] = {
@@ -679,17 +664,10 @@ class MessagingCommander @Inject() (
 
     val moreContext = new HeimdalContextBuilder()
     val orgParticipantsFuture = Future.sequence(orgIds.map { oid =>
-      shoebox.hasOrganizationMembership(oid, userId).flatMap {
-        case true =>
-          //ignoring case of multiple org ids in the same chat, just picking the last one
-          moreContext += ("messagedWholeOrgId", ContextStringData(oid.toString))
-          shoebox.getOrganizationMembers(oid)
-        case false =>
-          Future.successful(Set.empty[Id[User]])
-      }
+      shoebox.getOrganizationMembers(oid)
     }).map(_.flatten)
 
-    moreContext.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => log.info(s"[OrgMessageTracking] should be tracking messagedWholeOrgId=$orgId") }
+    if (orgIds.nonEmpty) moreContext += ("messagedAllOrgId", Random.shuffle(orgIds).head.toString)
 
     val context = moreContext.addExistingContext(initContext).build
 

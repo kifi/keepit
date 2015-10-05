@@ -1,7 +1,7 @@
 package com.keepit.common.cache
 
 import com.keepit.eliza.model.UserThreadStatsForUserIdCache
-import com.keepit.heimdal.{ OrganizationMessageCountCache, SearchHitReportCache }
+import com.keepit.heimdal.{ OrgMemberWithMostClickedKeepsCache, OrganizationMessageCountCache, SearchHitReportCache }
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.model.helprank.{ UriReKeepCountCache, UriDiscoveryCountCache }
 import com.keepit.model.{ AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache }
@@ -11,7 +11,7 @@ import scala.concurrent.duration._
 import com.keepit.common.logging.AccessLog
 import com.google.inject.{ Provides, Singleton }
 import com.keepit.model._
-import com.keepit.social.BasicUserUserIdCache
+import com.keepit.social.{ UserIdentityCache, BasicUserUserIdCache }
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.common.usersegment.UserSegmentCache
 
@@ -51,6 +51,10 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def socialUserInfoNetworkCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new SocialUserInfoNetworkCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
+
+  @Provides @Singleton
+  def userIdentityCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserIdentityCache(stats, accessLog, (innerRepo, 10 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -206,4 +210,8 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def orgMemberWithMostClickedKeepsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
+    new OrgMemberWithMostClickedKeepsCache(stats, accessLog, (outerRepo, 1 day))
 }

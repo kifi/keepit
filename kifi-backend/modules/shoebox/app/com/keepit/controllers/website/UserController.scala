@@ -13,12 +13,16 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.{ EmailAddress, _ }
+import com.keepit.common.social.NewConnections
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.controllers.core.NetworkInfoLoader
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ BasicDelightedAnswer, DelightedAnswerSources }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.NewConnectionInvite
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.core._
@@ -60,6 +64,7 @@ class UserController @Inject() (
     abookServiceClient: ABookServiceClient,
     airbrakeNotifier: AirbrakeNotifier,
     abookUploadConf: ABookUploadConf,
+    elizaServiceClient: ElizaServiceClient,
     emailSender: EmailSenderProvider,
     userProfileCommander: UserProfileCommander,
     checklistCommander: ChecklistCommander,
@@ -139,6 +144,7 @@ class UserController @Inject() (
               BadRequest(Json.obj("error" -> s"The friend request has already been accepted", "alreadyAccepted" -> true))
             } else {
               friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.INACTIVE))
+              elizaServiceClient.completeNotification(NewConnectionInvite, friendRequest.senderId -> friendRequest.recipientId, Recipient(friendRequest.recipientId))
               Ok(Json.obj("success" -> true))
             }
           } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request for user $id."))

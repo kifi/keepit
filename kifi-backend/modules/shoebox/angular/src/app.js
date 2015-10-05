@@ -170,11 +170,17 @@ angular.module('kifi', [
           // information about the library/profile; therefore, libraries and profiles are
           // responsible for calling pageTrack themselves.
           // TODO: The above statement is now false, so we may want to standardize tracking of those page views.
-          if (toStateParts[0] !== 'library' && toStateParts[0] !== 'userProfile') {
+          // This whole process up here ^^^ and down here vvv is all a bit bogus, should be refactored
+          // to be able to have better page tracking with metadata
+          var ignore = ['library', 'userOrOrg', 'getStarted'];
+          // if base state is not in the ignore list
+          if (ignore.indexOf(toStateParts[0]) === -1) {
             var url = $analytics.settings.pageTracking.basePath + $location.url();
             $analytics.pageTrack(url);
           }
         }
+        $scope.showSimpleHeader = toState.name.indexOf('getStarted') > -1;
+        
       });
 
       $rootScope.$on('$stateChangeError', function (event, toState, toParams, fromState, fromParams, error) {
@@ -183,6 +189,11 @@ angular.module('kifi', [
           $scope.errorStatus = error.status;
           $scope.errorParams = toParams;
         }
+      });
+
+      $rootScope.$on('errorImmediately', function (error, params) {
+        $scope.errorStatus = error.status || 404;
+        $scope.errorParams = params;
       });
     }
 

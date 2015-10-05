@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.commanders.HandleCommander
+import com.keepit.commanders.{ UserEmailAddressCommander, HandleCommander }
 import com.keepit.model.UserConnectionFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -18,6 +18,10 @@ object UserFactoryHelper {
         partialUser.experiments.foreach { experimentType =>
           experimentRepo.save(UserExperiment(userId = user.id.get, experimentType = experimentType))
         }
+      }
+      partialUser.emailAddressOpt.foreach { email =>
+        val emailAddressCommander = injector.getInstance(classOf[UserEmailAddressCommander])
+        emailAddressCommander.intern(user.id.get, email, verified = true)
       }
       user
     }

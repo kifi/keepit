@@ -23,7 +23,7 @@ angular.module('kifi')
       .otherwise('/');  // last resort
 
     // Set up the states.
-    $stateProvider
+    $stateProvider  
       .state('home', {
         url: '/',
         controller: 'HomeCtrl',
@@ -34,6 +34,17 @@ angular.module('kifi')
         url: '',
         controller: 'FeedCtrl',
         templateUrl: 'feed/feed.tpl.html'
+      })
+      .state('getStarted', {
+          url: '/getstarted',
+          controller: 'FtueCtrl',
+          templateUrl: 'ftue/ftue.tpl.html',
+          'abstract': true
+      })
+      .state('getStarted.followLibraries', {
+          url: '',
+          controller: 'FtueFollowLibrariesCtrl',
+          templateUrl: 'ftue/ftueFollowLibraries.tpl.html'
       })
       .state('invite', {
         url: '/invite',
@@ -108,15 +119,7 @@ angular.module('kifi')
             'orgProfileService', 'profile', 'messageTicker', 'ORG_PERMISSION',
             function (orgProfileService, profile, messageTicker, ORG_PERMISSION) {
               if (profile.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
-                return orgProfileService
-                .getOrgSettings(profile.organization.id)
-                ['catch'](function(response) {
-                  messageTicker({
-                    text: response.statusText + ': Could not retrieve your settings. Please refresh and try again',
-                    type: 'red',
-                    delay: 0
-                  });
-                });
+                return orgProfileService.getOrgSettings(profile.organization.id);
               } else {
                 return {};
               }
@@ -148,25 +151,29 @@ angular.module('kifi')
         url: '',
         controller: 'TeamSettingsCtrl',
         templateUrl: 'teamSettings/teamSettings.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        activenav: 'team-settings'
       })
       .state('orgProfile.settings.export', {
         url: '/export',
         controller: 'ExportKeepsCtrl',
         templateUrl: 'teamSettings/exportKeeps.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        activenav: 'export-keeps'
       })
       .state('orgProfile.settings.contacts', {
         url: '/contacts',
         controller: 'BillingContactsCtrl',
         templateUrl: 'teamSettings/billingContacts.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        activenav: 'billing-contacts'
       })
       .state('orgProfile.settings.plan', {
         url: '/plan',
         controller: 'PaymentPlanCtrl',
         templateUrl: 'teamSettings/paymentPlan.tpl.html',
-        activetab: 'settings'
+        activetab: 'settings',
+        activenav: 'payment-plan'
       })
       .state('teams', {
         url: '/teams',

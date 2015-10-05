@@ -1,4 +1,4 @@
-<div class="kf-billing-contacts">
+<div class="kf-billing-contacts kf-container">
   <h1>Billing Contacts</h1>
   <p>Select which team admins should receive billing notifications via email</p>
   <div class="kf-container">
@@ -24,6 +24,7 @@
           </label>
         </div>
       </div>
+      <div kf-loading-spinner hide="(admins !== null)"></div>
     </div>
   </div>
 </div>

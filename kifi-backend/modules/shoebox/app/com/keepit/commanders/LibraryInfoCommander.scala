@@ -141,7 +141,8 @@ class LibraryInfoCommanderImpl @Inject() (
         val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
         val membershipOpt = membershipsByLibraryId.get(libId).flatten
         val path = libPathCommander.pathForLibrary(lib)
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(createMembershipInfo), lib.ownerId, path)
+        val permissions = permissionCommander.getLibraryPermissions(libId, viewerId)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(createMembershipInfo), lib.ownerId, path, permissions)
       }.toMap
     }
   }
@@ -332,16 +333,6 @@ class LibraryInfoCommanderImpl @Inject() (
         val membershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
         membershipOpt.map(createMembershipInfo)
       }
-    }
-  }
-
-  def getLibraryPermissionsFromOrgPermissions(orgIdOpt: Option[Id[Organization]], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
-    (orgIdOpt, userIdOpt) match {
-      case (Some(orgId), Some(userId)) => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).map { orgMem =>
-        val libraryPermissions = orgMem.permissions.flatMap(OrganizationPermission.toLibraryPermissionsOpt).flatten
-        libraryPermissions
-      }.getOrElse(Set.empty)
-      case _ => Set.empty
     }
   }
 
