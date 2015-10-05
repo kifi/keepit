@@ -82,6 +82,7 @@ class KeepRepoImpl @Inject() (
     keepToUserRepo: KeepToUserRepo, // implicit dependency on this repo via a plain SQL query getRecentKeeps
     countCache: KeepCountCache,
     keepByIdCache: KeepByIdCache,
+    basicKeepByIdCache: BasicKeepByIdCache,
     keepUriUserCache: KeepUriUserCache,
     libraryMetadataCache: LibraryMetadataCache,
     countByLibraryCache: CountByLibraryCache) extends DbRepo[Keep] with KeepRepo with SeqNumberDbFunction[Keep] with ExternalIdColumnDbFunction[Keep] with Logging {
@@ -176,6 +177,7 @@ class KeepRepoImpl @Inject() (
       libraryMetadataCache.remove(LibraryMetadataKey(id))
     }
     keepByIdCache.remove(KeepIdKey(keep.id.get))
+    basicKeepByIdCache.remove(BasicKeepIdKey(keep.id.get))
     keepUriUserCache.remove(KeepUriUserKey(keep.uriId, keep.userId))
     countCache.remove(KeepCountKey(keep.userId))
   }
@@ -189,6 +191,7 @@ class KeepRepoImpl @Inject() (
       deleteCache(keep)
     } else {
       keepByIdCache.set(KeepIdKey(keep.id.get), keep)
+      basicKeepByIdCache.remove(BasicKeepIdKey(keep.id.get))
       keepUriUserCache.set(KeepUriUserKey(keep.uriId, keep.userId), keep)
       countCache.remove(KeepCountKey(keep.userId))
     }

@@ -26,7 +26,8 @@ trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organiz
 class OrganizationRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
-    orgCache: OrganizationCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
+    orgCache: OrganizationCache,
+    basicOrgCache: BasicOrganizationIdCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
 
   import DBSession._
   import db.Driver.simple._
@@ -48,11 +49,13 @@ class OrganizationRepoImpl @Inject() (
 
   initTable()
 
-  override def deleteCache(org: Organization)(implicit session: RSession) {
-    org.id.foreach(id => orgCache.remove(OrganizationKey(id)))
+  override def deleteCache(model: Organization)(implicit session: RSession) {
+    orgCache.remove(OrganizationKey(model.id.get))
+    basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
   }
-  override def invalidateCache(org: Organization)(implicit session: RSession) {
-    org.id.foreach(id => orgCache.set(OrganizationKey(id), org))
+  override def invalidateCache(model: Organization)(implicit session: RSession) {
+    orgCache.set(OrganizationKey(model.id.get), model)
+    basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
   }
 
   override def save(model: Organization)(implicit session: RWSession): Organization = {
