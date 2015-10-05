@@ -20,8 +20,15 @@ class DeepLinkRouter @Inject() (
 
   def generateRedirectUrl(data: JsObject): Option[Path] = {
     (data \ "t").as[String] match {
+      case "vh" => Some(Path("")) // view home
+      case "vf" => Some(Path("friends")) // view friends
+      case "il" => Some(Path("/me/libraries/invited")) // view invited libraries
+      case "oi" => // org invite
+        val orgIdOpt = (data \ "oid").asOpt[PublicId[Organization]].flatMap(pubId => Organization.decodePublicId(pubId).toOption)
+        val orgOpt = orgIdOpt.map { orgId => db.readOnlyReplica { implicit session => orgRepo.get(orgId) } }
+        orgOpt.map(org => pathCommander.pathForOrganization(org))
       case "fr" => Some(Path("friends/requests"))
-      case "lr" | "li" =>
+      case "lr" | "li" | "lg" =>
         val libIdOpt = (data \ "lid").asOpt[PublicId[Library]].flatMap(pubId => Library.decodePublicId(pubId).toOption)
         val libOpt = libIdOpt.map { libId => db.readOnlyReplica { implicit session => libraryRepo.get(libId) } }
         libOpt.map(lib => pathCommander.pathForLibrary(lib))
@@ -29,8 +36,6 @@ class DeepLinkRouter @Inject() (
         val userIdOpt = (data \ "uid").asOpt[ExternalId[User]]
         val userOpt = userIdOpt.map { extId => db.readOnlyReplica { implicit session => userRepo.getByExternalId(extId) } }
         userOpt.map(user => pathCommander.pathForUser(user))
-      case "m" => ??? // Is there any way to display a message on the website?
-      case "ur" => ??? // is there any way to display unread message on the website?
       case _ => None
     }
   }

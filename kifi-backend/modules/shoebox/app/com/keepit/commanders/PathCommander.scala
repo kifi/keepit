@@ -21,7 +21,7 @@ class PathCommander @Inject() (
 
   def pathForUser(user: User): Path = Path(user.username.value)
 
-  def pathFororganization(org: Organization): Path = Path(org.handle.value)
+  def pathForOrganization(org: Organization): Path = Path(org.handle.value)
 
   // todo: remove these and replace with Path-returning versions
   def getPathForLibrary(lib: Library): String = {
