@@ -10,6 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.RawImageInfo
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
+import com.keepit.common.performance.{StatsdTiming, AlertingTimer}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.heimdal.HeimdalContext
@@ -276,35 +277,28 @@ class OrganizationCommanderImpl @Inject() (
       .withSite(modifications.site.orElse(org.site))
   }
 
+  @AlertingTimer(2 seconds)
+  @StatsdTiming("OrganizationCommander.createOrganization")
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse] = {
-    val orgCreateTry = Try {
-      db.readOnlyMaster { implicit session => getValidationError(request) } match {
-        case Some(fail) =>
-          Left(fail)
+    db.readWrite { implicit session =>
+      getValidationError(request) match {
+        case Some(fail) => Left(fail)
         case None =>
-          db.readWrite { implicit session =>
-            val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
-            val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
-            val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
+          val orgSkeleton = Organization(ownerId = request.requesterId, name = request.initialValues.name, primaryHandle = None, description = None, site = None)
+          val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
+          val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
 
-            val plan = paidPlanRepo.get(PaidPlan.DEFAULT)
-            val orgConfig = orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
-            planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
+          val plan = paidPlanRepo.get(PaidPlan.DEFAULT)
+          val orgConfig = orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
+          planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
 
-            orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
-            val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
-            organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
+          orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
+          val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
+          organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
 
-            val orgView = getFullOrganizationViewHelper(org.id.get, Some(request.requesterId), None)
-            Right(OrganizationCreateResponse(request, org, orgGeneralLibrary, orgView))
-          }
+          val orgView = getFullOrganizationViewHelper(org.id.get, Some(request.requesterId), None)
+          Right(OrganizationCreateResponse(request, org, orgGeneralLibrary, orgView))
       }
-    }
-    orgCreateTry match {
-      case Success(Left(fail)) => Left(fail)
-      case Success(Right(response)) => Right(response)
-      case Failure(OrganizationFail.HANDLE_UNAVAILABLE) => Left(OrganizationFail.HANDLE_UNAVAILABLE)
-      case Failure(ex) => throw ex
     }
   }
 
