@@ -294,7 +294,9 @@ class OrganizationCommanderImpl @Inject() (
             orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
             val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
             organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
-            Right(OrganizationCreateResponse(request, org, orgGeneralLibrary))
+
+            val orgView = getFullOrganizationViewHelper(org.id.get, Some(request.requesterId), None)
+            Right(OrganizationCreateResponse(request, org, orgGeneralLibrary, orgView))
           }
       }
     }
@@ -314,7 +316,8 @@ class OrganizationCommanderImpl @Inject() (
 
           val modifiedOrg = organizationWithModifications(org, request.modifications)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
-          Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg)))
+          val orgView = getFullOrganizationViewHelper(request.orgId, Some(request.requesterId), None)
+          Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg), orgView))
         case Some(orgFail) => Left(orgFail)
       }
     }
