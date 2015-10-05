@@ -30,6 +30,8 @@ trait OrganizationCommander {
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
   def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse
+  def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration
+  def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
   def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
@@ -147,6 +149,17 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
+  def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration = {
+    db.readOnlyReplica(implicit session => getExternalOrgConfigurationHelper(orgId))
+  }
+
+  def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration = {
+    val config = orgConfigRepo.getByOrgId(orgId)
+    val plan = paidPlanRepo.get(paidAccountRepo.getByOrgId(orgId).planId)
+
+    ExternalOrganizationConfiguration(plan.name.name, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
+  }
+
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
     val viewerPermissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
     if (!viewerPermissions.contains(OrganizationPermission.VIEW_ORGANIZATION)) {
@@ -171,7 +184,7 @@ class OrganizationCommanderImpl @Inject() (
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
     val memberCount = members.length
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
-
+    val orgConfig = getExternalOrgConfigurationHelper(orgId)
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
     OrganizationInfo(
@@ -184,7 +197,8 @@ class OrganizationCommanderImpl @Inject() (
       avatarPath = avatarPath,
       members = membersAsBasicUsers,
       numMembers = memberCount,
-      numLibraries = numLibraries)
+      numLibraries = numLibraries,
+      orgConfig = orgConfig)
   }
 
   private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationViewerInfo = {

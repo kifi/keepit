@@ -20,7 +20,8 @@ case class OrganizationInfo(
     avatarPath: ImagePath,
     members: Seq[BasicUser],
     numMembers: Int,
-    numLibraries: Int) {
+    numLibraries: Int,
+    orgConfig: ExternalOrganizationConfiguration) {
   def toBasicOrganization: BasicOrganization = BasicOrganization(this.orgId, this.ownerId, this.handle, this.name, this.description, this.avatarPath)
 }
 object OrganizationInfo {
@@ -34,21 +35,9 @@ object OrganizationInfo {
     (__ \ 'avatarPath).write[ImagePath] and
     (__ \ 'members).write[Seq[BasicUser]] and
     (__ \ 'numMembers).write[Int] and
-    (__ \ 'numLibraries).write[Int]
+    (__ \ 'numLibraries).write[Int] and
+    (__ \ 'orgConfig).write[ExternalOrganizationConfiguration]
   )(unlift(OrganizationInfo.unapply))
-
-  val testReads: Reads[OrganizationInfo] = ( // for test-usage only
-    (__ \ 'id).read[PublicId[Organization]] and
-    (__ \ 'ownerId).read[ExternalId[User]] and
-    (__ \ 'handle).read[OrganizationHandle] and
-    (__ \ 'name).read[String] and
-    (__ \ 'description).readNullable[String] and
-    (__ \ 'site).readNullable[String] and
-    (__ \ 'avatarPath).read[ImagePath] and
-    (__ \ 'members).read[Seq[BasicUser]] and
-    (__ \ 'numMembers).read[Int] and
-    (__ \ 'numLibraries).read[Int]
-  )(OrganizationInfo.apply _)
 }
 
 case class OrganizationMembershipInfo(role: OrganizationRole)
