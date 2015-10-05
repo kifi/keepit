@@ -498,30 +498,46 @@ k.keepBox = k.keepBox || (function () {
       window.location.href = 'https://www.kifi.com/teams';
     });
 
-    if ($box.data('organizations').length === 0) {
-      $view.hoverfu('.kifi-keep-box-new-lib-visibility-item', function (configureHover) {
-        var $this = $(this);
+    $view.hoverfu('.kifi-keep-box-new-lib-visibility-item', function (configureHover) {
+      var $this = $(this);
+      var title;
+      var message;
+      if ($this.children('[disabled]').length === 0) {
+        return;
+      }
 
-        if ($this.children('[disabled]').length === 0) {
-          return;
-        }
-
+      // TODO(carlos): This logic only works if one visibility is disabled at a time.
+      // This will need to be reworked if, for example, both public and team visibility
+      // are disabled.
+      if ($box.data('organizations').length === 0) {
         $this.addClass('kifi-keep-box-new-lib-visibility-item-no-orgs');
+        title = 'Curious?';
+        message = 'Click to get early access<br />to the Kifi for Teams beta';
+      } else if ($this.find('[disabled][value="published"]').length === 1) {
+        var teamId = $box.find('[name="kifi-location"]:checked').val();
+        var team = $box.data('organizations').filter(idIs(teamId)).pop();
+        var teamName = (team && team.name) || 'Your team';
+        title = 'Not applicable';
+        message = teamName + ' has disabled creation of<br />publicly visible libraries.';
+      } else if ($this.find('[disabled][value="organization"]').length === 1) {
+        title = 'Not applicable';
+        message = 'Select a team to create<br />a team visible library.';
+      } else {
+        return;
+      }
 
-        var btn = this;
-        k.render('html/keeper/titled_tip', {
-          dir: 'above',
-          cssClass: 'kifi-pane-settings-tip',
-          title: 'Curious?',
-          html: 'Click to get early access<br />to the Kifi for Teams beta'
-        }, function (html) {
-          configureHover(html, {
-            mustHoverFor: 300, hideAfter: 0, click: 'hide',
-            position: {my: 'center bottom-4px', at: 'top', of: btn, collision: 'none'}
-          });
+      k.render('html/keeper/titled_tip', {
+        dir: 'above',
+        cssClass: 'kifi-pane-settings-tip',
+        title: title,
+        html: message
+      }, function (html) {
+        configureHover(html, {
+          mustHoverFor: 300, hideAfter: 0,
+          position: {my: 'center bottom-4px', at: 'top', of: $this, collision: 'none'}
         });
       });
-    }
+    });
 
     var $submit = $view.find('.kifi-keep-box-new-lib-create')
     .on('click', function (e) {
@@ -537,16 +553,22 @@ k.keepBox = k.keepBox || (function () {
     var organizations = $box.data('organizations');
     var matches = organizations.filter(idIs(newLocation));
     var isOrganization = (matches.length !== 0);
+    var canPublish = !isOrganization || matches[0].viewer.permissions.indexOf('publish_libraries') !== -1;
 
     var el = $(this).closest('.kifi-keep-box-new-lib-location-item')[0];
     selectItem(el, '.kifi-keep-box-new-lib-locations');
 
     if (isOrganization) {
       $box.find('.kifi-organization-name').html(matches[0].name);
-    } else {
-      $box.find('[name="kifi-visibility"][value="published"]').focus().click();
+    } else if ($box.find('[name="kifi-visibility"][value="organization"]:checked').length === 1) {
+      $box.find('[name="kifi-visibility"][value="secret"]').focus().click();
     }
     $box.find('[name="kifi-visibility"][value="organization"]').prop('disabled', !isOrganization);
+
+    if (!canPublish && $box.find('[name="kifi-visibility"][value="published"]:checked').length === 1) {
+      $box.find('[name="kifi-visibility"][value="organization"]').focus().click();
+    }
+    $box.find('[name="kifi-visibility"][value="published"]').prop('disabled', !canPublish);
 
     api.port.emit('track_pane_click', {
       type: 'createLibrary',
