@@ -34,8 +34,9 @@
     <div ng-repeat="lib in libraries">
 
       <div class="kf-ftue-fl-library-row">
-
-        <a class="kf-ftue-fl-library-row-left" href="{{lib.path}}" target="_blank" >
+        <!-- will bring back href on the row once some other bugs with the guide can be fixed -->
+        <!--href="{{lib.path}}"-->
+        <a class="kf-ftue-fl-library-row-left"  target="_blank" >
           <div class="kf-ftue-lib-card" ng-attr-style="background-color:{{lib.color}}"></div>
           <div class="kf-ftue-lib-card-data">
             <div class="kf-ftue-lib-card-library-name">{{lib.name}}</div>
