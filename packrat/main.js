@@ -1571,7 +1571,7 @@ function markRead(threadId, messageId, time) {
     threadReadAt[threadId] = time;
   }
   var th = threadsById[threadId];
-  if (th && th.unread && (th.id === messageId || th.time <= time)) {
+  if (th && (th.id === messageId || th.time <= time)) {
     th.unread = false;
     th.unreadAuthors = th.unreadMessages = 0;
     (function removeFromUnread(tl) {
@@ -2710,16 +2710,34 @@ function authenticate(callback, retryMs) {
 }
 
 function lightFlush() {
+  // Friendly cache dump
+  storeLibraries([]);
+  unstore('recent_libraries');
+
+  pageData = {};
+  threadLists = {};
+  threadsById = {};
+  messageData = {};
+  contactSearchCache = null;
+  urlPatterns = null;
+  guideData = null;
+
+  authenticate(function () {
+    getLatestThreads();
+    getUrlPatterns(getPrefs.bind(null, loadLibraries.bind(null, api.noop)));
+    log('[lightFlush] flush successful');
+  });
+
+}
+
+function clearSession() {
   if (me) {
     storeDrafts({});
     storeLibraries([]);
     unstore('recent_libraries');
   }
   clearDataCache();
-}
 
-function clearSession() {
-  lightFlush();
   if (me) {
     unstore('user_id');
     api.tabs.each(function (tab) {
