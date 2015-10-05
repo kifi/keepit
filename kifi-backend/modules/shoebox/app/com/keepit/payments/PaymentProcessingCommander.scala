@@ -63,22 +63,23 @@ class PaymentProcessingCommanderImpl @Inject() (
     val handle = org.handle
 
     lastFourFuture.map { lastFour =>
-      val subject = "We've charged you card for your Kfi Organization ${org.name}"
-      val htmlBody = """|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
-      |For more details please consult your account history at <a href="https://www.kifi.com/$handle/settings">www.kifi.com/$handle/settings<a>.
+      val subject = s"We've charged you card for your Kfi Organization ${org.name}"
+      val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
+      |For more details please consult your account history at <a href="https://www.kifi.com/$handle/settings">www.kifi.com/$handle/settings<a>.</p>
       |
-      |Thanks,
-      |The Kifi Team
+      |<p>Thanks,
+      |The Kifi Team</p>
       """.stripMargin
-      val textBody = """|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
+      val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
       |For more details please consult your account history at https://www.kifi.com/$handle/settings.
       |
-      |Thanks,
+      |Thanks, <br/>
       |The Kifi Team
       """.stripMargin
       db.readWrite { implicit session =>
         postOffice.sendMail(ElectronicMail(
           from = SystemEmailAddress.BILLING,
+          fromName = Some("Kifi Billing"),
           to = emails,
           subject = subject,
           htmlBody = htmlBody,
