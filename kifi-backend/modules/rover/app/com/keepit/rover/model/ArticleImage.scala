@@ -23,6 +23,7 @@ case class ArticleImage(
     imageHash: ImageHash) extends ModelWithState[ArticleImage] with ArticleKindHolder {
   def withId(id: Id[ArticleImage]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
+  def isActive: Boolean = (state == ArticleImageStates.ACTIVE)
 }
 
 object ArticleImage {
