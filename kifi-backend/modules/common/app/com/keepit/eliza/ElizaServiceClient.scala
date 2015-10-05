@@ -96,6 +96,7 @@ trait ElizaServiceClient extends ServiceClient {
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Future[Unit]
   def sendToUser(userId: Id[User], data: JsArray): Future[Unit]
   def sendToAllUsers(data: JsArray): Unit
+  def flush(userId: Id[User]): Future[Unit]
 
   def flush(userId: Id[User]): Future[Unit]
 
@@ -179,6 +180,12 @@ class ElizaServiceClientImpl @Inject() (
 
   def sendToUser(userId: Id[User], data: JsArray): Future[Unit] = {
     val payload = Json.obj("userId" -> userId, "data" -> data)
+    call(Eliza.internal.sendToUser, payload).map(_ => ())
+  }
+
+  def flush(userId: Id[User]): Future[Unit] = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj("userId" -> userId, "data" -> Json.arr("flush"))
     call(Eliza.internal.sendToUser, payload).map(_ => ())
   }
 

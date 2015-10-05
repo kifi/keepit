@@ -381,21 +381,21 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(owner)
-        val ownerExtRequest1 = FakeRequest("GET", mobileRoute)
+        val ownerExtRequest1 = FakeRequest("GET", extRoute)
         val ownerExtResult1 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest1)
         contentAsJson(ownerExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
-        val adminExtRequest1 = FakeRequest("GET", mobileRoute)
+        val adminExtRequest1 = FakeRequest("GET", extRoute)
         val adminExtResult1 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest1)
         contentAsJson(adminExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(member)
-        val memberExtRequest1 = FakeRequest("GET", mobileRoute)
+        val memberExtRequest1 = FakeRequest("GET", extRoute)
         val memberExtResult1 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest1)
         contentAsJson(memberExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
@@ -427,24 +427,17 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(owner)
-        val ownerExtRequest2 = FakeRequest("GET", mobileRoute)
+        val ownerExtRequest2 = FakeRequest("GET", extRoute)
         val ownerExtResult2 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest2)
         contentAsJson(ownerExtResult2).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
-        val adminExtRequest2 = FakeRequest("GET", mobileRoute)
+        val adminExtRequest2 = FakeRequest("GET", extRoute)
         val adminExtResult2 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest2)
         contentAsJson(adminExtResult2).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
-        } must beTrue
-
-        inject[FakeUserActionsHelper].setUser(member)
-        val memberExtRequest2 = FakeRequest("GET", mobileRoute)
-        val memberExtResult2 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest2)
-        contentAsJson(memberExtResult2).as[Seq[JsObject]].forall { obj =>
-          !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get))
         } must beTrue
 
         // members can send group messages
@@ -473,21 +466,21 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(owner)
-        val ownerExtRequest3 = FakeRequest("GET", mobileRoute)
+        val ownerExtRequest3 = FakeRequest("GET", extRoute)
         val ownerExtResult3 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest3)
         contentAsJson(ownerExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
-        val adminExtRequest3 = FakeRequest("GET", mobileRoute)
+        val adminExtRequest3 = FakeRequest("GET", extRoute)
         val adminExtResult3 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest3)
         contentAsJson(adminExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(member)
-        val memberExtRequest3 = FakeRequest("GET", mobileRoute)
+        val memberExtRequest3 = FakeRequest("GET", extRoute)
         val memberExtResult3 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest3)
         contentAsJson(memberExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
