@@ -120,7 +120,6 @@ class EmailTemplateProcessorImpl @Inject() (
         val needsByFromName = fromName.map { text => getNeededObjects(text, emailToSend) } getOrElse Set.empty
         needsByHtml ++ needsByText ++ needsBySubject ++ needsByFromName
       }
-      println("[RPB] needs = " + needs)
 
       val userIds = needs.collect { case UserNeeded(id) => id }
       val orgIds = needs.collect { case OrganizationNeeded(id) => id }
@@ -258,9 +257,7 @@ class EmailTemplateProcessorImpl @Inject() (
 
   // used to gather the types of objects we need to replace the tags with real values
   private def getNeededObjects(text: String, emailToSend: EmailToSend): Set[NeededObject] = {
-    println(s"[RPB] about to do matching in $text")
     tagRegex.findAllMatchIn(text).map[NeededObject] { rMatch =>
-      println("[RPB] rmatch one = " + rMatch.group(1))
       val tagWrapper = Json.parse(rMatch.group(1)).as[TagWrapper]
       val tagArgs = tagWrapper.args
 

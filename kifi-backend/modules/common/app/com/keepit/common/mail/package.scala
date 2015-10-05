@@ -79,12 +79,8 @@ package object template {
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
-    def profileLink(id: Id[User], content: String = "") = {
-      val ans = deepLink(s"""{"t":"us","uid":${Tag1(tags.profileUrl, id).value}}""", content, openInAppIfMobile = true)
-      println(s"profile link for $id = $ans")
-      println(s"the tag is " + Tag1(tags.profileUrl, id).value)
-      ans
-    }
+    def profileLink(id: Id[User], content: String = "") =
+      deepLink(s"""{"t":"us","uid":"${Tag1(tags.userExternalId, id).value}"}""", content, openInAppIfMobile = true)
 
     def profileUrl(id: Id[User]) = Tag1(tags.profileUrl, id).toHtml
 
@@ -161,9 +157,9 @@ package object template {
 
     // Just opens the contact's profile
     def inviteContactUrl(id: Id[User], content: String) =
-      deepLink("""{"t":"us", "uid":${Tag1(tags.userExternalId, id).value}}""", content, openInAppIfMobile = true)
+      deepLink(s"""{"t":"us","uid":"${Tag1(tags.userExternalId, id).value}"}""", content, openInAppIfMobile = true)
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
-      deepLink("""{"t":"us", "uid":${Tag1(tags.userExternalId, id).value}}""", "pymk" + index, openInAppIfMobile = true)
+      deepLink(s"""{"t":"us","uid":"${Tag1(tags.userExternalId, id).value}"}""", "pymk" + index, openInAppIfMobile = true)
 
     def invitedLibrariesUrl(id: Id[User], content: String) =
       deepLink("""{"t":"il"}""", content, openInAppIfMobile = true)
