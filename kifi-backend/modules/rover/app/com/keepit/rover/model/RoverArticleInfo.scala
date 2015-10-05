@@ -41,21 +41,6 @@ case class RoverArticleInfo(
 
   def getFetchRequest(shouldThrottle: Boolean): ArticleFetchRequest[A] = ArticleFetchRequest(articleKind, url, getLatestKey, shouldThrottle)
 
-  def clean: RoverArticleInfo = copy(
-    bestVersion = None,
-    latestVersion = None,
-    oldestVersion = None,
-    lastFetchedAt = None,
-    nextFetchAt = None,
-    lastFetchingAt = None,
-    fetchInterval = None,
-    failureCount = 0,
-    failureInfo = None,
-    imageProcessingRequestedAt = None,
-    lastImageProcessingVersion = None,
-    lastImageProcessingAt = None
-  )
-
   private def schedulingPolicy: Option[FetchSchedulingPolicy] = FetchSchedulingPolicy.get(articleKind)
 
   def initializeSchedulingPolicy: RoverArticleInfo = copy(
