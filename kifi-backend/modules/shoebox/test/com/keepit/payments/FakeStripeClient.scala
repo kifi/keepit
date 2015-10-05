@@ -37,4 +37,6 @@ class FakeStripeClientImpl extends StripeClient {
   def getPermanentToken(token: String, description: String): Future[StripeToken] = newToken()
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken] = newToken()
 
+  def getLastFourDigitsOfCard(token: StripeToken): Future[String] = Future.successful("1234")
+
 }
