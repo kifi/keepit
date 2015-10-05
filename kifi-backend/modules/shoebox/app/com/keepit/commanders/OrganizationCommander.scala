@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.images.RawImageInfo
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
-import com.keepit.common.performance.{StatsdTiming, AlertingTimer}
+import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.heimdal.HeimdalContext
@@ -304,14 +304,14 @@ class OrganizationCommanderImpl @Inject() (
           val org = handleCommander.autoSetOrganizationHandle(orgRepo.save(orgTemplate)) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
 
           val plan = paidPlanRepo.get(PaidPlan.DEFAULT)
-          val orgConfig = orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
+          orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
           planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
 
           orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
           val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
 
-          val orgView = getFullOrganizationViewHelper(org.id.get, Some(request.requesterId), None)
+          val orgView = getOrganizationViewHelper(org.id.get, Some(request.requesterId), None)
           Right(OrganizationCreateResponse(request, org, orgGeneralLibrary, orgView))
       }
     }
@@ -325,7 +325,7 @@ class OrganizationCommanderImpl @Inject() (
 
           val modifiedOrg = organizationWithModifications(org, request.modifications)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
-          val orgView = getFullOrganizationViewHelper(request.orgId, Some(request.requesterId), None)
+          val orgView = getOrganizationViewHelper(request.orgId, Some(request.requesterId), None)
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg), orgView))
         case Some(orgFail) => Left(orgFail)
       }
