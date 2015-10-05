@@ -529,6 +529,16 @@ var socketHandlers = {
   message_unread: function(nUri, threadId, time, messageId) {
     log("[socket:message_unread]", nUri, threadId, time);
     markUnread(threadId, messageId);
+  },
+  unread_notifications_count: function (unreadCount) {
+    log('[socket:unread_notifications_count]', unreadCount, threadLists && threadLists.all && threadLists.all.numUnreadUnmuted);
+    if (threadLists && threadLists.all) {
+       threadLists.all.numUnreadUnmuted = unreadCount;
+       // This forcefully updates the tabs to have the server's count. The issue is that the client
+       // _usually_ does a good job being correct, so this introduces potential latiency. Right now,
+       // if counts get off, if the user flips between tabs, it fixes. Good enough? Uncomment if no.
+       //tellVisibleTabsNoticeCountIfChanged();
+    }
   }
 };
 
@@ -1571,7 +1581,7 @@ function markRead(threadId, messageId, time) {
     threadReadAt[threadId] = time;
   }
   var th = threadsById[threadId];
-  if (th && (th.id === messageId || th.time <= time)) {
+  if (th && th.unread && (th.id === messageId || th.time <= time)) {
     th.unread = false;
     th.unreadAuthors = th.unreadMessages = 0;
     (function removeFromUnread(tl) {
