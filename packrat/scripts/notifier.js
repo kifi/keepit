@@ -36,7 +36,7 @@ var notifier = function () {
             '<div class="kifi-notify-email-icon kifi-participant-background-' + o.author.color + '">' + o.author.initial + '</div>' :
              imgTag(k.cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName),
           sticky: false,
-          showForMs: 60000,
+          showForMs: o.showForMs || 12000,
           onClick: $.proxy(onClickMessage, null, o.url, o.locator),
           threadId: o.thread
         });
@@ -51,7 +51,7 @@ var notifier = function () {
           link: o.linkText,
           imageHtml: imgTag(o.image),
           sticky: o.isSticky,
-          showForMs: o.showForMs || 60000,
+          showForMs: o.showForMs || 12000,
           onClick: $.proxy(onClickNotMessage, null, o.thread, o.id, o.url),
           threadId: o.thread
         });
