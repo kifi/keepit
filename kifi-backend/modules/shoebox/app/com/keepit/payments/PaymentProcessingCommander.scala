@@ -60,7 +60,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
     val emails = (account.emailContacts ++ userContacts).toSet.toSeq
 
-    val handle = org.primaryHandle.get.normalized.value
+    val handle = org.handle
 
     lastFourFuture.map { lastFour =>
       val subject = "We've charged you card for your Kfi Organization ${org.name}"
