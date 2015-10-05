@@ -43,6 +43,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   def sendToAllUsers(data: JsArray): Unit = {}
 
+  def flush(userId: Id[User]): Future[Unit] = Future.successful((): Unit)
+
   def connectedClientCount: Future[Seq[Int]] = {
     val p = Promise.successful(Seq[Int](1))
     p.future
