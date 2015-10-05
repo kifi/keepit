@@ -50,6 +50,8 @@ trait PlanManagementCommander {
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
 
   def currentPlan(orgId: Id[Organization]): PaidPlan
+  def currentPlanHelper(orgId: Id[Organization])(implicit session: RSession): PaidPlan
+
   def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings): PaidPlan
 
   def grandfatherPlan(id: Id[PaidPlan]): Try[PaidPlan]
@@ -372,6 +374,10 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def currentPlan(orgId: Id[Organization]): PaidPlan = db.readOnlyMaster { implicit session =>
+    currentPlanHelper(orgId)
+  }
+
+  def currentPlanHelper(orgId: Id[Organization])(implicit session: RSession): PaidPlan = {
     val account = paidAccountRepo.getByOrgId(orgId)
     paidPlanRepo.get(account.planId)
   }
