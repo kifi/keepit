@@ -174,7 +174,7 @@ angular.module('kifi', [
           // to be able to have better page tracking with metadata
           var ignore = ['library', 'userOrOrg', 'getStarted'];
           // if base state is not in the ignore list
-          if (ignore.indexOf(toStateParts[0]) == -1) {
+          if (ignore.indexOf(toStateParts[0]) === -1) {
             var url = $analytics.settings.pageTracking.basePath + $location.url();
             $analytics.pageTrack(url);
           }
