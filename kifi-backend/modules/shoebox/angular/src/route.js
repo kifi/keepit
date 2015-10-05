@@ -23,7 +23,7 @@ angular.module('kifi')
       .otherwise('/');  // last resort
 
     // Set up the states.
-    $stateProvider
+    $stateProvider  
       .state('home', {
         url: '/',
         controller: 'HomeCtrl',
@@ -34,6 +34,17 @@ angular.module('kifi')
         url: '',
         controller: 'FeedCtrl',
         templateUrl: 'feed/feed.tpl.html'
+      })
+      .state('getStarted', {
+          url: '/getstarted',
+          controller: 'FtueCtrl',
+          templateUrl: 'ftue/ftue.tpl.html',
+          'abstract': true
+      })
+      .state('getStarted.followLibraries', {
+          url: '',
+          controller: 'FtueFollowLibrariesCtrl',
+          templateUrl: 'ftue/ftueFollowLibraries.tpl.html'
       })
       .state('invite', {
         url: '/invite',
