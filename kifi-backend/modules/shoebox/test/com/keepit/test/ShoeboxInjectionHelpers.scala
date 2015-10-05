@@ -75,4 +75,5 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def orgConfigRepo(implicit injector: Injector) = inject[OrganizationConfigurationRepo]
   def paidPlanRepo(implicit injector: Injector) = inject[PaidPlanRepo]
   def planManagementCommander(implicit injector: Injector) = inject[PlanManagementCommander]
+  def libSubCommander(implicit injector: Injector) = inject[LibrarySubscriptionCommander].asInstanceOf[LibrarySubscriptionCommanderImpl]
 }
