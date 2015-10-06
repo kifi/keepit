@@ -3,12 +3,12 @@
 angular.module('kifi')
 
 .controller('OrgProfileSettingsCtrl', [
-  '$window', '$rootScope', '$scope','$timeout', '$state', 'settings',
+  '$window', '$rootScope', '$scope','$timeout', '$state',
   'profileService', 'ORG_PERMISSION',
-  function ($window, $rootScope, $scope, $timeout, $state, settings,
+  function ($window, $rootScope, $scope, $timeout, $state,
             profileService, ORG_PERMISSION) {
     $scope.state = $state;
-    $scope.settings = settings.settings;
+    $scope.settings = $scope.settings.settings;
     $scope.canExportKeeps = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) !== -1);
     $scope.isAdminExperiment = (profileService.me.experiments.indexOf('admin') !== -1);
     function onHashChange() {
