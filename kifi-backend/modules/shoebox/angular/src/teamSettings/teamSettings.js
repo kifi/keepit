@@ -143,7 +143,7 @@ angular.module('kifi')
       var options = [ // This is what the <select>s will read from
         { label: 'No one', value: ORG_SETTING_VALUE.DISABLED },
         { label: 'Admins only', value: ORG_SETTING_VALUE.ADMIN },
-        { label: 'All members', value: ORG_SETTING_VALUE.MEMBER },
+        { label: 'Team members', value: ORG_SETTING_VALUE.MEMBER },
         { label: 'Anyone', value: ORG_SETTING_VALUE.ANYONE }
       ];
 
