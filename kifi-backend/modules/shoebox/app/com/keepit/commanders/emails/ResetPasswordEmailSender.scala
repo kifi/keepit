@@ -5,16 +5,15 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
 import com.keepit.common.mail.template.EmailToSend
-import com.keepit.common.mail.{ ElectronicMail, EmailAddress, SystemEmailAddress }
-import com.keepit.controllers.website.DeepLinkRouter
+import com.keepit.controllers.core.routes
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ NotificationCategory, PasswordResetRepo, User }
+import com.keepit.model.{ PasswordResetRepo, NotificationCategory, User }
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 class ResetPasswordEmailSender @Inject() (
-    deepLinkRouter: DeepLinkRouter,
     db: Database,
     emailTemplateSender: EmailTemplateSender,
     passwordResetRepo: PasswordResetRepo,
@@ -27,7 +26,7 @@ class ResetPasswordEmailSender @Inject() (
       passwordResetRepo.createNewResetToken(userId, resetEmailAddress)
     }
 
-    val resetUrl = deepLinkRouter.passwordResetDeepLink(reset.token)
+    val resetUrl = config.applicationBaseUrl + routes.AuthController.setPasswordPage(reset.token)
     val emailToSend = EmailToSend(
       fromName = Some(Right("Kifi Support")),
       from = SystemEmailAddress.SUPPORT,

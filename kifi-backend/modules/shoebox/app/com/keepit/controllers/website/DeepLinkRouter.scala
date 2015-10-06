@@ -12,6 +12,8 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.libs.json.{ Json, JsObject }
 
+case class DeepLinkRedirect(url: String, externalLocator: Option[String] = None)
+
 @Singleton
 class DeepLinkRouter @Inject() (
     config: FortyTwoConfig,
@@ -19,39 +21,49 @@ class DeepLinkRouter @Inject() (
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
     libraryRepo: LibraryRepo,
+    uriRepo: NormalizedURIRepo,
     pathCommander: PathCommander,
     implicit val publicIdConfiguration: PublicIdConfiguration) {
 
-  private def passwordReset(authToken: String): JsObject = Json.obj("t" -> DeepLinkType.PasswordReset, DeepLinkField.AuthToken -> authToken)
-  def passwordResetDeepLink(authToken: String): String = deepLink(passwordReset(authToken))
-
   def deepLink(data: JsObject): String = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
-  def generateRedirectUrl(data: JsObject): Option[Path] = {
-    (data \ "t").as[String] match {
+  def generateRedirect(data: JsObject): Option[DeepLinkRedirect] = {
+    (data \ "t").asOpt[String].flatMap {
+      case DeepLinkType.DiscussionView =>
+        val uriIdOpt = (data \ DeepLinkField.UriId).asOpt[ExternalId[NormalizedURI]]
+        val uriOpt = uriIdOpt.flatMap { uriId => db.readOnlyReplica { implicit session => uriRepo.getOpt(uriId) } }
+        val externalLocatorOpt = (data \ DeepLinkField.ExternalLocator).asOpt[String]
+        for {
+          uri <- uriOpt
+          externalLocator <- externalLocatorOpt
+        } yield DeepLinkRedirect(uri.url, Some(externalLocator))
+      case _ =>
+        generateRedirectUrl(data).map(DeepLinkRedirect(_, externalLocator = None))
+    }
+  }
+
+  private def generateRedirectUrl(data: JsObject): Option[String] = {
+    (data \ "t").asOpt[String].flatMap {
       case DeepLinkType.ViewHomepage =>
-        Some(Path(""))
+        Some(Path("").absolute)
       case DeepLinkType.ViewFriends =>
-        Some(Path("friends")) // view friends
-      case DeepLinkType.PasswordReset =>
-        val tokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
-        tokenOpt.map(token => Path(s"password/$token"))
+        Some(Path("friends").absolute)
       case DeepLinkType.InvitedLibraries =>
-        Some(Path("me/libraries/invited"))
+        Some(Path("me/libraries/invited").absolute)
       case DeepLinkType.FriendRequest =>
-        Some(Path("friends/requests"))
+        Some(Path("friends/requests").absolute)
       case DeepLinkType.OrganizationInvite =>
         val orgIdOpt = (data \ DeepLinkField.OrganizationId).asOpt[PublicId[Organization]].flatMap(pubId => Organization.decodePublicId(pubId).toOption)
         val orgOpt = orgIdOpt.map { orgId => db.readOnlyReplica { implicit session => orgRepo.get(orgId) } }
-        orgOpt.map(org => pathCommander.pathForOrganization(org))
+        orgOpt.map(org => pathCommander.pathForOrganization(org).absolute)
       case DeepLinkType.LibraryRecommendation | DeepLinkType.LibraryInvite | DeepLinkType.LibraryView =>
         val libIdOpt = (data \ DeepLinkField.LibraryId).asOpt[PublicId[Library]].flatMap(pubId => Library.decodePublicId(pubId).toOption)
         val libOpt = libIdOpt.map { libId => db.readOnlyReplica { implicit session => libraryRepo.get(libId) } }
-        libOpt.map(lib => pathCommander.pathForLibrary(lib))
+        libOpt.map(lib => pathCommander.pathForLibrary(lib).absolute)
       case DeepLinkType.NewFollower | DeepLinkType.UserView =>
         val userIdOpt = (data \ DeepLinkField.UserId).asOpt[ExternalId[User]]
         val userOpt = userIdOpt.map { extId => db.readOnlyReplica { implicit session => userRepo.getByExternalId(extId) } }
-        userOpt.map(user => pathCommander.pathForUser(user))
+        userOpt.map(user => pathCommander.pathForUser(user).absolute)
       case _ => None
     }
   }
@@ -60,7 +72,6 @@ class DeepLinkRouter @Inject() (
 object DeepLinkType {
   val ViewHomepage = "vh"
   val ViewFriends = "vf"
-  val PasswordReset = "pr"
   val InvitedLibraries = "il"
   val FriendRequest = "fr"
   val OrganizationInvite = "oi"
@@ -69,6 +80,7 @@ object DeepLinkType {
   val LibraryView = "lv"
   val NewFollower = "nf"
   val UserView = "us"
+  val DiscussionView = "dv"
 }
 
 object DeepLinkField {
@@ -76,4 +88,7 @@ object DeepLinkField {
   val LibraryId = "lid"
   val UserId = "uid"
   val AuthToken = "at"
+  val MessageThreadId = "id"
+  val UriId = "uri"
+  val ExternalLocator = "extloc"
 }

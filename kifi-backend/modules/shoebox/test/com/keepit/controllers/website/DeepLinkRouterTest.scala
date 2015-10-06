@@ -49,7 +49,7 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
         withDb(modules: _*) { implicit injector =>
           val deepLink = Json.obj("t" -> "fr")
           val link = Path("friends/requests")
-          deepLinkRouter.generateRedirectUrl(deepLink) === Some(link)
+          deepLinkRouter.generateRedirect(deepLink) === Some(link)
         }
       }
       "for a library recommendation" in {
@@ -64,11 +64,11 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
 
           val deepLink1 = Json.obj("t" -> "lr", "lid" -> Library.publicId(orgLib.id.get))
           val link1 = Path(s"${org.handle.value}/${orgLib.slug.value}")
-          deepLinkRouter.generateRedirectUrl(deepLink1) === Some(link1)
+          deepLinkRouter.generateRedirect(deepLink1) === Some(link1)
 
           val deepLink2 = Json.obj("t" -> "lr", "lid" -> Library.publicId(personalLib.id.get))
           val link2 = Path(s"${owner.username.value}/${personalLib.slug.value}")
-          deepLinkRouter.generateRedirectUrl(deepLink2) === Some(link2)
+          deepLinkRouter.generateRedirect(deepLink2) === Some(link2)
         }
       }
       "for a new follower" in {
@@ -78,7 +78,7 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
           }
           val deepLink = Json.obj("t" -> "nf", "uid" -> user.externalId)
           val link = Path(s"${user.username.value}")
-          deepLinkRouter.generateRedirectUrl(deepLink) === Some(link)
+          deepLinkRouter.generateRedirect(deepLink) === Some(link)
         }
       }
       "for a new message" in {
@@ -87,7 +87,7 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
           val messageId = ???
           val deepLink = Json.obj("t" -> "m", "id" -> messageId)
           val link = ???
-          deepLinkRouter.generateRedirectUrl(deepLink) === Some(link)
+          deepLinkRouter.generateRedirect(deepLink) === Some(link)
         }
       }
     }

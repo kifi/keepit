@@ -365,14 +365,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val token = tokens(0).token
         token.size === 8
 
-        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"pr","at":"$token"}""")
         val html = email.htmlBody.value
         html must contain("Hi Billy,")
-        html must contain(deepLink)
+        html must contain(s"http://dev.ezkeep.com:9000/password/$token")
         html must contain("utm_campaign=passwordReset")
 
         val text = email.textBody.get.value
         text must contain("Hi Billy,")
+        text must contain(s"http://dev.ezkeep.com:9000/password/$token")illy,")
         text must contain(deepLink)
       }
     }
