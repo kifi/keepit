@@ -85,13 +85,7 @@ class PaymentsController @Inject() (
   }
 
   def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val response = orgCommander.getAccountFeatureSettings(request.orgId)
-    val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
-    val result = ExternalOrganizationConfiguration(
-      plan.name.name,
-      OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures)
-    )
-    Ok(Json.toJson(result))
+    Ok(Json.toJson(orgCommander.getExternalOrgConfiguration(request.orgId)))
   }
 
   def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN)(parse.tolerantJson) { request =>

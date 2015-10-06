@@ -1,6 +1,6 @@
-@(orgId: Id[Organization])
+@(orgId: Id[Organization], currentCard: String)
 
-Submitting this form will add the entered credit card as the default card for org @orgId
+Submitting this form will add the entered credit card as the default card for org @orgId (Current card: @currentCard)
 
 <form action="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCard(orgId)" method="post" autocomplete="off">
     <div>

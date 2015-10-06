@@ -191,29 +191,24 @@ class OrganizationMembershipCommanderImpl @Inject() (
     val requesterPermissions = permissionCommander.getOrganizationPermissions(request.orgId, Some(request.requesterId))
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
-    requesterOpt match {
-      case None => Some(OrganizationFail.NOT_A_MEMBER)
-      case Some(requester) =>
-        request match {
-          case OrganizationMembershipAddRequest(_, _, _, newRole) =>
-            val requesterCanInviteSpecifiedRole = (newRole <= requester.role) && requesterPermissions.contains(INVITE_MEMBERS)
-            if (targetOpt.isDefined) Some(OrganizationFail.ALREADY_A_MEMBER)
-            else if (!requesterCanInviteSpecifiedRole) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-            else None
+    (requesterOpt, request) match {
+      case (_, _: OrganizationMembershipAddRequest) =>
+        if (targetOpt.isDefined) Some(OrganizationFail.ALREADY_A_MEMBER)
+        else None
 
-          case OrganizationMembershipModifyRequest(_, _, _, newRole) =>
-            val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
-            val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requesterPermissions.contains(MODIFY_MEMBERS)
-            if (!(requesterIsOwner || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-            else None
+      case (Some(requester), OrganizationMembershipModifyRequest(_, _, _, newRole)) =>
+        val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
+        val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requesterPermissions.contains(MODIFY_MEMBERS)
+        if (!(requesterIsOwner || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else None
 
-          case OrganizationMembershipRemoveRequest(_, _, _) =>
-            val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
-            val requesterRemovingSelf = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
-            val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requesterPermissions.contains(REMOVE_MEMBERS)
-            if (!(requesterIsOwner || requesterRemovingSelf || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-            else None
-        }
+      case (Some(requester), OrganizationMembershipRemoveRequest(_, _, _)) =>
+        val requesterIsOwner = (requester.userId == org.ownerId) && !targetOpt.exists(_.userId == org.ownerId)
+        val requesterRemovingSelf = targetOpt.exists(t => t.userId == requester.userId && t.userId != org.ownerId)
+        val requesterOutranksTarget = targetOpt.exists(_.role < requester.role) && requesterPermissions.contains(REMOVE_MEMBERS)
+        if (!(requesterIsOwner || requesterRemovingSelf || requesterOutranksTarget)) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        else None
+      case (None, _) => Some(OrganizationFail.NOT_A_MEMBER)
     }
   }
 

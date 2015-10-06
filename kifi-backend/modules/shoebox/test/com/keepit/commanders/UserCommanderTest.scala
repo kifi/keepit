@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.net.URLEncoder
+
 import com.google.inject.Injector
 import com.keepit.abook.{ ABookServiceClient, FakeABookServiceClientImpl, FakeABookServiceClientModule }
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -17,6 +19,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.model.UserFactoryHelper._
+import play.api.libs.json.Json
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -230,12 +233,14 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val htmlBody = mail.htmlBody.value
         htmlBody must contain("Hi Jane")
         htmlBody must contain("Homer Simpson just joined")
-        htmlBody must contain(s"""/redir?data={"t":"us","uid":"${user1.externalId}"}""")
+
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(Json.stringify(Json.obj("t" -> "us", "uid" -> user1.externalId)), "ascii")
+        htmlBody must contain(deepLink)
 
         val textBody = mail.textBody.get.value
         textBody must contain("Hi Jane")
         textBody must contain("Homer Simpson just joined")
-        htmlBody must contain(s"""/redir?data={"t":"us","uid":"${user1.externalId}"}""")
+        textBody must contain(deepLink)
 
         NotificationCategory.fromElectronicMailCategory(mail.category) === NotificationCategory.User.CONTACT_JOINED
       }

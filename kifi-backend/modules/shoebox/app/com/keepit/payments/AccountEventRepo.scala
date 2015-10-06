@@ -117,7 +117,7 @@ class AccountEventRepoImpl @Inject() (
   }
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent] = {
-    (for (row <- rows if row.accountId === accountId && (row.eventType == "user_added" || row.eventType == "user_removed")) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
+    (for (row <- rows if row.accountId === accountId && (row.eventType === "user_added" || row.eventType === "user_removed")) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
 
 }

@@ -17,6 +17,7 @@ trait OrganizationAvatarRepo extends Repo[OrganizationAvatar] {
 
 @Singleton
 class OrganizationAvatarRepoImpl @Inject() (
+    basicOrgCache: BasicOrganizationIdCache,
     orgAvatarCache: OrganizationAvatarCache,
     val db: DataBaseComponent,
     val clock: Clock) extends OrganizationAvatarRepo with DbRepo[OrganizationAvatar] {
@@ -75,11 +76,13 @@ class OrganizationAvatarRepoImpl @Inject() (
 
   override def deleteCache(model: OrganizationAvatar)(implicit session: RSession): Unit = {
     orgAvatarCache.remove(OrganizationAvatarKey(model.organizationId))
+    basicOrgCache.remove(BasicOrganizationIdKey(model.organizationId))
   }
   override def invalidateCache(model: OrganizationAvatar)(implicit session: RSession): Unit = {
     // Because this cache associates an org id with an entire Seq[OrganizationAvatar], we can't really "save" to it. It's essentially a read-only cache.
     // If the cache becomes invalid, just dump the entire value associated with the Key
     orgAvatarCache.remove(OrganizationAvatarKey(model.organizationId))
+    basicOrgCache.remove(BasicOrganizationIdKey(model.organizationId))
   }
 
   def getByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationAvatar]] = Some(OrganizationAvatarStates.INACTIVE))(implicit session: RSession): Seq[OrganizationAvatar] = {

@@ -13,7 +13,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 import com.stripe.Stripe
-import com.stripe.model.{ Charge, Customer }
+import com.stripe.model.{ Charge, Customer, Card }
 import com.stripe.exception.CardException
 
 case class CardDetails(number: String, expMonth: Int, expYear: Int, cvc: String, cardholderName: String)
@@ -28,6 +28,8 @@ trait StripeClient {
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult]
   def getPermanentToken(token: String, description: String): Future[StripeToken]
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken]
+
+  def getLastFourDigitsOfCard(token: StripeToken): Future[String]
 }
 
 class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends StripeClient with Logging {
@@ -85,6 +87,10 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     )
     val customer = Customer.create(customerParams.asJava);
     StripeToken(customer.getId())
+  }
+
+  def getLastFourDigitsOfCard(token: StripeToken): Future[String] = lock.withLock {
+    Customer.retrieve(token.token).getSources().getData().get(0).asInstanceOf[Card].getLast4
   }
 
 }

@@ -1,5 +1,7 @@
 package com.keepit.commanders.emails
 
+import java.net.URLEncoder
+
 import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.commanders.{ PathCommander }
 import com.keepit.commanders.emails.tips.EmailTipProvider
@@ -11,6 +13,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
+import com.keepit.common.net.URI
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ helpers, EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
@@ -211,11 +214,20 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
         case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
         case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
+        case tags.profileLink =>
+          val data = Json.obj("t" -> "us", "uid" -> basicUser.externalId)
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.organizationId => Organization.publicId(org.id.get).id
+        case tags.organizationLink =>
+          val data = Json.obj("t" -> "oi", "oid" -> Organization.publicId(org.id.get).id)
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.libraryUrl =>
           config.applicationBaseUrl + libPathCommander.getPathForLibrary(library)
+        case tags.libraryLink =>
+          val data = Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id)
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
         case tags.libraryName => library.name
         case tags.libraryId => Library.publicId(library.id.get).id
         case tags.libraryOwnerFullName =>
@@ -270,10 +282,10 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
-        case tags.organizationId =>
+        case tags.organizationId | tags.organizationLink =>
           val orgId = tagArgs(0).as[Id[Organization]]
           OrganizationNeeded(orgId)
-        case tags.libraryName | tags.libraryUrl | tags.libraryOwnerFullName =>
+        case tags.libraryName | tags.libraryUrl | tags.libraryLink | tags.libraryOwnerFullName =>
           val libId = tagArgs(0).as[Id[Library]]
           LibraryNeeded(libId)
         case tags.keepName | tags.keepUrl =>

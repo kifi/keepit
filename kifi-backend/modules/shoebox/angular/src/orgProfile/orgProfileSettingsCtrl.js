@@ -13,10 +13,11 @@ angular.module('kifi')
     $scope.isAdminExperiment = (profileService.me.experiments.indexOf('admin') !== -1);
     function onHashChange() {
       var anchor = angular.element($window.location.hash.slice(0, -1))[0];
-
+      var headingTop = anchor.getBoundingClientRect().top - $window.document.body.getBoundingClientRect().top;
+      var scrollDestination = headingTop - 65; // make room for header
       if (anchor) {
         angular.element('html, body').animate({
-          scrollTop: anchor.getBoundingClientRect().top - $window.document.body.getBoundingClientRect().top
+          scrollTop: scrollDestination
         });
       }
     }

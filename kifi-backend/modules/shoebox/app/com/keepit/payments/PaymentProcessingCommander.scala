@@ -4,10 +4,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.model.Organization
+import com.keepit.model.{ Organization, NotificationCategory, UserEmailAddressRepo, OrganizationRepo }
 import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
@@ -38,6 +39,9 @@ class PaymentProcessingCommanderImpl @Inject() (
   accountLockHelper: AccountLockHelper,
   stripeClient: StripeClient,
   airbrake: AirbrakeNotifier,
+  postOffice: LocalPostOffice,
+  emailRepo: UserEmailAddressRepo,
+  orgRepo: OrganizationRepo,
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
@@ -45,6 +49,46 @@ class PaymentProcessingCommanderImpl @Inject() (
   private[payments] val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
 
   val processingLock = new ReactiveLock(1)
+
+  private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
+    val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
+    val (userContacts, org) = db.readOnlyReplica { implicit session =>
+      val userContacts = account.userContacts.map { userId =>
+        Try(emailRepo.getByUser(userId)).toOption
+      }.flatten
+      (userContacts, orgRepo.get(account.orgId))
+    }
+    val emails = (account.emailContacts ++ userContacts).toSet.toSeq
+
+    val handle = org.handle
+
+    lastFourFuture.map { lastFour =>
+      val subject = s"We've charged you card for your Kfi Organization ${org.name}"
+      val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
+      |For more details please consult your account history at <a href="https://www.kifi.com/$handle/settings">www.kifi.com/$handle/settings<a>.</p>
+      |
+      |<p>Thanks,
+      |The Kifi Team</p>
+      """.stripMargin
+      val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
+      |For more details please consult your account history at https://www.kifi.com/$handle/settings.
+      |
+      |Thanks, <br/>
+      |The Kifi Team
+      """.stripMargin
+      db.readWrite { implicit session =>
+        postOffice.sendMail(ElectronicMail(
+          from = SystemEmailAddress.BILLING,
+          fromName = Some("Kifi Billing"),
+          to = emails,
+          subject = subject,
+          htmlBody = htmlBody,
+          textBody = Some(textBody),
+          category = NotificationCategory.NonUser.BILLING
+        ))
+      }
+    }
+  }
 
   def processAllBilling(): Future[Map[Id[Organization], (DollarAmount, String)]] = processingLock.withLockFuture {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(MAX_BALANCE, clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
@@ -105,6 +149,7 @@ class PaymentProcessingCommanderImpl @Inject() (
                 chargeId = Some(chargeId)
               ))
             }
+            notifyOfCharge(account, pm.stripeToken, amount, chargeId)
             log.info(s"[PPC][${account.orgId}] Processed charge for amount $amount: $description")
             amount
           }

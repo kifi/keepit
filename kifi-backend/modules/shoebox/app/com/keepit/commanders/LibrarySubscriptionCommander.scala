@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Singleton, Inject }
+import com.google.inject.{ ImplementedBy, Singleton, Inject }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
@@ -8,6 +9,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ NonOKResponseException, ClientResponse, DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.path.Path
 import com.keepit.model._
 import com.kifi.macros.json
 import play.api.libs.json._
@@ -31,19 +33,35 @@ object BasicSlackMessage {
   }
 }
 
+@ImplementedBy(classOf[LibrarySubscriptionCommanderImpl])
+trait LibrarySubscriptionCommander {
+  def sendNewKeepMessage(keep: Keep, library: Library): Seq[Future[ClientResponse]]
+  def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit
+}
+
 @Singleton
-class LibrarySubscriptionCommander @Inject() (
+class LibrarySubscriptionCommanderImpl @Inject() (
     db: Database,
     httpClient: HttpClient,
     librarySubscriptionRepo: LibrarySubscriptionRepo,
     userRepo: UserRepo,
     organizationRepo: OrganizationRepo,
     implicit val executionContext: ExecutionContext,
-    protected val airbrake: AirbrakeNotifier) extends Logging {
+    implicit val publicIdConfig: PublicIdConfiguration,
+    protected val airbrake: AirbrakeNotifier) extends LibrarySubscriptionCommander with Logging {
 
   private val httpLock = new ReactiveLock(5)
 
   val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000)))
+
+  def slackMessageForNewKeep(user: User, keep: Keep, library: Library, channel: String): BasicSlackMessage = {
+    val keepTitle = if (keep.title.exists(_.nonEmpty)) { keep.title.get } else { "a keep" }
+    val userLink = Path(s"/redir?data=${Json.obj("t" -> "us", "uid" -> user.externalId).toString()}&kma=1").absolute
+    val libLink = Path(s"/redir?data=${Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id).toString()}&kma=1").absolute
+    val text = s"<$userLink|${user.fullName}> just added <${keep.url}|$keepTitle> to the <$libLink|${library.name}> library."
+    val attachments: Seq[SlackAttachment] = keep.note.toSeq.collect { case content if content.nonEmpty => SlackAttachment(fallback = "Check out this keep", text = s"${content} - ${user.firstName}") }
+    BasicSlackMessage(text = text, channel = Some(channel), attachments = attachments)
+  }
 
   def sendNewKeepMessage(keep: Keep, library: Library): Seq[Future[ClientResponse]] = {
 
@@ -58,12 +76,9 @@ class LibrarySubscriptionCommander @Inject() (
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
-          val keepTitle = if (keep.title.exists(_.nonEmpty)) { keep.title.get } else { "a keep" }
-          val text = s"<http://www.kifi.com/${keeper.username.value}?kma=1|${keeper.fullName}> just added <${keep.url}|${keepTitle}> to the <http://www.kifi.com/$handle/${library.slug.value}?kma=1|${library.name}> library."
-          val attachments: Seq[SlackAttachment] = keep.note.toSeq.collect { case content if content.nonEmpty => SlackAttachment(fallback = "Check out this keep", text = s"${content} - ${keeper.firstName}") }
-          val body = BasicSlackMessage(text = text, channel = Some(subscription.name.toLowerCase), attachments = attachments)
+          val message = slackMessageForNewKeep(keeper, keep, library, subscription.name.toLowerCase)
 
-          val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(body)))
+          val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(message)))
           log.info(s"sendNewKeepMessage: Slack message request sent to subscription.id=${subscription.id}")
 
           response.onComplete {

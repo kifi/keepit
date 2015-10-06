@@ -228,7 +228,7 @@ class LibraryInfoCommanderImpl @Inject() (
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
       db.readOnlyReplicaAsync { implicit s =>
         val orgMap = orgRepo.getByIds(allOrgsShown)
-        organizationCommander.getBasicOrganizationViews(orgMap.keys.toSet, viewerUserIdOpt, authTokenOpt = None)
+        orgMap.keys.map(orgId => orgId -> organizationCommander.getBasicOrganizationViewHelper(orgId, viewerUserIdOpt, authTokenOpt = None)).toMap
       }
     }
 

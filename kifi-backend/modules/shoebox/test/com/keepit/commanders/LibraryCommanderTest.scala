@@ -716,12 +716,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
 
+        val libraryInfoCommander = inject[LibraryInfoCommander]
+        val targetLib1 = libraryInfoCommander.getLibrariesByUser(userIron.id.get)
+        val targetLib2 = libraryInfoCommander.getLibrariesByUser(userCaptain.id.get)
+        val targetLib3 = libraryInfoCommander.getLibrariesByUser(userAgent.id.get)
+        val targetLib4 = libraryInfoCommander.getLibrariesByUser(userHulk.id.get)
+
         db.readOnlyMaster { implicit s =>
-          val libraryInfoCommander = inject[LibraryInfoCommander]
-          val targetLib1 = inject[LibraryInfoCommander].getLibrariesByUser(userIron.id.get)
-          val targetLib2 = inject[LibraryInfoCommander].getLibrariesByUser(userCaptain.id.get)
-          val targetLib3 = inject[LibraryInfoCommander].getLibrariesByUser(userAgent.id.get)
-          val targetLib4 = inject[LibraryInfoCommander].getLibrariesByUser(userHulk.id.get)
 
           val (ironMemberships, ironLibs) = targetLib1._1.unzip
           ironLibs.map(_.slug.value) === Seq("science", "murica")

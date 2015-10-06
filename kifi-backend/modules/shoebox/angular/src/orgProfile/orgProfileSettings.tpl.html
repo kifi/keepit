@@ -1,14 +1,20 @@
 <main class="kf-ops kf-wrapper">
-  <div class="kf-row kf-ops-row">
-    <div class="kf-container kf-ops-nav">
+  <div class="kf-row kf-row-responsive">
+    <div class="kf-container kf-ops-nav" kf-follow-scroll>
       <div class="kf-container-header">
         <h1>Navigation</h1>
       </div>
       <ul>
         <li class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'team-settings' }">
-          <a class="kf-link" ui-sref="orgProfile.settings.team">Team Settings</a>
+          <a class="kf-link" ui-sref="orgProfile.settings.team">Settings</a>
         </li>
         <!-- sublisting -->
+        <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
+          <a
+            class="kf-link"
+            ui-sref="orgProfile.settings.team({ '#': 'team-settings-' })"
+          >Team Settings</a>
+        </li>
         <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
           <a
             class="kf-link"

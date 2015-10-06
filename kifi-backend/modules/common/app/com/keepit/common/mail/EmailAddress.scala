@@ -97,9 +97,10 @@ object SystemEmailAddress {
   val SALES = EmailAddress("sales@kifi.com")
   val ASHLEY = EmailAddress("ashley@kifi.com") //keep it around for twitter communication
   val CONGRATS = EmailAddress("congrats@kifi.com")
+  val BILLING = EmailAddress("billing@kifi.com")
 
   val ENG_EMAILS = Seq(EISHAY, YASUHIRO, JARED, ANDREW, YINGJIE, LÉO, STEPHEN, JOSH, CAM)
-  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, CONGRATS, NOTIFICATIONS, ENG, NOTIFY, SENDGRID, EISHAY_PUBLIC, SALES, ASHLEY)
+  val NON_ENG_EMAILS = Seq(TEAM, INVITATION, SUPPORT, OLD_SUPPORT, CONGRATS, NOTIFICATIONS, ENG, NOTIFY, SENDGRID, EISHAY_PUBLIC, SALES, ASHLEY, BILLING)
 
   val ALL_EMAILS = ENG_EMAILS ++ NON_ENG_EMAILS
 

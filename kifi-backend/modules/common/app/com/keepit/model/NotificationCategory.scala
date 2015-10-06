@@ -85,8 +85,9 @@ object NotificationCategory {
     val DISCUSSION_UPDATES = NotificationCategory("discussion_updates")
     val LIBRARY_INVITATION = NotificationCategory("visitor_library_invitation")
     val ORGANIZATION_INVITATION = NotificationCategory("visitor_organization_invitation")
+    val BILLING = NotificationCategory("billing")
 
-    val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION, ORGANIZATION_INVITATION)
+    val reportToAnalytics = Set(INVITATION, DISCUSSION_STARTED, DISCUSSION_UPDATES, ADDED_TO_DISCUSSION, LIBRARY_INVITATION, ORGANIZATION_INVITATION, BILLING)
 
     // Formatting Categories used in the extension
     val fromFriends = Set(INVITATION, DISCUSSION_STARTED, ADDED_TO_DISCUSSION, DISCUSSION_UPDATES, LIBRARY_INVITATION)
