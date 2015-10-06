@@ -227,7 +227,8 @@ class EmailTemplateProcessorImpl @Inject() (
           config.applicationBaseUrl + libPathCommander.getPathForLibrary(library)
         case tags.libraryLink =>
           val data = Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id)
-          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
+          val ans = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
+          ans
         case tags.libraryName => library.name
         case tags.libraryId => Library.publicId(library.id.get).id
         case tags.libraryOwnerFullName =>
