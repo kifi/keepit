@@ -9,15 +9,15 @@
 
 @if(r.externalLocator.isDefined) {
 <html data-kifi-deep-link='{"url":"@{r.url}","locator":"@{r.externalLocator.get}"}'>
-<div class="kifi-deep-link-no-extension" style="visibility:hidden">
-    It appears that this browser doesn’t have Kifi installed. We’re sending you along to the page anyway.
-</div>
 }
 <meta charset="utf-8"/>
 <meta name="apple-itunes-app" content="app-id=740232575, app-argument=kifi:@{r.url}"/>
 <meta name="apple-mobile-web-app-capable" content="no"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>Kifi</title>
+<div class="kifi-deep-link-no-extension" style="visibility:hidden">
+    It appears that this browser doesn’t have Kifi installed. We’re sending you along to the page anyway.
+</div>
 
 
 <script>
@@ -43,6 +43,14 @@ if (IS_IOS) {
     window.location = 'https://play.google.com/store/apps/details?id=com.kifi';
   }
 } else {
-  window.location = '@{r.url}';
+    @if(r.externalLocator.isDefined) {
+      document.addEventListener("DOMContentLoaded", function() {
+        setTimeout(function() {
+          window.location = '@{r.url}';
+        }, 500);
+      });
+    } else {
+        window.location = '@{r.url}';
+    }
 }
 </script>
