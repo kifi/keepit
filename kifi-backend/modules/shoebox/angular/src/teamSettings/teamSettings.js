@@ -4,9 +4,11 @@ angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
   '$window', '$rootScope', '$scope', '$state', 'orgProfileService', 'profileService',
-  'billingService', 'messageTicker', 'ORG_SETTING_VALUE',
+  'billingService', 'messageTicker', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($window, $rootScope, $scope, $state, orgProfileService, profileService,
-            billingService, messageTicker, ORG_SETTING_VALUE) {
+            billingService, messageTicker, ORG_PERMISSION, ORG_SETTING_VALUE) {
+    $scope.ORG_PERMISSION = ORG_PERMISSION;
+
     $scope.settingsSectionTemplateData = [
       {
         heading: 'Team Settings',
