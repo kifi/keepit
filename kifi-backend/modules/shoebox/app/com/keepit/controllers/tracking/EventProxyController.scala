@@ -1,25 +1,32 @@
 package com.keepit.controllers.tracking
 
+import com.keepit.commanders.UserIpAddressCommander
 import com.keepit.common.controller._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.core._
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import com.google.inject.Inject
 import play.api.libs.json.JsObject
 
+import scala.concurrent.ExecutionContext
+
 class EventProxyController @Inject() (
     val userActionsHelper: UserActionsHelper,
     clock: Clock,
+    userIpAddressCommander: UserIpAddressCommander,
     heimdal: HeimdalServiceClient,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
-    airbrake: AirbrakeNotifier) extends UserActions with ShoeboxServiceController {
+    airbrake: AirbrakeNotifier,
+    implicit val executionContext: ExecutionContext
+  ) extends UserActions with ShoeboxServiceController {
 
   def track() = MaybeUserAction(parse.tolerantJson) { request =>
+    request match {
+      case req: UserRequest[_] => userIpAddressCommander.logUserByRequest(req)
+      case _ =>
+    }
     import com.keepit.common.core._
     SafeFuture("event proxy") {
       val sentAt = clock.now()

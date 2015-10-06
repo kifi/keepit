@@ -12,10 +12,12 @@ import scala.util.{ Failure, Success }
 
 class ExtPageController @Inject() (
   val userActionsHelper: UserActionsHelper,
+  userIpAddressCommander: UserIpAddressCommander,
   pageCommander: PageCommander)
     extends UserActions with ShoeboxServiceController {
 
   def getPageInfo() = UserAction.async(parse.tolerantJson) { request =>
+    userIpAddressCommander.logUserByRequest(request)
     val url = (request.body \ "url").as[String]
     URI.parse(url) match {
       case Success(uri) =>
