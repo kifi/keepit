@@ -4,11 +4,12 @@ angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
   '$window', '$rootScope', '$scope', '$state', '$sce', 'orgProfileService', 'profileService',
-  'billingService', 'messageTicker', 'ORG_SETTING_VALUE',
+  'billingService', 'messageTicker', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($window, $rootScope, $scope, $state, $sce, orgProfileService, profileService,
-            billingService, messageTicker, ORG_SETTING_VALUE) {
+            billingService, messageTicker, ORG_PERMISSION, ORG_SETTING_VALUE) {
     var slackIntegrationHtmlTitle =
       $sce.trustAsHtml('Who can <a href="http://blog.kifi.com/slack-library-subscriptions/">create a Slack integration</a> with Kifi?');
+    $scope.ORG_PERMISSION = ORG_PERMISSION;
     $scope.settingsSectionTemplateData = [
       {
         heading: 'Team Settings',

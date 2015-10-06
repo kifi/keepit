@@ -13,13 +13,19 @@ angular.module('kifi')
     $scope.isAdminExperiment = (profileService.me.experiments.indexOf('admin') !== -1);
     function onHashChange() {
       var anchor = angular.element($window.location.hash.slice(0, -1))[0];
-      var headingTop = anchor.getBoundingClientRect().top - $window.document.body.getBoundingClientRect().top;
-      var scrollDestination = headingTop - 65; // make room for header
+      var headingTop;
+      var scrollDestination;
+
       if (anchor) {
-        angular.element('html, body').animate({
-          scrollTop: scrollDestination
-        });
+        headingTop = anchor.getBoundingClientRect().top - $window.document.body.getBoundingClientRect().top;
+        scrollDestination = headingTop - 70; // make room for header
+      } else {
+        scrollDestination = 0;
       }
+
+      angular.element('html, body').animate({
+        scrollTop: scrollDestination
+      });
     }
 
     $window.addEventListener('hashchange', onHashChange, false);
@@ -27,7 +33,7 @@ angular.module('kifi')
       $window.removeEventListener('hashchange', onHashChange);
     });
 
-    if (!$scope.viewer.membership || $scope.viewer.membership.role !== 'admin') {
+    if (!$scope.viewer.membership || $scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_SETTINGS) === -1) {
       $rootScope.$emit('errorImmediately');
     }
   }

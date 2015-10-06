@@ -84,7 +84,7 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_SETTINGS) { request =>
     Ok(Json.toJson(orgCommander.getExternalOrgConfiguration(request.orgId)))
   }
 

@@ -188,6 +188,29 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         1 === 1
       }
     }
+    "remove member permissions when they leave the org" in {
+      withDb() { implicit injector =>
+        val (org, owner, member) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val member = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).secret().saved
+          (org, owner, member)
+        }
 
+        db.readOnlyMaster { implicit session =>
+          permissionCommander.getOrganizationPermissions(org.id.get, Some(member.id.get)) must contain(OrganizationPermission.VIEW_ORGANIZATION)
+        }
+
+        val memberLeave = OrganizationMembershipRemoveRequest(org.id.get, member.id.get, member.id.get)
+        orgMembershipCommander.removeMembership(memberLeave) === Right(OrganizationMembershipRemoveResponse(memberLeave))
+
+        db.readOnlyMaster { implicit session =>
+          permissionCommander.getOrganizationPermissions(org.id.get, Some(member.id.get)) must not contain (OrganizationPermission.VIEW_ORGANIZATION)
+        }
+
+        inject[WatchableExecutionContext].drain()
+        1 === 1
+      }
+    }
   }
 }

@@ -14,7 +14,7 @@
         <select
           class="kf-team-settings-select"
           ng-model="settings[field.fieldKey].setting"
-          ng-disabled="!settings[field.fieldKey].editable"
+          ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
           ng-options="option.value as option.label for option in field.selectOptions"
           ng-change="updateSettings()"
         ></select>
