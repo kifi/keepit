@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.cache._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -40,8 +40,17 @@ class PermissionCommanderImpl @Inject() (
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 
   def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
-    val orgPermissionsNamespace = orgPermissionsNamespaceCache.getOrElse(OrganizationPermissionsNamespaceKey(orgId))(OrganizationPermissionsNamespace(orgId, Random.nextInt()))
-    orgPermissionsCache.getOrElse(OrganizationPermissionsKey(orgPermissionsNamespace, userIdOpt)) {
+    /*
+    PSA regarding these caches:
+    We want to have a cache from (Id[Organization], Option[Id[User]]) => Set[OrganizationPermission]
+    When an organization is modified, we need to invalidate all of the keys that have that org's
+    ID in them. There is no easy way to do this via a single cache. Instead, we use two caches,
+        1. Id[Organization] => Int (we call this Int a "namespace", because it controls the key namespace in cache 2)
+        2. (Id[Organization, Int, Option[Id[User]]) => Set[OrganizationPermission]
+    With two caches, we can invalidate an entire organization by changing its value in cache 1
+    */
+    val orgPermissionsNamespace = orgPermissionsNamespaceCache.getOrElse(OrganizationPermissionsNamespaceKey(orgId))(OrganizationPermissionsNamespace(Random.nextInt()))
+    orgPermissionsCache.getOrElse(OrganizationPermissionsKey(orgId, orgPermissionsNamespace, userIdOpt)) {
       computeOrganizationPermissions(orgId, userIdOpt)
     }
   }
@@ -157,25 +166,19 @@ class PermissionCommanderImpl @Inject() (
   }
 }
 
-case class OrganizationPermissionsNamespace(orgId: Id[Organization], value: Int)
-object OrganizationPermissionsNamespace {
-  implicit val format: Format[OrganizationPermissionsNamespace] = (
-    (__ \ 'orgId).format[Id[Organization]] and
-    (__ \ 'value).format[Int]
-  )(OrganizationPermissionsNamespace.apply, unlift(OrganizationPermissionsNamespace.unapply))
-}
+case class OrganizationPermissionsNamespace(value: Int) extends AnyVal
 case class OrganizationPermissionsNamespaceKey(orgId: Id[Organization]) extends Key[OrganizationPermissionsNamespace] {
   override val version = 1
   val namespace = "org_permissions_namespace"
   def toKey(): String = orgId.id.toString
 }
 class OrganizationPermissionsNamespaceCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[OrganizationPermissionsNamespaceKey, OrganizationPermissionsNamespace](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends PrimitiveCacheImpl[OrganizationPermissionsNamespaceKey, OrganizationPermissionsNamespace](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class OrganizationPermissionsKey(opn: OrganizationPermissionsNamespace, userIdOpt: Option[Id[User]]) extends Key[Set[OrganizationPermission]] {
+case class OrganizationPermissionsKey(orgId: Id[Organization], opn: OrganizationPermissionsNamespace, userIdOpt: Option[Id[User]]) extends Key[Set[OrganizationPermission]] {
   override val version = 1
   val namespace = "org_permissions"
-  def toKey(): String = opn.orgId.id.toString + "_" + opn.value.toString + "_" + userIdOpt.map(x => x.id.toString).getOrElse("none")
+  def toKey(): String = orgId.id.toString + "_" + opn.value.toString + "_" + userIdOpt.map(x => x.id.toString).getOrElse("none")
 }
 
 class OrganizationPermissionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
