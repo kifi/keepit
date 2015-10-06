@@ -39,17 +39,13 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
   "DeepLinkRouter" should {
     implicit val context = HeimdalContext.empty
     implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
-    implicit def deepLinkRouter(implicit injector: Injector) = inject[DeepLinkRouter]
-    implicit class PathWrapper(pathOpt: Option[Path]) {
-      def ===(that: Option[Path]) = pathOpt.map(_.absolute) must equalTo(that.map(_.absolute))
-    }
 
-    "route correctly" in {
+    "route internal links correctly" in {
       "for a friend request" in {
         withDb(modules: _*) { implicit injector =>
           val deepLink = Json.obj("t" -> "fr")
-          val link = Path("friends/requests")
-          deepLinkRouter.generateRedirect(deepLink) === Some(link)
+          val link = Path("friends/requests").absolute
+          deepLinkRouter.generateRedirectUrl(deepLink) === Some(link)
         }
       }
       "for a library recommendation" in {
@@ -63,12 +59,12 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
           }
 
           val deepLink1 = Json.obj("t" -> "lr", "lid" -> Library.publicId(orgLib.id.get))
-          val link1 = Path(s"${org.handle.value}/${orgLib.slug.value}")
-          deepLinkRouter.generateRedirect(deepLink1) === Some(link1)
+          val link1 = Path(s"${org.handle.value}/${orgLib.slug.value}").absolute
+          deepLinkRouter.generateRedirectUrl(deepLink1) === Some(link1)
 
           val deepLink2 = Json.obj("t" -> "lr", "lid" -> Library.publicId(personalLib.id.get))
-          val link2 = Path(s"${owner.username.value}/${personalLib.slug.value}")
-          deepLinkRouter.generateRedirect(deepLink2) === Some(link2)
+          val link2 = Path(s"${owner.username.value}/${personalLib.slug.value}").absolute
+          deepLinkRouter.generateRedirectUrl(deepLink2) === Some(link2)
         }
       }
       "for a new follower" in {
@@ -77,17 +73,21 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
             UserFactory.user().saved
           }
           val deepLink = Json.obj("t" -> "nf", "uid" -> user.externalId)
-          val link = Path(s"${user.username.value}")
-          deepLinkRouter.generateRedirect(deepLink) === Some(link)
+          val link = Path(s"${user.username.value}").absolute
+          deepLinkRouter.generateRedirectUrl(deepLink) === Some(link)
         }
       }
-      "for a new message" in {
-        skipped("need to figure out how to route a message-related deep-link")
+    }
+    "route external deep links" in {
+      "for a discussion" in {
         withDb(modules: _*) { implicit injector =>
-          val messageId = ???
-          val deepLink = Json.obj("t" -> "m", "id" -> messageId)
-          val link = ???
-          deepLinkRouter.generateRedirect(deepLink) === Some(link)
+          val url = "http://www.google.com"
+          val uri = db.readWrite { implicit session =>
+            normalizedURIInterner.internByUri(url, contentWanted = false)
+          }
+          val messageId = "1f871157-8bdc-42a9-a758-a602213fafb1"
+          val deepLink = Json.obj("t" -> "m", "id" -> messageId, "uri" -> uri.externalId)
+          deepLinkRouter.generateRedirect(deepLink) === Some(DeepLinkRedirect(url, Some(s"/messages/$messageId")))
         }
       }
     }

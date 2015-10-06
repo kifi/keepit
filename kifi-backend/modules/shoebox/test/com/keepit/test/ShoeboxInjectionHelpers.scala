@@ -2,6 +2,7 @@ package com.keepit.test
 
 import com.keepit.commanders._
 import com.keepit.common.db.slick.SlickSessionProvider
+import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRouterImpl }
 import com.keepit.integrity.{ OrganizationChecker, KeepChecker, LibraryChecker }
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
@@ -76,4 +77,5 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def paidPlanRepo(implicit injector: Injector) = inject[PaidPlanRepo]
   def planManagementCommander(implicit injector: Injector) = inject[PlanManagementCommander]
   def libSubCommander(implicit injector: Injector) = inject[LibrarySubscriptionCommander].asInstanceOf[LibrarySubscriptionCommanderImpl]
+  def deepLinkRouter(implicit injector: Injector) = inject[DeepLinkRouter].asInstanceOf[DeepLinkRouterImpl]
 }

@@ -372,8 +372,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         val text = email.textBody.get.value
         text must contain("Hi Billy,")
-        text must contain(s"http://dev.ezkeep.com:9000/password/$token")illy,")
-        text must contain(deepLink)
+        text must contain(s"http://dev.ezkeep.com:9000/password/$token")
       }
     }
 

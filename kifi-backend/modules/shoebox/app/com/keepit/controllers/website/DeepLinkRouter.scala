@@ -2,7 +2,7 @@ package com.keepit.controllers.website
 
 import java.net.URLEncoder
 
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.PathCommander
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
@@ -14,8 +14,13 @@ import play.api.libs.json.{ Json, JsObject }
 
 case class DeepLinkRedirect(url: String, externalLocator: Option[String] = None)
 
+@ImplementedBy(classOf[DeepLinkRouterImpl])
+trait DeepLinkRouter {
+  def generateRedirect(data: JsObject): Option[DeepLinkRedirect]
+}
+
 @Singleton
-class DeepLinkRouter @Inject() (
+class DeepLinkRouterImpl @Inject() (
     config: FortyTwoConfig,
     db: Database,
     userRepo: UserRepo,
@@ -23,26 +28,26 @@ class DeepLinkRouter @Inject() (
     libraryRepo: LibraryRepo,
     uriRepo: NormalizedURIRepo,
     pathCommander: PathCommander,
-    implicit val publicIdConfiguration: PublicIdConfiguration) {
+    implicit val publicIdConfiguration: PublicIdConfiguration) extends DeepLinkRouter {
 
-  def deepLink(data: JsObject): String = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
+  private def deepLink(data: JsObject): String = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
   def generateRedirect(data: JsObject): Option[DeepLinkRedirect] = {
     (data \ "t").asOpt[String].flatMap {
       case DeepLinkType.DiscussionView =>
         val uriIdOpt = (data \ DeepLinkField.UriId).asOpt[ExternalId[NormalizedURI]]
         val uriOpt = uriIdOpt.flatMap { uriId => db.readOnlyReplica { implicit session => uriRepo.getOpt(uriId) } }
-        val externalLocatorOpt = (data \ DeepLinkField.ExternalLocator).asOpt[String]
+        val messageIdOpt = (data \ DeepLinkField.MessageThreadId).asOpt[String]
         for {
           uri <- uriOpt
-          externalLocator <- externalLocatorOpt
-        } yield DeepLinkRedirect(uri.url, Some(externalLocator))
+          messageId <- messageIdOpt
+        } yield DeepLinkRedirect(uri.url, Some(s"/messages/$messageId"))
       case _ =>
         generateRedirectUrl(data).map(DeepLinkRedirect(_, externalLocator = None))
     }
   }
 
-  private def generateRedirectUrl(data: JsObject): Option[String] = {
+  def generateRedirectUrl(data: JsObject): Option[String] = {
     (data \ "t").asOpt[String].flatMap {
       case DeepLinkType.ViewHomepage =>
         Some(Path("").absolute)
@@ -80,7 +85,7 @@ object DeepLinkType {
   val LibraryView = "lv"
   val NewFollower = "nf"
   val UserView = "us"
-  val DiscussionView = "dv"
+  val DiscussionView = "m"
 }
 
 object DeepLinkField {
@@ -90,5 +95,4 @@ object DeepLinkField {
   val AuthToken = "at"
   val MessageThreadId = "id"
   val UriId = "uri"
-  val ExternalLocator = "extloc"
 }
