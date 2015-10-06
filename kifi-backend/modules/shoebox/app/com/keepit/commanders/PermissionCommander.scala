@@ -49,7 +49,7 @@ class PermissionCommanderImpl @Inject() (
         2. (Id[Organization, Int, Option[Id[User]]) => Set[OrganizationPermission]
     With two caches, we can invalidate an entire organization by changing its value in cache 1
     */
-    val orgPermissionsNamespace = orgPermissionsNamespaceCache.getOrElse(OrganizationPermissionsNamespaceKey(orgId))(OrganizationPermissionsNamespace(Random.nextInt()))
+    val orgPermissionsNamespace = orgPermissionsNamespaceCache.getOrElse(OrganizationPermissionsNamespaceKey(orgId))(Random.nextInt())
     orgPermissionsCache.getOrElse(OrganizationPermissionsKey(orgId, orgPermissionsNamespace, userIdOpt)) {
       computeOrganizationPermissions(orgId, userIdOpt)
     }
@@ -166,19 +166,18 @@ class PermissionCommanderImpl @Inject() (
   }
 }
 
-case class OrganizationPermissionsNamespace(value: Int) extends AnyVal
-case class OrganizationPermissionsNamespaceKey(orgId: Id[Organization]) extends Key[OrganizationPermissionsNamespace] {
+case class OrganizationPermissionsNamespaceKey(orgId: Id[Organization]) extends Key[Int] {
   override val version = 1
   val namespace = "org_permissions_namespace"
   def toKey(): String = orgId.id.toString
 }
 class OrganizationPermissionsNamespaceCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends PrimitiveCacheImpl[OrganizationPermissionsNamespaceKey, OrganizationPermissionsNamespace](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends PrimitiveCacheImpl[OrganizationPermissionsNamespaceKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
-case class OrganizationPermissionsKey(orgId: Id[Organization], opn: OrganizationPermissionsNamespace, userIdOpt: Option[Id[User]]) extends Key[Set[OrganizationPermission]] {
+case class OrganizationPermissionsKey(orgId: Id[Organization], opn: Int, userIdOpt: Option[Id[User]]) extends Key[Set[OrganizationPermission]] {
   override val version = 1
   val namespace = "org_permissions"
-  def toKey(): String = orgId.id.toString + "_" + opn.value.toString + "_" + userIdOpt.map(x => x.id.toString).getOrElse("none")
+  def toKey(): String = orgId.id.toString + "_" + opn.toString + "_" + userIdOpt.map(x => x.id.toString).getOrElse("none")
 }
 
 class OrganizationPermissionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
