@@ -107,6 +107,10 @@ angular.module('kifi')
       return memberLazyLoader.hasMore();
     };
 
+    $scope.hasLoaded = function () {
+      return memberLazyLoader.hasLoaded();
+    };
+
     $scope.fetchMembers = function () {
       memberLazyLoader
       .fetch()

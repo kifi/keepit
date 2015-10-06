@@ -28,39 +28,33 @@ angular.module('kifi')
       link: function ($scope, element, attrs) {
         function moveFloatMenu() {
           var pageScroll = $body.scrollTop();
-          var offset = pageScroll - positionY + ($header.height() + 3);
+          var headerOffset = $header.height() + 8;
+          var offset = pageScroll - positionY + headerOffset;
 
-          if (offset < 0 || pageScroll + 58 < positionY) {
-            offset = 0;
+          if (offset < 0 || pageScroll + headerOffset < positionY) {
+            element.css({
+              'position': 'static',
+              'top': '0px'
+            });
+          } else {
+            element.css({
+              'position': 'fixed',
+              'top': headerOffset + 'px'
+            });
           }
-
-          element.animate(
-            {
-              borderSpacing: offset
-            },
-            {
-              step: function (now) {
-                this.style.transform = 'translateY(' + now + 'px)';
-              },
-              duration: 500,
-              queue: false
-            }
-          );
         }
 
         function updateMq() {
           if (desktopMq.matches) {
-            $window.addEventListener('scroll', _moveFloatMenu);
+            $window.addEventListener('scroll', moveFloatMenu);
             moveFloatMenu();
           } else {
-            $window.removeEventListener('scroll', _moveFloatMenu);
-            element[0].style.transform = null;
-            element[0].style.borderSpacing = null;
+            $window.removeEventListener('scroll', moveFloatMenu);
+            element.css('position', null);
           }
         }
 
         var $header = (attrs.kfFollowScrollHeader && angular.element(attrs.kfFollowScrollHeader)) || angular.element('.kf-lih');
-        var _moveFloatMenu = _.debounce(moveFloatMenu, 150);
         var positionY;
 
         // Wait for the page to fully render before calculating the position.
@@ -71,7 +65,7 @@ angular.module('kifi')
           updateMq();
 
           $scope.$on('$destroy', function () {
-            $window.removeEventListener('scroll', _moveFloatMenu);
+            $window.removeEventListener('scroll', moveFloatMenu);
             desktopMq.removeEventListener('change', updateMq);
           });
         });
