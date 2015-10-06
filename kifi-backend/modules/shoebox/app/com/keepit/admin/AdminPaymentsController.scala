@@ -137,10 +137,12 @@ class AdminPaymentsController @Inject() (
       data("cvc").head.trim,
       data("cardholderName").head.trim
     )
-    stripeClient.getPermanentToken(cardDetails, s"Manually Entered through admin ${request.userId} for org $orgId").map { token =>
-      val pm = planCommander.addPaymentMethod(orgId, token, ActionAttribution(user = None, admin = Some(request.userId)))
-      val event = planCommander.changeDefaultPaymentMethod(orgId, pm.id.get, ActionAttribution(user = None, admin = Some(request.userId)))
-      Ok(event.toString)
+    stripeClient.getPermanentToken(cardDetails, s"Manually Entered through admin ${request.userId} for org $orgId").flatMap { token =>
+      stripeClient.getLastFourDigitsOfCard(token).map { lastFour =>
+        val pm = planCommander.addPaymentMethod(orgId, token, ActionAttribution(user = None, admin = Some(request.userId)), lastFour)
+        val event = planCommander.changeDefaultPaymentMethod(orgId, pm.id.get, ActionAttribution(user = None, admin = Some(request.userId)), lastFour)
+        Ok(event.toString)
+      }
     }
   }
 

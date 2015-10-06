@@ -225,7 +225,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       extras, e.creditChange, e.paymentMethod, e.paymentCharge, e.memo, e.chargeId))
   }
 
-  def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, creditChange: DollarAmount = DollarAmount.ZERO) = {
+  def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, creditChange: DollarAmount = DollarAmount.ZERO, memo: Option[String] = None) = {
     AccountEvent(
       eventGroup = EventGroup(),
       eventTime = eventTime,
@@ -238,7 +238,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       creditChange = creditChange,
       paymentMethod = None,
       paymentCharge = None,
-      memo = None,
+      memo = memo,
       chargeId = None
     )
   }

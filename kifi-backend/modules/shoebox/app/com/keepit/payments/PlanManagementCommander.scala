@@ -62,8 +62,8 @@ trait PlanManagementCommander {
   def getBillingCycleStart(orgId: Id[Organization]): DateTime
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
-  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): PaymentMethod
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution): Try[AccountEvent]
+  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[AccountEvent]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
 
   def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
@@ -453,7 +453,7 @@ class PlanManagementCommanderImpl @Inject() (
     paymentMethodRepo.getByAccountId(orgId2AccountId(orgId))
   }
 
-  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): PaymentMethod = db.readWrite { implicit session =>
+  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod = db.readWrite { implicit session =>
     val accountId = orgId2AccountId(orgId)
     val newPaymentMethod = paymentMethodRepo.save(PaymentMethod(
       accountId = accountId,
@@ -464,12 +464,13 @@ class PlanManagementCommanderImpl @Inject() (
       eventTime = clock.now,
       accountId = accountId,
       attribution = attribution,
-      action = AccountEventAction.PaymentMethodAdded(newPaymentMethod.id.get)
+      action = AccountEventAction.PaymentMethodAdded(newPaymentMethod.id.get),
+      memo = Some(s"Credit card ending in $lastFour added")
     ))
     newPaymentMethod
   }
 
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution): Try[AccountEvent] = db.readWrite { implicit session =>
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[AccountEvent] = db.readWrite { implicit session =>
     val accountId = orgId2AccountId(orgId)
     val newDefault = paymentMethodRepo.get(newDefaultId)
     val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
@@ -484,7 +485,8 @@ class PlanManagementCommanderImpl @Inject() (
         eventTime = clock.now,
         accountId = accountId,
         attribution = attribution,
-        action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get)
+        action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get),
+        memo = Some(s"Credit card ending in $lastFour set to default")
       )))
     }
 
@@ -525,19 +527,19 @@ class PlanManagementCommanderImpl @Inject() (
       case UserChangeCredit() => "Credit for reduction in number of Users"
       case UserAdded(who) => {
         val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} added to your organization"
+        s"${user.firstName} ${user.lastName} added to your team"
       }
       case UserRemoved(who) => {
         val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} removed from your organization"
+        s"${user.firstName} ${user.lastName} removed from your team"
       }
       case AdminAdded(who) => {
         val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} made an admin of your organization"
+        s"${user.firstName} ${user.lastName} made an admin of your team"
       }
       case AdminRemoved(who) => {
         val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} no longer an admin of your organization"
+        s"${user.firstName} ${user.lastName} no longer an admin of your team"
       }
       case PlanChanged(oldPlanId, newPlanId) => {
         val oldPlan = paidPlanRepo.get(oldPlanId)
