@@ -113,6 +113,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val request = route.acceptInvitation(publicOrgId, Some(invite.authToken))
           val result = controller.acceptInvitation(publicOrgId, Some(invite.authToken))(request)
           status(result) must equalTo(NO_CONTENT)
+          db.readOnlyMaster(implicit s => inject[OrganizationMembershipRepo].getByOrgIdAndUserId(orgId, invitee.id.get)) must beSome
         }
       }
 

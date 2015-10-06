@@ -192,7 +192,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
     (requesterOpt, request) match {
-      case (_, OrganizationMembershipAddRequest(_, _, _, newRole)) =>
+      case (_, _: OrganizationMembershipAddRequest) =>
         if (targetOpt.isDefined) Some(OrganizationFail.ALREADY_A_MEMBER)
         else None
 
