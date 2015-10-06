@@ -1,15 +1,19 @@
 package com.keepit.commanders.emails
 
+import java.net.URLEncoder
+
 import com.google.inject.{ Provider, ImplementedBy, Inject }
 import com.keepit.commanders.{ PathCommander }
 import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ LargeString, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.template.Tag.tagRegex
+import com.keepit.common.net.URI
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.mail.template.{ helpers, EmailLayout, EmailTrackingParam, EmailToSend, TagWrapper, tags, EmailTip }
@@ -63,6 +67,7 @@ class EmailTemplateProcessorImpl @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
+    orgRepo: OrganizationRepo,
     keepRepo: KeepRepo,
     s3ImageStore: S3ImageStore,
     libPathCommander: PathCommander,
@@ -72,6 +77,7 @@ class EmailTemplateProcessorImpl @Inject() (
     emailTipProvider: Provider[EmailTipProvider],
     emailOptOutCommander: EmailOptOutCommander,
     implicit val defaultContext: ExecutionContext,
+    implicit val publicIdConfig: PublicIdConfiguration,
     private val airbrake: AirbrakeNotifier) extends EmailTemplateProcessor with Logging {
 
   /* for the lack of a better name, this is just a trait that encapsulates
@@ -84,12 +90,14 @@ class EmailTemplateProcessorImpl @Inject() (
 
   case class UserNeeded(id: Id[User]) extends NeededObject
 
+  case class OrganizationNeeded(id: Id[Organization]) extends NeededObject
+
   case class LibraryNeeded(id: Id[Library]) extends NeededObject
 
   case class KeepNeeded(id: Id[Keep]) extends NeededObject
 
   case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String],
-    libraries: Map[Id[Library], Library], keeps: Map[Id[Keep], Keep])
+    libraries: Map[Id[Library], Library], keeps: Map[Id[Keep], Keep], organizations: Map[Id[Organization], Organization])
 
   def process(emailToSend: EmailToSend) = new SafeFuture[ProcessedEmailResult]({
     val tipHtmlF = emailTipProvider.get().getTipHtml(emailToSend)
@@ -117,6 +125,7 @@ class EmailTemplateProcessorImpl @Inject() (
       }
 
       val userIds = needs.collect { case UserNeeded(id) => id }
+      val orgIds = needs.collect { case OrganizationNeeded(id) => id }
       val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
       val libraryIds = needs.collect { case LibraryNeeded(id) => id }
       val keepIds = needs.collect { case KeepNeeded(id) => id }
@@ -132,14 +141,16 @@ class EmailTemplateProcessorImpl @Inject() (
       }
 
       val keepsF = getKeeps(keepIds)
+      val orgsF = getOrganizations(orgIds)
 
       for {
         (users, libraries) <- usersAndLibrariesF
         userImageUrls <- userImageUrlsF
         tipHtmlOpt <- tipHtmlF
         keeps <- keepsF
+        orgs <- orgsF
       } yield {
-        val input = DataNeededResult(users = users, imageUrls = userImageUrls, libraries = libraries, keeps = keeps)
+        val input = DataNeededResult(users = users, organizations = orgs, imageUrls = userImageUrls, libraries = libraries, keeps = keeps)
         val includedTip = tipHtmlOpt.map(_._1)
 
         val decoratedHtml = htmlDecorator(evalTemplate(htmlBody.body, input, emailToSend, includedTip)) {
@@ -190,6 +201,10 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def libraryId = tagArgs(0).as[Id[Library]]
       @inline def library: Library = input.libraries(libraryId)
 
+      // only call if Id[Organization] is expected as the first argument
+      @inline def orgId = tagArgs(0).as[Id[Organization]]
+      @inline def org: Organization = input.organizations(orgId)
+
       @inline def keepId = tagArgs(0).as[Id[Keep]]
       @inline def keep: Keep = input.keeps(keepId)
 
@@ -199,11 +214,25 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.fullName => basicUser.firstName + " " + basicUser.lastName
         case tags.avatarUrl => toHttpsUrl(input.imageUrls(userId))
         case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
+        case tags.profileLink =>
+          val data = Json.obj("t" -> "us", "uid" -> basicUser.externalId)
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
+
+        case tags.organizationId => Organization.publicId(org.id.get).id
+        case tags.organizationLink =>
+          val data = Json.obj("t" -> "oi", "oid" -> Organization.publicId(org.id.get).id)
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
+
         case tags.libraryUrl =>
           config.applicationBaseUrl + libPathCommander.getPathForLibrary(library)
+        case tags.libraryLink =>
+          val data = Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id)
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
         case tags.libraryName => library.name
+        case tags.libraryId => Library.publicId(library.id.get).id
         case tags.libraryOwnerFullName =>
           val libOwner = input.users(library.ownerId)
+
           libOwner.fullName
         case tags.keepName => keep.title.getOrElse("Untitled Keep")
         case tags.keepUrl => keep.url
@@ -216,7 +245,7 @@ class EmailTemplateProcessorImpl @Inject() (
           val address = db.readOnlyReplica { implicit s => emailAddressRepo.getByUser(userId) }
           getUnsubUrl(address)
         case tags.unsubscribeEmailUrl => getUnsubUrl(tagWrapper.args(0).as[EmailAddress])
-        case tags.userExternalId => user.externalId.toString()
+        case tags.userExternalId => user.externalId.id
         case tags.title => emailToSend.title
         case tags.baseUrl => config.applicationBaseUrl
         case tags.kcid => emailToSend.urlKcidParam
@@ -253,7 +282,10 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
-        case tags.libraryName | tags.libraryUrl | tags.libraryOwnerFullName =>
+        case tags.organizationId | tags.organizationLink =>
+          val orgId = tagArgs(0).as[Id[Organization]]
+          OrganizationNeeded(orgId)
+        case tags.libraryName | tags.libraryUrl | tags.libraryLink | tags.libraryOwnerFullName =>
           val libId = tagArgs(0).as[Id[Library]]
           LibraryNeeded(libId)
         case tags.keepName | tags.keepUrl =>
@@ -275,6 +307,12 @@ class EmailTemplateProcessorImpl @Inject() (
   private def getKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Keep]] = {
     db.readOnlyMasterAsync { implicit s =>
       keepIds.map(id => id -> keepRepo.get(id)).toMap
+    }
+  }
+
+  private def getOrganizations(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], Organization]] = {
+    db.readOnlyMasterAsync { implicit s =>
+      orgIds.map(id => id -> orgRepo.get(id)).toMap
     }
   }
 

@@ -1,6 +1,8 @@
 @(toUserId: Id[User])
 @import com.keepit.common.mail.template.helpers._
-@homeUrl = @{htmlUrl("www.kifi.com?", "kifiHome", false)}
+@import play.api.libs.json._
+
+@homeUrl = @{kifiUrl("kifiHome")}
 @howKifiWorksUrl = @{htmlUrl("https://www.kifi.com/how_it_works?", "howKifiWorks", false)}
 @eishayKifiUrl = @{profileUrl(Id[User](1), "eishayProf")}
 
