@@ -1,14 +1,19 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.model._
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import scala.util.Random
 
 @ImplementedBy(classOf[PermissionCommanderImpl])
 trait PermissionCommander {
@@ -19,6 +24,8 @@ trait PermissionCommander {
 @Singleton
 class PermissionCommanderImpl @Inject() (
     db: Database,
+    orgPermissionsCache: OrganizationPermissionsCache,
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
@@ -33,9 +40,10 @@ class PermissionCommanderImpl @Inject() (
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 
   def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
-    // TODO(ryan): this needs to look in orgPermissionsCache by (orgId, userIdOpt) to see if the permissions are cached
-    // If not, it should compute them directly and add them to the cache
-    computeOrganizationPermissions(orgId, userIdOpt)
+    val orgPermissionsNamespace = orgPermissionsNamespaceCache.getOrElse(OrganizationPermissionsNamespaceKey(orgId))(OrganizationPermissionsNamespace(orgId, Random.nextInt()))
+    orgPermissionsCache.getOrElse(OrganizationPermissionsKey(orgPermissionsNamespace, userIdOpt)) {
+      computeOrganizationPermissions(orgId, userIdOpt)
+    }
   }
 
   private def computeOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
@@ -147,5 +155,28 @@ class PermissionCommanderImpl @Inject() (
       OrganizationPermission.VIEW_SETTINGS
     )
   }
-
 }
+
+case class OrganizationPermissionsNamespace(orgId: Id[Organization], value: Int)
+object OrganizationPermissionsNamespace {
+  implicit val format: Format[OrganizationPermissionsNamespace] = (
+    (__ \ 'orgId).format[Id[Organization]] and
+    (__ \ 'value).format[Int]
+  )(OrganizationPermissionsNamespace.apply, unlift(OrganizationPermissionsNamespace.unapply))
+}
+case class OrganizationPermissionsNamespaceKey(orgId: Id[Organization]) extends Key[OrganizationPermissionsNamespace] {
+  override val version = 1
+  val namespace = "org_permissions_namespace"
+  def toKey(): String = orgId.id.toString
+}
+class OrganizationPermissionsNamespaceCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrganizationPermissionsNamespaceKey, OrganizationPermissionsNamespace](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class OrganizationPermissionsKey(opn: OrganizationPermissionsNamespace, userIdOpt: Option[Id[User]]) extends Key[Set[OrganizationPermission]] {
+  override val version = 1
+  val namespace = "org_permissions"
+  def toKey(): String = opn.orgId.id.toString + "_" + opn.value.toString + "_" + userIdOpt.map(x => x.id.toString).getOrElse("none")
+}
+
+class OrganizationPermissionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrganizationPermissionsKey, Set[OrganizationPermission]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
