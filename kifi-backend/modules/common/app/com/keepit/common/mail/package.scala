@@ -1,5 +1,7 @@
 package com.keepit.common.mail
 
+import java.net.URLEncoder
+
 import com.google.common.html.HtmlEscapers
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
@@ -26,9 +28,11 @@ package object template {
     val fullName = TagLabel("fullName")
     val avatarUrl = TagLabel("avatarUrl")
     val organizationId = TagLabel("organizationId")
+    val organizationLink = TagLabel("organizationLink")
     val libraryId = TagLabel("libraryId")
     val libraryName = TagLabel("libraryName")
     val libraryUrl = TagLabel("libraryUrl")
+    val libraryLink = TagLabel("libraryLink")
     val libraryOwnerFullName = TagLabel("libraryOwnerFullName")
     val keepName = TagLabel("keepName")
     val keepUrl = TagLabel("keepUrl")
@@ -37,6 +41,7 @@ package object template {
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
     val userExternalId = TagLabel("userExternalId")
     val profileUrl = TagLabel("profileUrl")
+    val profileLink = TagLabel("profileLink")
     val kcid = TagLabel("kcid")
     val campaign = TagLabel("campaign")
     val channel = TagLabel("channel")
@@ -79,36 +84,21 @@ package object template {
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
-    def profileLink(id: Id[User], content: String = "") =
-      deepLink(s"""{"t":"us","uid":"${Tag1(tags.userExternalId, id).value}"}""", content, openInAppIfMobile = true)
+    def profileLink(id: Id[User]) = Tag1(tags.profileLink, id).toHtml
+    def profileLink(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileLink, id) + "&", content, openInAppIfMobile = true))
 
     def profileUrl(id: Id[User]) = Tag1(tags.profileUrl, id).toHtml
-
     def profileUrl(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileUrl, id) + "?", content, openInAppIfMobile = true))
 
     def organizationId(id: Id[Organization]) = Tag1(tags.organizationId, id).value
 
-    sealed abstract class OrganizationDeepLinkType(val value: String)
-    object OrganizationDeepLinkType {
-      case object Invite extends OrganizationDeepLinkType("oi")
-    }
-    def organizationLink(deepLinkType: OrganizationDeepLinkType, id: Id[Organization], authToken: String, content: String = "", openInAppIfMobile: Boolean = false) =
-      deepLink(s"""{"t":${deepLinkType.value},"oid":${organizationId(id)},"at":$authToken}""", content, openInAppIfMobile)
+    def organizationLink(id: Id[Organization]) = Tag1(tags.organizationLink, id).toHtml
+    def organizationLink(id: Id[Organization], content: String) = Html(appendTrackingParams(Tag1(tags.organizationLink, id) + "&", content, openInAppIfMobile = true))
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
-    // deepLinkType needs to encode the reason we are redirecting to a library
-    //    1. for an invite => "li"
-    //    2. because it was recommended => "lr"
-    //    2. because we are presenting stats on it => "lv"
-    sealed abstract class LibraryDeepLinkType(val value: String)
-    object LibraryDeepLinkType {
-      case object Invite extends LibraryDeepLinkType("li")
-      case object Recommendation extends LibraryDeepLinkType("lr")
-      case object View extends LibraryDeepLinkType("lv")
-    }
-    def libraryLink(deepLinkType: LibraryDeepLinkType, id: Id[Library], content: String) =
-      deepLink(s"""{"t":${deepLinkType.value},"lid":${Tag1(tags.libraryId, id).value}}""", "", openInAppIfMobile = true)
+    def libraryLink(id: Id[Library]) = Tag1(tags.libraryLink, id).toHtml
+    def libraryLink(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryLink, id) + "&", content, openInAppIfMobile = true))
 
     def libraryUrl(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryUrl, id) + "?", content, openInAppIfMobile = true))
 
@@ -157,16 +147,18 @@ package object template {
 
     // Just opens the contact's profile
     def inviteContactUrl(id: Id[User], content: String) =
-      deepLink(s"""{"t":"us","uid":"${Tag1(tags.userExternalId, id).value}"}""", content, openInAppIfMobile = true)
+      profileLink(id, content)
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
-      deepLink(s"""{"t":"us","uid":"${Tag1(tags.userExternalId, id).value}"}""", "pymk" + index, openInAppIfMobile = true)
+      profileLink(id, "pymk" + index)
 
     def invitedLibrariesUrl(id: Id[User], content: String) =
       deepLink("""{"t":"il"}""", content, openInAppIfMobile = true)
 
     // data is a stringified version of a JsObject
-    def deepLink(data: String, content: String, openInAppIfMobile: Boolean): Html =
-      htmlUrl(s"$baseUrl/redir?data=$data&", content, openInAppIfMobile)
+    def deepLink(data: String, content: String, openInAppIfMobile: Boolean): Html = {
+      val encodedParams = URLEncoder.encode(s"data=$data", "ascii")
+      htmlUrl(s"$baseUrl/redir?$encodedParams&", content, openInAppIfMobile)
+    }
 
     // wrap a url (String) in HTML (so tags aren't escaped)
     def htmlUrl(url: String, content: String, openInAppIfMobile: Boolean): Html =
@@ -181,7 +173,7 @@ package object template {
         s"&amp;${EmailTrackingParam.paramName}=${trackingParam(content)}&amp;$openInAppIfMobileDirective"
     }
 
-    def kifiUrl(content: String = "unknown") = deepLink("""{"t":"h"}""", content, openInAppIfMobile = true)
+    def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content, openInAppIfMobile = true)
 
     val kifiAddress = "278 Hope St Suite D, Mountain View, CA 94041, USA"
     val kifiLogoUrl = kifiUrl("headerLogo")
