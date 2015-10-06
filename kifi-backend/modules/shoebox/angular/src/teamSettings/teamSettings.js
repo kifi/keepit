@@ -7,7 +7,8 @@ angular.module('kifi')
   'billingService', 'messageTicker', 'ORG_SETTING_VALUE',
   function ($window, $rootScope, $scope, $state, $sce, orgProfileService, profileService,
             billingService, messageTicker, ORG_SETTING_VALUE) {
-    var slackIntegrationHtmlTitle = $sce.trustAsHtml('Who can <a href="http://blog.kifi.com/slack-library-subscriptions/">create a Slack integration</a> with Kifi?');
+    var slackIntegrationHtmlTitle =
+      $sce.trustAsHtml('Who can <a href="http://blog.kifi.com/slack-library-subscriptions/">create a Slack integration</a> with Kifi?');
     $scope.settingsSectionTemplateData = [
       {
         heading: 'Team Settings',
