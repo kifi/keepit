@@ -1,5 +1,5 @@
 <div ng-if="kifiAdmin && viewer.membership.role === 'admin' && billingState.credit > 0" kf-credit-banner credit="{{ billingState.credit }}"></div>
-<div class="kf-container kf-team-settings-fields">
+<div class="kf-team-settings-fields">
   <h1 class="kf-team-settings-top-header">Settings</h1>
   <section ng-repeat="section in settingsSectionTemplateData" class="kf-container">
     <div ng-show="section.heading" class="kf-container-header">
