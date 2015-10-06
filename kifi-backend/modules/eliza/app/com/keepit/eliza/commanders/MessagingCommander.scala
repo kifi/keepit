@@ -656,8 +656,9 @@ class MessagingCommander @Inject() (
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
 
     val cantSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
-      permissionsByOrgId.exists { case (orgId, permissions) =>
-        !permissions.contains(OrganizationPermission.GROUP_MESSAGING).tap(if (_) airbrake.notify(s"user $userId was able to send to org $orgId without permissions!"))
+      permissionsByOrgId.exists {
+        case (orgId, permissions) =>
+          !permissions.contains(OrganizationPermission.GROUP_MESSAGING).tap(if (_) airbrake.notify(s"user $userId was able to send to org $orgId without permissions!"))
       }
     }
 
