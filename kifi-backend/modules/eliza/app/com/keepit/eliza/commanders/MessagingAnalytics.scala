@@ -207,9 +207,6 @@ class MessagingAnalytics @Inject() (
       message.source.foreach { source => contextBuilder += ("source", source.value) }
       thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
-
-      contextBuilder.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => s"[OrgMessageTracking] successfully tracked messagedWholeOrgId=${orgId.value}" }
-
       sender match {
         case MessageSender.User(userId) => {
           val uriId = thread.uriId.get
@@ -217,6 +214,7 @@ class MessagingAnalytics @Inject() (
             contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
             thread.participants.foreach(addOrganizationInfo(contextBuilder, _))
             val context = contextBuilder.build
+            context.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgTracking:sentMessage] successfully tracking allParticipantsInOrgId=$orgId") }
             heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
             heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
             heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
@@ -269,7 +267,7 @@ class MessagingAnalytics @Inject() (
       val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
       log.info(s"[OrgMessageTracking] commonOrgs=${commonOrgs.map(_.mkString(","))}")
       commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", ContextStringData(orgId.toString)) }
-      contextBuilder.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgMessageTracking] successfully tracking allParticipantsInOrgId = $orgId") }
+      contextBuilder.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgTracking:addOrganizationInfo] successfully tracking allParticipantsInOrgId = $orgId") }
     }
   }
 }

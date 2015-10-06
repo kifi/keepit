@@ -44,6 +44,7 @@ class EventTrackingController @Inject() (
   private val visitorEventHandlers: Seq[VisitorEventHandler] = Seq(libraryViewTrackingCommander)
 
   private def trackInternalEvent(event: HeimdalEvent): Unit = {
+    if (event.eventType.name.toLowerCase.contains("messaged")) event.context.data.get("allParticipantsInOrgId").foreach(orgId => log.info(s"[OrgTracking:trackInternalEvent] allParticipantsInOrgId=$orgId"))
     event match {
       case userEvent: UserEvent => handleUserEvent(userEvent).map(e => clientTrackEvent(e))
       case visitorEvent: VisitorEvent => handleVisitorEvent(visitorEvent).map(e => clientTrackEvent(e))
@@ -81,9 +82,8 @@ class EventTrackingController @Inject() (
 
     val userEvent = if (rawUserEvent.eventType.name.startsWith("user_")) rawUserEvent.copy(eventType = EventType(rawUserEvent.eventType.name.substring(5))) else rawUserEvent
 
-    if (rawUserEvent.eventType.name.equalsIgnoreCase("messaged")) {
-      rawUserEvent.context.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => log.info(s"[OrgMessageTracking] successfully tracked messagedWholeOrgId=${orgId.value}") }
-      rawUserEvent.context.data.get("allParticipantsInOrgId").collect { case orgId: ContextStringData => log.info(s"[OrgMessageTracking] successfully tracked allParticipantsInOrgId=${orgId.value}") }
+    if (rawUserEvent.eventType.name.toLowerCase.contains("messaged")) { // debugging
+      rawUserEvent.context.data.get("allParticipantsInOrgId").foreach(orgId => log.info(s"[OrgTracking:handleUserEvent] allParticipantsInOrgId=$orgId"))
     }
 
     val userEventF = EventAugmentor.safelyAugmentContext(userEvent, augmentors: _*).map { ctx =>
