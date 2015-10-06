@@ -300,7 +300,7 @@ class NotificationKindInfoRequests @Inject() () {
       StandardNotificationInfo(
         user = inviter,
         title = s"${inviter.fullName} invited ${plural("someone")} to contribute to your library!",
-        body = s"${inviter.fullName} invited ${plural("some friends")} to contribute to your library, ${libraryInvited.name}",
+        body = s"${inviter.fullName} invited ${plural("someone")} to contribute to your library, ${libraryInvited.name}",
         linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
         extraJson = Some(Json.obj(
           "inviter" -> inviter,
