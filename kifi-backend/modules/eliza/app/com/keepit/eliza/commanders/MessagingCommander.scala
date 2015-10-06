@@ -24,6 +24,8 @@ import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
 
 import org.joda.time.DateTime
 
+import com.keepit.common.core.anyExtensionOps
+
 import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Promise, Await, Future }
@@ -654,11 +656,8 @@ class MessagingCommander @Inject() (
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
 
     val cantSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
-      permissionsByOrgId.exists {
-        case (orgId, permissions) =>
-          val cantMessageOrg = !permissions.contains(OrganizationPermission.GROUP_MESSAGING)
-          if (cantMessageOrg) airbrake.notify(s"user $userId was able to send to org $orgId without permissions!")
-          cantMessageOrg
+      permissionsByOrgId.exists { case (orgId, permissions) =>
+        !permissions.contains(OrganizationPermission.GROUP_MESSAGING).tap(if (_) airbrake.notify(s"user $userId was able to send to org $orgId without permissions!"))
       }
     }
 
