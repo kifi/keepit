@@ -7,6 +7,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.model._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -39,6 +40,7 @@ class PermissionCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 
+  @StatsdTiming("PermissionCommander.getOrganizationPermissions")
   def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
     /*
     PSA regarding these caches:
@@ -70,6 +72,7 @@ class PermissionCommanderImpl @Inject() (
     }
   }
 
+  @StatsdTiming("PermissionCommander.getLibraryPermissions")
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
     val lib = libraryRepo.get(libId)
     val libMembershipOpt = userIdOpt.flatMap { userId => libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId) }
