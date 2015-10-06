@@ -166,7 +166,7 @@ class AdminPaymentsController @Inject() (
     val PAGE_SIZE = 50
     val (allEvents, org) = db.readOnlyMaster { implicit s =>
       val account = paidAccountRepo.getByOrgId(orgId)
-      val allEvents = accountEventRepo.getByAccountAndState(account.id.get, AccountEventStates.ACTIVE)
+      val allEvents = accountEventRepo.getByAccountAndState(account.id.get, AccountEventStates.ACTIVE).sortBy(-1 * _.eventTime.getMillis)
       val org = organizationRepo.get(orgId)
       (allEvents, org)
     }
