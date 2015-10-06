@@ -259,8 +259,10 @@ angular.module('kifi')
                 });
               }
             });
-
-            memberPageAnalytics({ action: 'clickedInvite', orgInvitees: invitees });
+            var inviteeIds = invitees.map(function(invitee) {
+                return invitee.id;
+             });
+            memberPageAnalytics({ action: 'clickedInvite', orgInvitees: inviteeIds });
           }
         }
       });
