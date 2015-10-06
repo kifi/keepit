@@ -265,10 +265,10 @@ angular.module('kifi')
                 });
               }
             });
-            var inviteeIds = invitees.map(function(invitee) {
-                return invitee.id;
+            var flattenedInvitees = invitees.map(function(invitee) {
+                return invitee.id || invitee.email;
              });
-            memberPageAnalytics({ action: 'clickedInvite', orgInvitees: inviteeIds });
+            memberPageAnalytics({ action: 'clickedInvite', orgInvitees: flattenedInvitees });
           }
         }
       });
