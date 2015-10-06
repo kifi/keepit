@@ -21,7 +21,6 @@ import com.keepit.notify.model.Recipient
 import com.keepit.realtime.{ OrganizationPushNotification, UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
-import com.keepit.common.core.anyExtensionOps
 
 import org.joda.time.DateTime
 
@@ -654,11 +653,12 @@ class MessagingCommander @Inject() (
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
 
-    val canSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
-      !permissionsByOrgId.exists {
+    val cantSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
+      permissionsByOrgId.exists {
         case (orgId, permissions) =>
-          !permissions.contains(OrganizationPermission.GROUP_MESSAGING)
-            .tap { _ => airbrake.notify(s"user $userId was able to send to org $orgId without permissions!") }
+          val cantMessageOrg = !permissions.contains(OrganizationPermission.GROUP_MESSAGING)
+          if (cantMessageOrg) airbrake.notify(s"user $userId was able to send to org $orgId without permissions!")
+          cantMessageOrg
       }
     }
 
@@ -672,8 +672,8 @@ class MessagingCommander @Inject() (
     val context = moreContext.addExistingContext(initContext).build
 
     val resFut =
-      canSendToOrgs.flatMap { canSend =>
-        if (!canSend) throw new Exception("insufficient_org_permissions")
+      cantSendToOrgs.flatMap { cantSend =>
+        if (cantSend) throw new Exception("insufficient_org_permissions")
         else {
           for {
             userRecipients <- userRecipientsFuture
