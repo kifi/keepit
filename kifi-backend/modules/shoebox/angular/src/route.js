@@ -23,7 +23,7 @@ angular.module('kifi')
       .otherwise('/');  // last resort
 
     // Set up the states.
-    $stateProvider  
+    $stateProvider
       .state('home', {
         url: '/',
         controller: 'HomeCtrl',
@@ -113,16 +113,6 @@ angular.module('kifi')
                     throw new Error('orgProfile state was given invalid type ' + type);
                   }
                 });
-            }
-          ],
-          settings: [
-            'orgProfileService', 'profile', 'messageTicker', 'ORG_PERMISSION',
-            function (orgProfileService, profile, messageTicker, ORG_PERMISSION) {
-              if (profile.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
-                return orgProfileService.getOrgSettings(profile.organization.id);
-              } else {
-                return {};
-              }
             }
           ]
         },

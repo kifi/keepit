@@ -22,27 +22,27 @@
       ></svg>
       <span class="kf-library-visibility-selector-caption">Public</span>
       <span
-        ng-if="spaceIsOrg(space) && space.settings && !(space.membership.role === 'member' && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER)"
+        ng-if="spaceIsOrg(space) && space.config && !(space.membership.role === 'member' && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER)"
         kf-upsell
         position="right"
         on-click="onClickUpsellPublic()"
         on-hover="onHoverUpsellPublic()"
       >
-      <span ng-if="space.planName.toLowerCase().indexOf('paid') !== -1">
-        <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER">
+      <span ng-if="space.config.name.toLowerCase().indexOf('paid') !== -1">
+        <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER">
           Any member can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
         </span>
-        <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN">
+        <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN">
           Only admins can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
         </span>
-        <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED">
+        <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED">
           No one can make your team's libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
         </span>
-        <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'member') && (space.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED || space.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN)">
+        <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'member') && (space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.DISABLED || space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.ADMIN)">
           Public libraries are disabled for {{ space.name }}. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.handle })">settings</a>
         </span>
       </span>
-      <span ng-if="space.planName.toLowerCase().indexOf('paid') === -1">
+      <span ng-if="space.config.name.toLowerCase().indexOf('paid') === -1">
         Restrict who can make libraries public by <a class="kf-link" href="#">Upgrading to Premium</a>
       </span>
     </label>
