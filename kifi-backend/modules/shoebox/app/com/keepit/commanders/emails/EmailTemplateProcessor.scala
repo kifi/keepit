@@ -216,9 +216,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
         case tags.profileLink =>
           val data = Json.obj("t" -> "us", "uid" -> basicUser.externalId)
-          val ans = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
-          println(s"Created a profile link: $data -> $ans")
-          ans
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.organizationId => Organization.publicId(org.id.get).id
         case tags.organizationLink =>
@@ -229,9 +227,7 @@ class EmailTemplateProcessorImpl @Inject() (
           config.applicationBaseUrl + libPathCommander.getPathForLibrary(library)
         case tags.libraryLink =>
           val data = Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id)
-          val ans = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
-          println(s"Created a library link: $data -> $ans")
-          ans
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
         case tags.libraryName => library.name
         case tags.libraryId => Library.publicId(library.id.get).id
         case tags.libraryOwnerFullName =>
@@ -286,10 +282,10 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
-        case tags.organizationId =>
+        case tags.organizationId | tags.organizationLink =>
           val orgId = tagArgs(0).as[Id[Organization]]
           OrganizationNeeded(orgId)
-        case tags.libraryName | tags.libraryUrl | tags.libraryOwnerFullName =>
+        case tags.libraryName | tags.libraryUrl | tags.libraryLink | tags.libraryOwnerFullName =>
           val libId = tagArgs(0).as[Id[Library]]
           LibraryNeeded(libId)
         case tags.keepName | tags.keepUrl =>

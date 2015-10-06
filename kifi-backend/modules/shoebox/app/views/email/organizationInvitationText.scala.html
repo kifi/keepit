@@ -19,7 +19,7 @@ Hi @firstName(inviteeId.get),
 @description = @{ organization.description.filter( description => description.length < 250 ).map ( des => "Here's what it's about: " + des).getOrElse("") }
 
 @emailMessage = {
-Please join "@organization.name" on Kifi at www.kifi.com/@organization.name,
+Please join "@organization.name" on Kifi at www.kifi.com/@{organization.handle.value},
 so we can collaborate together. It's a great way to organize the links that we find.
 }
 

@@ -6,7 +6,7 @@ authToken: String
 )
 
 @import com.keepit.common.mail.template.helpers._
-@orgLink = @{organizationLink(organization.id.get, "clickedOrgURL")}
+@orgLink = @{organizationLink(organization.id.get, "authToken=" + authToken + "&clickedOrgURL")}
 
 @* setting up message components that depend on conditionals *@
 @salutation = {

@@ -44,7 +44,6 @@ class LibraryInviteEmailSender @Inject() (
         val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
         val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, org, Some(inviter))
         (library, libraryInfo)
-
       }
 
       val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, UserExperimentType.PLAIN_EMAIL) }.getOrElse(false)
@@ -59,12 +58,12 @@ class LibraryInviteEmailSender @Inject() (
         category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
         htmlTemplate = {
           if (usePlainEmail) {
-            views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)
+            views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, library, libraryInfo, authToken, invite.access)
           } else {
-            views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)
+            views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, library, libraryInfo, authToken, invite.access)
           }
         },
-        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, libraryInfo, authToken, invite.access)),
+        textTemplate = Some(views.html.email.libraryInvitationText(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, library, libraryInfo, authToken, invite.access)),
         templateOptions = Seq(CustomLayout).toMap,
         campaign = Some("na"),
         channel = Some("vf_email"),

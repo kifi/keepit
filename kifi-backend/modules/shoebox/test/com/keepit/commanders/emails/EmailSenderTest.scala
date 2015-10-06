@@ -32,6 +32,7 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 
 class EmailSenderTest extends Specification with ShoeboxTestInjector {
+  implicit def publicIdConfiguration(implicit injector: Injector) = inject[PublicIdConfiguration]
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeHttpClientModule(),
@@ -401,7 +402,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
   }
 
   "LibraryInviteEmailSender" should {
-    implicit val config = PublicIdConfiguration("secret key")
+    //implicit val config = PublicIdConfiguration("secret key")
 
     def setup(withDescription: Boolean = true)(implicit injector: Injector) = {
       val keepRepo = inject[KeepRepo]
@@ -505,12 +506,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "An invitation to a Kifi library: Football"
-        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
-        email.htmlBody.contains("Hi Aaron") === true
-        email.htmlBody.contains("Check out the \"Football\" library I created") === true
+        email.htmlBody.value must contain(deepLink)
+        email.htmlBody.value must contain("Hi Aaron")
+        email.htmlBody.value must contain("Check out the \"Football\" library I created")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
@@ -533,12 +536,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "I want to collaborate with you on Football"
-        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
-        email.htmlBody.contains("Hi Aaron") === true
-        email.htmlBody.contains("collaborate") === true
+        email.htmlBody.value must contain(deepLink)
+        email.htmlBody.value must contain("Hi Aaron")
+        email.htmlBody.value must contain("collaborate")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
@@ -588,11 +593,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "An invitation to a Kifi library: Football"
-        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
-        email.htmlBody.contains("check this out!") === true
+        email.htmlBody.value must contain(deepLink)
+        email.htmlBody.value must contain("check this out!")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
