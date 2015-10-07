@@ -381,4 +381,12 @@ class AdminLibraryController @Inject() (
     Ok(Json.obj("ids" -> Json.toJson(libIds), "count" -> libIds.length))
   }
 
+  def unsafeModifyLibrary = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val libId = (request.body \ "libraryId").as[Id[Library]]
+    val mods = (request.body \ "modifications").as[LibraryModifications](LibraryModifications.adminReads)
+    val lib = db.readOnlyMaster { implicit session => libraryRepo.get(libId) }
+    val response = libraryCommander.unsafeModifyLibrary(lib, mods)
+    Ok(Json.obj("lib" -> response.modifiedLibrary))
+  }
+
 }
