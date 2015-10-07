@@ -430,8 +430,8 @@ class AuthHelper @Inject() (
         getResetEmailAddresses(suppliedEmailAddress)
       } match {
         case Some((userId, resetEmailAddressOpt)) =>
-          val emailAddresses = Set(suppliedEmailAddress) ++ resetEmailAddressOpt
-          val emailsF = Future.sequence(emailAddresses.map { email => resetPasswordEmailSender.sendToUser(userId, email) }.toSeq)
+          val emailAddresses = (Set(suppliedEmailAddress) ++ resetEmailAddressOpt).toSeq.sortBy(ea => (ea != suppliedEmailAddress, ea.address))
+          val emailsF = Future.sequence(emailAddresses.map { email => resetPasswordEmailSender.sendToUser(userId, email) })
           emailsF.map { e =>
             Ok(Json.obj("addresses" -> emailAddresses.map {
               case email if email == suppliedEmailAddress => suppliedEmailAddress.address
