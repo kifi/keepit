@@ -145,7 +145,7 @@ class PaymentProcessingCommanderImpl @Inject() (
                 creditChange = amount,
                 paymentMethod = pm.id,
                 paymentCharge = Some(amount),
-                memo = Some(s"Invoice $chargeId"),
+                memo = None,
                 chargeId = Some(chargeId)
               ))
             }

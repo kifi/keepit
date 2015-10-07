@@ -91,7 +91,7 @@ class AccountEventRepoImpl @Inject() (
   }
 
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent] = {
-    (for (row <- rows if row.accountId === accountId && row.state === state) yield row).list
+    (for (row <- rows if row.accountId === accountId && row.state === state) yield row).sortBy(row => row.eventTime desc).list
   }
 
   def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
