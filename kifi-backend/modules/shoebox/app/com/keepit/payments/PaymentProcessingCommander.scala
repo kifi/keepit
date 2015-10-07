@@ -9,13 +9,17 @@ import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
+import com.keepit.commanders.BasicSlackMessage
+import com.keepit.common.net.{ DirectUrl, HttpClient }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
-import play.api.libs.json.JsNull
+import play.api.libs.json.{ JsNull, Json }
+import play.api.Mode
+import play.api.Mode.Mode
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.util.{ Try, Success, Failure }
 
 @ImplementedBy(classOf[PaymentProcessingCommanderImpl])
 trait PaymentProcessingCommander {
@@ -42,13 +46,17 @@ class PaymentProcessingCommanderImpl @Inject() (
   postOffice: LocalPostOffice,
   emailRepo: UserEmailAddressRepo,
   orgRepo: OrganizationRepo,
+  httpClient: HttpClient,
+  mode: Mode,
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
   private[payments] val MAX_BALANCE = DollarAmount.wholeDollars(-100) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
   private[payments] val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
 
-  val processingLock = new ReactiveLock(1)
+  private val slackChannelUrl = "https://hooks.slack.com/services/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"
+
+  private val processingLock = new ReactiveLock(1)
 
   private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
@@ -90,10 +98,27 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
+  private def reportToSlack(msg: String): Unit = {
+    val fullMsg = BasicSlackMessage(
+      text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
+      username = "PaymentProcessingCommander"
+    )
+    httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
+  }
+
   def processAllBilling(): Future[Map[Id[Organization], (DollarAmount, String)]] = processingLock.withLockFuture {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(MAX_BALANCE, clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
+    reportToSlack(s"Processing Payments. ${relevantAccounts.length} orgs to check.")
     FutureHelpers.map(relevantAccounts.map { account =>
-      account.orgId -> processAccount(account)
+      val processingResultFut = processAccount(account)
+      processingResultFut.onComplete {
+        case Success((amount, reason)) => reportToSlack(s"Processed Org ${account.orgId}. Charged: $amount. Reason: $reason")
+        case Failure(ex) => {
+          reportToSlack(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}. (See log for stack trace.")
+          log.error(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}", ex)
+        }
+      }
+      account.orgId -> processingResultFut
     }.toMap)
   }
 
@@ -113,14 +138,14 @@ class PaymentProcessingCommanderImpl @Inject() (
           val chargeAmount = DollarAmount(-1 * updatedAccountPreCharge.credit.cents)
           log.info(s"[PPC][${account.orgId}] Going to charge $chargeAmount")
           val description = if (maxBalanceExceeded) s"Max balance exceeded charge for org ${account.orgId} of amount $chargeAmount" else s"Regular charge for org ${account.orgId} of amount $chargeAmount"
-          forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> "Charge performed" }
+          forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> (if (maxBalanceExceeded) "Max balance exceeded" else "Billing Cycle elapsed") }
         } else {
-          log.info(s"[PPC][${account.orgId}] Not Charging. Balance less than $$1 (${account.credit})")
+          log.info(s"[PPC][${account.orgId}] Not Charging. Balance less than $MIN_BALANCE (${account.credit})")
           paidAccountRepo.save(updatedAccountPreCharge)
           Future.successful(DollarAmount.ZERO -> "Not charging because of low balance")
         }
       } else {
-        Future.successful(DollarAmount.ZERO -> "Not processed because conditions not met")
+        Future.successful(DollarAmount.ZERO -> s"Not processed because conditions not met. Frozen: ${account.frozen}.")
       }
     }
   }.getOrElse(Future.successful(DollarAmount.ZERO -> "Failed to get lock"))
