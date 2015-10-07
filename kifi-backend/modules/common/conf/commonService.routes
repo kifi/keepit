@@ -13,6 +13,8 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 GET     /up/elb                               @com.keepit.common.admin.ServiceController.upForElb
 GET     /up/pingdom                           @com.keepit.common.admin.ServiceController.upForPingdom
 GET     /up/deployment                        @com.keepit.common.admin.ServiceController.upForDeployment
+GET     /up/headers                           @com.keepit.common.admin.ServiceController.headers
+POST    /up/headers                           @com.keepit.common.admin.ServiceController.headersP
 
 #deprecated, remove when all elbs are updated
 GET     /up                                   @com.keepit.common.admin.ServiceController.deprecatedUp
