@@ -222,7 +222,7 @@ class KeepInternerImpl @Inject() (
 
   private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library, source: KeepSource,
     title: Option[String], url: String, keptAt: DateTime,
-    sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
+    sourceAttribution: Option[SourceAttribution], note: Option[String], asyncStatus: KeepAsyncStatus = KeepAsyncStatus.OKAY)(implicit session: RWSession) = {
 
     val keepOpt = keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
 
@@ -264,7 +264,8 @@ class KeepInternerImpl @Inject() (
           keptAt = keptAt,
           sourceAttributionId = savedAttr.flatMap { _.id },
           note = note,
-          originalKeeperId = Some(userId)
+          originalKeeperId = Some(userId),
+          asyncStatus = asyncStatus
         )
         val improvedKeep = keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get))
         (true, false, improvedKeep)

@@ -88,8 +88,11 @@ class KeepRepoImpl @Inject() (
 
   import db.Driver.simple._
 
+  implicit val messageThreadIdMapper = MappedColumnType.base[MessageThreadId, Long](_.id, MessageThreadId.apply)
+
   type RepoImpl = KeepTable
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with SeqNumberColumn[Keep] with NamedColumns {
+
     def title = column[Option[String]]("title", O.Nullable) //indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
@@ -105,10 +108,13 @@ class KeepRepoImpl @Inject() (
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def librariesHash = column[LibrariesHash]("libraries_hash", O.NotNull)
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
+    def messageThreadId = column[Option[MessageThreadId]]("message_thread_id", O.Nullable)
+    def asyncStatus = column[KeepAsyncStatus]("async_status", O.NotNull)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
       (userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
-        note, originalKeeperId, organizationId, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
+        note, originalKeeperId, organizationId,
+        librariesHash, participantsHash, messageThreadId, asyncStatus)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
 
     def isPrivate: Column[Boolean] = {
       val privateVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.SECRET, LibraryVisibility.ORGANIZATION)
@@ -124,6 +130,8 @@ class KeepRepoImpl @Inject() (
 
   implicit val getLibrariesHashResult = getResultFromMapper[LibrariesHash]
   implicit val getParticipantsHashResult = getResultFromMapper[ParticipantsHash]
+  implicit val getMessageThreadIdOptResult = getResultOptionFromMapper[MessageThreadId]
+  implicit val getAsyncStatusResult = getResultFromMapper[KeepAsyncStatus]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     Keep._applyFromDbRow(
@@ -147,7 +155,9 @@ class KeepRepoImpl @Inject() (
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],
       librariesHash = r.<<[LibrariesHash],
-      participantsHash = r.<<[ParticipantsHash]
+      participantsHash = r.<<[ParticipantsHash],
+      messageThreadId = r.<<[Option[MessageThreadId]],
+      asyncStatus = r.<<[KeepAsyncStatus]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")

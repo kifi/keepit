@@ -34,7 +34,9 @@ case class Keep(
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None,
     librariesHash: LibrariesHash = LibrariesHash.EMPTY,
-    participantsHash: ParticipantsHash = ParticipantsHash.EMPTY) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    participantsHash: ParticipantsHash = ParticipantsHash.EMPTY,
+    messageThreadId: Option[MessageThreadId] = None,
+    asyncStatus: KeepAsyncStatus = KeepAsyncStatus.OKAY) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def withPrimary(newPrimary: Boolean) = this.copy(isPrimary = newPrimary)
   def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, isPrimary = false, librariesHash = LibrariesHash.EMPTY, participantsHash = ParticipantsHash.EMPTY)
@@ -106,38 +108,44 @@ object Keep {
 
   def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
     case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId, librariesHash, participantsHash)) =>
+      (userId, state, source, seq, libraryId, visibility, keptAt,
+        sourceAttributionId, note, originalKeeperId, organizationId,
+        librariesHash, participantsHash, messageThreadId, asyncStatus)) =>
+
       _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
         uriId = uriId, isPrimary = isPrimary, url = url,
         userId = userId, state = state, source = source,
         seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
         sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId,
-        organizationId = organizationId, librariesHash = librariesHash, participantsHash = participantsHash)
+        organizationId = organizationId, librariesHash = librariesHash, participantsHash = participantsHash,
+        messageThreadId = messageThreadId, asyncStatus = asyncStatus
+      )
   }
 
   // is_primary: trueOrNull in db
   def _applyFromDbRow(id: Option[Id[Keep]], createdAt: DateTime, updatedAt: DateTime, externalId: ExternalId[Keep],
     title: Option[String], uriId: Id[NormalizedURI], isPrimary: Option[Boolean],
-    url: String, userId: Id[User],
-    state: State[Keep], source: KeepSource,
+    url: String, userId: Id[User], state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], librariesHash: LibrariesHash, participantsHash: ParticipantsHash): Keep = {
+    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]],
+    librariesHash: LibrariesHash, participantsHash: ParticipantsHash, messageThreadId: Option[MessageThreadId], asyncStatus: KeepAsyncStatus): Keep = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), url,
-      visibility, userId, state, source, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId, librariesHash, participantsHash)
+      visibility, userId, state, source, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId,
+      librariesHash, participantsHash, messageThreadId, asyncStatus)
   }
 
   def unapplyToDbRow(k: Keep) = {
     Some(
       (k.id, k.createdAt, k.updatedAt, k.externalId, k.title,
         k.uriId, if (k.isPrimary) Some(true) else None, k.url),
-      (k.userId, k.state, k.source,
-        k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId,
-        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId, k.librariesHash, k.participantsHash)
+      (k.userId, k.state, k.source, k.seq, k.libraryId, k.visibility,
+        k.keptAt, k.sourceAttributionId, k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId,
+        k.librariesHash, k.participantsHash, k.messageThreadId, k.asyncStatus)
     )
   }
 
   private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], String)
-  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]], LibrariesHash, ParticipantsHash)
+  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]], LibrariesHash, ParticipantsHash, Option[MessageThreadId], KeepAsyncStatus)
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
       (__ \ 'id).readNullable(Id.format[Keep]) and
@@ -161,7 +169,9 @@ object Keep {
       (__ \ 'originalKeeperId).readNullable[Id[User]] and
       (__ \ 'organizationId).readNullable[Id[Organization]] and
       (__ \ 'librariesHash).read[LibrariesHash] and
-      (__ \ 'participantsHash).read[ParticipantsHash]
+      (__ \ 'participantsHash).read[ParticipantsHash] and
+      (__ \ 'messageThreadId).readNullable[MessageThreadId] and
+      (__ \ 'asyncStatus).read[KeepAsyncStatus]
     ).tupled
 
     (fields1To10 and fields10Up).apply(applyFromDbRowTuples _)
@@ -196,7 +206,9 @@ object Keep {
         "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId)),
         "organizationId" -> k.organizationId,
         "librariesHash" -> k.librariesHash,
-        "participantsHash" -> k.participantsHash
+        "participantsHash" -> k.participantsHash,
+        "messageThreadId" -> k.messageThreadId,
+        "asyncStatus" -> k.asyncStatus
       )
     }
   }
