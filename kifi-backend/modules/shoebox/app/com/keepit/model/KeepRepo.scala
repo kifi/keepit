@@ -281,7 +281,7 @@ class KeepRepoImpl @Inject() (
 
   def countPublicActiveByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"select count(*) from bookmark where uri_id = $uriId and is_private = false and state = 'active'".as[Int].first
+    sql"select count(*) from bookmark where uri_id = $uriId and (visibility = 'published' or visibility = 'discoverable') and state = 'active'".as[Int].first
   }
 
   def getByUser(userId: Id[User], excludeSet: Set[State[Keep]])(implicit session: RSession): Seq[Keep] =
@@ -332,7 +332,7 @@ class KeepRepoImpl @Inject() (
               SELECT uri_id FROM bookmark
               WHERE user_id = ${userId}
             ) ub, bookmark ab
-            WHERE ub.uri_id = ab.uri_id AND ab.is_private = FALSE AND ab.user_id != ${userId}
+            WHERE ub.uri_id = ab.uri_id AND ab.visibility = 'published' AND ab.user_id != ${userId}
             GROUP BY ab.uri_id
           ) b
           WHERE b.t > ${since} AND b.c BETWEEN 1 AND ${maxKeepers}
@@ -442,7 +442,7 @@ class KeepRepoImpl @Inject() (
   def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
-    val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.is_private = 1 and b.source=${source} and created_at between ${from} and ${to};"
+    val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.visibility = 'secret' b.source=${source} and created_at between ${from} and ${to};"
     sql.as[Int].first
   }
 
@@ -467,7 +467,7 @@ class KeepRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val sql = if (includePrivate) sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} order by kept_at DESC limit ${limit}"
-    else sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} and is_private = false order by kept_at DESC limit ${limit}"
+    else sql"select uri_Id from bookmark where state = '#${KeepStates.ACTIVE}' and user_id=${userId} and (visibility = 'discoverable' or visibility = 'published') order by kept_at DESC limit ${limit}"
 
     sql.as[Id[NormalizedURI]].list
   }
