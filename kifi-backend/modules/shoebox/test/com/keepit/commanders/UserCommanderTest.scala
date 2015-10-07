@@ -226,6 +226,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         tellContactsAboutNewUser(user1) === Set(user4.id.get)
         outbox.size === 1
 
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(Json.stringify(Json.obj("t" -> "us", "uid" -> user1.externalId)), "ascii")
         // test the personalized parts of the email
         val mail = outbox(0)
         mail.subject must beEqualTo("Homer Simpson joined Kifi. Want to connect?")
@@ -233,14 +234,12 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
         val htmlBody = mail.htmlBody.value
         htmlBody must contain("Hi Jane")
         htmlBody must contain("Homer Simpson just joined")
-
-        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(Json.stringify(Json.obj("t" -> "us", "uid" -> user1.externalId)), "ascii")
         htmlBody must contain(deepLink)
 
         val textBody = mail.textBody.get.value
         textBody must contain("Hi Jane")
         textBody must contain("Homer Simpson just joined")
-        textBody must contain(deepLink)
+        textBody must contain("http://dev.ezkeep.com:9000/homer")
 
         NotificationCategory.fromElectronicMailCategory(mail.category) === NotificationCategory.User.CONTACT_JOINED
       }
