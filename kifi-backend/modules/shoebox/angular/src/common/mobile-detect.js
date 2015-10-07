@@ -5,13 +5,13 @@ angular.module('kifi')
 .factory('mobileOS', function () {
   var userAgent = navigator.userAgent || navigator.vendor || window.opera;
 
-  if( userAgent.match( /iPad/i ) || userAgent.match( /iPhone/i ) || userAgent.match( /iPod/i ) ) {
+  if (userAgent.match(/Kifi/i)) {
+    return 'Kifi';
+  } if( userAgent.match( /iPad/i ) || userAgent.match( /iPhone/i ) || userAgent.match( /iPod/i ) ) {
     return 'iOS';
-  }
-  else if( userAgent.match( /Android/i ) ) {
+  } else if( userAgent.match( /Android/i ) ) {
     return 'Android';
-  }
-  else {
+  } else {
     return 'unknown';
   }
 });
