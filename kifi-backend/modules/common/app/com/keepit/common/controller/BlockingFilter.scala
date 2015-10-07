@@ -24,7 +24,7 @@ object BlockingFilter extends Filter {
   )
 
   val tarpit = Seq(
-    "70.197.4.11"
+    "70.197.4.114"
   )
 
   private def throwThemInAPit[T](andThen: => Future[T]) = {
