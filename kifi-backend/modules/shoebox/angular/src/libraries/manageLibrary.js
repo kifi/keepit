@@ -34,7 +34,6 @@ angular.module('kifi')
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
-        scope.showFollowers = false;
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
         scope.showSubIntegrations = false;
@@ -58,8 +57,13 @@ angular.module('kifi')
           scope.userHasEditedSlug = true;
         };
 
-        scope.toggleIntegrations = function() {
+        scope.toggleIntegrations = function (e) {
           scope.showIntegrations = !scope.showIntegrations;
+          if (scope.showIntegrations) {
+            element.find('.dialog-body').animate({
+              scrollTop: e.target.getBoundingClientRect().top
+            }, 500);
+          }
         };
 
         scope.addIfEnter = function(event) {
@@ -252,17 +256,16 @@ angular.module('kifi')
           scope.close();
         };
 
-        scope.showFollowersPanel = function () {
-          scope.showFollowers = true;
-        };
-
-        scope.hideFollowersPanel = function () {
-          scope.viewFollowersFirst = false;
-          scope.showFollowers = false;
-        };
-
         scope.hasPermission = function (permission) {
           return scope.library.permissions.indexOf(permission) !== -1;
+        };
+
+        scope.onHoverUpsellIntegration = function () {
+
+        };
+
+        scope.onClickUpsellIntegration = function () {
+
         };
 
         //
