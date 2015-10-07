@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import org.specs2.mutable.Specification
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{ MessageThread, NormalizedURI, User }
 import com.keepit.common.db.Id
 import play.api.libs.json.JsNull
 import com.keepit.shoebox.FakeShoeboxServiceModule

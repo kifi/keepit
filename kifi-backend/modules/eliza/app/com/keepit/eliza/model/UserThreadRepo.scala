@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.SQLInterpolation_WarningsFixed
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ ThreadAccessToken, MessageThread, User, NormalizedURI }
 
 import org.joda.time.DateTime
 

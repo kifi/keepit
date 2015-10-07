@@ -7,6 +7,7 @@ import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.eliza.model._
 import com.keepit.inject.AppScoped
 import com.google.inject.{ Inject, ImplementedBy }
+import com.keepit.model.{ParticipantThread, MessageThread}
 import scala.concurrent.duration._
 import akka.util.Timeout
 import scala.util.{ Failure, Success, Try }

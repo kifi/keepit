@@ -17,7 +17,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{ MessageThread, NormalizedURI, User }
 import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule

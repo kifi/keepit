@@ -1,24 +1,16 @@
 package com.keepit.eliza.model
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
-import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
+import com.keepit.common.db.{ ExternalId, Id, ModelWithExternalId }
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.time._
+import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import org.joda.time.DateTime
-import com.keepit.common.time._
-import com.keepit.common.db.{ ModelWithState, ModelWithExternalId, Id, ExternalId }
-import com.keepit.model.{ User, NormalizedURI }
-import MessagingTypeMappers._
-import com.keepit.common.logging.Logging
-import com.keepit.common.cache.{ CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key }
-import scala.concurrent.duration.Duration
-import play.api.libs.json._
-import play.api.libs.json.util._
 import play.api.libs.functional.syntax._
-import scala.slick.lifted.Query
-import scala.slick.jdbc.StaticQuery
+import play.api.libs.json._
+
+import scala.concurrent.duration.Duration
 
 sealed trait MessageSender {
   def isSystem: Boolean = false

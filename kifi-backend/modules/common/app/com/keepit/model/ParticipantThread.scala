@@ -1,4 +1,4 @@
-package com.keepit.eliza.model
+package com.keepit.model
 
 import com.keepit.common.db.Id
 

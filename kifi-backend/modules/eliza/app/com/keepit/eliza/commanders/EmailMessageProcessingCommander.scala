@@ -3,11 +3,11 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.eliza.model._
 import com.keepit.common.logging.Logging
+import com.keepit.model.{ ThreadAccessToken, NonUserThread }
 import com.kifi.franz.SQSQueue
 import com.keepit.eliza.mail.MailNotificationReply
 import com.keepit.common.db.Id
 import scala.Some
-import com.keepit.eliza.model.NonUserThread
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.util.{ Success, Failure }

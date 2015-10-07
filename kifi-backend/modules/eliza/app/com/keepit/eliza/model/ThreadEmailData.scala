@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import com.keepit.common.mail.template.EmailTrackingParam
-import com.keepit.model.User
+import com.keepit.model.{ MessageThread, User }
 import com.keepit.eliza.util.MessageSegment
 import com.keepit.common.db.Id
 import com.keepit.rover.model.RoverUriSummary

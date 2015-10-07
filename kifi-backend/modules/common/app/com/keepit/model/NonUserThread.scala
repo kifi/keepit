@@ -1,16 +1,11 @@
-package com.keepit.eliza.model
+package com.keepit.model
 
-import org.joda.time.DateTime
-import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ User, NormalizedURI }
-import play.api.libs.json._
-import com.keepit.social.{ BasicNonUser, NonUserKinds, NonUserKind }
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
 import com.keepit.common.mail.EmailAddress
-import com.keepit.common.crypto.ModelWithPublicId
+import com.keepit.common.time._
+import com.keepit.social.{ BasicNonUser, NonUserKind, NonUserKinds }
+import org.joda.time.DateTime
+import play.api.libs.json.{ JsObject, JsString, _ }
 
 sealed trait NonUserParticipant {
   val identifier: String
