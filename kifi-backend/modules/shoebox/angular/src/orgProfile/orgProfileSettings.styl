@@ -4,11 +4,13 @@
   overflow: hidden
 
 .kf-ops-nav
-  flex: 3
-  margin-bottom: auto
-
 .kf-ops-nav-box
-  width: 160px
+  @media (min-width: 480px)
+    box-sizing: border-box
+    width: 195px
+
+.kf-ops-fixed-nav-fix
+  font-size: 0
 
 .kf-ops-nav-item
   box-sizing: border-box

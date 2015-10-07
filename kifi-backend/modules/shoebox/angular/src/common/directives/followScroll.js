@@ -33,8 +33,8 @@ angular.module('kifi')
 
           if (offset < 0 || pageScroll + headerOffset < positionY) {
             element.css({
-              'position': 'static',
-              'top': '0px'
+              'position': '',
+              'top': ''
             });
           } else {
             element.css({
@@ -50,7 +50,10 @@ angular.module('kifi')
             moveFloatMenu();
           } else {
             $window.removeEventListener('scroll', moveFloatMenu);
-            element.css('position', null);
+            element.css({
+              'position': '',
+              'top': ''
+            });
           }
         }
 

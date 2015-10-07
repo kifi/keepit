@@ -131,6 +131,21 @@ case class LibraryModifications(
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
+object LibraryModifications {
+  implicit val spaceReads = LibrarySpace.adminReads
+  val adminReads: Reads[LibraryModifications] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'slug).readNullable[String] and
+    (__ \ 'visibility).readNullable[LibraryVisibility] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[LibrarySpace] and
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+  )(LibraryModifications.apply _)
+}
 
 object ExternalLibraryModifications {
   val readsMobileV1: Reads[ExternalLibraryModifications] = (
