@@ -257,6 +257,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
             Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
           val email = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
           val externalId = db.readOnlyMaster { implicit session => userRepo.getByUsername(Username("billy")).get.externalId }
+
           val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"us","uid":"$externalId"}""", "ascii")
 
           val html = email.htmlBody.value
@@ -289,6 +290,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        val friendRequestLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode("""{"t":"fr"}""", "ascii")
+        val friendProfileLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"us","uid":"${fromUser.externalId}""", "ascii")
+
         email.to === Seq(EmailAddress("billy@gmail.com"))
         email.subject === "Johnny Manziel wants to connect with you on Kifi"
         email.fromName === Some(s"Johnny Manziel (via Kifi)")
@@ -297,11 +301,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Hi Billy")
         html must contain("Johnny Manziel wants to connect with you on Kifi.")
         html must contain("utm_campaign=friendRequest")
+        html must contain(friendRequestLink)
+        html must contain(friendProfileLink)
 
         val text = email.textBody.get.value
         text must contain("Hi Billy")
         text must contain("Johnny Manziel wants to connect with you on Kifi.")
         text must contain("You can visit this link to accept the invitation")
+        text must contain("http://dev.ezkeep.com:9000/friends/requests")
       }
     }
   }
@@ -335,11 +342,12 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val fromDeepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"us","uid":"${fromUser.externalId}"}""", "ascii")
         html must contain(fromDeepLink)
 
+        val fromUrl = s"http://dev.ezkeep.com:9000/${fromUser.username.value}"
         val text = email.textBody.get.value
         text must contain("Hi Billy,")
         text must contain("Johnny Manziel just joined Kifi.")
         text must contain("to invite Johnny to connect on Kifi")
-        text must contain(fromDeepLink)
+        text must contain(fromUrl)
       }
     }
   }

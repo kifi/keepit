@@ -5,8 +5,15 @@
 
 .kf-ops-nav
 .kf-ops-nav-box
-  box-sizing: border-box
-  width: 210px
+  @media (min-width: 480px)
+    box-sizing: border-box
+    width: 195px
+
+.kf-ops-fixed-nav-fix
+  font-size: 0
+
+  @media (min-width: 480px)
+    font-size: inherit
 
 .kf-ops-nav-item
   box-sizing: border-box
