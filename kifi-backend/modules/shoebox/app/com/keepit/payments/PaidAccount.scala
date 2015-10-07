@@ -39,7 +39,6 @@ case class PaidAccount(
     emailContacts: Seq[EmailAddress],
     lockedForProcessing: Boolean = false,
     frozen: Boolean = false,
-    modifiedSinceLastIntegrityCheck: Boolean = true,
     activeUsers: Int,
     billingCycleStart: DateTime) extends ModelWithState[PaidAccount] {
 
