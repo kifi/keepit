@@ -8,7 +8,7 @@ import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ ModelWithExternalId, Id, ExternalId }
-import com.keepit.model.{ DeepLocator, User, NormalizedURI }
+import com.keepit.model.{ MessageThreadId, DeepLocator, User, NormalizedURI }
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.time.{ DateTimeJsonFormat }
@@ -142,7 +142,8 @@ case class MessageThread(
 }
 
 object MessageThread {
-  implicit def format = (
+  implicit def toCommonId(id: Id[MessageThread]): MessageThreadId = MessageThreadId(id.id)
+  implicit val format: Format[MessageThread] = (
     (__ \ 'id).formatNullable(Id.format[MessageThread]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
