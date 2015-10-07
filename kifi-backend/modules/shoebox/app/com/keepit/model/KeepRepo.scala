@@ -96,7 +96,6 @@ class KeepRepoImpl @Inject() (
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
     def url = column[String]("url", O.NotNull) //indexd
     def userId = column[Id[User]]("user_id", O.Nullable) //indexd
-    def isPrivate = column[Boolean]("is_private", O.NotNull) //indexd
     def source = column[KeepSource]("source", O.NotNull)
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
@@ -109,8 +108,13 @@ class KeepRepoImpl @Inject() (
     def participantsHash = column[Option[ParticipantsHash]]("participants_hash", O.Nullable)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (isPrivate, userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
+      (userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
         note, originalKeeperId, organizationId, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
+
+    def isPrivate: Column[Boolean] = {
+      val privateVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.SECRET, LibraryVisibility.ORGANIZATION)
+      visibility.inSet(privateVisibilities)
+    }
   }
 
   def table(tag: Tag) = new KeepTable(tag)
@@ -132,7 +136,6 @@ class KeepRepoImpl @Inject() (
       uriId = r.<<[Id[NormalizedURI]],
       isPrimary = r.<<[Option[Boolean]],
       url = r.<<[String],
-      isPrivate = r.<<[Boolean],
       userId = r.<<[Id[User]],
       state = r.<<[State[Keep]],
       source = r.<<[KeepSource],
@@ -166,7 +169,7 @@ class KeepRepoImpl @Inject() (
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
     val q = for {
-      t <- rows if (t.isPrivate === false || includePrivate == true) && !t.state.inSet(excludeStates)
+      t <- rows if (t.isPrivate || includePrivate) && !t.state.inSet(excludeStates)
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
