@@ -33,11 +33,11 @@ case class Keep(
     note: Option[String] = None,
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None,
-    librariesHash: Option[LibrariesHash] = None,
-    participantsHash: Option[ParticipantsHash] = None) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    librariesHash: LibrariesHash = LibrariesHash.EMPTY,
+    participantsHash: ParticipantsHash = ParticipantsHash.EMPTY) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def withPrimary(newPrimary: Boolean) = this.copy(isPrimary = newPrimary)
-  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, isPrimary = false, librariesHash = Some(LibrariesHash.EMPTY), participantsHash = Some(ParticipantsHash.EMPTY))
+  def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, isPrimary = false, librariesHash = LibrariesHash.EMPTY, participantsHash = ParticipantsHash.EMPTY)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
@@ -70,8 +70,8 @@ case class Keep(
     organizationId = lib.organizationId
   )
 
-  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(librariesHash = Some(LibrariesHash(libraries)))
-  def withParticipants(users: Set[Id[User]]): Keep = this.copy(participantsHash = Some(ParticipantsHash(users)))
+  def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(librariesHash = LibrariesHash(libraries))
+  def withParticipants(users: Set[Id[User]]): Keep = this.copy(participantsHash = ParticipantsHash(users))
 
   def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
   def isInactive: Boolean = state == KeepStates.INACTIVE
@@ -121,7 +121,7 @@ object Keep {
     url: String, userId: Id[User],
     state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], librariesHash: Option[LibrariesHash], participantsHash: Option[ParticipantsHash]): Keep = {
+    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], librariesHash: LibrariesHash, participantsHash: ParticipantsHash): Keep = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), url,
       visibility, userId, state, source, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId, librariesHash, participantsHash)
   }
@@ -137,7 +137,7 @@ object Keep {
   }
 
   private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], String)
-  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]], Option[LibrariesHash], Option[ParticipantsHash])
+  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]], LibrariesHash, ParticipantsHash)
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
       (__ \ 'id).readNullable(Id.format[Keep]) and
@@ -160,8 +160,8 @@ object Keep {
       (__ \ 'note).readNullable[String] and
       (__ \ 'originalKeeperId).readNullable[Id[User]] and
       (__ \ 'organizationId).readNullable[Id[Organization]] and
-      (__ \ 'librariesHash).readNullable[LibrariesHash] and
-      (__ \ 'participantsHash).readNullable[ParticipantsHash]
+      (__ \ 'librariesHash).read[LibrariesHash] and
+      (__ \ 'participantsHash).read[ParticipantsHash]
     ).tupled
 
     (fields1To10 and fields10Up).apply(applyFromDbRowTuples _)

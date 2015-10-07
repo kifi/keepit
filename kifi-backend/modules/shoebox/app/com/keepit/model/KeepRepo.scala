@@ -104,8 +104,8 @@ class KeepRepoImpl @Inject() (
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
-    def librariesHash = column[Option[LibrariesHash]]("libraries_hash", O.Nullable)
-    def participantsHash = column[Option[ParticipantsHash]]("participants_hash", O.Nullable)
+    def librariesHash = column[LibrariesHash]("libraries_hash", O.NotNull)
+    def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
       (userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
@@ -123,8 +123,8 @@ class KeepRepoImpl @Inject() (
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
-  implicit val getLibrariesHashResult = getResultOptionFromMapper[LibrariesHash]
-  implicit val getParticipantsHashResult = getResultOptionFromMapper[ParticipantsHash]
+  implicit val getLibrariesHashResult = getResultFromMapper[LibrariesHash]
+  implicit val getParticipantsHashResult = getResultFromMapper[ParticipantsHash]
 
   private implicit val getBookmarkResult: GetResult[com.keepit.model.Keep] = GetResult { r: PositionedResult => // bonus points for anyone who can do this generically in Slick 2.0
     Keep._applyFromDbRow(
@@ -147,8 +147,8 @@ class KeepRepoImpl @Inject() (
       note = r.<<[Option[String]],
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],
-      librariesHash = r.<<[Option[LibrariesHash]],
-      participantsHash = r.<<[Option[ParticipantsHash]]
+      librariesHash = r.<<[LibrariesHash],
+      participantsHash = r.<<[ParticipantsHash]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
