@@ -1,5 +1,6 @@
 package com.keepit.common.admin
 
+import com.keepit.common.net.UserAgent
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
@@ -14,6 +15,24 @@ class ServiceController @Inject() (
     localCache: InMemoryCachePlugin) extends com.keepit.common.controller.ServiceController with Logging {
 
   override lazy val serviceType: ServiceType = service.currentService
+
+  def headersP = headers
+  def headers = Action { implicit request =>
+    val addr = request.remoteAddress
+    val id = request.id
+    val method = request.method
+    val path = request.path
+    val version = request.version
+    val ua = UserAgent.apply(request)
+
+    val qs = request.queryString
+    val all = request.headers.toMap.mkString("\n")
+    val body = request.body
+
+    val pnt = Seq(addr.toString, id.toString, method.toString, path.toString, version.toString, ua.toString, qs.toString, all.toString, body.toString).mkString("\n\n")
+
+    Ok(pnt)
+  }
 
   def forceRefresh = Action { implicit request =>
     serviceDiscovery.forceUpdate()
