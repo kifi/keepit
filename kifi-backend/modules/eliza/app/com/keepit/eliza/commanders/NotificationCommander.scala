@@ -1,24 +1,21 @@
 package com.keepit.eliza.commanders
 
-import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.core._
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.{RSession, RWSession}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.eliza.model.UserThreadRepo.RawNotification
-import com.keepit.eliza.model._
-import com.keepit.model.{ NormalizedURI, User, NotificationCategory }
-import com.keepit.notify.LegacyNotificationCheck
-import com.keepit.notify.delivery.WsNotificationDelivery
-import com.keepit.notify.info.{ NotificationKindInfoRequests, LegacyNotificationInfo, NotificationInfo }
-import com.keepit.notify.model.event.{NotificationEvent, NewMessage, LegacyNotification}
-import com.keepit.notify.model.{NKind, GroupingNotificationKind, Recipient, NotificationKind}
-import org.joda.time.DateTime
-import play.api.libs.json.{ JsValue, JsObject, Json }
-import com.keepit.common.core._
 import com.keepit.common.time._
+import com.keepit.eliza.model._
+import com.keepit.model._
+import com.keepit.notify.delivery.WsNotificationDelivery
+import com.keepit.notify.model.event.{LegacyNotification, NewMessage, NotificationEvent}
+import com.keepit.notify.model.{GroupingNotificationKind, NKind, Recipient}
+import org.joda.time.DateTime
+import play.api.libs.json.JsValue
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class NotificationCommander @Inject() (

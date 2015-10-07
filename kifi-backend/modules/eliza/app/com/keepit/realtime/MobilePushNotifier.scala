@@ -5,8 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.logging.Logging
 import com.keepit.eliza._
-import com.keepit.eliza.model.MessageThread
-import com.keepit.model.{ Username, User, Library }
+import com.keepit.model.{ MessageThread, Username, User, Library }
 import com.kifi.macros.json
 import org.joda.time.Days
 

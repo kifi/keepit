@@ -3,7 +3,7 @@ package com.keepit.eliza.model
 import com.keepit.common.time._
 import com.keepit.common.db.{ Model, Id }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model._
 
 import play.api.libs.json._
 

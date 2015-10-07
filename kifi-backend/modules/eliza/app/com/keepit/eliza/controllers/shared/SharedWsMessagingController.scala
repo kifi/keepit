@@ -6,7 +6,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
 import com.keepit.common.db.{ ExternalId, State }
-import com.keepit.model.{ User, NotificationCategory, UserExperimentType, KifiExtVersion }
+import com.keepit.model._
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.model.Recipient

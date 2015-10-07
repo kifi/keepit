@@ -14,7 +14,7 @@ import com.keepit.eliza.util.MessageFormatter
 import com.keepit.eliza.{ PushNotificationExperiment, SimplePushNotificationCategory }
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model.{ UserThreadNotification, UserThread, UserThreadActivity, _ }
-import com.keepit.model.{ NotificationCategory, User }
+import com.keepit.model._
 import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.model.{ Recipient, UserRecipient }
 import com.keepit.realtime.{ MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification, PushNotification }

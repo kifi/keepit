@@ -12,7 +12,7 @@ import com.keepit.eliza.commanders.{ ElizaEmailUriSummaryImageSizes, ElizaEmailC
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.eliza.model.UserThread
-import com.keepit.model.{ NotificationCategory, UserStates, URISummary, User }
+import com.keepit.model._
 import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.Minutes

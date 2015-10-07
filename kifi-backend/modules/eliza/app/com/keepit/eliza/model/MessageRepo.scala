@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ MessageThread, User, NormalizedURI }
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
 import play.api.libs.json.{ JsArray, JsValue }

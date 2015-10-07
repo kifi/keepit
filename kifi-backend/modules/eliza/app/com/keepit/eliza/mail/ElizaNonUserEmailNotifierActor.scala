@@ -5,7 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.eliza.commanders.ElizaEmailCommander
 import com.keepit.eliza.model._
-import com.keepit.eliza.model.NonUserThread
+import com.keepit.model.NonUserThread
 import com.keepit.social.NonUserKinds
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

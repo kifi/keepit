@@ -5,8 +5,8 @@ import com.keepit.common.controller.{ ElizaServiceController, ServiceController 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.service.ServiceType
 import com.keepit.eliza.commanders.{ MessagingAnalytics, NotificationCommander }
-import com.keepit.eliza.model.{ MessageThread, Message }
-import com.keepit.model.NotificationCategory
+import com.keepit.eliza.model.Message
+import com.keepit.model.{ MessageThread, NotificationCategory }
 import com.keepit.notify.model.{ Recipient, GroupingNotificationKind, NKind, UserRecipient }
 import com.keepit.notify.model.event.NotificationEvent
 import play.api.libs.json.Json

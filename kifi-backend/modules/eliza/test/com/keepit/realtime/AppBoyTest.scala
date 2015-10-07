@@ -9,7 +9,6 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, LibraryPushNotificationCategory, FakeElizaServiceClientModule }
-import com.keepit.eliza.model.MessageThread
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }

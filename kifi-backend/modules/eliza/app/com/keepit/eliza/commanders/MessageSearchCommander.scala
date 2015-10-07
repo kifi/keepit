@@ -2,10 +2,10 @@ package com.keepit.eliza.commanders
 
 import com.keepit.common.db.slick.Database
 import com.keepit.search.SearchServiceClient
-import com.keepit.eliza.model.{ MessageThreadRepo, UserThreadRepo, MessageThread, MessageSearchHistoryRepo }
+import com.keepit.eliza.model.{ MessageThreadRepo, UserThreadRepo, MessageSearchHistoryRepo }
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
-import com.keepit.model.User
+import com.keepit.model.{ MessageThread, User }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.akka.SafeFuture
 

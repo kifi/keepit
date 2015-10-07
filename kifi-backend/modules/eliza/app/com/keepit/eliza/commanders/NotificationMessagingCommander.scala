@@ -7,7 +7,7 @@ import com.keepit.eliza.commanders.NotificationMessagingCommander.{ Notification
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.eliza.model._
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.User
+import com.keepit.model.{ MessageThread, User }
 import com.keepit.notify.delivery.NotificationJsonFormat
 import com.keepit.notify.info.NotificationInfoGenerator
 import com.keepit.notify.model.{ UserRecipient, Recipient }

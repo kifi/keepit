@@ -8,7 +8,7 @@ import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, MessageWithBasicUser, NotificationCommander, NotificationJsonMaker }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.eliza.model._
-import com.keepit.model.{ NotificationCategory, NormalizedURI }
+import com.keepit.model._
 import com.keepit.notify.info._
 import com.keepit.notify.model.{ EmailRecipient, UserRecipient, Recipient }
 import com.keepit.notify.model.event.{ NewMessage, LegacyNotification }

@@ -4,7 +4,7 @@ import com.keepit.eliza.util.MessageFormatter
 import com.keepit.search.index.message.{ ThreadContent, FULL }
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.User
+import com.keepit.model.{ NonUserParticipant, MessageThread, User }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
 import com.keepit.social.BasicUserLikeEntity

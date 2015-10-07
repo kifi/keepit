@@ -8,9 +8,9 @@ import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.UserAgent
 import com.keepit.common.time._
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.{ Message, MessageSource, MessageThread }
+import com.keepit.eliza.model.{ Message, MessageSource }
 import com.keepit.heimdal._
-import com.keepit.model.{ Organization, User }
+import com.keepit.model.{ MessageThread, Organization, User }
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 

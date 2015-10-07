@@ -1,22 +1,16 @@
-package com.keepit.eliza.model
+package com.keepit.model
 
-import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
-import com.keepit.common.cache.CacheStatistics
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
+import com.keepit.common.db.{ ExternalId, Id, ModelWithExternalId }
 import com.keepit.common.logging.AccessLog
-import org.joda.time.DateTime
-import com.keepit.common.time._
-import com.keepit.common.db.{ ModelWithExternalId, Id, ExternalId }
-import com.keepit.model.{ DeepLocator, User, NormalizedURI }
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import com.keepit.common.time.{ DateTimeJsonFormat }
-
-import scala.util.hashing.MurmurHash3
-import scala.concurrent.duration.Duration
-import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin }
 import com.keepit.common.strings.StringWithNoLineBreaks
+import com.keepit.common.time.{ DateTimeJsonFormat, _ }
+import org.joda.time.DateTime
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+
+import scala.concurrent.duration.Duration
+import scala.util.hashing.MurmurHash3
 
 class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], val nonUserParticipants: Map[NonUserParticipant, DateTime]) {
 

@@ -6,7 +6,7 @@ import com.keepit.eliza._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ Username, Library, User }
+import com.keepit.model.{ MessageThread, Username, Library, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.realtime._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
@@ -19,7 +19,7 @@ import play.api.libs.json.{ JsNumber, Json, JsObject, JsArray }
 
 import com.google.inject.Inject
 import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationDeliveryCommander, ElizaStatsCommander }
-import com.keepit.eliza.model.{ MessageThread, UserThreadStats }
+import com.keepit.eliza.model.UserThreadStats
 import com.keepit.common.db.slick._
 
 class ElizaController @Inject() (

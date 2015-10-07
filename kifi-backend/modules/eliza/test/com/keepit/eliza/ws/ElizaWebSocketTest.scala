@@ -14,7 +14,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.notify.WsTestBehavior
 import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
-import com.keepit.model.{ User, SocialUserInfo }
+import com.keepit.model.{ MessageThreadParticipants, MessageThread, User, SocialUserInfo }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }

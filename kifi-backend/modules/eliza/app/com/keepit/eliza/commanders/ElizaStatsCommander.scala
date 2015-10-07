@@ -6,7 +6,7 @@ import com.keepit.eliza.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
-import com.keepit.model.{ ChangedURI, User }
+import com.keepit.model.{ MessageThread, ChangedURI, User }
 
 class ElizaStatsCommander @Inject() (
     userThreadRepo: UserThreadRepo,

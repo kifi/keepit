@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.model.{ Organization, NotificationCategory, User }
+import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, Id }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.shoebox.ShoeboxServiceClient
