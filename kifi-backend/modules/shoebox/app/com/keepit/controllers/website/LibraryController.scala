@@ -242,14 +242,15 @@ class LibraryController @Inject() (
 
   def getKeepableLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
     val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
-    val basicUserById = {
+    val (basicUserById, orgAvatarsById) = {
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
-      db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
+      val orgIds = librariesWithMembershipAndCollaborators.map(_._1).flatMap(_.organizationId)
+      db.readOnlyMaster { implicit s =>
+        val basicUserById = basicUserRepo.loadAll(allUserIds)
+        val orgAvatarsById = orgAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
+        (basicUserById, orgAvatarsById)
+      }
     }
-
-    val libs = librariesWithMembershipAndCollaborators.map(_._1)
-    val orgIds = libs.flatMap(_.organizationId)
-    val orgAvatarsById = orgAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
 
     val datas = librariesWithMembershipAndCollaborators map {
       case (lib, membership, collaboratorsIds) =>

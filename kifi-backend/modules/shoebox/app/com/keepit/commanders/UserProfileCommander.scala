@@ -140,7 +140,7 @@ class UserProfileCommander @Inject() (
     }
   }
 
-  def getFollowersByViewer(userId: Id[User], viewer: Option[Id[User]]): Seq[Id[User]] = db.readOnlyMaster { implicit s =>
+  def getFollowersByViewer(userId: Id[User], viewer: Option[Id[User]])(implicit session: RSession): Seq[Id[User]] = {
     viewer match {
       case None =>
         libraryMembershipRepo.getFollowersForAnonymous(userId)
@@ -195,7 +195,7 @@ class UserProfileCommander @Inject() (
     }
   }
 
-  def countFollowers(userId: Id[User], viewer: Option[Id[User]]): Int = db.readOnlyReplica { implicit s =>
+  def countFollowers(userId: Id[User], viewer: Option[Id[User]])(implicit session: RSession): Int = {
     viewer match {
       case None =>
         libraryMembershipRepo.countFollowersForAnonymous(userId)

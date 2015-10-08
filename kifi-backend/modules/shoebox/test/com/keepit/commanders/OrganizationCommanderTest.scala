@@ -55,17 +55,17 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             orgLibs.size === 1
             val orgGeneralLib = orgLibs.head
             libraryMembershipRepo.getWithLibraryId(orgGeneralLib.id.get).map(_.userId) === List(org.ownerId)
+
+            val avatar1 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize)
+            avatar1.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
+            avatar1.width === 200
+            avatar1.height === 200
+
+            val avatar2 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, CropScaledImageSize.Tiny.idealSize)
+            avatar2.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"
+            avatar2.width === 100
+            avatar2.height === 100
           }
-
-          val avatar1 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize)
-          avatar1.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
-          avatar1.width === 200
-          avatar1.height === 200
-
-          val avatar2 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, CropScaledImageSize.Tiny.idealSize)
-          avatar2.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"
-          avatar2.width === 100
-          avatar2.height === 100
 
           inject[WatchableExecutionContext].drain()
           1 === 1
@@ -209,6 +209,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             val (owner, members) = (users.head, users.tail)
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(members).saved
             val orgGeneralLib = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
+            println(libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head)
             val orgLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user).withOrganization(org)).saved.toSet }.toMap
             val personalLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user)).saved.toSet }.toMap
             (org, owner, members, orgLibs, personalLibs, orgGeneralLib)
@@ -231,7 +232,6 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           val maybeResponse = orgCommander.deleteOrganization(OrganizationDeleteRequest(orgId = org.id.get, requesterId = owner.id.get))
           maybeResponse must beRight
-
           Await.result(maybeResponse.right.get.returningLibsFut, Duration.Inf)
 
           db.readOnlyMaster { implicit session =>
@@ -239,8 +239,10 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             orgRepo.get(org.id.get).state === OrganizationStates.INACTIVE
             orgMembershipRepo.getAllByOrgId(org.id.get) === Set.empty
             libraryRepo.getBySpace(org.id.get) === Set.empty
+            libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL) === Set.empty
             for (u <- users) {
-              libraryRepo.getAllByOwner(u.id.get).map(_.id.get).toSet === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
+              libraryRepo.getAllByOwner(u.id.get).
+                map(_.id.get).toSet === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
               libraryRepo.getBySpace(u.id.get).map(_.id.get) === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
             }
           }

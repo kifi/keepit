@@ -427,10 +427,8 @@ class AdminOrganizationController @Inject() (
 
   def forceDeactivate(orgId: Id[Organization]) = AdminUserAction { implicit request =>
     implicit val context = HeimdalContext.empty
-    val deleteResponse = db.readWrite { implicit session =>
-      val org = orgRepo.get(orgId)
-      orgCommander.deleteOrganization(OrganizationDeleteRequest(org.ownerId, org.id.get))
-    }
+    val org = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
+    val deleteResponse = orgCommander.deleteOrganization(OrganizationDeleteRequest(org.ownerId, org.id.get))
     deleteResponse match {
       case Left(fail) => fail.asErrorResponse
       case Right(response) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
