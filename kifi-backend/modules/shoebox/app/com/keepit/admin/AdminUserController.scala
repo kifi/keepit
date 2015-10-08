@@ -885,7 +885,7 @@ class AdminUserController @Inject() (
     val ownedLibraries = libraryRepo.getAllByOwner(userId).map(_.id.get)
     val ownsCollaborativeLibs = libraryMembershipRepo.getCollaboratorsByLibrary(ownedLibraries.toSet).exists { case (_, collaborators) => collaborators.size > 1 }
     assert(!ownsCollaborativeLibs, "cannot deactivate a user if they own a library with collaborators: either delete the library or transfer its ownership")
-    FutureHelpers.sequentialExec(ownedLibraries)(libraryCommander.unsafeAsyncDeleteLibrary)
+    ownedLibraries.foreach(libraryCommander.unsafeDeleteLibrary)
 
     // Personal Info
     userSessionRepo.invalidateByUser(userId) // User Session

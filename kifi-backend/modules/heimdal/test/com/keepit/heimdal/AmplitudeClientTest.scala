@@ -4,7 +4,6 @@ import com.google.inject.Module
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule, ProdHttpClientModule }
 import com.keepit.common.time._
-import com.keepit.heimdal.ContextStringData
 import com.keepit.model.{ User, UserExperimentType }
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientModule }
 import com.keepit.social.NonUserKinds
