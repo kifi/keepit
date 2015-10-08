@@ -60,13 +60,13 @@ class KeepChecker @Inject() (
     val allKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = None)
     for (ktu <- allKtus) {
       if (ktu.uriId != keep.uriId) {
-        log.error(s"[KTU-URI-MATCH] KTU ${ktu.id.get}'s URI Id (${ktu.uriId}) does not match keep ${keep.id.get}'s URI id (${keep.uriId})")
+        airbrake.notify(s"[KTU-URI-MATCH] KTU ${ktu.id.get}'s URI Id (${ktu.uriId}) does not match keep ${keep.id.get}'s URI id (${keep.uriId})")
         ktuCommander.syncWithKeep(ktu, keep)
       }
     }
     for (ktl <- allKtls) {
       if (ktl.uriId != keep.uriId) {
-        log.error(s"[KTL-URI-MATCH] KTL ${ktl.id.get}'s URI Id (${ktl.uriId}) does not match keep ${keep.id.get}'s URI id (${keep.uriId})")
+        airbrake.notify(s"[KTL-URI-MATCH] KTL ${ktl.id.get}'s URI Id (${ktl.uriId}) does not match keep ${keep.id.get}'s URI id (${keep.uriId})")
         ktlCommander.syncWithKeep(ktl, keep)
       }
     }
@@ -77,13 +77,13 @@ class KeepChecker @Inject() (
     if (keep.isInactive) {
       val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.INACTIVE))
       for (ktu <- zombieKtus) {
-        log.error(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!")
+        airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!")
         ktuCommander.deactivate(ktu)
       }
 
       val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
       for (ktl <- zombieKtls) {
-        log.error(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!")
+        airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!")
         ktlCommander.deactivate(ktl)
       }
     }
@@ -93,9 +93,8 @@ class KeepChecker @Inject() (
     val keep = keepRepo.getNoCache(keepId)
     val libraries = ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet
     val expectedHash = LibrariesHash(libraries)
-    if (keep.librariesHash != Some(expectedHash)) {
-      // TODO(ryan): once we have backfilled and made the field not nullable, uncomment this line
-      // log.error(s"[KTL-HASH-MATCH] Keep $keepId's library hash (${keep.librariesHash}) != $libraries ($expectedHash)")
+    if (keep.librariesHash != expectedHash) {
+      airbrake.notify(s"[KTL-HASH-MATCH] Keep $keepId's library hash (${keep.librariesHash}) != $libraries ($expectedHash)")
       keepCommander.refreshLibrariesHash(keep)
     }
   }
@@ -104,9 +103,8 @@ class KeepChecker @Inject() (
     val keep = keepRepo.getNoCache(keepId)
     val users = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
     val expectedHash = ParticipantsHash(users)
-    if (keep.participantsHash != Some(expectedHash)) {
-      // TODO(ryan): once we have backfilled and made the field not nullable, uncomment this line
-      // log.error(s"[KTU-HASH-MATCH] Keep $keepId's participants hash (${keep.participantsHash}) != $users ($expectedHash)")
+    if (keep.participantsHash != expectedHash) {
+      airbrake.notify(s"[KTU-HASH-MATCH] Keep $keepId's participants hash (${keep.participantsHash}) != $users ($expectedHash)")
       keepCommander.refreshParticipantsHash(keep)
     }
   }

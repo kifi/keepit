@@ -2,9 +2,9 @@
 
 # --- !Ups
 
-ALTER TABLE account_event DROP COLUMN event_group;
-ALTER TABLE paid_account DROP COLUMN modified_since_last_integrity_check;
+ALTER TABLE bookmark MODIFY COLUMN libraries_hash int(10) NOT NULL;
+ALTER TABLE bookmark MODIFY COLUMN participants_hash int(10) NOT NULL;
 
-insert into evolutions(name, description) values('399.sql', 'removing deprecated columns');
+insert into evolutions(name, description) values('399.sql', 'made keep hashes (libraries, participants) not null');
 
 # --- !Downs

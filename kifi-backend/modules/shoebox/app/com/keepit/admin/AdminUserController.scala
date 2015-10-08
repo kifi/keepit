@@ -79,7 +79,9 @@ class AdminUserController @Inject() (
     mailRepo: ElectronicMailRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
     keepRepo: KeepRepo,
-    keepToLibraryRepo: KeepToLibraryRepo,
+    keepCommander: KeepCommander,
+    ktlRepo: KeepToLibraryRepo,
+    ktuRepo: KeepToUserRepo,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -738,7 +740,7 @@ class AdminUserController @Inject() (
         properties += ("userId", user.id.get.id)
         properties += ("admin", "https://admin.kifi.com" + com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get).url)
 
-        val keepVisibilityCount = keepToLibraryRepo.getPrivatePublicCountByUser(userId)
+        val keepVisibilityCount = ktlRepo.getPrivatePublicCountByUser(userId)
         val keeps = keepVisibilityCount.all
         properties += ("keeps", keeps)
         properties += ("publicKeeps", keepVisibilityCount.published + keepVisibilityCount.discoverable + keepVisibilityCount.organization)
@@ -873,7 +875,8 @@ class AdminUserController @Inject() (
     }
 
     // URI Graph
-    keepRepo.getByUser(userId).foreach { bookmark => keepRepo.save(bookmark.withActive(false)) }
+    keepRepo.getByUser(userId).foreach(keepCommander.deactivateKeep)
+    ktuRepo.getAllByUserId(userId).foreach(ktuRepo.deactivate)
     collectionRepo.getUnfortunatelyIncompleteTagsByUser(userId).foreach { collection => collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE)) }
 
     // Libraries Data

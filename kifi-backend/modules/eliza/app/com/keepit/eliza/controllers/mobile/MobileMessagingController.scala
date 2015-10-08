@@ -13,6 +13,7 @@ import com.keepit.heimdal._
 import com.keepit.model.{ Organization, User }
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
+import com.kifi.macros.json
 
 import scala.concurrent.ExecutionContext
 
@@ -282,6 +283,27 @@ class MobileMessagingController @Inject() (
     Ok("")
   }
 
+  // users is a string because orgs come in through that field
+  @json case class AddParticipants(users: Seq[String], emails: Seq[BasicContact])
+  def addParticipantsToThreadV2(threadId: ExternalId[MessageThread]) = UserAction(parse.tolerantJson) { request =>
+    request.body.asOpt[AddParticipants] match {
+      case Some(addReq) =>
+        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+        contextBuilder += ("source", "mobile")
+
+        val (validUserIds, validOrgIds) = addReq.users.foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
+          ExternalId.asOpt[User](id) match {
+            case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
+            case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
+          }
+        }
+        messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, addReq.emails, validOrgIds)(contextBuilder.build)
+        Ok
+      case None => BadRequest
+    }
+  }
+
+  // Do not use, clients have moved to addParticipantsToThreadV2 which doesn't have an insane API
   def addParticipantsToThread(threadId: ExternalId[MessageThread], users: String, emailContacts: String) = UserAction { request =>
     if (users.nonEmpty || emailContacts.nonEmpty) {
       val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
