@@ -113,9 +113,9 @@ class PaymentProcessingCommanderImpl @Inject() (
     FutureHelpers.map(relevantAccounts.map { account =>
       val processingResultFut = processAccount(account)
       processingResultFut.onComplete {
-        case Success((amount, reason)) => reportToSlack(s"Processed Org ${account.orgId}. Charged: $amount. Reason: $reason")
+        case Success((amount, reason)) => //reportToSlack(s"Processed Org ${account.orgId}. Charged: $amount. Reason: $reason") //Too high frequency when it runs for slack webhooks. Need to find a different solution.
         case Failure(ex) => {
-          reportToSlack(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}. See log for stack trace.")
+          //reportToSlack(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}. See log for stack trace.")
           log.error(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}", ex)
         }
       }
