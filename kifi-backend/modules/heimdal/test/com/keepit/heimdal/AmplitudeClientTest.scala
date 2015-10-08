@@ -4,6 +4,7 @@ import com.google.inject.Module
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule, ProdHttpClientModule }
 import com.keepit.common.time._
+import com.keepit.heimdal.ContextStringData
 import com.keepit.model.{ User, UserExperimentType }
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientModule }
 import com.keepit.social.NonUserKinds
@@ -59,6 +60,9 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
 
       val visitorViewedPane1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("login")), UserEventTypes.VIEWED_PANE, now)
       val visitorViewedPage1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("signupLibrary")), UserEventTypes.VIEWED_PAGE, now)
+
+      val userWasNotified1 = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("spamreport")), UserEventTypes.WAS_NOTIFIED, now)
+      val userWasNotified2 = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("deferred")), UserEventTypes.WAS_NOTIFIED, now)
 
       // any future that doesn't return the type we expect will throw an exception
       val eventsFList = List(
@@ -127,6 +131,15 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
         amplitude.track(userViewedPage3) map {
           case dat: AmplitudeEventSent =>
             dat.eventData \\ "type" === Seq(JsString("home_feed:successful_signup"))
+        },
+        amplitude.track(userWasNotified1) map {
+          case dat: AmplitudeEventSent =>
+            // event name should have been renamed
+            dat.eventData \ "event_type" === JsString("user_clicked_notification")
+        },
+        amplitude.track(userWasNotified2) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_was_notified")
         }
       )
 

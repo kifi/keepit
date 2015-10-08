@@ -89,6 +89,9 @@ var defaultUserProperties = {
   $city: 'city'
 };
 
+// for user_was_notified events, these 'action' properties should be user_clicked_notification events
+var userWasNotifiedClickActions = ['open', 'click', 'spamreport', 'cleared', 'marked_read', 'marked_unread'];
+
 // function(url) - https GET request that return a promise
 var httpsGet = Promise.method(function(url) {
   return new Promise(function(resolve, reject) {
@@ -136,6 +139,8 @@ function amplitudeEventName(mixpanelEvent) {
     return 'visitor_viewed_page';
   } else if (mixpanelEvent.event === 'user_viewed_pane') {
     return 'user_viewed_page';
+  } else if (mixpanelEvent.event === 'user_was_notified' && userWasNotifiedClickActions.indexOf(mixpanelEvent.properties.action) >= 0) {
+    return 'user_clicked_notification';
   } else {
     return mixpanelEvent.event;
   }

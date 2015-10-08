@@ -65,6 +65,9 @@ object AmplitudeClient {
     "user_viewed_pane" -> "user_viewed_page",
     "visitor_viewed_pane" -> "visitor_viewed_page"
   )
+
+  // these user_was_notified action properties should be change dto user_clicked_notification events
+  val userWasNotifiedClickActions = Set("open", "click", "spamreport", "cleared", "marked_read", "marked_unread")
 }
 
 trait AmplitudeClient {
@@ -229,10 +232,10 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
       // TODO(josh) after amplitude is in prod, change these events at their source
       if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("registered")) "user_registered"
       else if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("installed")) "user_installed"
+      else if (shouldRenameToUserClickedNotification()) "user_clicked_notification"
       else origEventName
     })
   }
-
 
   override def getUserAndEventProperties(): (Map[String, ContextData], Map[String, ContextData]) = {
     val (userProperties, eventProperties) = super.getUserAndEventProperties()
@@ -309,6 +312,11 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
     }
 
     builder.build.data
+  }
+
+  private def shouldRenameToUserClickedNotification() = {
+    origEventName == "user_was_notified" &&
+      heimdalContext.get[String]("action").exists(AmplitudeClient.userWasNotifiedClickActions.contains)
   }
 
   private def getIpAddress(): Option[String] =
