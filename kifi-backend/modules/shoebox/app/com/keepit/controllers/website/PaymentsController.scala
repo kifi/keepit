@@ -56,11 +56,13 @@ class PaymentsController @Inject() (
   def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
       case Some(token) => {
-        stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").map { realToken =>
-          val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-          val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution)
-          planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution)
-          Ok
+        stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").flatMap { realToken =>
+          stripeClient.getLastFourDigitsOfCard(realToken).map { lastFour =>
+            val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
+            val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, lastFour)
+            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, lastFour)
+            Ok
+          }
         }
       }
       case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))

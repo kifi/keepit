@@ -138,8 +138,9 @@ class AdminPaymentsController @Inject() (
       data("cardholderName").head.trim
     )
     stripeClient.getPermanentToken(cardDetails, s"Manually Entered through admin ${request.userId} for org $orgId").map { token =>
-      val pm = planCommander.addPaymentMethod(orgId, token, ActionAttribution(user = None, admin = Some(request.userId)))
-      val event = planCommander.changeDefaultPaymentMethod(orgId, pm.id.get, ActionAttribution(user = None, admin = Some(request.userId)))
+      val lastFour = cardDetails.number.takeRight(4)
+      val pm = planCommander.addPaymentMethod(orgId, token, ActionAttribution(user = None, admin = Some(request.userId)), lastFour)
+      val event = planCommander.changeDefaultPaymentMethod(orgId, pm.id.get, ActionAttribution(user = None, admin = Some(request.userId)), lastFour)
       Ok(event.toString)
     }
   }
@@ -166,7 +167,7 @@ class AdminPaymentsController @Inject() (
     val PAGE_SIZE = 50
     val (allEvents, org) = db.readOnlyMaster { implicit s =>
       val account = paidAccountRepo.getByOrgId(orgId)
-      val allEvents = accountEventRepo.getByAccountAndState(account.id.get, AccountEventStates.ACTIVE).sortBy(-1 * _.eventTime.getMillis)
+      val allEvents = accountEventRepo.getByAccountAndState(account.id.get, AccountEventStates.ACTIVE)
       val org = organizationRepo.get(orgId)
       (allEvents, org)
     }

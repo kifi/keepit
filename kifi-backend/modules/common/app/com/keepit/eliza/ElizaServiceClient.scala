@@ -58,7 +58,9 @@ object LibraryPushNotificationCategory {
 }
 
 object OrgPushNotificationCategory {
+
   val OrganizationInvitation = OrgPushNotificationCategory("OrganizationInvitation")
+
   implicit val format = new Format[OrgPushNotificationCategory] {
     def reads(json: JsValue) = json.as[String] match {
       case OrganizationInvitation.name => JsSuccess(OrganizationInvitation)
