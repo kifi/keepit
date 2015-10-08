@@ -34,9 +34,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
     val webService: WebService,
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
 
-  def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar = {
-    getBestImagesByOrgIds(Set(orgId), imageSize).head._2
-  }
+  def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar = getBestImagesByOrgIds(Set(orgId), imageSize).head._2
 
   def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize)(implicit session: RSession): Map[Id[Organization], OrganizationAvatar] = {
     val candidatesById = orgAvatarRepo.getByOrgIds(orgIds)

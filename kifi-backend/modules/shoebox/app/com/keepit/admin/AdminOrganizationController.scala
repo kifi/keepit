@@ -434,4 +434,12 @@ class AdminOrganizationController @Inject() (
       case Right(response) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
     }
   }
+
+  def deleteSystemLibrariesWithInactiveOrgs() = AdminUserAction { implicit request =>
+    db.readWriteAsync { implicit session =>
+      val inactiveOrgs = orgRepo.getAllByState(OrganizationStates.INACTIVE)
+      inactiveOrgs.flatMap(org => libRepo.getBySpace(org.id.get)).filter(_.kind.value.startsWith("system")).foreach(libRepo.deactivate) // get all active libraries in the org
+    }
+    Ok
+  }
 }
