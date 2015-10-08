@@ -5,8 +5,10 @@ angular.module('kifi')
 .directive('kfManageLibrary', [
   '$window', '$rootScope', '$location', '$state', 'friendService',
   'libraryService', 'modalService', 'profileService', 'util', 'LIB_PERMISSION',
+  'ORG_PERMISSION',
   function ($window, $rootScope, $location, $state, friendService,
-            libraryService, modalService, profileService, util, LIB_PERMISSION) {
+            libraryService, modalService, profileService, util, LIB_PERMISSION,
+            ORG_PERMISSION) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -31,6 +33,7 @@ angular.module('kifi')
         // Scope data.
         //
         scope.LIB_PERMISSION = LIB_PERMISSION;
+        scope.ORG_PERMISSION = ORG_PERMISSION;
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
@@ -58,8 +61,8 @@ angular.module('kifi')
         };
 
         scope.toggleIntegrations = function (e) {
-          scope.showIntegrations = !scope.showIntegrations;
-          if (scope.showIntegrations) {
+          scope.integrationsOpen = !scope.integrationsOpen;
+          if (scope.integrationsOpen) {
             element.find('.dialog-body').animate({
               scrollTop: e.target.getBoundingClientRect().top
             }, 500);
@@ -259,6 +262,45 @@ angular.module('kifi')
         scope.hasPermission = function (permission) {
           return scope.library.permissions.indexOf(permission) !== -1;
         };
+
+        scope.showIntegrations = function () {
+          return (
+            scope.modifyingExistingLibrary &&
+            (
+              scope.showIntegrationsUpsell() ||
+              !scope.spaceIsOrg(scope.space.destination) ||
+              (
+                scope.library.subscriptions[0] &&
+                scope.library.subscriptions[0].url
+              )
+            )
+          );
+        };
+
+        scope.showIntegrationsUpsell = function () {
+          return (
+            scope.spaceIsOrg(scope.space.destination) &&
+            !(
+              scope.space.destination.viewer.membership &&
+              scope.space.destination.viewer.membership.role !== 'admin'
+            )
+          );
+        };
+
+        scope.isIntegrationsEnabled = function () {
+          return (
+            !scope.spaceIsOrg(scope.space.destination) ||
+            scope.space.destination.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) > -1
+          );
+        };
+
+        scope.$watch(function () {
+          return scope.isIntegrationsEnabled()
+        }, function (newValue, oldValue) {
+          if (newValue === false && scope.integrationsOpen === true) {
+            scope.integrationsOpen = !scope.integrationsOpen;
+          }
+        });
 
         scope.onHoverUpsellIntegration = function () {
 
