@@ -3,17 +3,29 @@
 angular.module('kifi')
 
 .controller('OrgProfileCreateCtrl', [
-  '$scope', 'orgProfileService', '$location', 'profileService',
-  function($scope, orgProfileService, $location, profileService) {
+  '$scope', 'orgProfileService', '$state', 'profileService', 'modalService',
+  function($scope, orgProfileService, $state, profileService, modalService) {
     $scope.orgName = '';
     $scope.orgSlug = ''; // Not yet implemented.
+    $scope.disableCreate = false;
+
     if (profileService.me.experiments.indexOf('organization') > -1) {
       $scope.org_experiment = true;
     }
+
     $scope.createOrg = function() {
-      orgProfileService.createOrg(this.orgName).then(function(handle) {
-        $location.url('/' + handle);
-      }.bind($scope));
+      $scope.disableCreate = true;
+
+      orgProfileService
+      .createOrg(this.orgName)
+      .then(function(handle) {
+        profileService.fetchMe(); // update the me object
+        $state.go('orgProfile.libraries', { handle: handle });
+      })
+      ['catch'](function () {
+        modalService.openGenericErrorModal();
+        $scope.disableCreate = false;
+      });
     };
   }
 ]);

@@ -3,10 +3,13 @@
 angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
-  '$window', '$rootScope', '$scope', '$state', 'orgProfileService', 'profileService',
-  'billingService', 'messageTicker', 'ORG_SETTING_VALUE',
-  function ($window, $rootScope, $scope, $state, orgProfileService, profileService,
-            billingService, messageTicker, ORG_SETTING_VALUE) {
+  '$window', '$rootScope', '$scope', '$state', '$sce', 'orgProfileService', 'profileService',
+  'billingService', 'messageTicker', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
+  function ($window, $rootScope, $scope, $state, $sce, orgProfileService, profileService,
+            billingService, messageTicker, ORG_PERMISSION, ORG_SETTING_VALUE) {
+    var slackIntegrationHtmlTitle =
+      $sce.trustAsHtml('Who can <a href="http://blog.kifi.com/slack-library-subscriptions/">create a Slack integration</a> with Kifi?');
+    $scope.ORG_PERMISSION = ORG_PERMISSION;
     $scope.settingsSectionTemplateData = [
       {
         heading: 'Team Settings',
@@ -90,9 +93,9 @@ angular.module('kifi')
         heading: 'Integrations',
         fields: [
           {
-            title: 'Who can create a slack integration with Kifi?',
+            title: slackIntegrationHtmlTitle,
             description: (
-              'Send all of your keeps from a particular library, automatically, to a slack channel.'
+              'Send all of your keeps from a particular library, automatically, to a Slack channel.'
             ),
             fieldKey: 'create_slack_integration',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
@@ -143,7 +146,7 @@ angular.module('kifi')
       var options = [ // This is what the <select>s will read from
         { label: 'No one', value: ORG_SETTING_VALUE.DISABLED },
         { label: 'Admins only', value: ORG_SETTING_VALUE.ADMIN },
-        { label: 'All members', value: ORG_SETTING_VALUE.MEMBER },
+        { label: 'Team members', value: ORG_SETTING_VALUE.MEMBER },
         { label: 'Anyone', value: ORG_SETTING_VALUE.ANYONE }
       ];
 

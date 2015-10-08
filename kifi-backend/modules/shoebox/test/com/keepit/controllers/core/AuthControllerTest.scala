@@ -73,8 +73,9 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
         Await.ready(result2, Duration(5, "seconds"))
 
         outbox.size === 3
-        outbox(1).to === Seq(EmailAddress("dancing@gmail.com"))
-        outbox(2).to === Seq(EmailAddress("elaine@gmail.com"))
+        val actual = (outbox(1).to ++ outbox(2).to).sortBy(_.address)
+        val expected = Seq("dancing@gmail.com", "elaine@gmail.com").map(EmailAddress(_))
+        actual === expected
         Json.parse(contentAsString(result2)) === Json.obj("addresses" -> Json.toJson(Seq("dancing@gmail.com", "e...@gmail.com")))
         status(result2) === OK
       }

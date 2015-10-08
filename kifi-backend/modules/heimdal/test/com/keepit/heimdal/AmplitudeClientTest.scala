@@ -4,6 +4,7 @@ import com.google.inject.Module
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule, ProdHttpClientModule }
 import com.keepit.common.time._
+import com.keepit.heimdal.ContextStringData
 import com.keepit.model.{ User, UserExperimentType }
 import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientModule }
 import com.keepit.social.NonUserKinds
@@ -42,7 +43,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val amplitude = inject[AmplitudeClient]
       val now = currentDateTime
 
-      val userKept = new UserEvent(testUserId, heimdalContext(), UserEventTypes.KEPT, now)
+      val userKept = new UserEvent(testUserId, heimdalContext("os" -> ContextStringData("Windows 95")), UserEventTypes.KEPT, now)
       val userRecoAction = new UserEvent(testUserId, heimdalContext(), UserEventTypes.RECOMMENDATION_USER_ACTION, now)
       val userUsedKifi = new UserEvent(testUserId, heimdalContext(), UserEventTypes.USED_KIFI, now)
       val nonUserMessaged: NonUserEvent = new NonUserEvent("foo@bar.com", NonUserKinds.email, heimdalContext(), NonUserEventTypes.MESSAGED)
@@ -55,9 +56,13 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val userViewedPane = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("libraryChooser")), UserEventTypes.VIEWED_PANE, now)
       val userViewedPage1 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/josh")), UserEventTypes.VIEWED_PAGE, now)
       val userViewedPage2 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/settings")), UserEventTypes.VIEWED_PAGE, now)
+      val userViewedPage3 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/?m=0")), UserEventTypes.VIEWED_PAGE, now)
 
       val visitorViewedPane1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("login")), UserEventTypes.VIEWED_PANE, now)
       val visitorViewedPage1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("signupLibrary")), UserEventTypes.VIEWED_PAGE, now)
+
+      val userWasNotified1 = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("spamreport")), UserEventTypes.WAS_NOTIFIED, now)
+      val userWasNotified2 = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("deferred")), UserEventTypes.WAS_NOTIFIED, now)
 
       // any future that doesn't return the type we expect will throw an exception
       val eventsFList = List(
@@ -66,6 +71,8 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
           case dat: AmplitudeEventSent =>
             dat.eventData \\ "installation_id" === Seq(JsString("123"))
             dat.eventData \\ "created_at" === Seq(JsString("2015-06-22T06:59:01"))
+            dat.eventData \ "os_name" === JsString("Windows 95")
+            dat.eventData \\ "operating_system" === Seq(JsString("Windows 95"))
         },
         amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
         amplitude.track(userRecoAction) map { case _: AmplitudeEventSkipped => () },
@@ -120,7 +127,20 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
             dat.eventData \\ "type" === Seq(JsString("signupLibrary"))
         },
         amplitude.track(userViewedPage1) map { case _: AmplitudeEventSkipped => () },
-        amplitude.track(userViewedPage2) map { case _: AmplitudeEventSent => () }
+        amplitude.track(userViewedPage2) map { case _: AmplitudeEventSent => () },
+        amplitude.track(userViewedPage3) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \\ "type" === Seq(JsString("home_feed:successful_signup"))
+        },
+        amplitude.track(userWasNotified1) map {
+          case dat: AmplitudeEventSent =>
+            // event name should have been renamed
+            dat.eventData \ "event_type" === JsString("user_clicked_notification")
+        },
+        amplitude.track(userWasNotified2) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("user_was_notified")
+        }
       )
 
       val eventsF = Future.sequence(eventsFList)

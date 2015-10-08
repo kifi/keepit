@@ -237,13 +237,17 @@ class LibraryCommanderImpl @Inject() (
       }
     }
 
-    def validateIntegrationPermissions(newSubscriptions: Option[Seq[LibrarySubscriptionKey]], newSpace: LibrarySpace): Option[LibraryFail] = {
-      db.readOnlyReplica { implicit session =>
-        (newSubscriptions.exists(_.nonEmpty), newSpace) match {
-          case (true, space: OrganizationSpace) if !permissionCommander.getOrganizationPermissions(space.id, Some(userId)).contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) =>
-            Some(LibraryFail(FORBIDDEN, "create_slack_integration"))
-          case _ => None
-        }
+    def validateIntegration(newSubscriptions: Option[Seq[LibrarySubscriptionKey]], newSpace: LibrarySpace): Option[LibraryFail] = {
+      val areSubKeysValidOpt = newSubscriptions.map(subs => subs.forall {
+        case LibrarySubscriptionKey(name, info: SlackInfo) => name.length < 33 && "^https://hooks.slack.com/services/.*/.*/?$".r.findFirstIn(info.url).isDefined
+        case _ => false // unsupported type
+      })
+
+      (newSubscriptions.isDefined, areSubKeysValidOpt, newSpace) match {
+        case (true, Some(false), _) => Some(LibraryFail(BAD_REQUEST, "subscription_key_format"))
+        case (true, _, space: OrganizationSpace) if db.readOnlyReplica { implicit session => !permissionCommander.getOrganizationPermissions(space.id, Some(userId)).contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) } =>
+          Some(LibraryFail(FORBIDDEN, "create_slack_integration_permission"))
+        case _ => None
       }
     }
 
@@ -254,7 +258,7 @@ class LibraryCommanderImpl @Inject() (
       validateName(modifyReq.name, newSpace),
       validateSlug(modifyReq.slug, newSpace),
       validateVisibility(modifyReq.visibility, newSpace),
-      validateIntegrationPermissions(modifyReq.subscriptions, newSpace)
+      validateIntegration(modifyReq.subscriptions, newSpace)
     )
     errorOpts.flatten.headOption
   }
@@ -434,7 +438,7 @@ class LibraryCommanderImpl @Inject() (
       deletedInvites <- deletedInvitesFut
       deletedKeeps <- deletedKeepsFut
     } yield {
-      db.readWriteAsync { implicit session =>
+      db.readWrite { implicit session =>
         libraryRepo.save(libraryRepo.get(libraryId).withState(LibraryStates.INACTIVE))
         searchClient.updateLibraryIndex()
       }

@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders._
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.{ DbSequenceAssigner, SequenceNumber, State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -34,17 +35,27 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
 class OrganizationMembershipRepoImpl @Inject() (
     primaryOrgForUserCache: PrimaryOrgForUserCache,
     orgMembersCache: OrganizationMembersCache,
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
+    orgPermissionsCache: OrganizationPermissionsCache,
     val db: DataBaseComponent,
     val clock: Clock) extends OrganizationMembershipRepo with DbRepo[OrganizationMembership] with SeqNumberDbFunction[OrganizationMembership] with Logging {
 
-  override def deleteCache(orgMember: OrganizationMembership)(implicit session: RSession): Unit = {
-    primaryOrgForUserCache.remove(PrimaryOrgForUserKey(orgMember.userId))
-    orgMembersCache.remove(OrganizationMembersKey(orgMember.organizationId))
+  override def deleteCache(model: OrganizationMembership)(implicit session: RSession): Unit = {
+    primaryOrgForUserCache.remove(PrimaryOrgForUserKey(model.userId))
+    orgMembersCache.remove(OrganizationMembersKey(model.organizationId))
+
+    orgPermissionsNamespaceCache.get(OrganizationPermissionsNamespaceKey(model.organizationId)).foreach { namespace =>
+      orgPermissionsCache.remove(OrganizationPermissionsKey(model.organizationId, namespace, Some(model.userId)))
+    }
   }
 
-  override def invalidateCache(orgMember: OrganizationMembership)(implicit session: RSession): Unit = {
-    primaryOrgForUserCache.remove(PrimaryOrgForUserKey(orgMember.userId))
-    orgMembersCache.remove(OrganizationMembersKey(orgMember.organizationId))
+  override def invalidateCache(model: OrganizationMembership)(implicit session: RSession): Unit = {
+    primaryOrgForUserCache.remove(PrimaryOrgForUserKey(model.userId))
+    orgMembersCache.remove(OrganizationMembersKey(model.organizationId))
+
+    orgPermissionsNamespaceCache.get(OrganizationPermissionsNamespaceKey(model.organizationId)).foreach { namespace =>
+      orgPermissionsCache.remove(OrganizationPermissionsKey(model.organizationId, namespace, Some(model.userId)))
+    }
   }
 
   import db.Driver.simple._

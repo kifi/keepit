@@ -137,7 +137,11 @@ package object template {
 
     def kifiFriendsUrl(content: String) = deepLink("""{"t":"fr"}""", content, openInAppIfMobile = true)
 
-    def acceptFriendUrl(id: Id[User], content: String) = deepLink("""{"t":"fr"}""", content, openInAppIfMobile = true)
+    def acceptFriendLink(id: Id[User], content: String) = deepLink("""{"t":"fr"}""", content, openInAppIfMobile = true)
+    def acceptFriendUrl(id: Id[User]): Html = Html(s"$baseUrl/friends/requests")
+    def acceptFriendUrl(id: Id[User], content: String): Html = Html {
+      appendTrackingParams(s"$baseUrl/friends/requests&", content, openInAppIfMobile = false)
+    }
 
     private def connectNetworkUrl(network: String, content: String): Html = Html {
       s"$baseUrl/link/$network?${EmailTrackingParam.paramName}=${trackingParam(content)}"
@@ -147,7 +151,7 @@ package object template {
 
     // Just opens the contact's profile
     def inviteContactUrl(id: Id[User], content: String) =
-      profileLink(id, content)
+      profileUrl(id, content)
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
       profileLink(id, "pymk" + index)
 
@@ -156,8 +160,8 @@ package object template {
 
     // data is a stringified version of a JsObject
     def deepLink(data: String, content: String, openInAppIfMobile: Boolean): Html = {
-      val encodedParams = URLEncoder.encode(s"data=$data", "ascii")
-      htmlUrl(s"$baseUrl/redir?$encodedParams&", content, openInAppIfMobile)
+      val encodedParams = URLEncoder.encode(data, "ascii")
+      htmlUrl(s"$baseUrl/redir?data=$encodedParams&", content, openInAppIfMobile)
     }
 
     // wrap a url (String) in HTML (so tags aren't escaped)

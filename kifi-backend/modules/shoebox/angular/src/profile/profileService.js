@@ -36,24 +36,6 @@ angular.module('kifi')
         updateMe(res.data);
         updateLoginState(true, me.id !== oldMeId);
         return me;
-      })
-      // TODO(carlos): delete this promise block when the backend returns
-      // settings and plan data.
-      .then(function (me) {
-        return $q.all(me.orgs.map(function (meOrg) {
-          return net
-          .getOrgSettings(meOrg.id)
-          .then(function (response) {
-            var settingsData = response.data;
-            meOrg.planName = settingsData.name;
-            meOrg.settings = settingsData.settings;
-            return me;
-          })['catch'](function () {
-            // If we 403 when getting the featureSettings
-            // we still want to return the `me` object
-            return me;
-          });
-        }));
       })['catch'](function (err) {
         if (err.status === 403) {
           util.replaceObjectInPlace(me, {});

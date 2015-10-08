@@ -54,6 +54,13 @@ object LibrarySpace {
     case OrganizationSpace(orgId) => s"organization $orgId"
     case UserSpace(userId) => s"user $userId"
   }
+
+  val adminReads: Reads[LibrarySpace] = Reads[LibrarySpace] { payload =>
+    payload.validate[Either[Id[User], Id[Organization]]](EitherFormat.keyedReads("user", "org")).map {
+      case Left(userId) => UserSpace(userId)
+      case Right(orgId) => OrganizationSpace(orgId)
+    }
+  }
 }
 
 sealed trait ExternalLibrarySpace

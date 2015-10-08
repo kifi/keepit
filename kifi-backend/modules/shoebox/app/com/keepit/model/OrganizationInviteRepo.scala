@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ States, Id, State }
@@ -30,9 +31,22 @@ trait OrganizationInviteRepo extends Repo[OrganizationInvite] {
 }
 
 @Singleton
-class OrganizationInviteRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends OrganizationInviteRepo with DbRepo[OrganizationInvite] {
-  override def deleteCache(orgInvite: OrganizationInvite)(implicit session: RSession) {}
-  override def invalidateCache(orgInvite: OrganizationInvite)(implicit session: RSession) {}
+class OrganizationInviteRepoImpl @Inject() (
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
+    orgPermissionsCache: OrganizationPermissionsCache,
+    val db: DataBaseComponent,
+    val clock: Clock) extends OrganizationInviteRepo with DbRepo[OrganizationInvite] {
+
+  override def deleteCache(model: OrganizationInvite)(implicit session: RSession): Unit = {
+    orgPermissionsNamespaceCache.get(OrganizationPermissionsNamespaceKey(model.organizationId)).foreach { namespace =>
+      orgPermissionsCache.remove(OrganizationPermissionsKey(model.organizationId, namespace, model.userId))
+    }
+  }
+  override def invalidateCache(model: OrganizationInvite)(implicit session: RSession): Unit = {
+    orgPermissionsNamespaceCache.get(OrganizationPermissionsNamespaceKey(model.organizationId)).foreach { namespace =>
+      orgPermissionsCache.remove(OrganizationPermissionsKey(model.organizationId, namespace, model.userId))
+    }
+  }
 
   import db.Driver.simple._
 

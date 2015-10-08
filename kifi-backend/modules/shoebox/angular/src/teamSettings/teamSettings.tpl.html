@@ -7,14 +7,14 @@
     </div>
     <div class="kf-row kf-team-settings-field" ng-repeat="field in section.fields">
       <div class="kf-main-pane">
-        <h3 class="kf-team-settings-heading" id="{{ field.fieldKey }}">{{ field.title }}</h3>
+        <h3 class="kf-team-settings-heading" id="{{ field.fieldKey }}" ng-bind-html="field.title"></h3>
         <p class="kf-team-settings-desc">{{ field.description }}</p>
       </div>
       <div class="kf-side-pane">
         <select
           class="kf-team-settings-select"
           ng-model="settings[field.fieldKey].setting"
-          ng-disabled="!settings[field.fieldKey].editable"
+          ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
           ng-options="option.value as option.label for option in field.selectOptions"
           ng-change="updateSettings()"
         ></select>

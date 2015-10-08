@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
+import com.keepit.commanders.{ OrganizationPermissionsNamespaceKey, OrganizationPermissionsNamespaceCache, OrganizationPermissionsCache }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -27,7 +28,9 @@ class OrganizationRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     orgCache: OrganizationCache,
-    basicOrgCache: BasicOrganizationIdCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
+    basicOrgCache: BasicOrganizationIdCache,
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
+    orgPermissionsCache: OrganizationPermissionsCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
 
   import DBSession._
   import db.Driver.simple._
@@ -52,10 +55,12 @@ class OrganizationRepoImpl @Inject() (
   override def deleteCache(model: Organization)(implicit session: RSession) {
     orgCache.remove(OrganizationKey(model.id.get))
     basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
+    orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.id.get))
   }
   override def invalidateCache(model: Organization)(implicit session: RSession) {
     orgCache.set(OrganizationKey(model.id.get), model)
     basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
+    orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.id.get))
   }
 
   override def save(model: Organization)(implicit session: RWSession): Organization = {
