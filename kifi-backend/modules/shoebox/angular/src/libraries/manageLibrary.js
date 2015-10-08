@@ -295,8 +295,8 @@ angular.module('kifi')
         };
 
         scope.$watch(function () {
-          return scope.isIntegrationsEnabled()
-        }, function (newValue, oldValue) {
+          return scope.isIntegrationsEnabled();
+        }, function (newValue) {
           if (newValue === false && scope.integrationsOpen === true) {
             scope.integrationsOpen = !scope.integrationsOpen;
           }
