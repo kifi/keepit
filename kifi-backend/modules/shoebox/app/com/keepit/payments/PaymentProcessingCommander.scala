@@ -11,6 +11,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
 import com.keepit.commanders.BasicSlackMessage
 import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.common.akka.SafeFuture
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
@@ -98,7 +99,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
-  private def reportToSlack(msg: String): Unit = {
+  private def reportToSlack(msg: String): Future[Unit] = SafeFuture {
     val fullMsg = BasicSlackMessage(
       text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
       username = "PaymentProcessingCommander"
@@ -114,7 +115,7 @@ class PaymentProcessingCommanderImpl @Inject() (
       processingResultFut.onComplete {
         case Success((amount, reason)) => reportToSlack(s"Processed Org ${account.orgId}. Charged: $amount. Reason: $reason")
         case Failure(ex) => {
-          reportToSlack(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}. (See log for stack trace.")
+          reportToSlack(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}. See log for stack trace.")
           log.error(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}", ex)
         }
       }

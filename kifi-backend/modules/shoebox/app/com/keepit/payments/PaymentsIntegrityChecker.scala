@@ -14,8 +14,10 @@ import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient }
 import com.keepit.commanders.BasicSlackMessage
+import com.keepit.common.akka.SafeFuture
 
 import scala.util.{ Try, Success, Failure }
+import scala.concurrent.{ Future, ExecutionContext }
 
 import play.api.Mode
 import play.api.Mode.Mode
@@ -34,11 +36,12 @@ class PaymentsIntegrityChecker @Inject() (
     paidAccountRepo: PaidAccountRepo,
     planManagementCommander: PlanManagementCommander,
     httpClient: HttpClient,
-    mode: Mode) extends Logging {
+    mode: Mode,
+    implicit val defaultContext: ExecutionContext) extends Logging {
 
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
 
-  private def reportToSlack(msg: String): Unit = {
+  private def reportToSlack(msg: String): Future[Unit] = SafeFuture {
     val fullMsg = BasicSlackMessage(
       text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
       username = "PaymentsIntegrityChecker"
