@@ -48,6 +48,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val localTimeMapper = MappedColumnType.base[LocalTime, Int](t => t.getMillisOfDay, t => new LocalTime(t, zones.UTC))
   implicit val durationMapper = MappedColumnType.base[Duration, Long](_.toMillis, _ millis)
 
+
   implicit def seqIdsMapper[M <: Model[M]]: TypedType[Seq[Id[M]]] = MappedColumnType.base[Seq[Id[M]], String](
     { ids => Json.stringify(Json.toJson(ids)) }, { jstr => Json.parse(jstr).as[Seq[Id[M]]] })
 
@@ -106,7 +107,6 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
   implicit val keepLibrariesHashMapper = MappedColumnType.base[LibrariesHash, Int](_.value, LibrariesHash.apply)
   implicit val keepParticipantsHashMapper = MappedColumnType.base[ParticipantsHash, Int](_.value, ParticipantsHash.apply)
-  implicit val keepAsyncStatusMapper = MappedColumnType.base[KeepAsyncStatus, String](_.value, KeepAsyncStatus.apply)
 
   implicit val recipientMapper = MappedColumnType.base[Recipient, String](
     {recip =>
