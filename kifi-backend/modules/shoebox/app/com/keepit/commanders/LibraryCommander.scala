@@ -434,7 +434,7 @@ class LibraryCommanderImpl @Inject() (
       deletedInvites <- deletedInvitesFut
       deletedKeeps <- deletedKeepsFut
     } yield {
-      db.readWriteAsync { implicit session =>
+      db.readWrite { implicit session =>
         libraryRepo.save(libraryRepo.get(libraryId).withState(LibraryStates.INACTIVE))
         searchClient.updateLibraryIndex()
       }
