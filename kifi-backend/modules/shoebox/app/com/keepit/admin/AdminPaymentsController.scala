@@ -181,6 +181,10 @@ class AdminPaymentsController @Inject() (
       PAGE_SIZE))
   }
 
+  def unfreezeAccount(orgId: Id[Organization]) = AdminUserAction { implicit request =>
+    Ok(planCommander.unfreeze(orgId).toString)
+  }
+
 }
 
 case class AdminAccountEventView(
