@@ -375,11 +375,14 @@ button.manage-lib-delete-button
   transform-origin: top center
 
   &.ng-enter
-    transition: .4s linear
-    transform: scaleY(0)
+    transition: .75s ease
+    transform: translateY(-30%)
+    opacity: 0
 
   &.ng-enter-active
-    transform: scaleY(1)
+    transform: translateY(0)
+    opacity: 1
+
 
 .manage-lib-subs-heading
   font-size: 14px
@@ -391,10 +394,20 @@ button.manage-lib-delete-button
   font-size: 15px
 
 .manage-lib-integrations-title
-  font-weight: 700
-  color: black
-  cursor: pointer
+  display: inline
   position: relative
+  font-weight: bold
+  font-size: 15px
+  color: #333
+  cursor: pointer
+
+  &.manage-lib-integrations-disabled
+    color: textGreyColor
+    font-smoothing: antialiased
+    cursor: no-drop
+
+    &:before
+      display: none
 
   &:before
     content: ''
@@ -537,7 +550,7 @@ button.manage-lib-delete-button
 
 .manage-lib-subs-instruct
   margin: 0 24px
-  color: textGreyColor
+  color: #666
 
   p
     margin: 7px 0
