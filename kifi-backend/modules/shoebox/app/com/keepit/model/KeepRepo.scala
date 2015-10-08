@@ -89,7 +89,8 @@ class KeepRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  implicit val messageThreadIdMapper = MappedColumnType.base[MessageThreadId, Long](_.id, MessageThreadId.apply)
+  implicit val messageThreadIdMapper = MappedColumnType.base[MessageThreadId, Long](_.id, MessageThreadId(_))
+  implicit val keepAsyncStatusMapper = MappedColumnType.base[KeepAsyncStatus, String](_.value, KeepAsyncStatus(_))
 
   type RepoImpl = KeepTable
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with SeqNumberColumn[Keep] with NamedColumns {

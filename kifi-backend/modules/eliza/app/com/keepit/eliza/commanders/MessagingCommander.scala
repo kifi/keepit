@@ -44,11 +44,12 @@ object MessagingCommander {
   val MAX_RECENT_NON_USER_RECIPIENTS = 100
   val WARNING_RECENT_NON_USER_RECIPIENTS = 75
   val RECENT_NON_USER_RECIPIENTS_WINDOW = 24 hours
-  val maxRecentEmailRecipientsErrorMessage = s"You are allowed ${MessagingCommander.MAX_NON_USER_PARTICIPANTS_PER_THREAD} email recipients per discussion."
 
   val MAX_NON_USER_PARTICIPANTS_PER_THREAD = 30
   val WARNING_NON_USER_PARTICIPANTS_PER_THREAD = 20
+  val maxRecentEmailRecipientsErrorMessage = s"You are allowed $MAX_NON_USER_PARTICIPANTS_PER_THREAD email recipients per discussion."
 
+  // TODO(ryan): do we really want to send users their internal id? seems like a bad idea
   def maxEmailRecipientsPerThreadErrorMessage(user: Id[User], emailCount: Int) = s"You (user #$user) have hit the limit on the number of emails ($emailCount) you are able to send through Kifi."
 }
 

@@ -89,7 +89,6 @@ case class Keep(
 }
 
 object Keep {
-
   // If you see this after library migration is done, tell Andrew to clean up his messes.
   def isPrivateToVisibility(isPrivate: Boolean) = {
     if (isPrivate) {

@@ -14,6 +14,8 @@ POST    /eliza/messages                   @com.keepit.eliza.controllers.ext.ExtM
 POST    /eliza/messages/:parentId         @com.keepit.eliza.controllers.ext.ExtMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
 GET     /eliza/emailPreview/:msgExtId     @com.keepit.eliza.controllers.ext.ExtMessagingController.getEmailPreview(msgExtId: String)
 
+POST    /eliza/startDiscussion            @com.keepit.eliza.controllers.ext.ExtDiscussionController.startDiscussion()
+
 ##########################################
 # Mobile V1
 ##########################################
