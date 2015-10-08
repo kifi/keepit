@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
@@ -27,6 +27,7 @@ trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryI
   def getLastSentByLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
   def getLastSentByLibraryIdAndInviterIdAndUserId(libraryId: Id[Library], inviterId: Id[User], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
   def getLastSentByLibraryIdAndInviterIdAndEmail(libraryId: Id[Library], inviterId: Id[User], email: EmailAddress, includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite]
+  def deactivate(model: LibraryInvite)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -189,4 +190,6 @@ class LibraryInviteRepoImpl @Inject() (
   def getLastSentByLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeStates: Set[State[LibraryInvite]])(implicit session: RSession): Option[LibraryInvite] = {
     getLastSentByLibraryIdAndUserIdCompiled(libraryId, userId, includeStates).firstOption
   }
+
+  def deactivate(model: LibraryInvite)(implicit session: RWSession): Unit = save(model.withState(LibraryInviteStates.INACTIVE))
 }

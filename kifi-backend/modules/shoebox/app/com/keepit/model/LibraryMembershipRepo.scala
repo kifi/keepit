@@ -50,6 +50,7 @@ trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[
   def countsWithUserIdAndAccesses(userId: Id[User], accesses: Set[LibraryAccess])(implicit session: RSession): Map[LibraryAccess, Int]
   def getCollaboratorsByLibrary(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Set[Id[User]]]
   def getCollaborators(userId: Id[User])(implicit session: RSession): Set[Id[User]]
+  def deactivate(model: LibraryMembership)(implicit session: RWSession): Unit
 
   //
   // Profile Library Repo functions
@@ -433,6 +434,8 @@ class LibraryMembershipRepoImpl @Inject() (
   def getCollaborators(userId: Id[User])(implicit session: RSession): Set[Id[User]] = {
     getCollaboratorsCompiled(userId).run.toSet
   }
+
+  def deactivate(model: LibraryMembership)(implicit session: RWSession): Unit = save(model.withState(LibraryMembershipStates.INACTIVE))
 }
 
 trait LibraryMembershipSequencingPlugin extends SequencingPlugin

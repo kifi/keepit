@@ -36,7 +36,7 @@ trait LibraryCommander {
   def createLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def unsafeCreateLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RWSession): Library
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifications)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse]
-  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifications): LibraryModifyResponse
+  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifications)(implicit session: RWSession): LibraryModifyResponse
   def deleteLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
   def createReadItLaterLibrary(userId: Id[User]): Library
@@ -50,6 +50,7 @@ trait LibraryCommander {
   def updateSubscribedToLibrary(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership]
   def unsafeTransferLibrary(libraryId: Id[Library], newOwner: Id[User])(implicit session: RWSession): Library
   def unsafeAsyncDeleteLibrary(libraryId: Id[Library]): Future[Unit]
+  def unsafeDeleteLibrary(libraryId: Id[Library])(implicit session: RWSession): Unit
 }
 
 class LibraryCommanderImpl @Inject() (
@@ -281,7 +282,7 @@ class LibraryCommanderImpl @Inject() (
     validateModifyRequest(library, userId, modifyReq) match {
       case Some(error) => Left(error)
       case None =>
-        val modifyResponse = unsafeModifyLibrary(library, modifyReq)
+        val modifyResponse = db.readWrite(implicit s => unsafeModifyLibrary(library, modifyReq))
         Future {
           libraryAnalytics.editLibrary(userId, modifyResponse.modifiedLibrary, context, None, modifyResponse.edits)
           searchClient.updateLibraryIndex()
@@ -290,7 +291,7 @@ class LibraryCommanderImpl @Inject() (
     }
   }
 
-  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifications): LibraryModifyResponse = {
+  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifications)(implicit session: RWSession): LibraryModifyResponse = {
     val currentSpace = library.space
     val newSpace = modifyReq.space.getOrElse(currentSpace)
     val newOrgIdOpt = newSpace match {
@@ -314,41 +315,30 @@ class LibraryCommanderImpl @Inject() (
     }
 
     // New library subscriptions
-    newSubKeysOpt.foreach { newSubKeys =>
-      db.readWrite { implicit s =>
-        librarySubscriptionCommander.updateSubsByLibIdAndKey(library.id.get, newSubKeys)
-      }
+    newSubKeysOpt.foreach(librarySubscriptionCommander.updateSubsByLibIdAndKey(library.id.get, _))
+
+    if (newSpace != currentSpace || newSlug != currentSlug) {
+      libraryAliasRepo.reclaim(newSpace, newSlug) // There is now a real library there; dump the alias
+      libraryAliasRepo.alias(currentSpace, library.slug, library.id.get) // Make a new alias for where library used to live
     }
 
-    val modifiedLibrary = db.readWrite { implicit s =>
-      if (newSpace != currentSpace || newSlug != currentSlug) {
-        libraryAliasRepo.reclaim(newSpace, newSlug) // There is now a real library there; dump the alias
-        libraryAliasRepo.alias(currentSpace, library.slug, library.id.get) // Make a new alias for where library used to live
-      }
-
-      libraryRepo.save(library.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
-    }
+    val modifiedLibrary = libraryRepo.save(library.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
 
     // Update visibility of keeps
     // TODO(ryan): Change this method so that it operates exclusively on KTLs. Keeps should not have visibility anymore
-    def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int): Future[Unit] = Future {
-      val (keeps, lib, curViz) = db.readOnlyMaster { implicit s =>
-        val lib = libraryRepo.get(library.id.get)
-        val viz = lib.visibility // It may have changed, re-check
-        val keepIds = keepRepo.getByLibraryIdAndExcludingVisibility(lib.id.get, Some(viz), 500).map(_.id.get).toSet ++ keepRepo.getByLibraryWithInconsistentOrgId(lib.id.get, lib.organizationId, Limit(500))
-        val keeps = keepRepo.getByIds(keepIds).values.toSeq
-        (keeps, lib, viz)
-      }
-      if (keeps.nonEmpty && curViz == changedVisibility) {
-        db.readWriteBatch(keeps, attempts = 5) { (s, k) =>
-          implicit val session: RWSession = s
-          keepCommander.syncWithLibrary(k, lib)
-        }
+    def updateKeepVisibility(changedVisibility: LibraryVisibility, iter: Int)(implicit session: RWSession): Future[Unit] = Future {
+      val lib = libraryRepo.get(library.id.get)
+      val viz = lib.visibility // It may have changed, re-check
+      val keepIds = keepRepo.getByLibraryIdAndExcludingVisibility(lib.id.get, Some(viz), 500).map(_.id.get).toSet ++ keepRepo.getByLibraryWithInconsistentOrgId(lib.id.get, lib.organizationId, Limit(500))
+      val keeps = keepRepo.getByIds(keepIds).values.toSeq
+
+      if (keeps.nonEmpty && viz == changedVisibility) {
+        keeps.foreach(keepCommander.syncWithLibrary(_, lib))
         if (iter < 200) {
           // to prevent infinite loops if there's an issue updating keeps.
           updateKeepVisibility(changedVisibility, iter + 1)
         } else {
-          val msg = s"[updateKeepVisibility] Problems updating visibility on ${lib.id.get} to $curViz, $iter"
+          val msg = s"[updateKeepVisibility] Problems updating visibility on ${lib.id.get} to $viz, $iter"
           airbrake.notify(msg)
           Future.failed(new Exception(msg))
         }
@@ -443,6 +433,18 @@ class LibraryCommanderImpl @Inject() (
         searchClient.updateLibraryIndex()
       }
     }
+  }
+
+  def unsafeDeleteLibrary(libraryId: Id[Library])(implicit session: RWSession): Unit = {
+    libraryMembershipRepo.getWithLibraryId(libraryId).foreach(libraryMembershipRepo.deactivate)
+
+    libraryInviteRepo.getWithLibraryId(libraryId).foreach(libraryInviteRepo.deactivate)
+
+    keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).foreach(keepCommander.deactivateKeep)
+    searchClient.updateKeepIndex()
+
+    libraryRepo.save(libraryRepo.get(libraryId).withState(LibraryStates.INACTIVE))
+    searchClient.updateLibraryIndex()
   }
 
   def unsafeTransferLibrary(libraryId: Id[Library], newOwner: Id[User])(implicit session: RWSession): Library = {

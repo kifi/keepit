@@ -377,8 +377,10 @@ class OrganizationCommanderImpl @Inject() (
         // Modifying an org opens its own DB session. Do these separately from the rest of the logic
         val returningLibsFut = Future {
           libsToReturn.foreach { libId =>
-            val lib = db.readOnlyReplica { implicit session => libraryRepo.get(libId) }
-            libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(space = Some(lib.ownerId)))
+            val lib = db.readWrite { implicit session =>
+              val lib = libraryRepo.get(libId)
+              libraryCommander.unsafeModifyLibrary(lib, LibraryModifications(space = Some(lib.ownerId)))
+            }
           }
         }
         Right(OrganizationDeleteResponse(request, returningLibsFut, deletingLibsFut))
