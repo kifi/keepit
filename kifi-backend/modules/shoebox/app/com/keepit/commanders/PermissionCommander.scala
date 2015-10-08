@@ -137,17 +137,22 @@ class PermissionCommanderImpl @Inject() (
   }
 
   def combineOrganizationAndLibraryPermissions(lib: Library, libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
-    val addedPermissions = Map[Boolean, Set[LibraryPermission]](
-      (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)) ->
-        Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY),
-      (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)) ->
-        Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
-    ).collect { case (true, ps) => ps }.flatten
+    val addedPermissions: Set[LibraryPermission] = {
+      val canModifyLibrary = lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY)
+      val canForceEdit = canModifyLibrary && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
+      val canCreateSlackIntegration = canModifyLibrary && orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)
+      Set(
+        canForceEdit -> Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY),
+        canCreateSlackIntegration -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
+      ).collect { case (true, ps) => ps }.flatten
+    }
 
-    val removedPermissions = Map[Boolean, Set[LibraryPermission]](
-      !orgPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES) ->
-        Set(LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
-    ).collect { case (true, ps) => ps }.flatten
+    val removedPermissions: Set[LibraryPermission] = {
+      val cannotRemoveLibraries = !orgPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES)
+      Set(
+        cannotRemoveLibraries -> Set(LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
+      ).collect { case (true, ps) => ps }.flatten
+    }
 
     libPermissions ++ addedPermissions -- removedPermissions
   }
