@@ -35,12 +35,20 @@ class PaymentsController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
-  def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    Ok(Json.obj(
-      "credit" -> planCommander.getCurrentCredit(request.orgId).cents,
-      "users" -> orgMembershipCommander.getMemberIds(request.orgId).size,
-      "plan" -> planCommander.currentPlan(request.orgId).asInfo
-    ))
+  def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
+    import com.keepit.common.core._
+    val lastFourFut = planCommander.getDefaultPaymentMethod(request.orgId).map { method =>
+      stripeClient.getLastFourDigitsOfCard(method.stripeToken).map(Some(_))
+    }.getOrElse(Future.successful(None))
+
+    lastFourFut.map { lastFourOpt =>
+      Ok(Json.obj(
+        "credit" -> planCommander.getCurrentCredit(request.orgId).cents,
+        "users" -> orgMembershipCommander.getMemberIds(request.orgId).size,
+        "plan" -> planCommander.currentPlan(request.orgId).asInfo,
+        "card" -> lastFourOpt
+      ).nonNullFields)
+    }
   }
 
   def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
@@ -56,11 +64,13 @@ class PaymentsController @Inject() (
   def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
       case Some(token) => {
-        stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").map { realToken =>
-          val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-          val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution)
-          planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution)
-          Ok
+        stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").flatMap { realToken =>
+          stripeClient.getLastFourDigitsOfCard(realToken).map { lastFour =>
+            val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
+            val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, lastFour)
+            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, lastFour)
+            Ok
+          }
         }
       }
       case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))

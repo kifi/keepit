@@ -101,7 +101,7 @@ class SharedWsMessagingController @Inject() (
           }
         }
 
-        if (users.nonEmpty || emailContacts.nonEmpty) {
+        if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
           messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailContacts, orgs)
         }

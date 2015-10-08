@@ -19,6 +19,7 @@ case class SimpleAccountEventInfo(
   id: PublicId[AccountEvent],
   eventTime: DateTime,
   shortName: String,
+  extraInfo: Option[String],
   whoDunnit: String,
   creditChange: Int,
   paymentCharge: Int,
@@ -31,7 +32,7 @@ trait AccountEventAction {
   def toDbRow: (String, JsValue)
 }
 
-object AccountEventAction { //There is probably a deeper type hierachy that can be used here...
+object AccountEventAction { //There is probably a deeper type hierarchy that can be used here...
 
   trait Payloadless { self: AccountEventAction =>
     def toDbRow: (String, JsValue) = (eventType, JsNull)
@@ -81,17 +82,16 @@ object AccountEventAction { //There is probably a deeper type hierachy that can 
   case class PlanChanged(oldPlan: Id[PaidPlan], newPlan: Id[PaidPlan]) extends AccountEventAction {
     def eventType: String = "plan_changed"
     def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
-
   }
 
   @json
-  case class PaymentMethodAdded(id: Id[PaymentMethod]) extends AccountEventAction {
+  case class PaymentMethodAdded(id: Id[PaymentMethod], lastFour: String) extends AccountEventAction {
     def eventType: String = "payment_method_added"
     def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
   }
 
   @json
-  case class DefaultPaymentMethodChanged(from: Option[Id[PaymentMethod]], to: Id[PaymentMethod]) extends AccountEventAction {
+  case class DefaultPaymentMethodChanged(from: Option[Id[PaymentMethod]], to: Id[PaymentMethod], toLastFour: String) extends AccountEventAction {
     def eventType: String = "default_payment_method_changed"
     def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
   }

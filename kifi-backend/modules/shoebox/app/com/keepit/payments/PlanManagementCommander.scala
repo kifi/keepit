@@ -8,7 +8,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.social.BasicUserRepo
 
@@ -62,8 +62,8 @@ trait PlanManagementCommander {
   def getBillingCycleStart(orgId: Id[Organization]): DateTime
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
-  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): PaymentMethod
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution): Try[AccountEvent]
+  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[AccountEvent]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
 
   def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
@@ -456,7 +456,7 @@ class PlanManagementCommanderImpl @Inject() (
     paymentMethodRepo.getByAccountId(orgId2AccountId(orgId))
   }
 
-  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution): PaymentMethod = db.readWrite { implicit session =>
+  def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod = db.readWrite { implicit session =>
     val accountId = orgId2AccountId(orgId)
     val newPaymentMethod = paymentMethodRepo.save(PaymentMethod(
       accountId = accountId,
@@ -467,12 +467,12 @@ class PlanManagementCommanderImpl @Inject() (
       eventTime = clock.now,
       accountId = accountId,
       attribution = attribution,
-      action = AccountEventAction.PaymentMethodAdded(newPaymentMethod.id.get)
+      action = AccountEventAction.PaymentMethodAdded(newPaymentMethod.id.get, lastFour)
     ))
     newPaymentMethod
   }
 
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution): Try[AccountEvent] = db.readWrite { implicit session =>
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, newLastFour: String): Try[AccountEvent] = db.readWrite { implicit session =>
     val accountId = orgId2AccountId(orgId)
     val newDefault = paymentMethodRepo.get(newDefaultId)
     val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
@@ -487,10 +487,9 @@ class PlanManagementCommanderImpl @Inject() (
         eventTime = clock.now,
         accountId = accountId,
         attribution = attribution,
-        action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get)
+        action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
       )))
     }
-
   }
 
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod] = {
@@ -522,9 +521,9 @@ class PlanManagementCommanderImpl @Inject() (
     val maybeUser = event.whoDunnit.map(basicUserRepo.load)
     val maybeAdmin = event.kifiAdminInvolved.map(basicUserRepo.load)
     val whoDunnit = (maybeUser, maybeAdmin) match {
-      case (Some(user), Some(admin)) => s"${user.firstName} ${user.lastName} with Kifi Admin {admin.firstName} ${admin.lastName}"
+      case (Some(user), Some(admin)) => s"${user.firstName} ${user.lastName} with Kifi Admin ${admin.firstName} ${admin.lastName}"
       case (Some(user), None) => s"${user.firstName} ${user.lastName}"
-      case (None, Some(admin)) => s"Kifi Admin {admin.firstName} ${admin.lastName}"
+      case (None, Some(admin)) => s"Kifi Admin ${admin.firstName} ${admin.lastName}"
       case (None, None) => s"System"
     }
     val shortName = event.action match {
@@ -534,27 +533,27 @@ class PlanManagementCommanderImpl @Inject() (
       case UserChangeCredit() => "Credit for reduction in number of Users"
       case UserAdded(who) => {
         val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} added to your organization"
+        s"${user.firstName} ${user.lastName} added to your team"
       }
       case UserRemoved(who) => {
         val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} removed from your organization"
+        s"${user.firstName} ${user.lastName} removed from your team"
       }
       case AdminAdded(who) => {
         val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} made an admin of your organization"
+        s"${user.firstName} ${user.lastName} made an admin of your team"
       }
       case AdminRemoved(who) => {
         val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} no longer an admin of your organization"
+        s"${user.firstName} ${user.lastName} no longer an admin of your team"
       }
       case PlanChanged(oldPlanId, newPlanId) => {
         val oldPlan = paidPlanRepo.get(oldPlanId)
         val newPlan = paidPlanRepo.get(newPlanId)
         s"Plan Changed from ${oldPlan.name} to ${newPlan.name}"
       }
-      case PaymentMethodAdded(_) => "New Payment Method Added"
-      case DefaultPaymentMethodChanged(_, _) => "Default Payment Method Changed"
+      case PaymentMethodAdded(_, _) => "New Payment Method Added"
+      case DefaultPaymentMethodChanged(_, _, _) => "Default Payment Method Changed"
       case AccountContactsChanged(userAdded: Option[Id[User]], userRemoved: Option[Id[User]], emailAdded: Option[EmailAddress], emailRemoved: Option[EmailAddress]) => {
         val userAddedOpt: Option[String] = userAdded.map { userId =>
           val bu = basicUserRepo.load(userId)
@@ -573,10 +572,20 @@ class PlanManagementCommanderImpl @Inject() (
         s"Account Contacts Changed.${added}${removed}"
       }
     }
+    val extraInfo = event.action match {
+      case PaymentMethodAdded(_, lastFour) => Some(s"Card ending in $lastFour added")
+      case DefaultPaymentMethodChanged(_, _, newLastFour) => Some(s"Changed to card ending in $newLastFour")
+      case PlanBillingCharge() => {
+        val chargeIdNotFoundText = s"not found, please contact ${SystemEmailAddress.BILLING}"
+        Some(s"Invoice # ${event.chargeId.getOrElse(chargeIdNotFoundText)}")
+      }
+      case _ => None
+    }
     SimpleAccountEventInfo(
       id = AccountEvent.publicId(event.id.get),
       eventTime = event.eventTime,
       shortName = shortName,
+      extraInfo = extraInfo,
       whoDunnit = whoDunnit,
       creditChange = event.creditChange.cents,
       paymentCharge = event.paymentCharge.map(_.cents).getOrElse(0),
