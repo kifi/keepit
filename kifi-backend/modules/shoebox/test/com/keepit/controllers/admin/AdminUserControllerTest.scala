@@ -47,22 +47,20 @@ class AdminUserControllerTest extends Specification with ShoeboxTestInjector {
         val adminUserController = inject[AdminUserController]
         val userExperimentRepo = inject[UserExperimentRepo]
 
-        db.readWrite { implicit session =>
-          // nonadmins cannot add/remove admins
-          adminUserController.addExperiment(requesterUserId = userNonAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
-          adminUserController.removeExperiment(requesterUserId = userNonAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") === Left("Failure")
+        // nonadmins cannot add/remove admins
+        adminUserController.addExperiment(requesterUserId = userNonAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
+        adminUserController.removeExperiment(requesterUserId = userNonAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") === Left("Failure")
 
-          // admins cannot add/remove admins
-          adminUserController.addExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
-          adminUserController.removeExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
+        // admins cannot add/remove admins
+        adminUserController.addExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
+        adminUserController.removeExperiment(requesterUserId = userAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Left("Failure")
 
-          // superAdmins can add or remove admins
-          adminUserController.addExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Right(UserExperimentType.ADMIN)
-          userExperimentRepo.getUserExperiments(userNonAdminOpt.id.get).contains(UserExperimentType.ADMIN) must equalTo(true)
+        // superAdmins can add or remove admins
+        adminUserController.addExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userNonAdminOpt.id.get, "admin") === Right(UserExperimentType.ADMIN)
+        db.readOnlyMaster { implicit s => userExperimentRepo.getUserExperiments(userNonAdminOpt.id.get).contains(UserExperimentType.ADMIN) must equalTo(true) }
 
-          adminUserController.removeExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") === Right(UserExperimentType.ADMIN)
-          userExperimentRepo.getUserExperiments(userAdminOpt.id.get).contains(UserExperimentType.ADMIN) must equalTo(false)
-        }
+        adminUserController.removeExperiment(requesterUserId = userSuperAdminOpt.id.get, userId = userAdminOpt.id.get, "admin") === Right(UserExperimentType.ADMIN)
+        db.readOnlyMaster { implicit s => userExperimentRepo.getUserExperiments(userAdminOpt.id.get).contains(UserExperimentType.ADMIN) must equalTo(false) }
 
       }
     }

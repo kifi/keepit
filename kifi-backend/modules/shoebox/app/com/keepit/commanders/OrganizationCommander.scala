@@ -28,7 +28,7 @@ trait OrganizationCommander {
   def getOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], OrganizationView]
   def getOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationView
   def getBasicOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): BasicOrganizationView
-  def getBasicOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], BasicOrganizationView]
+  def getBasicOrganizationViewsHelper(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): Map[Id[Organization], BasicOrganizationView]
   def getBasicOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): BasicOrganizationView
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo]
@@ -98,8 +98,8 @@ class OrganizationCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session => getBasicOrganizationViewHelper(orgId, viewerIdOpt, authTokenOpt) }
   }
 
-  def getBasicOrganizationViews(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Map[Id[Organization], BasicOrganizationView] = {
-    db.readOnlyReplica { implicit session => orgIds.map(id => id -> getBasicOrganizationViewHelper(id, viewerIdOpt, authTokenOpt)).toMap }
+  def getBasicOrganizationViewsHelper(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): Map[Id[Organization], BasicOrganizationView] = {
+    orgIds.map(id => id -> getBasicOrganizationViewHelper(id, viewerIdOpt, authTokenOpt)).toMap
   }
 
   def getBasicOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): BasicOrganizationView = {
@@ -362,7 +362,7 @@ class OrganizationCommanderImpl @Inject() (
 
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)
-          planManagementCommander.deactivatePaidAccountForOrganziation(org.id.get, session)
+          planManagementCommander.deactivatePaidAccountForOrganization(org.id.get, session)
 
           val requester = userRepo.get(request.requesterId)
           organizationAnalytics.trackOrganizationEvent(org, requester, request)

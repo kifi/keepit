@@ -59,15 +59,16 @@ class UserProfileController @Inject() (
   def getProfileHelper(username: Username, viewer: Option[User]): Option[JsValue] = {
     userCommander.profile(username, viewer) map { profile =>
       val (numLibraries, numCollabLibraries, numFollowedLibraries, numInvitedLibs) = userProfileCommander.countLibraries(profile.userId, viewer.map(_.id.get))
-      val (numConnections, userBiography, orgInfos, pendingOrgs) = db.readOnlyMaster { implicit s =>
+      val (numConnections, numFollowers, userBiography, orgInfos, pendingOrgs) = db.readOnlyMaster { implicit s =>
         val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
+        val numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get))
         val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
         val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
         val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
           organizationCommander.getOrganizationInfo(orgId, viewer.flatMap(_.id))
         }
         val orgInfos = orgMemberships.map { orgMembership => organizationCommander.getOrganizationInfo(orgMembership.organizationId, viewer.flatMap(_.id)) }
-        (numConnections, userBio, orgInfos, pendingOrgs)
+        (numConnections, numFollowers, userBio, orgInfos, pendingOrgs)
       }
 
       val jsonFriendInfo = Json.toJson(profile.basicUserWithFriendStatus).as[JsObject]
@@ -77,7 +78,7 @@ class UserProfileController @Inject() (
         numCollabLibraries = numCollabLibraries,
         numKeeps = profile.numKeeps,
         numConnections = numConnections,
-        numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get)),
+        numFollowers = numFollowers,
         numTags = collectionCommander.getCount(profile.userId),
         numInvitedLibraries = numInvitedLibs,
         biography = userBiography,

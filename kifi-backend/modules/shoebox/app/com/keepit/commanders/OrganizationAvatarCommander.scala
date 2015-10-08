@@ -6,6 +6,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.OrganizationAvatarConfiguration._
 import com.keepit.common.core._
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.images.{ RawImageInfo, Photoshop }
 import com.keepit.common.logging.Logging
@@ -19,8 +20,8 @@ import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[OrganizationAvatarCommanderImpl])
 trait OrganizationAvatarCommander {
-  def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize): OrganizationAvatar
-  def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize): Map[Id[Organization], OrganizationAvatar]
+  def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar
+  def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize)(implicit session: RSession): Map[Id[Organization], OrganizationAvatar]
   def persistOrganizationAvatarsFromUserUpload(orgId: Id[Organization], imageFile: File, cropRegion: SquareImageCropRegion): Future[Either[ImageStoreFailure, ImageHash]]
 }
 
@@ -33,14 +34,12 @@ class OrganizationAvatarCommanderImpl @Inject() (
     val webService: WebService,
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
 
-  def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize): OrganizationAvatar = {
-    getBestImagesByOrgIds(Set(orgId), imageSize).head._2
-  }
+  def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar = getBestImagesByOrgIds(Set(orgId), imageSize).head._2
 
-  def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize): Map[Id[Organization], OrganizationAvatar] = {
-    val candidatesById = db.readOnlyReplica { implicit session => orgAvatarRepo.getByOrgIds(orgIds) }
+  def getBestImagesByOrgIds(orgIds: Set[Id[Organization]], imageSize: ImageSize)(implicit session: RSession): Map[Id[Organization], OrganizationAvatar] = {
+    val candidatesById = orgAvatarRepo.getByOrgIds(orgIds)
     orgIds.map { orgId =>
-      val avatarOpt = ProcessedImageSize.pickByIdealImageSize(imageSize, candidatesById.get(orgId).getOrElse(defaultOrgImages(orgId)), strictAspectRatio = false)(_.imageSize)
+      val avatarOpt = ProcessedImageSize.pickByIdealImageSize(imageSize, candidatesById.getOrElse(orgId, defaultOrgImages(orgId)), strictAspectRatio = false)(_.imageSize)
       val avatar = avatarOpt.getOrElse(throw new Exception(s"no avatar for org $orgId with image size $imageSize"))
       orgId -> avatar
     }.toMap

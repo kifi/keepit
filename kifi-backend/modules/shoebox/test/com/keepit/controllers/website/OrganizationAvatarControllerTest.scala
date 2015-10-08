@@ -71,7 +71,10 @@ class OrganizationAvatarControllerTest extends Specification with ShoeboxTestInj
           val result = inject[OrganizationAvatarController].uploadAvatar(pubId, 15, 23, 50)(request)
 
           status(result) === FORBIDDEN
-          inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize).sourceFileHash.hash === "076fccc32247ae67bb75d48879230953" //the default
+          db.readOnlyMaster { implicit s =>
+            inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize).sourceFileHash.hash === "076fccc32247ae67bb75d48879230953" //the default
+          }
+          1 === 1
         }
       }
     }

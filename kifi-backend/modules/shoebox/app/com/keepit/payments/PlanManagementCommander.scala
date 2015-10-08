@@ -31,7 +31,7 @@ class InvalidChange(msg: String) extends PlanManagementException(msg)
 @ImplementedBy(classOf[PlanManagementCommanderImpl])
 trait PlanManagementCommander {
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent]
-  def deactivatePaidAccountForOrganziation(orgId: Id[Organization], session: RWSession): Try[Unit]
+  def deactivatePaidAccountForOrganization(orgId: Id[Organization], session: RWSession): Try[Unit]
 
   def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
   def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
@@ -189,7 +189,7 @@ class PlanManagementCommanderImpl @Inject() (
 
   }
 
-  def deactivatePaidAccountForOrganziation(orgId: Id[Organization], session: RWSession): Try[Unit] = {
+  def deactivatePaidAccountForOrganization(orgId: Id[Organization], session: RWSession): Try[Unit] = {
     implicit val s = session
     Try {
       paidAccountRepo.maybeGetByOrgId(orgId).foreach { account =>

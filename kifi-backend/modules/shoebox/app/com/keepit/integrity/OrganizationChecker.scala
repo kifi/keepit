@@ -79,7 +79,7 @@ class OrganizationChecker @Inject() (
       val zombiePaidAccount = paidAccountRepo.maybeGetByOrgId(org.id.get, excludeStates = Set(PaidAccountStates.INACTIVE))
       if (zombiePaidAccount.isDefined) {
         airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie paid account: ${zombiePaidAccount.map(_.id.get)}")
-        planManagementCommander.deactivatePaidAccountForOrganziation(org.id.get, session)
+        planManagementCommander.deactivatePaidAccountForOrganization(org.id.get, session)
       }
 
       val zombieLibs = libraryRepo.getBySpace(org.id.get, excludeState = Some(LibraryStates.INACTIVE))
