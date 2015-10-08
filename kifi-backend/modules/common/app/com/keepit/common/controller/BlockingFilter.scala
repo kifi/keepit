@@ -20,12 +20,13 @@ object BlockingFilter extends Filter {
   val blocked = Seq(
     "103.60.176.6",
     "103.60.176.238",
-    "43.249.225.14"
+    "43.249.225.14",
+    "95.5.131.183",
+    "88.251.246.206",
+    "88.251.181.56"
   )
 
-  val tarpit = Seq(
-    "70.197.4.114"
-  )
+  val tarpit = Seq()
 
   private def throwThemInAPit[T](andThen: => Future[T]) = {
     play.api.Play.maybeApplication.collect {
