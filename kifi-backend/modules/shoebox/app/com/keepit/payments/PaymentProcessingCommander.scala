@@ -160,7 +160,6 @@ class PaymentProcessingCommanderImpl @Inject() (
             db.readWrite { implicit session =>
               paidAccountRepo.save(account.withIncreasedCredit(amount))
               accountEventRepo.save(AccountEvent(
-                eventGroup = EventGroup(),
                 eventTime = clock.now(),
                 accountId = account.id.get,
                 billingRelated = true,

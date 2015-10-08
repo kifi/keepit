@@ -45,24 +45,8 @@ object AccountEventAction { //There is probably a deeper type hierachy that can 
     def eventType: String = "charge_back"
   }
 
-  case class PlanBillingCredit() extends AccountEventAction with Payloadless {
-    def eventType: String = "plan_billing_credit"
-  }
-
   case class PlanBillingCharge() extends AccountEventAction with Payloadless {
     def eventType: String = "plan_billing_charge"
-  }
-
-  case class PlanBillingCreditPartial() extends AccountEventAction with Payloadless {
-    def eventType: String = "plan_billing_credit_partial"
-  }
-
-  case class PlanBillingChargePartial() extends AccountEventAction with Payloadless {
-    def eventType: String = "plan_billing_charge_partial"
-  }
-
-  case class PlanChangeCredit() extends AccountEventAction with Payloadless {
-    def eventType: String = "plan_change_credit"
   }
 
   case class UserChangeCredit() extends AccountEventAction with Payloadless {
@@ -121,11 +105,7 @@ object AccountEventAction { //There is probably a deeper type hierachy that can 
   def fromDb(eventType: String, extras: JsValue): AccountEventAction = eventType match {
     case "special_credit" => SpecialCredit()
     case "charge_back" => ChargeBack()
-    case "plan_billing_credit" => PlanBillingCredit()
     case "plan_billing_charge" => PlanBillingCharge()
-    case "plan_billing_credit_partial" => PlanBillingCreditPartial()
-    case "plan_billing_charge_partial" => PlanBillingChargePartial()
-    case "plan_change_credit" => PlanChangeCredit()
     case "user_change_credit" => UserChangeCredit()
     case "user_added" => extras.as[UserAdded]
     case "user_removed" => extras.as[UserRemoved]
@@ -154,7 +134,6 @@ case class AccountEvent(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[AccountEvent] = AccountEventStates.ACTIVE,
-    eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
     billingRelated: Boolean,
@@ -183,7 +162,6 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[AccountEvent],
-    eventGroup: EventGroup,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
     billingRelated: Boolean,
@@ -202,7 +180,6 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       createdAt,
       updatedAt,
       state,
-      eventGroup,
       eventTime,
       accountId,
       billingRelated,
@@ -220,14 +197,13 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
 
   def unapplyFromDbRow(e: AccountEvent) = {
     val (eventType, extras) = e.action.toDbRow
-    Some((e.id, e.createdAt, e.updatedAt, e.state, e.eventGroup, e.eventTime, e.accountId,
+    Some((e.id, e.createdAt, e.updatedAt, e.state, e.eventTime, e.accountId,
       e.billingRelated, e.whoDunnit, e.whoDunnitExtra, e.kifiAdminInvolved, eventType,
       extras, e.creditChange, e.paymentMethod, e.paymentCharge, e.memo, e.chargeId))
   }
 
   def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, creditChange: DollarAmount = DollarAmount.ZERO) = {
     AccountEvent(
-      eventGroup = EventGroup(),
       eventTime = eventTime,
       accountId = accountId,
       billingRelated = false,

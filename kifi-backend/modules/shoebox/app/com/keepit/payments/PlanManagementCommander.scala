@@ -349,7 +349,6 @@ class PlanManagementCommanderImpl @Inject() (
     val account = paidAccountRepo.getByOrgId(orgId)
     paidAccountRepo.save(account.withIncreasedCredit(amount))
     accountEventRepo.save(AccountEvent(
-      eventGroup = EventGroup(),
       eventTime = clock.now(),
       accountId = account.id.get,
       billingRelated = false,
@@ -517,11 +516,7 @@ class PlanManagementCommanderImpl @Inject() (
     val shortName = event.action match {
       case SpecialCredit() => "Special Credit Given"
       case ChargeBack() => "Charge back to your Card"
-      case PlanBillingCredit() => "Regular cost of your Plan deducted entirely from credit"
       case PlanBillingCharge() => "Regular cost of your Plan charged entirely to your card on file"
-      case PlanBillingCreditPartial() => "Regular cost of your Plan deducted partially from remaining credit"
-      case PlanBillingChargePartial() => "Regular cost of your Plan charged partially to your card on file (after credit was used up)"
-      case PlanChangeCredit() => "Cost of previous plan credit back to your account"
       case UserChangeCredit() => "Credit for reduction in number of Users"
       case UserAdded(who) => {
         val user = basicUserRepo.load(who)

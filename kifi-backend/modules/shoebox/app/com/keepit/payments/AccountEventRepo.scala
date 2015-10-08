@@ -14,7 +14,6 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[AccountEventRepoImpl])
 trait AccountEventRepo extends Repo[AccountEvent] {
-  def getByGroupId(group: EventGroup, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
   def getByAccountIdAndTime(accountId: Id[PaidAccount], before: DateTime, max: Int = 10, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
@@ -43,7 +42,6 @@ class AccountEventRepoImpl @Inject() (
   type RepoImpl = AccountEventTable
 
   class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "account_event") {
-    def eventGroup = column[EventGroup]("event_group", O.NotNull)
 
     def eventTime = column[DateTime]("event_time", O.NotNull)
 
@@ -71,7 +69,7 @@ class AccountEventRepoImpl @Inject() (
 
     def chargeId = column[Option[String]]("charge_id", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, eventGroup, eventTime, accountId, billingRelated, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, eventTime, accountId, billingRelated, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
 
   def table(tag: Tag) = new AccountEventTable(tag)
@@ -81,10 +79,6 @@ class AccountEventRepoImpl @Inject() (
   override def deleteCache(accountEvent: AccountEvent)(implicit session: RSession): Unit = {}
 
   override def invalidateCache(accountEvent: AccountEvent)(implicit session: RSession): Unit = {}
-
-  def getByGroupId(group: EventGroup, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
-    (for (row <- rows if row.eventGroup === group && !row.state.inSet(excludeStates)) yield row).list
-  }
 
   def getByAccountIdAndTime(accountId: Id[PaidAccount], before: DateTime, max: Int = 10, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
     (for (row <- rows if row.accountId === accountId && row.eventTime < before && !row.state.inSet(excludeStates)) yield row).sortBy(row => row.eventTime desc).take(max).list
