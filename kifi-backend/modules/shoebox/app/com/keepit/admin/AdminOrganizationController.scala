@@ -439,7 +439,7 @@ class AdminOrganizationController @Inject() (
   def deleteSystemLibrariesWithInactiveOrgs() = AdminUserAction { implicit request =>
     val zombieLibs = db.readOnlyMaster { implicit session =>
       val inactiveOrgs = orgRepo.getAllByState(OrganizationStates.INACTIVE)
-      inactiveOrgs.flatMap(org => libRepo.getBySpace(org.id.get)).filter(_.kind.value.startsWith("system")) // get all active system libraries in the orgs
+      inactiveOrgs.flatMap(org => libRepo.getBySpace(org.id.get)).filter(_.isSystemLibrary) // get all active system libraries in the orgs
     }
     zombieLibs.foreach(lib => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get))
     Ok
