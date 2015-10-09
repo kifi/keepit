@@ -38,19 +38,19 @@
           <li ng-if="isAdminExperiment" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'payment-plan' }">
             <a
               class="kf-link"
-              ui-sref="orgProfile.settings.plan({ '#': 'p-' })"
+              ui-sref="orgProfile.settings.plan"
             >Payment Plan</a>
           </li>
-          <li ng-if="isAdminExperiment"  class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
+          <li ng-if="isAdminExperiment" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
             <a
               class="kf-link"
-              ui-sref="orgProfile.settings.contacts({ '#': 'b-' })"
+              ui-sref="orgProfile.settings.contacts"
             >Billing Contacts</a>
           </li>
-          <li ng-if="canExportKeeps"  class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'export-keeps' }">
+          <li ng-if="canExportKeeps" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'export-keeps' }">
             <a
               class="kf-link"
-              ui-sref="orgProfile.settings.export({ '#': 'e-' })"
+              ui-sref="orgProfile.settings.export"
               ng-if="canExportKeeps"
             >Export Keeps</a>
           </li>

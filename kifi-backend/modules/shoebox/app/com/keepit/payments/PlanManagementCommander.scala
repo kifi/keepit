@@ -72,6 +72,10 @@ trait PlanManagementCommander {
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
 
+  //ADMIN ONLY
+  def isFrozen(orgId: Id[Organization]): Boolean
+  def unfreeze(orgId: Id[Organization]): Option[Boolean]
+
   //UTILITIES
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
 }
@@ -500,6 +504,16 @@ class PlanManagementCommanderImpl @Inject() (
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
     accountEventRepo.getEventsBefore(accountId, beforeTime, beforeId, limit, onlyRelatedToBilling)
+  }
+
+  def isFrozen(orgId: Id[Organization]): Boolean = db.readOnlyMaster { implicit session =>
+    paidAccountRepo.getByOrgId(orgId).frozen
+  }
+
+  def unfreeze(orgId: Id[Organization]): Option[Boolean] = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>
+    paidAccountRepo.save(
+      paidAccountRepo.getByOrgId(orgId).copy(frozen = false)
+    ).frozen
   }
 
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>

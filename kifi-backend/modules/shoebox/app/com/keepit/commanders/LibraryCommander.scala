@@ -34,9 +34,7 @@ object MarketingSuggestedLibrarySystemValue {
 trait LibraryCommander {
   def updateLastView(userId: Id[User], libraryId: Id[Library]): Unit
   def createLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit context: HeimdalContext): Either[LibraryFail, Library]
-  def unsafeCreateLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RWSession): Library
   def modifyLibrary(libraryId: Id[Library], userId: Id[User], modifyReq: LibraryModifications)(implicit context: HeimdalContext): Either[LibraryFail, LibraryModifyResponse]
-  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifications): LibraryModifyResponse
   def deleteLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail]
   def internSystemGeneratedLibraries(userId: Id[User], generateNew: Boolean = true): (Library, Library)
   def createReadItLaterLibrary(userId: Id[User]): Library
@@ -48,7 +46,13 @@ trait LibraryCommander {
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit
   def updateSubscribedToLibrary(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership]
+
+  // These are "fast" methods, so they can be transactional
+  def unsafeCreateLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RWSession): Library
   def unsafeTransferLibrary(libraryId: Id[Library], newOwner: Id[User])(implicit session: RWSession): Library
+
+  // These methods take forever (they have to fiddle with values denormalized onto keeps) so they're async
+  def unsafeModifyLibrary(library: Library, modifyReq: LibraryModifications): LibraryModifyResponse
   def unsafeAsyncDeleteLibrary(libraryId: Id[Library]): Future[Unit]
 }
 
