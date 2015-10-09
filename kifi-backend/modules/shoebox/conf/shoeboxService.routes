@@ -909,6 +909,7 @@ POST          /admin/payments/changePlanForOrg             @com.keepit.controlle
 GET           /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCardView(orgId: Id[Organization])
 POST          /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
 GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
+POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 
 
 ##########################################
