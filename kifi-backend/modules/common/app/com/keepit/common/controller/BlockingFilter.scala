@@ -8,7 +8,7 @@ import scala.concurrent.Future
 object BlockingFilter extends Filter {
   def apply(nextFilter: (RequestHeader) => Future[Result])(requestHeader: RequestHeader): Future[Result] = {
     val ip = requestHeader.headers.get("X-Forwarded-For").getOrElse(requestHeader.remoteAddress)
-    if (blocked.contains(ip) && !requestHeader.path.contains("logout") && requestHeader.session.get(KifiSession.FORTYTWO_USER_ID).isDefined) {
+    if (blocked.exists(b => ip.indexOf(b) == 0) && !requestHeader.path.contains("logout") && requestHeader.session.get(KifiSession.FORTYTWO_USER_ID).isDefined) {
       Future.successful(Results.Redirect("/logout"))
     } else if (tarpit.contains(ip)) {
       throwThemInAPit(nextFilter(requestHeader))
@@ -18,12 +18,10 @@ object BlockingFilter extends Filter {
   }
 
   val blocked = Seq(
-    "103.60.176.6",
-    "103.60.176.238",
+    "103.60.176.",
     "43.249.225.14",
     "95.5.131.183",
-    "88.251.246.206",
-    "88.251.181.56"
+    "88.251."
   )
 
   val tarpit = Seq()
