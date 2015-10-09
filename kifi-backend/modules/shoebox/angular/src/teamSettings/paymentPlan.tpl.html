@@ -31,17 +31,21 @@
       </div>
     </div>
     <p>Select your team's plan. Get details on the plans we offer on the <a class="kf-link" href="#">pricing page</a></p>
+    <div class="custom-select kf-button">
     <select class="kf-team-plan-select">
-      <option>Free Plan</option>
-      <option>Standard Plan</option>
-      <option>Enterprise Plan</option>
-    </select>
+        <option>Free Plan</option>
+        <option>Standard Plan</option>
+        <option>Enterprise Plan</option>
+      </select>
+    </div>
     <h2 class="kf-heading">Choose your Payment Frequency</h2>
     <p>You're paying for <span ng-bind="profile.numMembers"></span> users. With worry-free billing, we'll automatically charge or credit your account with a change in team members.</p>
-    <select class="kf-team-plan-select">
-      <option>Annual billing</option>
-      <option>Monthly billing</option>
-    </select>
+    <div class="custom-select kf-button">
+      <select class="kf-team-plan-select">
+        <option>Annual billing</option>
+        <option>Monthly billing</option>
+      </select>
+    </div>
     <h2 class="kf-heading">Manage your Credit Card Information</h2>
     <p>Your current card ends in {{ billingState.card }}</p>
     <p>
