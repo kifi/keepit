@@ -47,6 +47,11 @@ class PaymentsController @Inject() (
     }
   }
 
+  def getActivePlans() = UserAction { implicit request =>
+    val plans = planCommander.getAvailablePlans(request.adminUserId)
+    Ok(Json.toJson(plans.map(_.asInfo)))
+  }
+
   def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     planCommander.getActivePaymentMethods(request.orgId).find(_.default).map { pm =>
       Ok(Json.obj(

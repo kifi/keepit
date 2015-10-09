@@ -587,8 +587,8 @@ class PlanManagementCommanderImpl @Inject() (
       shortName = shortName,
       extraInfo = extraInfo,
       whoDunnit = whoDunnit,
-      creditChange = event.creditChange.cents,
-      paymentCharge = event.paymentCharge.map(_.cents).getOrElse(0),
+      creditChange = event.creditChange.cents * 100,
+      paymentCharge = event.paymentCharge.map(_.cents).getOrElse(0) * 100,
       memo = event.memo
     )
   }

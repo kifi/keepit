@@ -57,10 +57,10 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         val planJson = (payload \ "plan").as[JsObject]
         val actualPlan = planCommander.currentPlan(org.id.get)
         (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
-        (planJson \ "name").as[String] must beEqualTo("test")
+        (planJson \ "name").as[String] must beEqualTo("Free")
         (planJson \ "pricePerUser").as[Int] must beEqualTo(10000)
         (planJson \ "cycle").as[Int] must beEqualTo(1)
-        1 === 1
+        (planJson \ "features").as[Set[Feature]] must beEqualTo(Feature.ALL)
       }
     }
 
