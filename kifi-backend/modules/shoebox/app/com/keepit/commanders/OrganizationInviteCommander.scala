@@ -74,8 +74,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
-    val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
-
     val validateRequester = if (!permissionCommander.getOrganizationPermissions(request.orgId, Some(request.requesterId)).contains(OrganizationPermission.INVITE_MEMBERS)) {
       Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
     } else None
