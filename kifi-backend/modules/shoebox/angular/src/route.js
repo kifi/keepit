@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.config(['$httpProvider', '$locationProvider', '$stateProvider', '$urlRouterProvider',
-  function($httpProvider, $locationProvider, $stateProvider, $urlRouterProvider) {
+.config(['$httpProvider', '$locationProvider', '$stateProvider', '$urlRouterProvider', 'StripeCheckoutProvider',
+  function($httpProvider, $locationProvider, $stateProvider, $urlRouterProvider, StripeCheckoutProvider) {
     $locationProvider
       .html5Mode(true)
       .hashPrefix('!');
@@ -163,7 +163,23 @@ angular.module('kifi')
         controller: 'PaymentPlanCtrl',
         templateUrl: 'teamSettings/paymentPlan.tpl.html',
         activetab: 'settings',
-        activenav: 'payment-plan'
+        activenav: 'payment-plan',
+        resolve: {
+          stripe: StripeCheckoutProvider.load,
+          billingState: [
+            'billingService', 'profile',
+            function (billingService, profile) {
+              return billingService.getBillingState(profile.organization.id);
+            }
+          ]
+        }
+      })
+      .state('orgProfile.settings.activity', {
+        url: '/activity',
+        controller: 'ActivityLogCtrl',
+        templateUrl: 'teamSettings/activityLog.tpl.html',
+        activetab: 'settings',
+        activenav: 'activity-log'
       })
       .state('teams', {
         url: '/teams',
