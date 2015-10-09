@@ -99,7 +99,7 @@ class MobileRecommendationsController @Inject() (
         title = keep.title,
         url = keep.url,
         keepers = keep.keepers.getOrElse(Seq.empty),
-        libraries = keep.libraries.map(_.map { case (lib, user) => RecoLibraryInfo(user, lib.id, lib.name, lib.path, lib.color.map(_.hex)) } toSeq).getOrElse(Seq.empty),
+        libraries = keep.libraries.map(_.map { case (BasicLibraryWithKeptAt(lib, _), user) => RecoLibraryInfo(user, lib.id, lib.name, lib.path, lib.color.map(_.hex)) } toSeq).getOrElse(Seq.empty),
         others = Math.max(0, keep.keepersTotal.getOrElse(0) - keep.keepers.map(_.size).getOrElse(0)),
         siteName = keep.siteName,
         summary = keep.summary.get), explain = None)
