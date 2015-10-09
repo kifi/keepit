@@ -15,6 +15,8 @@ import com.keepit.realtime.{ MessageThreadPushNotification, SimplePushNotificati
 import com.keepit.common.db.slick.Database
 import com.keepit.eliza.model._
 
+import scala.concurrent.Future
+
 @Singleton
 class MessagingAnalytics @Inject() (
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -212,17 +214,19 @@ class MessagingAnalytics @Inject() (
           val uriId = thread.uriId.get
           shoebox.getPersonalKeeps(userId, Set(uriId)).foreach { basicKeeps =>
             contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
-            thread.participants.foreach(addOrganizationInfo(contextBuilder, _))
-            val context = contextBuilder.build
-            context.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgTracking:sentMessage] successfully tracking allParticipantsInOrgId=$orgId") }
-            heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
-            heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
-            heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
+            thread.participants.map(addOrganizationInfo(contextBuilder, _)).getOrElse(Future.successful(())).foreach { _ =>
+              contextBuilder.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgTracking:sentMessage1] successfully tracking allParticipantsInOrgId=$orgId") }
+              val context = contextBuilder.build
+              context.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgTracking:sentMessage2] successfully tracking allParticipantsInOrgId=$orgId") }
+              heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
+              heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
+              heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
 
-            // Anonymized event with page information
-            anonymise(contextBuilder)
-            thread.url foreach contextBuilder.addUrlInfo
-            heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
+              // Anonymized event with page information
+              anonymise(contextBuilder)
+              thread.url foreach contextBuilder.addUrlInfo
+              heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
+            }
           }
         }
 
@@ -261,13 +265,14 @@ class MessagingAnalytics @Inject() (
   private def anonymise(contextBuilder: HeimdalContextBuilder): Unit =
     contextBuilder.anonymise("userParticipants", "newParticipants", "otherParticipants", "threadId", "messageId", "uriId")
 
-  private def addOrganizationInfo(contextBuilder: HeimdalContextBuilder, participants: MessageThreadParticipants): Unit = {
+  private def addOrganizationInfo(contextBuilder: HeimdalContextBuilder, participants: MessageThreadParticipants): Future[Unit] = {
     val orgIdsByUserIdFut = shoebox.getOrganizationsForUsers(participants.allUsers)
-    orgIdsByUserIdFut.foreach { orgIdsByUserId =>
+    orgIdsByUserIdFut.map { orgIdsByUserId =>
       val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
       log.info(s"[OrgMessageTracking] commonOrgs=${commonOrgs.map(_.mkString(","))}")
       commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", ContextStringData(orgId.toString)) }
       contextBuilder.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgTracking:addOrganizationInfo] successfully tracking allParticipantsInOrgId = $orgId") }
+      ()
     }
   }
 }
