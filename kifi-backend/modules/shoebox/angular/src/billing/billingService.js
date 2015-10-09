@@ -22,7 +22,7 @@ angular.module('kifi')
       },
       setBillingCCToken: function (pubId, token) {
         return net
-        .setBillingCCToken(pubId, { token: token })
+        .setBillingCCToken(pubId, { token: token });
       },
       getBillingContacts: function (pubId) {
         return net
