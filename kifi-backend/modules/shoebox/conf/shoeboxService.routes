@@ -291,8 +291,6 @@ GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.M
 GET     /m/2/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembersV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 POST    /m/1/libraries/:id/members/:uId/access  @com.keepit.controllers.mobile.MobileLibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User])
-POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
-
 
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
@@ -385,7 +383,6 @@ GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.
 GET     /site/keeps/stream               @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
 GET     /site/keeps/all                  @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /site/keeps/count                @com.keepit.controllers.website.KeepsController.numKeeps()
-GET     /site/keeps/export               @com.keepit.controllers.website.KeepsController.exportKeeps()
 POST    /site/keeps/personalExport       @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
 POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
@@ -462,9 +459,6 @@ POST    /site/libraries/:id/image/upload    @com.keepit.controllers.website.Libr
 POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.LibraryImageController.positionLibraryImage(id: PublicId[Library])
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
-
-GET     /site/libraries/recos/top           @com.keepit.controllers.website.LibraryRecommendationsController.topLibRecos()
-POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
