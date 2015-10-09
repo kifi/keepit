@@ -63,11 +63,12 @@ class OrganizationChecker @Inject() (
   }
 
   def fixOrg(orgId: Id[Organization]): Future[Unit] = {
+    log.info(s"[ORG-CHECKER] Fixing org $orgId")
     val fixes = Set(
       ensureStateIntegrity(orgId),
       ensureOrgSystemLibraryIntegrity(orgId)
     )
-    Future.sequence(fixes).map { _ => () }
+    Future.sequence(fixes).map { _ => log.info(s"[ORG-CHECKER] Done fixing org $orgId") }
   }
 
   private def orgHasBrokenState(org: Organization)(implicit session: RSession): Boolean = {
@@ -94,6 +95,7 @@ class OrganizationChecker @Inject() (
     val org = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
     if (org.isActive) Future.successful(())
     else {
+      log.info(s"[ORG-CHECKER] Ensuring the integrity of dead org $orgId")
       // There is some easy stuff that can be done synchronously
       db.readWrite { implicit session =>
         val zombieMemberships = orgMembershipRepo.getAllByOrgId(org.id.get, excludeState = Some(OrganizationMembershipStates.INACTIVE))
