@@ -64,12 +64,12 @@ angular.module('kifi')
         $timeout(function () {
           positionY = getAbsoluteBoundingRect(element).top;
 
-          desktopMq.addEventListener('change', updateMq);
+          desktopMq.addListener('change', updateMq);
           updateMq();
 
           $scope.$on('$destroy', function () {
             $window.removeEventListener('scroll', moveFloatMenu);
-            desktopMq.removeEventListener('change', updateMq);
+            desktopMq.removeListener('change', updateMq);
           });
         });
       }
