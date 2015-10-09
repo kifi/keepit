@@ -87,35 +87,11 @@ angular.module('kifi')
           pictureUrl: 'true'
         });
       },
-      exportKeeps: route('/keeps/export'), // DEPRECATED 2015-09-30. use exportPersonalKeeps
       exportPersonalKeeps: route('/keeps/personalExport'),
       exportOrganizationKeeps: route('/keeps/organizationExport'),
       postDelightedAnswer: route('/user/delighted/answer'),
       cancelDelightedSurvey: route('/user/delighted/cancel'),
       userCloseAccount: route('/user/close'),
-      adHocRecos: function (howMany) {
-        return route('/recos/adHoc', {n: howMany});
-      },
-      recos: function (opts) {
-        return route('/recos/topV2', {
-          recency: opts.recency,
-          uriContext: opts.uriContext || [],
-          libContext: opts.libContext || [],
-          trackLibDelivery: _.isBoolean(opts.trackLibDelivery) ? opts.trackLibDelivery : []
-        });
-      },
-      recosPublic: function () {
-        return route('/recos/public');
-      },
-      recoFeedback: function (urlId) {
-        return route('/recos/feedback', {id: urlId});
-      },
-      libraryRecos: function () {
-        return route('/libraries/recos/top');
-      },
-      libraryRecoFeedback: function (libraryId) {
-        return route('/libraries/recos/feedback', {id: libraryId});
-      },
       basicUserInfo: function (id, friendCount) {
         return route('/user/' + id, {friendCount: friendCount ? 1 : []});
       },
