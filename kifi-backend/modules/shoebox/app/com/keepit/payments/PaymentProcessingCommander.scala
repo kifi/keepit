@@ -24,7 +24,7 @@ import scala.util.{ Try, Success, Failure }
 
 @ImplementedBy(classOf[PaymentProcessingCommanderImpl])
 trait PaymentProcessingCommander {
-  def processAllBilling(): Future[Map[Id[Organization], (DollarAmount, String)]]
+  def processAllBilling(): Future[Unit]
   def forceChargeAccount(account: PaidAccount, amount: DollarAmount, description: Option[String]): Future[DollarAmount] //not private for admin use
   def processAccount(account: PaidAccount): Future[(DollarAmount, String)]
 
@@ -57,7 +57,7 @@ class PaymentProcessingCommanderImpl @Inject() (
 
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
 
-  private val processingLock = new ReactiveLock(1)
+  private val processingLock = new ReactiveLock(2)
 
   private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
@@ -102,54 +102,69 @@ class PaymentProcessingCommanderImpl @Inject() (
   private def reportToSlack(msg: String): Future[Unit] = SafeFuture {
     val fullMsg = BasicSlackMessage(
       text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
-      username = "PaymentProcessingCommander"
+      username = "PaymentProcessingCommander",
+      channel = Some("#billing-alerts")
     )
     httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
   }
 
-  def processAllBilling(): Future[Map[Id[Organization], (DollarAmount, String)]] = processingLock.withLockFuture {
+  def processAllBilling(): Future[Unit] = processingLock.withLockFuture {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(MAX_BALANCE, clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
     reportToSlack(s"Processing Payments. ${relevantAccounts.length} orgs to check.")
-    FutureHelpers.map(relevantAccounts.map { account =>
-      val processingResultFut = processAccount(account)
-      processingResultFut.onComplete {
-        case Success((amount, reason)) => //reportToSlack(s"Processed Org ${account.orgId}. Charged: $amount. Reason: $reason") //Too high frequency when it runs for slack webhooks. Need to find a different solution.
-        case Failure(ex) => {
-          //reportToSlack(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}. See log for stack trace.")
-          log.error(s"Fatal Error processing Org ${account.orgId}. Reason: ${ex.getMessage}", ex)
-        }
+    val resultsFuture = Future.sequence(relevantAccounts.map { account =>
+      processAccount(account).map { result =>
+        account.orgId -> Success(result)
+      }.recover {
+        case t: Throwable => account.orgId -> Failure(t)
       }
-      account.orgId -> processingResultFut
-    }.toMap)
+    })
+    resultsFuture.onComplete {
+      case Success(results) => {
+        reportToSlack(results.map {
+          case (orgId, result) =>
+            result match {
+              case Success((amount, reason)) => s"Processed Org ${orgId}. Charged: $amount. Reason: $reason"
+              case Failure(ex) => {
+                log.error(s"Fatal Error processing Org ${orgId}. Reason: ${ex.getMessage}", ex)
+                s"Fatal Error processing Org ${orgId}. Reason: ${ex.getMessage}. See log for stack trace."
+              }
+            }
+        }.mkString("\n"))
+      }
+      case Failure(ex) => reportToSlack(s"@channel Fatal Error during billing processing!")
+    }
+    resultsFuture.map(_ => ())
   }
 
-  def processAccount(account: PaidAccount): Future[(DollarAmount, String)] = accountLockHelper.maybeWithAccountLockAsync(account.orgId) {
-    log.info(s"[PPC][${account.orgId}] Starting Processing")
-    db.readWrite { implicit session =>
-      val plan = paidPlanRepo.get(account.planId)
-      val billingCycleElapsed = account.billingCycleStart.plusMonths(plan.billingCycle.month).isBefore(clock.now)
-      val maxBalanceExceeded = account.credit.cents < MAX_BALANCE.cents
-      val shouldProcess = !account.frozen && (billingCycleElapsed || maxBalanceExceeded)
-      if (shouldProcess) {
-        val newBillingCycleStart = account.billingCycleStart.plusMonths(plan.billingCycle.month)
-        val fullCyclePrice = DollarAmount(account.activeUsers * plan.pricePerCyclePerUser.cents)
-        val updatedAccountPreCharge = if (billingCycleElapsed) account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart) else account
+  def processAccount(account: PaidAccount): Future[(DollarAmount, String)] = processingLock.withLockFuture {
+    accountLockHelper.maybeWithAccountLockAsync(account.orgId) {
+      log.info(s"[PPC][${account.orgId}] Starting Processing")
+      db.readWrite { implicit session =>
+        val plan = paidPlanRepo.get(account.planId)
+        val billingCycleElapsed = account.billingCycleStart.plusMonths(plan.billingCycle.month).isBefore(clock.now)
+        val maxBalanceExceeded = account.credit.cents < MAX_BALANCE.cents
+        val shouldProcess = !account.frozen && (billingCycleElapsed || maxBalanceExceeded)
+        if (shouldProcess) {
+          val newBillingCycleStart = account.billingCycleStart.plusMonths(plan.billingCycle.month)
+          val fullCyclePrice = DollarAmount(account.activeUsers * plan.pricePerCyclePerUser.cents)
+          val updatedAccountPreCharge = if (billingCycleElapsed) account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart) else account
 
-        if (account.credit.cents < MIN_BALANCE.cents) {
-          val chargeAmount = DollarAmount(-1 * updatedAccountPreCharge.credit.cents)
-          log.info(s"[PPC][${account.orgId}] Going to charge $chargeAmount")
-          val description = if (maxBalanceExceeded) s"Max balance exceeded charge for org ${account.orgId} of amount $chargeAmount" else s"Regular charge for org ${account.orgId} of amount $chargeAmount"
-          forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> (if (maxBalanceExceeded) "Max balance exceeded" else "Billing Cycle elapsed") }
+          if (account.credit.cents < MIN_BALANCE.cents) {
+            val chargeAmount = DollarAmount(-1 * updatedAccountPreCharge.credit.cents)
+            log.info(s"[PPC][${account.orgId}] Going to charge $chargeAmount")
+            val description = if (maxBalanceExceeded) s"Max balance exceeded charge for org ${account.orgId} of amount $chargeAmount" else s"Regular charge for org ${account.orgId} of amount $chargeAmount"
+            forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> (if (maxBalanceExceeded) "Max balance exceeded" else "Billing Cycle elapsed") }
+          } else {
+            log.info(s"[PPC][${account.orgId}] Not Charging. Balance less than $MIN_BALANCE (${account.credit})")
+            paidAccountRepo.save(updatedAccountPreCharge)
+            Future.successful(DollarAmount.ZERO -> "Not charging because of low balance")
+          }
         } else {
-          log.info(s"[PPC][${account.orgId}] Not Charging. Balance less than $MIN_BALANCE (${account.credit})")
-          paidAccountRepo.save(updatedAccountPreCharge)
-          Future.successful(DollarAmount.ZERO -> "Not charging because of low balance")
+          Future.successful(DollarAmount.ZERO -> s"Not processed because conditions not met. Frozen: ${account.frozen}.")
         }
-      } else {
-        Future.successful(DollarAmount.ZERO -> s"Not processed because conditions not met. Frozen: ${account.frozen}.")
       }
-    }
-  }.getOrElse(Future.successful(DollarAmount.ZERO -> "Failed to get lock"))
+    }.getOrElse(Future.successful(DollarAmount.ZERO -> "Failed to get lock"))
+  }
 
   def forceChargeAccount(account: PaidAccount, amount: DollarAmount, descriptionOpt: Option[String]): Future[DollarAmount] = {
     db.readOnlyMaster { implicit session => paymentMethodRepo.getDefault(account.id.get) } match {

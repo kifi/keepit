@@ -45,6 +45,15 @@ orgStats: OrganizationStatistics
     <tr><td>Plan</td><td>@orgStats.plan.id (Price per User per Cycle: @orgStats.plan.pricePerCyclePerUser, Cycle Length: @orgStats.plan.billingCycle.month month)<button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
     <tr><td>Billing Cycle Start</td><td>@adminHelper.dateTimeDisplay(orgStats.billingCycleStart)</td></tr>
     <tr><td>Credit</td><td>@orgStats.credit<button id="process-billing-now" class="btn btn-default btn-xs">Process Payments Now</button></td></tr>
+    <tr>
+        <td>Frozen?</td>
+        <td>
+            @orgStats.accountFrozen
+            @if(orgStats.accountFrozen){
+                <button id="unfreeze-account" class="btn btn-danger btn-xs">Unfreeze Account</button>
+            }
+        </td>
+    </tr>
     <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>)</td></tr>
     <tr><td>Extra credit</td><td>
         Amount (cents)? <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
@@ -332,6 +341,20 @@ orgStats: OrganizationStatistics
             var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.processOrgNow(orgStats.orgId)", {});
             deffered.done( function (data) {
                 alert(data);
+                location.reload();
+            });
+            deffered.fail (function () {
+                console.log("FAIL:", arguments);
+                alert("Sadly, something unexpected went wrong. See the console for possible more information.")
+            })
+        }
+    });
+
+    $("#unfreeze-account").click(function () {
+        if (confirm("Are you sure?")) {
+            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.unfreezeAccount(orgStats.orgId)", {});
+            deffered.done( function (data) {
+                alert("Frozen State of account is now: " + data);
                 location.reload();
             });
             deffered.fail (function () {
