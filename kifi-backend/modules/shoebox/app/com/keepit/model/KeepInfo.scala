@@ -1,13 +1,21 @@
 package com.keepit.model
 
-import com.keepit.common.time._
 import com.keepit.commanders.BasicCollection
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsNull, Json, Writes }
+import com.keepit.common.time._
+import play.api.libs.json.{ OWrites, Json, Writes }
+
+case class BasicLibraryWithKeptAt(library: BasicLibrary, keptAt: DateTime)
+object BasicLibraryWithKeptAt {
+  implicit val writes: OWrites[BasicLibraryWithKeptAt] = OWrites[BasicLibraryWithKeptAt] {
+    case BasicLibraryWithKeptAt(library, keptAt) =>
+      BasicLibrary.libraryWrites.writes(library) + ("keptAt" -> Json.toJson(keptAt))
+  }
+}
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
@@ -20,7 +28,7 @@ case class KeepInfo(
   keepers: Option[Seq[BasicUser]] = None,
   keepersOmitted: Option[Int] = None,
   keepersTotal: Option[Int] = None,
-  libraries: Option[Seq[(BasicLibrary, BasicUser)]] = None,
+  libraries: Option[Seq[(BasicLibraryWithKeptAt, BasicUser)]] = None,
   librariesOmitted: Option[Int] = None,
   librariesTotal: Option[Int] = None,
   collections: Option[Set[String]] = None, // deprecated
@@ -40,7 +48,7 @@ object KeepInfo {
   val maxLibrariesShown = 10
 
   implicit val writes = {
-    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibrary, BasicUser]
+    implicit val libraryWithContributorWrites = TupleFormat.tuple2Writes[BasicLibraryWithKeptAt, BasicUser]
     new Writes[KeepInfo] {
       import com.keepit.common.core._
       def writes(o: KeepInfo) = Json.obj(
