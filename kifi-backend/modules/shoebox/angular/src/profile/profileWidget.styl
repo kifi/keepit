@@ -98,6 +98,15 @@
       flex: 1 100%
       text-align: center
 
+      &.ng-leave
+        transition: all 1s
+      &.ng-leave-active
+        opacity: 0
+        padding: 0px
+        line-height: 0px
+        font-size: 0px
+        margin-bottom: 0px
+
     .kf-pw-org-img
       border-radius: 20%
       background: appBackgroundColor
@@ -105,9 +114,6 @@
       height: 70px
       overflow: hidden
       display: block
-
-    &.kf-pw-org-pending .kf-pw-org-img
-      opacity: .35
 
     .kf-pw-org-link
 
@@ -141,7 +147,43 @@
             a
               color: accentGreen
               text-transform: uppercase
-              font-weight: bold
+              font-weight: bol
+
+    .org-inv-btn
+      font-size: 11px
+      border: 1px solid white
+      border-radius: 6px
+      width: 90px
+      margin-top: 10px
+
+      &.org-inv-btn-decline
+        margin-right: auto
+        margin-left: auto
+        color: white
+        background-color: alpha(red, .65)
+
+        &:hover:not(:active)
+          background-color: red
+
+      &.org-inv-btn-accept
+        margin-right: auto
+        margin-left: 6px
+        background-color: alpha(libraryGreen, .9)
+        color: white
+
+        &:hover:not(:active)
+          background-color: libraryGreen
+
+      &.ng-leave
+        transition: 1.75s all
+      &.ng-leave-active
+        font-size: 0px
+        margin-top: 0px
+        padding: 0px 0px 0px 0px
+        margin-bottom: 0px
+        border: 0px
+        opacity: 0
+
 
   .kf-pw-create-org
     margin: 15px -16px -10px

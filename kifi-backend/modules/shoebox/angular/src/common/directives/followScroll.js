@@ -20,14 +20,14 @@ angular.module('kifi')
       };
     }
 
-    var $body = angular.element('body');
+    var documentElement = $window.document.documentElement;
     var desktopMq = $window.matchMedia('(min-width: 480px)');
 
     return {
       restrict: 'A',
       link: function ($scope, element, attrs) {
         function moveFloatMenu() {
-          var pageScroll = $body.scrollTop();
+          var pageScroll = -documentElement.getBoundingClientRect().top;
           var headerOffset = $header.height() + 8;
           var offset = pageScroll - positionY + headerOffset;
 
@@ -64,12 +64,12 @@ angular.module('kifi')
         $timeout(function () {
           positionY = getAbsoluteBoundingRect(element).top;
 
-          desktopMq.addEventListener('change', updateMq);
+          desktopMq.addListener(updateMq);
           updateMq();
 
           $scope.$on('$destroy', function () {
             $window.removeEventListener('scroll', moveFloatMenu);
-            desktopMq.removeEventListener('change', updateMq);
+            desktopMq.removeListener(updateMq);
           });
         });
       }
