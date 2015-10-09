@@ -41,6 +41,12 @@
               ui-sref="orgProfile.settings.plan"
             >Payment Plan</a>
           </li>
+          <li ng-if="isAdminExperiment" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'activity-log' }">
+            <a
+              class="kf-link"
+              ui-sref="orgProfile.settings.activity"
+            >Activity Log</a>
+          </li>
           <li ng-if="isAdminExperiment" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
             <a
               class="kf-link"

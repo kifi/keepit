@@ -84,6 +84,7 @@ var testJsFiles = 'test/**/*.js';
 var libCssFiles = [
   'lib/normalize-css/normalize.css',
   ['managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css', 'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.min.css'],
+  'managed-lib/select-css/src/select.css',
   'managed-lib/pace/pace.css'
 ];
 var libJsFiles = [

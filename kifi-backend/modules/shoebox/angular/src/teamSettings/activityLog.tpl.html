@@ -1,0 +1,26 @@
+<div class="kf-team-activity-log">
+  <h1>Activity Log</h1>
+  <div class="kf-container">
+    <table class="kf-team-activity-table">
+      <caption><h2>Team Billing Activity</h2></caption>
+      <thead>
+        <tr>
+          <th>Date and Time</th>
+          <th>Description</th>
+          <th>User</th>
+          <th>Credits</th>
+          <th>Debits</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="b in billingEvents">
+          <td ng-bind="b.eventTime | amCalendar"></td>
+          <td ng-bind="b.shortName"></td>
+          <td ng-bind="b.whoDunnit"></td>
+          <td ng-bind="b.creditChange | currency"></td>
+          <td ng-bind="b.paymentCharge | currency"></td>
+        </tr>
+      <tbody>
+    </table>
+  </div>
+</div>
