@@ -1,19 +1,19 @@
 package com.keepit.integrity
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.LibraryCommander
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.performance.{AlertingTimer, StatsdTiming}
-import com.keepit.common.time.{Clock, _}
+import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
+import com.keepit.common.time.{ Clock, _ }
 import com.keepit.model._
-import com.keepit.payments.{PaidAccountRepo, PaidAccountStates, PlanManagementCommander}
+import com.keepit.payments.{ PaidAccountRepo, PaidAccountStates, PlanManagementCommander }
 
-import scala.concurrent.duration.{Duration, SECONDS}
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration.{ Duration, SECONDS }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 
 @Singleton
 class OrganizationChecker @Inject() (
@@ -46,9 +46,11 @@ class OrganizationChecker @Inject() (
     val (allOrgs, brokenOrgs) = db.readOnlyReplica { implicit s =>
       val lastSeq = systemValueRepo.getSequenceNumber(ORGANIZATION_INTEGRITY_SEQ).getOrElse(SequenceNumber.ZERO[Organization])
       val orgsToCheck = orgRepo.getBySequenceNumber(lastSeq, ORG_FETCH_SIZE).toSet
-      val brokenOrgs = orgsToCheck.filter { org => orgHasBrokenState(org.id.get) || orgHasBrokenSystemLibraries(org.id.get) }
+      val brokenOrgs = orgsToCheck.filter { org => orgHasBrokenState(org) || orgHasBrokenSystemLibraries(org) }
       (orgsToCheck, brokenOrgs)
     }
+
+    if (brokenOrgs.nonEmpty) log.error("[ORG-CHECKER] Found broken orgs: " + brokenOrgs.map(_.id.get))
 
     if (allOrgs.nonEmpty) {
       val maxSeq = allOrgs.map(_.seq).max
@@ -68,9 +70,8 @@ class OrganizationChecker @Inject() (
     Future.sequence(fixes).map { _ => () }
   }
 
-  private def orgHasBrokenState(orgId: Id[Organization])(implicit session: RSession): Boolean = {
-    val org = orgRepo.get(orgId)
-    if (org.isActive) true
+  private def orgHasBrokenState(org: Organization)(implicit session: RSession): Boolean = {
+    if (org.isActive) false
     else {
       val zombieMemberships = orgMembershipRepo.getAllByOrgId(org.id.get, excludeState = Some(OrganizationMembershipStates.INACTIVE))
       val zombieCandidates = orgMembershipCandidateRepo.getAllByOrgId(org.id.get, states = Set(OrganizationMembershipCandidateStates.ACTIVE))
@@ -81,6 +82,14 @@ class OrganizationChecker @Inject() (
       zombieMemberships.nonEmpty || zombieCandidates.nonEmpty || zombieInvites.nonEmpty || zombiePaidAccount.isDefined || zombieLibs.nonEmpty
     }
   }
+  private def orgHasBrokenSystemLibraries(org: Organization)(implicit session: RSession): Boolean = {
+    if (org.isInactive) false
+    else {
+      val orgGeneralLibrary = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL)
+      orgGeneralLibrary.size != 1
+    }
+  }
+
   private def ensureStateIntegrity(orgId: Id[Organization]): Future[Unit] = {
     val org = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
     if (org.isActive) Future.successful(())
@@ -125,15 +134,6 @@ class OrganizationChecker @Inject() (
         }
       }
       Future.sequence(libIntegrityFuts).map { _ => () }
-    }
-  }
-
-  private def orgHasBrokenSystemLibraries(orgId: Id[Organization])(implicit session: RSession): Boolean = {
-    val org = orgRepo.get(orgId)
-    if (org.isInactive) true
-    else {
-      val orgGeneralLibrary = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL)
-      orgGeneralLibrary.size != 1
     }
   }
   private def ensureOrgSystemLibraryIntegrity(orgId: Id[Organization]): Future[Unit] = db.readWriteAsync { implicit session =>
