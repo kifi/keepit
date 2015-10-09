@@ -5,7 +5,7 @@ import java.net.URLEncoder
 import com.google.common.html.HtmlEscapers
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.{ Organization, Keep, Library, User }
+import com.keepit.model._
 import play.twirl.api.Html
 
 object KifiMobileAppLinkFlag {
@@ -23,6 +23,7 @@ object KifiMobileAppLinkFlag {
 
 package object template {
   object tags {
+    val discussionLink = TagLabel("discussionLink")
     val firstName = TagLabel("firstName")
     val lastName = TagLabel("lastName")
     val fullName = TagLabel("fullName")
@@ -96,6 +97,8 @@ package object template {
     def organizationLink(id: Id[Organization], content: String) = Html(appendTrackingParams(Tag1(tags.organizationLink, id) + "&", content, openInAppIfMobile = true))
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
+
+    def discussionLink(id: Id[NormalizedURI], threadExtId: String) = Tag2(tags.discussionLink, id, threadExtId).toHtml
 
     def libraryLink(id: Id[Library]) = Tag1(tags.libraryLink, id).toHtml
     def libraryLink(id: Id[Library], content: String, openInAppIfMobile: Boolean = true) = Html(appendTrackingParams(Tag1(tags.libraryLink, id) + "&", content, openInAppIfMobile))

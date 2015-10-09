@@ -68,6 +68,7 @@ class EmailTemplateProcessorImpl @Inject() (
     libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
+    uriRepo: NormalizedURIRepo,
     keepRepo: KeepRepo,
     s3ImageStore: S3ImageStore,
     libPathCommander: PathCommander,
@@ -96,8 +97,15 @@ class EmailTemplateProcessorImpl @Inject() (
 
   case class KeepNeeded(id: Id[Keep]) extends NeededObject
 
-  case class DataNeededResult(users: Map[Id[User], User], imageUrls: Map[Id[User], String],
-    libraries: Map[Id[Library], Library], keeps: Map[Id[Keep], Keep], organizations: Map[Id[Organization], Organization])
+  case class UriNeeded(id: Id[NormalizedURI]) extends NeededObject
+
+  case class DataNeededResult(
+    users: Map[Id[User], User],
+    imageUrls: Map[Id[User], String],
+    libraries: Map[Id[Library], Library],
+    keeps: Map[Id[Keep], Keep],
+    organizations: Map[Id[Organization], Organization],
+    uris: Map[Id[NormalizedURI], NormalizedURI])
 
   def process(emailToSend: EmailToSend) = new SafeFuture[ProcessedEmailResult]({
     val tipHtmlF = emailTipProvider.get().getTipHtml(emailToSend)
@@ -129,6 +137,7 @@ class EmailTemplateProcessorImpl @Inject() (
       val avatarUrlUserIds = needs.collect { case AvatarUrlNeeded(id) => id }
       val libraryIds = needs.collect { case LibraryNeeded(id) => id }
       val keepIds = needs.collect { case KeepNeeded(id) => id }
+      val uriIds = needs.collect { case UriNeeded(id) => id }
 
       val userImageUrlsF = getUserImageUrls(avatarUrlUserIds.toSeq)
 
@@ -142,6 +151,7 @@ class EmailTemplateProcessorImpl @Inject() (
 
       val keepsF = getKeeps(keepIds)
       val orgsF = getOrganizations(orgIds)
+      val urisF = getUris(uriIds)
 
       for {
         (users, libraries) <- usersAndLibrariesF
@@ -149,8 +159,9 @@ class EmailTemplateProcessorImpl @Inject() (
         tipHtmlOpt <- tipHtmlF
         keeps <- keepsF
         orgs <- orgsF
+        uris <- urisF
       } yield {
-        val input = DataNeededResult(users = users, organizations = orgs, imageUrls = userImageUrls, libraries = libraries, keeps = keeps)
+        val input = DataNeededResult(users = users, organizations = orgs, imageUrls = userImageUrls, libraries = libraries, keeps = keeps, uris = uris)
         val includedTip = tipHtmlOpt.map(_._1)
 
         val decoratedHtml = htmlDecorator(evalTemplate(htmlBody.body, input, emailToSend, includedTip)) {
@@ -208,6 +219,9 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def keepId = tagArgs(0).as[Id[Keep]]
       @inline def keep: Keep = input.keeps(keepId)
 
+      @inline def uriId = tagArgs(0).as[Id[NormalizedURI]]
+      @inline def uri: NormalizedURI = input.uris(uriId)
+
       val resultString = tagWrapper.label match {
         case tags.firstName => basicUser.firstName
         case tags.lastName => basicUser.lastName
@@ -216,6 +230,10 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.profileUrl => config.applicationBaseUrl + "/" + basicUser.username.value
         case tags.profileLink =>
           val data = Json.obj("t" -> "us", "uid" -> basicUser.externalId)
+          config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
+
+        case tags.discussionLink =>
+          val data = Json.obj("t" -> "m", "uri" -> uri.externalId, "id" -> tagArgs(1))
           config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.organizationId => Organization.publicId(org.id.get).id
@@ -233,8 +251,8 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.libraryId => Library.publicId(library.id.get).id
         case tags.libraryOwnerFullName =>
           val libOwner = input.users(library.ownerId)
-
           libOwner.fullName
+
         case tags.keepName => keep.title.getOrElse("Untitled Keep")
         case tags.keepUrl => keep.url
         case tags.unsubscribeUrl =>
@@ -280,6 +298,9 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def keepId = tagArgs(0).as[Id[Keep]]
 
       tagWrapper.label match {
+        case tags.discussionLink =>
+          val uriId = tagArgs(0).as[Id[NormalizedURI]]
+          UriNeeded(uriId)
         case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
@@ -314,6 +335,12 @@ class EmailTemplateProcessorImpl @Inject() (
   private def getOrganizations(orgIds: Set[Id[Organization]]): Future[Map[Id[Organization], Organization]] = {
     db.readOnlyMasterAsync { implicit s =>
       orgIds.map(id => id -> orgRepo.get(id)).toMap
+    }
+  }
+
+  private def getUris(uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], NormalizedURI]] = {
+    db.readOnlyMasterAsync { implicit s =>
+      uriIds.map(id => id -> uriRepo.get(id)).toMap
     }
   }
 
