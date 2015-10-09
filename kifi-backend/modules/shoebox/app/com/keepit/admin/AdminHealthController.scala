@@ -8,8 +8,6 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.cache.GlobalCacheStatistics
 import com.keepit.common.healthcheck._
 import com.google.inject.{ Guice, Injector, Inject };
-import com.google.inject.grapher.graphviz.GraphvizGrapher;
-import com.google.inject.grapher.graphviz.GraphvizModule
 import play.api.Play
 import play.api.Application;
 
