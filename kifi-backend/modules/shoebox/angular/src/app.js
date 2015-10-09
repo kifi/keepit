@@ -185,7 +185,7 @@ angular.module('kifi', [
           }
         }
         $scope.showSimpleHeader = toState.name.indexOf('getStarted') > -1;
-        
+
       });
 
       $rootScope.$on('$stateChangeError', function (event, toState, toParams, fromState, fromParams, error) {
