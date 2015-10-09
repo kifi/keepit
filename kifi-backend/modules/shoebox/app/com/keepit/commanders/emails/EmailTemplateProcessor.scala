@@ -298,6 +298,9 @@ class EmailTemplateProcessorImpl @Inject() (
       @inline def keepId = tagArgs(0).as[Id[Keep]]
 
       tagWrapper.label match {
+        case tags.discussionLink =>
+          val uriId = tagArgs(0).as[Id[NormalizedURI]]
+          UriNeeded(uriId)
         case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)

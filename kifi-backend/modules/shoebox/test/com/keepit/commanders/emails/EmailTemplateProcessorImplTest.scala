@@ -1,5 +1,7 @@
 package com.keepit.commanders.emails
 
+import java.net.URLEncoder
+
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
@@ -186,6 +188,33 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
 
           val output = processed.htmlBody.value
           output must contain(s"${Organization.publicId(org.id.get).id}")
+        }
+      }
+      "do discussion information" in {
+        withDb(modules: _*) { implicit injector =>
+          val (user, uri) = db.readWrite { implicit rw =>
+            val user = UserFactory.user().withName("Ryan", "Brewster").withEmailAddress("ryan@kifi.com")saved
+            val uri = normalizedURIInterner.internByUri("http://www.kifi.com/")
+            (user, uri)
+          }
+
+          val mid = "4e26678a-8c20-48ca-9344-a1c75084d320"
+          val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"m","uri":"${uri.externalId}","id":"$mid"}""", "ascii")
+          val html = Html(s"""${discussionLink(uri.id.get, mid)}""")
+          val processor = inject[EmailTemplateProcessorImpl]
+          val emailToSend = EmailToSend(
+            from = SystemEmailAddress.NOTIFICATIONS,
+            to = Left(user.id.get),
+            subject = "",
+            htmlTemplate = html,
+            category = NotificationCategory.User.MESSAGE
+          )
+
+          val outputF = processor.process(emailToSend)
+          val processed = Await.result(outputF, Duration(5, "seconds"))
+
+          val output = processed.htmlBody.value
+          output must contain(deepLink)
         }
       }
     }
