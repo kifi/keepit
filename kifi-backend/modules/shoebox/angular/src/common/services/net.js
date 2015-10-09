@@ -41,9 +41,10 @@ angular.module('kifi')
       transferOrgMemberOwnership: post(shoebox, '/organizations/:id/transfer'),
       getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 30),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
-      
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId'),
+      getBillingCCToken: get(shoebox, '/admin/billing/ccToken?pubId=:pubId'),
+      setBillingCCToken: post(shoebox, '/admin/billing/ccToken?pubId=:pubId'),
       getBillingContacts: get(shoebox, '/admin/billing/contacts?pubId=:pubId', 30),
       setBillingContacts: post(shoebox, '/admin/billing/contacts?pubId=:pubId'),
 

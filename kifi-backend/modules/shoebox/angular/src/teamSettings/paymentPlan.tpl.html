@@ -8,7 +8,7 @@
         <div class="kf-team-plan-card-cost">0</div>
         <div class="kf-team-plan-card-bottom">
           <p class="kf-team-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-          <button class="kf-team-plan-card-cta">Upgrade now</button>
+          <button class="kf-team-plan-card-cta" style="visibility: hidden;">Upgrade now</button>
         </div>
       </div>
       <div class="kf-team-plan-card kf-team-plan-card-basic">
@@ -31,26 +31,20 @@
       </div>
     </div>
     <p>Select your team's plan. Get details on the plans we offer on the <a class="kf-link" href="#">pricing page</a></p>
-    <select>
+    <select class="kf-team-plan-select">
       <option>Free Plan</option>
       <option>Standard Plan</option>
       <option>Enterprise Plan</option>
     </select>
-  </div>
-  <div class="kf-container">
-    <div class="kf-container-header"><h2>Choose your Payment Frequency</h2></div>
-    <p>You're paying for <span ng-bind="profile.numMembers"></span> With worry-free billing, we'll automatically charge or credit your account with a cahnge in team members.</p>
-    <select>
+    <h2 class="kf-heading">Choose your Payment Frequency</h2>
+    <p>You're paying for <span ng-bind="profile.numMembers"></span> users. With worry-free billing, we'll automatically charge or credit your account with a change in team members.</p>
+    <select class="kf-team-plan-select">
       <option>Annual billing</option>
       <option>Monthly billing</option>
     </select>
-  </div>
-  <div class="kf-container">
-    <div class="kf-container-header"><h2>Manage your Credit Card Information</h2></div>
-    <p>You're paying for <span ng-bind="profile.numMembers"></span> With worry-free billing, we'll automatically charge or credit your account with a cahnge in team members.</p>
-    <select>
-      <option>Annual billing</option>
-      <option>Monthly billing</option>
-    </select>
-  </div>
+    <h2 class="kf-heading">Manage your Credit Card Information</h2>
+    <p>Your current card ends in {{ billingState.card }}</p>
+    <p>
+      <button class="kf-button kf-button-large" ng-click="openStripeCheckout()">Update Payment Information</button>
+    </p>
 </div>
