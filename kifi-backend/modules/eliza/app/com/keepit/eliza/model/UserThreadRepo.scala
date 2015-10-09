@@ -236,7 +236,7 @@ class UserThreadRepoImpl @Inject() (
     filterByReplyable.map { replyable =>
       (for (
         row <- rows if row.user === userId &&
-          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+          row.lastNotification =!= (JsNull: JsValue) &&
           row.replyable === replyable
       ) yield row)
         .sortBy(row => (row.notificationUpdatedAt) desc)
@@ -245,7 +245,7 @@ class UserThreadRepoImpl @Inject() (
     } getOrElse {
       (for (
         row <- rows if row.user === userId &&
-          row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+          row.lastNotification =!= (JsNull: JsValue)
       ) yield row)
         .sortBy(row => (row.notificationUpdatedAt) desc)
         .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -258,7 +258,7 @@ class UserThreadRepoImpl @Inject() (
       (for (
         row <- rows if row.user === userId &&
           row.notificationUpdatedAt < time &&
-          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+          row.lastNotification =!= (JsNull: JsValue) &&
           row.replyable === replyable
       ) yield row)
         .sortBy(row => (row.notificationUpdatedAt) desc)
@@ -268,7 +268,7 @@ class UserThreadRepoImpl @Inject() (
       (for (
         row <- rows if row.user === userId &&
           row.notificationUpdatedAt < time &&
-          row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+          row.lastNotification =!= (JsNull: JsValue)
       ) yield row)
         .sortBy(row => (row.notificationUpdatedAt) desc)
         .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -280,7 +280,7 @@ class UserThreadRepoImpl @Inject() (
     (for (
       row <- rows if row.user === userId &&
         row.unread &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+        row.lastNotification =!= (JsNull: JsValue) &&
         row.replyable
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
@@ -293,7 +293,7 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId &&
         row.unread &&
         row.notificationUpdatedAt < time &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+        row.lastNotification =!= (JsNull: JsValue) &&
         row.replyable
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
@@ -305,7 +305,7 @@ class UserThreadRepoImpl @Inject() (
     (for (
       row <- rows if row.user === userId &&
         row.started &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -317,7 +317,7 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId &&
         row.started &&
         row.notificationUpdatedAt < time &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -328,7 +328,7 @@ class UserThreadRepoImpl @Inject() (
     (for (
       row <- rows if row.user === userId &&
         row.uriId === uriId &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -340,7 +340,7 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId &&
         row.uriId === uriId &&
         row.notificationUpdatedAt < time &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -464,7 +464,7 @@ class UserThreadRepoImpl @Inject() (
   def getNotificationByThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[RawNotification] = {
     (for (
       row <- rows if row.user === userId && row.threadId === threadId &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield (row.lastNotification, row.unread, row.uriId)).firstOption
   }
 
