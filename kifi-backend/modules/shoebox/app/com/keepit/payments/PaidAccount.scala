@@ -10,6 +10,7 @@ import com.kifi.macros.json
 
 import org.joda.time.DateTime
 
+@json
 case class DollarAmount(cents: Int) extends AnyVal {
   def +(other: DollarAmount) = DollarAmount(cents + other.cents)
 

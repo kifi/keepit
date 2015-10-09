@@ -14,6 +14,15 @@ sealed abstract class PaymentRequest
 @json
 case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boolean) extends PaymentRequest
 
+@json
+case class CardInfo(last4: String, brand: String)
+@json
+case class AccountStateResponse(
+  users: Int,
+  credit: DollarAmount,
+  plan: PaidPlanInfo,
+  card: Option[CardInfo])
+
 sealed abstract class PaymentFail(val status: Int, val message: String) extends Exception(message) with NoStackTrace {
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
 }

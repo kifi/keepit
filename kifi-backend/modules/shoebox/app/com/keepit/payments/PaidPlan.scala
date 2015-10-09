@@ -19,12 +19,15 @@ import play.api.libs.json.Format
 
 import scala.util.{ Success, Failure, Try }
 
+@json
 case class BillingCycle(month: Int) extends AnyVal
 
 @json
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
-  name: String)
+  name: String,
+  pricePerUser: DollarAmount,
+  cycle: BillingCycle)
 
 case class PaidPlan(
     id: Option[Id[PaidPlan]] = None,
@@ -44,7 +47,9 @@ case class PaidPlan(
 
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
     id = PaidPlan.publicId(id.get),
-    name = name.name
+    name = name.name,
+    pricePerUser = pricePerCyclePerUser,
+    cycle = billingCycle
   )
 }
 
