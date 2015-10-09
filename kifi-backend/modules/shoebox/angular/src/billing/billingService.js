@@ -36,6 +36,11 @@ angular.module('kifi')
           net.getBillingContacts.clearCache();
           return response;
         });
+      },
+      getBillingEvents: function (pubId, limit) {
+        return net
+        .getBillingEvents(pubId, limit)
+        .then(getResponseData);
       }
     };
 

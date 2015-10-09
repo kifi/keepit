@@ -9,16 +9,20 @@
   appearance: none
   font-size: 13px
 
-  &:hover
-    background: #f3f3f3
+  &:not([disabled]):not(.disabled)
+    &:hover
+      background: #f3f3f3
 
-  &:active
-    background: darken(#f3f3f3, 5%)
+    &:active
+      background: darken(#f3f3f3, 5%)
 
+  &.disabled,
   &[disabled]
     color: #fff
     text-shadow: 1px 1px 1px rgba(0, 0, 0, .3)
     background: #ddd linear-gradient(alpha(#fff, 0), alpha(#fff, .5))
+    cursor: no-drop
+    opacity: .5
 
   span
   .symbol-sprite
