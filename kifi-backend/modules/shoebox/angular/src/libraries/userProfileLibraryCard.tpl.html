@@ -10,13 +10,13 @@
     class="kf-upl-card-upsell"
   >
     <span ng-if="getMeOrg().config.name.toLowerCase().indexOf('paid') !== -1">
-      <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
+      <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
         Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
       </span>
-      <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.ADMIN">
+      <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.ADMIN">
         Admins and the library owner can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
       </span>
-      <span ng-if="getMeOrg().membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.MEMBER">
+      <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.MEMBER">
         All team members can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
       </span>
     </span>
