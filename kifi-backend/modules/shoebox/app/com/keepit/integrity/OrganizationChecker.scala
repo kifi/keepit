@@ -92,10 +92,9 @@ class OrganizationChecker @Inject() (
   }
 
   private def ensureStateIntegrity(orgId: Id[Organization]): Future[Unit] = {
-    val org = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
+    val org = db.readOnlyReplica { implicit session => orgRepo.getNoCache(orgId) }
     if (org.isActive) Future.successful(())
     else {
-      log.info(s"[ORG-CHECKER] Ensuring the integrity of dead org $orgId")
       // There is some easy stuff that can be done synchronously
       db.readWrite { implicit session =>
         val zombieMemberships = orgMembershipRepo.getAllByOrgId(org.id.get, excludeState = Some(OrganizationMembershipStates.INACTIVE))
@@ -139,7 +138,7 @@ class OrganizationChecker @Inject() (
     }
   }
   private def ensureOrgSystemLibraryIntegrity(orgId: Id[Organization]): Future[Unit] = db.readWriteAsync { implicit session =>
-    val org = orgRepo.get(orgId)
+    val org = orgRepo.getNoCache(orgId)
     if (org.isActive) {
       val orgGeneralLibrary = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL)
       if (orgGeneralLibrary.isEmpty) {

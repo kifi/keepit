@@ -11,13 +11,15 @@
         <p class="kf-team-settings-desc">{{ field.description }}</p>
       </div>
       <div class="kf-side-pane">
-        <select
-          class="kf-team-settings-select"
-          ng-model="settings[field.fieldKey].setting"
-          ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
-          ng-options="option.value as option.label for option in field.selectOptions"
-          ng-change="updateSettings()"
-        ></select>
+        <div class="custom-select kf-button" ng-class="{ 'disabled' : viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable }">
+          <select
+            class="kf-team-settings-select"
+            ng-model="settings[field.fieldKey].setting"
+            ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
+            ng-options="option.value as option.label for option in field.selectOptions"
+            ng-change="updateSettings()"
+          ></select>
+        </div>
       </div>
     </div>
   </section>
