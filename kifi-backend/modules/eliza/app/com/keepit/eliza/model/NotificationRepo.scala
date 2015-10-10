@@ -29,14 +29,6 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 
   def setAllRead(recipient: Recipient)(implicit session: RWSession): Unit
 
-  def getNotificationsForPage(recipient: Recipient, nUri: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Seq[Notification]
-
-  def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
-
-  def getNotificationsForSentMessages(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
-
-  def getNotificationsForSentMessagesBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
-
   def getNotificationsWithNewEvents(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
 
   def getNotificationsWithNewEventsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
@@ -50,7 +42,6 @@ trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[
 @Singleton
 class NotificationRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val userThreadRepoImpl: UserThreadRepoImpl,
     val clock: Clock) extends NotificationRepo with DbRepo[Notification] with ExternalIdColumnDbFunction[Notification] {
 
   import db.Driver.simple._
@@ -138,38 +129,6 @@ class NotificationRepoImpl @Inject() (
       row <- rows if row.recipient === recipient && row.hasNewEvent
     ) yield row.lastChecked
     q.update(Some(clock.now()))
-  }
-
-  def getNotificationsForPage(recipient: Recipient, nUri: Id[NormalizedURI], howMany: Int)(implicit session: RSession): Seq[Notification] = {
-    val q = for {
-      notif <- rows if notif.recipient === recipient
-      userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
-    } yield notif
-    q.sortBy(_.lastEvent.desc).take(howMany).list
-  }
-
-  def getNotificationsForPageBefore(recipient: Recipient, nUri: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
-    val q = for {
-      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
-      userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.uriId === nUri
-    } yield notif
-    q.sortBy(_.lastEvent.desc).take(howMany).list
-  }
-
-  def getNotificationsForSentMessages(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
-    val q = for {
-      notif <- rows if notif.recipient === recipient
-      userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.started
-    } yield notif
-    q.sortBy(_.lastEvent.desc).take(howMany).list
-  }
-
-  def getNotificationsForSentMessagesBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
-    val q = for {
-      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
-      userThread <- userThreadRepoImpl.rows if userThread.notificationId === notif.id && userThread.started
-    } yield notif
-    q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
   def getNotificationsWithNewEvents(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
