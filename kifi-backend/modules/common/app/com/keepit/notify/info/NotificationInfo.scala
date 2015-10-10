@@ -1,7 +1,6 @@
 package com.keepit.notify.info
 
 import com.keepit.model.{ User, NotificationCategory }
-import com.keepit.notify.model.event.NewMessage
 import com.keepit.social.BasicUser
 import play.api.libs.json.JsObject
 import play.api.libs.json._
@@ -52,8 +51,6 @@ object StandardNotificationInfo {
 }
 
 case class LegacyNotificationInfo(json: JsValue) extends NotificationInfo
-
-case class MessageNotificationInfo(newMessages: Set[NewMessage]) extends NotificationInfo
 
 sealed trait NotificationImage
 

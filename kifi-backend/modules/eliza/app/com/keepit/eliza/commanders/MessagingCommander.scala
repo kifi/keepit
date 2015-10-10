@@ -16,7 +16,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
-import com.keepit.notify.model.event.NewMessage
 import com.keepit.notify.model.Recipient
 import com.keepit.realtime.{ OrganizationPushNotification, UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -560,8 +559,8 @@ class MessagingCommander @Inject() (
         case _ => userThreadRepo.getUnreadUnmutedThreadCount(userId, Some(true))
       }
       userThreadCount + (filterByReplyable match {
-        case Some(true) => notificationRepo.getUnreadNotificationsCountForKind(Recipient(userId), NewMessage.name)
-        case Some(false) => notificationRepo.getUnreadNotificationsCountExceptKind(Recipient(userId), NewMessage.name)
+        case Some(true) => 0 // instead of notificationRepo.getUnreadNotificationsCountForKind(Recipient(userId), NewMessage.name)
+        case Some(false) => notificationRepo.getUnreadNotificationsCount(Recipient(userId)) // instead of: notificationRepo.getUnreadNotificationsCountExceptKind(Recipient(userId), NewMessage.name)
         case None => notificationRepo.getUnreadNotificationsCount(Recipient(userId))
       })
     }

@@ -112,8 +112,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
 
-  def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread]
-
   def getThreadsThatNeedBackfilling()(implicit session: RSession): Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])]
 }
 
@@ -145,8 +143,7 @@ class UserThreadRepoImpl @Inject() (
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
     def started = column[Boolean]("started", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def notificationId = column[Option[Id[Notification]]]("notification_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, replyable, lastActive, started, accessToken, notificationId) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, replyable, lastActive, started, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user, threadId), unique = true)
   }
@@ -520,10 +517,6 @@ class UserThreadRepoImpl @Inject() (
           desc
       """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
     }
-  }
-
-  def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread] = {
-    (for (row <- rows if row.notificationId === id) yield row).firstOption
   }
 
   def getThreadsThatNeedBackfilling()(implicit session: RSession): Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])] = {
