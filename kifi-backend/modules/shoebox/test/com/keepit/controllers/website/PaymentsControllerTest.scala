@@ -45,7 +45,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val request = route.getAccountFeatureSettings(publicId)
           val response = controller.getAccountFeatureSettings(publicId)(request)
           val payload = contentAsJson(response).as[JsObject]
-
           (payload \ "name").as[String] === "test"
           ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "setting").as[String] === "members"
           ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "editable").as[Boolean] === true

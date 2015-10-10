@@ -20,7 +20,8 @@ object PaidPlanFactory {
     Feature.RemoveLibraries -> FeatureSetting.MEMBERS,
     Feature.CreateSlackIntegration -> FeatureSetting.DISABLED,
     Feature.EditOrganization -> FeatureSetting.ADMINS,
-    Feature.ExportKeeps -> FeatureSetting.ADMINS
+    Feature.ExportKeeps -> FeatureSetting.ADMINS,
+    Feature.ViewSettings -> FeatureSetting.MEMBERS
   ))
 
   def paidPlan(): PartialPaidPlan = {
