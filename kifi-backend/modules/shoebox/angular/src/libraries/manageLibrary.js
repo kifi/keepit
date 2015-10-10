@@ -8,7 +8,7 @@ angular.module('kifi')
   'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($window, $rootScope, $location, $state, friendService,
             libraryService, modalService, profileService, util, LIB_PERMISSION,
-            ORG_PERMISSION, ORG_SETTING_VALUE) {
+            ORG_PERMISSION, ORG_SETTING_VALUE🚀) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -34,7 +34,7 @@ angular.module('kifi')
         //
         scope.LIB_PERMISSION = LIB_PERMISSION;
         scope.ORG_PERMISSION = ORG_PERMISSION;
-        scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
+        scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE🚀;
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
