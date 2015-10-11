@@ -31,6 +31,7 @@ class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
   notificationDeliveryCommander: NotificationDeliveryCommander,
+  notificationCommander: NotificationCommander,
   notificationMessagingCommander: NotificationMessagingCommander,
   legacyNotificationCheck: LegacyNotificationCheck,
   val userActionsHelper: UserActionsHelper,
@@ -101,8 +102,8 @@ class SharedWsMessagingController @Inject() (
         }
     },
     "get_unread_notifications_count" -> { _ =>
-      val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
-      val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
+      val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
+      val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
       socket.channel.push(Json.arr("unread_notifications_count",
         numUnreadUnmutedMessages + numUnreadUnmutedNotifications,
         numUnreadUnmutedMessages,
@@ -128,8 +129,10 @@ class SharedWsMessagingController @Inject() (
           threadJsons <- notificationDeliveryCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, includeUriSummary)
           notifJsons <- notificationMessagingCommander.getLatestNotifications(socket.userId, howMany.toInt, includeUriSummary)
         } yield {
-          val (oldNumUnread, oldNumUnreadUnmuted) = messagingCommander.getUnreadThreadCounts(socket.userId)
-          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons.results), oldNumUnread, oldNumUnreadUnmuted)
+          val (unreadThreadCount, unreadUnmutedThreadCount, unreadNotificationCount) = notificationDeliveryCommander.getUnreadCounts(socket.userId)
+          val numUnread = unreadThreadCount + unreadNotificationCount
+          val numUnreadUnmuted = unreadUnmutedThreadCount + unreadNotificationCount
+          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons.results), numUnread, numUnreadUnmuted)
         }
 
         fut.foreach {
@@ -253,8 +256,8 @@ class SharedWsMessagingController @Inject() (
             val recipient = Recipient(socket.userId)
             notificationMessagingCommander.setNotificationsUnreadBefore(notif, recipient, item)
         } {
-          val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(true))
-          val numUnreadUnmutedNotifications = messagingCommander.getUnreadUnmutedThreadCount(socket.userId, Some(false))
+          val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
+          val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
           val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
           websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
         }

@@ -187,4 +187,8 @@ class NotificationCommander @Inject() (
     }
   }
 
+  def getUnreadNotificationsCount(recipient: Recipient): Int = db.readOnlyMaster { implicit session =>
+    notificationRepo.getUnreadNotificationsCount(recipient)
+  }
+
 }

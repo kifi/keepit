@@ -24,7 +24,7 @@ class WebsiteMessagingController @Inject() (
         notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = false)
     }
     noticesFuture.map { notices =>
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      val numUnreadUnmuted = notificationCommander.getTotalUnreadUnmutedCount(request.userId)
       Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
