@@ -53,6 +53,9 @@ var skippedEvents = ['user_old_slider_sliderShown', 'user_expanded_keeper', 'use
     // skip {user,visitor}_viewed_page events where the "type" property starts with a "/", with a few exceptions
     return _.endsWith(mpEvent.event, '_viewed_page') && typeProperty.charAt(0) === '/' &&
       typeProperty !== '/settings' && typeProperty !== '/tags/manage' && !_.startsWith(typeProperty, '/?m=0');
+  },
+  function(mpEvent) {
+    return mpEvent.properties.action === 'importedBookmarks' && mpEvent.event === 'user_joined';
   }
 ];
 
