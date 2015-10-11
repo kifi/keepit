@@ -17,16 +17,17 @@
       $analyticsProvider.settings.pageTracking.autoTrackVirtualPages = false;
     }
   ])
-  .run(['$window', '$log', 'profileService', 'net',
-    function (_$window_, _$log_, _profileService_, _net_) {
+  .run(['$window', '$log', 'profileService', 'net', '$q',
+    function (_$window_, _$log_, _profileService_, _net_, _$q_) {
       $window = _$window_;
       $log = _$log_;
       profileService = _profileService_;
       net = _net_;
+      $q = _$q_;
     }
   ]);
 
-  var $window, $log, profileService, net;  // injected before any code below runs
+  var $window, $log, profileService, net, $q;  // injected before any code below runs
   var identifiedViewEventQueue = [];
   var userId;
 
@@ -80,8 +81,11 @@
     attributes = attributes || {};
     var origin = attributes.origin || $window.location.origin;
 
-    pageTrackForVisitor(path, origin, attributes);
-    pageTrackForUser(path, origin, attributes);
+    getUser().then(function() {
+      pageTrackForUser(path, origin, attributes);
+    }, function() {
+      pageTrackForVisitor(path, origin, attributes);
+    });
   }
 
   function trackEvent(action, props) {
@@ -103,17 +107,17 @@
     }
   }
 
-  function setUser(user) {
+  function setUserId(userId) {
     if ($window.mixpanel) {
-      $window.mixpanel.identify(user);
+      $window.mixpanel.identify(userId);
     }
 
     // sanity check shouldn't be necessary, but it's to make sure user.id is
     // valid and doesn't accidentally get set to a value that's not unique
     // across users
-    if ($window.amplitude && user && user.id && uuidRegex.test(user.id)) {
+    if ($window.amplitude && userId && uuidRegex.test(userId)) {
       // does not call amplitude.setUserId because this id is internal only and will not be known here
-      $window.amplitude.setDeviceId(user.id);
+      $window.amplitude.setDeviceId(userId);
     }
   }
 
@@ -139,19 +143,32 @@
 
   function getDistinctId() {
     if ($window.mixpanel && $window.mixpanel.get_distinct_id) {
-      return $window.mixpanel.get_distinct_id();
+      var distinct_id = $window.mixpanel.get_distinct_id();
+      // backwards compatible where this might be a full user object
+      return distinct_id.id || distinct_id;
     }
 
     return null;
   }
 
+  function getUser() {
+    return $q(function(resolve, reject) {
+      if (profileService.me && profileService.me.id) {
+        resolve(profileService.me);
+      } else {
+        profileService.getMe().then(function(maybeMe) {
+          maybeMe ? resolve(maybeMe) : reject();
+        }, reject);
+      }
+    });
+  }
+
   function pageTrackForUser(path, origin, attributes) {
     if (userId) {
-
       var oldId = getDistinctId();
       try {
         origin = origin || $window.location.origin;
-        setUser(userId);
+        setUserId(userId);
         $log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
 
         attributes = _.extend({
@@ -164,7 +181,7 @@
 
         trackEventThroughProxy('user_viewed_page', attributes);
       } finally {
-        if (oldId) { setUser(oldId); }
+        if (oldId) { setUserId(oldId); }
       }
     } else {
       identifiedViewEventQueue.push(path);
@@ -176,7 +193,7 @@
           return;
         }
 
-        userId = me;
+        userId = me.id;
         var toSend = identifiedViewEventQueue.slice();
         identifiedViewEventQueue.length = 0;
         toSend.forEach(function (path) {
@@ -184,11 +201,10 @@
         });
       };
 
-      if (profileService.me && profileService.me.id) {
-        trackMe();
-      } else if (profileService.userLoggedIn()) {
-        profileService.getMe().then(trackMe);
-      }
+      getUser().then(trackMe)['catch'](function(err) {
+        // shouldn't happen because pageTrackForUser shouldn't be called if getUser() does not resolve a user
+        $log.error('Unexpected rejected getUser()', err);
+      });
     }
   }
 
