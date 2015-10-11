@@ -24,7 +24,7 @@ import com.keepit.common.db.slick._
 
 class ElizaController @Inject() (
     notificationRouter: WebSocketRouter,
-    messagingCommander: MessagingCommander,
+    notificationDeliveryCommander: NotificationDeliveryCommander,
     deviceRepo: DeviceRepo,
     db: Database,
     elizaStatsCommander: ElizaStatsCommander,
@@ -51,7 +51,7 @@ class ElizaController @Inject() (
     val libraryId = (req \ "libraryId").as[Id[Library]]
     val libraryUrl = (req \ "libraryUrl").as[String]
     val force = (req \ "force").asOpt[Boolean] //backward compatibility. remove option when done deploing shoebox
-    messagingCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
+    notificationDeliveryCommander.sendLibraryPushNotification(userId, message, libraryId, libraryUrl, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }
@@ -65,7 +65,7 @@ class ElizaController @Inject() (
     val category = UserPushNotificationCategory((req \ "category").as[String])
     val username = (req \ "username").as[Username]
     val pictureUrl = (req \ "pictureUrl").as[String]
-    messagingCommander.sendUserPushNotification(userId, message, recipientExtId, username: Username, pictureUrl, pushNotificationExperiment, category).map { deviceCount =>
+    notificationDeliveryCommander.sendUserPushNotification(userId, message, recipientExtId, username: Username, pictureUrl, pushNotificationExperiment, category).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }
@@ -77,14 +77,14 @@ class ElizaController @Inject() (
     val category = SimplePushNotificationCategory((req \ "category").as[String])
     val pushNotificationExperiment = (req \ "pushNotificationExperiment").as[PushNotificationExperiment]
     val force = (req \ "force").asOpt[Boolean] //backward compatibility. remove option when done deploying shoebox
-    messagingCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
+    notificationDeliveryCommander.sendGeneralPushNotification(userId, message, pushNotificationExperiment, category, force.getOrElse(false)).map { deviceCount =>
       Ok(JsNumber(deviceCount))
     }
   }
 
   def sendOrgPushNotification() = Action.async(parse.tolerantJson) { request =>
     val pushNotifRequest = request.body.as[OrgPushNotificationRequest]
-    messagingCommander.sendOrgPushNotification(pushNotifRequest).map {
+    notificationDeliveryCommander.sendOrgPushNotification(pushNotifRequest).map {
       deviceCount => Ok(JsNumber(deviceCount))
     }
   }

@@ -11,6 +11,7 @@ import com.keepit.eliza.commanders._
 import com.keepit.eliza.model.{ Message, MessageSource, MessageThread }
 import com.keepit.heimdal._
 import com.keepit.model.{ Organization, User }
+import com.keepit.notify.model.Recipient
 import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import com.kifi.macros.json
@@ -23,7 +24,8 @@ import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
 class MobileMessagingController @Inject() (
     messagingCommander: MessagingCommander,
     basicMessageCommander: MessageFetchingCommander,
-    notificationCommander: NotificationDeliveryCommander,
+    notificationDeliveryCommander: NotificationDeliveryCommander,
+    notificationCommander: NotificationCommander,
     val userActionsHelper: UserActionsHelper,
     notificationMessagingCommander: NotificationMessagingCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -33,9 +35,9 @@ class MobileMessagingController @Inject() (
   def getNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val threadNoticesFuture = before match {
       case Some(before) =>
-        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
+        notificationDeliveryCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
-        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
+        notificationDeliveryCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
     }
     val noticesFuture = before match {
       case Some(before) =>
@@ -47,7 +49,7 @@ class MobileMessagingController @Inject() (
       threadNotices <- threadNoticesFuture
       notices <- noticesFuture
     } yield {
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      val numUnreadUnmuted = notificationDeliveryCommander.getTotalUnreadUnmutedCount(request.userId)
       Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
     }
   }
@@ -62,7 +64,7 @@ class MobileMessagingController @Inject() (
     for {
       notices <- noticesFuture
     } yield {
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(false))
+      val numUnreadUnmuted = notificationCommander.getUnreadNotificationsCount(Recipient(request.userId))
       Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(Seq(), notices, Some(howMany)), numUnreadUnmuted))
     }
   }
@@ -70,12 +72,12 @@ class MobileMessagingController @Inject() (
   def getMessageNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val noticesFuture = before match {
       case Some(before) =>
-        notificationCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true, filterByReplyable = Some(true))
+        notificationDeliveryCommander.getSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
-        notificationCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true, filterByReplyable = Some(true))
+        notificationDeliveryCommander.getLatestSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
     }
     noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId, filterByReplyable = Some(true))
+      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
       Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
@@ -83,9 +85,9 @@ class MobileMessagingController @Inject() (
   def getUnreadNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val threadNoticesFuture = before match {
       case Some(before) =>
-        notificationCommander.getUnreadSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
+        notificationDeliveryCommander.getUnreadSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
-        notificationCommander.getLatestUnreadSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true).map(_._1)
+        notificationDeliveryCommander.getLatestUnreadSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true).map(_._1)
     }
     val noticesFuture = before match {
       case Some(before) =>
@@ -97,7 +99,7 @@ class MobileMessagingController @Inject() (
       threadNotices <- threadNoticesFuture
       notices <- noticesFuture
     } yield {
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      val numUnreadUnmuted = notificationDeliveryCommander.getTotalUnreadUnmutedCount(request.userId)
       Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
     }
   }
@@ -105,12 +107,12 @@ class MobileMessagingController @Inject() (
   def getSentNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val noticesFuture = before match {
       case Some(before) =>
-        notificationCommander.getSentSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
+        notificationDeliveryCommander.getSentSendableNotificationsBefore(request.userId, parseStandardTime(before), howMany.toInt, includeUriSummary = true)
       case None =>
-        notificationCommander.getLatestSentSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
+        notificationDeliveryCommander.getLatestSentSendableNotifications(request.userId, howMany.toInt, includeUriSummary = true)
     }
     noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
-      val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+      val numUnreadUnmuted = notificationDeliveryCommander.getTotalUnreadUnmutedCount(request.userId)
       Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
     }
   }
@@ -323,13 +325,13 @@ class MobileMessagingController @Inject() (
   }
 
   def getUnreadNotificationsCount = UserAction { request =>
-    val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
+    val numUnreadUnmuted = notificationDeliveryCommander.getTotalUnreadUnmutedCount(request.userId)
     Ok(numUnreadUnmuted.toString)
   }
 
   def getUnreadCounts = UserAction { request =>
-    val numUnreadNotifs = messagingCommander.getUnreadUnmutedThreadCount(request.userId, Some(false))
-    val numUnreadMessages = messagingCommander.getUnreadUnmutedThreadCount(request.userId, Some(true))
+    val numUnreadNotifs = notificationCommander.getUnreadNotificationsCount(Recipient(request.userId))
+    val numUnreadMessages = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
     Ok(Json.obj(
       "messages" -> numUnreadMessages,
       "notifications" -> numUnreadNotifs
@@ -339,13 +341,13 @@ class MobileMessagingController @Inject() (
   def markUnreadNotifications(kind: Option[String] = None) = UserAction { request =>
     kind match {
       case Some("system") =>
-        notificationCommander.setSystemNotificationsRead(request.userId) // mark system notifs as read
+        notificationDeliveryCommander.setSystemNotificationsRead(request.userId) // mark system notifs as read
       case Some("message") =>
-        notificationCommander.setMessageNotificationsRead(request.userId) // mark message notifs as read
+        notificationDeliveryCommander.setMessageNotificationsRead(request.userId) // mark message notifs as read
       case _ =>
-        notificationCommander.setAllNotificationsRead(request.userId) // mark all as read
+        notificationDeliveryCommander.setAllNotificationsRead(request.userId) // mark all as read
     }
-    notificationCommander.notifyUnreadCount(request.userId)
+    notificationDeliveryCommander.notifyUnreadCount(request.userId)
     NoContent
   }
 }

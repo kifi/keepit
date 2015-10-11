@@ -5,7 +5,6 @@ import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.net.URI
-import com.keepit.eliza.{ OrgPushNotificationRequest, SimplePushNotificationCategory, LibraryPushNotificationCategory, UserPushNotificationCategory, PushNotificationExperiment }
 import com.keepit.eliza.model._
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.db.{ Id, ExternalId }
@@ -16,9 +15,6 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
-import com.keepit.notify.model.event.NewMessage
-import com.keepit.notify.model.Recipient
-import com.keepit.realtime.{ OrganizationPushNotification, UserPushNotification, LibraryUpdatePushNotification, SimplePushNotification }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
 
@@ -63,33 +59,11 @@ class MessagingCommander @Inject() (
     messagingAnalytics: MessagingAnalytics,
     shoebox: ShoeboxServiceClient,
     airbrake: AirbrakeNotifier,
-    notificationRepo: NotificationRepo,
     basicMessageCommander: MessageFetchingCommander,
-    notificationCommander: NotificationCommander,
     notificationDeliveryCommander: NotificationDeliveryCommander,
     messageSearchHistoryRepo: MessageSearchHistoryRepo,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
-
-  def sendUserPushNotification(userId: Id[User], message: String, recipientUserId: ExternalId[User], username: Username, pictureUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: UserPushNotificationCategory): Future[Int] = {
-    val notification = UserPushNotification(message = Some(message), userExtId = recipientUserId, username = username, pictureUrl = pictureUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
-    notificationDeliveryCommander.sendPushNotification(userId, notification)
-  }
-
-  def sendLibraryPushNotification(userId: Id[User], message: String, libraryId: Id[Library], libraryUrl: String, pushNotificationExperiment: PushNotificationExperiment, category: LibraryPushNotificationCategory, force: Boolean): Future[Int] = {
-    val notification = LibraryUpdatePushNotification(message = Some(message), libraryId = libraryId, libraryUrl = libraryUrl, unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
-    notificationDeliveryCommander.sendPushNotification(userId, notification, force)
-  }
-
-  def sendGeneralPushNotification(userId: Id[User], message: String, pushNotificationExperiment: PushNotificationExperiment, category: SimplePushNotificationCategory, force: Boolean): Future[Int] = {
-    val notification = SimplePushNotification(message = Some(message), unvisitedCount = getUnreadUnmutedThreadCount(userId), category = category, experiment = pushNotificationExperiment)
-    notificationDeliveryCommander.sendPushNotification(userId, notification, force)
-  }
-
-  def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int] = {
-    val notification = OrganizationPushNotification(message = Some(request.message), unvisitedCount = getUnreadUnmutedThreadCount(request.userId), category = request.category, experiment = request.pushNotificationExperiment)
-    notificationDeliveryCommander.sendPushNotification(request.userId, notification, request.force)
-  }
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Future[Seq[ElizaThreadInfo]] = {
     //get all involved users
@@ -522,9 +496,7 @@ class MessagingCommander @Inject() (
     }
     messagingAnalytics.clearedNotification(userId, message.externalId, thread.externalId, context)
 
-    val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
-    val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
-    notificationDeliveryCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
+    notificationDeliveryCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt)
   }
 
   def setUnread(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
@@ -536,9 +508,7 @@ class MessagingCommander @Inject() (
       userThreadRepo.markUnread(userId, thread.id.get)
     }
     if (changed) {
-      val unreadMessagesCount = getUnreadUnmutedThreadCount(userId, Some(true))
-      val unreadNotificationsCount = getUnreadUnmutedThreadCount(userId, Some(false))
-      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt, unreadMessagesCount, unreadNotificationsCount)
+      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt)
     }
   }
 
@@ -553,29 +523,9 @@ class MessagingCommander @Inject() (
     setLastSeen(userId, message.thread, Some(message.createdAt))
   }
 
-  def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None): Int = {
+  def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
     db.readOnlyReplica { implicit session =>
-      val userThreadCount = filterByReplyable match {
-        case Some(false) => 0
-        case _ => userThreadRepo.getUnreadUnmutedThreadCount(userId, Some(true))
-      }
-      userThreadCount + (filterByReplyable match {
-        case Some(true) => notificationRepo.getUnreadNotificationsCountForKind(Recipient(userId), NewMessage.name)
-        case Some(false) => notificationRepo.getUnreadNotificationsCountExceptKind(Recipient(userId), NewMessage.name)
-        case None => notificationRepo.getUnreadNotificationsCount(Recipient(userId))
-      })
-    }
-  }
-
-  def getUnreadThreadCounts(userId: Id[User]): (Int, Int) = {
-    db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadThreadCounts(userId) match {
-        case (numUnread, numUnmuted) =>
-          (
-            numUnread + notificationRepo.getNotificationsWithNewEventsCount(Recipient(userId)),
-            numUnmuted + notificationRepo.getUnreadNotificationsCount(Recipient(userId))
-          )
-      }
+      userThreadRepo.getUnreadUnmutedThreadCount(userId)
     }
   }
 
