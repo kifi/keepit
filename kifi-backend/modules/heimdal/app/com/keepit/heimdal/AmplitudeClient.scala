@@ -28,6 +28,9 @@ object AmplitudeClient {
     (eb: AmplitudeEventBuilder[_]) => eb.eventType.startsWith("anonymous_"),
     (eb: AmplitudeEventBuilder[_]) => eb.heimdalContext.get[String]("userAgent").exists(_.startsWith("Pingdom")),
     (eb: AmplitudeEventBuilder[_]) => {
+      eb.origEventName == "user_joined" && eb.heimdalContext.get[String]("action").contains("importedBookmarks")
+    },
+    (eb: AmplitudeEventBuilder[_]) => {
       // drop all _viewed_page events where "type" starts with "/", with a few exceptions
       eb.eventType.endsWith("_viewed_page") && eb.heimdalContext.get[String]("type").exists { v =>
         v.head == '/' && !Set("/settings", "/tags/manage").contains(v) && !v.startsWith("/?m=")
