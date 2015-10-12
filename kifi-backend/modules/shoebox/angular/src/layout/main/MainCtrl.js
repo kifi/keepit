@@ -37,20 +37,37 @@ angular.module('kifi')
     function initBookmarkImport(opts) {
       $scope.importLibrary = opts && opts.library || libraryService.getSysMainInfo();
 
+      if (!$scope.importLibrary) {
+        libraryService
+        .fetchLibraryInfos()
+        .then(function () {
+          $scope.importLibrary = libraryService.getSysMainInfo();
+        });
+      }
+
       modalService.open({
         template: 'common/modal/importBookmarksModal.tpl.html',
         scope: $scope
       });
 
       importBookmarksMessageEvent = opts && opts.msgEvent;
+
     }
 
     function initBookmarkFileUpload(opts) {
+      $scope.importLibrary = opts && opts.library || libraryService.getSysMainInfo();
+
+      if (!$scope.importLibrary) {
+        libraryService
+        .fetchLibraryInfos()
+        .then(function () {
+          $scope.importLibrary = libraryService.getSysMainInfo();
+        });
+      }
+
       // Make sure file input is empty.
       var fileInput = $rootElement.find('.bookmark-file-upload');
       fileInput.replaceWith(fileInput = fileInput.clone(true));
-
-      $scope.importLibrary = opts && opts.library || libraryService.getSysMainInfo();
 
       modalService.open({
         template: 'common/modal/importBookmarkFileModal.tpl.html',

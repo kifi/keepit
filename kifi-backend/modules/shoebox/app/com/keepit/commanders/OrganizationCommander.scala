@@ -40,7 +40,7 @@ trait OrganizationCommander {
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
-  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings): Either[OrganizationFail, OrganizationSettingsResponse]
+  def setAccountFeatureSettings(request: OrganizationSettingsRequest): Either[OrganizationFail, OrganizationSettingsResponse]
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse]
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse]
 
@@ -331,14 +331,13 @@ class OrganizationCommanderImpl @Inject() (
       }
     }
   }
-  def setAccountFeatureSettings(orgId: Id[Organization], userId: Id[User], settings: OrganizationSettings): Either[OrganizationFail, OrganizationSettingsResponse] = {
-    // TODO(ryan): change this so that it takes an OrganizationSettingsRequest
-    val validation = db.readOnlyReplica { implicit session => getValidationError(OrganizationSettingsRequest(orgId, userId, settings)) }
-    validation match {
-      case Some(fail) => Left(fail)
-      case None => db.readWrite { implicit session =>
-        val response = unsafeSetAccountFeatureSettings(orgId, settings)
-        Right(response)
+  def setAccountFeatureSettings(req: OrganizationSettingsRequest): Either[OrganizationFail, OrganizationSettingsResponse] = {
+    db.readWrite { implicit session =>
+      getValidationError(req) match {
+        case Some(fail) => Left(fail)
+        case None =>
+          val response = unsafeSetAccountFeatureSettings(req.orgId, req.settings)
+          Right(response)
       }
     }
   }
