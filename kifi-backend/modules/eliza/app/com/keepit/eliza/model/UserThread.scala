@@ -31,7 +31,6 @@ case class UserThread(
   notificationUpdatedAt: DateTime = currentDateTime,
   notificationLastSeen: Option[DateTime] = None,
   notificationEmailed: Boolean = false,
-  replyable: Boolean = true,
   lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
   started: Boolean = false, //Whether or not this thread was started by this user
   accessToken: ThreadAccessToken = ThreadAccessToken())
@@ -42,7 +41,7 @@ case class UserThread(
 
   lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updateAt, user = $user, thread = $threadId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
-    s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed, replyable = $replyable]"
+    s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed]"
 
   def toRawNotification: RawNotification = (lastNotification, unread, uriId)
 }
