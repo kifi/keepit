@@ -23,9 +23,6 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class NotificationCommander @Inject() (
     db: Database,
-    userThreadRepo: UserThreadRepo,
-    messageRepo: MessageRepo,
-    messageThreadRepo: MessageThreadRepo,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     wsNotificationDelivery: WsNotificationDelivery,

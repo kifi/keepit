@@ -49,24 +49,6 @@ class NotificationMessagingCommander @Inject() (
     howMany.fold(full)(full.take)
   }
 
-  def sendUnreadNotifications(recipient: Recipient): Unit = {
-    val (unreadMessages, unreadNotifications) = getUnreadNotifications(recipient)
-    recipient match {
-      case UserRecipient(user, _) =>
-        webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
-      case _ =>
-    }
-  }
-
-  def getUnreadNotifications(recipient: Recipient): (Int, Int) = recipient match {
-    case EmailRecipient(_) => (0, 0)
-    case UserRecipient(userId, _) =>
-      db.readOnlyMaster { implicit session =>
-        (userThreadRepo.getUnreadUnmutedThreadCount(userId),
-          notificationRepo.getUnreadNotificationsCount(UserRecipient(userId)))
-      }
-  }
-
   def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
     recipient match {
       case UserRecipient(user, _) =>
@@ -199,5 +181,4 @@ object NotificationMessagingCommander {
     override val numUnread: Int) extends NotificationResults(results)
 
   case class NotificationResultsForPage(pageUri: String, results: NotificationResults)
-
 }
