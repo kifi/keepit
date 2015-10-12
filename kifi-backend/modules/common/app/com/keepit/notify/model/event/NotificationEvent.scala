@@ -62,7 +62,7 @@ object NewConnectionInvite extends GroupingNotificationKind[NewConnectionInvite,
     js =>
       (js \ "inviteeId").validate[Id[User]]
         .orElse((js \ "recipient").validate[Recipient].collect(ValidationError("expected recipient to be a user")) {
-          case UserRecipient(id, _) => id
+          case UserRecipient(id) => id
         }),
     id => Json.obj("inviteeId" -> id)
   )
