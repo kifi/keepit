@@ -62,7 +62,7 @@ object NewConnectionInvite extends GroupingNotificationKind[NewConnectionInvite,
     js =>
       (js \ "inviteeId").validate[Id[User]]
         .orElse((js \ "recipient").validate[Recipient].collect(ValidationError("expected recipient to be a user")) {
-          case UserRecipient(id, _) => id
+          case UserRecipient(id) => id
         }),
     id => Json.obj("inviteeId" -> id)
   )
@@ -254,40 +254,6 @@ object LibraryNewFollowInvite extends NonGroupingNotificationKind[LibraryNewFoll
 
 }
 
-
-case class NewMessage(
-  recipient: Recipient,
-  time: DateTime,
-  from: Recipient,
-  messageThreadId: Long, // need to use long here because MessageThread is only defined in Eliza
-  messageId: Long // same here
-) extends NotificationEvent {
-
-  type N = NewMessage
-  val kind = NewMessage
-
-}
-
-object NewMessage extends GroupingNotificationKind[NewMessage, Long] {
-
-  override val name: String = "new_message"
-
-  override implicit val format = (
-    (__ \ "recipient").format[Recipient] and
-    (__ \ "time").format[DateTime] and
-    (__ \ "from").format[Recipient] and
-    (__ \ "messageThreadId").format[Long] and
-    (__ \ "messageId").format[Long]
-  )(NewMessage.apply, unlift(NewMessage.unapply))
-
-  override def shouldGroupWith(newEvent: NewMessage, existingEvents: Set[NewMessage]): Boolean = {
-    val existing = existingEvents.head
-    existing.messageThreadId == newEvent.messageThreadId
-  }
-
-  override def getIdentifier(that: NewMessage): Long = that.messageId
-
-}
 
 case class OrgNewInvite(
   recipient: Recipient,

@@ -30,6 +30,7 @@ trait StripeClient {
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken]
 
   def getLastFourDigitsOfCard(token: StripeToken): Future[String]
+  def getCardInfo(token: StripeToken): Future[CardInfo]
 }
 
 class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends StripeClient with Logging {
@@ -91,6 +92,11 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
 
   def getLastFourDigitsOfCard(token: StripeToken): Future[String] = lock.withLock {
     Customer.retrieve(token.token).getSources().getData().get(0).asInstanceOf[Card].getLast4
+  }
+
+  def getCardInfo(token: StripeToken): Future[CardInfo] = lock.withLock {
+    val card = Customer.retrieve(token.token).getSources().getData().get(0).asInstanceOf[Card]
+    CardInfo(card.getLast4, card.getBrand)
   }
 
 }

@@ -21,7 +21,7 @@ class NotificationController @Inject() (
     val event = request.body.as[NotificationEvent]
     val notif = notificationCommander.processNewEvent(event)
     event.recipient match {
-      case UserRecipient(id, _) =>
+      case UserRecipient(id) =>
         notif foreach { notifWithItems =>
           messagingAnalytics.sentGlobalNotification(
             Set(id),

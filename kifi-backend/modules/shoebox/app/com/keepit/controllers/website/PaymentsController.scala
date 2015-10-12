@@ -2,14 +2,11 @@ package com.keepit.controllers.website
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, UserActionsHelper }
-import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.model._
 import com.keepit.commanders.{ PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
-
-import com.kifi.macros.json
 
 import play.api.libs.json.{ Json, JsSuccess, JsError }
 
@@ -36,19 +33,23 @@ class PaymentsController @Inject() (
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
-    import com.keepit.common.core._
-    val lastFourFut = planCommander.getDefaultPaymentMethod(request.orgId).map { method =>
-      stripeClient.getLastFourDigitsOfCard(method.stripeToken).map(Some(_))
+    val card = planCommander.getDefaultPaymentMethod(request.orgId).map { method =>
+      stripeClient.getCardInfo(method.stripeToken).map(Some(_))
     }.getOrElse(Future.successful(None))
 
-    lastFourFut.map { lastFourOpt =>
-      Ok(Json.obj(
-        "credit" -> planCommander.getCurrentCredit(request.orgId).cents,
-        "users" -> orgMembershipCommander.getMemberIds(request.orgId).size,
-        "plan" -> planCommander.currentPlan(request.orgId).asInfo,
-        "card" -> lastFourOpt
-      ).nonNullFields)
+    card.map { card =>
+      Ok(Json.toJson(AccountStateResponse(
+        credit = planCommander.getCurrentCredit(request.orgId),
+        users = orgMembershipCommander.getMemberIds(request.orgId).size,
+        plan = planCommander.currentPlan(request.orgId).asInfo,
+        card = card
+      )))
     }
+  }
+
+  def getActivePlans() = UserAction { implicit request =>
+    val plans = planCommander.getAvailablePlans(request.adminUserId)
+    Ok(Json.toJson(plans.map(_.asInfo)))
   }
 
   def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>

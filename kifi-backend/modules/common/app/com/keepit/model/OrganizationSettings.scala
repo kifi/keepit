@@ -78,7 +78,7 @@ object FeatureSetting {
 }
 
 object Feature {
-  val all: Set[Feature] = Set(
+  val ALL: Set[Feature] = Set(
     PublishLibraries,
     InviteMembers,
     GroupMessaging,
@@ -91,7 +91,7 @@ object Feature {
     ExportKeeps,
     ViewSettings
   )
-  def apply(str: String): Feature = all.find(_.value == str).get
+  def apply(str: String): Feature = ALL.find(_.value == str).get
 
   implicit val format: Format[Feature] = Format(
     __.read[String].map(Feature(_)),

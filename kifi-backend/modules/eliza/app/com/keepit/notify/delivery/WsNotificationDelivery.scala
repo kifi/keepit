@@ -27,7 +27,7 @@ class WsNotificationDelivery @Inject() (
     notificationInfoGenerator.generateInfo(Seq(notif)).flatMap { infos =>
       notificationJsonFormat.get.extendedJson(infos.head).map { notifJson =>
         recipient match {
-          case UserRecipient(user, _) => notificationRouter.sendToUser(user, Json.arr("notification", notifJson.json))
+          case UserRecipient(user) => notificationRouter.sendToUser(user, Json.arr("notification", notifJson.json))
           case _ =>
         }
       }

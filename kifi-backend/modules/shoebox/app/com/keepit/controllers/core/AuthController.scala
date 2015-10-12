@@ -113,6 +113,7 @@ class AuthController @Inject() (
     clock: Clock,
     authHelper: AuthHelper,
     authCommander: AuthCommander,
+    userIpAddressCommander: UserIpAddressCommander,
     val userActionsHelper: UserActionsHelper,
     userRepo: UserRepo,
     userValueRepo: UserValueRepo,
@@ -300,6 +301,7 @@ class AuthController @Inject() (
   def afterLogin() = MaybeUserAction { implicit req =>
     req match {
       case userRequest: UserRequest[_] =>
+        userIpAddressCommander.logUserByRequest(userRequest)
         if (userRequest.user.state == UserStates.PENDING) {
           Redirect("/")
         } else if (userRequest.user.state == UserStates.INCOMPLETE_SIGNUP) {

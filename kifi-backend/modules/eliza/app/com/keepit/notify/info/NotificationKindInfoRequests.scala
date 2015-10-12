@@ -48,7 +48,6 @@ class NotificationKindInfoRequests @Inject() () {
       case NewSocialConnection => genericInfoFn(infoForNewSocialConection)
       case SocialContactJoined => genericInfoFn(infoForSocialContactJoined)
       case LegacyNotification => genericInfoFn(infoForLegacyNotification)
-      case NewMessage => genericInfoFn(infoForNewMessage)
     }
     infoFn(items.map(_.event))
   }
@@ -420,13 +419,4 @@ class NotificationKindInfoRequests @Inject() () {
       )
     }
   }
-
-  def infoForNewMessage(events: Set[NewMessage]): RequestingNotificationInfos[MessageNotificationInfo] = {
-    RequestingNotificationInfos(Requests()) { batched =>
-      MessageNotificationInfo(
-        events
-      )
-    }
-  }
-
 }

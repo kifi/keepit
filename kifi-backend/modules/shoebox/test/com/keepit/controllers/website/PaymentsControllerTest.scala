@@ -3,13 +3,13 @@ package com.keepit.controllers.website
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.payments.FakeStripeClientModule
+import com.keepit.payments.{ DollarAmount, PlanManagementCommander, PaidPlan, FakeStripeClientModule }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.JsObject
@@ -31,15 +31,43 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   )
 
   "PaymentsController" should {
+
+    def setup()(implicit injector: Injector) = {
+      db.readWrite { implicit session =>
+        val owner = UserFactory.user().saved
+        val org = OrganizationFactory.organization().withOwner(owner).saved
+        (org, owner)
+      }
+    }
+
+    "get an account's state" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val planCommander = inject[PlanManagementCommander]
+        val (org, owner) = setup()
+
+        val publicId = Organization.publicId(org.id.get)
+        inject[FakeUserActionsHelper].setUser(owner)
+        val request = route.getAccountState(publicId)
+        val response = controller.getAccountState(publicId)(request)
+        val payload = contentAsJson(response).as[JsObject]
+
+        (payload \ "users").as[Int] must beEqualTo(1)
+        (payload \ "credit").as[DollarAmount] must beEqualTo(DollarAmount(-4677))
+
+        val planJson = (payload \ "plan").as[JsObject]
+        val actualPlan = planCommander.currentPlan(org.id.get)
+        (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
+        (planJson \ "name").as[String] must beEqualTo("Free")
+        (planJson \ "pricePerUser").as[DollarAmount] must beEqualTo(DollarAmount(10000))
+        (planJson \ "cycle").as[Int] must beEqualTo(1)
+        (planJson \ "features").as[Set[Feature]] must beEqualTo(Feature.ALL)
+      }
+    }
+
     "get an organization's configuration" in {
       "use the correct format" in {
         withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner) = db.readWrite { implicit session =>
-            val owner = UserFactory.user().saved
-            val org = OrganizationFactory.organization().withOwner(owner).saved
-            (org, owner)
-          }
-
+          val (org, owner) = setup()
           val publicId = Organization.publicId(org.id.get)
           inject[FakeUserActionsHelper].setUser(owner)
           val request = route.getAccountFeatureSettings(publicId)

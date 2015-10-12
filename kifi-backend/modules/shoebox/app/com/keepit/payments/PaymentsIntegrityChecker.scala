@@ -98,7 +98,6 @@ class PaymentsIntegrityChecker @Inject() (
         val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
         val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
 
-        //TODO: one things are stable and everything is backfilled, the three code blocks below should airbake instead of logging
         perceivedActiveButActuallyInactive.foreach { userId =>
           log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
           planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
@@ -129,7 +128,7 @@ class PaymentsIntegrityChecker @Inject() (
       processMembershipsForAccount(orgId) match {
         case Success(Some(0)) => log.info(s"[AEIC] Successfully processed org $orgId. No discrepancies found.")
         case Success(Some(n)) => {
-          reportToSlack(s"Successfully processed org $orgId. $n discrepancies found. Freezing Account. See logs for stack trace.")
+          reportToSlack(s"Successfully processed org $orgId. $n discrepancies found. Freezing Account. See logs for details.")
           log.info(s"[AEIC] Successfully processed org $orgId. $n discrepancies found. Freezing Account.")
           freezeAccount(orgId)
         }
