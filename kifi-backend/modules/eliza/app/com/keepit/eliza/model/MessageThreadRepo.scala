@@ -5,7 +5,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, Exte
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.time._
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model._
 
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
@@ -17,6 +17,8 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
   override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread
 
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit
+
+  def getByKeepId(keepId: KeepId)(implicit session: RSession): Option[MessageThread]
 }
 
 @Singleton
@@ -28,6 +30,9 @@ class MessageThreadRepoImpl @Inject() (
 
   import db.Driver.simple._
 
+  implicit val keepIdMapper = MappedColumnType.base[KeepId, Long](_.id, KeepId(_))
+  implicit val messageThreadAsyncStatusMapper = MappedColumnType.base[MessageThreadAsyncStatus, String](_.value, MessageThreadAsyncStatus(_))
+
   type RepoImpl = MessageThreadTable
   class MessageThreadTable(tag: Tag) extends RepoTable[MessageThread](db, tag, "message_thread") with ExternalIdColumn[MessageThread] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.Nullable)
@@ -37,7 +42,9 @@ class MessageThreadRepoImpl @Inject() (
     def participants = column[MessageThreadParticipants]("participants", O.Nullable)
     def participantsHash = column[Int]("participants_hash", O.Nullable)
     def replyable = column[Boolean]("replyable", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, externalId, uriId.?, url.?, nUrl.?, pageTitle.?, participants.?, participantsHash.?, replyable) <> ((MessageThread.apply _).tupled, MessageThread.unapply _)
+    def keepId = column[Option[KeepId]]("keep_id", O.Nullable)
+    def asyncStatus = column[MessageThreadAsyncStatus]("async_status", O.NotNull)
+    def * = (id.?, createdAt, updatedAt, externalId, uriId.?, url.?, nUrl.?, pageTitle.?, participants.?, participantsHash.?, replyable, keepId, asyncStatus) <> ((MessageThread.apply _).tupled, MessageThread.unapply _)
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
 
@@ -89,5 +96,9 @@ class MessageThreadRepoImpl @Inject() (
           threadExternalIdCache.remove(MessageThreadExternalIdKey(extId))
         }
     }
+  }
+
+  def getByKeepId(keepId: KeepId)(implicit session: RSession): Option[MessageThread] = {
+    rows.filter(mt => mt.keepId === keepId).firstOption
   }
 }
