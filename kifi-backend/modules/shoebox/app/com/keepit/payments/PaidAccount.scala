@@ -7,14 +7,14 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.social.BasicUser
 
 import com.kifi.macros.json
-
 import org.joda.time.DateTime
 
 @json
 case class DollarAmount(cents: Int) extends AnyVal {
   def +(other: DollarAmount) = DollarAmount(cents + other.cents)
 
-  def toDollarString = s"$$${cents.toFloat / 100.0}"
+  override def toString = toDollarString
+  def toDollarString: String = if (cents < 0) "-" + DollarAmount(-cents).toDollarString else "$%d.%02d".format(cents / 100, cents % 100)
 
   def negative = DollarAmount(-1 * cents)
 }

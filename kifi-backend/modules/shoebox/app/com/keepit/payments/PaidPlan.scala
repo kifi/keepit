@@ -26,7 +26,7 @@ case class BillingCycle(month: Int) extends AnyVal
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
   name: String,
-  pricePerUser: String,
+  pricePerUser: DollarAmount,
   cycle: BillingCycle,
   features: Set[Feature])
 
@@ -50,7 +50,7 @@ case class PaidPlan(
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
     id = PaidPlan.publicId(id.get),
     name = displayName.name,
-    pricePerUser = pricePerCyclePerUser.toDollarString,
+    pricePerUser = pricePerCyclePerUser,
     cycle = billingCycle,
     features = editableFeatures
   )
