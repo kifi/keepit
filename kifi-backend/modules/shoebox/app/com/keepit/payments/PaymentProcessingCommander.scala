@@ -100,17 +100,21 @@ class PaymentProcessingCommanderImpl @Inject() (
   }
 
   private def reportToSlack(msg: String): Future[Unit] = SafeFuture {
-    val fullMsg = BasicSlackMessage(
-      text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
-      username = "PaymentProcessingCommander",
-      channel = Some("#billing-alerts")
-    )
-    httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
+    if (msg != "") {
+      val fullMsg = BasicSlackMessage(
+        text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
+        username = "PaymentProcessingCommander",
+        channel = Some("#billing-alerts")
+      )
+      httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
+    } else {
+      Future.successful(())
+    }
   }
 
   def processAllBilling(): Future[Unit] = processingLock.withLockFuture {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(MAX_BALANCE, clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
-    reportToSlack(s"Processing Payments. ${relevantAccounts.length} orgs to check.")
+    if (relevantAccounts.length > 0) reportToSlack(s"Processing Payments. ${relevantAccounts.length} orgs to check.")
     val resultsFuture = Future.sequence(relevantAccounts.map { account =>
       processAccount(account).map { result =>
         account.orgId -> Success(result)
