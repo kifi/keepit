@@ -60,7 +60,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         (planJson \ "name").as[String] must beEqualTo("Free")
         (planJson \ "pricePerUser").as[DollarAmount] must beEqualTo(DollarAmount(10000))
         (planJson \ "cycle").as[Int] must beEqualTo(1)
-        (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
+        (planJson \ "features").as[Set[Feature]] must beEqualTo(Feature.ALL)
       }
     }
 
@@ -73,6 +73,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val request = route.getAccountFeatureSettings(publicId)
           val response = controller.getAccountFeatureSettings(publicId)(request)
           val payload = contentAsJson(response).as[JsObject]
+
           (payload \ "name").as[String] === "test"
           ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "setting").as[String] === "members"
           ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "editable").as[Boolean] === true
