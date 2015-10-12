@@ -37,7 +37,7 @@ case class PaidPlan(
     state: State[PaidPlan] = PaidPlanStates.ACTIVE,
     kind: PaidPlan.Kind,
     name: Name[PaidPlan],
-    displayName: Name[PaidPlan],
+    displayName: String,
     billingCycle: BillingCycle,
     pricePerCyclePerUser: DollarAmount,
     editableFeatures: Set[Feature],
@@ -49,7 +49,7 @@ case class PaidPlan(
 
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
     id = PaidPlan.publicId(id.get),
-    name = displayName.name,
+    name = displayName,
     pricePerUser = pricePerCyclePerUser,
     cycle = billingCycle,
     features = editableFeatures
