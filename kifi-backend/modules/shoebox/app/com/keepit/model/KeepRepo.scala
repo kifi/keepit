@@ -442,7 +442,7 @@ class KeepRepoImpl @Inject() (
   def getPrivateCountByTimeAndSource(from: DateTime, to: DateTime, source: KeepSource)(implicit session: RSession): Int = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
-    val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.visibility = 'secret' b.source=${source} and created_at between ${from} and ${to};"
+    val sql = sql"select count(*) as c from bookmark b where b.state = '#${KeepStates.ACTIVE}' and b.visibility = 'secret' and b.source=${source} and created_at between ${from} and ${to};"
     sql.as[Int].first
   }
 
