@@ -60,7 +60,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         (planJson \ "name").as[String] must beEqualTo("Free")
         (planJson \ "pricePerUser").as[DollarAmount] must beEqualTo(DollarAmount(10000))
         (planJson \ "cycle").as[Int] must beEqualTo(1)
-        (planJson \ "features").as[Set[Feature]] must beEqualTo(Feature.ALL)
+        (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
       }
     }
 
