@@ -26,7 +26,7 @@ case class BillingCycle(month: Int) extends AnyVal
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
   name: String,
-  pricePerUser: DollarAmount,
+  pricePerUser: String,
   cycle: BillingCycle,
   features: Set[Feature])
 
@@ -37,6 +37,7 @@ case class PaidPlan(
     state: State[PaidPlan] = PaidPlanStates.ACTIVE,
     kind: PaidPlan.Kind,
     name: Name[PaidPlan],
+    displayName: Name[PaidPlan],
     billingCycle: BillingCycle,
     pricePerCyclePerUser: DollarAmount,
     editableFeatures: Set[Feature],
@@ -48,8 +49,8 @@ case class PaidPlan(
 
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
     id = PaidPlan.publicId(id.get),
-    name = PaidPlan.dbNameToViewName(name),
-    pricePerUser = pricePerCyclePerUser,
+    name = displayName.name,
+    pricePerUser = pricePerCyclePerUser.toDollarString,
     cycle = billingCycle,
     features = editableFeatures
   )
@@ -67,13 +68,6 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
     val NORMAL = Kind("normal")
     val GRANDFATHERED = Kind("grandfathered")
     val CUSTOM = Kind("custom")
-  }
-
-  def dbNameToViewName(name: Name[PaidPlan]): String = {
-    name match {
-      case Name("test") => "Free"
-      case Name("test_paid") => "Standard"
-    }
   }
 
 }

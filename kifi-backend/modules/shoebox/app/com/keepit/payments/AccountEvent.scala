@@ -21,8 +21,8 @@ case class SimpleAccountEventInfo(
   shortName: String,
   extraInfo: Option[String],
   whoDunnit: String,
-  creditChange: Int,
-  paymentCharge: Int,
+  creditChange: String,
+  paymentCharge: String,
   memo: Option[String])
 
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])

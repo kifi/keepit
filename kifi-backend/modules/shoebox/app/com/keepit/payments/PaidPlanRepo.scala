@@ -34,11 +34,12 @@ class PaidPlanRepoImpl @Inject() (
   class PaidPlanTable(tag: Tag) extends RepoTable[PaidPlan](db, tag, "paid_plan") {
     def kind = column[PaidPlan.Kind]("kind", O.NotNull)
     def name = column[Name[PaidPlan]]("name", O.NotNull)
+    def displayName = column[Name[PaidPlan]]("display_name", O.NotNull)
     def billingCycle = column[BillingCycle]("billing_cycle", O.NotNull)
     def pricePerCyclePerUser = column[DollarAmount]("price_per_user_per_cycle", O.NotNull)
     def editableFeatures = column[Set[Feature]]("editable_features", O.NotNull)
     def defaultSettings = column[OrganizationSettings]("default_settings", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, kind, name, billingCycle, pricePerCyclePerUser, editableFeatures, defaultSettings) <> ((PaidPlan.apply _).tupled, PaidPlan.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, kind, name, displayName, billingCycle, pricePerCyclePerUser, editableFeatures, defaultSettings) <> ((PaidPlan.apply _).tupled, PaidPlan.unapply _)
   }
 
   def table(tag: Tag) = new PaidPlanTable(tag)

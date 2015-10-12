@@ -14,7 +14,7 @@ import org.joda.time.DateTime
 case class DollarAmount(cents: Int) extends AnyVal {
   def +(other: DollarAmount) = DollarAmount(cents + other.cents)
 
-  override def toString = s"$$${(cents.toFloat / 100.0)}"
+  def toDollarString = s"$$${cents.toFloat / 100.0}"
 
   def negative = DollarAmount(-1 * cents)
 }
