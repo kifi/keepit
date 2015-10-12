@@ -3,7 +3,6 @@ package com.keepit.eliza.commanders
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.heimdal._
 import com.keepit.realtime._
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture

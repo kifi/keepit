@@ -52,7 +52,7 @@ trait PlanManagementCommander {
   def currentPlan(orgId: Id[Organization]): PaidPlan
   def currentPlanHelper(orgId: Id[Organization])(implicit session: RSession): PaidPlan
 
-  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings): PaidPlan
+  def createNewPlan(name: Name[PaidPlan], displayName: String, billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings): PaidPlan
 
   def grandfatherPlan(id: Id[PaidPlan]): Try[PaidPlan]
   def deactivatePlan(id: Id[PaidPlan]): Try[PaidPlan]
@@ -385,13 +385,14 @@ class PlanManagementCommanderImpl @Inject() (
     paidPlanRepo.get(account.planId)
   }
 
-  def createNewPlan(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings): PaidPlan = {
-    db.readWrite { implicit session => createNewPlanHelper(name, billingCycle, price, custom, editableFeatures, defaultSettings) }
+  def createNewPlan(name: Name[PaidPlan], displayName: String, billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings): PaidPlan = {
+    db.readWrite { implicit session => createNewPlanHelper(name, displayName, billingCycle, price, custom, editableFeatures, defaultSettings) }
   }
 
-  def createNewPlanHelper(name: Name[PaidPlan], billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings)(implicit session: RWSession): PaidPlan = {
+  def createNewPlanHelper(name: Name[PaidPlan], displayName: String, billingCycle: BillingCycle, price: DollarAmount, custom: Boolean = false, editableFeatures: Set[Feature], defaultSettings: OrganizationSettings)(implicit session: RWSession): PaidPlan = {
     paidPlanRepo.save(PaidPlan(kind = if (custom) PaidPlan.Kind.CUSTOM else PaidPlan.Kind.NORMAL,
       name = name,
+      displayName = displayName,
       billingCycle = billingCycle,
       pricePerCyclePerUser = price,
       editableFeatures = editableFeatures,
@@ -587,8 +588,8 @@ class PlanManagementCommanderImpl @Inject() (
       shortName = shortName,
       extraInfo = extraInfo,
       whoDunnit = whoDunnit,
-      creditChange = event.creditChange.cents,
-      paymentCharge = event.paymentCharge.map(_.cents).getOrElse(0),
+      creditChange = event.creditChange,
+      paymentCharge = event.paymentCharge,
       memo = event.memo
     )
   }

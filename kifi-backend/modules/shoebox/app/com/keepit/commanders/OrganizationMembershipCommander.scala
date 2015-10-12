@@ -238,7 +238,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
       implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
       libraryMembershipCommander.joinLibrary(request.targetId, lib.id.get)
     }
-    planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
+    planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = request.adminIdOpt))
     elizaServiceClient.flush(request.targetId)
 
     OrganizationMembershipAddResponse(request, newMembership)
