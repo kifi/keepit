@@ -86,8 +86,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
             nUrl = None,
             pageTitle = None,
             participants = None,
-            participantsHash = None,
-            replyable = true))
+            participantsHash = None))
         }
 
         socket.in {
@@ -104,8 +103,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
             nUrl = None,
             pageTitle = None,
             participants = Some(MessageThreadParticipants(Set(Id(1)))),
-            participantsHash = None,
-            replyable = true))
+            participantsHash = None))
         }
 
         socket.in {
@@ -144,8 +142,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
             nUrl = None,
             pageTitle = None,
             participants = Some(MessageThreadParticipants(Set(Id(1), Id(2)))),
-            participantsHash = None,
-            replyable = true))
+            participantsHash = None))
 
           val userThread = userThreadRepo.save(UserThread(
             user = Id(1),
