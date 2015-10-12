@@ -10,13 +10,13 @@ sealed trait Recipient {
   val kind: String
 }
 
-case class UserRecipient(id: Id[User], experimentEnabled: Option[Boolean] = None) extends Recipient {
+case class UserRecipient(id: Id[User]) extends Recipient {
   override val kind = "user"
 
   override def toString = id.toString
 
   override def equals(that: Any): Boolean = that match {
-    case UserRecipient(thatId, _) if thatId == this.id => true
+    case UserRecipient(thatId) if thatId == this.id => true
     case _ => false
   }
 }

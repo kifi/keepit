@@ -51,7 +51,7 @@ class NotificationMessagingCommander @Inject() (
 
   def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
     recipient match {
-      case UserRecipient(user, _) =>
+      case UserRecipient(user) =>
         val unreadMessages = messagingCommander.getUnreadUnmutedThreadCount(user)
         val unreadNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(user))
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
@@ -84,14 +84,14 @@ class NotificationMessagingCommander @Inject() (
     db.readWrite { implicit session =>
       notificationRepo.setAllReadBefore(recipient, item.eventTime)
       recipient match {
-        case UserRecipient(id, _) =>
+        case UserRecipient(id) =>
           userThreadRepo.markAllReadAtOrBefore(id, item.eventTime)
         case _ =>
       }
     }
     sendUnreadNotificationsWith(notif, recipient)
     recipient match {
-      case UserRecipient(user, _) =>
+      case UserRecipient(user) =>
         webSocketRouter.sendToUser(user, Json.arr("all_notifications_visited", item.externalId, item.eventTime))
       case _ =>
     }
