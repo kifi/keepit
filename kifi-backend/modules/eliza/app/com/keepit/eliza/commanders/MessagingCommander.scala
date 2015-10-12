@@ -4,28 +4,28 @@ import java.util.concurrent.TimeoutException
 
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
-import com.keepit.common.akka.{SafeFuture, TimeoutFuture}
+import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
 import com.keepit.common.core.anyExtensionOps
-import com.keepit.common.crypto.{PublicId, PublicIdConfiguration}
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ExternalId, Id}
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.URI
 import com.keepit.common.time._
 import com.keepit.eliza.model._
-import com.keepit.heimdal.{HeimdalContext, HeimdalContextBuilder}
+import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{BasicUserLikeEntity, NonUserKinds}
+import com.keepit.social.{ BasicUserLikeEntity, NonUserKinds }
 import org.joda.time.DateTime
 import play.api.libs.json._
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
-import scala.util.{Failure, Random, Success}
+import scala.concurrent.{ Await, ExecutionContext, Future, Promise }
+import scala.util.{ Failure, Random, Success }
 
 case class NotAuthorizedException(msg: String) extends java.lang.Throwable(msg)
 

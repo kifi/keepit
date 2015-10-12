@@ -62,7 +62,7 @@ class NotificationMessagingCommander @Inject() (
     case EmailRecipient(_) => (0, 0)
     case UserRecipient(userId, _) =>
       db.readOnlyMaster { implicit session =>
-        (userThreadRepo.getUnreadUnmutedThreadCount(userId, filterByReplyable = Some(true)),
+        (userThreadRepo.getUnreadUnmutedThreadCount(userId),
           notificationRepo.getUnreadNotificationsCount(UserRecipient(userId)))
       }
   }
