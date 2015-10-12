@@ -22,8 +22,8 @@ paginationSize: Int
                     <td>@{event.billingRelated}</td>
                     <td>@event.whoDunnit.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
                     <td>@event.adminInvolved.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
-                    <td>@{event.creditChange.cents / 100}</td>
-                    <td>@{event.paymentCharge.map(_.cents).getOrElse(0) / 100}</td>
+                    <td>@{event.creditChange.toDollarString}</td>
+                    <td>@{event.paymentCharge.map(_.toDollarString)}</td>
                     <td>@{event.memo.getOrElse("")}</td>
                 </tr>
             }
