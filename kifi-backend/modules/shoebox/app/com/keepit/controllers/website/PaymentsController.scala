@@ -102,7 +102,8 @@ class PaymentsController @Inject() (
     request.body.validate[OrganizationSettings](OrganizationSettings.siteFormat) match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "details" -> errs.toString))
       case JsSuccess(settings, _) =>
-        orgCommander.setAccountFeatureSettings(request.orgId, request.request.userId, settings) match {
+        val settingsRequest = OrganizationSettingsRequest(request.orgId, request.request.userId, settings)
+        orgCommander.setAccountFeatureSettings(settingsRequest) match {
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
             val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
