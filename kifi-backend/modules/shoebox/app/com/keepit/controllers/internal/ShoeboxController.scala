@@ -491,6 +491,25 @@ class ShoeboxController @Inject() (
     Ok(result)
   }
 
+  def getLibraryCardInfos() = Action(parse.tolerantJson) { request =>
+    val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
+    val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
+    val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
+
+    val libraryCardInfosWithId = db.readOnlyReplica { implicit session =>
+      val libraryById = libraryRepo.getByIds(libraryIds)
+      val libraries = libraryIds.map(libraryById.apply)
+      val owners = basicUserRepo.loadAll(libraries.map(_.ownerId))
+
+      val libSeq = libraries.toSeq
+      val libraryCardInfos = libraryInfoCommander.createLibraryCardInfos(libSeq, owners, viewerId, withFollowing = true, idealSize = idealImageSize)
+
+      libSeq.map(_.id.get) zip libraryCardInfos
+    }
+    implicit val tupleWrites = TupleFormat.tuple2Writes[Id[Library], LibraryCardInfo]
+    Ok(Json.toJson(libraryCardInfosWithId))
+  }
+
   def getKeepCounts() = Action(parse.tolerantJson) { request =>
     val userIds = request.body.as[Set[Id[User]]]
     val keepCountsByUserId = db.readOnlyMaster { implicit session =>

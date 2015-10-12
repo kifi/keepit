@@ -126,7 +126,7 @@ class NotificationKindInfoRequests @Inject() () {
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       StandardNotificationInfo(
-        url = libraryKept.url.absolute,
+        url = libraryKept.path,
         image = UserImage(keeper),
         title = s"New Keep in ${libraryKept.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
@@ -194,7 +194,7 @@ class NotificationKindInfoRequests @Inject() () {
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       StandardNotificationInfo(
-        url = invitedLib.url.absolute,
+        url = invitedLib.path,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
         body = s"Help ${inviter.firstName} by sharing your knowledge in the library ${invitedLib.name}.",
@@ -217,7 +217,7 @@ class NotificationKindInfoRequests @Inject() () {
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       StandardNotificationInfo(
-        url = invitedLib.url.absolute,
+        url = invitedLib.path,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a library!",
         body = s"Browse keeps in ${invitedLib.name} to find some interesting gems kept by ${inviter.firstName}.", //same

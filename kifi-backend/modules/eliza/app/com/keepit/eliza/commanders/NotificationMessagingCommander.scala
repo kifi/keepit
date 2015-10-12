@@ -104,7 +104,7 @@ class NotificationMessagingCommander @Inject() (
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
     }
-    notificationInfoGenerator.generateInfo(newEventNotifs).flatMap { infos =>
+    notificationInfoGenerator.generateInfo(UserRecipient(userId), newEventNotifs).flatMap { infos =>
       Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info) })
     }.map { finalNotifs =>
       if (newEventNotifs.length < howMany) {
@@ -125,7 +125,7 @@ class NotificationMessagingCommander @Inject() (
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
     }
-    notificationInfoGenerator.generateInfo(newEventNotifs).flatMap { infos =>
+    notificationInfoGenerator.generateInfo(UserRecipient(userId), newEventNotifs).flatMap { infos =>
       Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
     }
   }
@@ -137,7 +137,7 @@ class NotificationMessagingCommander @Inject() (
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
     }
-    notificationInfoGenerator.generateInfo(latestNotifs).flatMap { infos =>
+    notificationInfoGenerator.generateInfo(UserRecipient(userId), latestNotifs).flatMap { infos =>
       val finalNotifsF = Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
       finalNotifsF.map { finalNotifs =>
         if (latestNotifs.length < howMany) {
@@ -159,7 +159,7 @@ class NotificationMessagingCommander @Inject() (
         NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
       }
     }
-    notificationInfoGenerator.generateInfo(latestNotifs).flatMap { infos =>
+    notificationInfoGenerator.generateInfo(UserRecipient(userId), latestNotifs).flatMap { infos =>
       Future.sequence(infos.map { info => notificationJsonFormat.extendedJson(info, uriSummary) })
     }
   }

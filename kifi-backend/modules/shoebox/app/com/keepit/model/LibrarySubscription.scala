@@ -23,7 +23,7 @@ case class LibrarySubscription(
 }
 
 object LibrarySubscription {
-  implicit def format = (
+  implicit val format: Format[LibrarySubscription] = (
     (__ \ 'id).formatNullable(Id.format[LibrarySubscription]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
@@ -31,7 +31,8 @@ object LibrarySubscription {
     (__ \ 'libraryId).format[Id[Library]] and
     (__ \ 'name).format[String] and
     (__ \ 'trigger).format[SubscriptionTrigger] and
-    (__ \ 'info).format[SubscriptionInfo])(LibrarySubscription.apply _, unlift(LibrarySubscription.unapply))
+    (__ \ 'info).format[SubscriptionInfo]
+  )(LibrarySubscription.apply, unlift(LibrarySubscription.unapply))
 
   def toSubKey(sub: LibrarySubscription): LibrarySubscriptionKey = {
     LibrarySubscriptionKey(name = sub.name, info = sub.info)
@@ -40,6 +41,17 @@ object LibrarySubscription {
 
 object LibrarySubscriptionStates extends States[LibrarySubscription] {
   val DISABLED = State[LibrarySubscription]("disabled")
+}
+
+case class SubscriptionTrigger(value: String)
+
+object SubscriptionTrigger {
+  val NEW_KEEP = SubscriptionTrigger("new_keep")
+  val NEW_MEMBER = SubscriptionTrigger("new_member")
+
+  implicit val format: Format[SubscriptionTrigger] = Format(
+    __.read[String].map(SubscriptionTrigger(_)),
+    new Writes[SubscriptionTrigger] { def writes(o: SubscriptionTrigger) = JsString(o.value) })
 }
 
 trait SubscriptionInfo {
@@ -60,45 +72,30 @@ case class SlackInfo(url: String) extends SubscriptionInfo {
 }
 
 object SlackInfo {
-  implicit val format: Format[SlackInfo] = new Format[SlackInfo] {
-    def reads(json: JsValue): JsResult[SlackInfo] = {
+  implicit val format: Format[SlackInfo] = Format(
+    Reads { json =>
       (json \ "url").asOpt[String].filter(url => URIParser.parseAll(URIParser.uri, url).successful) match {
         case Some(url) => JsSuccess[SlackInfo](SlackInfo(url))
         case _ => JsError("[SlackInfo] format.reads: url not found")
       }
-    }
-    def writes(o: SlackInfo): JsValue = Json.obj("kind" -> "slack", "url" -> o.url)
-  }
-
+    },
+    Writes { o => Json.obj("kind" -> "slack", "url" -> o.url) }
+  )
 }
 
 object SubscriptionInfo {
-  implicit val format: Format[SubscriptionInfo] = new Format[SubscriptionInfo] {
-    def reads(json: JsValue): JsResult[SubscriptionInfo] = {
+  implicit val format: Format[SubscriptionInfo] = Format(
+    Reads { json =>
       val kind = (json \ "kind").asOpt[String]
       kind match {
         case Some("slack") => Json.fromJson[SlackInfo](json)
         case Some(unknownKind) => JsError(s"[SubscriptionInfo] format.reads: unsupported_kind: $unknownKind")
         case _ => JsError("[SubscriptionInfo] format.reads: kind not found")
       }
+    },
+    Writes {
+      case s: SlackInfo => SlackInfo.format.writes(s)
+      case _ => throw new Exception("[SubscriptionInfo] format.writes: unsupported SubscriptionInfo")
     }
-    def writes(subscription: SubscriptionInfo): JsValue = {
-      subscription match {
-        case s: SlackInfo => SlackInfo.format.writes(s)
-        case _ => throw new Exception("[SubscriptionInfo] format.writes: unsupported SubscriptionInfo")
-      }
-    }
-  }
+  )
 }
-
-case class SubscriptionTrigger(value: String)
-
-object SubscriptionTrigger {
-  val NEW_KEEP = SubscriptionTrigger("new_keep")
-  val NEW_MEMBER = SubscriptionTrigger("new_member")
-
-  implicit def format: Format[SubscriptionTrigger] = Format(
-    __.read[String].map(SubscriptionTrigger(_)),
-    new Writes[SubscriptionTrigger] { def writes(o: SubscriptionTrigger) = JsString(o.value) })
-}
-

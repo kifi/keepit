@@ -5,7 +5,7 @@ import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.db.Id
 import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems, NotificationItem, Notification }
 import com.keepit.model.{ Keep, Organization, Library }
-import com.keepit.notify.model.NotificationKind
+import com.keepit.notify.model.{ UserRecipient, Recipient, NotificationKind }
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.shoebox.ShoeboxServiceClient
 
@@ -16,7 +16,11 @@ class NotificationInfoGenerator @Inject() (
     notificationKindInfoRequests: NotificationKindInfoRequests,
     implicit val ec: ExecutionContext) {
 
-  def generateInfo(notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]] = {
+  def generateInfo(recipient: Recipient, notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]] = {
+    val userIdOpt = recipient match {
+      case UserRecipient(uid) => Some(uid)
+      case _ => None
+    }
     val notifInfoRequests = notifs.map {
       case NotificationWithItems(notif, items) =>
         val infoRequest = notificationKindInfoRequests.requestsFor(notif, items)
@@ -48,7 +52,7 @@ class NotificationInfoGenerator @Inject() (
       }
     }.toSet
 
-    val libsF = shoeboxServiceClient.getBasicLibraryDetails(libRequests, ProcessedImageSize.Small.idealSize, None)
+    val libsF = shoeboxServiceClient.getLibraryCardInfos(libRequests, ProcessedImageSize.Small.idealSize, userIdOpt)
     val orgsF = shoeboxServiceClient.getBasicOrganizationsByIds(orgRequests)
     val keepsF = shoeboxServiceClient.getBasicKeepsByIds(keepRequests)
 

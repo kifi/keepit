@@ -67,7 +67,7 @@ class MobileLibraryController @Inject() (
 
   private def constructLibraryInfo(lib: Library, inviter: Option[BasicUser] = None) = {
     val (owner, org) = db.readOnlyMaster { implicit s => (basicUserRepo.load(lib.ownerId), lib.organizationId.map { id => orgRepo.get(id) }) }
-    val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize)
+    val libImage = libraryImageCommander.getBestImageForLibrary(lib.id.get, MobileLibraryController.defaultLibraryImageSize).map(_.asInfo)
     LibraryInfo.fromLibraryAndOwner(lib, libImage, owner, org, inviter)
   }
 

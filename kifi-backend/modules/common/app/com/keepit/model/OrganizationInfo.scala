@@ -1,14 +1,12 @@
 package com.keepit.model
 
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.ExternalId
 import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
-import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.strings._
 
 case class OrganizationInfo(
     orgId: PublicId[Organization],
@@ -42,13 +40,10 @@ object OrganizationInfo {
 
 case class OrganizationMembershipInfo(role: OrganizationRole)
 object OrganizationMembershipInfo {
-  implicit val defaultWrites = new Writes[OrganizationMembershipInfo] {
-    def writes(o: OrganizationMembershipInfo): JsValue = Json.obj("role" -> o.role)
-  }
-
-  val testReads = new Reads[OrganizationMembershipInfo] {
-    def reads(json: JsValue): JsResult[OrganizationMembershipInfo] = (json \ "role").validate[OrganizationRole].map(OrganizationMembershipInfo.apply)
-  }
+  implicit val format: Format[OrganizationMembershipInfo] = Format(
+    Reads { j => j.validate[OrganizationRole].map(OrganizationMembershipInfo(_)) },
+    Writes { omi => Json.toJson(omi.role) }
+  )
 }
 
 case class OrganizationViewerInfo(
@@ -56,30 +51,22 @@ case class OrganizationViewerInfo(
   permissions: Set[OrganizationPermission],
   membership: Option[OrganizationMembershipInfo])
 object OrganizationViewerInfo {
-  implicit val defaultWrites: Writes[OrganizationViewerInfo] = (
-    (__ \ 'invite).writeNullable[OrganizationInviteInfo] and
-    (__ \ 'permissions).write[Set[OrganizationPermission]] and
-    (__ \ 'membership).writeNullable[OrganizationMembershipInfo]
-  )(unlift(OrganizationViewerInfo.unapply))
-
-  val testReads: Reads[OrganizationViewerInfo] = (
-    (__ \ 'invite).readNullable[OrganizationInviteInfo](OrganizationInviteInfo.testReads) and
-    (__ \ 'permissions).read[Set[OrganizationPermission]] and
-    (__ \ 'membership).readNullable[OrganizationMembershipInfo](OrganizationMembershipInfo.testReads)
-  )(OrganizationViewerInfo.apply _)
+  implicit val internalFormat: Format[OrganizationViewerInfo] = (
+    (__ \ 'invite).formatNullable[OrganizationInviteInfo] and
+    (__ \ 'permissions).format[Set[OrganizationPermission]] and
+    (__ \ 'membership).formatNullable[OrganizationMembershipInfo]
+  )(OrganizationViewerInfo.apply, unlift(OrganizationViewerInfo.unapply))
 }
 
 case class OrganizationInviteInfo(
   inviter: BasicUser,
   lastInvited: DateTime)
 object OrganizationInviteInfo {
-  implicit val defaultWrites: Writes[OrganizationInviteInfo] = (
-    (__ \ 'inviter).write[BasicUser] and
-    (__ \ 'lastInvited).write[DateTime])(unlift(OrganizationInviteInfo.unapply))
-  val testReads: Reads[OrganizationInviteInfo] = (
-    (__ \ 'inviter).read[BasicUser] and
-    (__ \ 'lastInvited).read[DateTime]
-  )(OrganizationInviteInfo.apply _)
+  implicit val internalFormat: Format[OrganizationInviteInfo] = (
+    (__ \ 'inviter).format[BasicUser] and
+    (__ \ 'lastInvited).format[DateTime]
+  )(OrganizationInviteInfo.apply, unlift(OrganizationInviteInfo.unapply))
+
   def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
     OrganizationInviteInfo(inviter, invite.createdAt)
   }
@@ -89,14 +76,10 @@ case class BasicOrganizationView(
   basicOrganization: BasicOrganization,
   viewerInfo: OrganizationViewerInfo)
 object BasicOrganizationView {
-  implicit val defaultWrites: Writes[BasicOrganizationView] = new Writes[BasicOrganizationView] {
-    def writes(o: BasicOrganizationView) = Json.toJson(o.basicOrganization).as[JsObject] + ("viewer" -> Json.toJson(o.viewerInfo))
-  }
-
-  val testReads: Reads[BasicOrganizationView] = (
-    __.read[BasicOrganization] and
-    (__ \ "viewer").read[OrganizationViewerInfo](OrganizationViewerInfo.testReads)
-  )(BasicOrganizationView.apply _)
+  implicit val internalFormat = (
+    (__ \ 'basicOrganization).format[BasicOrganization] and
+    (__ \ 'viewerInfo).format[OrganizationViewerInfo](OrganizationViewerInfo.internalFormat)
+  )(BasicOrganizationView.apply, unlift(BasicOrganizationView.unapply))
 }
 
 case class OrganizationView(
@@ -104,14 +87,12 @@ case class OrganizationView(
   viewerInfo: OrganizationViewerInfo)
 
 object OrganizationView {
-  val defaultWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = Json.obj("organization" -> OrganizationInfo.defaultWrites.writes(o.organizationInfo),
-      "viewer" -> OrganizationViewerInfo.defaultWrites.writes(o.viewerInfo))
+  val defaultWrites: Writes[OrganizationView] = Writes { o =>
+    Json.obj("organization" -> o.organizationInfo, "viewer" -> o.viewerInfo)
   }
 
-  val embeddedMembershipWrites: Writes[OrganizationView] = new Writes[OrganizationView] {
-    def writes(o: OrganizationView) = OrganizationInfo.defaultWrites.writes(o.organizationInfo).as[JsObject] ++
-      Json.obj("viewer" -> OrganizationViewerInfo.defaultWrites.writes(o.viewerInfo).as[JsObject])
+  val embeddedMembershipWrites: Writes[OrganizationView] = Writes { o =>
+    Json.toJson(o.organizationInfo).as[JsObject] ++ Json.obj("viewer" -> o.viewerInfo)
   }
 }
 

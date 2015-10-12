@@ -153,6 +153,7 @@ object Shoebox extends Service {
     def newKeepsInLibraryForEmail(userId: Id[User], max: Int) = ServiceRoute(GET, "/internal/shoebox/database/newKeepsInLibraryForEmail", Param("userId", userId), Param("max", max))
     def getPersonalKeeps(userId: Id[User]) = ServiceRoute(POST, "/internal/shoebox/database/getPersonalKeeps", Param("userId", userId))
     def getBasicLibraryDetails() = ServiceRoute(POST, "/internal/shoebox/database/getBasicLibraryDetails")
+    def getLibraryCardInfos() = ServiceRoute(POST, "/internal/shoebox/database/getLibraryCardInfos")
     def getKeepCounts() = ServiceRoute(POST, "/internal/shoebox/database/getKeepCounts")
     def getKeepImages() = ServiceRoute(POST, "/internal/shoebox/database/getKeepImages")
     def getLibrariesWithWriteAccess(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibrariesWithWriteAccess", Param("userId", userId))
