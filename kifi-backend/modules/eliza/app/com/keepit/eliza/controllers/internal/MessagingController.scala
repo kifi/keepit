@@ -98,7 +98,7 @@ class MessagingController @Inject() (
   }
 
   def getUnreadNotifications(userId: Id[User], howMany: Int) = Action {
-    val userThreadViews = notificationCommander.getUnreadNotifications(userId, howMany)
+    val userThreadViews = notificationCommander.getUnreadUnmutedThreads(userId, howMany)
     Ok(Json.toJson(userThreadViews))
   }
 

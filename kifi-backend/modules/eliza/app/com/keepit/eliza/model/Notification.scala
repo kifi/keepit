@@ -4,7 +4,7 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.notify.info.NotificationInfo
-import com.keepit.notify.model.event.{ NewMessage, NotificationEvent }
+import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model._
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -125,15 +125,7 @@ class ExtendedNotification(val notification: Notification, val items: Set[Notifi
 
   def unreadMessages: Set[NotificationItem] = items.filter(_.eventTime > notification.lastEvent)
 
-  def unreadAuthors: Set[Recipient] = {
-    // only makes sense if this is a message notification
-    if (notification.kind == NewMessage) {
-      items.map(_.event).collect {
-        case e: NewMessage => e
-      }.map(_.from)
-    } else Set()
-  }
-
+  def unreadAuthors: Set[Recipient] = Set.empty
 }
 
 case class NotificationWithItems(
