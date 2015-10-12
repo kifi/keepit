@@ -10,7 +10,6 @@ import com.keepit.model.{ User, NotificationCategory, UserExperimentType, KifiEx
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.model.Recipient
-import com.keepit.notify.model.event.NewMessage
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
