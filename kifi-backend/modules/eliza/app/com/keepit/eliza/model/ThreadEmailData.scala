@@ -22,7 +22,7 @@ case class ThreadEmailInfo(
     isDeepLink: Boolean = false) {
 
   def pageUrlWithTracking(subAction: String) =
-    if (isDeepLink) pageUrl + "?" + EmailTrackingParam.paramName + "=" + EmailTrackingParam(subAction = Some(subAction)).encode
+    if (isDeepLink) pageUrl + "&" + EmailTrackingParam.paramName + "=" + EmailTrackingParam(subAction = Some(subAction)).encode
     else pageUrl
 }
 
