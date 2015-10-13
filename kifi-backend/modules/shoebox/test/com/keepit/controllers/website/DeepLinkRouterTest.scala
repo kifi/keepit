@@ -62,11 +62,11 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
 
           // with auth tokens
           val deepLink1 = Json.obj("t" -> "lr", "lid" -> Library.publicId(orgLib.id.get), "at" -> authToken)
-          val link1 = Path(s"${org.handle.value}/${orgLib.slug.value}").absolute + s"&authToken=$authToken"
+          val link1 = Path(s"${org.handle.value}/${orgLib.slug.value}").absolute + s"?authToken=$authToken"
           deepLinkRouter.generateRedirectUrl(deepLink1) === Some(link1)
 
           val deepLink2 = Json.obj("t" -> "lr", "lid" -> Library.publicId(personalLib.id.get), "at" -> authToken)
-          val link2 = Path(s"${owner.username.value}/${personalLib.slug.value}").absolute + s"&authToken=$authToken"
+          val link2 = Path(s"${owner.username.value}/${personalLib.slug.value}").absolute + s"?authToken=$authToken"
           deepLinkRouter.generateRedirectUrl(deepLink2) === Some(link2)
 
           // without auth tokens
@@ -91,7 +91,7 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
 
           // with auth tokens
           val deepLink1 = Json.obj("t" -> "oi", "oid" -> Organization.publicId(org.id.get), "at" -> authToken)
-          val link1 = Path(s"${org.handle.value}").absolute + s"&authToken=$authToken"
+          val link1 = Path(s"${org.handle.value}").absolute + s"?authToken=$authToken"
           deepLinkRouter.generateRedirectUrl(deepLink1) === Some(link1)
 
           // without auth tokens
