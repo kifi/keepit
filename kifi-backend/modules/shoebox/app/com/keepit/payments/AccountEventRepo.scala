@@ -37,7 +37,7 @@ class AccountEventRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, String](_.id, EventGroup(_))
 
   type RepoImpl = AccountEventTable
