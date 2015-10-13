@@ -35,7 +35,7 @@ object Path {
 
   def base: String = "https://www.kifi.com/"
 
-  def apply(value: String): Path = new Path(value)
+  def apply(value: String): Path = new Path(value.dropWhile(_ == '/'))
 
   def encode(value: String): EncodedPath = new EncodedPath(value)
 

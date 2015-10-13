@@ -105,10 +105,6 @@ class LibraryInfoCommanderImpl @Inject() (
     createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib, imageSize, None)
   }
 
-  def getLibraryPath(library: Library): String = {
-    libPathCommander.getPathForLibrary(library)
-  }
-
   def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo = {
     LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
   }
@@ -567,7 +563,7 @@ class LibraryInfoCommanderImpl @Inject() (
 
       val owner = owners(lib.ownerId)
       val orgViewOpt = lib.organizationId.map(orgViews.apply)
-      val path = LibraryPathHelper.formatLibraryPath(owner, orgViewOpt.map(_.basicOrganization.handle), lib.slug)
+      val path = libPathCommander.pathForLibrary(lib).absolute
 
       val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
       val membershipInfoOpt = membershipOpt.map(createMembershipInfo)
