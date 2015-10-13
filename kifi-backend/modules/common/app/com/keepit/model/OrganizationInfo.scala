@@ -41,8 +41,8 @@ object OrganizationInfo {
 case class OrganizationMembershipInfo(role: OrganizationRole)
 object OrganizationMembershipInfo {
   implicit val format: Format[OrganizationMembershipInfo] = Format(
-    Reads { j => j.validate[OrganizationRole].map(OrganizationMembershipInfo(_)) },
-    Writes { omi => Json.toJson(omi.role) }
+    Reads { j => (j.as[JsObject] \ "role").validate[OrganizationRole].map(OrganizationMembershipInfo(_)) },
+    Writes { omi => Json.obj("role" -> omi.role) }
   )
 }
 

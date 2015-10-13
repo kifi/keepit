@@ -9,6 +9,10 @@ import play.api.libs.json.Json
 class OrganizationInfoTest extends Specification {
 
   "OrganizationInfo" should {
+    "format org membership info correctly" in {
+      val orgMembershipInfo = OrganizationMembershipInfo(OrganizationRole.ADMIN)
+      Json.toJson(orgMembershipInfo) === Json.obj("role" -> "admin")
+    }
     "format basic organization views correctly" in {
       val orgId = PublicId[Organization]("asdf")
       val userId = ExternalId[User]()
