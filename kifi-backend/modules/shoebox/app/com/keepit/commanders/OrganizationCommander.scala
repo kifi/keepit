@@ -177,10 +177,8 @@ class OrganizationCommanderImpl @Inject() (
     val ownerId = userRepo.get(org.ownerId).externalId
 
     val memberIds = {
-      if (!viewerPermissions.contains(OrganizationPermission.VIEW_MEMBERS)) {
-        airbrake.notify(s"Tried to serve up organization info for org $orgId to viewer $viewerIdOpt, but they do not have permission to view this org's members")
-        Seq.empty
-      } else orgMembershipRepo.getSortedMembershipsByOrgId(orgId, Offset(0), Limit(Int.MaxValue)).map(_.userId)
+      if (!viewerPermissions.contains(OrganizationPermission.VIEW_MEMBERS)) Seq.empty
+      else orgMembershipRepo.getSortedMembershipsByOrgId(orgId, Offset(0), Limit(Int.MaxValue)).map(_.userId)
     }
     val members = userRepo.getAllUsers(memberIds).values.toSeq
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
