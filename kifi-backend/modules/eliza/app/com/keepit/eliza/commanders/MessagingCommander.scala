@@ -600,9 +600,10 @@ class MessagingCommander @Inject() (
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
 
-    val canSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
-      orgIds.forall { orgId =>
-          permissionsByOrgId(orgId).contains(OrganizationPermission.GROUP_MESSAGING).tap { ok => if (!ok) airbrake.notify(s"user $userId was able to send to org $orgId without permissions!" })
+    val cantSendToOrgs = shoebox.getUserPermissionsByOrgId(orgIds.toSet, userId).map { permissionsByOrgId =>
+      permissionsByOrgId.exists {
+        case (orgId, permissions) =>
+          !permissions.contains(OrganizationPermission.GROUP_MESSAGING).tap(if (_) airbrake.notify(s"user $userId was able to send to org $orgId without permissions!"))
       }
     }
 
@@ -616,8 +617,8 @@ class MessagingCommander @Inject() (
     val context = moreContext.addExistingContext(initContext).build
 
     val resFut =
-      canSendToOrgs.flatMap { canSend =>
-        if (!canSend) throw new Exception("insufficient_org_permissions")
+      cantSendToOrgs.flatMap { cantSend =>
+        if (cantSend) throw new Exception("insufficient_org_permissions")
         else {
           for {
             userRecipients <- userRecipientsFuture
