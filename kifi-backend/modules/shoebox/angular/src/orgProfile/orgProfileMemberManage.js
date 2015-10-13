@@ -77,6 +77,7 @@ angular.module('kifi')
       })
       .then(function success() {
         memberPageAnalytics({ action: 'clickedCancelInvite', orgMember: member.username });
+        orgProfileService.invalidateOrgProfileCache();
         removeMemberFromPage(member);
       })
       ['catch'](handleErrorResponse);
@@ -98,7 +99,6 @@ angular.module('kifi')
     $scope.me = profileService.me;
 
     function resetAndFetch() {
-      orgProfileService.invalidateOrgProfileCache();
       memberLazyLoader.reset();
       $scope.fetchMembers();
     }
@@ -157,6 +157,7 @@ angular.module('kifi')
       })
       .then(function () {
         memberPageAnalytics({ action: 'clickedInvite', orgMember: member.username });
+        orgProfileService.invalidateOrgProfileCache();
       })
       ['catch'](handleErrorResponse);
 
@@ -208,6 +209,7 @@ angular.module('kifi')
       })
       .then(function success() {
         member.role = role;
+        orgProfileService.invalidateOrgProfileCache();
       })
       ['catch'](handleErrorResponse);
     }
