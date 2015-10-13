@@ -1,13 +1,12 @@
 package com.keepit.model
 
-import com.keepit.commanders.BasicCollection
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.time._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import com.keepit.common.time._
-import play.api.libs.json.{ OWrites, Json, Writes }
+import play.api.libs.json.{ Json, OWrites, Writes }
 
 case class BasicLibraryWithKeptAt(library: BasicLibrary, keptAt: DateTime)
 object BasicLibraryWithKeptAt {

@@ -404,7 +404,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "get library by public id" in {
       withDb(modules: _*) { implicit injector =>
-        implicit val libInviteInfoReads = LibraryInviteInfo.testReads
         val t1 = new DateTime(2014, 7, 21, 6, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
         val libraryController = inject[LibraryController]
 
@@ -589,8 +588,6 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         }
 
         firstTime.isBefore(secondTime) === true
-
-        implicit val basicOrgViewReads = BasicOrganizationView.testReads
 
         val permissions = db.readOnlyMaster { implicit session => permissionCommander.getOrganizationPermissions(org1.id.get, user1.id) }
 

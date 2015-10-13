@@ -41,7 +41,7 @@ class LibraryInviteEmailSender @Inject() (
         val org = library.organizationId.map { id => orgRepo.get(id) }
         val libOwner = basicUserRepo.load(library.ownerId)
         val inviter = basicUserRepo.load(invite.inviterId)
-        val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize)
+        val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize).map(_.asInfo)
         val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, org, Some(inviter))
         (library, libraryInfo)
       }

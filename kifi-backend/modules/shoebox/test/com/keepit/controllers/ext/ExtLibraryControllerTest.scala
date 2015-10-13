@@ -201,7 +201,7 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           "slug" -> "l1",
           "visibility" -> "secret",
           "color" -> lib1.color,
-          "image" -> LibraryImageInfo.fromImage(lib1Image),
+          "image" -> lib1Image.asInfo,
           "owner" -> BasicUser.fromUser(user1),
           "keeps" -> 0,
           "followers" -> 1,

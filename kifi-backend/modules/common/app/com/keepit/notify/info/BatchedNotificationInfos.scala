@@ -11,7 +11,7 @@ import scala.concurrent.Future
 class BatchedNotificationInfos(
     private val users: Map[Id[User], BasicUser],
     private val usersExternal: Map[ExternalId[User], BasicUser],
-    private val libraries: Map[Id[Library], BasicLibraryDetails],
+    private val libraries: Map[Id[Library], LibraryCardInfo],
     private val keeps: Map[Id[Keep], BasicKeep],
     private val orgs: Map[Id[Organization], BasicOrganization]) {
 
@@ -40,7 +40,7 @@ object NotificationInfoRequest {
 
   case class RequestUser(id: Id[User]) extends NotificationInfoRequest[User, BasicUser]
   case class RequestUserExternal(id: ExternalId[User]) extends NotificationInfoRequest[User, BasicUser]
-  case class RequestLibrary(id: Id[Library]) extends NotificationInfoRequest[Library, BasicLibraryDetails]
+  case class RequestLibrary(id: Id[Library]) extends NotificationInfoRequest[Library, LibraryCardInfo]
   case class RequestKeep(id: Id[Keep]) extends NotificationInfoRequest[Keep, BasicKeep]
   case class RequestOrganization(id: Id[Organization]) extends NotificationInfoRequest[Organization, BasicOrganization]
 

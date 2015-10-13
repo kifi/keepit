@@ -83,20 +83,11 @@ case class LibraryInviteInfo(
   inviter: BasicUser)
 
 object LibraryInviteInfo {
-  implicit val writes = Writes[LibraryInviteInfo] { info =>
-    Json.obj(
-      "access" -> info.access,
-      "lastInvitedAt" -> info.lastInvitedAt,
-      "inviter" -> info.inviter,
-      "lastInvite" -> info.lastInvitedAt.getMillis // deprecated
-    )
-  }
-
-  val testReads: Reads[LibraryInviteInfo] = (
-    (__ \ "access").read[LibraryAccess] and
-    (__ \ "lastInvitedAt").read[DateTime] and
-    (__ \ "inviter").read[BasicUser]
-  )(LibraryInviteInfo.apply _)
+  implicit val internalFormat: Format[LibraryInviteInfo] = (
+    (__ \ 'access).format[LibraryAccess] and
+    (__ \ 'lastInvitedAt).format[DateTime] and
+    (__ \ 'inviter).format[BasicUser]
+  )(LibraryInviteInfo.apply, unlift(LibraryInviteInfo.unapply))
 }
 
 sealed abstract class LibraryInvitePermissions(val value: String)
@@ -105,8 +96,10 @@ object LibraryInvitePermissions {
   case object COLLABORATOR extends LibraryInvitePermissions("collaborator")
   case object OWNER extends LibraryInvitePermissions("owner")
 
-  implicit def format[T]: Format[LibraryInvitePermissions] =
-    Format(__.read[String].map(LibraryInvitePermissions(_)), new Writes[LibraryInvitePermissions] { def writes(o: LibraryInvitePermissions) = JsString(o.value) })
+  implicit val format: Format[LibraryInvitePermissions] = Format(
+    Reads { j => j.validate[String].map(LibraryInvitePermissions(_)) },
+    Writes { o => JsString(o.value) }
+  )
 
   def apply(str: String): LibraryInvitePermissions = {
     str match {
