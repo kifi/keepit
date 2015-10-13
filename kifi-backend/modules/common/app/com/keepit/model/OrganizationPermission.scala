@@ -21,6 +21,7 @@ object OrganizationPermission {
   case object CREATE_SLACK_INTEGRATION extends OrganizationPermission("create_slack_integration")
   case object MANAGE_PLAN extends OrganizationPermission("manage_plan")
   case object VIEW_SETTINGS extends OrganizationPermission("view_settings")
+  case object VIEW_PAYMENTS extends OrganizationPermission("view_payments")
 
   def all: Set[OrganizationPermission] = Set(
     VIEW_ORGANIZATION,
@@ -37,7 +38,8 @@ object OrganizationPermission {
     EXPORT_KEEPS,
     CREATE_SLACK_INTEGRATION,
     MANAGE_PLAN,
-    VIEW_SETTINGS
+    VIEW_SETTINGS,
+    VIEW_PAYMENTS
   )
 
   implicit val format: Format[OrganizationPermission] =
@@ -64,6 +66,7 @@ object OrganizationPermission {
       case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
       case MANAGE_PLAN.value => MANAGE_PLAN
       case VIEW_SETTINGS.value => VIEW_SETTINGS
+      case VIEW_PAYMENTS.value => VIEW_PAYMENTS
     }
   }
 

@@ -9,7 +9,7 @@ import org.apache.commons.lang3.RandomStringUtils.random
 object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
-  val testPlanEditableFeatures = Feature.ALL -- Set(Feature.ViewOrganization, Feature.ViewSettings)
+  val testPlanEditableFeatures = Feature.ALL -- Set(Feature.ViewOrganization, Feature.ViewPayments)
   val testPlanSettings: OrganizationSettings = OrganizationSettings.empty.setAll(Map(
     Feature.PublishLibraries -> FeatureSetting.MEMBERS,
     Feature.InviteMembers -> FeatureSetting.MEMBERS,
@@ -21,7 +21,8 @@ object PaidPlanFactory {
     Feature.CreateSlackIntegration -> FeatureSetting.DISABLED,
     Feature.EditOrganization -> FeatureSetting.ADMINS,
     Feature.ExportKeeps -> FeatureSetting.ADMINS,
-    Feature.ViewSettings -> FeatureSetting.MEMBERS
+    Feature.ViewSettings -> FeatureSetting.MEMBERS,
+    Feature.ViewPayments -> FeatureSetting.DISABLED
   ))
 
   def paidPlan(): PartialPaidPlan = {

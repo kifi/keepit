@@ -99,7 +99,7 @@ angular.module('kifi')
           {
             title: $sce.trustAsHtml(
               'Who can' +
-              ' <a href="http://blog.kifi.com/slack-library-subscriptions/">create a Slack integration</a>' +
+              ' <a href="http://blog.kifi.com/slack-library-subscriptions/" target="_blank">create a Slack integration</a>' +
               ' with Kifi?'
             ),
             description: (
