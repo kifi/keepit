@@ -161,21 +161,19 @@ class PermissionCommanderImpl @Inject() (
   def settinglessOrganizationPermissions(orgRoleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = orgRoleOpt match {
     case None => Set.empty
     case Some(OrganizationRole.MEMBER) => Set(
-      OrganizationPermission.ADD_LIBRARIES,
-      OrganizationPermission.VIEW_SETTINGS
+      OrganizationPermission.ADD_LIBRARIES
     )
     case Some(OrganizationRole.ADMIN) => Set(
       OrganizationPermission.ADD_LIBRARIES,
       OrganizationPermission.MODIFY_MEMBERS,
       OrganizationPermission.REMOVE_MEMBERS,
-      OrganizationPermission.MANAGE_PLAN,
-      OrganizationPermission.VIEW_SETTINGS
+      OrganizationPermission.MANAGE_PLAN
     )
   }
 }
 
 case class OrganizationPermissionsNamespaceKey(orgId: Id[Organization]) extends Key[Int] {
-  override val version = 1
+  override val version = 2
   val namespace = "org_permissions_namespace"
   def toKey(): String = orgId.id.toString
 }
