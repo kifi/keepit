@@ -90,6 +90,14 @@ angular.module('kifi')
             ),
             fieldKey: 'group_messaging',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+          },
+          {
+            title: 'Who can see the settings page?',
+            description: (
+              'Select who is able to view the settings for this team. This does not allow them to edit the settings.'
+            ),
+            fieldKey: 'view_settings',
+            selectOptions: getOptions(ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           }
         ]
       },
