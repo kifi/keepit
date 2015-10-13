@@ -64,7 +64,9 @@ class DeepLinkRouterImpl @Inject() (
       case DeepLinkType.LibraryRecommendation | DeepLinkType.LibraryInvite | DeepLinkType.LibraryView =>
         val libIdOpt = (data \ DeepLinkField.LibraryId).asOpt[PublicId[Library]].flatMap(pubId => Library.decodePublicId(pubId).toOption)
         val libOpt = libIdOpt.map { libId => db.readOnlyReplica { implicit session => libraryRepo.get(libId) } }
-        libOpt.map(lib => pathCommander.pathForLibrary(lib).absolute)
+        libOpt.map(lib => db.readOnlyReplica { implicit session =>
+          pathCommander.pathForLibrary(lib).absolute
+        })
       case DeepLinkType.NewFollower | DeepLinkType.UserView =>
         val userIdOpt = (data \ DeepLinkField.UserId).asOpt[ExternalId[User]]
         val userOpt = userIdOpt.map { extId => db.readOnlyReplica { implicit session => userRepo.getByExternalId(extId) } }
