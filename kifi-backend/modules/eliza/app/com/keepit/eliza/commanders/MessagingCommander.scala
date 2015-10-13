@@ -116,7 +116,7 @@ class MessagingCommander @Inject() (
         val threads = db.readOnlyReplica { implicit session =>
           val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
           threadIds.map(threadRepo.get)
-        }.filter(_.replyable)
+        }
         buildThreadInfos(userId, threads, Some(url)).map { unsortedInfos =>
           val infos = unsortedInfos sortWith { (a, b) =>
             a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
@@ -274,9 +274,9 @@ class MessagingCommander @Inject() (
   private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
     from match {
       case MessageSender.User(id) =>
-        if (!thread.containsUser(id) || !thread.replyable) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
+        if (!thread.containsUser(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
       case MessageSender.NonUser(nup) =>
-        if (!thread.containsNonUser(nup) || !thread.replyable) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
+        if (!thread.containsNonUser(nup)) throw NotAuthorizedException(s"Non-User $nup not authorized to send message on thread ${thread.id.get}")
       case MessageSender.System =>
         throw NotAuthorizedException("Wrong code path for system Messages.")
     }
@@ -432,7 +432,7 @@ class MessagingCommander @Inject() (
 
         checkEmailParticipantRateLimits(adderUserId, oldThread, newNonUserParticipants)
 
-        if (!oldThread.participants.exists(_.contains(adderUserId)) || !oldThread.replyable) {
+        if (!oldThread.participants.exists(_.contains(adderUserId))) {
           throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
         }
 

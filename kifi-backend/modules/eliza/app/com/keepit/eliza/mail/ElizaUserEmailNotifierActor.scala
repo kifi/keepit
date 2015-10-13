@@ -87,8 +87,6 @@ class ElizaUserEmailNotifierActor @Inject() (
     idealImageSize: ImageSize): Future[Unit] = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
-    airbrake.verify(userThread.replyable,
-      s"${userThread.summary} not replyable")
     airbrake.verify(userThread.unread,
       s"${userThread.summary} not unread")
     airbrake.verify(!userThread.notificationEmailed,

@@ -36,8 +36,7 @@ class MessageThreadRepoImpl @Inject() (
     def pageTitle = column[String]("page_title", O.Nullable)
     def participants = column[MessageThreadParticipants]("participants", O.Nullable)
     def participantsHash = column[Int]("participants_hash", O.Nullable)
-    def replyable = column[Boolean]("replyable", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, externalId, uriId.?, url.?, nUrl.?, pageTitle.?, participants.?, participantsHash.?, replyable) <> ((MessageThread.apply _).tupled, MessageThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, externalId, uriId.?, url.?, nUrl.?, pageTitle.?, participants.?, participantsHash.?) <> ((MessageThread.apply _).tupled, MessageThread.unapply _)
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
 
@@ -69,8 +68,7 @@ class MessageThreadRepoImpl @Inject() (
         nUrl = nUriOpt,
         pageTitle = pageTitleOpt,
         participants = Some(mtps),
-        participantsHash = Some(mtps.userHash),
-        replyable = true
+        participantsHash = Some(mtps.userHash)
       )
       (save(thread), true)
     }
