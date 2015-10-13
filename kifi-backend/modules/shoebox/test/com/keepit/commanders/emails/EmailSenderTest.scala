@@ -514,7 +514,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
-        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}","at":"${inviteUser.authToken}"}""", "ascii")
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
@@ -544,7 +544,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
-        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}","at":"${inviteUser.authToken}"}""", "ascii")
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
@@ -601,7 +601,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
-        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}","at":"${inviteUser.authToken}"}""", "ascii")
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"

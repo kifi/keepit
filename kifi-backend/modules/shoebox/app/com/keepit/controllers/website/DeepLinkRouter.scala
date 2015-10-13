@@ -60,11 +60,17 @@ class DeepLinkRouterImpl @Inject() (
       case DeepLinkType.OrganizationInvite =>
         val orgIdOpt = (data \ DeepLinkField.OrganizationId).asOpt[PublicId[Organization]].flatMap(pubId => Organization.decodePublicId(pubId).toOption)
         val orgOpt = orgIdOpt.map { orgId => db.readOnlyReplica { implicit session => orgRepo.get(orgId) } }
-        orgOpt.map(org => pathCommander.pathForOrganization(org).absolute)
+        val authTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
+        orgOpt.map { org =>
+          pathCommander.pathForOrganization(org).absolute + authTokenOpt.map(at => s"&authToken=$at").getOrElse("")
+        }
       case DeepLinkType.LibraryRecommendation | DeepLinkType.LibraryInvite | DeepLinkType.LibraryView =>
         val libIdOpt = (data \ DeepLinkField.LibraryId).asOpt[PublicId[Library]].flatMap(pubId => Library.decodePublicId(pubId).toOption)
         val libOpt = libIdOpt.map { libId => db.readOnlyReplica { implicit session => libraryRepo.get(libId) } }
-        libOpt.map(lib => pathCommander.pathForLibrary(lib).absolute)
+        val authTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
+        libOpt.map { lib =>
+          pathCommander.pathForLibrary(lib).absolute + authTokenOpt.map(at => s"&authToken=$at").getOrElse("")
+        }
       case DeepLinkType.NewFollower | DeepLinkType.UserView =>
         val userIdOpt = (data \ DeepLinkField.UserId).asOpt[ExternalId[User]]
         val userOpt = userIdOpt.map { extId => db.readOnlyReplica { implicit session => userRepo.getByExternalId(extId) } }
