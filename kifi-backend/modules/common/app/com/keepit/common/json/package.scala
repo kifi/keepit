@@ -137,7 +137,7 @@ package object json {
     def safeArrayReads[T](implicit reads: Reads[T]): Reads[Seq[T]] = Reads { jsv =>
       jsv.validate[Seq[JsValue]].map { arr =>
         val vs = arr.map { v => Try(v.as[T]) }
-        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail.getMessage) }
+        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail) }
         vs.collect { case Success(v) => v }
       }
     }
@@ -152,7 +152,7 @@ package object json {
             key -> value
           }
         }
-        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail.getMessage) }
+        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail) }
         vs.collect { case Success(v) => v }.toMap
       }
     }
@@ -166,7 +166,7 @@ package object json {
             key -> value
           }
         }
-        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail.getMessage) }
+        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail) }
         vs.collect { case Success(v) => v }.toMap
       }
     }
