@@ -76,8 +76,8 @@ angular.module('kifi')
       $scope.savePlanChanges();
     }, true);
 
-    // Close Checkout on page navigation
     [
+      // Close Checkout on page navigation
       $rootScope.$on('$stateChangeStart', function () {
         if (handler && handler.close) {
           handler.close();
