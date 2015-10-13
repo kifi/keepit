@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.config(['$httpProvider', '$locationProvider', '$stateProvider', '$urlRouterProvider', 'StripeCheckoutProvider',
-  function($httpProvider, $locationProvider, $stateProvider, $urlRouterProvider, StripeCheckoutProvider) {
+.config(['$httpProvider', '$locationProvider', '$stateProvider', '$urlRouterProvider', 'StripeCheckoutProvider', 'ORG_PERMISSION',
+  function($httpProvider, $locationProvider, $stateProvider, $urlRouterProvider, StripeCheckoutProvider, ORG_PERMISSION) {
     $locationProvider
       .html5Mode(true)
       .hashPrefix('!');
@@ -139,7 +139,11 @@ angular.module('kifi')
           billingState: [
             'billingService', 'profile',
             function (billingService, profile) {
-              return billingService.getBillingState(profile.organization.id);
+              if (profile.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
+                return billingService.getBillingState(profile.organization.id);
+              } else {
+                return {};
+              }
             }
           ]
         },
