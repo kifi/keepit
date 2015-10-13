@@ -164,7 +164,7 @@ class HandleCommanderImpl @Inject() (
   private[commanders] def claimHandle(handle: Handle, ownerId: Option[HandleOwner], lock: Boolean = false, overrideProtection: Boolean = false, overrideValidityCheck: Boolean = false)(implicit session: RWSession): Try[HandleOwnership] = {
     getValidOwnership(handle, ownerId, overrideProtection = overrideProtection, overrideValidityCheck = overrideValidityCheck).map(claimOwnership(_, lock))
   } tap {
-    case Failure(error) => log.error(s"Failed to claim handle $handle for ${HandleOwner.prettyPrint(ownerId)}", error)
+    case Failure(error) => log.error(s"Failed to claim handle $handle for ${HandleOwner.prettyPrint(ownerId)}")
     case Success(updatedOwnership) => log.info(s"Handle $handle (${updatedOwnership.handle}) is now owned by ${updatedOwnership.prettyOwner}: $updatedOwnership")
   }
 
