@@ -63,9 +63,8 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson \ "firstName").as[String] === "Shanee"
         (resultJson \ "experiments").as[Seq[String]] === Seq("admin")
 
-        implicit val orgInfoReads = OrganizationInfo.testReads
-        (resultJson \ "orgs").as[Seq[OrganizationInfo]].length === 1
-        (resultJson \ "pendingOrgs").as[Seq[OrganizationInfo]].length === 0
+        (resultJson \ "orgs").as[Seq[JsObject]].length === 1
+        (resultJson \ "pendingOrgs").as[Seq[JsObject]].length === 0
       }
     }
 

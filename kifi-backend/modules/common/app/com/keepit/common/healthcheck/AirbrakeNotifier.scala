@@ -1,6 +1,7 @@
 package com.keepit.common.healthcheck
 
 import com.google.inject.Inject
+import com.keepit.FortyTwoGlobal
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.{ AlertingActor, UnsupportedActorMessage }
 import com.keepit.common.logging.Logging
@@ -229,3 +230,38 @@ class AirbrakeNotifierImpl(actor: ActorInstance[AirbrakeNotifierActor], isCanary
 
 }
 
+// Only use this if you have to.
+// ie, gives access to airbrake notifier if you're not in a dependency injected context.
+// Please don't use this unless you have to. It's an anti-pattern, but is pragmatism over correctness.
+// Extends AirbrakeNotifierImpl so we get the notify conversion methods for free; thus, depends on implementation above.
+object AirbrakeNotifierStatic extends AirbrakeNotifierImpl(???, false) {
+
+  @volatile private var notifierInstOpt: Option[AirbrakeNotifier] = None
+  private def notifierOpt: Option[AirbrakeNotifier] = {
+    notifierInstOpt.orElse {
+      this.synchronized {
+        notifierInstOpt.orElse {
+          play.api.Play.maybeApplication.collect {
+            case app if app.global.isInstanceOf[FortyTwoGlobal] =>
+              val notif = app.global.asInstanceOf[FortyTwoGlobal].injector.getInstance(classOf[AirbrakeNotifier])
+              notifierInstOpt = Some(notif)
+              notif
+          }
+        }
+      }
+    }
+  }
+
+  override def reportDeployment(): Unit = ()
+
+  override def notify(error: AirbrakeError): AirbrakeError = {
+    notifierOpt match {
+      case Some(notifier) =>
+        notifier.notify(error)
+      case None =>
+        // If no app is up, drop the error. I warned you about not using this unless you have to :)
+        log.error("Couldn't airbrake from AirbrakeNotifierStatic", error.exception)
+        error
+    }
+  }
+}

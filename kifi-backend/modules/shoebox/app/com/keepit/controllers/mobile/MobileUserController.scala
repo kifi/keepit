@@ -32,7 +32,6 @@ class MobileUserController @Inject() (
   val userActionsHelper: UserActionsHelper,
   userCommander: UserCommander,
   userConnectionsCommander: UserConnectionsCommander,
-  userIpAddressCommander: UserIpAddressCommander,
   userInboxCommander: UserInboxCommander,
   typeaheadCommander: TypeaheadCommander,
   keepCountCache: KeepCountCache,
@@ -137,7 +136,6 @@ class MobileUserController @Inject() (
   }
 
   private def getUserInfo[T](request: UserRequest[T], profileInfo: Boolean = false) = {
-    userIpAddressCommander.logUserByRequest(request)
     val user = userCommander.getUserInfo(request.user)
     val (friendCount, keepCount, libCount, libFollowerCount) = if (profileInfo) db.readOnlyMaster { implicit s => getProfileInfo(request.userId) } else (0, 0, 0, 0)
     userCommander.getHelpRankInfo(request.userId) map { info =>

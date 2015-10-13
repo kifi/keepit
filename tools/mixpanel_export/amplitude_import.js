@@ -53,6 +53,9 @@ var skippedEvents = ['user_old_slider_sliderShown', 'user_expanded_keeper', 'use
     // skip {user,visitor}_viewed_page events where the "type" property starts with a "/", with a few exceptions
     return _.endsWith(mpEvent.event, '_viewed_page') && typeProperty.charAt(0) === '/' &&
       typeProperty !== '/settings' && typeProperty !== '/tags/manage' && !_.startsWith(typeProperty, '/?m=0');
+  },
+  function(mpEvent) {
+    return mpEvent.properties.action === 'importedBookmarks' && mpEvent.event === 'user_joined';
   }
 ];
 
@@ -88,6 +91,9 @@ var defaultUserProperties = {
   $region: 'region',
   $city: 'city'
 };
+
+// for user_was_notified events, these 'action' properties should be user_clicked_notification events
+var userWasNotifiedClickActions = ['open', 'click', 'spamreport', 'cleared', 'marked_read', 'marked_unread'];
 
 // function(url) - https GET request that return a promise
 var httpsGet = Promise.method(function(url) {
@@ -136,6 +142,8 @@ function amplitudeEventName(mixpanelEvent) {
     return 'visitor_viewed_page';
   } else if (mixpanelEvent.event === 'user_viewed_pane') {
     return 'user_viewed_page';
+  } else if (mixpanelEvent.event === 'user_was_notified' && userWasNotifiedClickActions.indexOf(mixpanelEvent.properties.action) >= 0) {
+    return 'user_clicked_notification';
   } else {
     return mixpanelEvent.event;
   }
@@ -169,6 +177,11 @@ function amplitudeEvent(mixpanelEvent, insertId) {
     event[amplitudeKey] = mixpanelEvent.properties[mixpanelKey];
   });
 
+  // copy the system "os" property to also be an event property
+  if (mixpanelEvent.properties.os) {
+    event.event_properties.operating_system = mixpanelEvent.properties.os;
+  }
+
   // amplitude will automatically dedupe events with the same insert_id:
   //   "a unique identifier for the event being inserted; we will deduplicate
   //    events with the same insert_id sent within 24 hours of each other"
@@ -197,6 +210,8 @@ function modifyViewedPageOrPaneEvent(mixpanelEvent, amplitudeEvent) {
     amplitudeEvent.event_properties.type = 'settings';
   } else if (typeProperty === '/tags/manage') {
     amplitudeEvent.event_properties.type = 'manageTags';
+  } else if (_.startsWith(typeProperty, '/?m=0')) {
+    amplitudeEvent.event_properties.type = 'home_feed:successful_signup';
   }
 
   if (amplitudeEvent.event_type.indexOf('user_') === 0) {
@@ -283,7 +298,7 @@ function sendAmplitudeEvent(event) {
 
 function fakeApiWorker(task, done) {
   setTimeout(function() {
-    done(null, task.event);
+    done(null, {event: task.event});
   }, 2);
 }
 

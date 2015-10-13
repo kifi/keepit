@@ -5,8 +5,10 @@ angular.module('kifi')
 .directive('kfManageLibrary', [
   '$window', '$rootScope', '$location', '$state', 'friendService',
   'libraryService', 'modalService', 'profileService', 'util', 'LIB_PERMISSION',
+  'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($window, $rootScope, $location, $state, friendService,
-            libraryService, modalService, profileService, util, LIB_PERMISSION) {
+            libraryService, modalService, profileService, util, LIB_PERMISSION,
+            ORG_PERMISSION, ORG_SETTING_VALUE) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -31,10 +33,11 @@ angular.module('kifi')
         // Scope data.
         //
         scope.LIB_PERMISSION = LIB_PERMISSION;
+        scope.ORG_PERMISSION = ORG_PERMISSION;
+        scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
         scope.userHasEditedSlug = false;
         scope.emptySlug = true;
         scope.$error = {};
-        scope.showFollowers = false;
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
         scope.showSubIntegrations = false;
@@ -58,8 +61,13 @@ angular.module('kifi')
           scope.userHasEditedSlug = true;
         };
 
-        scope.toggleIntegrations = function() {
-          scope.showIntegrations = !scope.showIntegrations;
+        scope.toggleIntegrations = function (e) {
+          scope.integrationsOpen = !scope.integrationsOpen;
+          if (scope.integrationsOpen) {
+            element.find('.dialog-body').animate({
+              scrollTop: e.target.getBoundingClientRect().top
+            }, 500);
+          }
         };
 
         scope.addIfEnter = function(event) {
@@ -252,17 +260,55 @@ angular.module('kifi')
           scope.close();
         };
 
-        scope.showFollowersPanel = function () {
-          scope.showFollowers = true;
-        };
-
-        scope.hideFollowersPanel = function () {
-          scope.viewFollowersFirst = false;
-          scope.showFollowers = false;
-        };
-
         scope.hasPermission = function (permission) {
           return scope.library.permissions.indexOf(permission) !== -1;
+        };
+
+        scope.showIntegrations = function () {
+          return (
+            scope.modifyingExistingLibrary &&
+            (
+              scope.showIntegrationsUpsell() ||
+              !scope.spaceIsOrg(scope.space.destination) ||
+              (
+                scope.library.subscriptions[0] &&
+                scope.library.subscriptions[0].url
+              )
+            )
+          );
+        };
+
+        scope.showIntegrationsUpsell = function () {
+          return (
+            scope.spaceIsOrg(scope.space.destination) &&
+            !(
+              scope.space.destination.viewer.membership &&
+              scope.space.destination.viewer.membership.role !== 'admin'
+            )
+          );
+        };
+
+        scope.isIntegrationsEnabled = function () {
+          return (
+            !scope.spaceIsOrg(scope.space.destination) ||
+            scope.space.destination.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) > -1
+          );
+        };
+
+        scope.$watch(function () {
+          return scope.isIntegrationsEnabled();
+        }, function (newValue) {
+          if (newValue === false && scope.integrationsOpen === true) {
+            scope.integrationsOpen = !scope.integrationsOpen;
+          }
+        });
+
+        scope.onHoverUpsellIntegration = function () {
+
+        };
+
+        scope.onClickUpsellIntegration = function () {
+
         };
 
         //

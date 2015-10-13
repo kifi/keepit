@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ UserRepo, OrganizationRepo, OrganizationStates, Organization, User }
+import com.keepit.model.{ OrganizationSettings, OrganizationConfigurationRepo, UserRepo, OrganizationRepo, OrganizationStates, Organization, User }
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.twirl.api.HtmlFormat
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure }
 
 import com.google.inject.Inject
@@ -20,8 +20,10 @@ class AdminPaymentsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val executionContext: ExecutionContext,
     organizationRepo: OrganizationRepo,
+    paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
+    orgConfigRepo: OrganizationConfigurationRepo,
     userRepo: UserRepo,
     planCommander: PlanManagementCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
@@ -116,8 +118,16 @@ class AdminPaymentsController @Inject() (
     }
   }
 
-  def addCreditCardView(orgId: Id[Organization]) = AdminUserAction { request =>
-    Ok(views.html.admin.addCreditCard(orgId))
+  def addCreditCardView(orgId: Id[Organization]) = AdminUserAction.async { request =>
+    val currentCardFuture = planCommander.getDefaultPaymentMethod(orgId) match {
+      case Some(pm) => {
+        stripeClient.getLastFourDigitsOfCard(pm.stripeToken).map { lastFour => s"*${lastFour}" }
+      }
+      case None => Future.successful("N/A")
+    }
+    currentCardFuture.map { lastFour =>
+      Ok(views.html.admin.addCreditCard(orgId, lastFour))
+    }
   }
 
   def addCreditCard(orgId: Id[Organization]) = AdminUserAction.async { request =>
@@ -130,8 +140,9 @@ class AdminPaymentsController @Inject() (
       data("cardholderName").head.trim
     )
     stripeClient.getPermanentToken(cardDetails, s"Manually Entered through admin ${request.userId} for org $orgId").map { token =>
-      val pm = planCommander.addPaymentMethod(orgId, token, ActionAttribution(user = None, admin = Some(request.userId)))
-      val event = planCommander.changeDefaultPaymentMethod(orgId, pm.id.get, ActionAttribution(user = None, admin = Some(request.userId)))
+      val lastFour = cardDetails.number.takeRight(4)
+      val pm = planCommander.addPaymentMethod(orgId, token, ActionAttribution(user = None, admin = Some(request.userId)), lastFour)
+      val event = planCommander.changeDefaultPaymentMethod(orgId, pm.id.get, ActionAttribution(user = None, admin = Some(request.userId)), lastFour)
       Ok(event.toString)
     }
   }
@@ -171,6 +182,31 @@ class AdminPaymentsController @Inject() (
       page,
       allEvents.length,
       PAGE_SIZE))
+  }
+
+  def unfreezeAccount(orgId: Id[Organization]) = AdminUserAction { implicit request =>
+    Ok(planCommander.unfreeze(orgId).toString)
+  }
+
+  def applyDefaultSettingsToOrgConfigs() = AdminUserAction { implicit request =>
+    val paidPlans = db.readOnlyMaster(implicit s => paidPlanRepo.all().filter(_.state == PaidPlanStates.ACTIVE))
+    paidPlans.foreach { plan =>
+      val oldConfigs = db.readOnlyMaster { implicit s =>
+        val orgIds = paidAccountRepo.getActiveByPlan(plan.id.get).map(_.orgId)
+        orgIds.map(orgConfigRepo.getByOrgId)
+      }
+      oldConfigs.foreach { config =>
+        val featuresToRemove = config.settings.kvs.keySet.diff(plan.defaultSettings.kvs.keySet)
+        val featuresToAdd = plan.defaultSettings.kvs.keySet.diff(config.settings.kvs.keySet)
+        if (featuresToRemove.nonEmpty || featuresToAdd.nonEmpty) {
+          val targetFeatures = config.settings.kvs.keySet ++ featuresToAdd -- featuresToRemove
+          val newConfig = targetFeatures.map(feature => feature -> config.settings.kvs.getOrElse(feature, plan.defaultSettings.kvs(feature))).toMap
+          assume(newConfig.keySet == plan.defaultSettings.kvs.keySet)
+          db.readWrite { implicit s => orgConfigRepo.save(config.withSettings(OrganizationSettings(newConfig))) }
+        }
+      }
+    }
+    Ok
   }
 
 }

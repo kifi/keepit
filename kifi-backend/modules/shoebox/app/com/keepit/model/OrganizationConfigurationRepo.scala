@@ -1,10 +1,10 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.{ OrganizationPermissionsNamespaceCache, OrganizationPermissionsNamespaceKey }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ Id, State }
-import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import org.joda.time.DateTime
 
@@ -16,11 +16,16 @@ trait OrganizationConfigurationRepo extends Repo[OrganizationConfiguration] {
 
 @Singleton
 class OrganizationConfigurationRepoImpl @Inject() (
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
     val db: DataBaseComponent,
     val clock: Clock) extends OrganizationConfigurationRepo with DbRepo[OrganizationConfiguration] {
 
-  override def deleteCache(orgMember: OrganizationConfiguration)(implicit session: RSession): Unit = {}
-  override def invalidateCache(orgMember: OrganizationConfiguration)(implicit session: RSession): Unit = {}
+  override def deleteCache(model: OrganizationConfiguration)(implicit session: RSession): Unit = {
+    orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.organizationId))
+  }
+  override def invalidateCache(model: OrganizationConfiguration)(implicit session: RSession): Unit = {
+    orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.organizationId))
+  }
 
   import db.Driver.simple._
 

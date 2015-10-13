@@ -15,7 +15,7 @@
           <input type="text" ng-model="orgName" class="kf-textbox kf-org-create-name" placeholder="Choose a name for your team" />
         </div>
 
-        <input type="submit" ng-click="createOrg()" class="kf-button kf-button-large" value="Create Team"/>
+        <input type="submit" ng-click="createOrg()" class="kf-button kf-button-large" value="Create Team" ng-disabled="disableCreate"/>
       </div>
       <div class="kf-split-pane">
         <p>After choosing a name for your team, we'll let you choose a logo, description, and link.</p>

@@ -12,8 +12,16 @@ import com.keepit.model.{
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.commanders.BasicSlackMessage
+import com.keepit.common.akka.SafeFuture
 
 import scala.util.{ Try, Success, Failure }
+import scala.concurrent.{ Future, ExecutionContext }
+
+import play.api.Mode
+import play.api.Mode.Mode
+import play.api.libs.json.Json
 
 import com.google.inject.{ Singleton, Inject }
 
@@ -26,14 +34,25 @@ class PaymentsIntegrityChecker @Inject() (
     accountLockHelper: AccountLockHelper,
     accountEventRepo: AccountEventRepo,
     paidAccountRepo: PaidAccountRepo,
-    planManagementCommander: PlanManagementCommander) extends Logging {
+    planManagementCommander: PlanManagementCommander,
+    httpClient: HttpClient,
+    mode: Mode,
+    implicit val defaultContext: ExecutionContext) extends Logging {
+
+  private val slackChannelUrl = "https://hooks.slack.com/services/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"
+
+  private def reportToSlack(msg: String): Future[Unit] = SafeFuture {
+    val fullMsg = BasicSlackMessage(
+      text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
+      username = "PaymentsIntegrityChecker"
+    )
+    httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
+  }
 
   private def freezeAccount(orgId: Id[Organization]): Unit = {
-    //TODO: once things are stable and eveything is backfilled this should email whoever is repsonsible for checking and unfreezing accounts
     db.readWrite { implicit session =>
       paidAccountRepo.save(paidAccountRepo.getByOrgId(orgId).freeze)
     }
-
   }
 
   private def processMembershipsForAccount(orgId: Id[Organization]): Try[Option[Int]] = {
@@ -79,7 +98,6 @@ class PaymentsIntegrityChecker @Inject() (
         val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
         val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
 
-        //TODO: one things are stable and everything is backfilled, the three code blocks below should airbake instead of logging
         perceivedActiveButActuallyInactive.foreach { userId =>
           log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
           planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
@@ -110,12 +128,14 @@ class PaymentsIntegrityChecker @Inject() (
       processMembershipsForAccount(orgId) match {
         case Success(Some(0)) => log.info(s"[AEIC] Successfully processed org $orgId. No discrepancies found.")
         case Success(Some(n)) => {
+          reportToSlack(s"Successfully processed org $orgId. $n discrepancies found. Freezing Account. See logs for details.")
           log.info(s"[AEIC] Successfully processed org $orgId. $n discrepancies found. Freezing Account.")
           freezeAccount(orgId)
         }
         case Success(None) => log.info(s"[AEIC] Could not process org $orgId due to account being locked.")
         case Failure(ex) => {
-          log.info(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account", ex)
+          reportToSlack(s"An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account. See logs for stack trace.")
+          log.error(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account", ex)
           freezeAccount(orgId)
         }
       }

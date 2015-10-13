@@ -57,14 +57,16 @@ class ExtLibraryController @Inject() (
 
   def getLibraries(allowOpenCollab: Boolean) = UserAction { request =>
     val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, allowOpenCollab)
-    val basicUserById = {
+    val (basicUserById, orgAvatarsById) = {
       val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
-      db.readOnlyMaster { implicit s => basicUserRepo.loadAll(allUserIds) }
+      val orgIds = librariesWithMembershipAndCollaborators.map(_._1).flatMap(_.organizationId)
+      db.readOnlyMaster { implicit s =>
+        val basicUserById = basicUserRepo.loadAll(allUserIds)
+        val orgAvatarsById = organizationAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, defaultLibraryImageSize)
+        (basicUserById, orgAvatarsById)
+      }
     }
 
-    val libs = librariesWithMembershipAndCollaborators.map(_._1)
-    val orgIds = libs.flatMap(_.organizationId)
-    val orgAvatarsById = organizationAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, defaultLibraryImageSize)
     val datas = librariesWithMembershipAndCollaborators map {
       case (lib, membership, collaboratorsIds) =>
         val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
@@ -161,7 +163,7 @@ class ExtLibraryController @Inject() (
             "slug" -> library.slug,
             "visibility" -> library.visibility,
             "color" -> library.color,
-            "image" -> imageOpt.map(LibraryImageInfo.fromImage),
+            "image" -> imageOpt.map(_.asInfo),
             "owner" -> owner,
             "keeps" -> library.keepCount,
             "followers" -> followerCount,

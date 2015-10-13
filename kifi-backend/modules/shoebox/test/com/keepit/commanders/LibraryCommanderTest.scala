@@ -408,8 +408,8 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = libOwner.id.get, LibraryModifications(space = Some(org.id.get))) must beRight
 
           // However, if we give the admin force-edit permissions
-          val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings }
-          orgCommander.setAccountFeatureSettings(org.id.get, orgOwner.id.get, orgSettings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.ADMINS)) must beRight
+          val newSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.ADMINS) }
+          orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, orgOwner.id.get, newSettings)) must beRight
 
           // They still can't steal the library
           libraryCommander.modifyLibrary(libraryId = lib.id.get, userId = orgOwner.id.get, LibraryModifications(space = Some(orgOwner.id.get))) must beLeft
@@ -716,12 +716,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
         implicit val config = inject[PublicIdConfiguration]
         val (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience) = setupAcceptedInvites
 
+        val libraryInfoCommander = inject[LibraryInfoCommander]
+        val targetLib1 = libraryInfoCommander.getLibrariesByUser(userIron.id.get)
+        val targetLib2 = libraryInfoCommander.getLibrariesByUser(userCaptain.id.get)
+        val targetLib3 = libraryInfoCommander.getLibrariesByUser(userAgent.id.get)
+        val targetLib4 = libraryInfoCommander.getLibrariesByUser(userHulk.id.get)
+
         db.readOnlyMaster { implicit s =>
-          val libraryInfoCommander = inject[LibraryInfoCommander]
-          val targetLib1 = inject[LibraryInfoCommander].getLibrariesByUser(userIron.id.get)
-          val targetLib2 = inject[LibraryInfoCommander].getLibrariesByUser(userCaptain.id.get)
-          val targetLib3 = inject[LibraryInfoCommander].getLibrariesByUser(userAgent.id.get)
-          val targetLib4 = inject[LibraryInfoCommander].getLibrariesByUser(userHulk.id.get)
 
           val (ironMemberships, ironLibs) = targetLib1._1.unzip
           ironLibs.map(_.slug.value) === Seq("science", "murica")

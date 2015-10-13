@@ -169,29 +169,6 @@ class FasterMobileUserControllerTest extends Specification with ShoeboxTestInjec
       }
     }
 
-    "log a user's ip" in {
-      withDb(modules: _*) { implicit injector =>
-        val user = inject[Database].readWrite { implicit session =>
-          UserFactory.user().withName("Shanee", "Smith").withUsername("test").saved
-        }
-
-        val ctrl = routes.MobileUserController.currentUser()
-        ctrl.toString === "/m/1/user/me"
-        ctrl.method === "GET"
-
-        val controller = inject[MobileUserController]
-        val commander = inject[UserIpAddressEventLogger]
-        inject[FakeUserActionsHelper].setUser(user, Set(UserExperimentType.ADMIN))
-
-        val call = controller.currentUser
-        val result = call(FakeRequest())
-        status(result) must equalTo(OK)
-        contentType(result) must beSome("application/json")
-
-        commander.totalNumberOfLogs() === 1
-      }
-    }
-
     "get basic user info for any user" in {
       withDb(modules: _*) { implicit injector =>
         val user = inject[Database].readWrite { implicit rw =>

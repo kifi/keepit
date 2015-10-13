@@ -16,7 +16,8 @@ angular.module('kifi')
   REMOVE_MEMBERS: 'remove_members',
   ADD_LIBRARIES: 'add_libraries',
   VIEW_MEMBERS: 'view_members',
-  EXPORT_KEEPS: 'export_keeps'
+  EXPORT_KEEPS: 'export_keeps',
+  VIEW_SETTINGS: 'view_settings'
 })
 
 .constant('ORG_SETTING_VALUE', {

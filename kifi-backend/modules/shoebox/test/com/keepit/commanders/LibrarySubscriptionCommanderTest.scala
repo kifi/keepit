@@ -1,11 +1,16 @@
 package com.keepit.commanders
 
 import com.google.inject.Injector
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.model._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
 class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInjector {
+  implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   def setup(numLibSubs: Int = 1)(implicit injector: Injector): (User, Library) = {
     db.readWrite { implicit session =>
       val user = userRepo.save(User(firstName = "Link", lastName = "ToThePast", primaryUsername = Some(PrimaryUsername(Username("link"), Username("link")))))
@@ -18,7 +23,6 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
     "save new subscription" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val libSubCommander = inject[LibrarySubscriptionCommander]
         val (expectedSub, actualSub) = db.readWrite { implicit session =>
           val expectedSub = librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "my library sub", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook.com/")))
           val actualSub = librarySubscriptionRepo.get(expectedSub.id.get)
@@ -31,7 +35,6 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
     "save subscription given a subscription key" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val libSubCommander = inject[LibrarySubscriptionCommander]
         val subKey = LibrarySubscriptionKey("competitors", SlackInfo("http://www.fakewebhook.com"))
 
         val newSub = db.readWrite { implicit session =>
@@ -46,7 +49,6 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
     "update subscriptions" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val libSubCommander = inject[LibrarySubscriptionCommander]
         db.readWrite { implicit session =>
           librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "competitors", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook.com/")))
           librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "competitors2", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook2.com/")))
@@ -85,6 +87,20 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
 
       }
     }
-
+    "format new-keep messages properly" in {
+      "slack messages" in {
+        withDb() { implicit injector =>
+          val (user, lib, keep) = db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val lib = LibraryFactory.library().saved
+            val keep = KeepFactory.keep().withUser(user).withLibrary(lib).saved
+            (user, lib, keep)
+          }
+          val message = libSubCommander.slackMessageForNewKeep(user, keep, lib, "testChannel")
+          message.text must contain(s"""/redir?data={"t":"us","uid":"${user.externalId.id}"}""")
+          message.text must contain(s"""/redir?data={"t":"lv","lid":"${Library.publicId(lib.id.get).id}"}""")
+        }
+      }
+    }
   }
 }

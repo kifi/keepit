@@ -99,8 +99,6 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
 
     "add members to org" in {
       withDb() { implicit injector =>
-        val orgRepo = inject[OrganizationRepo]
-        val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
         val (org, owner, user1, user2, rando) = db.readWrite { implicit session =>
           val owner = UserFactory.user().saved
@@ -112,19 +110,11 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         }
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val ownerAddUser = OrganizationMembershipAddRequest(org.id.get, owner.id.get, user1.id.get, OrganizationRole.MEMBER)
+        val ownerAddUser = OrganizationMembershipAddRequest(org.id.get, owner.id.get, user1.id.get, OrganizationRole.MEMBER, None)
         orgMembershipCommander.addMembership(ownerAddUser).isRight === true
 
-        // members can't add owners
-        val memberAddUserAsOwner = OrganizationMembershipAddRequest(org.id.get, user1.id.get, user2.id.get, OrganizationRole.ADMIN)
-        orgMembershipCommander.addMembership(memberAddUserAsOwner) === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-
-        // random people can't add members either
-        val randoAddUser = OrganizationMembershipAddRequest(org.id.get, rando.id.get, user2.id.get, OrganizationRole.MEMBER)
-        orgMembershipCommander.addMembership(randoAddUser) === Left(OrganizationFail.NOT_A_MEMBER)
-
         // can't add someone who is already a member
-        val memberAddMember = OrganizationMembershipAddRequest(org.id.get, user1.id.get, owner.id.get, OrganizationRole.MEMBER)
+        val memberAddMember = OrganizationMembershipAddRequest(org.id.get, user1.id.get, owner.id.get, OrganizationRole.MEMBER, None)
         orgMembershipCommander.addMembership(memberAddMember) === Left(OrganizationFail.ALREADY_A_MEMBER)
       }
     }
@@ -198,6 +188,29 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         1 === 1
       }
     }
+    "remove member permissions when they leave the org" in {
+      withDb() { implicit injector =>
+        val (org, owner, member) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val member = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).secret().saved
+          (org, owner, member)
+        }
 
+        db.readOnlyMaster { implicit session =>
+          permissionCommander.getOrganizationPermissions(org.id.get, Some(member.id.get)) must contain(OrganizationPermission.VIEW_ORGANIZATION)
+        }
+
+        val memberLeave = OrganizationMembershipRemoveRequest(org.id.get, member.id.get, member.id.get)
+        orgMembershipCommander.removeMembership(memberLeave) === Right(OrganizationMembershipRemoveResponse(memberLeave))
+
+        db.readOnlyMaster { implicit session =>
+          permissionCommander.getOrganizationPermissions(org.id.get, Some(member.id.get)) must not contain (OrganizationPermission.VIEW_ORGANIZATION)
+        }
+
+        inject[WatchableExecutionContext].drain()
+        1 === 1
+      }
+    }
   }
 }

@@ -43,7 +43,6 @@ class DelightedPluginImpl @Inject() (
   override def onStart() {
     log.info("Starting DelightedPluginImpl")
     scheduleTaskOnOneMachine(actor.system, 10 seconds, 15 seconds, actor.ref, FetchNewDelightedAnswers, FetchNewDelightedAnswers.getClass.getSimpleName)
-    scheduleTaskOnOneMachine(actor.system, 10 seconds, 1 day, actor.ref, ScheduleSurveyForLapsedUsers(0), ScheduleSurveyForLapsedUsers.getClass.getSimpleName)
   }
 
   def fetchNewDelightedAnswers() {

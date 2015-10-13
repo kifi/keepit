@@ -11,7 +11,7 @@ import com.keepit.model.{ NormalizedURI, User, NotificationCategory }
 import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.delivery.WsNotificationDelivery
 import com.keepit.notify.info.{ NotificationKindInfoRequests, LegacyNotificationInfo, NotificationInfo }
-import com.keepit.notify.model.event.{NotificationEvent, NewMessage, LegacyNotification}
+import com.keepit.notify.model.event.{NotificationEvent, LegacyNotification}
 import com.keepit.notify.model.{NKind, GroupingNotificationKind, Recipient, NotificationKind}
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsValue, JsObject, Json }
@@ -23,9 +23,6 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class NotificationCommander @Inject() (
     db: Database,
-    userThreadRepo: UserThreadRepo,
-    messageRepo: MessageRepo,
-    messageThreadRepo: MessageThreadRepo,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     wsNotificationDelivery: WsNotificationDelivery,
@@ -94,127 +91,6 @@ class NotificationCommander @Inject() (
             Some(NotificationWithItems(notif, Set()))
           }
       }.collect { case Some(notif) => notif }
-    }
-  }
-
-  def backfillMessageThreadForUser(userId: Id[User], messageThreadId: Id[MessageThread])(implicit session: RWSession): NotificationWithItems = {
-    val recipient = Recipient(userId)
-    val userThread = userThreadRepo.getUserThread(userId, messageThreadId)
-    val lastChecked = Seq(userThread.lastActive, userThread.lastSeen, userThread.notificationLastSeen).collect {
-      case Some(time) => time
-    }.maxOpt
-    val messages = messageRepo.get(messageThreadId, 0)
-    val lastEvent = messages.map(_.createdAt).max
-    val groupIdentifier = messageThreadId.id.toString
-    notificationRepo.getByGroupIdentifier(recipient, NewMessage, groupIdentifier).fold({
-      val notif = notificationRepo.save(Notification(
-        recipient = recipient,
-        kind = NewMessage,
-        lastEvent = lastEvent,
-        groupIdentifier = Some(messageThreadId.id.toString)
-      ))
-      val notifId = notif.id.get
-      userThreadRepo.save(userThread.copy(
-        notificationId = Some(notifId)
-      ))
-      val items = messages.map { message =>
-        (message, message.from.asRecipient)
-      }.collect {
-        case (message, Some(from)) => (message, from)
-      }.map {
-        case (message, from) =>
-          notificationItemRepo.save(NotificationItem(
-            notificationId = notif.id.get,
-            kind = NewMessage,
-            event = NewMessage(
-              recipient = recipient,
-              time = message.createdAt,
-              from = from,
-              messageId = message.id.get.id,
-              messageThreadId = messageThreadId.id
-            ),
-            eventTime = message.createdAt
-          ))
-      }
-      NotificationWithItems(notif, items.toSet)
-    }) { notif =>
-      NotificationWithItems(notif, notificationItemRepo.getAllForNotification(notif.id.get).toSet)
-    }
-  }
-
-  def updateMessageThreadForUser(userId: Id[User], messageThreadId: Id[MessageThread]): NotificationWithItems = {
-    db.readWrite { implicit session =>
-      val notifWithItems = backfillMessageThreadForUser(userId, messageThreadId)
-      val mostRecent = notifWithItems.relevantItem
-      val newItems = messageRepo.getAfter(messageThreadId, mostRecent.eventTime).map { message =>
-        (message, message.from.asRecipient)
-      }.collect {
-        case (message, Some(from)) => (message, from)
-      }.map {
-        case (message, from) =>
-          notificationItemRepo.save(NotificationItem(
-            notificationId = notifWithItems.notification.id.get,
-            kind = NewMessage,
-            event = NewMessage(
-              recipient = Recipient(userId),
-              time = message.createdAt,
-              from = from,
-              messageId = message.id.get.id,
-              messageThreadId = messageThreadId.id
-            ),
-            eventTime = message.createdAt
-          ))
-      }.toSet
-      notifWithItems.copy(items = notifWithItems.items | newItems)
-    }
-  }
-
-  def getNotifForMessageThread(userId: Id[User], messageThreadId: Id[MessageThread]): Option[Notification] = {
-    db.readOnlyMaster { implicit session =>
-      userThreadRepo.getUserThread(userId, messageThreadId).notificationId.map { id =>
-        notificationRepo.get(id)
-      }
-    }
-  }
-
-  /**
-   * Gets the message thread that is potentially associated with a notification. This should only return a message thread
-   * if the notification kind is of [[com.keepit.notify.model.event.NewMessage]], as that is the only kind associated with
-   * message threads.
-   */
-  def getMessageThread(notifId: Id[Notification])(implicit session: RSession): Option[MessageThread] = {
-    userThreadRepo.getByNotificationId(notifId).map { userThread =>
-      messageThreadRepo.get(userThread.threadId)
-    }
-  }
-
-  /**
-   * Gets the URI associated with a notification. If the notification represents a [[LegacyNotification]], then getting
-   * the URI just means getting the uri off of the notification's event object. Otherwise, the notification may be connected
-   * with a message thread that does have a normalized URI associated with it.
-   */
-  def getURI(notifId: Id[Notification]): Option[Id[NormalizedURI]] = {
-    db.readOnlyMaster { implicit session =>
-      val items = notificationItemRepo.getAllForNotification(notifId)
-      items.head.event match { // these two cases are mutually exclusive. legacy notifications do not have message threads
-        case LegacyNotification(_, _, _, uriId) => uriId
-        case _ => getMessageThread(notifId).flatMap(_.uriId)
-      }
-    }
-  }
-
-  def getParticipants(notif: Notification): Set[Recipient] = {
-    val messageThreadOpt = db.readOnlyReplica { implicit session =>
-      getMessageThread(notif.id.get)
-    }
-    messageThreadOpt.fold(Set(notif.recipient)) { messageThread =>
-      messageThread.participants.fold(Set[Recipient]()) { participants =>
-        participants.allUsers.map { user =>
-          Recipient(user)
-        } ++ participants.allNonUsers.collect {
-          case NonUserEmailParticipant(address) => Recipient(address)
-        }
-      }
     }
   }
 
@@ -306,6 +182,10 @@ class NotificationCommander @Inject() (
         true
       }
     }
+  }
+
+  def getUnreadNotificationsCount(recipient: Recipient): Int = db.readOnlyMaster { implicit session =>
+    notificationRepo.getUnreadNotificationsCount(recipient)
   }
 
 }

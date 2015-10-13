@@ -3,15 +3,13 @@ package com.keepit.notify.info
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.path.Path
 import com.keepit.eliza.model.{Notification, NotificationItem}
-import com.keepit.model.{NotificationCategory, LibraryAccess}
-import com.keepit.notify.model.NotificationKind
+import com.keepit.model.{LibraryAccess, NotificationCategory}
+import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
 import play.api.libs.json.Json
-import NotificationInfoRequest._
 
 @Singleton
-class NotificationKindInfoRequests @Inject() () {
-
+class NotificationKindInfoRequests @Inject()() {
   private def genericInfoFn[N <: NotificationEvent](
     fn: Set[N] => RequestingNotificationInfos[NotificationInfo]
   ): Set[NotificationEvent] => RequestingNotificationInfos[NotificationInfo] = {
@@ -48,7 +46,6 @@ class NotificationKindInfoRequests @Inject() () {
       case NewSocialConnection => genericInfoFn(infoForNewSocialConection)
       case SocialContactJoined => genericInfoFn(infoForSocialContactJoined)
       case LegacyNotification => genericInfoFn(infoForLegacyNotification)
-      case NewMessage => genericInfoFn(infoForNewMessage)
     }
     infoFn(items.map(_.event))
   }
@@ -127,7 +124,7 @@ class NotificationKindInfoRequests @Inject() () {
       val newKeep = RequestKeep(event.keepId).lookup(batched)
       val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
       StandardNotificationInfo(
-        url = libraryKept.url.absolute,
+        url = Path(libraryKept.path).absolute,
         image = UserImage(keeper),
         title = s"New Keep in ${libraryKept.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
@@ -195,7 +192,7 @@ class NotificationKindInfoRequests @Inject() () {
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       StandardNotificationInfo(
-        url = invitedLib.url.absolute,
+        url = Path(invitedLib.path).absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to collaborate on a library!",
         body = s"Help ${inviter.firstName} by sharing your knowledge in the library ${invitedLib.name}.",
@@ -218,7 +215,7 @@ class NotificationKindInfoRequests @Inject() () {
       val inviter = RequestUser(event.inviterId).lookup(batched)
       val invitedLib = RequestLibrary(event.libraryId).lookup(batched)
       StandardNotificationInfo(
-        url = invitedLib.url.absolute,
+        url = Path(invitedLib.path).absolute,
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to follow a library!",
         body = s"Browse keeps in ${invitedLib.name} to find some interesting gems kept by ${inviter.firstName}.", //same
@@ -300,7 +297,7 @@ class NotificationKindInfoRequests @Inject() () {
       StandardNotificationInfo(
         user = inviter,
         title = s"${inviter.fullName} invited ${plural("someone")} to contribute to your library!",
-        body = s"${inviter.fullName} invited ${plural("some friends")} to contribute to your library, ${libraryInvited.name}",
+        body = s"${inviter.fullName} invited ${plural("someone")} to contribute to your library, ${libraryInvited.name}",
         linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
         extraJson = Some(Json.obj(
           "inviter" -> inviter,
@@ -420,13 +417,4 @@ class NotificationKindInfoRequests @Inject() () {
       )
     }
   }
-
-  def infoForNewMessage(events: Set[NewMessage]): RequestingNotificationInfos[MessageNotificationInfo] = {
-    RequestingNotificationInfos(Requests()) { batched =>
-      MessageNotificationInfo(
-        events
-      )
-    }
-  }
-
 }

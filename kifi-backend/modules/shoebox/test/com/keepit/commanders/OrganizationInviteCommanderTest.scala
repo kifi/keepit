@@ -155,5 +155,38 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         }
       }
     }
+    "cancel invites" in {
+      "remove extra org permissions from a user when their invite is cancelled" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner, invitee) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val invitee = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner.id.get).secret().saved
+            (org, owner, invitee)
+          }
+
+          db.readOnlyMaster { implicit session =>
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(invitee.id.get)) must not contain (OrganizationPermission.VIEW_ORGANIZATION)
+          }
+
+          val inviteResponse = orgInviteCommander.inviteToOrganization(OrganizationInviteSendRequest(org.id.get, owner.id.get, Set.empty, Set(invitee.id.get)))
+          Await.result(inviteResponse, Duration.Inf) must beRight
+
+          val invite = db.readOnlyMaster { implicit session =>
+            val invites = orgInviteRepo.getByOrgAndUserId(org.id.get, invitee.id.get)
+            invites must haveSize(1)
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(invitee.id.get)) must contain(OrganizationPermission.VIEW_ORGANIZATION)
+            invites.head
+          }
+
+          orgInviteCommander.cancelOrganizationInvites(OrganizationInviteCancelRequest(org.id.get, owner.id.get, Set.empty, Set(invitee.id.get))) must beRight
+
+          db.readOnlyMaster { implicit session =>
+            orgInviteRepo.getByOrgAndUserId(org.id.get, invitee.id.get) must beEmpty
+            permissionCommander.getOrganizationPermissions(org.id.get, Some(invitee.id.get)) must not contain (OrganizationPermission.VIEW_ORGANIZATION)
+          }
+        }
+      }
+    }
   }
 }

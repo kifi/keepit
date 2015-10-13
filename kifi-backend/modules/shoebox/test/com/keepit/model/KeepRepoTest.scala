@@ -25,8 +25,8 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
             userId = Id[User](3),
             source = KeepSource.keeper,
             libraryId = Some(Id[Library](4)),
-            librariesHash = Some(LibrariesHash(5)),
-            participantsHash = Some(ParticipantsHash(6))
+            librariesHash = LibrariesHash(5),
+            participantsHash = ParticipantsHash(6)
           ))
           val cacheKeep = keepRepo.get(savedKeep.id.get)
           val dbKeep = keepRepo.getNoCache(savedKeep.id.get)

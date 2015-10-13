@@ -163,12 +163,13 @@ POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.Mobil
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV1(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /m/2/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV2(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 
+GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
+
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
 GET     /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
 POST    /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV1(id: ExternalId[Keep])
 POST    /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV2(id: ExternalId[Keep])
 
-GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.MobileKeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
 
 POST    /m/1/collections/create             @com.keepit.controllers.mobile.MobileKeepsController.saveCollection()
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileKeepsController.allCollections(sort: String ?= "last_kept")
@@ -290,8 +291,6 @@ GET     /m/1/libraries/:id/members              @com.keepit.controllers.mobile.M
 GET     /m/2/libraries/:id/members              @com.keepit.controllers.mobile.MobileLibraryController.getLibraryMembersV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 20)
 GET     /m/1/libraries/:id/members/suggest      @com.keepit.controllers.mobile.MobileLibraryController.suggestMembers(id: PublicId[Library], q: Option[String] ?= None, n: Int ?= 5)
 POST    /m/1/libraries/:id/members/:uId/access  @com.keepit.controllers.mobile.MobileLibraryController.updateLibraryMembership(id: PublicId[Library], uId: ExternalId[User])
-POST    /m/1/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
-
 
 POST    /m/1/content/flagUrl                @com.keepit.controllers.mobile.MobileUriController.flagContent()
 GET     /m/1/inviteInfo                     @com.keepit.controllers.website.InviteController.getGeneralInviteInfo()
@@ -384,7 +383,6 @@ GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.
 GET     /site/keeps/stream               @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
 GET     /site/keeps/all                  @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /site/keeps/count                @com.keepit.controllers.website.KeepsController.numKeeps()
-GET     /site/keeps/export               @com.keepit.controllers.website.KeepsController.exportKeeps()
 POST    /site/keeps/personalExport       @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
 POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean ?= false)
@@ -461,12 +459,6 @@ POST    /site/libraries/:id/image/upload    @com.keepit.controllers.website.Libr
 POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.LibraryImageController.positionLibraryImage(id: PublicId[Library])
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
-
-GET     /site/libraries/recos/top           @com.keepit.controllers.website.LibraryRecommendationsController.topLibRecos()
-POST    /site/libraries/recos/feedback      @com.keepit.controllers.website.LibraryRecommendationsController.updateLibraryRecommendationFeedback(id: PublicId[Library])
-
-GET     /site/recos/public          @com.keepit.controllers.website.RecommendationsController.topPublicRecos()
-POST    /site/recos/feedback        @com.keepit.controllers.website.RecommendationsController.updateUriRecommendationFeedback(id: ExternalId[NormalizedURI])
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
@@ -552,6 +544,7 @@ GET           /site/user-or-org/:handle/libraries         @com.keepit.controller
 GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
 GET           /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.getAccountState(pubId: PublicId[Organization])
+GET           /site/admin/billing/plans                         @com.keepit.controllers.website.PaymentsController.getActivePlans()
 GET           /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.getCreditCardToken(pubId: PublicId[Organization])
 POST          /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.setCreditCardToken(pubId: PublicId[Organization])
 GET           /site/admin/billing/contacts                      @com.keepit.controllers.website.PaymentsController.getAccountContacts(pubId: PublicId[Organization])
@@ -749,6 +742,7 @@ GET     /admin/findOrganizationByNameJson                    @com.keepit.control
 POST    /admin/organizations/create                          @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
+DELETE  /admin/organizations/deleteSystemLibrariesWithInactiveOrgs      @com.keepit.controllers.admin.AdminOrganizationController.deleteSystemLibrariesWithInactiveOrgs()
 
 
 GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg
@@ -817,6 +811,7 @@ POST    /admin/libraries/cloneKifiTutorialsLibraryToOrg @com.keepit.controllers.
 POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.admin.AdminLibraryController.setLibraryOwner(libId: Id[Library])
 POST    /admin/libraries/forceAddMember                 @com.keepit.controllers.admin.AdminLibraryController.unsafeAddMember
 POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps
+POST    /admin/libraries/forceModify                    @com.keepit.controllers.admin.AdminLibraryController.unsafeModifyLibrary
 POST    /admin/libraries/removeLibrariesWithInactiveOwner       @com.keepit.controllers.admin.AdminLibraryController.removeLibrariesWithInactiveOwner
 POST    /admin/libraries/getLibrariesWithInactiveOwner          @com.keepit.controllers.admin.AdminLibraryController.getLibrariesWithInactiveOwner
 
@@ -910,7 +905,8 @@ POST          /admin/payments/changePlanForOrg             @com.keepit.controlle
 GET           /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCardView(orgId: Id[Organization])
 POST          /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
 GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
-
+POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
+POST          /admin/payments/applyDefaultSettingsToOrgConfigs      @com.keepit.controllers.admin.AdminPaymentsController.applyDefaultSettingsToOrgConfigs()
 
 ##########################################
 # Common Healthcheck / service routes
@@ -1025,6 +1021,7 @@ POST     /internal/shoebox/database/canViewLibrary             @com.keepit.contr
 POST     /internal/shoebox/database/getPersonalKeeps   @com.keepit.controllers.internal.ShoeboxController.getPersonalKeeps(userId: Id[User])
 POST     /internal/shoebox/database/getBasicKeepsByIds   @com.keepit.controllers.internal.ShoeboxController.getBasicKeepsByIds()
 POST     /internal/shoebox/database/getBasicLibraryDetails   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
+POST     /internal/shoebox/database/getLibraryCardInfos      @com.keepit.controllers.internal.ShoeboxController.getLibraryCardInfos()
 POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
 POST     /internal/shoebox/database/getKeepImages   @com.keepit.controllers.internal.ShoeboxController.getKeepImages()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
@@ -1082,6 +1079,10 @@ GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRoute
 GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:handle/members           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/settings          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/plan     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/contacts @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/export   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/activity @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)

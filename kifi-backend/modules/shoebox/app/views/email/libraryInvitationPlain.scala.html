@@ -1,13 +1,14 @@
 @(inviteeId: Option[Id[User]],
 inviterId: Id[User],
 inviteMsg: Option[String],
+library: Library,
 libraryInfo: com.keepit.model.LibraryInfo,
 authToken: String,
 inviteAccess: LibraryAccess
 )
 
 @import com.keepit.common.mail.template.helpers._
-@libraryUrl = @{htmlUrl(baseUrl + libraryInfo.url + "?authToken=" + authToken + "&", "libraryInviteLink", inviteeId.nonEmpty)}
+@libraryUrl = @{libraryLink(library.id.get, "authToken=" + authToken, inviteeId.isDefined)}
 
 @* setting up message components that depend on conditionals *@
 @salutation = {

@@ -157,7 +157,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         }
         val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === DollarAmount.ZERO
-        message === "Not processed because conditions not met"
+        message === "Not processed because conditions not met. Frozen: true."
 
         db.readOnlyMaster { implicit session =>
           inject[PaidAccountRepo].get(accountPre.id.get).credit === initialCredit
@@ -171,13 +171,14 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val commander = inject[PaymentProcessingCommander]
         val price = DollarAmount(438)
         val initialCredit = commander.MIN_BALANCE + DollarAmount(1)
+        val initialBillingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
           PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withCredit(initialCredit)
-            .withBillingCycleStart(currentDateTime.minusMonths(1).minusDays(1))
+            .withBillingCycleStart(initialBillingCycleStart)
             .saved
         }
         val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
@@ -185,7 +186,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         message === "Not charging because of low balance"
 
         db.readOnlyMaster { implicit session =>
-          inject[PaidAccountRepo].get(accountPre.id.get).credit === initialCredit
+          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
+          updatedAccount.credit === initialCredit
+          updatedAccount.billingCycleStart === initialBillingCycleStart.plusMonths(1)
         }
 
       }
@@ -207,7 +210,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         }
         val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === DollarAmount.ZERO
-        message === "Not processed because conditions not met"
+        message === "Not processed because conditions not met. Frozen: false."
 
         db.readOnlyMaster { implicit session =>
           inject[PaidAccountRepo].get(accountPre.id.get).credit === initialCredit
@@ -244,7 +247,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
 
         val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === DollarAmount(3 * price.cents) + initialCredit.negative
-        message === "Charge performed"
+        message === "Billing Cycle elapsed"
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
@@ -283,7 +286,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
 
         val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === initialCredit.negative
-        message === "Charge performed"
+        message === "Max balance exceeded"
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)

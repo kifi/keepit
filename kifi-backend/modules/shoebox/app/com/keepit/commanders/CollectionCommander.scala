@@ -16,15 +16,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
 import com.keepit.common.time._
 
-case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
-
-object BasicCollection {
-  implicit val externalIdFormat = ExternalId.format[Collection]
-  implicit val format = Json.format[BasicCollection]
-  def fromCollection(c: CollectionSummary, keeps: Option[Int] = None): BasicCollection =
-    BasicCollection(Some(c.externalId), c.name.tag, keeps)
-}
-
 case class BasicCollectionByIdKey(id: Id[Collection]) extends Key[BasicCollection] {
   override val version = 1
   val namespace = "basic_collection"

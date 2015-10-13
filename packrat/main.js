@@ -529,6 +529,16 @@ var socketHandlers = {
   message_unread: function(nUri, threadId, time, messageId) {
     log("[socket:message_unread]", nUri, threadId, time);
     markUnread(threadId, messageId);
+  },
+  unread_notifications_count: function (unreadCount) {
+    log('[socket:unread_notifications_count]', unreadCount, threadLists && threadLists.all && threadLists.all.numUnreadUnmuted);
+    if (threadLists && threadLists.all) {
+       threadLists.all.numUnreadUnmuted = unreadCount;
+       // This forcefully updates the tabs to have the server's count. The issue is that the client
+       // _usually_ does a good job being correct, so this introduces potential latiency. Right now,
+       // if counts get off, if the user flips between tabs, it fixes. Good enough? Uncomment if no.
+       //tellVisibleTabsNoticeCountIfChanged();
+    }
   }
 };
 
@@ -2710,16 +2720,34 @@ function authenticate(callback, retryMs) {
 }
 
 function lightFlush() {
+  // Friendly cache dump
+  storeLibraries([]);
+  unstore('recent_libraries');
+
+  pageData = {};
+  threadLists = {};
+  threadsById = {};
+  messageData = {};
+  contactSearchCache = null;
+  urlPatterns = null;
+  guideData = null;
+
+  authenticate(function () {
+    getLatestThreads();
+    getUrlPatterns(getPrefs.bind(null, loadLibraries.bind(null, api.noop)));
+    log('[lightFlush] flush successful');
+  });
+
+}
+
+function clearSession() {
   if (me) {
     storeDrafts({});
     storeLibraries([]);
     unstore('recent_libraries');
   }
   clearDataCache();
-}
 
-function clearSession() {
-  lightFlush();
   if (me) {
     unstore('user_id');
     api.tabs.each(function (tab) {

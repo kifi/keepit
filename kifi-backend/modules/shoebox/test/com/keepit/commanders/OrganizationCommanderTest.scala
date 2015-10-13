@@ -55,17 +55,17 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             orgLibs.size === 1
             val orgGeneralLib = orgLibs.head
             libraryMembershipRepo.getWithLibraryId(orgGeneralLib.id.get).map(_.userId) === List(org.ownerId)
+
+            val avatar1 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize)
+            avatar1.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
+            avatar1.width === 200
+            avatar1.height === 200
+
+            val avatar2 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, CropScaledImageSize.Tiny.idealSize)
+            avatar2.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"
+            avatar2.width === 100
+            avatar2.height === 100
           }
-
-          val avatar1 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, OrganizationAvatarConfiguration.defaultSize)
-          avatar1.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg"
-          avatar1.width === 200
-          avatar1.height === 200
-
-          val avatar2 = inject[OrganizationAvatarCommander].getBestImageByOrgId(org.id.get, CropScaledImageSize.Tiny.idealSize)
-          avatar2.imagePath.path === "oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-100x100_cs.jpg"
-          avatar2.width === 100
-          avatar2.height === 100
 
           inject[WatchableExecutionContext].drain()
           1 === 1
@@ -104,6 +104,53 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           db.readOnlyMaster { implicit session =>
             inject[LibraryRepo].getBySpace(org.id.get, excludeState = None).size === publicLibs.length + orgLibs.length + deletedLibs.length + 1 // for the org's General lib
           }
+        }
+      }
+    }
+
+    "modify an organization" in {
+      "handle modify permissions correctly" in {
+        withDb(modules: _*) { implicit injector =>
+          val orgRepo = inject[OrganizationRepo]
+          val orgCommander = inject[OrganizationCommander]
+          val orgMembershipRepo = inject[OrganizationMembershipRepo]
+
+          val users = db.readWrite { implicit session =>
+            PaidPlanFactory.paidPlan().saved
+            UserFactory.users(3).saved
+          }
+
+          val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
+          val createResponse = orgCommander.createOrganization(createRequest)
+          createResponse must beRight
+          val org = createResponse.right.get.newOrg
+
+          db.readWrite { implicit session =>
+            orgMembershipRepo.save(org.newMembership(userId = users(1).id.get, role = OrganizationRole.MEMBER))
+          }
+
+          // Random non-members shouldn't be able to modify the org
+          val nonmemberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(2).id.get,
+            modifications = OrganizationModifications(name = Some("User 42 Rules!")))
+          val nonmemberModifyResponse = orgCommander.modifyOrganization(nonmemberModifyRequest)
+          nonmemberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+          // Neither should a generic member
+          val memberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(1).id.get,
+            modifications = OrganizationModifications(name = Some("User 2 Rules!")))
+          val memberModifyResponse = orgCommander.modifyOrganization(memberModifyRequest)
+          memberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+
+          // An owner can do whatever they want
+          val ownerModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
+            modifications = OrganizationModifications(name = Some("The view is nice from up here"), site = Some("www.kifi.com")))
+          val ownerModifyResponse = orgCommander.modifyOrganization(ownerModifyRequest)
+          ownerModifyResponse must beRight
+          ownerModifyResponse.right.get.request === ownerModifyRequest
+          ownerModifyResponse.right.get.modifiedOrg.name === "The view is nice from up here"
+          ownerModifyResponse.right.get.modifiedOrg.site.get === "www.kifi.com"
+
+          db.readOnlyMaster { implicit session => orgRepo.get(org.id.get) } === ownerModifyResponse.right.get.modifiedOrg
         }
       }
     }
@@ -162,6 +209,7 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             val (owner, members) = (users.head, users.tail)
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(members).saved
             val orgGeneralLib = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
+            println(libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head)
             val orgLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user).withOrganization(org)).saved.toSet }.toMap
             val personalLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user)).saved.toSet }.toMap
             (org, owner, members, orgLibs, personalLibs, orgGeneralLib)
@@ -184,7 +232,6 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
 
           val maybeResponse = orgCommander.deleteOrganization(OrganizationDeleteRequest(orgId = org.id.get, requesterId = owner.id.get))
           maybeResponse must beRight
-
           Await.result(maybeResponse.right.get.returningLibsFut, Duration.Inf)
 
           db.readOnlyMaster { implicit session =>
@@ -192,8 +239,10 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             orgRepo.get(org.id.get).state === OrganizationStates.INACTIVE
             orgMembershipRepo.getAllByOrgId(org.id.get) === Set.empty
             libraryRepo.getBySpace(org.id.get) === Set.empty
+            libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL) === Set.empty
             for (u <- users) {
-              libraryRepo.getAllByOwner(u.id.get).map(_.id.get).toSet === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
+              libraryRepo.getAllByOwner(u.id.get).
+                map(_.id.get).toSet === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
               libraryRepo.getBySpace(u.id.get).map(_.id.get) === (orgLibs(u.id.get) ++ personalLibs(u.id.get)).map(_.id.get)
             }
           }

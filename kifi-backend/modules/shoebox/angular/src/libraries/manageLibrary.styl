@@ -370,65 +370,63 @@ button.manage-lib-delete-button
   &.ng-hide
     margin-left: -600px
 
+.manage-lib-integrations
+  margin: 0 12px
+  transform-origin: top center
+
+  &.ng-enter
+    transition: .75s ease
+    transform: translateY(-30%)
+    opacity: 0
+
+  &.ng-enter-active
+    transform: translateY(0)
+    opacity: 1
+
+
 .manage-lib-subs-heading
-  margin-left: 27px
   font-size: 14px
   font-weight: 700
 
 .manage-lib-integrations-title-wrapper
-  display: block
+  position: relative
   color: textBlackColor
   font-size: 15px
 
 .manage-lib-integrations-title
-  font-weight: 700
-  color: black
-  cursor: pointer
+  display: inline
   position: relative
-  right: 13px
-
-
-.manage-lib-integrations-arrow
-  position: relative
-  overflow: hidden
-  display: inline-block
-  width: 13px
-  height: 13px
-  vertical-align: middle
-  top: -1px
-  right: 18px
+  font-weight: bold
+  font-size: 15px
+  color: #333
   cursor: pointer
 
-  &.active
-    transform: rotate(90deg)
-    transition: all 0.8s
+  &.manage-lib-integrations-disabled
+    color: textGreyColor
+    font-smoothing: antialiased
+    cursor: no-drop
 
     &:before
-      background-color: blueColor
-      transition: all 0.8s
+      display: none
 
-.manage-lib-integrations-arrow:before
-  content: ''
-  background-color: textGreyColor
-  transform: rotate(45deg)
-  width: 9px
-  height: 9px
-  position: absolute
-  top: 2px
-  left: 0
+  &:before
+    content: ''
+    position: absolute;
+    top: 4px
+    left: -14px
+    display: block
+    width: 0
+    height: 0
+    border: 7px solid transparent
+    border-left-color: blueColor;
+    transform-origin: 30% 50%
 
-.manage-lib-integrations-arrow:after
-  content: ''
-  position: absolute
-  top: 0
-  left: 0
-  width: 31%
-  height: 100%
-  background-color: #fff
+  &.active:before
+    transform: rotate(90deg)
+    transition: .5s
 
 .manage-lib-subs-table
-  width: 90%
-  margin-left: 25px
+  margin: 0 20px
   table-layout: fixed
   border-collapse: separate
   border-spacing: 10px
@@ -444,12 +442,12 @@ button.manage-lib-delete-button
   white-space: nowrap
 
 .manage-lib-sub-name-input
-  width: 30%
+  width: 45%
   white-space: nowrap
   overflow-x: hidden
 
 .manage-lib-sub-url-input
-  width: 80%
+  width: 55%
   white-space: nowrap
   overflow-x: hidden
 
@@ -551,8 +549,15 @@ button.manage-lib-delete-button
     width: 2px
 
 .manage-lib-subs-instruct
-  margin-left: 42px
-  color: gray
+  margin: 0 24px
+  color: #666
+
+  p
+    margin: 7px 0
+
+.manage-lib-subs-instruct-list
+  list-style-type: decimal
+  margin: 0 25px
 
 .manage-lib-user-selector
   margin-top: 15px

@@ -26,41 +26,6 @@ class LegacyNotificationCheck @Inject() (
     notificationItemRepo: NotificationItemRepo,
     implicit val executionContext: ExecutionContext) {
 
-  def checkUserExperiment(recipient: Recipient): LegacyNotificationCheck.Result = {
-    Await.result(checkUserExperimentAsync(recipient), 10 seconds)
-  }
-
-  def checkUserExperimentAsync(recipient: Recipient): Future[LegacyNotificationCheck.Result] = {
-    // Don't want to have to keep switching experiments in dev mode
-    val flipResults = Play.maybeApplication.exists(_.mode == Mode.Dev)
-    recipient match {
-      case u @ UserRecipient(id, experimentEnabled) => experimentEnabled match {
-        case None =>
-          Future.successful(LegacyNotificationCheck.Result(true, u.copy(experimentEnabled = Some(true))))
-        case Some(result) => Future.successful(LegacyNotificationCheck.Result(result, u))
-      }
-      case _: EmailRecipient => Future.successful(LegacyNotificationCheck.Result(false, recipient))
-    }
-  }
-
-  def ifUserExperiment(recipient: Recipient)(f: (Recipient) => Unit): Recipient = {
-    val check = checkUserExperiment(recipient)
-    if (check.experimentEnabled) {
-      f(check.recipient)
-    }
-    check.recipient
-  }
-
-  def ifElseUserExperiment(recipient: Recipient)(f: (Recipient) => Unit)(elseF: (Recipient) => Unit): Recipient = {
-    val check = checkUserExperiment(recipient)
-    if (check.experimentEnabled) {
-      f(check.recipient)
-    } else {
-      elseF(check.recipient)
-    }
-    check.recipient
-  }
-
   def ifNotifExists(potentialNotifId: String)(doIfExists: Notification => Unit)(doElse: => Unit): Unit = {
     val notifOpt = db.readOnlyMaster { implicit session =>
       ExternalId.asOpt[Notification](potentialNotifId).flatMap { id => notificationRepo.getOpt(id) }

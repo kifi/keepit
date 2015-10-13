@@ -9,7 +9,7 @@ import org.apache.commons.lang3.RandomStringUtils.random
 object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
-  val testPlanEditableFeatures = Feature.all
+  val testPlanEditableFeatures = Feature.ALL -- Set(Feature.ViewOrganization, Feature.ViewSettings)
   val testPlanSettings: OrganizationSettings = OrganizationSettings.empty.setAll(Map(
     Feature.PublishLibraries -> FeatureSetting.MEMBERS,
     Feature.InviteMembers -> FeatureSetting.MEMBERS,
@@ -20,11 +20,12 @@ object PaidPlanFactory {
     Feature.RemoveLibraries -> FeatureSetting.MEMBERS,
     Feature.CreateSlackIntegration -> FeatureSetting.DISABLED,
     Feature.EditOrganization -> FeatureSetting.ADMINS,
-    Feature.ExportKeeps -> FeatureSetting.ADMINS
+    Feature.ExportKeeps -> FeatureSetting.ADMINS,
+    Feature.ViewSettings -> FeatureSetting.MEMBERS
   ))
 
   def paidPlan(): PartialPaidPlan = {
-    new PartialPaidPlan(PaidPlan(id = Some(Id[PaidPlan](idx.incrementAndGet())), kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("test"),
+    new PartialPaidPlan(PaidPlan(id = Some(Id[PaidPlan](idx.incrementAndGet())), kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("test"), displayName = "Free",
       pricePerCyclePerUser = DollarAmount(10000), billingCycle = BillingCycle(month = 1), editableFeatures = testPlanEditableFeatures, defaultSettings = testPlanSettings))
   }
 

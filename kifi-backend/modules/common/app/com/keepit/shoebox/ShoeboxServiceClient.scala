@@ -118,6 +118,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def newKeepsInLibraryForEmail(userId: Id[User], max: Int): Future[Seq[Keep]]
   def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]]): Future[Map[Id[NormalizedURI], Set[PersonalKeep]]]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]]
+  def getLibraryCardInfos(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], LibraryCardInfo]]
   def getKeepCounts(userIds: Set[Id[User]]): Future[Map[Id[User], Int]]
   def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]]
   def getLibrariesWithWriteAccess(userId: Id[User]): Future[Set[Id[Library]]]
@@ -728,6 +729,20 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getBasicLibraryDetails, payload).map { r =>
         implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], BasicLibraryDetails]
         r.json.as[Seq[(Id[Library], BasicLibraryDetails)]].toMap
+      }
+    }
+  }
+  def getLibraryCardInfos(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], LibraryCardInfo]] = {
+    if (libraryIds.isEmpty) Future.successful(Map.empty[Id[Library], LibraryCardInfo]) else {
+      val payload = Json.obj(
+        "libraryIds" -> libraryIds,
+        "idealImageSize" -> idealImageSize,
+        "viewerId" -> viewerId
+      )
+      call(Shoebox.internal.getLibraryCardInfos, payload).map { r =>
+        implicit val libraryCardInfoReads = LibraryCardInfo.internalReads
+        implicit val readsFormat = TupleFormat.tuple2Reads[Id[Library], LibraryCardInfo]
+        r.json.as[Seq[(Id[Library], LibraryCardInfo)]].toMap
       }
     }
   }

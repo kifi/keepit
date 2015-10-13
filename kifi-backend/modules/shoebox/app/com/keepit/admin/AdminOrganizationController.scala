@@ -34,6 +34,7 @@ class AdminOrganizationController @Inject() (
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
     libRepo: LibraryRepo,
+    libraryCommander: LibraryCommander,
     userExperimentRepo: UserExperimentRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -338,7 +339,7 @@ class AdminOrganizationController @Inject() (
   def addMember(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
     val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, requesterId = org.ownerId, targetId = userId, OrganizationRole.MEMBER)) match {
+    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, requesterId = org.ownerId, targetId = userId, OrganizationRole.MEMBER, adminIdOpt = request.adminUserId)) match {
       case Right(res) =>
         Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
       case Left(fail) =>
@@ -427,13 +428,20 @@ class AdminOrganizationController @Inject() (
 
   def forceDeactivate(orgId: Id[Organization]) = AdminUserAction { implicit request =>
     implicit val context = HeimdalContext.empty
-    val deleteResponse = db.readWrite { implicit session =>
-      val org = orgRepo.get(orgId)
-      orgCommander.deleteOrganization(OrganizationDeleteRequest(org.ownerId, org.id.get))
-    }
+    val org = db.readOnlyReplica { implicit session => orgRepo.get(orgId) }
+    val deleteResponse = orgCommander.deleteOrganization(OrganizationDeleteRequest(org.ownerId, org.id.get))
     deleteResponse match {
       case Left(fail) => fail.asErrorResponse
       case Right(response) => Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationsView(0))
     }
+  }
+
+  def deleteSystemLibrariesWithInactiveOrgs() = AdminUserAction { implicit request =>
+    val zombieLibs = db.readOnlyMaster { implicit session =>
+      val inactiveOrgs = orgRepo.getAllByState(OrganizationStates.INACTIVE)
+      inactiveOrgs.flatMap(org => libRepo.getBySpace(org.id.get)).filter(_.isSystemLibrary) // get all active system libraries in the orgs
+    }
+    zombieLibs.foreach(lib => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get))
+    Ok
   }
 }

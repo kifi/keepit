@@ -1,21 +1,15 @@
 package com.keepit.model
 
-import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.json
-import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.BasicContact
-import com.keepit.common.store.ImagePath
-import com.keepit.social.{ BasicUser, BasicUserFields }
+import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.Future
-import scala.concurrent.duration.Duration
-import scala.util.Try
 
 sealed abstract class LibraryError(val message: String)
 
@@ -131,6 +125,21 @@ case class LibraryModifications(
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
+object LibraryModifications {
+  implicit val spaceReads = LibrarySpace.adminReads
+  val adminReads: Reads[LibraryModifications] = (
+    (__ \ 'name).readNullable[String] and
+    (__ \ 'slug).readNullable[String] and
+    (__ \ 'visibility).readNullable[LibraryVisibility] and
+    (__ \ 'description).readNullable[String] and
+    (__ \ 'color).readNullable[LibraryColor] and
+    (__ \ 'listed).readNullable[Boolean] and
+    (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
+    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
+    (__ \ 'space).readNullable[LibrarySpace] and
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+  )(LibraryModifications.apply _)
+}
 
 object ExternalLibraryModifications {
   val readsMobileV1: Reads[ExternalLibraryModifications] = (
@@ -186,7 +195,7 @@ object LibraryInfo {
     (__ \ 'inviter).formatNullable[BasicUser]
   )(LibraryInfo.apply, unlift(LibraryInfo.unapply))
 
-  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImage], owner: BasicUser, org: Option[Organization], inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
+  def fromLibraryAndOwner(lib: Library, image: Option[LibraryImageInfo], owner: BasicUser, org: Option[Organization], inviter: Option[BasicUser] = None)(implicit config: PublicIdConfiguration): LibraryInfo = {
     LibraryInfo(
       id = Library.publicId(lib.id.get),
       name = lib.name,
@@ -194,7 +203,7 @@ object LibraryInfo {
       shortDescription = lib.description,
       url = LibraryPathHelper.formatLibraryPath(owner, org.map(_.handle), lib.slug),
       color = lib.color,
-      image = image.map(LibraryImageInfo.fromImage),
+      image = image,
       owner = owner,
       numKeeps = lib.keepCount,
       numFollowers = lib.memberCount - 1, // remove owner from count
@@ -202,70 +211,6 @@ object LibraryInfo {
       lastKept = lib.lastKept,
       inviter = inviter
     )
-  }
-}
-
-case class LibraryCardInfo(
-  id: PublicId[Library],
-  name: String,
-  description: Option[String],
-  color: Option[LibraryColor], // system libraries have no color
-  image: Option[LibraryImageInfo],
-  slug: LibrarySlug,
-  visibility: LibraryVisibility,
-  owner: BasicUser,
-  numKeeps: Int,
-  numFollowers: Int,
-  followers: Seq[BasicUser],
-  numCollaborators: Int,
-  collaborators: Seq[BasicUser],
-  lastKept: DateTime,
-  following: Option[Boolean], // @deprecated use membership object instead!
-  membership: Option[LibraryMembershipInfo],
-  invite: Option[LibraryInviteInfo], // currently only for Invited tab on viewer's own user profile
-  permissions: Set[LibraryPermission],
-  caption: Option[String] = None, // currently only for marketing page
-  modifiedAt: DateTime,
-  kind: LibraryKind,
-  path: String,
-  org: Option[BasicOrganizationView],
-  orgMemberAccess: Option[LibraryAccess])
-
-object LibraryCardInfo {
-  implicit val writes = new Writes[LibraryCardInfo] {
-    import com.keepit.common.core._
-    def writes(o: LibraryCardInfo) = Json.obj(
-      "id" -> o.id,
-      "name" -> o.name,
-      "description" -> o.description,
-      "color" -> o.color,
-      "image" -> o.image,
-      "slug" -> o.slug,
-      "visibility" -> o.visibility,
-      "owner" -> o.owner,
-      "numKeeps" -> o.numKeeps,
-      "numFollowers" -> o.numFollowers,
-      "followers" -> o.followers,
-      "numCollaborators" -> o.numCollaborators,
-      "collaborators" -> o.collaborators,
-      "lastKept" -> o.lastKept,
-      "following" -> o.following,
-      "membership" -> o.membership,
-      "invite" -> o.invite,
-      "permissions" -> o.permissions,
-      "caption" -> o.caption,
-      "modifiedAt" -> o.modifiedAt,
-      "kind" -> o.kind,
-      "path" -> o.path,
-      "org" -> o.org,
-      "orgMemberAccess" -> o.orgMemberAccess).nonNullFields
-  }
-  def chooseCollaborators(collaborators: Seq[BasicUser]): Seq[BasicUser] = {
-    collaborators.sortBy(_.pictureName == "0.jpg").take(3) // owner + up to 3 collaborators shown
-  }
-
-  def chooseFollowers(followers: Seq[BasicUser]): Seq[BasicUser] = {
-    followers.filter(_.pictureName != "0.jpg").take(4) // 3 shown, 1 extra in case viewer is one and leaves
   }
 }
 

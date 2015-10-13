@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.config(['$httpProvider', '$locationProvider', '$stateProvider', '$urlRouterProvider',
-  function($httpProvider, $locationProvider, $stateProvider, $urlRouterProvider) {
+.config(['$httpProvider', '$locationProvider', '$stateProvider', '$urlRouterProvider', 'StripeCheckoutProvider',
+  function($httpProvider, $locationProvider, $stateProvider, $urlRouterProvider, StripeCheckoutProvider) {
     $locationProvider
       .html5Mode(true)
       .hashPrefix('!');
@@ -23,9 +23,9 @@ angular.module('kifi')
       .otherwise('/');  // last resort
 
     // Set up the states.
-    $stateProvider  
+    $stateProvider
       .state('home', {
-        url: '/',
+        url: '/?openImportModal',
         controller: 'HomeCtrl',
         templateUrl: 'home/home.tpl.html',
         'abstract': true
@@ -114,16 +114,6 @@ angular.module('kifi')
                   }
                 });
             }
-          ],
-          settings: [
-            'orgProfileService', 'profile', 'messageTicker', 'ORG_PERMISSION',
-            function (orgProfileService, profile, messageTicker, ORG_PERMISSION) {
-              if (profile.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
-                return orgProfileService.getOrgSettings(profile.organization.id);
-              } else {
-                return {};
-              }
-            }
           ]
         },
         'abstract': true
@@ -173,7 +163,23 @@ angular.module('kifi')
         controller: 'PaymentPlanCtrl',
         templateUrl: 'teamSettings/paymentPlan.tpl.html',
         activetab: 'settings',
-        activenav: 'payment-plan'
+        activenav: 'payment-plan',
+        resolve: {
+          stripe: StripeCheckoutProvider.load,
+          billingState: [
+            'billingService', 'profile',
+            function (billingService, profile) {
+              return billingService.getBillingState(profile.organization.id);
+            }
+          ]
+        }
+      })
+      .state('orgProfile.settings.activity', {
+        url: '/activity',
+        controller: 'ActivityLogCtrl',
+        templateUrl: 'teamSettings/activityLog.tpl.html',
+        activetab: 'settings',
+        activenav: 'activity-log'
       })
       .state('teams', {
         url: '/teams',

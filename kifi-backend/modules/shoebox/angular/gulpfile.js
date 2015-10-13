@@ -84,6 +84,7 @@ var testJsFiles = 'test/**/*.js';
 var libCssFiles = [
   'lib/normalize-css/normalize.css',
   ['managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.css', 'managed-lib/jquery-ui-1.10.4.custom/css/smoothness/jquery-ui-1.10.4.custom.min.css'],
+  'managed-lib/select-css/src/select.css',
   'managed-lib/pace/pace.css'
 ];
 var libJsFiles = [
@@ -92,6 +93,7 @@ var libJsFiles = [
   ['lib/jquery/dist/jquery.js', 'lib/jquery/dist/jquery.min.js'],
   ['lib/angular/angular.js', 'lib/angular/angular.min.js'],
   ['lib/angular-cookies/angular-cookies.js', 'lib/angular-cookies/angular-cookies.min.js'],
+  ['lib/angular-stripe-checkout/angular-stripe-checkout.js', 'lib/angular-stripe-checkout/angular-stripe-checkout.min.js'],
   'lib/airbrake-js-client/dist/client.js',
   ['lib/angular-resource/angular-resource.js', 'lib/angular-resource/angular-resource.min.js'],
   ['lib/angular-sanitize/angular-sanitize.js', 'lib/angular-sanitize/angular-sanitize.min.js'],

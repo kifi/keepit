@@ -3,7 +3,6 @@ package com.keepit.eliza.commanders
 import com.google.inject.{ Singleton, Inject }
 import com.keepit.heimdal._
 import com.keepit.realtime._
-import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
@@ -14,6 +13,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.realtime.{ MessageThreadPushNotification, SimplePushNotification, PushNotification }
 import com.keepit.common.db.slick.Database
 import com.keepit.eliza.model._
+
+import scala.concurrent.Future
+import scala.util.Random
 
 @Singleton
 class MessagingAnalytics @Inject() (
@@ -207,24 +209,26 @@ class MessagingAnalytics @Inject() (
       message.source.foreach { source => contextBuilder += ("source", source.value) }
       thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
       thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
-
-      contextBuilder.data.get("messagedWholeOrgId").collect { case orgId: ContextStringData => s"[OrgMessageTracking] successfully tracked messagedWholeOrgId=${orgId.value}" }
-
       sender match {
         case MessageSender.User(userId) => {
           val uriId = thread.uriId.get
           shoebox.getPersonalKeeps(userId, Set(uriId)).foreach { basicKeeps =>
             contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
-            thread.participants.foreach(addOrganizationInfo(contextBuilder, _))
-            val context = contextBuilder.build
-            heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
-            heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
-            heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
+            thread.participants.map(getOrganizationsSharedByParticipants)
+              .getOrElse(Future.successful(Set.empty))
+              .foreach { sharedOrgs =>
+                if (sharedOrgs.nonEmpty) contextBuilder += ("allParticipantsInOrgId", Random.shuffle(sharedOrgs).head.toString)
+                val context = contextBuilder.build
+                context.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgTracking:sentMessage] successfully tracking allParticipantsInOrgId=$orgId") }
+                heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.MESSAGED, sentAt))
+                heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.USED_KIFI, sentAt))
+                heimdal.setUserProperties(userId, "lastMessaged" -> ContextDate(sentAt))
 
-            // Anonymized event with page information
-            anonymise(contextBuilder)
-            thread.url foreach contextBuilder.addUrlInfo
-            heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
+                // Anonymized event with page information
+                anonymise(contextBuilder)
+                thread.url foreach contextBuilder.addUrlInfo
+                heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
+              }
           }
         }
 
@@ -263,13 +267,9 @@ class MessagingAnalytics @Inject() (
   private def anonymise(contextBuilder: HeimdalContextBuilder): Unit =
     contextBuilder.anonymise("userParticipants", "newParticipants", "otherParticipants", "threadId", "messageId", "uriId")
 
-  private def addOrganizationInfo(contextBuilder: HeimdalContextBuilder, participants: MessageThreadParticipants): Unit = {
-    val orgIdsByUserIdFut = shoebox.getOrganizationsForUsers(participants.allUsers)
-    orgIdsByUserIdFut.foreach { orgIdsByUserId =>
-      val commonOrgs = orgIdsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }
-      log.info(s"[OrgMessageTracking] commonOrgs=${commonOrgs.map(_.mkString(","))}")
-      commonOrgs.flatMap(_.headOption).foreach { orgId: Id[Organization] => contextBuilder += ("allParticipantsInOrgId", ContextStringData(orgId.toString)) }
-      contextBuilder.data.get("allParticipantsInOrgId").foreach { orgId => log.info(s"[OrgMessageTracking] successfully tracking allParticipantsInOrgId = $orgId") }
+  private def getOrganizationsSharedByParticipants(participants: MessageThreadParticipants): Future[Set[Id[Organization]]] = {
+    shoebox.getOrganizationsForUsers(participants.allUsers).map { orgsByUserId =>
+      orgsByUserId.values.reduceLeftOption[Set[Id[Organization]]] { case (acc, orgSet) => acc.intersect(orgSet) }.getOrElse(Set.empty)
     }
   }
 }

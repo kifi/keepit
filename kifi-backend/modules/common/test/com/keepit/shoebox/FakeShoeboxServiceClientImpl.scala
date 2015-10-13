@@ -636,6 +636,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], BasicLibraryDetails]] = Future.successful(Map.empty)
 
+  def getLibraryCardInfos(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Future[Map[Id[Library], LibraryCardInfo]] = Future.successful(Map.empty)
+
   def getKeepCounts(userId: Set[Id[User]]): Future[Map[Id[User], Int]] = ???
 
   def getKeepImages(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicImages]] = Future.successful(Map.empty)

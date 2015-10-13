@@ -12,6 +12,7 @@ angular.module('kifi', [
   'jun.smartScroll',
   'angularMoment',
   'jun.facebook',
+  'stripe.checkout',
   'ui.slider',
   'angulartics',
   'kifi.templates'
@@ -45,8 +46,8 @@ angular.module('kifi', [
 }()))
 
 .config([
-  '$compileProvider', '$FBProvider', 'env',
-  function ($compileProvider, $FBProvider, env) {
+  '$compileProvider', '$FBProvider', 'StripeCheckoutProvider', 'env',
+  function ($compileProvider, $FBProvider, StripeCheckoutProvider, env) {
     // ng-perf.com/2014/10/24/simple-trick-to-speed-up-your-angularjs-app-load-time/
     $compileProvider.debugInfoEnabled(env.dev);
 
@@ -56,6 +57,10 @@ angular.module('kifi', [
       .scope('public_profile,user_friends,email')
       .cookie(true)
       .logging(false);
+
+    StripeCheckoutProvider.defaults({
+      key: 'pk_test_hR2uwSNwa3miJ0ccr9qFEkBN'
+    });
   }
 ])
 
@@ -180,7 +185,6 @@ angular.module('kifi', [
           }
         }
         $scope.showSimpleHeader = toState.name.indexOf('getStarted') > -1;
-        
       });
 
       $rootScope.$on('$stateChangeError', function (event, toState, toParams, fromState, fromParams, error) {

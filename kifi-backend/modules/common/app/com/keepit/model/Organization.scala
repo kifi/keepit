@@ -190,7 +190,7 @@ case class OrgTrackingValues(
   collabLibCount: Int)
 
 case class OrganizationKey(id: Id[Organization]) extends Key[Organization] {
-  override val version = 4
+  override val version = 5
   val namespace = "organization_by_id"
   def toKey(): String = id.id.toString
 }
@@ -217,7 +217,7 @@ class OrgTrackingValuesCache(stats: CacheStatistics, accessLog: AccessLog, inner
   extends JsonCacheImpl[OrgTrackingValuesKey, OrgTrackingValues](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class BasicOrganizationIdKey(id: Id[Organization]) extends Key[BasicOrganization] {
-  override val version = 2
+  override val version = 3
   val namespace = "basic_org_by_id"
   def toKey(): String = id.id.toString
 }

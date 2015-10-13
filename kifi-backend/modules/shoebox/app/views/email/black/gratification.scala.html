@@ -19,7 +19,7 @@ rekeeps: com.keepit.model.CountData[Keep]
 <p>You had <b>@{libFollows.totalCount} @singularOrPlural("follow", libFollows.totalCount)</b> across all of your libraries:</p>
 <ul>
     @for((libId, followCount) <- libFollows.sortedCountById.take(LIST_LIMIT)) {
-    <li>@{followCount} @singularOrPlural("follow", followCount) on <a href=@libraryUrl(libId, "gratLibUrl")>@libraryName(libId)</a></li>
+    <li>@{followCount} @singularOrPlural("follow", followCount) on <a href=@libraryLink(libId, "gratLibUrl")>@libraryName(libId)</a></li>
     }
 </ul>
 }
@@ -28,7 +28,7 @@ rekeeps: com.keepit.model.CountData[Keep]
 <p>You had <b>@{libViews.totalCount} @singularOrPlural("view", libViews.totalCount)</b> across all of your libraries:</p>
 <ul>
     @for((libId, viewCount) <- libViews.sortedCountById.take(LIST_LIMIT)) {
-    <li>@{viewCount} @singularOrPlural("view", viewCount) on <a href=@libraryUrl(libId, "gratLibUrl")>@libraryName(libId)</a></li>
+    <li>@{viewCount} @singularOrPlural("view", viewCount) on <a href=@libraryLink(libId, "gratLibUrl")>@libraryName(libId)</a></li>
     }
 </ul>
 }

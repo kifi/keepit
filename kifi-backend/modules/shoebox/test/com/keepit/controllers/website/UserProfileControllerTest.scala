@@ -258,15 +258,13 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (res1 \ "firstName").as[String] === "George"
         (res1 \ "numKeeps").as[Int] === 5
 
-        implicit val orgInfoReads = OrganizationInfo.testReads
-
-        val validatedOrgs = (res1 \ "orgs").validate[Seq[OrganizationInfo]]
+        val validatedOrgs = (res1 \ "orgs").validate[Seq[JsObject]]
         validatedOrgs.isSuccess === true
         val org1Response = validatedOrgs.get.head
-        org1Response.orgId === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
-        org1Response.members.exists(_.externalId == user1.externalId) === true
+        (org1Response \ "id").as[PublicId[Organization]] === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
+        (org1Response \ "members").as[Seq[JsValue]].exists(json => (json \ "id").as[ExternalId[User]] == user1.externalId) === true
 
-        val validatedPendingOrgs = (res1 \ "pendingOrgs").validate[Seq[OrganizationInfo]]
+        val validatedPendingOrgs = (res1 \ "pendingOrgs").validate[Seq[JsObject]]
         validatedPendingOrgs.isSuccess === true
         validatedPendingOrgs.get.length === 1
 

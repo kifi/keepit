@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileWidget', [
-  '$state', '$analytics', 'profileService', 'modalService',
-  function ($state, $analytics, profileService, modalService) {
+  '$state', '$analytics', 'profileService', 'modalService', 'orgProfileService',
+  function ($state, $analytics, profileService, modalService, orgProfileService) {
     return {
       replace: true,
       restrict: 'A',
@@ -18,6 +18,7 @@ angular.module('kifi')
         if (me.pendingOrgs) {
           me.pendingOrgs.forEach(function (o) {
             o.pending = true;
+            o.notDeclined = true;
           });
           scope.organizations = scope.organizations.concat(me.pendingOrgs);
         }
@@ -51,6 +52,19 @@ angular.module('kifi')
 
         scope.createTeam = function () {
           $state.go('teams.new');
+        };
+
+        scope.acceptInvite = function(org) {
+          orgProfileService
+            .acceptOrgMemberInvite(org.id)
+            .then(function() {
+              org.pending = false;
+            });
+        };
+
+        scope.declineInvite = function(org) {
+          orgProfileService.declineOrgMemberInvite(org.id);
+          org.notDeclined = false;
         };
       }
     };

@@ -78,7 +78,7 @@ object FeatureSetting {
 }
 
 object Feature {
-  val all: Set[Feature] = Set(
+  val ALL: Set[Feature] = Set(
     PublishLibraries,
     InviteMembers,
     GroupMessaging,
@@ -88,9 +88,10 @@ object Feature {
     RemoveLibraries,
     CreateSlackIntegration,
     EditOrganization,
-    ExportKeeps
+    ExportKeeps,
+    ViewSettings
   )
-  def apply(str: String): Feature = all.find(_.value == str).get
+  def apply(str: String): Feature = ALL.find(_.value == str).get
 
   implicit val format: Format[Feature] = Format(
     __.read[String].map(Feature(_)),
@@ -156,5 +157,11 @@ object Feature {
     val value = OrganizationPermission.EXPORT_KEEPS.value
     val permission = OrganizationPermission.EXPORT_KEEPS
     val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
+  }
+
+  case object ViewSettings extends Feature with FeatureWithPermissions {
+    val value = OrganizationPermission.VIEW_SETTINGS.value
+    val permission = OrganizationPermission.VIEW_SETTINGS
+    val settings: Set[FeatureSetting] = Set(ADMINS, MEMBERS)
   }
 }

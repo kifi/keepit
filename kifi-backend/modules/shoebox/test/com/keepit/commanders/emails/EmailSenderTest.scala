@@ -1,5 +1,7 @@
 package com.keepit.commanders.emails
 
+import java.net.URLEncoder
+
 import com.google.inject.Injector
 import com.keepit.abook.{ FakeABookServiceClientImpl, ABookServiceClient, FakeABookServiceClientModule }
 import com.keepit.commanders.UserEmailAddressCommander
@@ -30,6 +32,7 @@ import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
 
 class EmailSenderTest extends Specification with ShoeboxTestInjector {
+  implicit def publicIdConfiguration(implicit injector: Injector) = inject[PublicIdConfiguration]
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeHttpClientModule(),
@@ -191,11 +194,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           email.from === SystemEmailAddress.NOTIFICATIONS
           email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === SystemEmailAddress.SUPPORT.address
 
+          val externalId = db.readOnlyMaster { implicit session => userRepo.getByUsername(Username("billy")).get.externalId }
+          val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"us","uid":"$externalId"}""", "ascii")
           val html = email.htmlBody.value
           email.subject === "Billy Madison accepted your invitation to connect"
-          html must contain("""<a href="http://dev.ezkeep.com:9000/billy?""")
+          html must contain(deepLink)
           html must contain("""Billy Madison</a> accepted your invitation to connect""")
-          html must contain("""<a href="http://dev.ezkeep.com:9000/billy?utm_source=fromFriends&amp;utm_medium=email&amp;utm_campaign=friendRequestAccepted&amp;utm_content=friendConnectionMade&amp;kcid=friendRequestAccepted-email-fromFriends&amp;dat=eyJsIjoiZnJpZW5kQ29ubmVjdGlvbk1hZGUiLCJjIjpbXSwidCI6W119&amp;kma=1"><img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Billy Madison" width="73" height="73" style="display:block;" border="0"/></a>""")
+          html must contain(s"""$deepLink&utm_source=fromFriends&amp;utm_medium=email&amp;utm_campaign=friendRequestAccepted&amp;utm_content=friendConnectionMade&amp;kcid=friendRequestAccepted-email-fromFriends&amp;dat=eyJsIjoiZnJpZW5kQ29ubmVjdGlvbk1hZGUiLCJjIjpbXSwidCI6W119&amp;kma=1"><img src="https://cloudfront/users/2/pics/100/0.jpg" alt="Billy Madison" width="73" height="73" style="display:block;" border="0"/></a>""")
 
           val text = email.textBody.get.value
           text must contain("""Billy Madison accepted your invitation to connect""")
@@ -221,12 +226,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
               Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
 
             val email = testFriendConnectionMade(toUser, NotificationCategory.User.SOCIAL_FRIEND_JOINED, Some(network))
+            val externalId = db.readOnlyMaster { implicit session => userRepo.getByUsername(Username("billy")).get.externalId }
+            val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"us","uid":"$externalId"}""", "ascii")
             val html = email.htmlBody.value
             val text = email.textBody.get.value
             email.subject === s"Your $networkName Billy just joined Kifi"
             html must contain("utm_campaign=socialFriendJoined")
-            html must contain(s"""Your $networkName, <a href="http://dev.ezkeep.com:9000/billy""")
-            html must contain("You and <a href=\"http://dev.ezkeep.com:9000/billy?")
+            html must contain(s"""Your $networkName, <a href="$deepLink""")
+            html must contain(s"""You and <a href="$deepLink""")
             html must contain("Billy Madison</a> are now connected on Kifi")
 
             text must contain(s"Billy Madison, joined Kifi")
@@ -249,12 +256,16 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           abook.addFriendRecommendationsExpectations(toUser.id.get,
             Seq(friends._1, friends._2, friends._3, friends._4).map(_.id.get))
           val email = testFriendConnectionMade(toUser, NotificationCategory.User.CONNECTION_MADE, Some(FACEBOOK))
+          val externalId = db.readOnlyMaster { implicit session => userRepo.getByUsername(Username("billy")).get.externalId }
+
+          val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"us","uid":"$externalId"}""", "ascii")
+
           val html = email.htmlBody.value
           val text = email.textBody.get.value
           email.subject === "You and Billy Madison are now connected on Kifi!"
           html must contain("utm_campaign=connectionMade")
           html must contain("You have a new connection on Kifi")
-          html must contain("""Your Facebook friend, <a href="http://dev.ezkeep.com:9000/billy?""")
+          html must contain(s"""Your Facebook friend, <a href="$deepLink""")
 
           text must contain("You have a new connection on Kifi")
           text must contain("""Your Facebook friend, Billy""")
@@ -279,6 +290,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        val friendRequestLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode("""{"t":"fr"}""", "ascii")
+        val friendProfileLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"us","uid":"${fromUser.externalId}""", "ascii")
+
         email.to === Seq(EmailAddress("billy@gmail.com"))
         email.subject === "Johnny Manziel wants to connect with you on Kifi"
         email.fromName === Some(s"Johnny Manziel (via Kifi)")
@@ -287,11 +301,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Hi Billy")
         html must contain("Johnny Manziel wants to connect with you on Kifi.")
         html must contain("utm_campaign=friendRequest")
+        html must contain(friendRequestLink)
+        html must contain(friendProfileLink)
 
         val text = email.textBody.get.value
         text must contain("Hi Billy")
         text must contain("Johnny Manziel wants to connect with you on Kifi.")
         text must contain("You can visit this link to accept the invitation")
+        text must contain("http://dev.ezkeep.com:9000/friends/requests")
       }
     }
   }
@@ -321,13 +338,16 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         html must contain("Hi Billy,")
         html must contain("Johnny Manziel just joined Kifi.")
         html must contain("utm_campaign=contactJoined")
-        html must contain(s"/${fromUser.username.value}?intent=connect")
 
+        val fromDeepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"us","uid":"${fromUser.externalId}"}""", "ascii")
+        html must contain(fromDeepLink)
+
+        val fromUrl = s"http://dev.ezkeep.com:9000/${fromUser.username.value}"
         val text = email.textBody.get.value
         text must contain("Hi Billy,")
         text must contain("Johnny Manziel just joined Kifi.")
         text must contain("to invite Johnny to connect on Kifi")
-        text must contain(s"/${fromUser.username.value}?intent=connect")
+        text must contain(fromUrl)
       }
     }
   }
@@ -390,7 +410,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
   }
 
   "LibraryInviteEmailSender" should {
-    implicit val config = PublicIdConfiguration("secret key")
+    //implicit val config = PublicIdConfiguration("secret key")
 
     def setup(withDescription: Boolean = true)(implicit injector: Injector) = {
       val keepRepo = inject[KeepRepo]
@@ -494,12 +514,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "An invitation to a Kifi library: Football"
-        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
-        email.htmlBody.contains("Hi Aaron") === true
-        email.htmlBody.contains("Check out the \"Football\" library I created") === true
+        email.htmlBody.value must contain(deepLink)
+        email.htmlBody.value must contain("Hi Aaron")
+        email.htmlBody.value must contain("Check out the \"Football\" library I created")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
@@ -522,12 +544,14 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "I want to collaborate with you on Football"
-        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
-        email.htmlBody.contains("Hi Aaron") === true
-        email.htmlBody.contains("collaborate") === true
+        email.htmlBody.value must contain(deepLink)
+        email.htmlBody.value must contain("Hi Aaron")
+        email.htmlBody.value must contain("collaborate")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
@@ -577,11 +601,13 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox.size === 1
         outbox(0) === email
 
+        val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib1.id.get).id}"}""", "ascii")
+
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
         email.subject === "An invitation to a Kifi library: Football"
-        email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
-        email.htmlBody.contains("check this out!") === true
+        email.htmlBody.value must contain(deepLink)
+        email.htmlBody.value must contain("check this out!")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")

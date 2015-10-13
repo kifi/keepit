@@ -87,12 +87,10 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
           (user1, user2, user3, user4, user5, user1lib, org)
         }
 
-        implicit val orgInfoReads = OrganizationInfo.testReads
-
         //non existing username
         status(getProfile(Some(user1), Username("foo"))) must equalTo(NOT_FOUND)
 
-        //seeing a profile from an anonymos user
+        //seeing a profile from an anonymous user
         val anonViewer = getProfile(None, user1.username)
         status(anonViewer) must equalTo(OK)
         contentType(anonViewer) must beSome("application/json")
@@ -107,9 +105,9 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         (res1 \ "numFollowedLibraries").as[Int] === 1
         (res1 \ "numCollabLibraries").as[Int] === 0
         (res1 \ "biography").as[String] === "First Prez yo!"
-        val orgs = (res1 \ "orgs").as[Seq[OrganizationInfo]]
-        orgs.head.orgId === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
-        orgs.head.members.length === 1
+        val orgs = (res1 \ "orgs").as[Seq[JsObject]]
+        (orgs.head \ "id").as[PublicId[Organization]] === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
+        (orgs.head \ "members").as[Seq[JsValue]].length === 1
 
         //seeing a profile from another user (friend)
         val friendViewer = getProfile(Some(user2), user1.username)

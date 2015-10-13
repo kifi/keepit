@@ -1,6 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.mail.template.helpers.discussionLink
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
 
@@ -84,7 +85,7 @@ class ElizaEmailCommander @Inject() (
     val pageName = thread.nUrl.flatMap(DomainToNameMapper.getNameFromUrl(_)).getOrElse("")
 
     ThreadEmailInfo(
-      pageUrl = thread.nUrl.get,
+      pageUrl = discussionLink(thread.uriId.get, thread.externalId.id).body,
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl.get).abbreviate(80),
       isInitialEmail = isInitialEmail,

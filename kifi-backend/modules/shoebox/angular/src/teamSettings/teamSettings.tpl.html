@@ -1,24 +1,26 @@
-<div ng-if="viewer.membership.role === 'admin' && billingState.credit > 0" kf-credit-banner credit="{{ billingState.credit }}"></div>
-<div class="kf-container kf-team-settings-fields">
-  <div class="kf-container-main">
-    <h1 class="kf-team-settings-top-header">Team Settings</h1>
-    <section ng-repeat="section in settingsSectionTemplateData">
-      <h2 class="kf-team-settings-heading" id="{{ getHeadingAnchor(section.heading) }}" ng-show="section.heading">{{ section.heading }}</h2>
-      <div ng-repeat="field in section.fields" class="kf-row kf-team-settings-field">
-        <div class="kf-main-pane">
-          <h3 class="kf-team-settings-heading" id="{{ field.fieldKey }}">{{ field.title }}</h3>
-          <p class="kf-team-settings-desc">{{ field.description }}</p>
-        </div>
-        <div class="kf-side-pane">
+<div ng-if="kifiAdmin && viewer.membership.role === 'admin' && billingState.credit > 0" kf-credit-banner credit="{{ billingState.credit }}"></div>
+<div class="kf-team-settings-fields">
+  <h1 class="kf-team-settings-top-header">Settings</h1>
+  <section ng-repeat="section in settingsSectionTemplateData" class="kf-container">
+    <div ng-show="section.heading" class="kf-container-header">
+      <h2 id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
+    </div>
+    <div class="kf-row kf-team-settings-field" ng-repeat="field in section.fields">
+      <div class="kf-main-pane">
+        <h3 class="kf-team-settings-heading" id="{{ field.fieldKey }}" ng-bind-html="field.title"></h3>
+        <p class="kf-team-settings-desc">{{ field.description }}</p>
+      </div>
+      <div class="kf-side-pane">
+        <div class="custom-select kf-button" ng-class="{ 'disabled' : viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable }">
           <select
             class="kf-team-settings-select"
             ng-model="settings[field.fieldKey].setting"
-            ng-disabled="!settings[field.fieldKey].editable"
+            ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
             ng-options="option.value as option.label for option in field.selectOptions"
             ng-change="updateSettings()"
           ></select>
         </div>
       </div>
-    </section>
-  </div>
+    </div>
+  </section>
 </div>

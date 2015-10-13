@@ -28,7 +28,6 @@ class ExtPreferenceController @Inject() (
   notifyPreferenceRepo: UserNotifyPreferenceRepo,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
-  userIpAddressCommander: UserIpAddressCommander,
   userCommander: UserCommander)
     extends UserActions with ShoeboxServiceController {
 
@@ -90,7 +89,6 @@ class ExtPreferenceController @Inject() (
   }
 
   def getPrefs(version: Int) = UserAction.async { request =>
-    userIpAddressCommander.logUserByRequest(request)
     val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
     val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
     val userId = request.user.id.get

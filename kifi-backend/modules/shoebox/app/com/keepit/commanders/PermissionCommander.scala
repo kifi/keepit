@@ -1,14 +1,20 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.cache._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.logging.Logging
+import com.keepit.common.logging.{ AccessLog, Logging }
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.model._
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
+import scala.util.Random
 
 @ImplementedBy(classOf[PermissionCommanderImpl])
 trait PermissionCommander {
@@ -19,6 +25,8 @@ trait PermissionCommander {
 @Singleton
 class PermissionCommanderImpl @Inject() (
     db: Database,
+    orgPermissionsCache: OrganizationPermissionsCache,
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
@@ -32,10 +40,21 @@ class PermissionCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 
+  @StatsdTiming("PermissionCommander.getOrganizationPermissions")
   def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
-    // TODO(ryan): this needs to look in orgPermissionsCache by (orgId, userIdOpt) to see if the permissions are cached
-    // If not, it should compute them directly and add them to the cache
-    computeOrganizationPermissions(orgId, userIdOpt)
+    /*
+    PSA regarding these caches:
+    We want to have a cache from (Id[Organization], Option[Id[User]]) => Set[OrganizationPermission]
+    When an organization is modified, we need to invalidate all of the keys that have that org's
+    ID in them. There is no easy way to do this via a single cache. Instead, we use two caches,
+        1. Id[Organization] => Int (we call this Int a "namespace", because it controls the key namespace in cache 2)
+        2. (Id[Organization, Int, Option[Id[User]]) => Set[OrganizationPermission]
+    With two caches, we can invalidate an entire organization by changing its value in cache 1
+    */
+    val orgPermissionsNamespace = orgPermissionsNamespaceCache.getOrElse(OrganizationPermissionsNamespaceKey(orgId))(Random.nextInt())
+    orgPermissionsCache.getOrElse(OrganizationPermissionsKey(orgId, orgPermissionsNamespace, userIdOpt)) {
+      computeOrganizationPermissions(orgId, userIdOpt)
+    }
   }
 
   private def computeOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
@@ -53,6 +72,7 @@ class PermissionCommanderImpl @Inject() (
     }
   }
 
+  @StatsdTiming("PermissionCommander.getLibraryPermissions")
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
     val lib = libraryRepo.get(libId)
     val libMembershipOpt = userIdOpt.flatMap { userId => libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId) }
@@ -117,17 +137,22 @@ class PermissionCommanderImpl @Inject() (
   }
 
   def combineOrganizationAndLibraryPermissions(lib: Library, libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
-    val addedPermissions = Map[Boolean, Set[LibraryPermission]](
-      (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)) ->
-        Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY),
-      (lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY) && orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)) ->
-        Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
-    ).collect { case (true, ps) => ps }.flatten
+    val addedPermissions: Set[LibraryPermission] = {
+      val canModifyLibrary = lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY)
+      val canForceEdit = canModifyLibrary && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
+      val canCreateSlackIntegration = canModifyLibrary && orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)
+      Set(
+        canForceEdit -> Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY),
+        canCreateSlackIntegration -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
+      ).collect { case (true, ps) => ps }.flatten
+    }
 
-    val removedPermissions = Map[Boolean, Set[LibraryPermission]](
-      !orgPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES) ->
-        Set(LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
-    ).collect { case (true, ps) => ps }.flatten
+    val removedPermissions: Set[LibraryPermission] = {
+      val cannotRemoveLibraries = !orgPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES)
+      Set(
+        cannotRemoveLibraries -> Set(LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
+      ).collect { case (true, ps) => ps }.flatten
+    }
 
     libPermissions ++ addedPermissions -- removedPermissions
   }
@@ -145,5 +170,21 @@ class PermissionCommanderImpl @Inject() (
       OrganizationPermission.MANAGE_PLAN
     )
   }
-
 }
+
+case class OrganizationPermissionsNamespaceKey(orgId: Id[Organization]) extends Key[Int] {
+  override val version = 2
+  val namespace = "org_permissions_namespace"
+  def toKey(): String = orgId.id.toString
+}
+class OrganizationPermissionsNamespaceCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[OrganizationPermissionsNamespaceKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class OrganizationPermissionsKey(orgId: Id[Organization], opn: Int, userIdOpt: Option[Id[User]]) extends Key[Set[OrganizationPermission]] {
+  override val version = 1
+  val namespace = "org_permissions"
+  def toKey(): String = orgId.id.toString + "_" + opn.toString + "_" + userIdOpt.map(x => x.id.toString).getOrElse("none")
+}
+
+class OrganizationPermissionsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrganizationPermissionsKey, Set[OrganizationPermission]](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

@@ -30,7 +30,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]]
 
-  def markAllRead(user: Id[User], filterByReplyable: Option[Boolean] = None)(implicit session: RWSession): Unit
+  def markAllRead(user: Id[User])(implicit session: RWSession): Unit
 
   def markAllReadAtOrBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
 
@@ -44,9 +44,9 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getRawNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification
 
-  def getLatestRawNotifications(userId: Id[User], howMany: Int, filterByReplyable: Option[Boolean])(implicit session: RSession): List[RawNotification]
+  def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
-  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, filterByReplyable: Option[Boolean])(implicit session: RSession): List[RawNotification]
+  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
 
   def getLatestUnreadRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
 
@@ -62,7 +62,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int)
 
-  def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None)(implicit session: RSession): Int
+  def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
 
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
 
@@ -112,8 +112,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
 
-  def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread]
-
   def getThreadsThatNeedBackfilling()(implicit session: RSession): Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])]
 }
 
@@ -145,8 +143,7 @@ class UserThreadRepoImpl @Inject() (
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
     def started = column[Boolean]("started", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def notificationId = column[Option[Id[Notification]]]("notification_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, replyable, lastActive, started, accessToken, notificationId) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, replyable, lastActive, started, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user, threadId), unique = true)
   }
@@ -187,15 +184,8 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def markAllRead(user: Id[User], filterByReplyable: Option[Boolean] = None)(implicit session: RWSession): Unit = {
-    var q = filterByReplyable match {
-      case Some(true) =>
-        (for (row <- rows if row.user === user && !row.replyable) yield (row.unread, row.updatedAt))
-      case Some(false) =>
-        (for (row <- rows if row.user === user && row.replyable) yield (row.unread, row.updatedAt))
-      case _ =>
-        (for (row <- rows if row.user === user) yield (row.unread, row.updatedAt))
-    }
+  def markAllRead(user: Id[User])(implicit session: RWSession): Unit = {
+    val q = (for (row <- rows if row.user === user && row.replyable) yield (row.unread, row.updatedAt))
     q.update((false, clock.now()))
   }
 
@@ -232,55 +222,34 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.threadId === threadId) yield (row.lastNotification, row.unread, row.uriId)).first
   }
 
-  def getLatestRawNotifications(userId: Id[User], howMany: Int, filterByReplyable: Option[Boolean])(implicit session: RSession): List[RawNotification] = {
-    filterByReplyable.map { replyable =>
-      (for (
-        row <- rows if row.user === userId &&
-          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-          row.replyable === replyable
-      ) yield row)
-        .sortBy(row => (row.notificationUpdatedAt) desc)
-        .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
-        .list
-    } getOrElse {
-      (for (
-        row <- rows if row.user === userId &&
-          row.lastNotification =!= JsNull.asInstanceOf[JsValue]
-      ) yield row)
-        .sortBy(row => (row.notificationUpdatedAt) desc)
-        .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
-        .list
-    }
+  def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
+    (for (
+      row <- rows if row.user === userId &&
+        row.lastNotification =!= (JsNull: JsValue) &&
+        row.replyable
+    ) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
+      .list
   }
 
-  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, filterByReplyable: Option[Boolean])(implicit session: RSession): List[RawNotification] = {
-    filterByReplyable.map { replyable =>
-      (for (
-        row <- rows if row.user === userId &&
-          row.notificationUpdatedAt < time &&
-          row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
-          row.replyable === replyable
-      ) yield row)
-        .sortBy(row => (row.notificationUpdatedAt) desc)
-        .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
-        .list
-    } getOrElse {
-      (for (
-        row <- rows if row.user === userId &&
-          row.notificationUpdatedAt < time &&
-          row.lastNotification =!= JsNull.asInstanceOf[JsValue]
-      ) yield row)
-        .sortBy(row => (row.notificationUpdatedAt) desc)
-        .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
-        .list
-    }
+  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
+    (for (
+      row <- rows if row.user === userId &&
+        row.notificationUpdatedAt < time &&
+        row.lastNotification =!= (JsNull: JsValue) &&
+        row.replyable
+    ) yield row)
+      .sortBy(row => (row.notificationUpdatedAt) desc)
+      .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
+      .list
   }
 
   def getLatestUnreadRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
     (for (
       row <- rows if row.user === userId &&
         row.unread &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+        row.lastNotification =!= (JsNull: JsValue) &&
         row.replyable
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
@@ -293,7 +262,7 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId &&
         row.unread &&
         row.notificationUpdatedAt < time &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue] &&
+        row.lastNotification =!= (JsNull: JsValue) &&
         row.replyable
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
@@ -305,7 +274,7 @@ class UserThreadRepoImpl @Inject() (
     (for (
       row <- rows if row.user === userId &&
         row.started &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -317,7 +286,7 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId &&
         row.started &&
         row.notificationUpdatedAt < time &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -328,7 +297,7 @@ class UserThreadRepoImpl @Inject() (
     (for (
       row <- rows if row.user === userId &&
         row.uriId === uriId &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -340,7 +309,7 @@ class UserThreadRepoImpl @Inject() (
       row <- rows if row.user === userId &&
         row.uriId === uriId &&
         row.notificationUpdatedAt < time &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield row)
       .sortBy(row => (row.notificationUpdatedAt) desc)
       .take(howMany).map(row => (row.lastNotification, row.unread, row.uriId))
@@ -351,24 +320,13 @@ class UserThreadRepoImpl @Inject() (
     StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(notification_pending and not muted) from user_thread where user_id = $userId and uri_id = $uriId").first
   }
 
-  def getUnreadUnmutedThreadCount(userId: Id[User], filterByReplyable: Option[Boolean] = None)(implicit session: RSession): Int = {
-    filterByReplyable match {
-      case Some(true) =>
-        StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not muted and replyable").first
-      case Some(false) =>
-        StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not muted and not replyable").first
-      case None =>
-        StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and not muted").first
-    }
-  }
+  def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = getUnreadThreadCounts(userId)._2
 
   def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {
     StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending and replyable").first
   }
 
-  def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = {
-    StaticQuery.queryNA[Int](s"select count(*) from user_thread where user_id = $userId and notification_pending and replyable").first
-  }
+  def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = getUnreadThreadCounts(userId)._1
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
     (for (row <- rows if row.user === userId && row.threadId === threadId) yield row).first
@@ -464,7 +422,7 @@ class UserThreadRepoImpl @Inject() (
   def getNotificationByThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[RawNotification] = {
     (for (
       row <- rows if row.user === userId && row.threadId === threadId &&
-        row.lastNotification =!= JsNull.asInstanceOf[JsValue]
+        row.lastNotification =!= (JsNull: JsValue)
     ) yield (row.lastNotification, row.unread, row.uriId)).firstOption
   }
 
@@ -520,10 +478,6 @@ class UserThreadRepoImpl @Inject() (
           desc
       """.as[(Long, DateTime, Int)].list.map((GroupThreadStats.apply _).tupled)
     }
-  }
-
-  def getByNotificationId(id: Id[Notification])(implicit session: RSession): Option[UserThread] = {
-    (for (row <- rows if row.notificationId === id) yield row).firstOption
   }
 
   def getThreadsThatNeedBackfilling()(implicit session: RSession): Seq[(Id[UserThread], Id[User], JsValue, Boolean, Option[Id[NormalizedURI]])] = {

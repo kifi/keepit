@@ -18,7 +18,7 @@ object NotificationInfoModel {
       "color" -> lib.color,
       "owner" -> owner
     ) ++ image.fold(Json.obj()) { img =>
-        Json.obj("image" -> Json.toJson(LibraryImageInfo.fromImage(img)))
+        Json.obj("image" -> Json.toJson(img.asInfo))
       }
 
   def organization(org: Organization, image: OrganizationAvatar)(implicit config: PublicIdConfiguration): JsObject =

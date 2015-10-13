@@ -1,17 +1,13 @@
 <div class="manage-library dialog-content">
   <a class="dialog-x manage-library-close-x" ng-click="close()"></a>
-
   <div class="dialog-body-wrap">
     <h1 class="dialog-header">
-      <button ng-if="showFollowers" class="go-back-button" ng-click="hideFollowersPanel()">
-        <span class="go-back-left-arrow"></span>Back
-      </button>
       {{modalTitle}}
     </h1>
     <div class="dialog-body" kf-wheel-allow>
 
       <div class="manage-lib-content">
-        <div ng-hide="showFollowers" ng-if="!viewFollowersFirst" class="dialog-text manage-lib-default-content">
+        <div class="dialog-text manage-lib-default-content">
           <div class="manage-lib-input-wrapper">
             <h3 class="manage-lib-heading">Name</h3>
             <div class="manage-lib-input-area">
@@ -67,48 +63,86 @@
             </div>
           </div>
 
-          <div ng-if="modifyingExistingLibrary && hasPermission(LIB_PERMISSION.CREATE_SLACK_INTEGRATION)" class="manage-lib-input-wrapper">
-            <div class="manage-lib-integrations-title-wrapper" href="javascript:" ng-click="toggleIntegrations()">
-              <div class="manage-lib-integrations-arrow" ng-class="{'active':showIntegrations}"></div>
-              <span class="manage-lib-integrations-title" ng-class="{'active':showIntegrations}">Integrations</span>
+          <div
+            class="manage-lib-input-wrapper"
+            ng-if="showIntegrations()"
+          >
+            <div class="manage-lib-integrations-title-wrapper">
+              <h3
+                class="manage-lib-integrations-title"
+                ng-class="{
+                  'active': integrationsOpen,
+                  'manage-lib-integrations-disabled': !isIntegrationsEnabled()
+                }"
+                ng-click="isIntegrationsEnabled() && toggleIntegrations($event)"
+              >Integrations</h3>
+              <span
+                ng-if="showIntegrationsUpsell()"
+                kf-upsell
+                position="right"
+                on-click="onClickUpsellIntegration()"
+                on-hover="onHoverUpsellIntegration()"
+              >
+                <span ng-if="space.destination.config.name.toLowerCase().indexOf('paid') !== -1">
+                  <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.DISABLED">
+                    No member of yor team can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.destination.handle })">settings</a>
+                  </span>
+                  <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.ADMIN">
+                    Only admins can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.destination.handle })">settings</a>
+                  </span>
+                  <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.MEMBER">
+                    All team members can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.destination.handle })">settings</a>
+                  </span>
+                  <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role !== 'admin') && space.destination.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) === -1">
+                    Integrations are disabled for {{ library.org.name }}
+                  </span>
+                </span>
+                <span ng-if="space.destination.config.name.toLowerCase().indexOf('paid') === -1 && (space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin')">
+                  Enable Slack integration by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">Upgrading to Basic</a>
+                </span>
+              </span>
             </div>
-            <div manage-lib-subs>
-              <div class="manage-lib-integration-view" ng-show="showIntegrations">
-                <div class="manage-lib-subs-heading">Slack</div>
-                <div class="manage-lib-subs-instruct">
-                  <b>It's easy to push updates from this library to one of your company's Slack channels.</b><br>
-                  To configure the integration between Kifi and Slack:
-                    <li>Log into Slack, then <a href="https://slack.com/services/new/incoming-webhook" target="_blank">go to this page</a>.</li>
-                    <li>Choose a default channel, then click "Add Incoming WebHooks Integration"</li>
-                    <li>Copy the Webhook URL, and paste it in the URL fields below.</li>
-                    <li>Enter the name of the #channel, @person, or group you want updates sent to, then "Save".</li>
-                  All new keeps added to this library will now appear in your Slack channel as well!
-                </div>
-                <table class="manage-lib-subs-table">
-                  <form name="slackForm">
-                    <tr ng-repeat="subscription in library.subscriptions">
-                      <td class="manage-lib-sub-name-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{'manage-lib-input-error': subscription.$error && subscription.$error.name}" ng-model="subscription.name" type="text" name="name" placeholder="Name" autocomplete="off" novalidate></td>
-                      <td class="manage-lib-sub-url-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{'manage-lib-input-error': subscription.$error && subscription.$error.url}" ng-model="subscription.info.url" placeholder="Webhook Url" autocomplete="off" novalidate></td>
-                      <td><a class="manage-lib-sub-remove-x" ng-if="$index != (library.subscriptions.length-1) || library.subscriptions.length == 3" ng-click="removeSubscription($index)"></a><a class="manage-lib-sub-add-x" ng-if="$index == (library.subscriptions.length-1) && (library.subscriptions.length != 3)" ng-click="addSubscription()"></a></td>
-                    </tr>
-                  </form>
-                </table>
-              </div>
+          </div>
+
+          <div class="manage-lib-integrations" ng-if="isIntegrationsEnabled() && integrationsOpen">
+            <div class="manage-lib-subs-heading">Slack</div>
+            <div class="manage-lib-subs-instruct">
+              <p>
+                It's easy to push updates from this library to one of your company's Slack channels.
+                To configure the integration between Kifi and Slack:
+              </p>
+              <ol class="manage-lib-subs-instruct-list">
+                <li>Log into Slack, then <a href="https://slack.com/services/new/incoming-webhook" target="_blank">go to this page</a>.</li>
+                <li>Choose a default channel, then click "Add Incoming WebHooks Integration"</li>
+                <li>Copy the Webhook URL, and paste it in the URL fields below.</li>
+                <li>Enter the name of the #channel, @person, or group you want updates sent to, then "Save".</li>
+              </ol>
+              <p>All new keeps added to this library will now appear in your Slack channel as well!</p>
             </div>
+
+            <form name="slackForm">
+              <table class="manage-lib-subs-table">
+                <tr ng-repeat="subscription in library.subscriptions">
+                  <td class="manage-lib-sub-name-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{'manage-lib-input-error': subscription.$error && subscription.$error.name}" ng-model="subscription.name" type="text" name="name" placeholder="#channel, @mention" autocomplete="off" novalidate></td>
+                  <td class="manage-lib-sub-url-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine ng-valid" ng-class="{'manage-lib-input-error': subscription.$error && subscription.$error.url}" ng-model="subscription.info.url" placeholder="Webhook Url" autocomplete="off" novalidate></td>
+                  <td><a class="manage-lib-sub-remove-x" ng-if="$index != (library.subscriptions.length-1) || library.subscriptions.length == 3" ng-click="removeSubscription($index)"></a><a class="manage-lib-sub-add-x" ng-if="$index == (library.subscriptions.length-1) && (library.subscriptions.length != 3)" ng-click="addSubscription()"></a></td>
+                </tr>
+              </table>
+            </form>
           </div>
           <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
         </div>
-      </div>
 
-      <div class="dialog-buttons">
-        <button ng-if="!modifyingExistingLibrary" class="manage-lib-create-button" ng-click="saveLibrary()">Create Library</button>
-        <button
-          ng-if="modifyingExistingLibrary"
-          class="manage-lib-delete-button"
-          ng-click="openDeleteLibraryModal()"
-          ng-disabled="!hasPermission(LIB_PERMISSION.DELETE_LIBRARY)"
-        >Delete library</button>
-        <button ng-if="modifyingExistingLibrary" class="manage-lib-save-button" ng-click="saveLibrary()">Save</button>
+        <div class="dialog-buttons">
+          <button ng-if="!modifyingExistingLibrary" class="manage-lib-create-button" ng-click="saveLibrary()">Create Library</button>
+          <button
+            ng-if="modifyingExistingLibrary"
+            class="manage-lib-delete-button"
+            ng-click="openDeleteLibraryModal()"
+            ng-disabled="!hasPermission(LIB_PERMISSION.DELETE_LIBRARY)"
+          >Delete library</button>
+          <button ng-if="modifyingExistingLibrary" class="manage-lib-save-button" ng-click="saveLibrary()">Save</button>
+        </div>
       </div>
     </div>
   </div>

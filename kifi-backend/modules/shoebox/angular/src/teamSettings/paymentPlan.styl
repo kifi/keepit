@@ -2,6 +2,9 @@ freePlanColor = #8A74B9
 basicPlanColor = #1067BD
 enterprisePlanColor = #118730
 
+.kf-payment-plan-top-header
+  margin-bottom: 10px
+
 .kf-team-plan-cards
   justify-content: space-around
 
@@ -9,15 +12,21 @@ enterprisePlanColor = #118730
   box-sizing: border-box
   position: relative
   display: inline-block
-  width: 160px
-  height: 160px  * (7/5)
+  width: 150px
+  height: 150px  * (7/5)
   margin: 5px
   padding: 5px 10px
   border-radius: 12px
-  box-shadow: 2px 2px 15px 2px rgba(0, 0, 0, .5)
+  box-shadow: 2px 2px 4px 0px rgba(0, 0, 0, .5)
   font-size: 12px
   text-align: center
   color: #fff
+  font-smoothing: antialiased
+  transition: .33s ease-in-out
+
+  &:hover
+    box-shadow: 2px 2px 8px 4px rgba(0, 0, 0, .33)
+    transform: scale(1.05, 1.05)
 
 .kf-team-plan-card-description
   margin: 0
@@ -74,13 +83,11 @@ enterprisePlanColor = #118730
     box-shadow: 0 0 4px 2px rgba(0, 0, 0, .15)
 
 .kf-team-plan-card-soon
-  width: 160px
-  padding: 18px 0
+  width: 100%
   margin: 0 -10px
+  padding: 18px 10px
   background-color: rgba(255, 255, 255, .25)
   font-size: 18px
-  font-smoothing: antialiased
-
 
 .kf-team-plan-card-free
   background-color: freePlanColor
@@ -90,3 +97,7 @@ enterprisePlanColor = #118730
 
 .kf-team-plan-card-enterprise
   background-color: enterprisePlanColor
+
+.kf-team-plan-select
+  width: 100%
+  padding: 10px

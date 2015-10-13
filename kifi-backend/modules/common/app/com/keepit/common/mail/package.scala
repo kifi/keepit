@@ -1,10 +1,11 @@
 package com.keepit.common.mail
 
+import java.net.URLEncoder
+
 import com.google.common.html.HtmlEscapers
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.{ Keep, Library, User }
-import com.keepit.social.BasicUser
+import com.keepit.model._
 import play.twirl.api.Html
 
 object KifiMobileAppLinkFlag {
@@ -22,12 +23,17 @@ object KifiMobileAppLinkFlag {
 
 package object template {
   object tags {
+    val discussionLink = TagLabel("discussionLink")
     val firstName = TagLabel("firstName")
     val lastName = TagLabel("lastName")
     val fullName = TagLabel("fullName")
     val avatarUrl = TagLabel("avatarUrl")
+    val organizationId = TagLabel("organizationId")
+    val organizationLink = TagLabel("organizationLink")
+    val libraryId = TagLabel("libraryId")
     val libraryName = TagLabel("libraryName")
     val libraryUrl = TagLabel("libraryUrl")
+    val libraryLink = TagLabel("libraryLink")
     val libraryOwnerFullName = TagLabel("libraryOwnerFullName")
     val keepName = TagLabel("keepName")
     val keepUrl = TagLabel("keepUrl")
@@ -36,6 +42,7 @@ package object template {
     val unsubscribeEmailUrl = TagLabel("unsubscribeEmailUrl")
     val userExternalId = TagLabel("userExternalId")
     val profileUrl = TagLabel("profileUrl")
+    val profileLink = TagLabel("profileLink")
     val kcid = TagLabel("kcid")
     val campaign = TagLabel("campaign")
     val channel = TagLabel("channel")
@@ -78,17 +85,25 @@ package object template {
 
     def userExternalId(id: Id[User]) = Tag1(tags.userExternalId, id).toHtml
 
-    def profileUrl(id: Id[User]) = Tag1(tags.profileUrl, id).toHtml
+    def profileLink(id: Id[User]) = Tag1(tags.profileLink, id).toHtml
+    def profileLink(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileLink, id) + "&", content, openInAppIfMobile = true))
 
+    def profileUrl(id: Id[User]) = Tag1(tags.profileUrl, id).toHtml
     def profileUrl(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileUrl, id) + "?", content, openInAppIfMobile = true))
 
-    def profileUrl(user: BasicUser, content: String) = Html(appendTrackingParams(s"$baseUrl/${user.username.value}?", content, openInAppIfMobile = true))
+    def organizationId(id: Id[Organization]) = Tag1(tags.organizationId, id).value
+
+    def organizationLink(id: Id[Organization]) = Tag1(tags.organizationLink, id).toHtml
+    def organizationLink(id: Id[Organization], content: String) = Html(appendTrackingParams(Tag1(tags.organizationLink, id) + "&", content, openInAppIfMobile = true))
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
-    def libraryUrl(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryUrl, id) + "?", content, openInAppIfMobile = true))
+    def discussionLink(id: Id[NormalizedURI], threadExtId: String) = Tag2(tags.discussionLink, id, threadExtId).toHtml
 
-    def libraryUrl(path: String, content: String) = Html(appendTrackingParams(Tag0(tags.baseUrl).value + path + "?", content, openInAppIfMobile = true))
+    def libraryLink(id: Id[Library]) = Tag1(tags.libraryLink, id).toHtml
+    def libraryLink(id: Id[Library], content: String, openInAppIfMobile: Boolean = true) = Html(appendTrackingParams(Tag1(tags.libraryLink, id) + "&", content, openInAppIfMobile))
+
+    def libraryUrl(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryUrl, id) + "?", content, openInAppIfMobile = true))
 
     def libraryOwnerFullName(id: Id[Library]) = Tag1(tags.libraryOwnerFullName, id).toHtml
 
@@ -123,9 +138,13 @@ package object template {
 
     def libraryImageUrl(path: String) = s"$cdnBaseUrl/$path"
 
-    def kifiFriendsUrl(content: String) = htmlUrl(s"$baseUrl/friends?", content, openInAppIfMobile = true)
+    def kifiFriendsUrl(content: String) = deepLink("""{"t":"fr"}""", content, openInAppIfMobile = true)
 
-    def acceptFriendUrl(id: Id[User], content: String) = htmlUrl(Tag1(tags.profileUrl, id) + s"?intent=connect&id=${userExternalId(id)}&invited&", content, openInAppIfMobile = true)
+    def acceptFriendLink(id: Id[User], content: String) = deepLink("""{"t":"fr"}""", content, openInAppIfMobile = true)
+    def acceptFriendUrl(id: Id[User]): Html = Html(s"$baseUrl/friends/requests")
+    def acceptFriendUrl(id: Id[User], content: String): Html = Html {
+      appendTrackingParams(s"$baseUrl/friends/requests&", content, openInAppIfMobile = false)
+    }
 
     private def connectNetworkUrl(network: String, content: String): Html = Html {
       s"$baseUrl/link/$network?${EmailTrackingParam.paramName}=${trackingParam(content)}"
@@ -133,13 +152,20 @@ package object template {
 
     def connectFacebookUrl(content: String) = connectNetworkUrl("facebook", content)
 
+    // Just opens the contact's profile
     def inviteContactUrl(id: Id[User], content: String) =
-      htmlUrl(Tag1(tags.profileUrl, id) + s"?intent=connect&id=${userExternalId(id)}&", content, openInAppIfMobile = true)
-
+      profileUrl(id, content)
     def inviteFriendUrl(id: Id[User], index: Int, subtype: String) =
-      htmlUrl(Tag1(tags.profileUrl, id) + s"?intent=connect&id=${userExternalId(id)}&", "pymk" + index, openInAppIfMobile = true)
+      profileLink(id, "pymk" + index)
 
-    def invitedLibrariesUrl(id: Id[User], content: String) = htmlUrl(Tag1(tags.profileUrl, id) + s"/libraries/invited?", content, openInAppIfMobile = true)
+    def invitedLibrariesUrl(id: Id[User], content: String) =
+      deepLink("""{"t":"il"}""", content, openInAppIfMobile = true)
+
+    // data is a stringified version of a JsObject
+    def deepLink(data: String, content: String, openInAppIfMobile: Boolean): Html = {
+      val encodedParams = URLEncoder.encode(data, "ascii")
+      htmlUrl(s"$baseUrl/redir?data=$encodedParams&", content, openInAppIfMobile)
+    }
 
     // wrap a url (String) in HTML (so tags aren't escaped)
     def htmlUrl(url: String, content: String, openInAppIfMobile: Boolean): Html =
@@ -147,7 +173,7 @@ package object template {
 
     // url param must end with a ? or &
     private def appendTrackingParams(url: String, content: String, openInAppIfMobile: Boolean): String = {
-      val lastUrlChar = url(url.size - 1)
+      val lastUrlChar = url.last
       require(lastUrlChar == '?' || lastUrlChar == '&', "[appendTrackingParams] url must end with ? or &")
       val openInAppIfMobileDirective = if (openInAppIfMobile) KifiMobileAppLinkFlag.arg else ""
       s"${url}utm_source=$sourceTagStr&amp;utm_medium=$channelTagStr&amp;utm_campaign=$campaignTagStr&amp;utm_content=$content&amp;kcid=$kcidTagStr" +
@@ -156,7 +182,7 @@ package object template {
 
     def kifiUrl(content: String = "unknown") = htmlUrl(s"$baseUrl/?", content, openInAppIfMobile = true)
 
-    val kifiAddress = "709 N Shoreline Blvd, Mountain View, CA 94043, USA"
+    val kifiAddress = "278 Hope St Suite D, Mountain View, CA 94041, USA"
     val kifiLogoUrl = kifiUrl("headerLogo")
     val kifiFooterUrl = kifiUrl("footerKifiLink")
     val privacyUrl = htmlUrl(s"$baseUrl/privacy?", "footerPrivacy", openInAppIfMobile = false)

@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import akka.actor.Scheduler
-import com.google.inject.{ Provider, Inject }
+import com.google.inject.{ Singleton, Provider, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender }
@@ -14,7 +14,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ EmailAddress, _ }
-import com.keepit.common.service.IpAddress
+import com.keepit.common.service.{ RequestConsolidator, IpAddress }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
@@ -33,8 +33,9 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import securesocial.core._
 import com.keepit.common.core._
+import scala.concurrent.duration._
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ Await, ExecutionContext, Future }
 import scala.util._
 
 case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
@@ -107,6 +108,7 @@ object UserProfileStats {
 
 case class UserNotFoundException(username: Username) extends Exception(username.toString)
 
+@Singleton
 class UserCommander @Inject() (
     db: Database,
     userRepo: UserRepo,
@@ -245,10 +247,10 @@ class UserCommander @Inject() (
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
       val orgs = organizationMembershipRepo.getByUserId(user.id.get, Limit(Int.MaxValue), Offset(0)).map(_.organizationId)
-      val orgViews = organizationCommander.getOrganizationViews(orgs.toSet, user.id, authTokenOpt = None).values.toSeq
+      val orgViews = orgs.map(orgId => organizationCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
 
       val pendingOrgs = organizationInviteRepo.getByInviteeIdAndDecision(user.id.get, InvitationDecision.PENDING).map(_.organizationId)
-      val pendingOrgViews = organizationCommander.getOrganizationViews(pendingOrgs.toSet, user.id, authTokenOpt = None).values.toSeq
+      val pendingOrgViews = pendingOrgs.map(orgId => organizationCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
 
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews)
     }
@@ -262,7 +264,7 @@ class UserCommander @Inject() (
           isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(email.address))
         )
     }
-    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews)
+    BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq)
   }
 
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
@@ -590,12 +592,20 @@ class UserCommander @Inject() (
     db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(Seq(externalId)).values.head }
   }
 
+  private val fakeUsers = new RequestConsolidator[AllFakeUsersKey.type, Set[Id[User]]](5.minutes)
   def getAllFakeUsers(): Set[Id[User]] = {
-    import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-    allFakeUsersCache.getOrElse(AllFakeUsersKey) {
-      db.readOnlyReplica { implicit session =>
-        userExperimentRepo.getByType(UserExperimentType.FAKE).map(_.userId).toSet ++ experimentRepo.getUserIdsByExperiment(UserExperimentType.AUTO_GEN)
+    val fakesF = fakeUsers(AllFakeUsersKey) { _ =>
+      import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+      val fakes = allFakeUsersCache.getOrElse(AllFakeUsersKey) {
+        db.readOnlyReplica { implicit session =>
+          userExperimentRepo.getByType(UserExperimentType.FAKE).map(_.userId).toSet ++ experimentRepo.getUserIdsByExperiment(UserExperimentType.AUTO_GEN)
+        }
       }
+      Future.successful(fakes)
     }
+    // ↓↓↓ Not actually contributing to badness. We just need the API here to conform to RequestConsolidator's AND this synchronous API.
+    // However, since I have you, please don't use this method. Figure out how fake user data got in your data set and restrict it here.
+    // No one likes cleaning up fake users, so this slows the system down for everyone.
+    Await.result(fakesF, 10.seconds)
   }
 }

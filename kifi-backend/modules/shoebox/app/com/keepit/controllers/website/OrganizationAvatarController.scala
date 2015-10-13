@@ -29,7 +29,7 @@ class OrganizationAvatarController @Inject() (
     val cropRegion = SquareImageCropRegion(ImageOffset(x, y), s)
     val uploadImageF = orgAvatarCommander.persistOrganizationAvatarsFromUserUpload(request.orgId, request.body.file, cropRegion)
     uploadImageF.map { hash =>
-      val avatar = orgAvatarCommander.getBestImageByOrgId(request.orgId, OrganizationAvatarConfiguration.defaultSize)
+      val avatar = db.readOnlyMaster { implicit s => orgAvatarCommander.getBestImageByOrgId(request.orgId, OrganizationAvatarConfiguration.defaultSize) }
       Ok(Json.obj("uploaded" -> avatar.imagePath))
     }
   }

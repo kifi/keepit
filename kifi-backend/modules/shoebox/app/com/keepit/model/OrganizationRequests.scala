@@ -14,10 +14,10 @@ import scala.util.control.NoStackTrace
 sealed abstract class OrganizationRequest
 
 case class OrganizationCreateRequest(requesterId: Id[User], initialValues: OrganizationInitialValues) extends OrganizationRequest
-case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization, orgGeneralLibrary: Library)
+case class OrganizationCreateResponse(request: OrganizationCreateRequest, newOrg: Organization, orgGeneralLibrary: Library, orgView: OrganizationView)
 
 case class OrganizationModifyRequest(requesterId: Id[User], orgId: Id[Organization], modifications: OrganizationModifications) extends OrganizationRequest
-case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization)
+case class OrganizationModifyResponse(request: OrganizationModifyRequest, modifiedOrg: Organization, orgView: OrganizationView)
 
 case class OrganizationSettingsRequest(orgId: Id[Organization], requesterId: Id[User], settings: OrganizationSettings) extends OrganizationRequest
 case class OrganizationSettingsResponse(config: OrganizationConfiguration)
@@ -38,7 +38,8 @@ case class OrganizationMembershipAddRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
-  newRole: OrganizationRole = OrganizationRole.MEMBER) extends OrganizationMembershipRequest
+  newRole: OrganizationRole = OrganizationRole.MEMBER,
+  adminIdOpt: Option[Id[User]]) extends OrganizationMembershipRequest
 
 case class OrganizationMembershipModifyRequest(
   orgId: Id[Organization],

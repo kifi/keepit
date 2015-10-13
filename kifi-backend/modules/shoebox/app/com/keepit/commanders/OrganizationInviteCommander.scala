@@ -74,8 +74,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationInviteCommander with Logging {
 
   private def getValidationError(request: OrganizationInviteRequest)(implicit session: RSession): Option[OrganizationFail] = {
-    val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
-
     val validateRequester = if (!permissionCommander.getOrganizationPermissions(request.orgId, Some(request.requesterId)).contains(OrganizationPermission.INVITE_MEMBERS)) {
       Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
     } else None
@@ -285,7 +283,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case Some(membership) => Right(membership) // already a member
       case None => // new membership
         val addRequests = invitations.sortBy(_.role).reverse.map { currentInvitation =>
-          OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role)
+          OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role, adminIdOpt = None)
         }
 
         val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership)
@@ -298,7 +296,11 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       db.readWrite { implicit s =>
         // Notify inviters on organization joined.
         val organization = organizationRepo.get(orgId)
-        notifyInviterOnOrganizationInvitationAcceptance(invitations, userRepo.get(userId), organization)
+        val basicInvitee = userRepo.get(userId)
+
+        val invitesWithActiveInviter = invitations.filter(invite => organizationMembershipRepo.getByOrgIdAndUserId(orgId, invite.inviterId).isDefined)
+        notifyInviterOnOrganizationInvitationAcceptance(invitesWithActiveInviter, basicInvitee, organization)
+
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
           if (authTokenOpt.exists(_.nonEmpty)) organizationAnalytics.trackAcceptedEmailInvite(organization, invite.inviterId, invite.userId, invite.emailAddress)

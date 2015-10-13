@@ -15,6 +15,15 @@ angular.module('kifi')
         .getBillingState(pubId)
         .then(getResponseData);
       },
+      getBillingCCToken: function (pubId) {
+        return net
+        .getBillingCCToken(pubId)
+        .then(getResponseData);
+      },
+      setBillingCCToken: function (pubId, token) {
+        return net
+        .setBillingCCToken(pubId, { token: token });
+      },
       getBillingContacts: function (pubId) {
         return net
         .getBillingContacts(pubId)
@@ -27,6 +36,11 @@ angular.module('kifi')
           net.getBillingContacts.clearCache();
           return response;
         });
+      },
+      getBillingEvents: function (pubId, limit) {
+        return net
+        .getBillingEvents(pubId, limit)
+        .then(getResponseData);
       }
     };
 

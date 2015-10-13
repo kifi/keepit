@@ -13,6 +13,7 @@ import play.api.libs.ws.WS
 import scala.concurrent.Future
 
 object AmplitudeClient {
+  // do not send these existing properties to amplitude
   val killedProperties = Set("client", "clientBuild", "clientVersion",
     "device", "experiments", "extensionVersion", "kcid_6", "kcid_7", "kcid_8",
     "kcid_9", "kcid_10", "kcid_11", "os", "osVersion", "remoteAddress", "serviceInstance", "serviceZone",
@@ -27,9 +28,12 @@ object AmplitudeClient {
     (eb: AmplitudeEventBuilder[_]) => eb.eventType.startsWith("anonymous_"),
     (eb: AmplitudeEventBuilder[_]) => eb.heimdalContext.get[String]("userAgent").exists(_.startsWith("Pingdom")),
     (eb: AmplitudeEventBuilder[_]) => {
+      eb.origEventName == "user_joined" && eb.heimdalContext.get[String]("action").contains("importedBookmarks")
+    },
+    (eb: AmplitudeEventBuilder[_]) => {
       // drop all _viewed_page events where "type" starts with "/", with a few exceptions
       eb.eventType.endsWith("_viewed_page") && eb.heimdalContext.get[String]("type").exists { v =>
-        v.head == '/' && !Set("/settings", "/tags/manage").contains(v) && !v.startsWith("/?m=")
+        v.headOption.exists(_ ==  '/') && !Set("/settings", "/tags/manage").contains(v) && !v.startsWith("/?m=")
       }
     },
     (eb: AmplitudeEventBuilder[_]) => AmplitudeClient.killedEvents.contains(eb.eventType)
@@ -64,6 +68,9 @@ object AmplitudeClient {
     "user_viewed_pane" -> "user_viewed_page",
     "visitor_viewed_pane" -> "visitor_viewed_page"
   )
+
+  // these user_was_notified action properties should be change dto user_clicked_notification events
+  val userWasNotifiedClickActions = Set("open", "click", "spamreport", "cleared", "marked_read", "marked_unread")
 }
 
 trait AmplitudeClient {
@@ -228,10 +235,10 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
       // TODO(josh) after amplitude is in prod, change these events at their source
       if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("registered")) "user_registered"
       else if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("installed")) "user_installed"
+      else if (shouldRenameToUserClickedNotification()) "user_clicked_notification"
       else origEventName
     })
   }
-
 
   override def getUserAndEventProperties(): (Map[String, ContextData], Map[String, ContextData]) = {
     val (userProperties, eventProperties) = super.getUserAndEventProperties()
@@ -269,6 +276,9 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
   private def augmentEventProperties(eventProperties: Map[String, ContextData]): Map[String, ContextData] = {
     val builder = { val b = new HeimdalContextBuilder; b ++= eventProperties; b }
 
+    // copy the existing "os" property to be an "operating_sytem" event property
+    heimdalContext.get[String]("os").foreach { os => builder += ("operating_system", os) }
+
     lazy val typeProperty = eventProperties.get("type").map {
       case data: ContextStringData => data.value
       case data => data.toString
@@ -288,6 +298,7 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
       typeProperty foreach {
         case "/settings" => builder += ("type", "settings")
         case "/tags/manage" => builder += ("type", "manageTags")
+        case v if v.startsWith("/?m=0") => builder += ("type", "home_feed:successful_signup")
         case _ =>
       }
     }
@@ -304,6 +315,11 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
     }
 
     builder.build.data
+  }
+
+  private def shouldRenameToUserClickedNotification() = {
+    origEventName == "user_was_notified" &&
+      heimdalContext.get[String]("action").exists(AmplitudeClient.userWasNotifiedClickActions.contains)
   }
 
   private def getIpAddress(): Option[String] =

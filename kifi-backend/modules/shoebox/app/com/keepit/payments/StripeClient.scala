@@ -13,7 +13,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 import com.stripe.Stripe
-import com.stripe.model.{ Charge, Customer }
+import com.stripe.model.{ Charge, Customer, Card }
 import com.stripe.exception.CardException
 
 case class CardDetails(number: String, expMonth: Int, expYear: Int, cvc: String, cardholderName: String)
@@ -28,6 +28,9 @@ trait StripeClient {
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult]
   def getPermanentToken(token: String, description: String): Future[StripeToken]
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken]
+
+  def getLastFourDigitsOfCard(token: StripeToken): Future[String]
+  def getCardInfo(token: StripeToken): Future[CardInfo]
 }
 
 class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends StripeClient with Logging {
@@ -35,10 +38,10 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
   val lock = new ReactiveLock(2)
 
   Stripe.apiKey = if (mode == Mode.Prod) {
-    "sk_live_ZHRnZXBRKuRqupqRme17ZSry" //this is the live token that will cause stripe to actually process charges
+    "sk_test_ljj7nL3XLgIlwxefGVRrRpqg" //"sk_live_ZHRnZXBRKuRqupqRme17ZSry" //this is the live token that will cause stripe to actually process charges
   } else {
     "sk_test_ljj7nL3XLgIlwxefGVRrRpqg" //this is the stripe test token, which lets us make call to them without actually charging anyone.
-  };
+  }
 
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult] = lock.withLock {
     require(amount.cents > 0)
@@ -85,6 +88,15 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     )
     val customer = Customer.create(customerParams.asJava);
     StripeToken(customer.getId())
+  }
+
+  def getLastFourDigitsOfCard(token: StripeToken): Future[String] = lock.withLock {
+    Customer.retrieve(token.token).getSources().getData().get(0).asInstanceOf[Card].getLast4
+  }
+
+  def getCardInfo(token: StripeToken): Future[CardInfo] = lock.withLock {
+    val card = Customer.retrieve(token.token).getSources().getData().get(0).asInstanceOf[Card]
+    CardInfo(card.getLast4, card.getBrand)
   }
 
 }
