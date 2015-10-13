@@ -33,7 +33,7 @@ object AmplitudeClient {
     (eb: AmplitudeEventBuilder[_]) => {
       // drop all _viewed_page events where "type" starts with "/", with a few exceptions
       eb.eventType.endsWith("_viewed_page") && eb.heimdalContext.get[String]("type").exists { v =>
-        v.head == '/' && !Set("/settings", "/tags/manage").contains(v) && !v.startsWith("/?m=")
+        v.headOption.exists(_ ==  '/') && !Set("/settings", "/tags/manage").contains(v) && !v.startsWith("/?m=")
       }
     },
     (eb: AmplitudeEventBuilder[_]) => AmplitudeClient.killedEvents.contains(eb.eventType)

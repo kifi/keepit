@@ -5,7 +5,7 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 import play.api.{ Logger }
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
+import com.keepit.common.healthcheck.{ AirbrakeNotifierStatic, AirbrakeNotifier, AirbrakeError }
 
 class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit executor: ExecutionContext) extends Future[T] {
 
@@ -17,10 +17,8 @@ class SafeFuture[+T](future: Future[T], name: Option[String] = None)(implicit ex
           try {
             // Needs a running Play application. May fail.
             Logger(getClass).error(s"[SafeFuture] Failure of future [${name.getOrElse("")}]", cause)
-            play.api.Play.maybeApplication.foreach { app =>
-              app.global.asInstanceOf[FortyTwoGlobal].injector.getInstance(classOf[AirbrakeNotifier])
-                .notify(AirbrakeError(cause, Some(s"SafeFuture[${name.getOrElse("")}]")))
-            }
+            AirbrakeNotifierStatic.notify(AirbrakeError(cause, Some(s"SafeFuture[${name.getOrElse("")}]")))
+
           } catch {
             case _: Throwable => // tried our best.
               System.err.println(s"SafeFuture exception: ${cause.toString}")
