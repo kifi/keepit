@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ UserRepo, OrganizationRepo, OrganizationStates, Organization, User }
+import com.keepit.model.{ OrganizationSettings, OrganizationConfigurationRepo, UserRepo, OrganizationRepo, OrganizationStates, Organization, User }
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
@@ -20,8 +20,10 @@ class AdminPaymentsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val executionContext: ExecutionContext,
     organizationRepo: OrganizationRepo,
+    paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
+    orgConfigRepo: OrganizationConfigurationRepo,
     userRepo: UserRepo,
     planCommander: PlanManagementCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
@@ -184,6 +186,27 @@ class AdminPaymentsController @Inject() (
 
   def unfreezeAccount(orgId: Id[Organization]) = AdminUserAction { implicit request =>
     Ok(planCommander.unfreeze(orgId).toString)
+  }
+
+  def applyDefaultSettingsToOrgConfigs() = AdminUserAction { implicit request =>
+    val paidPlans = db.readOnlyMaster(implicit s => paidPlanRepo.all().filter(_.state == PaidPlanStates.ACTIVE))
+    paidPlans.foreach { plan =>
+      val oldConfigs = db.readOnlyMaster { implicit s =>
+        val orgIds = paidAccountRepo.getActiveByPlan(plan.id.get).map(_.orgId)
+        orgIds.map(orgConfigRepo.getByOrgId)
+      }
+      oldConfigs.foreach { config =>
+        val featuresToRemove = config.settings.kvs.keySet.diff(plan.defaultSettings.kvs.keySet)
+        val featuresToAdd = plan.defaultSettings.kvs.keySet.diff(config.settings.kvs.keySet)
+        if (featuresToRemove.nonEmpty || featuresToAdd.nonEmpty) {
+          val targetFeatures = config.settings.kvs.keySet ++ featuresToAdd -- featuresToRemove
+          val newConfig = targetFeatures.map(feature => feature -> config.settings.kvs.getOrElse(feature, plan.defaultSettings.kvs(feature))).toMap
+          assume(newConfig.keySet == plan.defaultSettings.kvs.keySet)
+          db.readWrite { implicit s => orgConfigRepo.save(config.withSettings(OrganizationSettings(newConfig))) }
+        }
+      }
+    }
+    Ok
   }
 
 }

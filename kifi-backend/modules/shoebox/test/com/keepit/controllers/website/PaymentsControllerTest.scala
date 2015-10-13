@@ -4,7 +4,9 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.controllers.admin.AdminPaymentsController
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
@@ -22,6 +24,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   private def controller(implicit injector: Injector) = inject[PaymentsController]
   private def route = com.keepit.controllers.website.routes.PaymentsController
+  private def adminRoute = com.keepit.controllers.admin.routes.AdminPaymentsController
 
   val controllerTestModules = Seq(
     FakeHeimdalServiceClientModule(),
@@ -60,7 +63,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         (planJson \ "name").as[String] must beEqualTo("Free")
         (planJson \ "pricePerUser").as[DollarAmount] must beEqualTo(DollarAmount(10000))
         (planJson \ "cycle").as[Int] must beEqualTo(1)
-        (planJson \ "features").as[Set[Feature]] must beEqualTo(Feature.ALL)
+        (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
       }
     }
 
@@ -73,10 +76,46 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val request = route.getAccountFeatureSettings(publicId)
           val response = controller.getAccountFeatureSettings(publicId)(request)
           val payload = contentAsJson(response).as[JsObject]
-
           (payload \ "name").as[String] === "test"
           ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "setting").as[String] === "members"
           ((payload \ "settings").as[JsObject] \ "publish_libraries" \ "editable").as[Boolean] === true
+        }
+      }
+    }
+
+    "apply new default settings to org configurations" in {
+      "apply migration properly" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = setup()
+          val newPlan1 = db.readWrite { implicit session =>
+            val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
+            val newFeatureSet = oldPlan.defaultSettings.kvs.keySet -- Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
+            val newFeatureSettings = newFeatureSet.map { feature => feature -> oldPlan.defaultSettings.kvs(feature) }.toMap
+            paidPlanRepo.save(oldPlan.copy(editableFeatures = newFeatureSet, defaultSettings = OrganizationSettings(newFeatureSettings))) // mock db migration, remove features
+          }
+
+          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ADMIN))
+          val request = adminRoute.applyDefaultSettingsToOrgConfigs()
+          val response = inject[AdminPaymentsController].applyDefaultSettingsToOrgConfigs()(request)
+
+          status(response) must equalTo(200)
+          val newConfig1 = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
+          newConfig1.settings === newPlan1.defaultSettings
+
+          val newPlan2 = db.readWrite { implicit session =>
+            val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
+            val newFeatureSet = PaidPlanFactory.testPlanEditableFeatures
+            val newFeatureSettings = PaidPlanFactory.testPlanSettings
+            paidPlanRepo.save(oldPlan.copy(editableFeatures = newFeatureSet, defaultSettings = newFeatureSettings)) // mock db migration, add features
+          }
+
+          val response2 = inject[AdminPaymentsController].applyDefaultSettingsToOrgConfigs()(request)
+
+          status(response2) must equalTo(200)
+          val newConfig2 = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
+          newConfig2.settings === newPlan2.defaultSettings
+
+          newConfig2.settings.kvs.keySet.diff(newConfig1.settings.kvs.keySet) === Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
         }
       }
     }
