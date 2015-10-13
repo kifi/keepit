@@ -81,7 +81,7 @@ object BasicOrganizationView {
     (__ \ 'viewer).read[OrganizationViewerInfo]
   )(BasicOrganizationView.apply _)
   val writes: Writes[BasicOrganizationView] = Writes { bov =>
-    BasicOrganization.defaultFormat.writes(bov.basicOrganization) ++ OrganizationViewerInfo.internalFormat.writes(bov.viewerInfo)
+    BasicOrganization.defaultFormat.writes(bov.basicOrganization) ++ Json.obj("viewer" -> OrganizationViewerInfo.internalFormat.writes(bov.viewerInfo))
   }
   implicit val internalFormat = Format(reads, writes)
 }
