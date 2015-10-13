@@ -4,12 +4,13 @@ angular.module('kifi')
 
 .controller('OrgProfileSettingsCtrl', [
   '$window', '$rootScope', '$scope','$timeout', '$state',
-  'profileService', 'ORG_PERMISSION',
+  'profileService', 'ORG_PERMISSION', '$location',
   function ($window, $rootScope, $scope, $timeout, $state,
-            profileService, ORG_PERMISSION) {
+            profileService, ORG_PERMISSION, $location) {
     $scope.state = $state;
     $scope.settings = $scope.settings.settings;
     $scope.canExportKeeps = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) !== -1);
+    $scope.canManagePlan = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1);
     $scope.isAdminExperiment = (profileService.me.experiments.indexOf('admin') !== -1);
     function onHashChange() {
       var anchor = angular.element($window.location.hash.slice(0, -1))[0];
@@ -34,6 +35,17 @@ angular.module('kifi')
     });
 
     if (!$scope.viewer.membership || $scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_SETTINGS) === -1) {
+      $rootScope.$emit('errorImmediately');
+    }
+
+    var managePlanPages = ['plan', 'activity', 'contacts'];
+    var currentPage = $location.path().split('/')[3] && $location.path().split('/')[3].toLowerCase();
+
+    if (managePlanPages.indexOf(currentPage) !== -1 && $scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1) {
+      $rootScope.$emit('errorImmediately');
+    }
+
+    if (currentPage === 'export' && $scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) === -1) {
       $rootScope.$emit('errorImmediately');
     }
   }
