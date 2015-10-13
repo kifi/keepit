@@ -3,30 +3,30 @@
     <div class="kf-ops-nav">
       <nav class="kf-ops-nav-box kf-container" kf-follow-scroll kf-follow-scroll-disabled="{{ state.current.activenav !== 'team-settings' }}">
         <div class="kf-container-header">
-          <h1>Navigation</h1>
+          <h1>Settings</h1>
         </div>
         <ul>
           <li class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'team-settings' }">
-            <a class="kf-link" ui-sref="orgProfile.settings.team({ '#': 's-' })">Settings</a>
+            <a class="kf-link" ui-sref="orgProfile.settings.team({ '#': 's-' })">Member Privileges</a>
           </li>
           <!-- sublisting -->
           <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
             <a
               class="kf-link"
-              ui-sref="orgProfile.settings.team({ '#': 'team-settings-' })"
-            >Team Settings</a>
+              ui-sref="orgProfile.settings.team({ '#': 'team-profile-' })"
+            >Team Profile</a>
           </li>
           <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
             <a
               class="kf-link"
-              ui-sref="orgProfile.settings.team({ '#': 'library-settings-' })"
-            >Library Settings</a>
+              ui-sref="orgProfile.settings.team({ '#': 'libraries-' })"
+            >Libraries</a>
           </li>
           <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
             <a
               class="kf-link"
-              ui-sref="orgProfile.settings.team({ '#': 'member-settings-' })"
-            >Member Settings</a>
+              ui-sref="orgProfile.settings.team({ '#': 'members-' })"
+            >Members</a>
           </li>
           <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
             <a

@@ -7,30 +7,28 @@ angular.module('kifi')
   'billingService', 'messageTicker', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($window, $rootScope, $scope, $state, $sce, orgProfileService, profileService,
             billingService, messageTicker, ORG_PERMISSION, ORG_SETTING_VALUE) {
-    var slackIntegrationHtmlTitle =
-      $sce.trustAsHtml('Who can <a href="http://blog.kifi.com/slack-library-subscriptions/">create a Slack integration</a> with Kifi?');
     $scope.ORG_PERMISSION = ORG_PERMISSION;
     $scope.settingsSectionTemplateData = [
       {
-        heading: 'Team Settings',
+        heading: 'Team Profile',
         fields: [
           {
-            title: 'Who can change team settings?',
+            title: 'Who can change your team\'s profile info?',
             description: (
-              'Select who is able to edit your team name, logo, description, and URL'
+              'Select who is able to edit your team name, logo, description, and URL.'
             ),
             fieldKey: 'edit_organization',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
+            selectOptions: getOptions(ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
           }
         ]
       },
       {
-        heading: 'Library settings',
+        heading: 'Libraries',
         fields: [
           {
             title: 'Who can create public libraries within your team?',
             description: (
-              'Select who is able to make your teams\' libraries public.' +
+              'Select who is able to make your team\'s libraries public.' +
               ' Public libraries are discoverable in search engine\'s results,' +
               ' like Google.'
             ),
@@ -40,17 +38,22 @@ angular.module('kifi')
           {
             title: 'Who can edit libraries within your team?',
             description: (
-              'Select who is able to edit any library settings such as' +
-              ' visibility, title, and membership.'
+              'Select who is able to edit library settings such as' +
+              ' visibility, title, and membership.' +
+              ' Library owners will always be able to edit their libraries.'
             ),
             fieldKey: 'force_edit_libraries',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(
+              { label: 'Library owner only', value: ORG_SETTING_VALUE.DISABLED },
+              ORG_SETTING_VALUE.ADMIN,
+              ORG_SETTING_VALUE.MEMBER
+            )
           },
           {
-            title: 'Who can move libraries out of the team page?',
+            title: 'Who can move libraries out of the team?',
             description: (
-              'Select who is able to move libraries out of the company' +
-              ' and into another location ex. another team.'
+              'Select who is able to move libraries out of the team' +
+              ' and into another location e.g. another team.'
             ),
             fieldKey: 'remove_libraries',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
@@ -58,23 +61,22 @@ angular.module('kifi')
         ]
       },
       {
-        heading: 'Member settings',
+        heading: 'Members',
         fields: [
           {
-            title: 'Who can see the members page of this team?',
+            title: 'Who can see the members list of this team?',
             description: (
-              'Select who is able to see the team\'s members page.' +
-              ' "Anyone" means it\'s also discoverable in other' +
+              'Select who is able to see the list of team members.' +
+              ' "Anyone" means it is public and discoverable in' +
               ' search engine\'s results like Google.'
             ),
             fieldKey: 'view_members',
             selectOptions: getOptions(ORG_SETTING_VALUE.ANYONE, ORG_SETTING_VALUE.MEMBER)
           },
           {
-            title: 'Who can invite members to join the team?',
+            title: 'Who can add members to the team?',
             description: (
-              'Members of the team have access to your team visible libraries.' +
-              ' In most scenarios they can also keep to any public or team visible library.'
+              'Select who is able to add members to your team.'
             ),
             fieldKey: 'invite_members',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
@@ -82,7 +84,7 @@ angular.module('kifi')
           {
             title: 'Who can message everyone in the team?',
             description: (
-              'Send a same page chat to everyone in the team with just a couple of clicks.'
+              'Select who can send a message to everyone in the team.'
             ),
             fieldKey: 'group_messaging',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
@@ -93,17 +95,23 @@ angular.module('kifi')
         heading: 'Integrations',
         fields: [
           {
-            title: slackIntegrationHtmlTitle,
+            title: $sce.trustAsHtml(
+              'Who can' +
+              ' <a href="http://blog.kifi.com/slack-library-subscriptions/">create a Slack integration</a>' +
+              ' with Kifi?'
+            ),
             description: (
-              'Send all of your keeps from a particular library, automatically, to a Slack channel.'
+              'Select who is able to create a Slack integration with Kifi.' +
+              ' Integrating with Slack will automatically send all keeps from' +
+              ' a particular library to a Slack channel.'
             ),
             fieldKey: 'create_slack_integration',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           },
           {
-            title: 'Who can export team keeps?',
+            title: 'Who can export this team\'s keeps?',
             description: (
-              'Download all of your team\'s keeps for safe keeping'
+              'Select who is able to download all of your team\'s keeps for safe keeping.'
             ),
             fieldKey: 'export_keeps',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN)
@@ -151,13 +159,20 @@ angular.module('kifi')
       ];
 
       // If an option isn't in the list of items, discard it.
-      return options.filter(function (o) {
+      return options.map(function (o) {
         var desired = items.filter(function (item) {
-          return o.value === item;
+          return o.value === item || o.value === item.value;
         }).pop();
 
-        return !!desired;
-      });
+        if (desired) {
+          return {
+            label: desired.label || o.label,
+            value: o.value
+          };
+        } else {
+          return null;
+        }
+      }).filter(Boolean);
     }
 
     // Transform
