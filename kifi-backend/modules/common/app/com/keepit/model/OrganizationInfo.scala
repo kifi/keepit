@@ -51,7 +51,7 @@ case class OrganizationViewerInfo(
   permissions: Set[OrganizationPermission],
   membership: Option[OrganizationMembershipInfo])
 object OrganizationViewerInfo {
-  implicit val internalFormat: Format[OrganizationViewerInfo] = (
+  implicit val internalFormat: OFormat[OrganizationViewerInfo] = (
     (__ \ 'invite).formatNullable[OrganizationInviteInfo] and
     (__ \ 'permissions).format[Set[OrganizationPermission]] and
     (__ \ 'membership).formatNullable[OrganizationMembershipInfo]
@@ -76,10 +76,14 @@ case class BasicOrganizationView(
   basicOrganization: BasicOrganization,
   viewerInfo: OrganizationViewerInfo)
 object BasicOrganizationView {
-  implicit val internalFormat = (
-    (__ \ 'basicOrganization).format[BasicOrganization] and
-    (__ \ 'viewerInfo).format[OrganizationViewerInfo](OrganizationViewerInfo.internalFormat)
-  )(BasicOrganizationView.apply, unlift(BasicOrganizationView.unapply))
+  val reads: Reads[BasicOrganizationView] = (
+    __.read[BasicOrganization] and
+    (__ \ 'viewer).read[OrganizationViewerInfo]
+  )(BasicOrganizationView.apply _)
+  val writes: Writes[BasicOrganizationView] = Writes { bov =>
+    BasicOrganization.defaultFormat.writes(bov.basicOrganization) ++ Json.obj("viewer" -> OrganizationViewerInfo.internalFormat.writes(bov.viewerInfo))
+  }
+  implicit val internalFormat = Format(reads, writes)
 }
 
 case class OrganizationView(
