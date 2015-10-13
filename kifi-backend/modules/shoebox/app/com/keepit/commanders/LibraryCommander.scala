@@ -247,7 +247,7 @@ class LibraryCommanderImpl @Inject() (
         case _ => false // unsupported type
       })
 
-      (newSubscriptions.isDefined, areSubKeysValidOpt, newSpace) match {
+      (newSubscriptions.exists(_.nonEmpty), areSubKeysValidOpt, newSpace) match {
         case (true, Some(false), _) => Some(LibraryFail(BAD_REQUEST, "subscription_key_format"))
         case (true, _, space: OrganizationSpace) if db.readOnlyReplica { implicit session => !permissionCommander.getOrganizationPermissions(space.id, Some(userId)).contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) } =>
           Some(LibraryFail(FORBIDDEN, "create_slack_integration_permission"))
