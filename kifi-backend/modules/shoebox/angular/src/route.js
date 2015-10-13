@@ -135,6 +135,14 @@ angular.module('kifi')
         controller: 'OrgProfileSettingsCtrl',
         templateUrl: 'orgProfile/orgProfileSettings.tpl.html',
         activetab: 'settings',
+        resolve: {
+          billingState: [
+            'billingService', 'profile',
+            function (billingService, profile) {
+              return billingService.getBillingState(profile.organization.id);
+            }
+          ]
+        },
         'abstract': true
       })
       .state('orgProfile.settings.team', {
@@ -165,13 +173,7 @@ angular.module('kifi')
         activetab: 'settings',
         activenav: 'payment-plan',
         resolve: {
-          stripe: StripeCheckoutProvider.load,
-          billingState: [
-            'billingService', 'profile',
-            function (billingService, profile) {
-              return billingService.getBillingState(profile.organization.id);
-            }
-          ]
+          stripe: StripeCheckoutProvider.load
         }
       })
       .state('orgProfile.settings.activity', {

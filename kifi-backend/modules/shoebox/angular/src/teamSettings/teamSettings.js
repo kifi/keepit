@@ -3,10 +3,12 @@
 angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
-  '$window', '$rootScope', '$scope', '$state', '$sce', 'orgProfileService', 'profileService',
-  'billingService', 'messageTicker', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function ($window, $rootScope, $scope, $state, $sce, orgProfileService, profileService,
-            billingService, messageTicker, ORG_PERMISSION, ORG_SETTING_VALUE) {
+  '$window', '$rootScope', '$scope', '$state', '$sce', 'billingState',
+  'orgProfileService', 'profileService', 'billingService', 'messageTicker',
+  'ORG_PERMISSION', 'ORG_SETTING_VALUE',
+  function ($window, $rootScope, $scope, $state, $sce, billingState,
+            orgProfileService, profileService, billingService, messageTicker,
+            ORG_PERMISSION, ORG_SETTING_VALUE) {
     $scope.ORG_PERMISSION = ORG_PERMISSION;
     $scope.settingsSectionTemplateData = [
       {
@@ -194,11 +196,7 @@ angular.module('kifi')
     }
 
     if ($scope.viewer.membership && $scope.viewer.membership.role === 'admin') {
-      billingService
-      .getBillingState($scope.profile.id)
-      .then(function (stateData) {
-        $scope.billingState = stateData;
-      });
+      $scope.billingState = billingState;
     }
 
     $scope.kifiAdmin = (profileService.me.experiments.indexOf('admin') !== -1);
