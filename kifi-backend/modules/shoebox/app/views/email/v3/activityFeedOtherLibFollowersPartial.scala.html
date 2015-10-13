@@ -17,7 +17,7 @@
             }@if(idx < followerNames.size - 1 && followerNames.size > 2){,}
           }
           followed
-          <a href="@libraryLink(libInfoView.libraryId, "otherLibFollowersLibraryName")" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
+          <a href="@libraryLink(libInfoView.libraryId, None, "otherLibFollowersLibraryName")" target="_blank" style="text-decoration:none;color:#62BE73;">@libInfoView.name</a>
           by @libInfoView.ownerName
         </td>
       </tr>
