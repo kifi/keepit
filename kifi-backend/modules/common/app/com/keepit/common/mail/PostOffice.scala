@@ -46,15 +46,15 @@ class RemotePostOfficeActor @Inject() (
 
   def receive = {
     case SendEmail(mail: ElectronicMail) =>
-      //shoeboxClient.sendMail(mail.copy(htmlBody = mail.htmlBody.value.take(Max8M), textBody = mail.textBody.map(_.value.take(Max8M)))) onComplete {
-       // case Success(result) => if (!result) self ! QueueEmail(mail)
-       // case Failure(failure) => self ! QueueEmail(mail)
-      //}
+      shoeboxClient.sendMail(mail.copy(htmlBody = mail.htmlBody.value.take(Max8M), textBody = mail.textBody.map(_.value.take(Max8M)))) onComplete {
+        case Success(result) => if (!result) self ! QueueEmail(mail)
+        case Failure(failure) => self ! QueueEmail(mail)
+      }
     case QueueEmail(mail) =>
-      //mailQueue.enqueue(mail)
+      mailQueue.enqueue(mail)
     case SendQueuedEmails =>
-      //mailQueue.foreach(mail => self ! SendEmail(mail))
-    case m => ///throw new UnsupportedActorMessage(m)
+      mailQueue.foreach(mail => self ! SendEmail(mail))
+    case m => throw new UnsupportedActorMessage(m)
   }
 }
 
