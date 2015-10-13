@@ -182,7 +182,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def markAllRead(user: Id[User])(implicit session: RWSession): Unit = {
-    val q = (for (row <- rows if row.user === user) yield (row.unread, row.updatedAt))
+    val q = (for (row <- rows if row.user === user && row.unread) yield (row.unread, row.updatedAt))
     q.update((false, clock.now()))
   }
 
