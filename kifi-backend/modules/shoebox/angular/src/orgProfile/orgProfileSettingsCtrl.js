@@ -36,5 +36,27 @@ angular.module('kifi')
     if (!$scope.viewer.membership || $scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_SETTINGS) === -1) {
       $rootScope.$emit('errorImmediately');
     }
+
+    var managePlanPages = ['plan', 'activity', 'contacts'];
+    var currentPage = $location.path().split('/')[3] && $location.path().split('/')[3].toLowerCase();
+
+    if (managePlanPages.indexOf(currentPage) !== -1 && $scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1) {
+      $rootScope.$emit('errorImmediately');
+    }
+
+    if (currentPage === 'export' && $scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) === -1) {
+      $rootScope.$emit('errorImmediately');
+    }
+
+    var managePlanPages = ['plan', 'activity', 'contacts'];
+    var currentPage = $location.path().split('/')[3] && $location.path().split('/')[3].toLowerCase();
+
+    if (managePlanPages.indexOf(currentPage) !== -1 && $scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1) {
+      $rootScope.$emit('errorImmediately');
+    }
+
+    if (currentPage === 'export' && $scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) === -1) {
+      $rootScope.$emit('errorImmediately');
+    }
   }
 ]);
