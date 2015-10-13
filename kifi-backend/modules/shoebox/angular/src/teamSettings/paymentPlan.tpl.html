@@ -1,53 +1,56 @@
-<div class="kf-team-plan">
-  <h1 class="kf-payment-plan-top-header">Team Plan</h1>
+<div class="kf-payment-plan">
+  <h1 class="kf-payment-plan-top-header">Payment Plan</h1>
   <div class="kf-container">
     <div class="kf-container-header"><h2>Select your plan</h2></div>
-    <div class="kf-row kf-team-plan-cards">
-      <div class="kf-team-plan-card kf-team-plan-card-free">
-        <div class="kf-team-plan-card-title">Free</div>
-        <div class="kf-team-plan-card-cost">0</div>
-        <div class="kf-team-plan-card-bottom">
-          <p class="kf-team-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-          <button class="kf-team-plan-card-cta" style="visibility: hidden;">Upgrade now</button>
+    <div class="kf-row kf-payment-plan-cards">
+      <div class="kf-payment-plan-card kf-payment-plan-card-free">
+        <div class="kf-payment-plan-card-title">Free</div>
+        <div class="kf-payment-plan-card-cost">0</div>
+        <div class="kf-payment-plan-card-bottom">
+          <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
+          <button ng-if="plan.tier !== 'free'" class="kf-payment-plan-card-cta" ng-click="changePlanToFree()">Downgrade</button>
+          <p ng-if="plan.tier === 'free'">Your current plan</p>
         </div>
       </div>
-      <div class="kf-team-plan-card kf-team-plan-card-basic">
-        <div class="kf-team-plan-card-title">Standard</div>
-        <div class="kf-team-plan-card-cost">6.67</div>
-        <p class="kf-team-plan-card-description">per user per month when billed anually</p>
-        <p class="kf-team-plan-card-description">$8 billed monthly</p>
-        <div class="kf-team-plan-card-bottom">
-          <p class="kf-team-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-          <button class="kf-team-plan-card-cta">Upgrade now</button>
+      <div class="kf-payment-plan-card kf-payment-plan-card-basic">
+        <div class="kf-payment-plan-card-title">Standard</div>
+        <div class="kf-payment-plan-card-cost">6.67</div>
+        <p ng-if="plan.tier !== 'standard'" class="kf-payment-plan-card-description">per user per month when billed anually</p>
+        <p ng-if="plan.tier !== 'standard'" class="kf-payment-plan-card-description">$8 billed monthly</p>
+        <div class="kf-payment-plan-card-bottom">
+          <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
+          <p ng-if="plan.tier === 'standard'">Your current plan</p>
+          <button ng-if="plan.tier === 'free'" class="kf-payment-plan-card-cta" ng-click="changePlanToStandard()">Upgrade now</button>
         </div>
       </div>
-      <div class="kf-team-plan-card kf-team-plan-card-enterprise">
-        <div class="kf-team-plan-card-title">Enterprise</div>
-        <p class="kf-team-plan-card-soon">Coming Soon</p>
-        <div class="kf-team-plan-card-bottom">
-          <p class="kf-team-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-          <button class="kf-team-plan-card-cta">Contact us</button>
+      <div class="kf-payment-plan-card kf-payment-plan-card-enterprise">
+        <div class="kf-payment-plan-card-title">Enterprise</div>
+        <p class="kf-payment-plan-card-soon">Coming Soon</p>
+        <div class="kf-payment-plan-card-bottom">
+          <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
+          <a class="kf-payment-plan-card-cta kf-link kf-link-white" href="mailto:billing@kifi.com">Contact us</a>
         </div>
       </div>
     </div>
     <p>Select your team's plan. Get details on the plans we offer on the <a class="kf-link" href="#">pricing page</a></p>
     <div class="custom-select kf-button">
-    <select class="kf-team-plan-select">
-        <option>Free Plan</option>
-        <option>Standard Plan</option>
-        <option>Enterprise Plan</option>
+    <select ng-model="plan.tier" class="kf-payment-plan-select">
+        <option value="free">Free Plan</option>
+        <option value="standard">Standard Plan</option>
+        <option value="enterprise">Enterprise Plan - contact us</option>
       </select>
     </div>
     <h2 class="kf-heading">Choose your Payment Frequency</h2>
-    <p>You're paying for <span ng-bind="profile.numMembers"></span> users. With worry-free billing, we'll automatically charge or credit your account with a change in team members.</p>
+    <p>You're paying for <b ng-bind="profile.numMembers"></b> users. With worry-free billing, we'll automatically charge or credit your account with a change in team members.</p>
     <div class="custom-select kf-button">
-      <select class="kf-team-plan-select">
-        <option>Annual billing</option>
-        <option>Monthly billing</option>
+      <select ng-model="plan.cycle" class="kf-payment-plan-select">
+        <option value="12">Annual billing</option>
+        <option value="1">Monthly billing</option>
       </select>
     </div>
     <h2 class="kf-heading">Manage your Credit Card Information</h2>
-    <p>Your current card ends in {{ billingState.card }}</p>
+    <p ng-if="!card">You haven't added a card yet.</p>
+    <p ng-if="card">Your current card is <b ng-bind="card.brand"></b> ****<b ng-bind="card.last4"></b></p>
     <p>
       <button class="kf-button kf-button-large" ng-click="openStripeCheckout()">Update Payment Information</button>
     </p>

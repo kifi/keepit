@@ -58,7 +58,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
 
   def createMessageThread(title: String)(implicit rw: RWSession, injector: Injector) = {
     inject[MessageThreadRepo].save(MessageThread(
-      uriId = None, url = None, nUrl = None, pageTitle = Some(title), replyable = true,
+      uriId = None, url = None, nUrl = None, pageTitle = Some(title),
       participants = None, participantsHash = None))
   }
 

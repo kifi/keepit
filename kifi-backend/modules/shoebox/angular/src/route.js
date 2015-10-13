@@ -177,13 +177,7 @@ angular.module('kifi')
         activetab: 'settings',
         activenav: 'payment-plan',
         resolve: {
-          stripe: StripeCheckoutProvider.load,
-          billingState: [
-            'billingService', 'profile',
-            function (billingService, profile) {
-              return billingService.getBillingState(profile.organization.id);
-            }
-          ]
+          stripe: StripeCheckoutProvider.load
         }
       })
       .state('orgProfile.settings.activity', {
