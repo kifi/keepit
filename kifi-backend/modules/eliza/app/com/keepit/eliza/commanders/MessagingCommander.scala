@@ -618,8 +618,8 @@ class MessagingCommander @Inject() (
     val context = moreContext.addExistingContext(initContext).build
 
     val resFut =
-      cantSendToOrgs.flatMap { cantSend =>
-        if (cantSend) throw new Exception("insufficient_org_permissions")
+      canSendToOrgs.flatMap { canSend =>
+        if (!canSend) throw new Exception("insufficient_org_permissions")
         else {
           for {
             userRecipients <- userRecipientsFuture
