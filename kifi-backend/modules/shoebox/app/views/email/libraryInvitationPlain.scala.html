@@ -8,7 +8,7 @@ inviteAccess: LibraryAccess
 )
 
 @import com.keepit.common.mail.template.helpers._
-@libraryUrl = @{libraryLink(library.id.get, "authToken=" + authToken, inviteeId.isDefined)}
+@libraryUrl = @{libraryLink(library.id.get, Some(authToken), "", inviteeId.isDefined)}
 
 @* setting up message components that depend on conditionals *@
 @salutation = {
