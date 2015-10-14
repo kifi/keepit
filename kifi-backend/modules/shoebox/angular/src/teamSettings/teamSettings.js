@@ -47,8 +47,7 @@ angular.module('kifi')
             fieldKey: 'force_edit_libraries',
             selectOptions: getOptions(
               { label: 'Library owner only', value: ORG_SETTING_VALUE.DISABLED },
-              ORG_SETTING_VALUE.ADMIN,
-              ORG_SETTING_VALUE.MEMBER
+              ORG_SETTING_VALUE.ADMIN
             )
           },
           {
