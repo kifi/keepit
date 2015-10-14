@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
-  '$window', '$rootScope', '$scope', '$state', '$filter', 'billingState', 'billingService',
-  'modalService', 'StripeCheckout', 'messageTicker',
-  function ($window, $rootScope, $scope, $state, $filter, billingState, billingService,
-            modalService, StripeCheckout, messageTicker) {
+  '$window', '$rootScope', '$scope', '$state', '$filter', 'billingState',
+  'billingService', 'modalService', 'StripeCheckout', 'messageTicker',
+  function ($window, $rootScope, $scope, $state, $filter, billingState,
+            billingService, modalService, StripeCheckout, messageTicker) {
     $scope.card = billingState.card;
 
     $scope.plan = {
