@@ -544,7 +544,7 @@ GET           /site/user-or-org/:handle/libraries         @com.keepit.controller
 GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
 GET           /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.getAccountState(pubId: PublicId[Organization])
-GET           /site/admin/billing/plans                         @com.keepit.controllers.website.PaymentsController.getActivePlans()
+GET           /site/admin/billing/plans                         @com.keepit.controllers.website.PaymentsController.getAvailablePlans(pubId: PublicId[Organization])
 GET           /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.getCreditCardToken(pubId: PublicId[Organization])
 POST          /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.setCreditCardToken(pubId: PublicId[Organization])
 GET           /site/admin/billing/contacts                      @com.keepit.controllers.website.PaymentsController.getAccountContacts(pubId: PublicId[Organization])
