@@ -54,6 +54,7 @@ sealed abstract class OrganizationRole(val value: String, val priority: Int) ext
 }
 
 object OrganizationRole {
+  case class OrganizationRoleNotFoundException(str: String) extends Exception(s"""Organization role "$str" not found""")
   case object ADMIN extends OrganizationRole("admin", 0)
   case object MEMBER extends OrganizationRole("member", 1)
 
@@ -66,6 +67,7 @@ object OrganizationRole {
     str match {
       case ADMIN.value => ADMIN
       case MEMBER.value => MEMBER
+      case _ => throw new OrganizationRoleNotFoundException(str)
     }
   }
 
