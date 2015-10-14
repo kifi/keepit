@@ -6,6 +6,7 @@ import com.keepit.commanders._
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
@@ -60,6 +61,15 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
   }
 
   def prenormalize(url: String)(implicit injector: Injector): String = normalizationService.prenormalize(url).get
+
+  def libraryCard(libraryId: Id[Library])(implicit injector: Injector): LibraryCardInfo = {
+    val viewerOpt = inject[FakeUserActionsHelper].fixedUser.flatMap(_.id)
+    db.readOnlyMaster { implicit session =>
+      val library = libraryRepo.get(libraryId)
+      val owner = basicUserRepo.load(library.ownerId)
+      inject[LibraryCardCommander].createLibraryCardInfo(library, owner, viewerOpt, withFollowing = true, ProcessedImageSize.Medium.idealSize)
+    }
+  }
 
   "remove tag" in {
     withDb(controllerTestModules: _*) { implicit injector =>
@@ -334,7 +344,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "summary":{},
             "siteName":"Amazon",
             "libraryId":"${pubLibId1.id}",
-            "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+            "library": ${Json.toJson(libraryCard(lib1.id.get))}
             },
           {
             "id":"${bookmark1.externalId.toString}",
@@ -359,7 +369,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "summary":{},
             "siteName":"Google",
             "libraryId":"${pubLibId1.id}",
-            "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+            "library": ${Json.toJson(libraryCard(lib1.id.get))}
             }
         ]}
       """)
@@ -422,7 +432,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "summary":{},
                       "siteName":"Kifi",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get)(inject[PublicIdConfiguration]), name = "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
@@ -443,7 +453,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get)(inject[PublicIdConfiguration]), name = "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     }
                   ],
                   "helprank":"click"
@@ -502,7 +512,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get)(inject[PublicIdConfiguration]), name = "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     }
                   ],
                   "helprank":"click"
@@ -598,7 +608,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                 "summary":{},
                 "siteName":"Amazon",
                 "libraryId":"${pubLibId1.id}",
-                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user), orgHandle = None))}
+                "library": ${Json.toJson(libraryCard(lib1.id.get))}
               }
             ]
           }
