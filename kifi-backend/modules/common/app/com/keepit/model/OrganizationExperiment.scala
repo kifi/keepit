@@ -60,10 +60,10 @@ object OrganizationExperimentType {
   }
 
   val FAKE = OrganizationExperimentType("fake")
+  val NON_PROFIT = OrganizationExperimentType("non_profit")
+  val EDUCATIONAL = OrganizationExperimentType("educational")
 
-  val _ALL = FAKE :: Nil
-
-  private val _ALL_MAP: Map[String, OrganizationExperimentType] = _ALL.map(e => e.value -> e).toMap
+  val _ALL = EDUCATIONAL :: NON_PROFIT :: FAKE :: Nil
 
   def get(str: String): OrganizationExperimentType = OrganizationExperimentType(str.toLowerCase.trim)
 }
