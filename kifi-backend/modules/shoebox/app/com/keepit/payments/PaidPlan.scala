@@ -59,11 +59,12 @@ case class PaidPlan(
 
   def fullName = {
     val cycleString = billingCycle.month match {
-      case 1 => "Monthly"
-      case 12 => "Annual"
-      case _ => "Custom"
+      case 0 => ""
+      case 1 => " Monthly"
+      case 12 => " Annual"
+      case _ => " Custom"
     }
-    displayName + " " + cycleString
+    displayName + cycleString
   }
 }
 
