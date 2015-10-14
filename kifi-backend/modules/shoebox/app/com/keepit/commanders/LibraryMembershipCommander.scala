@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
@@ -34,6 +35,9 @@ trait LibraryMembershipCommander {
   def updateLibraryMembershipAccess(requestUserId: Id[User], libraryId: Id[Library], targetUserId: Id[User], newAccess: Option[LibraryAccess]): Either[LibraryFail, LibraryMembership]
   def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]]
   def followDefaultLibraries(userId: Id[User]): Future[Map[Id[Library], LibraryMembership]]
+  def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo
+  def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo]
+  def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
 }
 
 object LibraryMembershipCommander {
@@ -58,6 +62,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     libraryInviteCommander: LibraryInviteCommander,
     libraryAccessCommander: LibraryAccessCommander,
+    permissionCommander: PermissionCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     typeaheadCommander: TypeaheadCommander,
     kifiUserTypeahead: KifiUserTypeahead,
@@ -399,5 +404,22 @@ class LibraryMembershipCommanderImpl @Inject() (
       }
       libId -> membership
     }.toMap
+  }
+
+  def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo = {
+    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
+  }
+
+  def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo] = {
+    userIdOpt.flatMap { userId =>
+      db.readOnlyReplica { implicit s =>
+        val membershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
+        membershipOpt.map(createMembershipInfo)
+      }
+    }
+  }
+
+  def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]] = {
+    db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) }
   }
 }

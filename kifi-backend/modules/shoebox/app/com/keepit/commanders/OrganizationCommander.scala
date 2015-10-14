@@ -7,20 +7,18 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.images.RawImageInfo
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ ImagePath, ImageSize }
+import com.keepit.common.store.{ ImageSize }
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION, VIEW_ORGANIZATION }
+import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
@@ -69,7 +67,7 @@ class OrganizationCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
-    libraryInfoCommander: LibraryInfoCommander,
+    libraryCardCommander: LibraryCardCommander,
     libraryCommander: LibraryCommander,
     airbrake: AirbrakeNotifier,
     orgExperimentRepo: OrganizationExperimentRepo,
@@ -218,7 +216,7 @@ class OrganizationCommanderImpl @Inject() (
     db.readOnlyReplica { implicit session =>
       val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
       val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId).toSet)
-      libraryInfoCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, userIdOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+      libraryCardCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, userIdOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
     }
   }
 
