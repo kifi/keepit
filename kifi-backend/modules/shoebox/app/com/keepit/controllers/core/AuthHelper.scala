@@ -43,6 +43,7 @@ import com.keepit.common.performance._
 import scala.concurrent.Future
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.core._
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -221,8 +222,8 @@ class AuthHelper @Inject() (
       (libraryPublicId, libAuthToken, orgPublicId, orgAuthToken) match { // assumes only one intent exists per request
         case (Some(libPubId), authTokenOpt, _, _) =>
           Some(AutoFollowLibrary(libPubId, authTokenOpt))
-        case (_, _, Some(orgPublicId), Some(authToken)) =>
-          Some(AutoJoinOrganization(orgPublicId, authToken))
+        case (_, _, Some(orgPubId), Some(authToken)) =>
+          Some(AutoJoinOrganization(orgPubId, authToken))
         case _ => None
       }
     }.getOrElse(NoIntent)
@@ -251,16 +252,37 @@ class AuthHelper @Inject() (
         }
     }
 
-    val uri = intent match {
+    type IntentAction = PostRegIntent ?=> Unit
+
+    val createUserValues: IntentAction = {
+      case o: AutoJoinOrganization =>
+      case l: AutoFollowLibrary =>
+      case _ =>
+      // This enables the FTUI for new users
+      //        db.readWrite { implicit session =>
+      //          userValueRepo.setValue(user.id.get, UserValueName.HAS_SEEN_FTUE, false)
+      //        }
+    }
+
+    val performPrimaryIntentAction: IntentAction = {
       case AutoFollowLibrary(libId, authTokenOpt) =>
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
+      case AutoJoinOrganization(orgPubId, authToken) =>
+        authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
+    }
+
+    Seq(createUserValues, performPrimaryIntentAction)
+      .map(_.lift)
+      .foreach(i => i(intent))
+
+    val uri = intent match {
+      case AutoFollowLibrary(libId, authTokenOpt) =>
         val url = Library.decodePublicId(libId).map { libraryId =>
           val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
           libPathCommander.getPathForLibrary(library)
         }.getOrElse("/")
         url
       case AutoJoinOrganization(orgPubId, authToken) =>
-        authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
         val url = Organization.decodePublicId(orgPubId).map { orgId =>
           val handle = db.readOnlyMaster { implicit session => orgRepo.get(orgId) }.handle
           s"/${handle.value}"
