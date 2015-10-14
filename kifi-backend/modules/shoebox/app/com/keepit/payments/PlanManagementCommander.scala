@@ -57,6 +57,7 @@ trait PlanManagementCommander {
   def grandfatherPlan(id: Id[PaidPlan]): Try[PaidPlan]
   def deactivatePlan(id: Id[PaidPlan]): Try[PaidPlan]
 
+  def getCurrentAndAvailablePlans(orgId: Id[Organization]): (Id[PaidPlan], Set[PaidPlan])
   def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan]
   def changePlan(orgId: Id[Organization], newPlan: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent]
   def getBillingCycleStart(orgId: Id[Organization]): DateTime
@@ -422,6 +423,12 @@ class PlanManagementCommanderImpl @Inject() (
   def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan] = db.readOnlyMaster { implicit session =>
     val kinds = if (grantedByAdmin.isDefined) Set(PaidPlan.Kind.NORMAL, PaidPlan.Kind.CUSTOM) else Set(PaidPlan.Kind.NORMAL)
     paidPlanRepo.getByKinds(kinds)
+  }
+
+  def getCurrentAndAvailablePlans(orgId: Id[Organization]): (Id[PaidPlan], Set[PaidPlan]) = db.readOnlyReplica { implicit session =>
+    val normalPlans = paidPlanRepo.getByKinds(Set(PaidPlan.Kind.NORMAL))
+    val currentPlan = currentPlanHelper(orgId)
+    (currentPlan.id.get, normalPlans.toSet + currentPlan)
   }
 
   def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent] = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>

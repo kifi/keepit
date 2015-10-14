@@ -48,12 +48,9 @@ class PaymentsController @Inject() (
   }
 
   def getAvailablePlans(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { implicit request =>
-    val currentPlan = planCommander.currentPlan(request.orgId)
-    val availablePlans = planCommander.getAvailablePlans(request.request.adminUserId)
-
-    val allPlans = (availablePlans :+ currentPlan).distinct.sortBy(_.billingCycle.month)
-    val plansByName = allPlans.map(_.asInfo).groupBy(_.name)
-    val response = AvailablePlansResponse(PaidPlan.publicId(currentPlan.id.get), plansByName)
+    val (currentPlanId, availablePlans) = planCommander.getCurrentAndAvailablePlans(request.orgId)
+    val sortedAvailablePlansByName = availablePlans.map(_.asInfo).groupBy(_.name).map { case (name, plans) => name -> plans.toSeq.sortBy(_.cycle.month) }
+    val response = AvailablePlansResponse(PaidPlan.publicId(currentPlanId), sortedAvailablePlansByName)
     Ok(Json.toJson(response))
   }
 

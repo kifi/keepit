@@ -57,7 +57,14 @@ case class PaidPlan(
     features = editableFeatures
   )
 
-  def fullName = displayName + (if (billingCycle.month == 1) " Monthly" else if (billingCycle.month == 12) " Annual" else "")
+  def fullName = {
+    val cycleString = billingCycle.month match {
+      case 1 => "Monthly"
+      case 12 => "Annual"
+      case _ => "Custom"
+    }
+    displayName + " " + cycleString
+  }
 }
 
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
