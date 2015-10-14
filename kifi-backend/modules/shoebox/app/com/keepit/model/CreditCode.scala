@@ -21,7 +21,7 @@ case class CreditCode(value: String) {
 
 object CreditCode {
   def normalize(rawCode: String): CreditCode = CreditCode(rawCode.toLowerCase.trim)
-  implicit def format: Format[CreditCode] = Format(Reads.of[String].map(normalize(_)), Writes[CreditCode](code => JsString(code.value)))
+  implicit val format: Format[CreditCode] = Format(Reads.of[String].map(normalize(_)), Writes[CreditCode](code => JsString(code.value)))
   def columnType(db: DataBaseComponent) = {
     import db.Driver.simple._
     MappedColumnType.base[CreditCode, String](_.value, CreditCode.apply)
@@ -117,7 +117,7 @@ case class UnavailableCreditCodeException(info: CreditCodeInfo) extends Exceptio
 @ImplementedBy(classOf[CreditCodeInfoRepoImpl])
 trait CreditCodeInfoRepo extends Repo[CreditCodeInfo] {
   def getByCode(code: CreditCode, excludeState: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo]
-  def add(code: CreditCode, kind: CreditCodeKind, credit: DollarAmount, validityPeriod: Option[Duration], referrer: Option[CreditCodeReferrer])(implicit session: RWSession): Try[CreditCodeInfo]
+  def insert(info: CreditCodeInfo)(implicit session: RWSession): Try[CreditCodeInfo]
 }
 
 @Singleton
@@ -154,5 +154,5 @@ class CreditCodeInfoRepoImpl @Inject() (
   override def invalidateCache(info: CreditCodeInfo)(implicit session: RSession): Unit = {}
 
   def getByCode(code: CreditCode, excludeState: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo] = ???
-  def add(code: CreditCode, kind: CreditCodeKind, credit: DollarAmount, validityPeriod: Option[Duration], referrer: Option[CreditCodeReferrer])(implicit session: RWSession): Try[CreditCodeInfo] = ???
+  def insert(info: CreditCodeInfo)(implicit session: RWSession): Try[CreditCodeInfo] = ???
 }

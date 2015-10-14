@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{DbRepo, DataBaseComponent, Repo}
 import com.keepit.common.db.{ States, ModelWithState, State, Id }
 import com.keepit.common.logging.Logging
@@ -11,81 +11,7 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 
 import scala.concurrent.duration.Duration
-
-sealed abstract class RewardStatus(val status: String) {
-  type I
-  def infoFormat: Format[I]
-}
-
-sealed abstract class RewardKind(val kind: String) {
-  type S <: RewardStatus
-  protected val allStatus: Set[S]
-  def writeStatus(status: S): String = status.status
-  def readStatus(status: String): S = allStatus.find(_.status equalsIgnoreCase status) match {
-    case Some(validStatus) => validStatus
-    case None => throw new IllegalArgumentException(s"Invalid status for $this credit reward: $status")
-  }
-}
-
-object RewardStatus {
-
-  trait FixedTypeInfo[F] { self: RewardKind =>
-    def infoFormat: Format[F]
-
-    sealed abstract class Status(status: String) extends RewardStatus(status) {
-      type I = F
-      def infoFormat = self.infoFormat
-    }
-    type S = Status
-  }
-
-  trait EmptyInfo extends FixedTypeInfo[None.type] { self: RewardKind =>
-    val infoFormat: Format[None.type] = Format(
-      Reads {
-        case JsNull => JsSuccess(None)
-        case unexpected => JsError(s"Unexpected CreditRewardStatus info: $unexpected")
-      },
-      Writes(None => JsNull)
-    )
-  }
-}
-
-object RewardKind {
-  
-  case object Coupon extends RewardKind("coupon") with RewardStatus.EmptyInfo {
-    case object Pending extends Status("pending")
-    case object Applied extends Status("applied")
-    protected val allStatus: Set[S] = Set(Pending, Applied)
-  }
-
-  case object OrgCreation extends RewardKind("org_creation") with RewardStatus.FixedTypeInfo[Id[Organization]] {
-    val infoFormat = Id.format[Organization]
-    case object Created extends Status("created")
-    case object Applied extends Status("applied")
-    protected val allStatus: Set[S] = Set(Created, Applied)
-  }
-
-  case object OrgReferral extends RewardKind("org_referral") with RewardStatus.FixedTypeInfo[Id[Organization]] {
-    val infoFormat = Id.format[Organization]
-    case object Created extends Status("created")
-    case object Upgraded extends Status("upgraded")
-    case object Applied extends Status("applied")
-    protected val allStatus: Set[S] = Set(Created, Upgraded, Applied)
-  }
-
-  def isUnrepeatable(kind: RewardKind): Boolean = kind match {
-    case Coupon => false
-    case OrgCreation => true
-    case OrgReferral => false
-  }
-  
-  private val all: Set[RewardKind] = Set(Coupon, OrgCreation, OrgReferral)
-
-  def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
-    case Some(validKind) => validKind
-    case None => throw new IllegalArgumentException(s"Unknown CreditRewardKind: $kind")
-  }
-}
+import scala.util.Try
 
 trait Reward {
   val kind: RewardKind
@@ -95,13 +21,28 @@ trait Reward {
   override def equals(that: Any): Boolean = that match {
     case thatReward: Reward => {
       kind == thatReward.kind &&
-      status == thatReward.status &&
-      info == thatReward.info
+        status == thatReward.status &&
+        info == thatReward.info
     }
     case _ => false
   }
 
   override def hashCode: Int = Seq(kind, status, info).map(_.hashCode()).reduce(_ | _)
+}
+
+sealed abstract class RewardKind(val kind: String) {
+  type S <: RewardStatus
+  protected val allStatus: Set[S]
+  def writeStatus(status: S): String = status.status
+  def readStatus(status: String): S = allStatus.find(_.status equalsIgnoreCase status) match {
+    case Some(validStatus) => validStatus
+    case None => throw new IllegalArgumentException(s"Invalid status for $this reward: $status")
+  }
+}
+
+sealed abstract class RewardStatus(val status: String) {
+  type I
+  def infoFormat: Format[I]
 }
 
 object Reward {
@@ -118,7 +59,7 @@ object Reward {
       reward.kind,
       reward.status,
       reward.info
-    ))
+      ))
   }
 
   def applyFromDbRow(kind: RewardKind, status: String, info: Option[JsValue]): Reward = {
@@ -135,7 +76,64 @@ object Reward {
         case JsNull => None
         case actualInfo => Some(actualInfo)
       }
-    ))
+      ))
+  }
+}
+
+object RewardStatus {
+
+  trait WithIndependentInfo[F] { self: RewardKind =>
+    def infoFormat: Format[F]
+
+    sealed abstract class Status(status: String) extends RewardStatus(status) {
+      type I = F
+      def infoFormat = self.infoFormat
+    }
+    type S = Status
+  }
+
+  trait WithEmptyInfo extends WithIndependentInfo[None.type] { self: RewardKind =>
+    val infoFormat: Format[None.type] = Format(
+      Reads {
+        case JsNull => JsSuccess(None)
+        case unknown => JsError(s"Unknown RewardStatus info: $unknown")
+      },
+      Writes(None => JsNull)
+    )
+  }
+}
+
+object RewardKind {
+  
+  case object Coupon extends RewardKind("coupon") with RewardStatus.WithEmptyInfo {
+    case object Applied extends Status("applied")
+    protected val allStatus: Set[S] = Set(Applied)
+  }
+
+  case object OrgCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
+    val infoFormat = Id.format[Organization]
+    case object Created extends Status("created")
+    protected val allStatus: Set[S] = Set(Created)
+  }
+
+  case object OrgReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
+    val infoFormat = Id.format[Organization]
+    case object Created extends Status("created")
+    case object Upgraded extends Status("upgraded")
+    protected val allStatus: Set[S] = Set(Created, Upgraded)
+  }
+
+  def isUnrepeatable(kind: RewardKind): Boolean = kind match {
+    case Coupon => false
+    case OrgCreation => true
+    case OrgReferral => false
+  }
+
+  private val all: Set[RewardKind] = Set(Coupon, OrgCreation, OrgReferral)
+
+  def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
+    case Some(validKind) => validKind
+    case None => throw new IllegalArgumentException(s"Unknown RewardKind: $kind")
   }
 }
 
