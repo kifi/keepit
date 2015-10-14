@@ -119,7 +119,7 @@ object Feature {
   case object ForceEditLibraries extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.FORCE_EDIT_LIBRARIES.value
     val permission = OrganizationPermission.FORCE_EDIT_LIBRARIES
-    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
+    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS)
   }
 
   case object ViewOrganization extends Feature with FeatureWithPermissions {
