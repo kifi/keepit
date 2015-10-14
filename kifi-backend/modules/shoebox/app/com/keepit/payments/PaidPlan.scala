@@ -37,8 +37,8 @@ case class PaidPlan(
     updatedAt: DateTime = currentDateTime,
     state: State[PaidPlan] = PaidPlanStates.ACTIVE,
     kind: PaidPlan.Kind,
-    name: Name[PaidPlan],
-    displayName: String,
+    name: Name[PaidPlan], // as is, deprecated. need to migrate the .displayName column values over to this column, then use .name instead of .displayName in-code
+    displayName: String, // not actually a display name, use fullName instead TODO: migrate this over to `.name`
     billingCycle: BillingCycle,
     pricePerCyclePerUser: DollarAmount,
     editableFeatures: Set[Feature],
@@ -59,12 +59,14 @@ case class PaidPlan(
 
   def fullName = {
     val cycleString = billingCycle.month match {
-      case 0 => ""
-      case 1 => " Monthly"
-      case 12 => " Annual"
-      case _ => " Custom"
+      case 1 => "Monthly"
+      case 12 => "Annual"
+      case _ => "Custom"
     }
-    displayName + cycleString
+    displayName match {
+      case freeName if freeName.toLowerCase.contains("free") => displayName
+      case _ => displayName + " " + cycleString
+    }
   }
 }
 
