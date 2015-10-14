@@ -88,7 +88,8 @@ object Feature {
     CreateSlackIntegration,
     EditOrganization,
     ExportKeeps,
-    ViewSettings
+    ViewSettings,
+    ViewPayments
   )
   def apply(str: String): Feature = ALL.find(_.value == str).getOrElse(throw new FeatureNotFoundException(str))
 
@@ -162,5 +163,11 @@ object Feature {
     val value = OrganizationPermission.VIEW_SETTINGS.value
     val permission = OrganizationPermission.VIEW_SETTINGS
     val settings: Set[FeatureSetting] = Set(ADMINS, MEMBERS)
+  }
+
+  case object ViewPayments extends Feature with FeatureWithPermissions {
+    val value = OrganizationPermission.VIEW_PAYMENTS.value
+    val permission = OrganizationPermission.VIEW_PAYMENTS
+    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS)
   }
 }

@@ -34,7 +34,7 @@ angular.module('kifi')
       $window.removeEventListener('hashchange', onHashChange);
     });
 
-    if (!$scope.viewer.membership || $scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_SETTINGS) === -1) {
+    if (!$scope.viewer.membership) {
       $rootScope.$emit('errorImmediately');
     }
 
