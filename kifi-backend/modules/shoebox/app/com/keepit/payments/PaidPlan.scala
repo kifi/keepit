@@ -26,6 +26,7 @@ case class BillingCycle(month: Int) extends AnyVal
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
   name: String,
+  fullName: String,
   pricePerUser: DollarAmount,
   cycle: BillingCycle,
   features: Set[Feature])
@@ -50,10 +51,13 @@ case class PaidPlan(
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
     id = PaidPlan.publicId(id.get),
     name = displayName,
+    fullName = fullName,
     pricePerUser = pricePerCyclePerUser,
     cycle = billingCycle,
     features = editableFeatures
   )
+
+  def fullName = displayName + (if (billingCycle.month == 1) " Monthly" else if (billingCycle.month == 12) " Annual" else "")
 }
 
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {

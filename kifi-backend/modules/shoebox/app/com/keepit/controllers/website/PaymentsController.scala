@@ -47,9 +47,14 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getActivePlans() = UserAction { implicit request =>
-    val plans = planCommander.getAvailablePlans(request.adminUserId)
-    Ok(Json.toJson(plans.map(_.asInfo)))
+  def getAvailablePlans(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { implicit request =>
+    val currentPlan = planCommander.currentPlan(request.orgId)
+    val availablePlans = planCommander.getAvailablePlans(request.request.adminUserId)
+
+    val allPlans = (availablePlans :+ currentPlan).distinct.sortBy(_.billingCycle.month)
+    val plansByName = allPlans.map(_.asInfo).groupBy(_.name)
+    val response = AvailablePlansResponse(PaidPlan.publicId(currentPlan.id.get), plansByName)
+    Ok(Json.toJson(response))
   }
 
   def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
