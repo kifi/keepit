@@ -159,7 +159,7 @@ class OrganizationCommanderImpl @Inject() (
     val config = orgConfigRepo.getByOrgId(orgId)
     val plan = planManagementCommander.currentPlanHelper(orgId)
 
-    ExternalOrganizationConfiguration(plan.name.name, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
+    ExternalOrganizationConfiguration(plan.displayName, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {

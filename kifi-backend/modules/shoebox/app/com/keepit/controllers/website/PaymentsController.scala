@@ -111,7 +111,7 @@ class PaymentsController @Inject() (
           case Right(response) =>
             val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
             val result = ExternalOrganizationConfiguration(
-              plan.name.name,
+              plan.displayName,
               OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures)
             )
             Ok(Json.toJson(result))
