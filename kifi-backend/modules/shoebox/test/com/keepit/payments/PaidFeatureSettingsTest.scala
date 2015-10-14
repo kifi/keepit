@@ -133,9 +133,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       withDb(modules: _*) { implicit injector =>
         val (org, owner, admin, member, _) = setup()
 
-        val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.ADMINS) }
-        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, initOrgSettings)) must beRight
-
         val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withOrganization(org).saved }
 
         val libraryCommander = inject[LibraryCommander]
@@ -145,13 +142,15 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val memberModifyRequest = LibraryModifications(name = Some("Sergey's Main Library"))
 
         libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
-        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beLeft
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
 
-        val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.MEMBERS) }
+        val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withSettings(Feature.ForceEditLibraries -> FeatureSetting.ADMINS) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, orgSettings)) must beRight
 
-        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
+        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
       }
     }
   }
