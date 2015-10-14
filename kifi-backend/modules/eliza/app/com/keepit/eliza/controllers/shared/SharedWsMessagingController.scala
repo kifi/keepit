@@ -124,15 +124,16 @@ class SharedWsMessagingController @Inject() (
     },
     "get_latest_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
+        val n = howMany.toInt
         val includeUriSummary = needsPageImages(socket)
         val fut = for {
-          threadJsons <- notificationDeliveryCommander.getLatestSendableNotifications(socket.userId, howMany.toInt, includeUriSummary)
-          notifJsons <- notificationMessagingCommander.getLatestNotifications(socket.userId, howMany.toInt, includeUriSummary)
+          threadJsons <- notificationDeliveryCommander.getLatestSendableNotifications(socket.userId, n, includeUriSummary)
+          notifJsons <- notificationMessagingCommander.getLatestNotifications(socket.userId, n, includeUriSummary)
         } yield {
           val (unreadThreadCount, unreadUnmutedThreadCount, unreadNotificationCount) = notificationDeliveryCommander.getUnreadCounts(socket.userId)
           val numUnread = unreadThreadCount + unreadNotificationCount
           val numUnreadUnmuted = unreadUnmutedThreadCount + unreadNotificationCount
-          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons.results), numUnread, numUnreadUnmuted)
+          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons, notifJsons.results, Some(n)), numUnread, numUnreadUnmuted)
         }
 
         fut.foreach {
@@ -166,12 +167,13 @@ class SharedWsMessagingController @Inject() (
     "get_unread_threads" -> {
       case JsNumber(requestId) +: JsNumber(howMany) +: _ =>
         val includeUriSummary = needsPageImages(socket)
+        val n = howMany.toInt
         val fut = for {
-          threadJsons <- notificationDeliveryCommander.getLatestUnreadSendableNotifications(socket.userId, howMany.toInt, includeUriSummary)
-          notifJsons <- notificationMessagingCommander.getNotificationsWithNewEvents(socket.userId, howMany.toInt, includeUriSummary)
+          threadJsons <- notificationDeliveryCommander.getLatestUnreadSendableNotifications(socket.userId, n, includeUriSummary)
+          notifJsons <- notificationMessagingCommander.getNotificationsWithNewEvents(socket.userId, n, includeUriSummary)
         } yield {
           val total = threadJsons._2 + notifJsons.numTotal
-          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons._1, notifJsons.results), total)
+          (notificationMessagingCommander.combineNotificationsWithThreads(threadJsons._1, notifJsons.results, Some(n)), total)
         }
         fut.foreach {
           case (notices, numTotal) =>
