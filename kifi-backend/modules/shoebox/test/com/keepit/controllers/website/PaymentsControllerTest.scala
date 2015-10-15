@@ -86,43 +86,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "apply new default settings to org configurations" in {
-      "apply migration properly" in {
-        withDb(controllerTestModules: _*) { implicit injector =>
-          val (org, owner, _, _) = setup()
-          val newPlan1 = db.readWrite { implicit session =>
-            val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
-            val newFeatureSet = oldPlan.defaultSettings.kvs.keySet -- Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
-            val newFeatureSettings = newFeatureSet.map { feature => feature -> oldPlan.defaultSettings.kvs(feature) }.toMap
-            paidPlanRepo.save(oldPlan.copy(editableFeatures = newFeatureSet, defaultSettings = OrganizationSettings(newFeatureSettings))) // mock db migration, remove features
-          }
-
-          inject[FakeUserActionsHelper].setUser(owner, Set(UserExperimentType.ADMIN))
-          val request = adminRoute.applyDefaultSettingsToOrgConfigs()
-          val response = inject[AdminPaymentsController].applyDefaultSettingsToOrgConfigs()(request)
-
-          status(response) must equalTo(200)
-          val newConfig1 = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
-          newConfig1.settings === newPlan1.defaultSettings
-
-          val newPlan2 = db.readWrite { implicit session =>
-            val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
-            val newFeatureSet = PaidPlanFactory.testPlanEditableFeatures
-            val newFeatureSettings = PaidPlanFactory.testPlanSettings
-            paidPlanRepo.save(oldPlan.copy(editableFeatures = newFeatureSet, defaultSettings = newFeatureSettings)) // mock db migration, add features
-          }
-
-          val response2 = inject[AdminPaymentsController].applyDefaultSettingsToOrgConfigs()(request)
-
-          status(response2) must equalTo(200)
-          val newConfig2 = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
-          newConfig2.settings === newPlan2.defaultSettings
-
-          newConfig2.settings.kvs.keySet.diff(newConfig1.settings.kvs.keySet) === Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
-        }
-      }
-    }
-
     "get active plans" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (org, owner, _, _) = setup()
