@@ -31,7 +31,7 @@ class AdminPaymentsController @Inject() (
     stripeClient: StripeClient,
     db: Database) extends AdminUserActions {
 
-  val EXTRA_SPECIAL_ADMINS: Set[Id[User]] = Set(1, 243).map(Id[User](_))
+  val EXTRA_SPECIAL_ADMINS: Set[Id[User]] = Set(1, 3, 61, 134).map(Id[User](_))
 
   def backfillPaidAccounts = AdminUserAction { request =>
     def printStackTraceToChannel(t: Throwable, channel: Concurrent.Channel[String]) = {
@@ -83,7 +83,6 @@ class AdminPaymentsController @Inject() (
 
   def grantExtraCredit(orgId: Id[Organization]) = AdminUserAction { request =>
     val amount = request.body.asFormUrlEncoded.get.apply("amount").head.toInt
-    val passphrase = request.body.asFormUrlEncoded.get.apply("passphrase").head.toString
     val memoRaw = request.body.asFormUrlEncoded.get.apply("memo").head.toString
     val memo = if (memoRaw == "") None else Some(memoRaw)
     val attributedToMember = request.body.asFormUrlEncoded.get.apply("member").headOption.map(id => Id[User](id.toLong))
@@ -95,14 +94,10 @@ class AdminPaymentsController @Inject() (
       (org, isAttributedToNonMember)
     }
 
-    val passphraseCorrect: Boolean = org.primaryHandle.exists(handle => handle.normalized.value == passphrase.reverse)
-
-    if ((amount < 0 || amount > 10000) && !(EXTRA_SPECIAL_ADMINS.contains(request.userId))) {
+    if ((amount < 0 || amount > 10000) && !EXTRA_SPECIAL_ADMINS.contains(request.userId)) {
       Ok("You are not special enough to deduct credit or grant more than $100.")
     } else if (amount == 0) {
       Ok("Umm, 0 credit?")
-    } else if (!passphraseCorrect) {
-      Ok("So sorry, but your passphrase isn't right.")
     } else if (isAttributedToNonMember) {
       Ok(s"User ${attributedToMember.get} is not a member of Organization $orgId")
     } else {
