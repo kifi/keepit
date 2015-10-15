@@ -70,7 +70,9 @@ angular.module('kifi')
       messageBar.classList.add('hide');
       return setTimeout(function() {
         messageBar.classList.remove('hide');
-        return messageBar.parentNode.removeChild(messageBar);
+        if (messageBar.parentNode) {
+          return messageBar.parentNode.removeChild(messageBar);
+        }
       }, 250);
     };
 

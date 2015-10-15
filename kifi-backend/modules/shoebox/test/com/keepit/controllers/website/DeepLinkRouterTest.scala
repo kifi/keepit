@@ -48,7 +48,7 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
           deepLinkRouter.generateRedirectUrl(deepLink) === Some(link)
         }
       }
-      "for a library recommendation" in {
+      "for a library" in {
         withDb(modules: _*) { implicit injector =>
           val (org, owner, orgLib, personalLib) = db.readWrite { implicit session =>
             val owner = UserFactory.user().saved
@@ -58,12 +58,45 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
             (org, owner, orgLib, personalLib)
           }
 
-          val deepLink1 = Json.obj("t" -> "lr", "lid" -> Library.publicId(orgLib.id.get))
-          val link1 = Path(s"${org.handle.value}/${orgLib.slug.value}").absolute
+          val authToken = "abcdefg"
+
+          // with auth tokens
+          val deepLink1 = Json.obj("t" -> "lr", "lid" -> Library.publicId(orgLib.id.get), "at" -> authToken)
+          val link1 = Path(s"${org.handle.value}/${orgLib.slug.value}").absolute + s"?authToken=$authToken"
           deepLinkRouter.generateRedirectUrl(deepLink1) === Some(link1)
 
-          val deepLink2 = Json.obj("t" -> "lr", "lid" -> Library.publicId(personalLib.id.get))
-          val link2 = Path(s"${owner.username.value}/${personalLib.slug.value}").absolute
+          val deepLink2 = Json.obj("t" -> "lr", "lid" -> Library.publicId(personalLib.id.get), "at" -> authToken)
+          val link2 = Path(s"${owner.username.value}/${personalLib.slug.value}").absolute + s"?authToken=$authToken"
+          deepLinkRouter.generateRedirectUrl(deepLink2) === Some(link2)
+
+          // without auth tokens
+          val deepLink3 = Json.obj("t" -> "lr", "lid" -> Library.publicId(orgLib.id.get))
+          val link3 = Path(s"${org.handle.value}/${orgLib.slug.value}").absolute
+          deepLinkRouter.generateRedirectUrl(deepLink3) === Some(link3)
+
+          val deepLink4 = Json.obj("t" -> "lr", "lid" -> Library.publicId(personalLib.id.get))
+          val link4 = Path(s"${owner.username.value}/${personalLib.slug.value}").absolute
+          deepLinkRouter.generateRedirectUrl(deepLink4) === Some(link4)
+        }
+      }
+      "for an org" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+
+          val authToken = "abcdefg"
+
+          // with auth tokens
+          val deepLink1 = Json.obj("t" -> "oi", "oid" -> Organization.publicId(org.id.get), "at" -> authToken)
+          val link1 = Path(s"${org.handle.value}").absolute + s"?authToken=$authToken"
+          deepLinkRouter.generateRedirectUrl(deepLink1) === Some(link1)
+
+          // without auth tokens
+          val deepLink2 = Json.obj("t" -> "oi", "oid" -> Organization.publicId(org.id.get))
+          val link2 = Path(s"${org.handle.value}").absolute
           deepLinkRouter.generateRedirectUrl(deepLink2) === Some(link2)
         }
       }

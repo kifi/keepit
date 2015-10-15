@@ -155,19 +155,19 @@ angular.module('kifi')
       ];
 
       scope.onClickUpsellMembers = function () {
-
+        orgProfileService.trackEvent('user_clicked_page', scope.profile, { action: 'clickMembersUpsell' });
       };
 
       scope.onHoverUpsellMembers = function () {
-
+        orgProfileService.trackEvent('user_viewed_page', scope.profile, { action: 'viewMembersUpsell' });
       };
 
       scope.onClickUpsellInvite = function () {
-
+        orgProfileService.trackEvent('user_clicked_page', scope.profile, { action: 'clickInviteUpsell' });
       };
 
       scope.onHoverUpsellInvite = function () {
-
+        orgProfileService.trackEvent('user_viewed_page', scope.profile, { action: 'viewInviteUpsell' });
       };
     }
   };

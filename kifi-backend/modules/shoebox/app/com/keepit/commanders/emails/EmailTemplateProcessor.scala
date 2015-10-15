@@ -211,10 +211,12 @@ class EmailTemplateProcessorImpl @Inject() (
       // only call if Id[Library] is expected as the first argument
       @inline def libraryId = tagArgs(0).as[Id[Library]]
       @inline def library: Library = input.libraries(libraryId)
+      @inline def libAuthToken: Option[String] = tagArgs(1).asOpt[String]
 
       // only call if Id[Organization] is expected as the first argument
       @inline def orgId = tagArgs(0).as[Id[Organization]]
       @inline def org: Organization = input.organizations(orgId)
+      @inline def orgAuthToken: Option[String] = tagArgs(1).asOpt[String]
 
       @inline def keepId = tagArgs(0).as[Id[Keep]]
       @inline def keep: Keep = input.keeps(keepId)
@@ -238,13 +240,13 @@ class EmailTemplateProcessorImpl @Inject() (
 
         case tags.organizationId => Organization.publicId(org.id.get).id
         case tags.organizationLink =>
-          val data = Json.obj("t" -> "oi", "oid" -> Organization.publicId(org.id.get).id)
+          val data = Json.obj("t" -> "oi", "oid" -> Organization.publicId(org.id.get).id, "at" -> orgAuthToken)
           config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.libraryUrl =>
           config.applicationBaseUrl + libPathCommander.getPathForLibrary(library)
         case tags.libraryLink =>
-          val data = Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id)
+          val data = Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id, "at" -> libAuthToken)
           val ans = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
           ans
         case tags.libraryName => library.name

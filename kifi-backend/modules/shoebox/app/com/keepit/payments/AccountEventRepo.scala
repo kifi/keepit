@@ -37,7 +37,6 @@ class AccountEventRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
-  implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, String](_.id, EventGroup(_))
 
   type RepoImpl = AccountEventTable
 

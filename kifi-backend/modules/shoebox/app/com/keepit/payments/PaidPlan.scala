@@ -26,6 +26,7 @@ case class BillingCycle(month: Int) extends AnyVal
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
   name: String,
+  fullName: String,
   pricePerUser: DollarAmount,
   cycle: BillingCycle,
   features: Set[Feature])
@@ -36,8 +37,8 @@ case class PaidPlan(
     updatedAt: DateTime = currentDateTime,
     state: State[PaidPlan] = PaidPlanStates.ACTIVE,
     kind: PaidPlan.Kind,
-    name: Name[PaidPlan],
-    displayName: String,
+    name: Name[PaidPlan], // as is, deprecated. need to migrate the .displayName column values over to this column, then use .name instead of .displayName in-code
+    displayName: String, // not actually a display name, use fullName instead TODO: migrate this over to `.name`
     billingCycle: BillingCycle,
     pricePerCyclePerUser: DollarAmount,
     editableFeatures: Set[Feature],
@@ -50,10 +51,23 @@ case class PaidPlan(
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
     id = PaidPlan.publicId(id.get),
     name = displayName,
+    fullName = fullName,
     pricePerUser = pricePerCyclePerUser,
     cycle = billingCycle,
     features = editableFeatures
   )
+
+  def fullName = {
+    val cycleString = billingCycle.month match {
+      case 1 => "Monthly"
+      case 12 => "Annual"
+      case _ => "Custom"
+    }
+    displayName match {
+      case freeName if freeName.toLowerCase.contains("free") => displayName
+      case _ => displayName + " " + cycleString
+    }
+  }
 }
 
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {

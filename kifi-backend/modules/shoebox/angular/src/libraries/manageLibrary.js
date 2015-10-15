@@ -4,11 +4,11 @@ angular.module('kifi')
 
 .directive('kfManageLibrary', [
   '$window', '$rootScope', '$location', '$state', 'friendService',
-  'libraryService', 'modalService', 'profileService', 'util', 'LIB_PERMISSION',
-  'ORG_PERMISSION', 'ORG_SETTING_VALUE',
+  'libraryService', 'modalService', 'profileService', 'orgProfileService', 'util',
+  'LIB_PERMISSION', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($window, $rootScope, $location, $state, friendService,
-            libraryService, modalService, profileService, util, LIB_PERMISSION,
-            ORG_PERMISSION, ORG_SETTING_VALUE) {
+            libraryService, modalService, profileService, orgProfileService, util,
+            LIB_PERMISSION, ORG_PERMISSION, ORG_SETTING_VALUE) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -190,6 +190,10 @@ angular.module('kifi')
               returnAction = null;
             }
 
+            if (scope.spaceIsOrg(scope.space.destination)) {
+              orgProfileService.invalidateOrgProfileCache();
+            }
+
             if (!returnAction) {
               $location.url(newLibrary.url || newLibrary.path);
             } else {
@@ -233,6 +237,10 @@ angular.module('kifi')
 
           submitting = true;
           libraryService.deleteLibrary(scope.library.id).then(function () {
+            if (scope.spaceIsOrg(scope.space.current)) {
+              orgProfileService.invalidateOrgProfileCache();
+            }
+
             // If we were on the deleted library's page,
             // return to the space it was in.
             if ($state.is('library.keeps') &&
@@ -304,11 +312,11 @@ angular.module('kifi')
         });
 
         scope.onHoverUpsellIntegration = function () {
-
+          orgProfileService.trackEvent('user_viewed_page', scope.space.destination, { action: 'viewIntegrationUpsell' });
         };
 
         scope.onClickUpsellIntegration = function () {
-
+          orgProfileService.trackEvent('user_clicked_page', scope.space.destination, { action: 'clickIntegrationUpsell' });
         };
 
         //

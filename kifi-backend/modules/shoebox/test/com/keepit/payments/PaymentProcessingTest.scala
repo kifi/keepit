@@ -91,14 +91,14 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount.credit
         }
 
-        commander.grantSpecialCredit(orgId, currentCredit.negative, None, None)
+        commander.grantSpecialCredit(orgId, currentCredit.negative, None, None, None)
 
         db.readOnlyMaster { implicit session =>
           accountRepo.get(accountId).credit === DollarAmount.wholeDollars(0)
         }
 
         val setCredit = DollarAmount.wholeDollars(-25)
-        commander.grantSpecialCredit(orgId, setCredit, None, None)
+        commander.grantSpecialCredit(orgId, setCredit, None, None, None)
 
         db.readOnlyMaster { implicit session =>
           accountRepo.get(accountId).credit === setCredit

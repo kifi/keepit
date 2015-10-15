@@ -113,8 +113,7 @@ case class MessageThread(
   nUrl: Option[String],
   pageTitle: Option[String],
   participants: Option[MessageThreadParticipants],
-  participantsHash: Option[Int],
-  replyable: Boolean)
+  participantsHash: Option[Int])
     extends ModelWithExternalId[MessageThread] {
   def deepLocator: DeepLocator = DeepLocator(s"/messages/$externalId")
 
@@ -152,8 +151,7 @@ object MessageThread {
     (__ \ 'nUrl).formatNullable[String] and
     (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'participants).formatNullable[MessageThreadParticipants] and
-    (__ \ 'participantsHash).formatNullable[Int] and
-    (__ \ 'replyable).format[Boolean]
+    (__ \ 'participantsHash).formatNullable[Int]
   )(MessageThread.apply, unlift(MessageThread.unapply))
 }
 

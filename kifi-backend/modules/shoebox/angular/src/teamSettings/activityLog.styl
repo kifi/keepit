@@ -1,7 +1,6 @@
 .kf-team-activity-table
+  width: 100%
   border-radius: 5px
-  border-collapse: separate
-  border-spacing: 2px
 
   thead
     th
@@ -12,8 +11,38 @@
     tr:nth-child(odd)
       background-color: whitesmoke
 
+    tr:first-child td:first-child
+      border-top-left-radius: 7px
+
+    tr:first-child td:last-child
+      border-top-right-radius: 7px
+
+    tr:last-child td:first-child
+      border-bottom-left-radius: 7px
+
+    tr:last-child td:last-child
+      border-bottom-right-radius: 7px
+
     td
-      border-radius: 7px
+      height: 2.5em
       padding: 8px 4px
       font-size: 14px
       font-smoothing: antialiased
+
+    td:first-child
+      white-space: nowrap
+
+.kf-team-activity-debit
+  color: #000
+  white-space: nowrap
+  text-align: right
+
+.kf-team-activity-credit
+  color: accentGreen
+  text-align: right
+
+.kf-team-activity-nocharge
+  color: transparent
+
+.kf-team-activity-top-header
+  margin-bottom: 10px

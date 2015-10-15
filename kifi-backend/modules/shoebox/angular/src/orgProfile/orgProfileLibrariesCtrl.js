@@ -22,7 +22,6 @@ angular.module('kifi')
 
     function resetAndFetchLibraries() {
       $scope.libraries = null;
-      orgProfileService.invalidateOrgProfileCache();
       newLibraryIds = {};
       libraryLazyLoader.reset();
       $scope.fetchLibraries();
@@ -31,9 +30,11 @@ angular.module('kifi')
     $scope.libraries = null;
 
     [
-      $rootScope.$on('$stateChangeSuccess', function (event, toState) {
-        if (/^orgProfile\.libraries/.test(toState.name)) {
-          resetAndFetchLibraries();
+      $rootScope.$on('$stateChangeStart', function (event, toState, toParams, fromState, fromParams) {
+        // ui-router wants to navigate to the userOrOrg route because the URL matches,
+        // so we tell it not to if we know we're staying in this space.
+        if (/^userOrOrg/.test(toState.name) && toParams.handle === fromParams.handle) {
+          event.preventDefault();
         }
       }),
 

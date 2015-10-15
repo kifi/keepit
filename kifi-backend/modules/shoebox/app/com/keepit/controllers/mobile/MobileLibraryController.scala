@@ -55,6 +55,7 @@ class MobileLibraryController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   clock: Clock,
   airbrake: AirbrakeNotifier,
+  libraryCardCommander: LibraryCardCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryAccessCommander: LibraryAccessCommander,
   val libraryCommander: LibraryCommander,
@@ -240,7 +241,7 @@ class MobileLibraryController @Inject() (
     val libOwnerIds = libs.map(_._1.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      libraryInfoCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      libraryCardCommander.createLibraryCardInfos(libs = libs.map(_._1), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
     }
 
     val writeableLibraryInfos = libraryCards.map { libraryCard =>
@@ -298,7 +299,7 @@ class MobileLibraryController @Inject() (
     val libOwnerIds = writeableLibraries.map(_._2.ownerId).toSet
     val libraryCards = db.readOnlyReplica { implicit session =>
       val libOwners = basicUserRepo.loadAll(libOwnerIds)
-      val libraryCards = libraryInfoCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
+      val libraryCards = libraryCardCommander.createLibraryCardInfos(libs = writeableLibraries.map(_._2), owners = libOwners, viewerOpt = Some(userId), withFollowing = true, idealSize = MobileLibraryController.defaultLibraryImageSize)
       libraryCards
     }
 
@@ -498,7 +499,7 @@ class MobileLibraryController @Inject() (
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
             case Right((lib, mem)) =>
-              val membershipInfo = db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+              val membershipInfo = db.readOnlyReplica { implicit session => libraryMembershipCommander.createMembershipInfo(mem) }
               (pubId, Right(membershipInfo))
           }
       }
@@ -656,7 +657,7 @@ class MobileLibraryController @Inject() (
   }
 
   def marketingSiteSuggestedLibraries() = Action.async {
-    libraryInfoCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
+    libraryCardCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
   }
 
   def suggestMembers(pubId: PublicId[Library], query: Option[String], limit: Int) = (UserAction andThen LibraryViewAction(pubId)).async { request =>

@@ -14,17 +14,6 @@ import org.joda.time.DateTime
 
 import javax.crypto.spec.IvParameterSpec
 
-@json
-case class SimpleAccountEventInfo(
-  id: PublicId[AccountEvent],
-  eventTime: DateTime,
-  shortName: String,
-  extraInfo: Option[String],
-  whoDunnit: String,
-  creditChange: DollarAmount,
-  paymentCharge: Option[DollarAmount],
-  memo: Option[String])
-
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 
 trait AccountEventAction {
@@ -48,10 +37,6 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
 
   case class PlanBillingCharge() extends AccountEventAction with Payloadless {
     def eventType: String = "plan_billing_charge"
-  }
-
-  case class UserChangeCredit() extends AccountEventAction with Payloadless {
-    def eventType: String = "user_change_credit"
   }
 
   @json
@@ -106,7 +91,6 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case "special_credit" => SpecialCredit()
     case "charge_back" => ChargeBack()
     case "plan_billing_charge" => PlanBillingCharge()
-    case "user_change_credit" => UserChangeCredit()
     case "user_added" => extras.as[UserAdded]
     case "user_removed" => extras.as[UserRemoved]
     case "admin_added" => extras.as[AdminAdded]
@@ -119,14 +103,6 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
 
   }
 
-}
-
-case class EventGroup(id: String) extends AnyVal
-
-object EventGroup {
-  def apply(): EventGroup = {
-    EventGroup(java.util.UUID.randomUUID.toString)
-  }
 }
 
 case class AccountEvent(

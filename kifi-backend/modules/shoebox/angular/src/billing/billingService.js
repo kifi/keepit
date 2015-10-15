@@ -9,6 +9,18 @@ angular.module('kifi')
       return response.data;
     }
 
+    function invalidateCache() {
+      [
+        net.getBillingState,
+        net.getBillingContacts,
+        net.getBillingEvents,
+        net.getBillingEventsBefore,
+        net.getBillingPlans
+      ].forEach(function (endpoint) {
+        endpoint.clearCache();
+      });
+    }
+
     var api = {
       getBillingState: function (pubId) {
         return net
@@ -22,7 +34,11 @@ angular.module('kifi')
       },
       setBillingCCToken: function (pubId, token) {
         return net
-        .setBillingCCToken(pubId, { token: token });
+        .setBillingCCToken(pubId, { token: token })
+        .then(function (response) {
+          invalidateCache();
+          return response;
+        });
       },
       getBillingContacts: function (pubId) {
         return net
@@ -33,7 +49,7 @@ angular.module('kifi')
         return net
         .setBillingContacts(pubId, contacts)
         .then(function (response) {
-          net.getBillingContacts.clearCache();
+          invalidateCache();
           return response;
         });
       },
@@ -41,7 +57,26 @@ angular.module('kifi')
         return net
         .getBillingEvents(pubId, limit)
         .then(getResponseData);
-      }
+      },
+      getBillingEventsBefore: function (pubId, limit, beforeTime, beforeId) {
+        return net
+        .getBillingEventsBefore(pubId, limit, beforeTime, beforeId)
+        .then(getResponseData);
+      },
+      getBillingPlans: function (pubId) {
+        return net
+        .getBillingPlans(pubId)
+        .then(getResponseData);
+      },
+      setBillingPlan: function (pubId, planId) {
+        return net
+        .setBillingPlan(pubId, planId)
+        .then(function (response) {
+          invalidateCache();
+          return response;
+        });
+      },
+      invalidateCache: invalidateCache
     };
 
     return api;

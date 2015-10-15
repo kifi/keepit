@@ -42,13 +42,15 @@ angular.module('kifi')
       getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 30),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
 
-      getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId'),
+      getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId', 30),
       getBillingCCToken: get(shoebox, '/admin/billing/ccToken?pubId=:pubId'),
       setBillingCCToken: post(shoebox, '/admin/billing/ccToken?pubId=:pubId'),
       getBillingContacts: get(shoebox, '/admin/billing/contacts?pubId=:pubId', 30),
       setBillingContacts: post(shoebox, '/admin/billing/contacts?pubId=:pubId'),
-      getBillingEvents: get(shoebox, '/admin/billing/events?pubId=:pubId&limit=:limit'),
-      getBillingEventsBefore: get(shoebox, '/site/admin/billing/eventsBefore?pubId=:pubId&limit=:limit&beforeTime=:beforeTime&beforePubId=:beforePubId'),
+      getBillingEvents: get(shoebox, '/admin/billing/events?pubId=:pubId&limit=:limit', 30),
+      getBillingEventsBefore: get(shoebox, '/admin/billing/eventsBefore?pubId=:pubId&limit=:limit&beforeTime=:beforeTime&beforePubId=:beforePubId', 30),
+      getBillingPlans: get(shoebox, '/admin/billing/plans?pubId=:pubId', 30),
+      setBillingPlan: post(shoebox, '/admin/billing/plan?pubId=:pubId&planPubId=:planPubId'),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
 
