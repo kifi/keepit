@@ -17,7 +17,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan }
+import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan, ActionAttribution }
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -421,6 +421,7 @@ class OrganizationCommanderImpl @Inject() (
               orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
             case inactiveMembershipOpt =>
               orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
+              planManagementCommander.registerNewUser(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
 

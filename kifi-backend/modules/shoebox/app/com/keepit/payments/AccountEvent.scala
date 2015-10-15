@@ -105,14 +105,6 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
 
 }
 
-case class EventGroup(id: String) extends AnyVal
-
-object EventGroup {
-  def apply(): EventGroup = {
-    EventGroup(java.util.UUID.randomUUID.toString)
-  }
-}
-
 case class AccountEvent(
     id: Option[Id[AccountEvent]] = None,
     createdAt: DateTime = currentDateTime,
