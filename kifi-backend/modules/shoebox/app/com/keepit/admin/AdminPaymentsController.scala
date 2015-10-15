@@ -83,9 +83,8 @@ class AdminPaymentsController @Inject() (
 
   def grantExtraCredit(orgId: Id[Organization]) = AdminUserAction { request =>
     val amount = request.body.asFormUrlEncoded.get.apply("amount").head.trim.toInt
-    val memoRaw = request.body.asFormUrlEncoded.get.apply("memo").head.toString.trim
-    val memo = if (memoRaw == "") None else Some(memoRaw)
-    val attributedToMember = request.body.asFormUrlEncoded.get.get("member").flatMap(_.headOption.map(id => Id[User](id.trim.toLong)))
+    val memo = request.body.asFormUrlEncoded.get.apply("memo").filterNot(_ == "").headOption.map(_.trim)
+    val attributedToMember = request.body.asFormUrlEncoded.get.get("member").flatMap(_.headOption.filterNot(_ == "").map(id => Id[User](id.trim.toLong)))
     val dollarAmount = DollarAmount(amount)
 
     val isAttributedToNonMember = db.readOnlyMaster { implicit session =>
