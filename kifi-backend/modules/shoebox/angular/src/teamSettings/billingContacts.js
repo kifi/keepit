@@ -63,7 +63,7 @@ angular.module('kifi')
 
     function onBeforeUnload(e) {
       var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
-      (e || $window.event).returnValue = message;
+      (e || $window.event).returnValue = message; // for Firefox
       return message;
     }
   }

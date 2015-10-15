@@ -70,7 +70,7 @@ angular.module('kifi')
       },
       setBillingPlan: function (pubId, planId) {
         return net
-        .setBillingPlans(pubId, planId)
+        .setBillingPlan(pubId, planId)
         .then(function (response) {
           invalidateCache();
           return response;
