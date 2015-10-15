@@ -55,7 +55,7 @@ object Reward {
     }
   }
 
-  def unapply(reward: Reward): Option[(RewardKind, reward.kind.S, reward.status.I)] = {
+  def unapply(reward: Reward): Option[(reward.kind.type, reward.kind.S, reward.status.I)] = {
     Some((
       reward.kind,
       reward.status,
