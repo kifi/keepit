@@ -33,6 +33,7 @@ trait Reward {
 sealed abstract class RewardKind(val kind: String) {
   type S <: RewardStatus
   protected val allStatus: Set[S]
+  val applicable: S
   def writeStatus(status: S): String = status.status
   def readStatus(status: String): S = allStatus.find(_.status equalsIgnoreCase status) match {
     case Some(validStatus) => validStatus
@@ -106,14 +107,16 @@ object RewardStatus {
 object RewardKind {
   
   case object Coupon extends RewardKind("coupon") with RewardStatus.WithEmptyInfo {
-    case object Applied extends Status("applied")
-    protected val allStatus: Set[S] = Set(Applied)
+    case object Used extends Status("used")
+    protected val allStatus: Set[S] = Set(Used)
+    val applicable: Used.type = Used
   }
 
   case object OrgCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
     protected val allStatus: Set[S] = Set(Created)
+    val applicable: Created.type = Created
   }
 
   case object OrgReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
@@ -121,6 +124,7 @@ object RewardKind {
     case object Created extends Status("created")
     case object Upgraded extends Status("upgraded")
     protected val allStatus: Set[S] = Set(Created, Upgraded)
+    val applicable: Upgraded.type = Upgraded
   }
 
   private val all: Set[RewardKind] = Set(Coupon, OrgCreation, OrgReferral)
@@ -138,6 +142,29 @@ object UsedCreditCode {
 
   def applyFromDbRow(code: CreditCode, singleUse: Option[Boolean]): UsedCreditCode = UsedCreditCode(code, singleUse.contains(true))
   def unapplyToDbRow(code: UsedCreditCode): Option[(CreditCode, Option[Boolean])] = Some((code.code, if (code.singleUse) Some(true) else None))
+}
+
+sealed trait UnrepeatableRewardKey {
+  def toKey: String
+}
+
+object UnrepeatableRewardKey {
+  case class ForUser(userId: Id[User]) extends UnrepeatableRewardKey { def toKey = s"user|$userId" }
+  case class ForOrganization(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"org|$orgId" }
+  case class ForOrganizationMember(orgId: Id[Organization], userId: Id[User]) extends UnrepeatableRewardKey { def toKey = s"org|$orgId-user$userId" }
+
+  private object ValidLong {
+    def unapply(id: String): Option[Long] = Try(id.toLong).toOption
+  }
+  private val userKey = """^user\|(\d+)$""".r
+  private val organizationKey = """^org\|(\d+)$""".r
+  private val organizationMemberKey = """^org\|(\d+)\-user\|(\d+)$""".r
+  def fromKey(key: String): UnrepeatableRewardKey = key match {
+    case userKey(ValidLong(userId)) => ForUser(Id(userId))
+    case organizationKey(ValidLong(orgId)) => ForOrganization(Id(orgId))
+    case organizationMemberKey(ValidLong(orgId), ValidLong(userId)) => ForOrganizationMember(Id(orgId), Id(userId))
+    case _ => throw new IllegalArgumentException(s"Invalid reward key: $key")
+  }
 }
 
 object CreditRewardStates extends States[CreditReward]
@@ -212,29 +239,6 @@ object CreditReward {
         singleUse
       )
     }
-  }
-}
-
-sealed trait UnrepeatableRewardKey {
-  def toKey: String
-}
-
-object UnrepeatableRewardKey {
-  case class ForUser(userId: Id[User]) extends UnrepeatableRewardKey { def toKey = s"user|$userId" }
-  case class ForOrganization(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"org|$orgId" }
-  case class ForOrganizationMember(orgId: Id[Organization], userId: Id[User]) extends UnrepeatableRewardKey { def toKey = s"org|$orgId-user$userId" }
-
-  private object ValidLong {
-    def unapply(id: String): Option[Long] = Try(id.toLong).toOption
-  }
-  private val userKey = """^user\|(\d+)$""".r
-  private val organizationKey = """^org\|(\d+)$""".r
-  private val organizationMemberKey = """^org\|(\d+)\-user\|(\d+)$""".r
-  def fromKey(key: String): UnrepeatableRewardKey = key match {
-    case userKey(ValidLong(userId)) => ForUser(Id(userId))
-    case organizationKey(ValidLong(orgId)) => ForOrganization(Id(orgId))
-    case organizationMemberKey(ValidLong(orgId), ValidLong(userId)) => ForOrganizationMember(Id(orgId), Id(userId))
-    case _ => throw new IllegalArgumentException(s"Invalid reward key: $key")
   }
 }
 
