@@ -69,15 +69,11 @@ class KeepDecoratorImpl @Inject() (
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
         }
 
-        val libIdToBasicOrg = {
-          val libId2orgId = idToLibrary.mapValues(lib => lib.organizationId).collect { case (id, Some(orgid)) => id -> orgid }
-          val libId2OrgCard = db.readOnlyMaster { implicit s =>
-            libId2orgId.map {
-              case (libId, orgId) =>
-                libId -> organizationCommander.getBasicOrganization(orgId)
-            }
-          }
-          libId2OrgCard
+        val basicOrgByLibId = {
+          val orgIdByLibId = idToLibrary.collect { case (libId, lib) if lib.organizationId.isDefined => libId -> lib.organizationId.get }
+          val orgIds = orgIdByLibId.values.toSet
+          val basicOrgById = organizationCommander.getBasicOrganizations(orgIds)
+          orgIdByLibId.mapValues(basicOrgById(_))
         }
 
         val idToBasicUser = {
@@ -88,11 +84,11 @@ class KeepDecoratorImpl @Inject() (
           db.readOnlyMaster { implicit s => basicUserRepo.loadAll(keepersShown ++ libraryContributorsShown ++ libraryOwners ++ keepers) } //cached
         }
         val idToBasicLibrary = idToLibrary.mapValues { library =>
-          val orgOpt = libIdToBasicOrg.get(library.id.get)
+          val orgOpt = basicOrgByLibId.get(library.id.get)
           val user = idToBasicUser(library.ownerId)
           BasicLibrary(library, user, orgOpt.map(_.handle))
         }
-        val idToLibraryCard = {
+        val libraryCardByLibId = {
           val libraries = keeps.flatMap(_.libraryId.map(idToLibrary(_)))
           val cards = db.readOnlyMaster { implicit s =>
             libraryCardCommander.createLibraryCardInfos(libraries, idToBasicUser, perspectiveUserIdOpt, withFollowing = true, idealSize = ProcessedImageSize.Medium.idealSize)
@@ -100,7 +96,7 @@ class KeepDecoratorImpl @Inject() (
           (libraries.map(_.id.get) zip cards).toMap
         }
 
-        (idToBasicUser, idToBasicLibrary, idToLibraryCard, libIdToBasicOrg)
+        (idToBasicUser, idToBasicLibrary, libraryCardByLibId, basicOrgByLibId)
       }
       val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
 
