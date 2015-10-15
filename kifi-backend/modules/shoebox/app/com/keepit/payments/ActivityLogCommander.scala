@@ -12,23 +12,22 @@ import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
 
-@ImplementedBy(classOf[AccountEventCommanderImpl])
-trait AccountEventCommander {
+@ImplementedBy(classOf[ActivityLogCommanderImpl])
+trait ActivityLogCommander {
   def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
-
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
 }
 
 @Singleton
-class AccountEventCommanderImpl @Inject() (
+class ActivityLogCommanderImpl @Inject() (
     db: Database,
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
     basicUserRepo: BasicUserRepo,
     organizationRepo: OrganizationRepo,
-    implicit val publicIdConfig: PublicIdConfiguration) extends AccountEventCommander {
+    implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
     paidAccountRepo.getAccountId(orgId)
@@ -49,8 +48,8 @@ class AccountEventCommanderImpl @Inject() (
     val maybeUser = event.whoDunnit.map(basicUserRepo.load)
     val maybeAdmin = event.kifiAdminInvolved.map(basicUserRepo.load)
     implicit lazy val orgHandle = organizationRepo.get(paidAccountRepo.get(event.accountId).orgId).handle // used to build links to different sections, e.g. :handle/settings/plan
-    val description: SimpleAccountEventInfo.DescriptionElements = {
-      import SimpleAccountEventInfo.{ DescriptionElements => Elements }
+    val description: DescriptionElements = {
+      import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
         case SpecialCredit() => Elements("Special credit was granted to your team", maybeAdmin.map(Elements("by", _, "from Kifi Support")), maybeUser.map(Elements("thanks to", _)))
         case ChargeBack() => s"A ${event.creditChange.toDollarString} refund was issued to your card"
@@ -91,40 +90,40 @@ class AccountEventCommanderImpl @Inject() (
   }
 }
 
+sealed trait DescriptionElements
+object DescriptionElements {
+  case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements
+  case class BasicElement(text: String, url: Option[String]) extends DescriptionElements
+
+  def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
+
+  implicit def fromText(text: String): BasicElement = BasicElement(text, None)
+  implicit def fromTextAndUrl(textAndUrl: (String, String)): BasicElement = BasicElement(textAndUrl._1, Some(textAndUrl._2))
+  implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
+  implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
+
+  implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.absolute
+  implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
+  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> s"/$orgHandle/settings/plan"
+
+  private def flatten(description: DescriptionElements): Seq[BasicElement] = description match {
+    case SequenceOfElements(elements) => elements.map(flatten).flatten
+    case element: DescriptionElements.BasicElement => Seq(element)
+  }
+  implicit val flatWrites = {
+    implicit val basicWrites = Json.writes[BasicElement]
+    Writes[DescriptionElements] { description => Json.toJson(flatten(description)) }
+  }
+}
+
 case class SimpleAccountEventInfo(
   id: PublicId[AccountEvent],
   eventTime: DateTime,
-  description: SimpleAccountEventInfo.DescriptionElements,
+  description: DescriptionElements,
   creditChange: String,
   paymentCharge: Option[String],
   memo: Option[String])
 
 object SimpleAccountEventInfo {
-  sealed trait DescriptionElements
-  object DescriptionElements {
-    case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements
-    case class BasicElement(text: String, url: Option[String]) extends DescriptionElements
-
-    def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
-
-    implicit def fromText(text: String): BasicElement = BasicElement(text, None)
-    implicit def fromTextAndUrl(textAndUrl: (String, String)): BasicElement = BasicElement(textAndUrl._1, Some(textAndUrl._2))
-    implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
-    implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
-
-    implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.absolute
-    implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
-    implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> s"/$orgHandle/settings/plan"
-
-    private def flatten(description: DescriptionElements): Seq[BasicElement] = description match {
-      case SequenceOfElements(elements) => elements.map(flatten).flatten
-      case element: DescriptionElements.BasicElement => Seq(element)
-    }
-    implicit val flatWrites = {
-      implicit val basicWrites = Json.writes[BasicElement]
-      Writes[DescriptionElements] { description => Json.toJson(flatten(description)) }
-    }
-  }
   implicit val writes = Json.writes[SimpleAccountEventInfo]
 }
-
