@@ -3,7 +3,7 @@ package com.keepit.payments
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId }
 import com.keepit.common.time._
-import com.keepit.model.User
+import com.keepit.model.{ CreditReward, User }
 import com.keepit.common.mail.EmailAddress
 
 import com.kifi.macros.json
@@ -102,6 +102,12 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
   }
 
+  @json
+  case class RewardCredit(rewardId: Id[CreditReward]) extends AccountEventAction {
+    def eventType: String = "reward_credit"
+    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+  }
+
   def fromDb(eventType: String, extras: JsValue): AccountEventAction = eventType match {
     case "special_credit" => SpecialCredit()
     case "charge_back" => ChargeBack()
@@ -115,6 +121,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case "payment_method_added" => extras.as[PaymentMethodAdded]
     case "default_payment_method_changed" => extras.as[DefaultPaymentMethodChanged]
     case "account_contacts_changed" => extras.as[AccountContactsChanged]
+    case "reward_credit" => extras.as[RewardCredit]
     case _ => throw new Exception(s"Invalid Event Type: $eventType")
 
   }

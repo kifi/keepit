@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.{DbRepo, DataBaseComponent, Repo}
 import com.keepit.common.db.{ States, ModelWithState, State, Id }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.payments.{ DollarAmount, PaidAccount }
+import com.keepit.payments.{AccountEvent, DollarAmount, PaidAccount}
 import org.joda.time.DateTime
 import play.api.libs.json._
 
@@ -149,6 +149,7 @@ case class CreditReward(
     state: State[CreditReward] = CreditRewardStates.ACTIVE,
     accountId: Id[PaidAccount],
     credit: DollarAmount,
+    applied: Option[Id[AccountEvent]],
     reward: Reward,
     unrepeatable: Option[UnrepeatableRewardKey],
     validityPeriod: Option[Duration],
@@ -165,6 +166,7 @@ object CreditReward {
     state: State[CreditReward],
     accountId: Id[PaidAccount],
     credit: DollarAmount,
+    applied: Option[Id[AccountEvent]],
     kind: RewardKind,
     status: String,
     info: Option[JsValue],
@@ -180,6 +182,7 @@ object CreditReward {
       state,
       accountId,
       credit,
+      applied,
       Reward.applyFromDbRow(kind, status, info),
       unrepeatable,
       validityPeriod,
@@ -199,6 +202,7 @@ object CreditReward {
         creditReward.state,
         creditReward.accountId,
         creditReward.credit,
+        creditReward.applied,
         kind,
         status,
         info,
@@ -243,6 +247,7 @@ trait CreditRewardRepo extends Repo[CreditReward] {
 // Unique index on (kind, unrepeatable) - two codes of the same unrepeatable kind cannot be applied
 // Referential integrity constraint from CreditReward.code CreditCode.code
 // Referential integrity constraint from CreditReward.accountId to PaidAccount.id
+// Referential integrity constraint from CreditReward.{accountId, applied, credit} to AccountEvent.{accountId, id, credit}
 
 @Singleton
 class CreditRewardRepoImpl @Inject() (
@@ -262,6 +267,7 @@ class CreditRewardRepoImpl @Inject() (
 
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
     def credit = column[DollarAmount]("credit", O.NotNull)
+    def applied = column[Option[Id[AccountEvent]]]("applied", O.Nullable)
 
     def kind = column[RewardKind]("kind", O.NotNull)
     def status = column[String]("status", O.NotNull)
@@ -273,7 +279,7 @@ class CreditRewardRepoImpl @Inject() (
     def code = column[Option[CreditCode]]("code", O.Nullable)
     def singleUse = column[Option[Boolean]]("single_use", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, accountId, credit, kind, status, info, unrepeatable, validityPeriod, code, singleUse) <> ((CreditReward.applyFromDbRow _).tupled, CreditReward.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, state, accountId, credit, applied, kind, status, info, unrepeatable, validityPeriod, code, singleUse) <> ((CreditReward.applyFromDbRow _).tupled, CreditReward.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new CreditRewardTable(tag)
