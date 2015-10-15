@@ -47,7 +47,7 @@
               on-hover="onHoverUpsellInvite()"
               class="kf-oph-upsell-invite"
             >
-              <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
+              <span ng-if="plan.isPaid">
                 <span ng-if="viewer.membership.role === 'admin' && plan.settings.invite_members.setting === ORG_SETTING_VALUE.MEMBER">
                   All team members are able to invite. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: profile.handle })">settings</a>
                 </span>
@@ -55,7 +55,7 @@
                   Only admins are able to invite. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: profile.handle })">settings</a>
                 </span>
               </span>
-              <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
+              <span ng-if="!plan.isPaid">
                 Restrict who can invite new members by <a class="kf-link" href="#">upgrading your plan</a>.
               </span>
             </span>
@@ -87,7 +87,7 @@
               on-hover="onHoverUpsellMembers()"
               class="kf-oph-upsell-members"
             >
-              <span ng-if="plan.name.toLowerCase().indexOf('paid') !== -1">
+              <span ng-if="plan.isPaid">
                 <span ng-if="viewer.membership.role === 'admin' && plan.settings.view_members.setting === ORG_SETTING_VALUE.ANYONE">
                   Your members page is publicly viewable.<br />Edit this in <button class="kf-link" ui-sref="orgProfile.settings.team({ handle: profile.handle })">settings</button>
                 </span>
@@ -95,7 +95,7 @@
                   Only members of {{ profile.name }} can view your team's member list.<br />Edit this in <button class="kf-link" ui-sref="orgProfile.settings.team({ handle: profile.handle })">settings</button>
                 </span>
               </span>
-              <span ng-if="plan.name.toLowerCase().indexOf('paid') === -1">
+              <span ng-if="!plan.isPaid">
                 Restrict who can view your team's members by <button class="kf-link" target="_self" href="https://www.kifi.com/teams">upgrading your plan</button>.
               </span>
             </span>
