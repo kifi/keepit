@@ -99,6 +99,9 @@ package object template {
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
     def discussionLink(id: Id[NormalizedURI], threadExtId: String) = Tag2(tags.discussionLink, id, threadExtId).toHtml
+    def discussionLink(id: Id[NormalizedURI], threadExtId: String, trackingContent: String) = {
+      Html(appendTrackingParams(Tag2(tags.discussionLink, id, threadExtId) + "&", trackingContent, openInAppIfMobile = true))
+    }
 
     def libraryLink(id: Id[Library], authToken: Option[String], content: String, openInAppIfMobile: Boolean = true) =
       Html(appendTrackingParams(Tag2(tags.libraryLink, id, authToken) + "&", content, openInAppIfMobile))
