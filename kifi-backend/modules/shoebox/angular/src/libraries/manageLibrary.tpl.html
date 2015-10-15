@@ -85,13 +85,13 @@
               >
                 <span ng-if="space.destination.config.name.toLowerCase().indexOf('paid') !== -1">
                   <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.DISABLED">
-                    No member of yor team can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.destination.handle })">settings</a>
+                    No member of yor team can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
                   </span>
                   <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.ADMIN">
-                    Only admins can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.destination.handle })">settings</a>
+                    Only admins can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
                   </span>
                   <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.MEMBER">
-                    All team members can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.destination.handle })">settings</a>
+                    All team members can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
                   </span>
                   <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role !== 'admin') && space.destination.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) === -1">
                     Integrations are disabled for {{ library.org.name }}
