@@ -34,18 +34,7 @@ class PaymentsController @Inject() (
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
-    val card = planCommander.getDefaultPaymentMethod(request.orgId).map { method =>
-      stripeClient.getCardInfo(method.stripeToken).map(Some(_))
-    }.getOrElse(Future.successful(None))
-
-    card.map { card =>
-      Ok(Json.toJson(AccountStateResponse(
-        credit = planCommander.getCurrentCredit(request.orgId),
-        users = orgMembershipCommander.getMemberIds(request.orgId).size,
-        plan = planCommander.currentPlan(request.orgId).asInfo,
-        card = card
-      )))
-    }
+    planCommander.getAccountState(request.orgId).map { response => Ok(Json.toJson(response)) }
   }
 
   def getAvailablePlans(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { implicit request =>
