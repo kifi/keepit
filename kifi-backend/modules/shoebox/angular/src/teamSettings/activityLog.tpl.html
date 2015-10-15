@@ -6,15 +6,26 @@
       <tbody>
         <tr ng-repeat="b in billingEvents">
           <td ng-bind="b.eventTime | amDateFormat:'YYYY-MM-DD'"></td>
-          <td ng-bind="b.shortName + ' by ' + b.whoDunnit"></td>
+          <td>
+            <!-- the comments below are to get prevent unwanted inline whitespace. -->
+            <span
+              ng-repeat="descriptionSegment in b.description"
+            ><!--
+          --><span ng-if="!descriptionSegment.url" ng-bind="descriptionSegment.text"></span><!--
+          --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text"></a><!--
+          --><span ng-if="!$last">&nbsp;</span>
+          </span><!--
+        --><span>.</span>
+          </td>
           <td
-            ng-bind="b.creditChange !== 0 ? ((b.creditChange > 0 ? 1 : -1) * b.creditChange / 100 | currency:'$') : ''"
+            ng-bind="b.creditChange"
             ng-class="{
-              'kf-team-activity-debit': b.creditChange < 0,
-              'kf-team-activity-credit': b.creditChange > 0,
-              'kf-team-activity-nocharge': b.creditChange === 0
+              'kf-team-activity-debit': b.creditChange[0] === '-',
+              'kf-team-activity-credit': b.creditChange[0] !== '-',
+              'kf-team-activity-nocharge': b.creditChange === '$0.00'
             }"
-          ></td>
+          >
+          </td>
         </tr>
       </tbody>
       <tfoot>
