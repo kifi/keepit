@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgSelector', [
-  'profileService', 'LIB_PERMISSION', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function(profileService, LIB_PERMISSION, ORG_PERMISSION, ORG_SETTING_VALUE) {
+  'profileService', 'LIB_PERMISSION', 'ORG_PERMISSION', 'ORG_SETTING_VALUE', 'orgProfileService',
+  function(profileService, LIB_PERMISSION, ORG_PERMISSION, ORG_SETTING_VALUE, orgProfileService) {
     return {
       restrict: 'A',
       templateUrl: 'common/directives/orgSelector/orgSelector.tpl.html',
@@ -80,11 +80,11 @@ angular.module('kifi')
         };
 
         $scope.onClickUpsellRelocate = function () {
-
+          orgProfileService.trackEvent('user_clicked_page', $scope.space.destination, { action: 'clickSelectorUpsell' });
         };
 
         $scope.onHoverUpsellRelocate = function () {
-
+          orgProfileService.trackEvent('user_viewed_page', $scope.space.destination, { action: 'viewSelectorUpsell' });
         };
       }
     };

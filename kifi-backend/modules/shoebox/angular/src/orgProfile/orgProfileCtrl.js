@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('OrgProfileCtrl', [
-  '$window', '$rootScope', '$scope', '$analytics', '$state', '$location', '$log', 'profile',
+  '$window', '$rootScope', '$scope', '$analytics', '$state', '$location', 'profile',
   'orgProfileService', 'originTrackingService',
-  function ($window, $rootScope, $scope, $analytics, $state, $location, $log, profile,
+  function ($window, $rootScope, $scope, $analytics, $state, $location, profile,
             orgProfileService, originTrackingService) {
     $window.document.title = profile.organization.name + ' • Kifi';
     $scope.profile = _.cloneDeep(profile.organization);

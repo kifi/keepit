@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfLibraryVisibilitySelector', [
-  'profileService', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function (profileService, ORG_PERMISSION, ORG_SETTING_VALUE) {
+  'profileService', 'ORG_PERMISSION', 'ORG_SETTING_VALUE', 'orgProfileService',
+  function (profileService, ORG_PERMISSION, ORG_SETTING_VALUE, orgProfileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -31,11 +31,11 @@ angular.module('kifi')
         };
 
         $scope.onClickUpsellPublic = function () {
-
+          orgProfileService.trackEvent('user_viewed_page', $scope.space, { action: 'clickPrivacyUpsell' });
         };
 
         $scope.onHoverUpsellPublic = function () {
-
+          orgProfileService.trackEvent('user_viewed_page', $scope.space, { action: 'viewPrivacyUpsell' });
         };
 
         $scope.spaceIsOrg = function (space) {

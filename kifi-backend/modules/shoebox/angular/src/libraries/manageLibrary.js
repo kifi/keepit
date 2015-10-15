@@ -312,11 +312,11 @@ angular.module('kifi')
         });
 
         scope.onHoverUpsellIntegration = function () {
-
+          orgProfileService.trackEvent('user_viewed_page', scope.space.destination, { action: 'viewIntegrationUpsell' });
         };
 
         scope.onClickUpsellIntegration = function () {
-
+          orgProfileService.trackEvent('user_clicked_page', scope.space.destination, { action: 'clickIntegrationUpsell' });
         };
 
         //
