@@ -251,16 +251,23 @@ class OrganizationMembershipCommanderImpl @Inject() (
         val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
         val org = organizationRepo.get(request.orgId)
         val newMembership = organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+        (membership.role, newMembership.role) match { // assumes admins can only be added via modifying a membership, not creating one
+          case (OrganizationRole.MEMBER, OrganizationRole.ADMIN) => planCommander.registerNewAdmin(org.id.get, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
+          case (OrganizationRole.ADMIN, OrganizationRole.MEMBER) => planCommander.registerRemovedAdmin(org.id.get, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
+          case _ =>
+        }
         Right(OrganizationMembershipModifyResponse(request, newMembership))
     }
   }
 
   private def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest): OrganizationMembershipRemoveResponse = {
-    db.readWrite { implicit session =>
+    val oldRole = db.readWrite { implicit session =>
       val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
       organizationMembershipRepo.deactivate(membership)
+      membership.role
     }
     planCommander.registerRemovedUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
+    if (oldRole == OrganizationRole.ADMIN) planCommander.registerRemovedAdmin(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
     val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
     orgGeneralLibrary.foreach { lib =>
       implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
