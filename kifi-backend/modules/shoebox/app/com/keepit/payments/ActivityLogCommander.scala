@@ -12,8 +12,8 @@ import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
 
-@ImplementedBy(classOf[AccountEventCommanderImpl])
-trait AccountEventCommander {
+@ImplementedBy(classOf[ActivityLogCommanderImpl])
+trait ActivityLogCommander {
   def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
   def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
 
@@ -21,14 +21,14 @@ trait AccountEventCommander {
 }
 
 @Singleton
-class AccountEventCommanderImpl @Inject() (
+class ActivityLogCommanderImpl @Inject() (
     db: Database,
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
     basicUserRepo: BasicUserRepo,
     organizationRepo: OrganizationRepo,
-    implicit val publicIdConfig: PublicIdConfiguration) extends AccountEventCommander {
+    implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
     paidAccountRepo.getAccountId(orgId)
