@@ -25,6 +25,7 @@ class PaymentsController @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
+    accountEventCommander: AccountEventCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -134,14 +135,14 @@ class PaymentsController @Inject() (
   }
 
   def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val infos = planCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
+    val infos = accountEventCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(accountEventCommander.buildSimpleEventInfo)
     Ok(Json.obj("events" -> infos))
   }
 
   def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     AccountEvent.decodePublicId(beforePubId) match {
       case Success(beforeId) => {
-        val infos = planCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
+        val infos = accountEventCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(accountEventCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
       }
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))
