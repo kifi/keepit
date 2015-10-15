@@ -142,10 +142,10 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     accountId: Id[PaidAccount],
     billingRelated: Boolean,
     whoDunnit: Option[Id[User]],
-    whoDunnitExtra: JsValue,
+    whoDunnitExtra: Option[JsValue],
     kifiAdminInvolved: Option[Id[User]],
     eventType: String,
-    eventTypeExtras: JsValue,
+    eventTypeExtras: Option[JsValue],
     creditChange: DollarAmount,
     paymentMethod: Option[Id[PaymentMethod]],
     paymentCharge: Option[DollarAmount],
@@ -160,9 +160,9 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       accountId,
       billingRelated,
       whoDunnit,
-      whoDunnitExtra,
+      whoDunnitExtra getOrElse JsNull,
       kifiAdminInvolved,
-      AccountEventAction.fromDb(eventType, eventTypeExtras),
+      AccountEventAction.fromDb(eventType, eventTypeExtras getOrElse JsNull),
       creditChange,
       paymentMethod,
       paymentCharge,
@@ -173,9 +173,25 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
 
   def unapplyFromDbRow(e: AccountEvent) = {
     val (eventType, extras) = e.action.toDbRow
-    Some((e.id, e.createdAt, e.updatedAt, e.state, e.eventTime, e.accountId,
-      e.billingRelated, e.whoDunnit, e.whoDunnitExtra, e.kifiAdminInvolved, eventType,
-      extras, e.creditChange, e.paymentMethod, e.paymentCharge, e.memo, e.chargeId))
+    Some((
+      e.id,
+      e.createdAt,
+      e.updatedAt,
+      e.state,
+      e.eventTime,
+      e.accountId,
+      e.billingRelated,
+      e.whoDunnit,
+      if (e.whoDunnitExtra == JsNull) None else Some(e.whoDunnitExtra),
+      e.kifiAdminInvolved,
+      eventType,
+      if (extras == JsNull) None else Some(extras),
+      e.creditChange,
+      e.paymentMethod,
+      e.paymentCharge,
+      e.memo,
+      e.chargeId
+    ))
   }
 
   def simpleNonBillingEvent(eventTime: DateTime, accountId: Id[PaidAccount], attribution: ActionAttribution, action: AccountEventAction, creditChange: DollarAmount = DollarAmount.ZERO) = {
