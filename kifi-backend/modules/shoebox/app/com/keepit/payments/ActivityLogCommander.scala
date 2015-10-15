@@ -57,10 +57,13 @@ class ActivityLogCommanderImpl @Inject() (
           s"Your card was charged ${event.creditChange.toDollarString} for your current plan [$invoiceText]"
         }
         case UserAdded(who) => Elements(basicUserRepo.load(who), "was added to your team", maybeUser.map(Elements("by", _)))
-        case UserRemoved(who) => Elements(basicUserRepo.load(who), "was removed from your team", maybeUser.map(Elements("by", _)))
+        case UserRemoved(who) => maybeUser match {
+          case Some(`who`) => Elements(basicUserRepo.load(who), "left your team")
+          case _ => Elements(basicUserRepo.load(who), "was removed from your team", maybeUser.map(Elements("by", _)))
+        }
         case AdminAdded(who) => Elements(basicUserRepo.load(who), "was made an admin", maybeUser.map(Elements("by", _)))
         case AdminRemoved(who) => Elements(basicUserRepo.load(who), "(admin) was made a member by", maybeUser.map(Elements("by", _)))
-        case PlanChanged(oldPlanId, newPlanId) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId))
+        case PlanChanged(oldPlanId, newPlanId) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
         case PaymentMethodAdded(_, lastFour) => Elements(s"A credit card ending in $lastFour was added", maybeUser.map(Elements("by", _)))
         case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your team's default payment method was changed to the card ending in $lastFour", maybeUser.map(Elements("by", _)))
         case AccountContactsChanged(userAdded: Option[Id[User]], userRemoved: Option[Id[User]], emailAdded: Option[EmailAddress], emailRemoved: Option[EmailAddress]) => {
