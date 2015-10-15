@@ -2,13 +2,13 @@
   <h1 class="kf-team-activity-top-header">Activity Log</h1>
   <p>You currently have <b ng-bind="profile.numMembers"></b> team members. All billing happens at the beginning of the month. All times are handled in the UTC timezone.</p>
   <div class="kf-container">
-    <table class="kf-team-activity-table">
+    <table class="kf-team-activity-table" smart-scroll scroll-distance="'100%'" scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()">
       <tbody>
         <tr ng-repeat="b in billingEvents">
           <td ng-bind="b.eventTime | amDateFormat:'YYYY-MM-DD'"></td>
           <td ng-bind="b.shortName + ' by ' + b.whoDunnit"></td>
           <td
-            ng-bind="b.creditChange !== 0 ? ((b.creditChange > 0 ? 1 : -1) * b.creditChange / 100 | currency:'$') : '---'"
+            ng-bind="b.creditChange !== 0 ? ((b.creditChange > 0 ? 1 : -1) * b.creditChange / 100 | currency:'$') : ''"
             ng-class="{
               'kf-team-activity-debit': b.creditChange < 0,
               'kf-team-activity-credit': b.creditChange > 0,
@@ -16,7 +16,13 @@
             }"
           ></td>
         </tr>
-      <tbody>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3"><div class="kf-loading-spinner-center" kf-loading-spinner hide="!isLoading()"></div></td>
+        </tr>
+      </tfoot>
     </table>
+
   </div>
 </div>

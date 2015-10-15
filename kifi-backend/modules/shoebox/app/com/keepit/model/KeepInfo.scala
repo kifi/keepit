@@ -36,7 +36,7 @@ case class KeepInfo(
   summary: Option[URISummary] = None,
   siteName: Option[String] = None,
   libraryId: Option[PublicId[Library]] = None, // deprecated, use .library.id instead
-  library: Option[BasicLibrary] = None,
+  library: Option[LibraryCardInfo] = None,
   organization: Option[BasicOrganization] = None,
   sourceAttribution: Option[KeepSourceAttribution] = None,
   note: Option[String] = None)

@@ -47,8 +47,7 @@ angular.module('kifi')
             fieldKey: 'force_edit_libraries',
             selectOptions: getOptions(
               { label: 'Library owner only', value: ORG_SETTING_VALUE.DISABLED },
-              ORG_SETTING_VALUE.ADMIN,
-              ORG_SETTING_VALUE.MEMBER
+              ORG_SETTING_VALUE.ADMIN
             )
           },
           {
@@ -107,7 +106,7 @@ angular.module('kifi')
           {
             title: $sce.trustAsHtml(
               'Who can' +
-              ' <a href="http://blog.kifi.com/slack-library-subscriptions/">create a Slack integration</a>' +
+              ' <a href="http://blog.kifi.com/slack-library-subscriptions/" target="_blank">create a Slack integration</a>' +
               ' with Kifi?'
             ),
             description: (

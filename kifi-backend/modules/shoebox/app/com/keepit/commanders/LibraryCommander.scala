@@ -241,28 +241,30 @@ class LibraryCommanderImpl @Inject() (
       }
     }
 
-    def validateIntegration(newSubscriptions: Option[Seq[LibrarySubscriptionKey]], newSpace: LibrarySpace): Option[LibraryFail] = {
+    def validateIntegration(newSubscriptions: Option[Seq[LibrarySubscriptionKey]], oldSpace: LibrarySpace, newSpace: LibrarySpace): Option[LibraryFail] = {
       val areSubKeysValidOpt = newSubscriptions.map(subs => subs.forall {
         case LibrarySubscriptionKey(name, info: SlackInfo) => name.length < 33 && "^https://hooks.slack.com/services/.*/.*/?$".r.findFirstIn(info.url).isDefined
         case _ => false // unsupported type
       })
 
-      (newSubscriptions.exists(_.nonEmpty), areSubKeysValidOpt, newSpace) match {
-        case (true, Some(false), _) => Some(LibraryFail(BAD_REQUEST, "subscription_key_format"))
-        case (true, _, space: OrganizationSpace) if db.readOnlyReplica { implicit session => !permissionCommander.getOrganizationPermissions(space.id, Some(userId)).contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) } =>
+      (newSubscriptions.exists(_.nonEmpty), areSubKeysValidOpt, oldSpace, newSpace) match {
+        case (true, Some(false), _, _) => Some(LibraryFail(BAD_REQUEST, "subscription_key_format"))
+        case (true, _, oldSpace: UserSpace, newSpace: OrganizationSpace) => None // allow members with existing subscriptions to transfer them to orgs sans permissions (grandfathered feature)
+        case (true, _, _, newSpace: OrganizationSpace) if db.readOnlyReplica { implicit session => !permissionCommander.getOrganizationPermissions(newSpace.id, Some(userId)).contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) } =>
           Some(LibraryFail(FORBIDDEN, "create_slack_integration_permission"))
         case _ => None
       }
     }
 
     val newSpace = modifyReq.space.getOrElse(library.space)
+    val oldSpace = library.space
     val errorOpts = Stream(
       validateUserWritePermission,
       validateSpace(modifyReq.space),
       validateName(modifyReq.name, newSpace),
       validateSlug(modifyReq.slug, newSpace),
       validateVisibility(modifyReq.visibility, newSpace),
-      validateIntegration(modifyReq.subscriptions, newSpace)
+      validateIntegration(modifyReq.subscriptions, oldSpace, newSpace)
     )
     errorOpts.flatten.headOption
   }

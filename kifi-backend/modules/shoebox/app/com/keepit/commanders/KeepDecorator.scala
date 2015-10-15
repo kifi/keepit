@@ -37,6 +37,7 @@ class KeepDecoratorImpl @Inject() (
     ktuRepo: KeepToUserRepo,
     orgRepo: OrganizationRepo,
     keepImageCommander: KeepImageCommander,
+    libraryCardCommander: LibraryCardCommander,
     userCommander: Provider[UserCommander],
     organizationCommander: OrganizationCommander,
     searchClient: SearchServiceClient,
@@ -62,7 +63,7 @@ class KeepDecoratorImpl @Inject() (
         val items = keeps.map { keep => AugmentableItem(keep.uriId) }
         searchClient.augment(perspectiveUserIdOpt, showPublishedLibraries, KeepInfo.maxKeepersShown, KeepInfo.maxLibrariesShown, 0, items).imap(augmentationInfos => filterLibraries(augmentationInfos))
       }
-      val basicInfosFuture = augmentationFuture.map { augmentationInfos =>
+      val entitiesFutures = augmentationFuture.map { augmentationInfos =>
         val idToLibrary = {
           val librariesShown = augmentationInfos.flatMap(_.libraries.map(_._1)).toSet ++ keepsSeq.flatMap(_.libraryId).toSet
           db.readOnlyMaster { implicit s => libraryRepo.getLibraries(librariesShown) } //cached
@@ -91,8 +92,15 @@ class KeepDecoratorImpl @Inject() (
           val user = idToBasicUser(library.ownerId)
           BasicLibrary(library, user, orgOpt.map(_.handle))
         }
+        val idToLibraryCard = {
+          val libraries = keeps.flatMap(_.libraryId.map(idToLibrary(_)))
+          val cards = db.readOnlyMaster { implicit s =>
+            libraryCardCommander.createLibraryCardInfos(libraries, idToBasicUser, perspectiveUserIdOpt, withFollowing = true, idealSize = ProcessedImageSize.Medium.idealSize)
+          }
+          (libraries.map(_.id.get) zip cards).toMap
+        }
 
-        (idToBasicUser, idToBasicLibrary, libIdToBasicOrg)
+        (idToBasicUser, idToBasicLibrary, idToLibraryCard, libIdToBasicOrg)
       }
       val pageInfosFuture = getKeepSummaries(keeps, idealImageSize)
 
@@ -122,7 +130,7 @@ class KeepDecoratorImpl @Inject() (
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
-        (idToBasicUser, idToBasicLibrary, idToBasicOrg) <- basicInfosFuture
+        (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
       } yield {
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
@@ -165,7 +173,7 @@ class KeepDecoratorImpl @Inject() (
               summary = Some(pageInfoForKeep),
               siteName = DomainToNameMapper.getNameFromUrl(keep.url),
               libraryId = keep.libraryId.map(Library.publicId),
-              library = keep.libraryId.flatMap(idToBasicLibrary.get),
+              library = keep.libraryId.map(idToLibraryCard(_)),
               organization = keep.libraryId.flatMap(idToBasicOrg.get),
               sourceAttribution = sourceAttrOpt,
               note = keep.note
