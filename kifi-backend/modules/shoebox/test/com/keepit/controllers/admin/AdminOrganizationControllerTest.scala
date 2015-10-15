@@ -89,7 +89,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           1 === 1
         }
       }
-      "pass cam's test" in {
+      "work for both adding and removing features" in {
         withDb(modules: _*) { implicit injector =>
           val (org, owner) = db.readWrite { implicit session =>
             val owner = UserFactory.user().saved
