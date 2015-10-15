@@ -6,7 +6,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
 import com.keepit.common.store.ImageSize
 import com.keepit.eliza.commanders.{ ElizaEmailUriSummaryImageSizes, ElizaEmailCommander }
@@ -128,8 +128,9 @@ class ElizaUserEmailNotifierActor @Inject() (
                 fromName = Some(Right("Kifi Notifications")),
                 to = Right(destinationEmail),
                 subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
-                htmlTemplate = views.html.discussionEmail(threadEmailInfo, extendedThreadItems, true, false, true),
-                category = NotificationCategory.User.MESSAGE
+                htmlTemplate = views.html.discussionEmail(threadEmailInfo, extendedThreadItems, isUser = true, isAdded = false, isSmall = true),
+                category = NotificationCategory.User.MESSAGE,
+                templateOptions = Seq(TemplateOptions.CustomLayout).toMap
               )
           }
 
