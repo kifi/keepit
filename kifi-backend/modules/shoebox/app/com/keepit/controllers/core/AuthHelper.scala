@@ -41,7 +41,7 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
 import scala.concurrent.Future
-import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.heimdal.{ UserEvent, UserEventTypes, HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.common.core._
 
@@ -77,6 +77,7 @@ class AuthHelper @Inject() (
     userCommander: UserCommander,
     twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
+    heimdal: HeimdalServiceClient,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val config: PublicIdConfiguration,
     resetPasswordEmailSender: ResetPasswordEmailSender,
@@ -190,7 +191,7 @@ class AuthHelper @Inject() (
     libAuthToken: Option[String],
     orgPublicId: Option[PublicId[Organization]],
     orgAuthToken: Option[String],
-    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
+    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_], context: HeimdalContext): Result = {
 
     // This is a Big ball of mud. Hopefully we can restore a bit of sanity.
     // This function does some end-of-the-line wiring after registration. We support registrations directly from an API,
@@ -250,6 +251,9 @@ class AuthHelper @Inject() (
             SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
           }
         }
+
+        val completedSignupEvent = UserEvent(user.id.get, context, UserEventTypes.COMPLETED_SIGNUP)
+        heimdal.trackEvent(completedSignupEvent)
     }
 
     type IntentAction = PostRegIntent ?=> Unit
