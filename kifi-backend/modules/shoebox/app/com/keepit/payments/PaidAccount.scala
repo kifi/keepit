@@ -1,5 +1,6 @@
 package com.keepit.payments
 
+import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.time._
 import com.keepit.model._
@@ -23,6 +24,11 @@ object DollarAmount {
   def wholeDollars(dollars: Int): DollarAmount = DollarAmount(dollars * 100)
 
   val ZERO = DollarAmount(0)
+
+  def columnType(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.apply)
+  }
 }
 
 @json
