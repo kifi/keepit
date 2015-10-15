@@ -78,6 +78,10 @@ angular.module('kifi')
       cycle: currentPlan.cycle //month
     };
 
+    $scope.isNoPlanName = function (planName) {
+      return !planName;
+    };
+
     $scope.isPaidPlanName = function (planName) {
       return planName && planName.toLowerCase().indexOf('free') === -1;
     };

@@ -12,8 +12,9 @@
           <button
             class="kf-payment-plan-card-cta"
             ng-if="!isFreePlanName(plan.name)"
+            ng-bind="isNoPlanName(plan.name) ? 'Choose plan' : 'Downgrade'"
             ng-click="changePlanToFree()"
-          >Downgrade</button>
+          ></button>
         </div>
       </div>
       <div class="kf-payment-plan-card kf-payment-plan-card-basic">
@@ -28,8 +29,9 @@
             class="kf-payment-plan-card-cta"
             ng-if="!isPaidPlanName(plan.name)"
             ng-click="changePlanToStandard()"
-            ng-bind="isFreePlanName(plan.name) ? 'Upgrade now' : 'Downgrade'"
-          >Upgrade now</button>
+            ng-bind="(isFreePlanName(plan.name) ? 'Upgrade now' :
+              (isNoPlanName(plan.name) ? 'Choose Plan' : 'Downgrade'))"
+          ></button>
         </div>
       </div>
       <div class="kf-payment-plan-card kf-payment-plan-card-enterprise">
