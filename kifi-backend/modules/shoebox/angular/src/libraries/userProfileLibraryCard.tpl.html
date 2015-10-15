@@ -5,8 +5,8 @@
     ng-if="lib.kind === 'user_created' && lib.org.viewer.membership.role === 'admin'"
     kf-upsell
     position="bottom"
-    on-click="onClickUpsellMembers()"
-    on-hover="onHoverUpsellMembers()"
+    on-click="onClickUpsellEditLibrary(lib.org)"
+    on-hover="onHoverUpsellEditLibrary(lib.org)"
     class="kf-upl-card-upsell"
   >
     <span ng-if="getMeOrg().config.name.toLowerCase().indexOf('paid') !== -1">

@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .directive('kfUserProfileLibraryCard', [
   '$rootScope', '$location', 'profileService', 'libraryService', 'modalService',
-  'platformService', 'signupService', 'LIB_PERMISSION', 'ORG_SETTING_VALUE',
+  'platformService', 'signupService', 'LIB_PERMISSION', 'ORG_SETTING_VALUE', 'orgProfileService',
   function ($rootScope, $location, profileService, libraryService, modalService,
-            platformService, signupService, LIB_PERMISSION, ORG_SETTING_VALUE) {
+            platformService, signupService, LIB_PERMISSION, ORG_SETTING_VALUE, orgProfileService) {
     // values that are the same for all cards that coexist at any one time
     var currentPageName;
     var currentPageOrigin;
@@ -165,6 +165,14 @@ angular.module('kifi')
       return meOrg;
     }
 
+    function onClickUpsellEditLibrary(organization) {
+      orgProfileService.trackEvent('user_clicked_page', organization, { action: 'clickEditLibraryUpsell' });
+    }
+
+    function onHoverUpsellEditLibrary(organization) {
+      orgProfileService.trackEvent('user_viewed_page', organization, { action: 'viewEditLibraryUpsell' });
+    }
+
     return {
       restrict: 'A',
       replace: true,
@@ -221,6 +229,8 @@ angular.module('kifi')
         scope.trackUplCardClick = trackUplCardClick;
         scope.hasPermission = hasPermission;
         scope.getMeOrg = getMeOrg;
+        scope.onClickUpsellEditLibrary = onClickUpsellEditLibrary;
+        scope.onHoverUpsellEditLibrary = onHoverUpsellEditLibrary;
       }
     };
   }
