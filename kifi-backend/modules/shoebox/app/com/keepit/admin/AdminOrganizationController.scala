@@ -12,8 +12,10 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.json.KeyFormat
 import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContext }
 import com.keepit.model._
+import com.keepit.payments.{ PaidPlanRepo, PaidAccountRepo, PaidPlanStates, PaidPlan }
+import play.api.libs.iteratee.{ Enumerator, Concurrent }
 import play.api.{ Mode, Play }
-import play.api.libs.json.{ JsString, Json }
+import play.api.libs.json.{ JsValue, JsString, Json }
 import play.twirl.api.{ HtmlFormat, Html }
 import play.api.mvc.{ Action, AnyContent, Result }
 import views.html
@@ -33,6 +35,9 @@ class AdminOrganizationController @Inject() (
     db: Database,
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,
+    orgConfigRepo: OrganizationConfigurationRepo,
+    paidAccountRepo: PaidAccountRepo,
+    paidPlanRepo: PaidPlanRepo,
     libRepo: LibraryRepo,
     libraryCommander: LibraryCommander,
     userExperimentRepo: UserExperimentRepo,
@@ -443,5 +448,32 @@ class AdminOrganizationController @Inject() (
     }
     zombieLibs.foreach(lib => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get))
     Ok
+  }
+
+  def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
+    require((request.body \ "confirmation").as[String] == "really do it")
+    def applyDefaultSettingsForPlan(plan: PaidPlan)(channel: Concurrent.Channel[JsValue]) = {
+      val planSettings = plan.defaultSettings
+      val oldConfigs = db.readOnlyMaster { implicit s =>
+        val orgIds = paidAccountRepo.getActiveByPlan(plan.id.get).map(_.orgId)
+        orgIds.map(orgConfigRepo.getByOrgId)
+      }
+      oldConfigs.foreach { config =>
+        if (config.settings.features != planSettings.features) {
+          val newSettings = OrganizationSettings(planSettings.features.map { f =>
+            f -> config.settings.settingFor(f).getOrElse(planSettings.settingFor(f).get)
+          }.toMap)
+          db.readWrite { implicit s => orgConfigRepo.save(config.withSettings(newSettings)) }
+          channel.push(Json.obj("orgId" -> config.organizationId, "settings" -> Json.toJson(newSettings)(OrganizationSettings.siteFormat)))
+        }
+      }
+    }
+
+    val paidPlans = db.readOnlyMaster { implicit s => paidPlanRepo.all().filter(_.state == PaidPlanStates.ACTIVE) }
+    val enum: Enumerator[JsValue] = Concurrent.unicast(onStart = { (channel: Concurrent.Channel[JsValue]) =>
+      paidPlans.foreach(plan => applyDefaultSettingsForPlan(plan)(channel))
+      channel.eofAndEnd()
+    })
+    Ok.chunked(enum)
   }
 }

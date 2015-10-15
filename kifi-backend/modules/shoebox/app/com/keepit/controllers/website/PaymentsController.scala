@@ -25,7 +25,7 @@ class PaymentsController @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
-    accountEventCommander: AccountEventCommander,
+    activityLogCommander: ActivityLogCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -100,8 +100,9 @@ class PaymentsController @Inject() (
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
             val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
+            val isPaid = !plan.displayName.toLowerCase.contains("free")
             val result = ExternalOrganizationConfiguration(
-              plan.name.name,
+              isPaid,
               OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures)
             )
             Ok(Json.toJson(result))
@@ -124,14 +125,14 @@ class PaymentsController @Inject() (
   }
 
   def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val infos = accountEventCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(accountEventCommander.buildSimpleEventInfo)
+    val infos = activityLogCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(activityLogCommander.buildSimpleEventInfo)
     Ok(Json.obj("events" -> infos))
   }
 
   def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     AccountEvent.decodePublicId(beforePubId) match {
       case Success(beforeId) => {
-        val infos = accountEventCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(accountEventCommander.buildSimpleEventInfo)
+        val infos = activityLogCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(activityLogCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
       }
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))

@@ -17,7 +17,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan }
+import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan, ActionAttribution }
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -37,7 +37,6 @@ trait OrganizationCommander {
   def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
-  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
@@ -107,39 +106,46 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def getBasicOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): BasicOrganizationView = {
-    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganization(orgId))
+    // This function assumes that the org is active
+    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganization(orgId).get)
     val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
     BasicOrganizationView(basicOrganization, membershipInfo)
   }
 
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization] = {
-    db.readOnlyReplica { implicit session =>
+    val cacheFormattedMap = db.readOnlyReplica { implicit session =>
       basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
-        missing.map(_.id).map { orgId => orgId -> getBasicOrganization(orgId) }.toMap.map {
-          case (orgId, org) => (BasicOrganizationIdKey(orgId), org)
-        }
+        missing.map(_.id).map {
+          orgId => orgId -> getBasicOrganization(orgId) // grab all the Option[BasicOrganization]
+        }.collect {
+          case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
+        }.map {
+          case (orgId, org) => (BasicOrganizationIdKey(orgId), org) // format them so the cache can understand them
+        }.toMap
       }
-    }.map {
-      case (orgKey, org) => (orgKey.id, org)
     }
+    cacheFormattedMap.map { case (orgKey, org) => (orgKey.id, org) }
   }
 
-  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): BasicOrganization = {
+  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = {
     val org = orgRepo.get(orgId)
-    val orgHandle = org.handle
-    val orgName = org.name
-    val description = org.description
+    if (org.isInactive) None
+    else {
+      val orgHandle = org.handle
+      val orgName = org.name
+      val description = org.description
 
-    val ownerId = userRepo.get(org.ownerId).externalId
-    val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
+      val ownerId = userRepo.get(org.ownerId).externalId
+      val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
 
-    BasicOrganization(
-      orgId = Organization.publicId(orgId),
-      ownerId = ownerId,
-      handle = orgHandle,
-      name = orgName,
-      description = description,
-      avatarPath = avatarPath)
+      Some(BasicOrganization(
+        orgId = Organization.publicId(orgId),
+        ownerId = ownerId,
+        handle = orgHandle,
+        name = orgName,
+        description = description,
+        avatarPath = avatarPath))
+    }
   }
 
   def getOrganizationInfos(orgIds: Set[Id[Organization]], viewerIdOpt: Option[Id[User]]): Map[Id[Organization], OrganizationInfo] = {
@@ -162,8 +168,8 @@ class OrganizationCommanderImpl @Inject() (
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration = {
     val config = orgConfigRepo.getByOrgId(orgId)
     val plan = planManagementCommander.currentPlanHelper(orgId)
-
-    ExternalOrganizationConfiguration(plan.name.name, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
+    val isPaid = !plan.displayName.toLowerCase.contains("free")
+    ExternalOrganizationConfiguration(isPaid, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
@@ -421,6 +427,7 @@ class OrganizationCommanderImpl @Inject() (
               orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
             case inactiveMembershipOpt =>
               orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
+              planManagementCommander.registerNewUser(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
 

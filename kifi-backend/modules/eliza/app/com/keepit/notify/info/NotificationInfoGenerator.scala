@@ -2,19 +2,18 @@ package com.keepit.notify.info
 
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
-import com.keepit.common.db.Id
-import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems, NotificationItem, Notification }
-import com.keepit.model.{ Keep, Organization, Library }
-import com.keepit.notify.model.{ UserRecipient, Recipient, NotificationKind }
-import com.keepit.notify.model.event.NotificationEvent
+import com.keepit.common.logging.Logging
+import com.keepit.eliza.model.{ NotificationWithInfo, NotificationWithItems }
+import com.keepit.notify.model.{ Recipient, UserRecipient }
 import com.keepit.shoebox.ShoeboxServiceClient
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Try }
 
 class NotificationInfoGenerator @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     notificationKindInfoRequests: NotificationKindInfoRequests,
-    implicit val ec: ExecutionContext) {
+    implicit val ec: ExecutionContext) extends Logging {
 
   def generateInfo(recipient: Recipient, notifs: Seq[NotificationWithItems]): Future[Seq[NotificationWithInfo]] = {
     val userIdOpt = recipient match {
@@ -90,11 +89,15 @@ class NotificationInfoGenerator @Inject() (
     for {
       batchedInfos <- batchedInfosF
     } yield {
-      notifs map {
+      notifs.flatMap {
         case NotificationWithItems(notif, items) =>
           val infoRequest = notifInfoRequests(notif)
-          val info = infoRequest.fn(batchedInfos)
-          NotificationWithInfo(notif, items, info)
+          val infoTry = Try(infoRequest.fn(batchedInfos)) // TODO(ryan): can you write code that handles missing info elegantly instead of catching the inevitable KeyNotFoundException?
+          infoTry match {
+            case Failure(fail) => log.error(fail.toString)
+            case _ =>
+          }
+          infoTry.toOption.map { info => NotificationWithInfo(notif, items, info) }
       }
     }
   }

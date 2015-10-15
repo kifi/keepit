@@ -44,7 +44,7 @@ trait PlanManagementCommander {
   def getSimpleContactInfos(orgId: Id[Organization]): Seq[SimpleAccountContactInfo]
   def updateUserContact(orgId: Id[Organization], extId: ExternalId[User], enabled: Boolean, attribution: ActionAttribution): Option[AccountEvent]
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], attributedToMember: Option[Id[User]], memo: Option[String]): AccountEvent
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
 
   def getAccountState(orgId: Id[Organization]): Future[AccountStateResponse]
@@ -158,7 +158,7 @@ class PlanManagementCommanderImpl @Inject() (
                 activeUsers = 0,
                 billingCycleStart = clock.now
               ))
-              grantSpecialCreditHelper(orgId, DollarAmount.wholeDollars(50), None, Some("Welcome to Kifi!"))
+              grantSpecialCreditHelper(orgId, DollarAmount.wholeDollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
               } else {
@@ -353,14 +353,14 @@ class PlanManagementCommanderImpl @Inject() (
     }
   }
 
-  private def grantSpecialCreditHelper(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String])(implicit session: RWSession): AccountEvent = {
+  private def grantSpecialCreditHelper(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], attributedToMember: Option[Id[User]], memo: Option[String])(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
     paidAccountRepo.save(account.withIncreasedCredit(amount))
     accountEventRepo.save(AccountEvent(
       eventTime = clock.now(),
       accountId = account.id.get,
       billingRelated = false,
-      whoDunnit = None,
+      whoDunnit = attributedToMember,
       whoDunnitExtra = JsNull,
       kifiAdminInvolved = grantedByAdmin,
       action = AccountEventAction.SpecialCredit(),
@@ -372,8 +372,8 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
-    grantSpecialCreditHelper(orgId, amount, grantedByAdmin, memo)
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], attributedToMember: Option[Id[User]], memo: Option[String]): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
+    grantSpecialCreditHelper(orgId, amount, grantedByAdmin, attributedToMember, memo)
   }.get
 
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount = db.readOnlyMaster { implicit session =>

@@ -52,12 +52,20 @@ class PaymentProcessingCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
-  private[payments] val MAX_BALANCE = DollarAmount.wholeDollars(-100) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
+  private[payments] val MAX_BALANCE = DollarAmount.wholeDollars(-1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
   private[payments] val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
 
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
 
   private val processingLock = new ReactiveLock(2)
+
+  private object BillingResultReasons {
+    val LOW_BALANCE = "Not charging because of low balance"
+    val NO_LOCK = "Failed to get lock"
+    val MAX_BALANCE_EXCEEDED = "Max balance exceeded"
+    val BILLING_CYCLE_ELAPSED = "Billing Cycle elapsed"
+    def CONDITIONS_NOT_MET(frozen: Boolean) = s"Not processed because conditions not met. Frozen: ${frozen}."
+  }
 
   private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
@@ -127,13 +135,17 @@ class PaymentProcessingCommanderImpl @Inject() (
         reportToSlack(results.map {
           case (orgId, result) =>
             result match {
-              case Success((amount, reason)) => s"Processed Org ${orgId}. Charged: $amount. Reason: $reason"
+              case Success((amount, reason)) => if (reason != BillingResultReasons.LOW_BALANCE) {
+                Some(s"Processed Org ${orgId}. Charged: $amount. Reason: $reason")
+              } else {
+                None
+              }
               case Failure(ex) => {
                 log.error(s"Fatal Error processing Org ${orgId}. Reason: ${ex.getMessage}", ex)
-                s"Fatal Error processing Org ${orgId}. Reason: ${ex.getMessage}. See log for stack trace."
+                Some(s"Fatal Error processing Org ${orgId}. Reason: ${ex.getMessage}. See log for stack trace.")
               }
             }
-        }.mkString("\n"))
+        }.flatten.mkString("\n"))
       }
       case Failure(ex) => reportToSlack(s"@channel Fatal Error during billing processing!")
     }
@@ -157,17 +169,17 @@ class PaymentProcessingCommanderImpl @Inject() (
             val chargeAmount = DollarAmount(-1 * updatedAccountPreCharge.credit.cents)
             log.info(s"[PPC][${account.orgId}] Going to charge $chargeAmount")
             val description = if (maxBalanceExceeded) s"Max balance exceeded charge for org ${account.orgId} of amount $chargeAmount" else s"Regular charge for org ${account.orgId} of amount $chargeAmount"
-            forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> (if (maxBalanceExceeded) "Max balance exceeded" else "Billing Cycle elapsed") }
+            forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> (if (maxBalanceExceeded) BillingResultReasons.MAX_BALANCE_EXCEEDED else BillingResultReasons.BILLING_CYCLE_ELAPSED) }
           } else {
             log.info(s"[PPC][${account.orgId}] Not Charging. Balance less than $MIN_BALANCE (${account.credit})")
             paidAccountRepo.save(updatedAccountPreCharge)
-            Future.successful(DollarAmount.ZERO -> "Not charging because of low balance")
+            Future.successful(DollarAmount.ZERO -> BillingResultReasons.LOW_BALANCE)
           }
         } else {
-          Future.successful(DollarAmount.ZERO -> s"Not processed because conditions not met. Frozen: ${account.frozen}.")
+          Future.successful(DollarAmount.ZERO -> BillingResultReasons.CONDITIONS_NOT_MET(account.frozen))
         }
       }
-    }.getOrElse(Future.successful(DollarAmount.ZERO -> "Failed to get lock"))
+    }.getOrElse(Future.successful(DollarAmount.ZERO -> BillingResultReasons.NO_LOCK))
   }
 
   def forceChargeAccount(account: PaidAccount, amount: DollarAmount, descriptionOpt: Option[String]): Future[DollarAmount] = {

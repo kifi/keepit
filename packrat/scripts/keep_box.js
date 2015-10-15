@@ -114,6 +114,7 @@ k.keepBox = k.keepBox || (function () {
     log('[keepBox:show]', trigger, guided ? 'guided' : '');
     var params = partitionLibs(libraries);
     params.socialPosting = posting;
+    params.guided = guided; // We hide create library in guided mode
 
     decorateLocationRecentLibraryCount(libraries, me, organizations);
 

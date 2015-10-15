@@ -37,7 +37,6 @@ class AccountEventRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
-  implicit val eventGroupColumnType = MappedColumnType.base[EventGroup, String](_.id, EventGroup(_))
 
   type RepoImpl = AccountEventTable
 
@@ -51,13 +50,13 @@ class AccountEventRepoImpl @Inject() (
 
     def whoDunnit = column[Option[Id[User]]]("whodunnit", O.Nullable)
 
-    def whoDunnitExtra = column[JsValue]("whodunnit_extra", O.NotNull)
+    def whoDunnitExtra = column[Option[JsValue]]("whodunnit_extra", O.Nullable)
 
     def kifiAdminInvolved = column[Option[Id[User]]]("kifi_admin_involved", O.Nullable)
 
     def eventType = column[String]("event_type", O.NotNull)
 
-    def eventTypeExtras = column[JsValue]("event_type_extras", O.NotNull)
+    def eventTypeExtras = column[Option[JsValue]]("event_type_extras", O.Nullable)
 
     def creditChange = column[DollarAmount]("credit_change", O.NotNull)
 

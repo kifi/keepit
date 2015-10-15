@@ -86,7 +86,7 @@ class KeepExportCommanderImpl @Inject() (
           case UserSpace(uid) => uid == userId
           case OrganizationSpace(_) => false
         }
-        val libIdsToExportFrom = libraryRepo.getByIds(writableLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
+        val libIdsToExportFrom = libraryRepo.getActiveByIds(writableLibIds).values.filter(libIsInValidSpace).map(_.id.get).toSet
         ktlRepo.getAllByLibraryIds(libIdsToExportFrom).values.flatten.filter(_.addedBy == userId).map(_.keepId)
 
       case OrganizationKeepExportRequest(userId, orgIds) =>
@@ -100,7 +100,7 @@ class KeepExportCommanderImpl @Inject() (
     val tagsByKeepId = (keeps zip tagIds).map { case (keep, keepTags) => keep.id.get -> keepTags.map(idToTag(_)) }.toMap
 
     val libIdsByKeep = ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet).mapValues(ktls => ktls.map(_.libraryId))
-    val idToLib = libraryRepo.getByIds(libIdsByKeep.values.flatten.toSet)
+    val idToLib = libraryRepo.getActiveByIds(libIdsByKeep.values.flatten.toSet)
     val libsByKeepId = keeps.map { keep => keep.id.get -> libIdsByKeep(keep.id.get).map(idToLib(_)) }.toMap
     KeepExportResponse(keeps.sortBy(_.keptAt), tagsByKeepId, libsByKeepId)
   }
