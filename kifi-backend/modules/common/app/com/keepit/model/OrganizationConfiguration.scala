@@ -3,7 +3,8 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import play.api.libs.json.{ Json, Writes }
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class OrganizationConfiguration(
     id: Option[Id[OrganizationConfiguration]] = None,
@@ -24,15 +25,13 @@ case class OrganizationConfiguration(
 object OrganizationConfigurationStates extends States[OrganizationConfiguration]
 
 case class ExternalOrganizationConfiguration(
-  planName: String,
+  isPaid: Boolean,
   settings: OrganizationSettingsWithEditability)
 
 object ExternalOrganizationConfiguration {
-  implicit val writes: Writes[ExternalOrganizationConfiguration] = Writes { config =>
-    Json.obj(
-      "name" -> config.planName,
-      "settings" -> config.settings
-    )
-  }
+  implicit val writes = (
+    (__ \ 'isPaid).write[Boolean] and
+    (__ \ 'settings).write[OrganizationSettingsWithEditability]
+  )(unlift(ExternalOrganizationConfiguration.unapply))
 }
 

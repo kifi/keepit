@@ -83,7 +83,7 @@
                 on-click="onClickUpsellIntegration()"
                 on-hover="onHoverUpsellIntegration()"
               >
-                <span ng-if="space.destination.config.name.toLowerCase().indexOf('free') === -1">
+                <span ng-if="space.destination.config.isPaid">
                   <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.DISABLED">
                     No member of yor team can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings({ handle: space.destination.handle })">settings</a>
                   </span>
@@ -97,8 +97,8 @@
                     Integrations are disabled for {{ library.org.name }}
                   </span>
                 </span>
-                <span ng-if="space.destination.config.name.toLowerCase().indexOf('free') !== -1 && (space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin')">
-                  Enable Slack integration by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">Upgrading to Basic</a>
+                <span ng-if="!space.destination.config.isPaid && (space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin')">
+                  Enable Slack integration by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">upgrading your plan</a>.
                 </span>
               </span>
             </div>
