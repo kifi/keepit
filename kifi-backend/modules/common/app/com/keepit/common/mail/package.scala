@@ -93,15 +93,15 @@ package object template {
 
     def organizationId(id: Id[Organization]) = Tag1(tags.organizationId, id).value
 
-    def organizationLink(id: Id[Organization]) = Tag1(tags.organizationLink, id).toHtml
-    def organizationLink(id: Id[Organization], content: String) = Html(appendTrackingParams(Tag1(tags.organizationLink, id) + "&", content, openInAppIfMobile = true))
+    def organizationLink(id: Id[Organization], authToken: Option[String], content: String) =
+      Html(appendTrackingParams(Tag2(tags.organizationLink, id, authToken) + "&", content, openInAppIfMobile = true))
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
     def discussionLink(id: Id[NormalizedURI], threadExtId: String) = Tag2(tags.discussionLink, id, threadExtId).toHtml
 
-    def libraryLink(id: Id[Library]) = Tag1(tags.libraryLink, id).toHtml
-    def libraryLink(id: Id[Library], content: String, openInAppIfMobile: Boolean = true) = Html(appendTrackingParams(Tag1(tags.libraryLink, id) + "&", content, openInAppIfMobile))
+    def libraryLink(id: Id[Library], authToken: Option[String], content: String, openInAppIfMobile: Boolean = true) =
+      Html(appendTrackingParams(Tag2(tags.libraryLink, id, authToken) + "&", content, openInAppIfMobile))
 
     def libraryUrl(id: Id[Library], content: String) = Html(appendTrackingParams(Tag1(tags.libraryUrl, id) + "?", content, openInAppIfMobile = true))
 

@@ -168,35 +168,25 @@ trait AirbrakeNotifier extends Logging {
 
   def notify(error: AirbrakeError): AirbrakeError
 
-  def notify(errorException: Throwable): AirbrakeError
-  def notify(errorMessage: String, errorException: Throwable): AirbrakeError
-  def notify(errorMessage: String): AirbrakeError
+  def notify(errorMessage: String, errorException: Throwable): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), exception = errorException))
+  def notify(errorException: Throwable, user: User): AirbrakeError = notify(AirbrakeError(exception = errorException, userId = user.id, userName = Some(user.fullName)))
+  def notify(errorMessage: String, errorException: Throwable, user: User): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), exception = errorException, userId = user.id, userName = Some(user.fullName)))
+  def notify(errorMessage: String, user: User): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), userId = user.id, userName = Some(user.fullName)))
+  def notify(errorMessage: String): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage)))
 
-  def notify(errorException: Throwable, user: User): AirbrakeError
-  def notify(errorMessage: String, errorException: Throwable, user: User): AirbrakeError
-  def notify(errorMessage: String, user: User): AirbrakeError
-
-  def panic(error: AirbrakeError): AirbrakeError
-
-  def panic(errorException: Throwable): AirbrakeError
-  def panic(errorMessage: String, errorException: Throwable): AirbrakeError
-  def panic(errorMessage: String): AirbrakeError
-
-  def panic(errorException: Throwable, user: User): AirbrakeError
-  def panic(errorMessage: String, errorException: Throwable, user: User): AirbrakeError
-  def panic(errorMessage: String, user: User): AirbrakeError
+  def panic(errorException: Throwable): AirbrakeError = panic(AirbrakeError(exception = errorException))
+  def panic(errorMessage: String, errorException: Throwable): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), exception = errorException))
+  def panic(errorMessage: String): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage)))
+  def panic(errorException: Throwable, user: User): AirbrakeError = panic(AirbrakeError(exception = errorException, userId = user.id, userName = Some(user.fullName)))
+  def panic(errorMessage: String, errorException: Throwable, user: User): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), exception = errorException, userId = user.id, userName = Some(user.fullName)))
+  def panic(errorMessage: String, user: User): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), userId = user.id, userName = Some(user.fullName)))
+  def panic(error: AirbrakeError): AirbrakeError = notify(error.copy(panic = true))
 }
 
 // apiKey is per service type (shoebox, search etc)
 class AirbrakeNotifierImpl(actor: ActorInstance[AirbrakeNotifierActor], isCanary: Boolean) extends AirbrakeNotifier with Logging {
 
   def reportDeployment(): Unit = if (!isCanary) actor.ref ! AirbrakeDeploymentNotice
-
-  def notify(errorException: Throwable): AirbrakeError = notify(AirbrakeError(exception = errorException))
-
-  def notify(errorMessage: String, errorException: Throwable): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), exception = errorException))
-
-  def notify(errorMessage: String): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage)))
 
   def notify(error: AirbrakeError): AirbrakeError = {
     if (!isCanary) { // can filter out panic later
@@ -205,36 +195,13 @@ class AirbrakeNotifierImpl(actor: ActorInstance[AirbrakeNotifierActor], isCanary
     log.error(error.toString())
     error
   }
-
-  def notify(errorException: Throwable, user: User): AirbrakeError = notify(AirbrakeError(exception = errorException, userId = user.id, userName = Some(user.fullName)))
-
-  def notify(errorMessage: String, errorException: Throwable, user: User): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), exception = errorException, userId = user.id, userName = Some(user.fullName)))
-
-  def notify(errorMessage: String, user: User): AirbrakeError = notify(AirbrakeError(message = Some(errorMessage), userId = user.id, userName = Some(user.fullName)))
-
-  def panic(errorException: Throwable): AirbrakeError = panic(AirbrakeError(exception = errorException))
-
-  def panic(errorMessage: String, errorException: Throwable): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), exception = errorException))
-
-  def panic(errorMessage: String): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage)))
-
-  def panic(errorException: Throwable, user: User): AirbrakeError = panic(AirbrakeError(exception = errorException, userId = user.id, userName = Some(user.fullName)))
-
-  def panic(errorMessage: String, errorException: Throwable, user: User): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), exception = errorException, userId = user.id, userName = Some(user.fullName)))
-
-  def panic(errorMessage: String, user: User): AirbrakeError = panic(AirbrakeError(message = Some(errorMessage), userId = user.id, userName = Some(user.fullName)))
-
-  def panic(error: AirbrakeError): AirbrakeError = {
-    notify(error.copy(panic = true))
-  }
-
 }
 
 // Only use this if you have to.
 // ie, gives access to airbrake notifier if you're not in a dependency injected context.
 // Please don't use this unless you have to. It's an anti-pattern, but is pragmatism over correctness.
 // Extends AirbrakeNotifierImpl so we get the notify conversion methods for free; thus, depends on implementation above.
-object AirbrakeNotifierStatic extends AirbrakeNotifierImpl(???, false) {
+object AirbrakeNotifierStatic extends AirbrakeNotifier {
 
   @volatile private var notifierInstOpt: Option[AirbrakeNotifier] = None
   private def notifierOpt: Option[AirbrakeNotifier] = {

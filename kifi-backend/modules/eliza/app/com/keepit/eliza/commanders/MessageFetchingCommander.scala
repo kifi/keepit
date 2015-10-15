@@ -42,7 +42,7 @@ class MessageFetchingCommander @Inject() (
 
   def getThreadMessagesWithBasicUser(userId: Id[User], thread: MessageThread): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     if (!thread.containsUser(userId)) throw NotAuthorizedException(s"User $userId not authorized to view messages of thread ${thread.id.get}")
-    val userParticipantSet = if (thread.replyable) thread.participants.map(_.allUsers).getOrElse(Set()) else Set()
+    val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     val messagesFut: Future[Seq[MessageWithBasicUser]] = new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread)

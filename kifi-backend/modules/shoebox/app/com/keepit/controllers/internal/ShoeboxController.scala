@@ -79,6 +79,8 @@ class ShoeboxController @Inject() (
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   libraryInfoCommander: LibraryInfoCommander,
+  libraryCardCommander: LibraryCardCommander,
+  libraryMembershipCommander: LibraryMembershipCommander,
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
@@ -502,7 +504,7 @@ class ShoeboxController @Inject() (
       val owners = basicUserRepo.loadAll(libraries.map(_.ownerId))
 
       val libSeq = libraries.toSeq
-      val libraryCardInfos = libraryInfoCommander.createLibraryCardInfos(libSeq, owners, viewerId, withFollowing = true, idealSize = idealImageSize)
+      val libraryCardInfos = libraryCardCommander.createLibraryCardInfos(libSeq, owners, viewerId, withFollowing = true, idealSize = idealImageSize)
 
       libSeq.map(_.id.get) zip libraryCardInfos
     }
@@ -529,7 +531,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
-    val libraryIds = libraryInfoCommander.getLibrariesWithWriteAccess(userId)
+    val libraryIds = libraryMembershipCommander.getLibrariesWithWriteAccess(userId)
     Ok(Json.toJson(libraryIds))
   }
 

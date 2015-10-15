@@ -3,9 +3,16 @@
 angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
-  '$rootScope', '$scope', '$state',  '$filter', 'billingService', 'modalService', 'billingState','StripeCheckout',
-  function ($rootScope, $scope, $state, $filter, billingService, modalService, billingState, StripeCheckout) {
-    $scope.billingState = billingState;
+  '$window', '$rootScope', '$scope', '$state', '$filter', 'billingState',
+  'billingService', 'modalService', 'StripeCheckout', 'messageTicker',
+  function ($window, $rootScope, $scope, $state, $filter, billingState,
+            billingService, modalService, StripeCheckout, messageTicker) {
+    $scope.card = billingState.card;
+
+    $scope.plan = {
+      tier: 'free',
+      cycle: 1 //month
+    };
 
     var handler = StripeCheckout.configure({
       locale: 'auto'
@@ -39,8 +46,38 @@ angular.module('kifi')
       });
     };
 
-    // Close Checkout on page navigation
+    $scope.savePlanChanges = function () {
+      messageTicker({
+        text: 'Saved Successfully',
+        type: 'green'
+      });
+    };
+
+    $scope.changePlanToFree = function () {
+      $scope.plan.tier = 'free';
+    };
+
+    $scope.changePlanToStandard = function () {
+      $scope.plan.tier = 'standard';
+    };
+
+    $scope.$watch('plan', function (newValue, oldValue) {
+      if (newValue.tier === oldValue.tier &&
+          newValue.cycle === oldValue.cycle) {
+        return;
+      }
+
+      if (newValue.tier === 'enterprise') {
+        $window.open('mailto:billing@kifi.com');
+        newValue.tier = oldValue.tier;
+        return;
+      }
+
+      $scope.savePlanChanges();
+    }, true);
+
     [
+      // Close Checkout on page navigation
       $rootScope.$on('$stateChangeStart', function () {
         if (handler && handler.close) {
           handler.close();

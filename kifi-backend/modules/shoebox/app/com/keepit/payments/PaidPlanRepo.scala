@@ -3,6 +3,7 @@ package com.keepit.payments
 import com.keepit.common.db.slick.{ InvalidDatabaseEncodingException, Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.{ State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.json.TraversableFormat
 import com.keepit.common.time.Clock
 import com.keepit.model.{ OrganizationSettings, Name, Feature }
 
@@ -27,7 +28,7 @@ class PaidPlanRepoImpl @Inject() (
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
   implicit val featureSetTypeMapper = MappedColumnType.base[Set[Feature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
-    { str => Json.parse(str).as[Set[Feature]] }
+    { str => Json.parse(str).as[Set[Feature]](TraversableFormat.safeSetReads[Feature]) }
   )
 
   type RepoImpl = PaidPlanTable

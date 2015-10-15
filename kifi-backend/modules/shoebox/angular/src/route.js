@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.config(['$httpProvider', '$locationProvider', '$stateProvider', '$urlRouterProvider', 'StripeCheckoutProvider',
-  function($httpProvider, $locationProvider, $stateProvider, $urlRouterProvider, StripeCheckoutProvider) {
+.config(['$httpProvider', '$locationProvider', '$stateProvider', '$urlRouterProvider', 'StripeCheckoutProvider', 'ORG_PERMISSION',
+  function($httpProvider, $locationProvider, $stateProvider, $urlRouterProvider, StripeCheckoutProvider, ORG_PERMISSION) {
     $locationProvider
       .html5Mode(true)
       .hashPrefix('!');
@@ -135,6 +135,18 @@ angular.module('kifi')
         controller: 'OrgProfileSettingsCtrl',
         templateUrl: 'orgProfile/orgProfileSettings.tpl.html',
         activetab: 'settings',
+        resolve: {
+          billingState: [
+            'billingService', 'profile',
+            function (billingService, profile) {
+              if (profile.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
+                return billingService.getBillingState(profile.organization.id);
+              } else {
+                return {};
+              }
+            }
+          ]
+        },
         'abstract': true
       })
       .state('orgProfile.settings.team', {
@@ -165,13 +177,7 @@ angular.module('kifi')
         activetab: 'settings',
         activenav: 'payment-plan',
         resolve: {
-          stripe: StripeCheckoutProvider.load,
-          billingState: [
-            'billingService', 'profile',
-            function (billingService, profile) {
-              return billingService.getBillingState(profile.organization.id);
-            }
-          ]
+          stripe: StripeCheckoutProvider.load
         }
       })
       .state('orgProfile.settings.activity', {

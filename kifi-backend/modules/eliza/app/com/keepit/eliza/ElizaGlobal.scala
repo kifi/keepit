@@ -3,7 +3,6 @@ package com.keepit.eliza
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{ InMemoryCachePlugin, FortyTwoCachePlugin }
 import com.keepit.common.healthcheck._
-import com.keepit.notify.NotificationBackfillerPlugin
 import play.api.Mode._
 import play.api._
 import com.keepit.eliza.mail.{ MailMessageReceiverPlugin, ElizaEmailNotifierPlugin }
@@ -31,6 +30,5 @@ trait ElizaServices { self: FortyTwoGlobal =>
     require(injector.instance[ElizaEmailNotifierPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[MailMessageReceiverPlugin] != null) //make sure its not lazy loaded
     require(injector.instance[LoadBalancerCheckPlugin] != null) //make sure its not lazy loaded
-    require(injector.instance[NotificationBackfillerPlugin] != null)
   }
 }

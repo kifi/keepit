@@ -25,6 +25,7 @@ class PaymentsController @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
+    activityLogCommander: ActivityLogCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -47,9 +48,11 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getActivePlans() = UserAction { implicit request =>
-    val plans = planCommander.getAvailablePlans(request.adminUserId)
-    Ok(Json.toJson(plans.map(_.asInfo)))
+  def getAvailablePlans(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { implicit request =>
+    val (currentPlanId, availablePlans) = planCommander.getCurrentAndAvailablePlans(request.orgId)
+    val sortedAvailablePlansByName = availablePlans.map(_.asInfo).groupBy(_.name).map { case (name, plans) => name -> plans.toSeq.sortBy(_.cycle.month) }
+    val response = AvailablePlansResponse(PaidPlan.publicId(currentPlanId), sortedAvailablePlansByName)
+    Ok(Json.toJson(response))
   }
 
   def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
@@ -132,14 +135,14 @@ class PaymentsController @Inject() (
   }
 
   def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val infos = planCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
+    val infos = activityLogCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(activityLogCommander.buildSimpleEventInfo)
     Ok(Json.obj("events" -> infos))
   }
 
   def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     AccountEvent.decodePublicId(beforePubId) match {
       case Success(beforeId) => {
-        val infos = planCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
+        val infos = activityLogCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(activityLogCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
       }
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))

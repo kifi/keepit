@@ -2,8 +2,7 @@ package com.keepit.shoebox.controllers
 
 import java.util.concurrent.TimeUnit
 
-import com.google.common.cache.{ Cache, CacheBuilder }
-import com.keepit.commanders.{ LibraryAccessCommander, LibraryInfoCommander, LibraryCommander }
+import com.keepit.commanders.{ LibraryAccessCommander }
 import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
@@ -12,14 +11,12 @@ import play.api.libs.json.Json
 import play.api.mvc.{ ActionFilter, Controller, Result }
 
 import scala.concurrent.Future
-import scala.util.Success
 
 trait LibraryAccessActions {
   self: UserActions with Controller =>
 
   val publicIdConfig: com.keepit.common.crypto.PublicIdConfiguration
   implicit private val implicitPublicId = publicIdConfig
-  val libraryInfoCommander: LibraryInfoCommander
   val libraryAccessCommander: LibraryAccessCommander
 
   def LibraryViewAction(id: PublicId[Library]) = new ActionFilter[MaybeUserRequest] {

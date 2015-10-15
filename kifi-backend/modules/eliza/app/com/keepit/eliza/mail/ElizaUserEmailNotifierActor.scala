@@ -87,8 +87,6 @@ class ElizaUserEmailNotifierActor @Inject() (
     idealImageSize: ImageSize): Future[Unit] = {
     log.info(s"processing user thread $userThread")
     val now = clock.now
-    airbrake.verify(userThread.replyable,
-      s"${userThread.summary} not replyable")
     airbrake.verify(userThread.unread,
       s"${userThread.summary} not unread")
     airbrake.verify(!userThread.notificationEmailed,
@@ -122,8 +120,7 @@ class ElizaUserEmailNotifierActor @Inject() (
           val futureEmail = shoebox.getUnsubscribeUrlForEmail(destinationEmail).map {
             case unsubUrl =>
               val threadEmailInfo: ThreadEmailInfo =
-                elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, idealImageSize, false, allUsers, allUserImageUrls, None,
-                  Some(unsubUrl), None).copy(pageUrl = deepUrl, isDeepLink = true)
+                elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, idealImageSize, isInitialEmail = false, allUsers, allUserImageUrls, None, Some(unsubUrl), None)
               val magicAddress = SystemEmailAddress.discussion(userThread.accessToken.token)
               ElectronicMail(
                 from = magicAddress,

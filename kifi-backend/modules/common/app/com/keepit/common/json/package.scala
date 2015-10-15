@@ -1,7 +1,10 @@
 package com.keepit.common
 
+import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import play.api.libs.json._
 import play.api.data.validation.ValidationError
+
+import scala.util.{Success, Failure, Try}
 
 package object json {
 
@@ -130,5 +133,42 @@ package object json {
     private def materialize[U, T <: Traversable[U]](implicit traversableFormatter: Format[T]) = traversableFormatter
     def seq[U](implicit formatter: Format[U]) = materialize[U, Seq[U]]
     def set[U](implicit formatter: Format[U]) = materialize[U, Set[U]]
+
+    def safeArrayReads[T](implicit reads: Reads[T]): Reads[Seq[T]] = Reads { jsv =>
+      jsv.validate[Seq[JsValue]].map { arr =>
+        val vs = arr.map { v => Try(v.as[T]) }
+        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail) }
+        vs.collect { case Success(v) => v }
+      }
+    }
+    def safeSetReads[T](implicit reads: Reads[T]): Reads[Set[T]] = safeArrayReads[T].map(_.toSet)
+
+    def safeObjectReads[K,V](implicit keyReads: Reads[K], valReads: Reads[V]): Reads[Map[K,V]] = Reads { jsv =>
+      jsv.validate[Map[String, JsValue]].map { arr =>
+        val vs = arr.map {
+          case (k, v) => Try {
+            val key = keyReads.reads(JsString(k)).get
+            val value = valReads.reads(v).get
+            key -> value
+          }
+        }
+        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail) }
+        vs.collect { case Success(v) => v }.toMap
+      }
+    }
+
+    def safeConditionalObjectReads[K,V](implicit keyReads: Reads[K], valReads: (K => Reads[V])): Reads[Map[K,V]] = Reads { jsv =>
+      jsv.validate[Map[String, JsValue]].map { arr =>
+        val vs = arr.map {
+          case (k, v) => Try {
+            val key = keyReads.reads(JsString(k)).get
+            val value = valReads(key).reads(v).get
+            key -> value
+          }
+        }
+        vs.collect { case Failure(fail) => AirbrakeNotifierStatic.notify(fail) }
+        vs.collect { case Success(v) => v }.toMap
+      }
+    }
   }
 }

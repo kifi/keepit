@@ -2,7 +2,7 @@
      ng-class="{'justAddedBelow': lib.justAddedBelow, 'justAddedBelowAcross': lib.justAddedBelowAcross}">
   <a class="kf-upl-card-setting svg-settings-gear" ng-if="hasPermission(LIB_PERMISSION.EDIT_LIBRARY)" href="javascript:" ng-click="openModifyLibrary(lib, currentPageOrigin)"></a>
   <span
-    ng-if="lib.org.viewer.membership.role === 'admin'"
+    ng-if="lib.kind === 'user_created' && lib.org.viewer.membership.role === 'admin'"
     kf-upsell
     position="bottom"
     on-click="onClickUpsellMembers()"

@@ -82,6 +82,15 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  def libraryCard(libraryId: Id[Library])(implicit injector: Injector): LibraryCardInfo = {
+    val viewerOpt = inject[FakeUserActionsHelper].fixedUser.flatMap(_.id)
+    db.readOnlyMaster { implicit session =>
+      val library = libraryRepo.get(libraryId)
+      val owner = basicUserRepo.load(library.ownerId)
+      inject[LibraryCardCommander].createLibraryCardInfo(library, owner, viewerOpt, withFollowing = true, ProcessedImageSize.Medium.idealSize)
+    }
+  }
+
   "LibraryController" should {
 
     "create libraries" in {
@@ -1016,7 +1025,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "summary": {},
                 "siteName": "Amazon",
                 "libraryId": "l7jlKlnA36Su",
-                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+                "library": ${Json.toJson(libraryCard(lib1.id.get))}
               },
               {
                 "id": "${keep1.externalId}",
@@ -1038,7 +1047,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "summary": {},
                 "siteName": "Google",
                 "libraryId": "l7jlKlnA36Su",
-                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+                "library": ${Json.toJson(libraryCard(lib1.id.get))}
               }
             ],
             "numKeeps": 2
