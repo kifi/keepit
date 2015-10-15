@@ -1,6 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.helpers.discussionLink
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
@@ -194,7 +195,7 @@ class ElizaEmailCommander @Inject() (
         require(nup.kind == NonUserKinds.email)
         val nut = nuts(nup.identifier)
         if (!nut.muted) {
-          safeProcessEmail(threadEmailData, nut, _.addedHtml.body, NotificationCategory.NonUser.ADDED_TO_DISCUSSION)
+          safeProcessEmail(threadEmailData, nut, _.addedHtml, NotificationCategory.NonUser.ADDED_TO_DISCUSSION)
         } else Future.successful(())
       }
     }
@@ -205,7 +206,7 @@ class ElizaEmailCommander @Inject() (
       require(emailParticipantThread.participant.kind == NonUserKinds.email, s"NonUserThread ${emailParticipantThread.id.get} does not represent an email participant.")
       require(emailParticipantThread.threadId == threadEmailData.thread.id.get, "MessageThread and NonUserThread do not match.")
       val category = if (emailParticipantThread.notifiedCount > 0) NotificationCategory.NonUser.DISCUSSION_UPDATES else NotificationCategory.NonUser.DISCUSSION_STARTED
-      val htmlBodyMaker = (protoEmail: ProtoEmail) => if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml.body else protoEmail.initialHtml.body
+      val htmlBodyMaker = (protoEmail: ProtoEmail) => if (emailParticipantThread.notifiedCount > 0) protoEmail.digestHtml else protoEmail.initialHtml
       safeProcessEmail(threadEmailData, emailParticipantThread, htmlBodyMaker, category)
     }
     // todo(martin) replace with onSuccess when we have better error handling
@@ -215,7 +216,7 @@ class ElizaEmailCommander @Inject() (
     result
   }
 
-  private def safeProcessEmail(threadEmailData: ThreadEmailData, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => String, category: NotificationCategory): Future[Unit] = {
+  private def safeProcessEmail(threadEmailData: ThreadEmailData, nonUserThread: NonUserThread, htmlBodyMaker: ProtoEmail => Html, category: NotificationCategory): Future[Unit] = {
     val unsubUrlFut = nonUserThread.participant match {
       case emailParticipant: NonUserEmailParticipant => shoebox.getUnsubscribeUrlForEmail(emailParticipant.address)
       case _ => throw new IllegalArgumentException(s"Unknown non user participant: ${nonUserThread.participant}")
@@ -234,16 +235,16 @@ class ElizaEmailCommander @Inject() (
 
     protoEmailFut.flatMap { protoEmail =>
       val magicAddress = SystemEmailAddress.discussion(nonUserThread.accessToken.token)
-      val email = ElectronicMail(
+      val email = EmailToSend(
         from = magicAddress,
-        fromName = Some(protoEmail.starterName + " (via Kifi)"),
-        to = Seq[EmailAddress](EmailAddress(nonUserThread.participant.identifier)),
+        fromName = Some(Right(protoEmail.starterName + " (via Kifi)")),
+        to = Right(EmailAddress(nonUserThread.participant.identifier)),
         subject = protoEmail.pageTitle,
-        htmlBody = htmlBodyMaker(protoEmail),
+        htmlTemplate = htmlBodyMaker(protoEmail),
         category = category,
         extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
       )
-      shoebox.sendMail(email) map {
+      shoebox.processAndSendMail(email) map {
         case true => // all good
         case false => throw new Exception("Shoebox was unable to parse and send the email.")
       }
