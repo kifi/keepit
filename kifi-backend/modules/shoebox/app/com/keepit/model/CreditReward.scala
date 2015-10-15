@@ -123,12 +123,6 @@ object RewardKind {
     protected val allStatus: Set[S] = Set(Created, Upgraded)
   }
 
-  def isUnrepeatable(kind: RewardKind): Boolean = kind match {
-    case Coupon => false
-    case OrgCreation => true
-    case OrgReferral => false
-  }
-
   private val all: Set[RewardKind] = Set(Coupon, OrgCreation, OrgReferral)
 
   def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
@@ -153,12 +147,10 @@ case class CreditReward(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[CreditReward] = CreditRewardStates.ACTIVE,
-    userId: Option[Id[User]],
-    organizationId: Option[Id[Organization]],
     accountId: Id[PaidAccount],
     credit: DollarAmount,
     reward: Reward,
-    unrepeatable: Boolean,
+    unrepeatable: Option[UnrepeatableRewardKey],
     validityPeriod: Option[Duration],
     code: Option[UsedCreditCode]) extends ModelWithState[CreditReward] {
   def withId(id: Id[CreditReward]) = this.copy(id = Some(id))
@@ -171,14 +163,12 @@ object CreditReward {
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[CreditReward],
-    userId: Option[Id[User]],
-    organizationId: Option[Id[Organization]],
     accountId: Id[PaidAccount],
     credit: DollarAmount,
     kind: RewardKind,
     status: String,
     info: Option[JsValue],
-    unrepeatable: Option[Boolean],
+    unrepeatable: Option[UnrepeatableRewardKey],
     validityPeriod: Option[Duration],
     code: Option[CreditCode],
     singleUse: Option[Boolean]
@@ -188,12 +178,10 @@ object CreditReward {
       createdAt,
       updatedAt,
       state,
-      userId,
-      organizationId,
       accountId,
       credit,
       Reward.applyFromDbRow(kind, status, info),
-      unrepeatable.contains(true),
+      unrepeatable,
       validityPeriod,
       code.map(UsedCreditCode.applyFromDbRow(_, singleUse))
     )
@@ -209,14 +197,12 @@ object CreditReward {
         creditReward.createdAt,
         creditReward.updatedAt,
         creditReward.state,
-        creditReward.userId,
-        creditReward.organizationId,
         creditReward.accountId,
         creditReward.credit,
         kind,
         status,
         info,
-        if (creditReward.unrepeatable) Some(true) else None,
+        creditReward.unrepeatable,
         creditReward.validityPeriod,
         code,
         singleUse
@@ -225,16 +211,37 @@ object CreditReward {
   }
 }
 
+sealed trait UnrepeatableRewardKey {
+  def toKey: String
+}
+
+object UnrepeatableRewardKey {
+  case class ForUser(userId: Id[User]) extends UnrepeatableRewardKey { def toKey = s"user|$userId" }
+  case class ForOrganization(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"org|$orgId" }
+  case class ForOrganizationMember(orgId: Id[Organization], userId: Id[User]) extends UnrepeatableRewardKey { def toKey = s"org|$orgId-user$userId" }
+
+  private object ValidLong {
+    def unapply(id: String): Option[Long] = Try(id.toLong).toOption
+  }
+  private val userKey = """^user\|(\d+)$""".r
+  private val organizationKey = """^org\|(\d+)$""".r
+  private val organizationMemberKey = """^org\|(\d+)\-user\|(\d+)$""".r
+  def fromKey(key: String): UnrepeatableRewardKey = key match {
+    case userKey(ValidLong(userId)) => ForUser(Id(userId))
+    case organizationKey(ValidLong(orgId)) => ForOrganization(Id(orgId))
+    case organizationMemberKey(ValidLong(orgId), ValidLong(userId)) => ForOrganizationMember(Id(orgId), Id(userId))
+    case _ => throw new IllegalArgumentException(s"Invalid reward key: $key")
+  }
+}
+
 @ImplementedBy(classOf[CreditRewardRepoImpl])
 trait CreditRewardRepo extends Repo[CreditReward] {
-  def getByAccount(accountId: Id[PaidAccount], excludeState: Option[State[CreditReward]] = Some(CreditRewardStates.INACTIVE))(implicit session: RSession): Set[CreditReward]
   def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward]
 }
 
 // Unique index on (code, singleUse) - single-use codes can only be used once overall
-// Unique index on (accountId, code) - a code can only be applied to the same account once
-// Unique index on (accountId, kind, unrepeatable) - two codes of the same unrepeatable kind cannot be applied to the same account
-// Referential integrity constraint from CreditReward.(code, kind) to CreditCode.(code, kind)
+// Unique index on (kind, unrepeatable) - two codes of the same unrepeatable kind cannot be applied
+// Referential integrity constraint from CreditReward.code CreditCode.code
 // Referential integrity constraint from CreditReward.accountId to PaidAccount.id
 
 @Singleton
@@ -248,12 +255,11 @@ class CreditRewardRepoImpl @Inject() (
   implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val kindColumnType = MappedColumnType.base[RewardKind, String](_.kind, RewardKind.apply)
   implicit val creditCodeTypeMapper = CreditCode.columnType(db)
+  implicit val unrepeatableTypeMapper = MappedColumnType.base[UnrepeatableRewardKey, String](_.toKey, UnrepeatableRewardKey.fromKey)
 
   type RepoImpl = CreditRewardTable
   class CreditRewardTable(tag: Tag) extends RepoTable[CreditReward](db, tag, "credit_reward") {
 
-    def userId = column[Option[Id[User]]]("user_id", O.Nullable)
-    def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
     def credit = column[DollarAmount]("credit", O.NotNull)
 
@@ -261,13 +267,13 @@ class CreditRewardRepoImpl @Inject() (
     def status = column[String]("status", O.NotNull)
     def info = column[Option[JsValue]]("info", O.Nullable)
 
-    def unrepeatable = column[Option[Boolean]]("unrepeatable", O.Nullable)
+    def unrepeatable = column[Option[UnrepeatableRewardKey]]("unrepeatable", O.Nullable)
     def validityPeriod = column[Option[Duration]]("validity_period", O.Nullable)
 
     def code = column[Option[CreditCode]]("code", O.Nullable)
     def singleUse = column[Option[Boolean]]("single_use", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, state, userId, organizationId, accountId, credit, kind, status, info, unrepeatable, validityPeriod, code, singleUse) <> ((CreditReward.applyFromDbRow _).tupled, CreditReward.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, state, accountId, credit, kind, status, info, unrepeatable, validityPeriod, code, singleUse) <> ((CreditReward.applyFromDbRow _).tupled, CreditReward.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new CreditRewardTable(tag)
@@ -277,6 +283,5 @@ class CreditRewardRepoImpl @Inject() (
 
   override def invalidateCache(creditReward: CreditReward)(implicit session: RSession): Unit = {}
 
-  def getByAccount(accountId: Id[PaidAccount], excludeState: Option[State[CreditReward]] = Some(CreditRewardStates.INACTIVE))(implicit session: RSession): Set[CreditReward] = ???
   def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward] = ???
 }
