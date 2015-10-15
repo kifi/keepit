@@ -14,17 +14,6 @@ import org.joda.time.DateTime
 
 import javax.crypto.spec.IvParameterSpec
 
-@json
-case class SimpleAccountEventInfo(
-  id: PublicId[AccountEvent],
-  eventTime: DateTime,
-  shortName: String,
-  extraInfo: Option[String],
-  whoDunnit: String,
-  creditChange: DollarAmount,
-  paymentCharge: Option[DollarAmount],
-  memo: Option[String])
-
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 
 trait AccountEventAction {
