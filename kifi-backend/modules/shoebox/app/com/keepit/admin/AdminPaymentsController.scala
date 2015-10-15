@@ -196,27 +196,6 @@ class AdminPaymentsController @Inject() (
     Ok(planCommander.unfreeze(orgId).toString)
   }
 
-  def applyDefaultSettingsToOrgConfigs() = AdminUserAction { implicit request =>
-    val paidPlans = db.readOnlyMaster(implicit s => paidPlanRepo.all().filter(_.state == PaidPlanStates.ACTIVE))
-    paidPlans.foreach { plan =>
-      val oldConfigs = db.readOnlyMaster { implicit s =>
-        val orgIds = paidAccountRepo.getActiveByPlan(plan.id.get).map(_.orgId)
-        orgIds.map(orgConfigRepo.getByOrgId)
-      }
-      oldConfigs.foreach { config =>
-        val featuresToRemove = config.settings.kvs.keySet.diff(plan.defaultSettings.kvs.keySet)
-        val featuresToAdd = plan.defaultSettings.kvs.keySet.diff(config.settings.kvs.keySet)
-        if (featuresToRemove.nonEmpty || featuresToAdd.nonEmpty) {
-          val targetFeatures = config.settings.kvs.keySet ++ featuresToAdd -- featuresToRemove
-          val newConfig = targetFeatures.map(feature => feature -> config.settings.kvs.getOrElse(feature, plan.defaultSettings.kvs(feature))).toMap
-          assume(newConfig.keySet == plan.defaultSettings.kvs.keySet)
-          db.readWrite { implicit s => orgConfigRepo.save(config.withSettings(OrganizationSettings(newConfig))) }
-        }
-      }
-    }
-    Ok
-  }
-
 }
 
 case class AdminAccountEventView(

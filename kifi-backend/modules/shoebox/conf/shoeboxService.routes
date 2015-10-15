@@ -743,6 +743,7 @@ POST    /admin/organizations/create                          @com.keepit.control
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
 DELETE  /admin/organizations/deleteSystemLibrariesWithInactiveOrgs      @com.keepit.controllers.admin.AdminOrganizationController.deleteSystemLibrariesWithInactiveOrgs()
+POST    /admin/organizations/applyDefaultSettingsToOrgConfigs           @com.keepit.controllers.admin.AdminOrganizationController.applyDefaultSettingsToOrgConfigs()
 
 
 GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg
@@ -906,7 +907,6 @@ GET           /admin/payments/addCreditCard                @com.keepit.controlle
 POST          /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
 GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
-POST          /admin/payments/applyDefaultSettingsToOrgConfigs      @com.keepit.controllers.admin.AdminPaymentsController.applyDefaultSettingsToOrgConfigs()
 
 ##########################################
 # Common Healthcheck / service routes
