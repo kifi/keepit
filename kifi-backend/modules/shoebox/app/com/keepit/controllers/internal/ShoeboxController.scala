@@ -147,18 +147,6 @@ class ShoeboxController @Inject() (
         Ok("false")
     }
   }
-
-  def sendMailToUser = Action(parse.tolerantJson(maxLength = 1024 * 500)) { request =>
-    val userId = Id[User]((request.body \ "user").as[Long])
-    val email = (request.body \ "email").as[ElectronicMail]
-
-    val addrs = db.readOnlyReplica(2) { implicit session => emailAddressRepo.getAllByUser(userId) }
-    for (addr <- addrs.find(_.verifiedAt.isDefined).orElse(addrs.headOption)) {
-      db.readWrite(attempts = 3) { implicit session => postOffice.sendMail(email.copy(to = List(addr.address))) }
-    }
-    Ok("true")
-  }
-
   def processAndSendMail = Action.async(parse.tolerantJson(maxLength = 1024 * 500)) { request =>
     request.body.asOpt[EmailToSend] match {
       case Some(module) =>
