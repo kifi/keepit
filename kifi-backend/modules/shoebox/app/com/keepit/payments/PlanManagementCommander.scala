@@ -531,7 +531,6 @@ class PlanManagementCommanderImpl @Inject() (
       case SpecialCredit() => "Special Credit Given"
       case ChargeBack() => "Charge back to your Card"
       case PlanBillingCharge() => "Regular cost of your Plan charged entirely to your card on file"
-      case UserChangeCredit() => "Credit for reduction in number of Users"
       case UserAdded(who) => {
         val user = basicUserRepo.load(who)
         s"${user.firstName} ${user.lastName} added to your team"

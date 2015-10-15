@@ -50,10 +50,6 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def eventType: String = "plan_billing_charge"
   }
 
-  case class UserChangeCredit() extends AccountEventAction with Payloadless {
-    def eventType: String = "user_change_credit"
-  }
-
   @json
   case class UserAdded(who: Id[User]) extends AccountEventAction {
     def eventType: String = "user_added"
@@ -106,7 +102,6 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case "special_credit" => SpecialCredit()
     case "charge_back" => ChargeBack()
     case "plan_billing_charge" => PlanBillingCharge()
-    case "user_change_credit" => UserChangeCredit()
     case "user_added" => extras.as[UserAdded]
     case "user_removed" => extras.as[UserRemoved]
     case "admin_added" => extras.as[AdminAdded]
