@@ -7,10 +7,13 @@ import play.api.libs.json._
 import scala.util.{ Failure, Success, Try }
 
 case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
-  def setAll(newKvs: Map[Feature, FeatureSetting]): OrganizationSettings = {
-    this.copy(kvs = kvs ++ newKvs)
-  }
-  def withSettings(newKvs: (Feature, FeatureSetting)*): OrganizationSettings = setAll(newKvs.toMap)
+  def features: Set[Feature] = kvs.keySet
+  def settingFor(f: Feature): Option[FeatureSetting] = kvs.get(f)
+
+  def withFeatureSetTo(fs: (Feature, FeatureSetting)): OrganizationSettings = setAll(Map(fs._1 -> fs._2))
+  def setAll(newKvs: Map[Feature, FeatureSetting]): OrganizationSettings = this.copy(kvs = kvs ++ newKvs)
+  def overwriteWith(that: OrganizationSettings): OrganizationSettings = this.setAll(that.kvs)
+
   def extraPermissionsFor(roleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = kvs.collect {
     case (feature: FeatureWithPermissions, setting: FeatureSetting) => feature.extraPermissionsFor(roleOpt, setting)
   }.toSet.flatten
@@ -119,7 +122,7 @@ object Feature {
   case object ForceEditLibraries extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.FORCE_EDIT_LIBRARIES.value
     val permission = OrganizationPermission.FORCE_EDIT_LIBRARIES
-    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
+    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS)
   }
 
   case object ViewOrganization extends Feature with FeatureWithPermissions {

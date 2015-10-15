@@ -14,10 +14,15 @@ object IpAddress {
   implicit def longToIp(long: Long): IpAddress = {
     IpAddress(((long >> 24) & 0xFF) + "." + ((long >> 16) & 0xFF) + "." + ((long >> 8) & 0xFF) + "." + (long & 0xFF))
   }
+
+  def fromXForwardedFor(xForwardedFor: String): Option[IpAddress] = {
+    xForwardedFor.split(",").map(_.trim()).sortBy(_.startsWith("10.")).headOption.map(IpAddress.apply)
+  }
 }
 
 case class IpAddress(ip: String) {
-  if (!ip.matches(IpAddress.ipPattern)) {
+  import IpAddress._
+  if (!ip.matches(ipPattern)) {
     throw new IllegalArgumentException(s"ip address $ip does not match ip pattern")
   }
   def datacenterIp: Boolean = ip.toString.startsWith("10.")

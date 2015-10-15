@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ OrganizationSettings, OrganizationConfigurationRepo, UserRepo, OrganizationRepo, OrganizationStates, Organization, User }
+import com.keepit.model._
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
@@ -20,6 +20,7 @@ class AdminPaymentsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val executionContext: ExecutionContext,
     organizationRepo: OrganizationRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
@@ -30,7 +31,7 @@ class AdminPaymentsController @Inject() (
     stripeClient: StripeClient,
     db: Database) extends AdminUserActions {
 
-  val EXTRA_SPECIAL_ADMINS: Set[Id[User]] = Set(1, 243).map(Id[User](_))
+  val EXTRA_SPECIAL_ADMINS: Set[Id[User]] = Set(1, 3, 61, 134).map(Id[User](_))
 
   def backfillPaidAccounts = AdminUserAction { request =>
     def printStackTraceToChannel(t: Throwable, channel: Concurrent.Channel[String]) = {
@@ -82,23 +83,25 @@ class AdminPaymentsController @Inject() (
 
   def grantExtraCredit(orgId: Id[Organization]) = AdminUserAction { request =>
     val amount = request.body.asFormUrlEncoded.get.apply("amount").head.toInt
-    val passphrase = request.body.asFormUrlEncoded.get.apply("passphrase").head.toString
     val memoRaw = request.body.asFormUrlEncoded.get.apply("memo").head.toString
     val memo = if (memoRaw == "") None else Some(memoRaw)
+    val attributedToMember = request.body.asFormUrlEncoded.get.apply("member").headOption.map(id => Id[User](id.toLong))
     val dollarAmount = DollarAmount(amount)
 
-    val org = db.readOnlyMaster { implicit session => organizationRepo.get(orgId) }
+    val (org, isAttributedToNonMember) = db.readOnlyMaster { implicit session =>
+      val org = organizationRepo.get(orgId)
+      val isAttributedToNonMember = attributedToMember.exists(userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty)
+      (org, isAttributedToNonMember)
+    }
 
-    val passphraseCorrect: Boolean = org.primaryHandle.exists(handle => handle.normalized.value == passphrase.reverse)
-
-    if ((amount < 0 || amount > 10000) && !(EXTRA_SPECIAL_ADMINS.contains(request.userId))) {
+    if ((amount < 0 || amount > 10000) && !EXTRA_SPECIAL_ADMINS.contains(request.userId)) {
       Ok("You are not special enough to deduct credit or grant more than $100.")
     } else if (amount == 0) {
       Ok("Umm, 0 credit?")
-    } else if (!passphraseCorrect) {
-      Ok("So sorry, but your passphrase isn't right.")
+    } else if (isAttributedToNonMember) {
+      Ok(s"User ${attributedToMember.get} is not a member of Organization $orgId")
     } else {
-      planCommander.grantSpecialCredit(orgId, dollarAmount, Some(request.userId), memo)
+      planCommander.grantSpecialCredit(orgId, dollarAmount, Some(request.userId), attributedToMember, memo)
       Ok(s"Sucessfully granted special credit of $dollarAmount to Organization $orgId.")
     }
   }
@@ -186,27 +189,6 @@ class AdminPaymentsController @Inject() (
 
   def unfreezeAccount(orgId: Id[Organization]) = AdminUserAction { implicit request =>
     Ok(planCommander.unfreeze(orgId).toString)
-  }
-
-  def applyDefaultSettingsToOrgConfigs() = AdminUserAction { implicit request =>
-    val paidPlans = db.readOnlyMaster(implicit s => paidPlanRepo.all().filter(_.state == PaidPlanStates.ACTIVE))
-    paidPlans.foreach { plan =>
-      val oldConfigs = db.readOnlyMaster { implicit s =>
-        val orgIds = paidAccountRepo.getActiveByPlan(plan.id.get).map(_.orgId)
-        orgIds.map(orgConfigRepo.getByOrgId)
-      }
-      oldConfigs.foreach { config =>
-        val featuresToRemove = config.settings.kvs.keySet.diff(plan.defaultSettings.kvs.keySet)
-        val featuresToAdd = plan.defaultSettings.kvs.keySet.diff(config.settings.kvs.keySet)
-        if (featuresToRemove.nonEmpty || featuresToAdd.nonEmpty) {
-          val targetFeatures = config.settings.kvs.keySet ++ featuresToAdd -- featuresToRemove
-          val newConfig = targetFeatures.map(feature => feature -> config.settings.kvs.getOrElse(feature, plan.defaultSettings.kvs(feature))).toMap
-          assume(newConfig.keySet == plan.defaultSettings.kvs.keySet)
-          db.readWrite { implicit s => orgConfigRepo.save(config.withSettings(OrganizationSettings(newConfig))) }
-        }
-      }
-    }
-    Ok
   }
 
 }

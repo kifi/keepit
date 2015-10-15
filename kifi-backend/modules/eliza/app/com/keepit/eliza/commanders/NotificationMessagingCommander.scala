@@ -37,7 +37,7 @@ class NotificationMessagingCommander @Inject() (
     shoeboxServiceClient: ShoeboxServiceClient,
     implicit val executionContext: ExecutionContext) {
 
-  def combineNotificationsWithThreads(threadJsons: Seq[NotificationJson], notifJsons: Seq[NotificationWithJson], howMany: Option[Int] = None): Seq[JsObject] = {
+  def combineNotificationsWithThreads(threadJsons: Seq[NotificationJson], notifJsons: Seq[NotificationWithJson], howMany: Option[Int]): Seq[JsObject] = {
     val allNotifs = threadJsons.map(Left.apply) ++ notifJsons.map(Right.apply)
     val full = allNotifs.sortBy {
       case Left(old) => (old.obj \ "time").as[DateTime]

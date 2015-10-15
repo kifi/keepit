@@ -82,10 +82,11 @@ class ElizaEmailCommander @Inject() (
     val starterUser = allUsers(starterUserId)
     val participants = allUsers.values.map { _.fullName } ++ nuts.map { _.participant.fullName }
 
-    val pageName = thread.nUrl.flatMap(DomainToNameMapper.getNameFromUrl(_)).getOrElse("")
+    val pageName = thread.nUrl.flatMap(DomainToNameMapper.getNameFromUrl).getOrElse("")
 
     ThreadEmailInfo(
-      pageUrl = discussionLink(thread.uriId.get, thread.externalId.id).body,
+      uriId = thread.uriId.get,
+      threadId = thread.externalId,
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl.get).abbreviate(80),
       isInitialEmail = isInitialEmail,
@@ -276,7 +277,8 @@ object ElizaEmailCommander {
    */
   def makeDummyEmail(isUser: Boolean, isAdded: Boolean, isSmall: Boolean): String = {
     val info = ThreadEmailInfo(
-      "http://www.wikipedia.org/aninterstingpage.html",
+      Id[NormalizedURI](1),
+      ExternalId[MessageThread](),
       "Wikipedia",
       "The Interesting Page That Everyone Should Read",
       true,

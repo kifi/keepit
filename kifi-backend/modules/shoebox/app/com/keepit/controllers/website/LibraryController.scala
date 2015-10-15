@@ -60,6 +60,7 @@ class LibraryController @Inject() (
   keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
   permissionCommander: PermissionCommander,
+  libraryCardCommander: LibraryCardCommander,
   val libraryCommander: LibraryCommander,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryMembershipCommander: LibraryMembershipCommander,
@@ -112,7 +113,7 @@ class LibraryController @Inject() (
               implicit s =>
                 libraryMembershipRepo.getWithLibraryIdAndUserId(newLibrary.id.get, request.userId)
             }
-            val libCardInfo = libraryInfoCommander.createLibraryCardInfo(newLibrary, BasicUser.fromUser(request.user), viewerOpt = Some(request.userId), withFollowing = false, LibraryController.defaultLibraryImageSize)
+            val libCardInfo = libraryCardCommander.createLibraryCardInfo(newLibrary, BasicUser.fromUser(request.user), viewerOpt = Some(request.userId), withFollowing = false, LibraryController.defaultLibraryImageSize)
             Ok(Json.obj("library" -> Json.toJson(libCardInfo), "listed" -> membership.map(_.listed)))
         }
     }
@@ -184,7 +185,7 @@ class LibraryController @Inject() (
     val (lib, info) = db.readOnlyReplica { implicit session =>
       val lib = libraryRepo.get(id)
       val owners = Map(lib.ownerId -> basicUserRepo.load(lib.ownerId))
-      val info = libraryInfoCommander.createLibraryCardInfos(Seq(lib), owners, request.userIdOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
+      val info = libraryCardCommander.createLibraryCardInfos(Seq(lib), owners, request.userIdOpt, withFollowing = false, idealSize = ProcessedImageSize.Medium.idealSize).seq.head
       (lib, info)
     }
     val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
@@ -221,7 +222,7 @@ class LibraryController @Inject() (
   def getLibrarySummariesByUser = UserAction.async { request =>
     val libInfos: ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
-      libraryInfoCommander.createLiteLibraryCardInfos(libs, request.userId)
+      libraryCardCommander.createLiteLibraryCardInfos(libs, request.userId)
     }
     val objs = libInfos.map {
       case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
@@ -257,7 +258,7 @@ class LibraryController @Inject() (
         val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
         val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
         val membershipInfo = membership.map { mem =>
-          db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+          db.readOnlyReplica { implicit session => libraryMembershipCommander.createMembershipInfo(mem) }
         }
         LibraryData(
           id = Library.publicId(lib.id.get),
@@ -343,7 +344,7 @@ class LibraryController @Inject() (
           case Left(fail) =>
             Status(fail.status)(Json.obj("error" -> fail.message))
           case Right((lib, mem)) =>
-            val membershipInfo = db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+            val membershipInfo = db.readOnlyReplica { implicit session => libraryMembershipCommander.createMembershipInfo(mem) }
             Ok(Json.obj("membership" -> membershipInfo))
         }
     }
@@ -359,7 +360,7 @@ class LibraryController @Inject() (
           libraryMembershipCommander.joinLibrary(request.userId, libId, authToken = None, subscribed = None) match {
             case Left(libFail) => (pubId, Left(libFail))
             case Right((lib, mem)) =>
-              val membershipInfo = db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+              val membershipInfo = db.readOnlyReplica { implicit session => libraryMembershipCommander.createMembershipInfo(mem) }
               (pubId, Right(membershipInfo))
           }
       }
@@ -710,7 +711,7 @@ class LibraryController @Inject() (
   }
 
   def marketingSiteSuggestedLibraries() = MaybeUserAction.async {
-    libraryInfoCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
+    libraryCardCommander.getMarketingSiteSuggestedLibraries map { infos => Ok(Json.toJson(infos)) }
   }
 
   def setSubscribedToUpdates(pubId: PublicId[Library], newSubscribedToUpdate: Boolean) = UserAction { request =>

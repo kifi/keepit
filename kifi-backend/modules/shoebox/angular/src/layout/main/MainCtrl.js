@@ -242,7 +242,7 @@ angular.module('kifi')
     }
 
     var unregisterAutoShowGuide = $rootScope.$watch(function () {
-      var newInstall = installService.installedVersion && profileService.auto_show_guide;
+      var newInstall = installService.installedVersion && profileService.prefs.auto_show_guide;
       var ftue = profileService.prefs.has_seen_ftue === false;
       return newInstall || ftue;
     }, function (show) {
