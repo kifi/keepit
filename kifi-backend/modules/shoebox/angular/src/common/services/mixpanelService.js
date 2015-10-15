@@ -157,7 +157,8 @@
         resolve(profileService.me);
       } else {
         profileService.getMe().then(function(maybeMe) {
-          maybeMe ? resolve(maybeMe) : reject();
+          if (maybeMe) { resolve(maybeMe); }
+          else { reject(); }
         }, reject);
       }
     });
