@@ -46,12 +46,11 @@ class ActivityLogCommanderImpl @Inject() (
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
     import AccountEventAction._
     val maybeUser = event.whoDunnit.map(basicUserRepo.load)
-    val maybeAdmin = event.kifiAdminInvolved.map(basicUserRepo.load)
     implicit lazy val orgHandle = organizationRepo.get(paidAccountRepo.get(event.accountId).orgId).handle // used to build links to different sections, e.g. :handle/settings/plan
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
-        case SpecialCredit() => Elements("Special credit was granted to your team", maybeAdmin.map(Elements("by", _, "from Kifi Support")), maybeUser.map(Elements("thanks to", _)))
+        case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
         case ChargeBack() => s"A ${event.creditChange.toDollarString} refund was issued to your card"
         case PlanBillingCharge() => {
           val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"

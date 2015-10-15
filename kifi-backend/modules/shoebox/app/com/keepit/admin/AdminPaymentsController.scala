@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{ OrganizationSettings, OrganizationConfigurationRepo, UserRepo, OrganizationRepo, OrganizationStates, Organization, User }
+import com.keepit.model._
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
@@ -20,6 +20,7 @@ class AdminPaymentsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val executionContext: ExecutionContext,
     organizationRepo: OrganizationRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
@@ -85,9 +86,14 @@ class AdminPaymentsController @Inject() (
     val passphrase = request.body.asFormUrlEncoded.get.apply("passphrase").head.toString
     val memoRaw = request.body.asFormUrlEncoded.get.apply("memo").head.toString
     val memo = if (memoRaw == "") None else Some(memoRaw)
+    val attributedToMember = request.body.asFormUrlEncoded.get.apply("member").headOption.map(id => Id[User](id.toLong))
     val dollarAmount = DollarAmount(amount)
 
-    val org = db.readOnlyMaster { implicit session => organizationRepo.get(orgId) }
+    val (org, isAttributedToNonMember) = db.readOnlyMaster { implicit session =>
+      val org = organizationRepo.get(orgId)
+      val isAttributedToNonMember = attributedToMember.exists(userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty)
+      (org, isAttributedToNonMember)
+    }
 
     val passphraseCorrect: Boolean = org.primaryHandle.exists(handle => handle.normalized.value == passphrase.reverse)
 
@@ -97,8 +103,10 @@ class AdminPaymentsController @Inject() (
       Ok("Umm, 0 credit?")
     } else if (!passphraseCorrect) {
       Ok("So sorry, but your passphrase isn't right.")
+    } else if (isAttributedToNonMember) {
+      Ok(s"User ${attributedToMember.get} is not a member of Organization $orgId")
     } else {
-      planCommander.grantSpecialCredit(orgId, dollarAmount, Some(request.userId), memo)
+      planCommander.grantSpecialCredit(orgId, dollarAmount, Some(request.userId), attributedToMember, memo)
       Ok(s"Sucessfully granted special credit of $dollarAmount to Organization $orgId.")
     }
   }
