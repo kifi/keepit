@@ -103,7 +103,7 @@ object DescriptionElements {
 
   implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.absolute
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
-  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> s"/$orgHandle/settings/plan"
+  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> s"/${orgHandle.value}/settings/plan"
 
   private def flatten(description: DescriptionElements): Seq[BasicElement] = description match {
     case SequenceOfElements(elements) => elements.map(flatten).flatten
