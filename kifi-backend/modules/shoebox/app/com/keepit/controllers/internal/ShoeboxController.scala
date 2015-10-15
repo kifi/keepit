@@ -499,7 +499,7 @@ class ShoeboxController @Inject() (
     val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
 
     val libraryCardInfosWithId = db.readOnlyReplica { implicit session =>
-      val libraryById = libraryRepo.getByIds(libraryIds)
+      val libraryById = libraryRepo.getActiveByIds(libraryIds)
       val libraries = libraryIds.map(libraryById.apply)
       val owners = basicUserRepo.loadAll(libraries.map(_.ownerId))
 
