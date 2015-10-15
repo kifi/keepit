@@ -4,9 +4,11 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model._
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.mvc.Results.Status
 import play.api.http.Status._
+import play.api.libs.functional.syntax._
 
 import scala.util.control.NoStackTrace
 
@@ -17,12 +19,24 @@ case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boo
 
 @json
 case class CardInfo(last4: String, brand: String)
-@json
+
 case class AccountStateResponse(
   users: Int,
-  credit: DollarAmount,
+  billingDate: DateTime,
+  balance: DollarAmount,
+  charge: DollarAmount,
   plan: PaidPlanInfo,
   card: Option[CardInfo])
+object AccountStateResponse {
+  implicit val writes = (
+    (__ \ 'users).write[Int] and
+    (__ \ 'billingDate).write[DateTime] and
+    (__ \ 'balance).write(DollarAmount.dollarStringFormat) and
+    (__ \ 'charge).write(DollarAmount.dollarStringFormat) and
+    (__ \ 'plan).write[PaidPlanInfo] and
+    (__ \ 'card).writeNullable[CardInfo]
+  )(unlift(AccountStateResponse.unapply))
+}
 
 case class AvailablePlansResponse(
   currentPlan: PublicId[PaidPlan],

@@ -8,10 +8,12 @@ import com.keepit.social.BasicUser
 
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import play.api.libs.json.{ JsResult, Format, JsValue, JsString, Writes }
 
 @json
 case class DollarAmount(cents: Int) extends AnyVal {
   def +(other: DollarAmount) = DollarAmount(cents + other.cents)
+  def *(x: Int) = DollarAmount(cents * x)
 
   override def toString = toDollarString
   def toDollarString: String = if (cents < 0) "-" + DollarAmount(-cents).toDollarString else "$%d.%02d".format(cents / 100, cents % 100)
@@ -23,6 +25,16 @@ object DollarAmount {
   def wholeDollars(dollars: Int): DollarAmount = DollarAmount(dollars * 100)
 
   val ZERO = DollarAmount(0)
+
+  val dollarStringFormat = new Format[DollarAmount] {
+    def writes(o: DollarAmount) = JsString(o.toDollarString)
+
+    // this is a fragile reads, shouldn't be used anywhere but tests until improved or fully-spec'd
+    def reads(json: JsValue): JsResult[DollarAmount] = json.validate[String].map { str =>
+      val centsString = str.drop(str.indexOf('$') + 1).replace(".", "")
+      DollarAmount(centsString.toInt)
+    }
+  }
 }
 
 @json
