@@ -159,7 +159,7 @@ class LibraryRepoImpl @Inject() (
 
   def getActiveByIds(ids: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
     idCache.bulkGetOrElse(ids.map(LibraryIdKey)) { missingKeys =>
-      val q = rows.filter(lib => lib.id.inSet(missingKeys.map(_.id)) && lib.state == LibraryStates.ACTIVE)
+      val q = rows.filter(lib => lib.id.inSet(missingKeys.map(_.id)) && lib.state === LibraryStates.ACTIVE)
       q.list.map { x => LibraryIdKey(x.id.get) -> x }.toMap
     }.map { case (key, lib) => key.id -> lib }
   }
