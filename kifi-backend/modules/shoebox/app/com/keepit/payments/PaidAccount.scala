@@ -4,12 +4,11 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
-import com.keepit.payments.DollarAmount.DollarAmount
 import com.keepit.social.BasicUser
 
 import com.kifi.macros.json
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsResult, Format, JsValue, JsString, Writes }
+import play.api.libs.json.{ JsResult, Format, JsValue, JsString }
 
 @json
 case class DollarAmount(cents: Int) extends Ordered[DollarAmount] {
