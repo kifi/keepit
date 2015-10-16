@@ -1,6 +1,6 @@
 package com.keepit.payments
 
-import com.keepit.common.db.{ States, ModelWithState, Id, State }
+import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
@@ -10,13 +10,15 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 
 @json
-case class DollarAmount(cents: Int) extends AnyVal {
-  def +(other: DollarAmount) = DollarAmount(cents + other.cents)
-
+case class DollarAmount(cents: Int) extends Ordered[DollarAmount] {
+  def compare(that: DollarAmount) = cents compare that.cents
+  def +(other: DollarAmount): DollarAmount = DollarAmount(cents + other.cents)
+  def -(other: DollarAmount): DollarAmount = DollarAmount(cents - other.cents)
+  def max(other: DollarAmount): DollarAmount = DollarAmount(cents max other.cents)
   override def toString = toDollarString
-  def toDollarString: String = if (cents < 0) "-" + DollarAmount(-cents).toDollarString else "$%d.%02d".format(cents / 100, cents % 100)
+  def toDollarString: String = if (cents < 0) "-" + (-this).toDollarString else "$%d.%02d".format(cents / 100, cents % 100)
 
-  def negative = DollarAmount(-1 * cents)
+  def unary_- = DollarAmount(-1 * cents)
 }
 
 object DollarAmount {
@@ -47,6 +49,8 @@ case class PaidAccount(
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
+
+  def owed: DollarAmount = DollarAmount.ZERO max -credit
 
   def withReducedCredit(reduction: DollarAmount): PaidAccount = {
     val newCredit = DollarAmount(credit.cents - reduction.cents)

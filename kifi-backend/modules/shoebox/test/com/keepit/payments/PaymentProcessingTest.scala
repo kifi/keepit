@@ -64,7 +64,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           commander.createAndInitializePaidAccountForOrganization(orgId, plan.id.get, userId, session)
           val account = accountRepo.get(accountId)
           account.activeUsers === 1
-          account.credit === DollarAmount.wholeDollars(50) + computePartialCost(planPrice, account.billingCycleStart, billingCycle).negative
+          account.credit === DollarAmount.wholeDollars(50) - computePartialCost(planPrice, account.billingCycleStart, billingCycle)
           account.lockedForProcessing === false
 
           //"fast forward" to test proration
@@ -87,11 +87,11 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val currentCredit = db.readOnlyMaster { implicit session =>
           val updatedAccount = accountRepo.get(accountId)
           updatedAccount.activeUsers === 2
-          updatedAccount.credit === account.credit + computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle).negative
+          updatedAccount.credit === account.credit - computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle)
           updatedAccount.credit
         }
 
-        commander.grantSpecialCredit(orgId, currentCredit.negative, None, None, None)
+        commander.grantSpecialCredit(orgId, - currentCredit, None, None, None)
 
         db.readOnlyMaster { implicit session =>
           accountRepo.get(accountId).credit === DollarAmount.wholeDollars(0)
@@ -130,7 +130,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = accountRepo.get(accountId)
           updatedAccount.activeUsers === 2
           updatedAccount.planId === plan.id.get
-          updatedAccount.credit === accountOnFreePlan.credit + DollarAmount(2 * computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle).cents).negative
+          updatedAccount.credit === accountOnFreePlan.credit - DollarAmount(2 * computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle).cents)
         }
 
       }
@@ -142,7 +142,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
         val price = DollarAmount(438)
-        val initialCredit = commander.MIN_BALANCE + DollarAmount.wholeDollars(1).negative
+        val initialCredit = commander.MIN_BALANCE - DollarAmount.wholeDollars(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -223,7 +223,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val commander = inject[PaymentProcessingCommander]
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         val price = DollarAmount(438)
-        val initialCredit = commander.MIN_BALANCE + DollarAmount.wholeDollars(1).negative
+        val initialCredit = commander.MIN_BALANCE - DollarAmount.wholeDollars(1)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
@@ -246,7 +246,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         }
 
         val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        charge === DollarAmount(3 * price.cents) + initialCredit.negative
+        charge === DollarAmount(3 * price.cents) - initialCredit
         message === "Billing Cycle elapsed"
 
         db.readOnlyMaster { implicit session =>
@@ -264,7 +264,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         val price = DollarAmount(438)
         val billingCycleStart = currentDateTime
-        val initialCredit = commander.MAX_BALANCE + DollarAmount.wholeDollars(7).negative
+        val initialCredit = commander.MAX_BALANCE - DollarAmount.wholeDollars(7)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -285,7 +285,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         }
 
         val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        charge === initialCredit.negative
+        charge === - initialCredit
         message === "Max balance exceeded"
 
         db.readOnlyMaster { implicit session =>
@@ -303,7 +303,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         stripeClient.failingMode = true
         val price = DollarAmount(438)
-        val initialCredit = commander.MAX_BALANCE + DollarAmount.wholeDollars(7).negative
+        val initialCredit = commander.MAX_BALANCE - DollarAmount.wholeDollars(7)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
@@ -340,7 +340,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
         val price = DollarAmount(438)
-        val initialCredit = commander.MAX_BALANCE + DollarAmount.wholeDollars(7).negative
+        val initialCredit = commander.MAX_BALANCE - DollarAmount.wholeDollars(7)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
