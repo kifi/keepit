@@ -55,8 +55,8 @@ class PaymentProcessingCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
-  private[payments] val MAX_BALANCE = DollarAmount.wholeDollars(-1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
-  private[payments] val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
+  private[payments] val MAX_BALANCE = DollarAmount.dollars(-1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
+  private[payments] val MIN_BALANCE = DollarAmount.dollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
 
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
 

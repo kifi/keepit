@@ -31,8 +31,8 @@ object AccountStateResponse {
   implicit val writes = (
     (__ \ 'users).write[Int] and
     (__ \ 'billingDate).write[DateTime] and
-    (__ \ 'balance).write(DollarAmount.dollarStringFormat) and
-    (__ \ 'charge).write(DollarAmount.dollarStringFormat) and
+    (__ \ 'balance).write(DollarAmount.formatAsCents) and
+    (__ \ 'charge).write(DollarAmount.formatAsCents) and
     (__ \ 'plan).write[PaidPlanInfo] and
     (__ \ 'card).writeNullable[CardInfo]
   )(unlift(AccountStateResponse.unapply))
