@@ -1,0 +1,32 @@
+<div class="kf-billing-summary kf-container">
+  <div class="kf-container-header"><span>Overview</span></div>
+  <ul>
+    <li>
+      <p>
+        <span>You currently have&nbsp;</span>
+        <u ng-bind="billingState.users + ' team members'"></u>
+        <span>&nbsp;on the&nbsp;</span>
+        <u ng-bind="billingState.plan.fullName + ' plan'"></u>.
+      </p>
+    </li>
+    <li ng-if="isPaidPlan()">
+      <p>
+        As of today, your next bill will be
+        <b ng-bind="billingState.charge"></b>
+        on
+        <b ng-bind="billingState.billingDate | date:'yyyy-MM-dd'"></b>.
+      </p>
+    </li>
+    <li>
+      <p>
+        <span>You have a&nbsp;</span>
+        <u ng-bind="'credit of ' + billingState.balance"></u>
+        <span ng-if="isPaidPlan()">
+          <span>&nbsp;which will be applied before your&nbsp;</span>
+          <u>credit card ending in <b ng-bind="'' + billingState.card.last4"></b></u>
+          <span>&nbsp;is charged.</span>
+        </span>
+      </p>
+    </li>
+  </ul>
+</div>
