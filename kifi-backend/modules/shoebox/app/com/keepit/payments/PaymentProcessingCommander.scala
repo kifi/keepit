@@ -138,14 +138,14 @@ class PaymentProcessingCommanderImpl @Inject() (
             result match {
               case Success((amount, reason)) => if (reason != BillingResultReasons.LOW_BALANCE) {
                 val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-                Some(s"""Processed Org <"https://admin.kifi.com/admin/organization/id/$orgId"|${org.name}>. Charged: $amount. Reason: $reason""")
+                Some(s"""Processed Org <https://admin.kifi.com/admin/organization/id/$orgId|${org.name}>. Charged: $amount. Reason: $reason""")
               } else {
                 None
               }
               case Failure(ex) => {
                 log.error(s"Fatal Error processing Org $orgId. Reason: ${ex.getMessage}", ex)
                 val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-                Some(s"""Fatal Error processing Org <"https://admin.kifi.com/admin/organization/id/$orgId"|${org.name}>. Reason: ${ex.getMessage}. See log for stack trace.""")
+                Some(s"""Fatal Error processing Org <https://admin.kifi.com/admin/organization/id/$orgId|${org.name}>. Reason: ${ex.getMessage}. See log for stack trace.""")
               }
             }
         }.flatten.mkString("\n"))
