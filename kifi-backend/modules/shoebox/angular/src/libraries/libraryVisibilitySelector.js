@@ -31,7 +31,7 @@ angular.module('kifi')
         };
 
         $scope.onClickUpsellPublic = function () {
-          orgProfileService.trackEvent('user_viewed_page', $scope.space, { action: 'clickPrivacyUpsell' });
+          orgProfileService.trackEvent('user_clicked_page', $scope.space, { action: 'clickPrivacyUpsell' });
         };
 
         $scope.onHoverUpsellPublic = function () {
