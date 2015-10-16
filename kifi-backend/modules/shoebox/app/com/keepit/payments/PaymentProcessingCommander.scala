@@ -121,7 +121,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   }
 
   def processAllBilling(): Future[Unit] = processingLock.withLockFuture {
-    val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(MAX_BALANCE, clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
+    val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(maxBalance = MAX_BALANCE, maxCycleAge = clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
     if (relevantAccounts.length > 0) reportToSlack(s"Processing Payments. ${relevantAccounts.length} orgs to check.")
     val resultsFuture = Future.sequence(relevantAccounts.map { account =>
       processAccount(account).map { result =>
