@@ -51,21 +51,17 @@ class AdminPaymentsController @Inject() (
         channel.push(s"Processing org ${org.id.get}: ${org.name}\n")
         db.readWrite { implicit session =>
           paidAccountRepo.maybeGetByOrgId(org.id.get) match {
-            case Some(_) => {
+            case Some(_) =>
               channel.push(s"Paid account already exists. Doing nothing.\n")
-            }
-            case None => {
+            case None =>
               planCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.userId, session) match {
-                case Success(event) => {
+                case Success(event) =>
                   channel.push(s"Successfully created paid account for org ${org.id.get}\n")
                   channel.push(event.toString + "\n")
-                }
-                case Failure(ex) => {
+                case Failure(ex) =>
                   channel.push(s"Failed creating paid account for org ${org.id.get}: ${ex.getMessage}\n")
                   printStackTraceToChannel(ex, channel)
-                }
               }
-            }
           }
         }
         Thread.sleep(200)
@@ -191,6 +187,15 @@ class AdminPaymentsController @Inject() (
     Ok(planCommander.unfreeze(orgId).toString)
   }
 
+  def paymentsDashboard = AdminUserPage { implicit request =>
+    val (frozenAccounts, recentEvents) = db.readOnlyMaster { implicit session =>
+      val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
+      val recentEvents = accountEventRepo.adminGetRecentEvents(Limit(100)).map(createAdminAccountEventView)
+      (frozenAccounts, recentEvents)
+    }
+    Ok(views.html.admin.paymentsDashboard(AdminPaymentsDashboard(frozenAccounts, recentEvents)))
+  }
+
 }
 
 case class AdminAccountEventView(
@@ -203,3 +208,7 @@ case class AdminAccountEventView(
   creditChange: DollarAmount,
   paymentCharge: Option[DollarAmount],
   memo: Option[String])
+
+case class AdminPaymentsDashboard(
+  frozenAccounts: Seq[PaidAccount],
+  recentEvents: Seq[AdminAccountEventView])
