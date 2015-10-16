@@ -6,4 +6,3 @@ trait AccountEventTrackingCommander {
   def track[E](event: AccountEvent)(implicit session: RWSession): Unit
 }
 
-
