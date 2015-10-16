@@ -25,12 +25,45 @@ import scala.util.{ Try, Success, Failure }
 @ImplementedBy(classOf[PaymentProcessingCommanderImpl])
 trait PaymentProcessingCommander {
   def processAllBilling(): Future[Unit]
-  def forceChargeAccount(account: PaidAccount, amount: DollarAmount, description: Option[String]): Future[DollarAmount] //not private for admin use
-  def processAccount(account: PaidAccount): Future[(DollarAmount, String)]
+  def forceChargeAccount(account: PaidAccount, amount: DollarAmount, description: Option[String]): Future[StripeChargeResult] //not private for admin use
+  def processAccount(account: PaidAccount): Future[BillingResult]
 
   private[payments] val MIN_BALANCE: DollarAmount
   private[payments] val MAX_BALANCE: DollarAmount
 
+}
+
+case object MissingPaymentMethodException extends Exception("missing_default_payment_method")
+
+case class BillingResult(amount: DollarAmount, reason: BillingResultReason, stripeResult: Option[StripeChargeResult])
+
+
+trait BillingResultReason {
+  val message: String
+}
+
+object BillingResultReason {
+  case object LOW_BALANCE extends BillingResultReason {
+    val message = "Not charging because of low balance."
+  }
+  case object NO_LOCK extends BillingResultReason {
+    val message = "Failed to get lock."
+  }
+  case object MAX_BALANCE_EXCEEDED extends BillingResultReason {
+    val message = "Max balance exceeded."
+  }
+  case object BILLING_CYCLE_ELAPSED extends BillingResultReason {
+    val message = "Billing Cycle elapsed."
+  }
+  case object STRIPE_FAILURE extends BillingResultReason {
+    val message = s"Stripe Call Failed."
+  }
+  case class CONDITIONS_NOT_MET(frozen: Boolean) extends BillingResultReason {
+    val message = s"Not processed because conditions not met. Frozen: ${frozen}."
+  }
+  case object MISSING_PAYMENT_METHOD extends BillingResultReason {
+    val message = "No default payment method available."
+  }
 }
 
 @Singleton
@@ -59,14 +92,6 @@ class PaymentProcessingCommanderImpl @Inject() (
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
 
   private val processingLock = new ReactiveLock(2)
-
-  private object BillingResultReasons {
-    val LOW_BALANCE = "Not charging because of low balance"
-    val NO_LOCK = "Failed to get lock"
-    val MAX_BALANCE_EXCEEDED = "Max balance exceeded"
-    val BILLING_CYCLE_ELAPSED = "Billing Cycle elapsed"
-    def CONDITIONS_NOT_MET(frozen: Boolean) = s"Not processed because conditions not met. Frozen: ${frozen}."
-  }
 
   private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
@@ -136,7 +161,7 @@ class PaymentProcessingCommanderImpl @Inject() (
         reportToSlack(results.map {
           case (orgId, result) =>
             result match {
-              case Success((amount, reason)) => if (reason != BillingResultReasons.LOW_BALANCE) {
+              case Success(BillingResult(amount, reason, stripeResultOpt)) => if (reason != BillingResultReason.LOW_BALANCE) {
                 val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
                 Some(s"""Processed Org <https://admin.kifi.com/admin/organization/id/$orgId|${org.name}>. Charged: $amount. Reason: $reason""")
               } else {
@@ -155,7 +180,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     resultsFuture.map(_ => ())
   }
 
-  def processAccount(account: PaidAccount): Future[(DollarAmount, String)] = processingLock.withLockFuture {
+  def processAccount(account: PaidAccount): Future[BillingResult] = processingLock.withLockFuture {
     accountLockHelper.maybeWithAccountLockAsync(account.orgId) {
       log.info(s"[PPC][${account.orgId}] Starting Processing")
       db.readWrite { implicit session =>
@@ -172,25 +197,40 @@ class PaymentProcessingCommanderImpl @Inject() (
             val chargeAmount = DollarAmount(-1 * updatedAccountPreCharge.credit.cents)
             log.info(s"[PPC][${account.orgId}] Going to charge $chargeAmount")
             val description = if (maxBalanceExceeded) s"Max balance exceeded charge for org ${account.orgId} of amount $chargeAmount" else s"Regular charge for org ${account.orgId} of amount $chargeAmount"
-            forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> (if (maxBalanceExceeded) BillingResultReasons.MAX_BALANCE_EXCEEDED else BillingResultReasons.BILLING_CYCLE_ELAPSED) }
+            forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { result =>
+              result match {
+                case result @ StripeChargeSuccess(amount, _) => {
+                  BillingResult(
+                    amount,
+                    if (maxBalanceExceeded) BillingResultReason.MAX_BALANCE_EXCEEDED else BillingResultReason.BILLING_CYCLE_ELAPSED,
+                    Some(result)
+                  )
+                }
+                case result: StripeChargeFailure => BillingResult(DollarAmount.ZERO, BillingResultReason.STRIPE_FAILURE, Some(result))
+              }
+            }.recover {
+              case MissingPaymentMethodException => {
+                BillingResult(DollarAmount.ZERO, BillingResultReason.MISSING_PAYMENT_METHOD, None)
+              }
+            }
           } else {
             log.info(s"[PPC][${account.orgId}] Not Charging. Balance less than $MIN_BALANCE (${account.credit})")
             paidAccountRepo.save(updatedAccountPreCharge)
-            Future.successful(DollarAmount.ZERO -> BillingResultReasons.LOW_BALANCE)
+            Future.successful(BillingResult(DollarAmount.ZERO, BillingResultReason.LOW_BALANCE, None))
           }
         } else {
-          Future.successful(DollarAmount.ZERO -> BillingResultReasons.CONDITIONS_NOT_MET(account.frozen))
+          Future.successful(BillingResult(DollarAmount.ZERO, BillingResultReason.CONDITIONS_NOT_MET(account.frozen), None))
         }
       }
-    }.getOrElse(Future.successful(DollarAmount.ZERO -> BillingResultReasons.NO_LOCK))
+    }.getOrElse(Future.successful(BillingResult(DollarAmount.ZERO, BillingResultReason.NO_LOCK, None)))
   }
 
-  def forceChargeAccount(account: PaidAccount, amount: DollarAmount, descriptionOpt: Option[String]): Future[DollarAmount] = {
+  def forceChargeAccount(account: PaidAccount, amount: DollarAmount, descriptionOpt: Option[String]): Future[StripeChargeResult] = {
     db.readOnlyMaster { implicit session => paymentMethodRepo.getDefault(account.id.get) } match {
       case Some(pm) => {
         val description = descriptionOpt.getOrElse("Forced charge for org ${account.orgId} of $amount")
         stripeClient.processCharge(amount, pm.stripeToken, description).map {
-          case StripeChargeSuccess(amount, chargeId) => {
+          case result @ StripeChargeSuccess(amount, chargeId) => {
             db.readWrite { implicit session =>
               paidAccountRepo.save(account.withIncreasedCredit(amount))
               accountEventRepo.save(AccountEvent(
@@ -210,17 +250,17 @@ class PaymentProcessingCommanderImpl @Inject() (
             }
             notifyOfCharge(account, pm.stripeToken, amount, chargeId)
             log.info(s"[PPC][${account.orgId}] Processed charge for amount $amount: $description")
-            amount
+            result
           }
-          case StripeChargeFailure(code, message) => {
+          case result @ StripeChargeFailure(code, message) => {
             airbrake.notify(s"Stripe error charging org ${account.orgId}: $code, $message")
-            throw new Exception(message)
+            result
           }
         }
       }
       case None => {
         airbrake.notify(s"Missing default payment method for org ${account.orgId}")
-        throw new Exception("missing_default_payment_method")
+        Future.failed(MissingPaymentMethodException)
       }
     }
   }

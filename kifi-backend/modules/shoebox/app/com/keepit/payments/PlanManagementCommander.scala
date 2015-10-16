@@ -64,7 +64,7 @@ trait PlanManagementCommander {
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[AccountEvent]
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Future[(AccountEvent, Option[BillingResult])]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
 
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
@@ -91,6 +91,7 @@ class PlanManagementCommanderImpl @Inject() (
   accountLockHelper: AccountLockHelper,
   permissionCommander: PermissionCommander,
   stripe: StripeClient,
+  paymentProcessingCommander: PaymentProcessingCommander,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends PlanManagementCommander with Logging {
@@ -505,23 +506,37 @@ class PlanManagementCommanderImpl @Inject() (
     newPaymentMethod
   }
 
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, newLastFour: String): Try[AccountEvent] = db.readWrite { implicit session =>
-    val accountId = orgId2AccountId(orgId)
-    val newDefault = paymentMethodRepo.get(newDefaultId)
-    val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
-    if (newDefault.state != PaymentMethodStates.ACTIVE) {
-      Failure(new InvalidChange("payment_method_not_available"))
-    } else {
-      oldDefaultOpt.map { oldDefault =>
-        paymentMethodRepo.save(oldDefault.copy(default = false))
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, newLastFour: String): Future[(AccountEvent, Option[BillingResult])] = {
+    db.readWrite { implicit session =>
+      val accountId = orgId2AccountId(orgId)
+      val newDefault = paymentMethodRepo.get(newDefaultId)
+      val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
+      if (newDefault.state != PaymentMethodStates.ACTIVE) {
+        Failure(new InvalidChange("payment_method_not_available"))
+      } else {
+        oldDefaultOpt.map { oldDefault =>
+          paymentMethodRepo.save(oldDefault.copy(default = false))
+        }
+        paymentMethodRepo.save(newDefault.copy(default = true))
+        Success(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+          eventTime = clock.now,
+          accountId = accountId,
+          attribution = attribution,
+          action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
+        )))
       }
-      paymentMethodRepo.save(newDefault.copy(default = true))
-      Success(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-        eventTime = clock.now,
-        accountId = accountId,
-        attribution = attribution,
-        action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
-      )))
+    } match {
+      case Success(event) => {
+        val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
+        if (account.lastBillingFailed) {
+          paymentProcessingCommander.processAccount(account).map { res =>
+            event -> Some(res)
+          }
+        } else {
+          Future.successful(event -> None)
+        }
+      }
+      case Failure(ex) => Future.failed(ex)
     }
   }
 
