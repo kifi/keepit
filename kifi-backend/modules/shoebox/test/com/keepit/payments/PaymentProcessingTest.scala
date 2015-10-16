@@ -64,6 +64,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           commander.createAndInitializePaidAccountForOrganization(orgId, plan.id.get, userId, session)
           val account = accountRepo.get(accountId)
           account.activeUsers === 1
+          account.userContacts === Seq(userId)
           account.credit === DollarAmount.wholeDollars(50) - computePartialCost(planPrice, account.billingCycleStart, billingCycle)
           account.lockedForProcessing === false
 
@@ -79,6 +80,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val accountFromThePast = accountRepo.get(accountId)
           accountFromThePast.activeUsers === 0
           accountFromThePast.credit === account.credit + computePartialCost(planPrice, accountFromThePast.billingCycleStart, billingCycle)
+          accountFromThePast.userContacts must not contain (userId)
         }
 
         commander.registerNewUser(orgId, userId, actionAttribution)
