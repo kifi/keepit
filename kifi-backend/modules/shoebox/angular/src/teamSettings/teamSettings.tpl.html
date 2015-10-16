@@ -1,6 +1,7 @@
 <div ng-if="kifiAdmin && viewer.membership.role === 'admin' && billingState.balance > 0" kf-credit-banner credit="{{ billingState.balance }}"></div>
 <div class="kf-team-settings-fields">
   <h1 class="kf-team-settings-top-header">Member Privileges</h1>
+  <h4 class="kf-team-settings-sub-header" ng-if="viewer.membership.role === 'admin'">You have access to view these settings. Contact your <a class="kf-link" ui-sref="orgProfile.members">team admins</a> to edit them.</h4>
   <section ng-repeat="section in settingsSectionTemplateData" class="kf-container">
     <div ng-show="section.heading" class="kf-container-header">
       <h2 id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
@@ -11,7 +12,8 @@
         <p class="kf-team-settings-desc">{{ field.description }}</p>
       </div>
       <div class="kf-side-pane">
-        <div class="custom-select kf-button" ng-class="{ 'disabled' : viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable }">
+        <div ng-class="{ 'kf-tooltip-parent kf-tooltip-parent-noclose' : !settings[field.fieldKey].editable && viewer.membership.role === 'admin' && billingState.plan.name.toLowerCase() === 'free'}" data-kf-tooltip-position="top">
+          <div class="custom-select kf-button" ng-class="{ 'disabled' : viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable }">
           <select
             class="kf-team-settings-select"
             ng-model="settings[field.fieldKey].setting"
@@ -19,6 +21,8 @@
             ng-options="option.value as option.label for option in field.selectOptions"
             ng-change="updateSettings()"
           ></select>
+          </div>
+          <div class="kf-tooltip-body" ng-if="!settings[field.fieldKey].editable && viewer.membership.role === 'admin' && billingState.plan.name.toLowerCase() === 'free'">You can edit this setting by <a class="kf-link" ui-sref="orgProfile.settings.plan">upgrading your plan</a>.</div>
         </div>
       </div>
     </div>
