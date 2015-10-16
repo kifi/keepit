@@ -42,7 +42,7 @@
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
         <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon-active" ng-if="selection.isSelected(keep)" ng-click="selection.toggleSelect(keep)"></div>
       </div>
-      <div class="kf-keep-top-menu-container" kf-hover-menu ng-if="::keep.user.id === me.id"><!-- This controls who gets the controls -->
+      <div class="kf-keep-top-menu-container" kf-click-menu ng-if="::keep.user.id === me.id"><!-- This controls who gets the controls -->
         <button class="kf-keep-top-menu-btn"></button>
         <menu class="kf-dropdown-menu">
           <button class="kf-dropdown-menu-item" ng-click="editKeepNote($event, keep)">{{keep.note ? 'Edit note' : 'Add a note'}}</button>

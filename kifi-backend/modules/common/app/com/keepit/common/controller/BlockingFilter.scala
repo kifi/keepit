@@ -18,7 +18,9 @@ object BlockingFilter extends Filter {
   }
 
   val blocked = Seq(
+    "27.255.139.",
     "27.255.159.",
+    "27.255.183.",
     "43.249.225.",
     "88.251.",
     "95.5.131.183",

@@ -4,17 +4,21 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
+import com.keepit.payments.DollarAmount.DollarAmount
 import com.keepit.social.BasicUser
 
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import play.api.libs.json.{ JsResult, Format, JsValue, JsString, Writes }
 
 @json
 case class DollarAmount(cents: Int) extends Ordered[DollarAmount] {
   def compare(that: DollarAmount) = cents compare that.cents
   def +(other: DollarAmount): DollarAmount = DollarAmount(cents + other.cents)
   def -(other: DollarAmount): DollarAmount = DollarAmount(cents - other.cents)
+  def *(x: Int) = DollarAmount(cents * x)
   def max(other: DollarAmount): DollarAmount = DollarAmount(cents max other.cents)
+  def min(other: DollarAmount): DollarAmount = DollarAmount(cents min other.cents)
   override def toString = toDollarString
   def toDollarString: String = if (cents < 0) "-" + (-this).toDollarString else "$%d.%02d".format(cents / 100, cents % 100)
 
@@ -25,6 +29,16 @@ object DollarAmount {
   def wholeDollars(dollars: Int): DollarAmount = DollarAmount(dollars * 100)
 
   val ZERO = DollarAmount(0)
+
+  val dollarStringFormat = new Format[DollarAmount] {
+    def writes(o: DollarAmount) = JsString(o.toDollarString)
+
+    // this is a fragile reads, shouldn't be used anywhere but tests until improved or fully-spec'd
+    def reads(json: JsValue): JsResult[DollarAmount] = json.validate[String].map { str =>
+      val centsString = str.drop(str.indexOf('$') + 1).replace(".", "")
+      DollarAmount(centsString.toInt)
+    }
+  }
 }
 
 @json

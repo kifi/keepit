@@ -22,7 +22,6 @@ import scala.util.{ Success, Failure, Try }
 @json
 case class BillingCycle(month: Int) extends AnyVal
 
-@json
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
   name: String,
@@ -30,6 +29,16 @@ case class PaidPlanInfo(
   pricePerUser: DollarAmount,
   cycle: BillingCycle,
   features: Set[Feature])
+object PaidPlanInfo {
+  implicit val format = (
+    (__ \ 'id).format[PublicId[PaidPlan]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'fullName).format[String] and
+    (__ \ 'pricePerUser).format(DollarAmount.dollarStringFormat) and
+    (__ \ 'cycle).format[BillingCycle] and
+    (__ \ 'features).format[Set[Feature]]
+  )(PaidPlanInfo.apply, unlift(PaidPlanInfo.unapply))
+}
 
 case class PaidPlan(
     id: Option[Id[PaidPlan]] = None,

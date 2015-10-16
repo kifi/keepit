@@ -12,7 +12,7 @@ import com.keepit.common.mail.{ EmailAddress }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.social.BasicUserRepo
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Try, Success, Failure }
 
 import play.api.libs.json._
@@ -46,6 +46,8 @@ trait PlanManagementCommander {
 
   def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], attributedToMember: Option[Id[User]], memo: Option[String]): AccountEvent
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
+
+  def getAccountState(orgId: Id[Organization]): Future[AccountStateResponse]
 
   def currentPlan(orgId: Id[Organization]): PaidPlan
   def currentPlanHelper(orgId: Id[Organization])(implicit session: RSession): PaidPlan
@@ -88,6 +90,7 @@ class PlanManagementCommanderImpl @Inject() (
   userRepo: UserRepo,
   accountLockHelper: AccountLockHelper,
   permissionCommander: PermissionCommander,
+  stripe: StripeClient,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends PlanManagementCommander with Logging {
@@ -113,7 +116,7 @@ class PlanManagementCommanderImpl @Inject() (
 
   }
 
-  //very explicitely accepts a db session to allow account creation on org creation within the same db session
+  //very explicitly accepts a db session to allow account creation on org creation within the same db session
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent] = {
     implicit val s = session
     Try { paidPlanRepo.get(planId) } match {
@@ -204,7 +207,7 @@ class PlanManagementCommanderImpl @Inject() (
 
   }
 
-  private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession) = {
+  def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession) = {
     val account = paidAccountRepo.getByOrgId(orgId)
     val price: DollarAmount = remainingBillingCycleCost(account)
     paidAccountRepo.save(
@@ -223,7 +226,7 @@ class PlanManagementCommanderImpl @Inject() (
     registerNewUserHelper(orgId, userId, attribution)
   }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
 
-  private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
+  def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
     val price: DollarAmount = remainingBillingCycleCost(account)
     paidAccountRepo.save(
@@ -242,7 +245,11 @@ class PlanManagementCommanderImpl @Inject() (
     registerRemovedUserHelper(orgId, userId, attribution)
   }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
 
-  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
+  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
+    registerNewAdminHelper(orgId, userId, attribution)
+  }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
+
+  def registerNewAdminHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
@@ -251,7 +258,11 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
+  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
+    registerRemovedAdminHelper(orgId, userId, attribution)
+  }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
+
+  def registerRemovedAdminHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
@@ -367,6 +378,28 @@ class PlanManagementCommanderImpl @Inject() (
 
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount = db.readOnlyMaster { implicit session =>
     paidAccountRepo.getByOrgId(orgId).credit
+  }
+
+  def getAccountState(orgId: Id[Organization]): Future[AccountStateResponse] = {
+    val (account, plan) = db.readOnlyReplica { implicit session =>
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val plan = paidPlanRepo.get(account.planId)
+      (account, plan)
+    }
+    val cardFut = getDefaultPaymentMethod(orgId).map { method =>
+      stripe.getCardInfo(method.stripeToken).map(Some(_))
+    }.getOrElse(Future.successful(None))
+
+    cardFut.map { card =>
+      AccountStateResponse(
+        users = account.activeUsers,
+        billingDate = account.billingCycleStart.plusMonths(plan.billingCycle.month),
+        balance = account.credit,
+        charge = plan.pricePerCyclePerUser * account.activeUsers,
+        plan.asInfo,
+        card
+      )
+    }
   }
 
   def currentPlan(orgId: Id[Organization]): PaidPlan = db.readOnlyMaster { implicit session =>

@@ -6,6 +6,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
 import com.keepit.common.store.ImageSize
 import com.keepit.eliza.commanders.{ ElizaEmailUriSummaryImageSizes, ElizaEmailCommander }
@@ -122,18 +123,19 @@ class ElizaUserEmailNotifierActor @Inject() (
               val threadEmailInfo: ThreadEmailInfo =
                 elizaEmailCommander.getThreadEmailInfo(thread, uriSummary, idealImageSize, isInitialEmail = false, allUsers, allUserImageUrls, None, Some(unsubUrl), None)
               val magicAddress = SystemEmailAddress.discussion(userThread.accessToken.token)
-              ElectronicMail(
+              EmailToSend(
                 from = magicAddress,
-                fromName = Some("Kifi Notifications"),
-                to = Seq(destinationEmail),
+                fromName = Some(Right("Kifi Notifications")),
+                to = Right(destinationEmail),
                 subject = s"""New messages on "${threadEmailInfo.pageTitle}"""",
-                htmlBody = views.html.discussionEmail(threadEmailInfo, extendedThreadItems, true, false, true).body,
-                category = NotificationCategory.User.MESSAGE
+                htmlTemplate = views.html.discussionEmail(threadEmailInfo, extendedThreadItems, isUser = true, isAdded = false, isSmall = true),
+                category = NotificationCategory.User.MESSAGE,
+                templateOptions = Seq(TemplateOptions.CustomLayout).toMap
               )
           }
 
           futureEmail.flatMap { email =>
-            shoebox.sendMail(email) map {
+            shoebox.processAndSendMail(email) map {
               case true =>
               case false => throw new Exception("Shoebox was unable to parse and send the email.")
             }

@@ -61,7 +61,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
   def internNormalizedURI(url: String, contentWanted: Boolean = false): Future[NormalizedURI]
   def sendMail(email: ElectronicMail): Future[Boolean]
-  def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int): Future[Seq[Phrase]]
   def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int): Future[Seq[NormalizedURI]]
@@ -245,14 +244,6 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def sendMail(email: ElectronicMail): Future[Boolean] = {
     call(Shoebox.internal.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
-  }
-
-  def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = {
-    val payload = Json.obj(
-      "user" -> userId.id,
-      "email" -> Json.toJson(email)
-    )
-    call(Shoebox.internal.sendMailToUser(), payload).map(r => r.body.toBoolean)
   }
 
   def processAndSendMail(email: EmailToSend) = {

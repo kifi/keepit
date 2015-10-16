@@ -9,7 +9,7 @@ import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
-import com.keepit.commanders.BasicSlackMessage
+import com.keepit.commanders.{ PathCommander, BasicSlackMessage }
 import com.keepit.common.net.{ DirectUrl, HttpClient }
 import com.keepit.common.akka.SafeFuture
 
@@ -44,6 +44,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   accountLockHelper: AccountLockHelper,
   stripeClient: StripeClient,
   airbrake: AirbrakeNotifier,
+  pathCommander: PathCommander,
   postOffice: LocalPostOffice,
   emailRepo: UserEmailAddressRepo,
   orgRepo: OrganizationRepo,
@@ -82,13 +83,13 @@ class PaymentProcessingCommanderImpl @Inject() (
     lastFourFuture.map { lastFour =>
       val subject = s"We've charged you card for your Kfi Organization ${org.name}"
       val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
-      |For more details please consult your account history at <a href="https://www.kifi.com/$handle/settings">www.kifi.com/$handle/settings<a>.</p>
+      |For more details please consult your account history at <a href="${pathCommander.pathForOrganization(org).absolute}/settings">www.kifi.com/$handle/settings<a>.</p>
       |
       |<p>Thanks,
       |The Kifi Team</p>
       """.stripMargin
       val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
-      |For more details please consult your account history at https://www.kifi.com/$handle/settings.
+      |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings.
       |
       |Thanks, <br/>
       |The Kifi Team
@@ -136,18 +137,20 @@ class PaymentProcessingCommanderImpl @Inject() (
           case (orgId, result) =>
             result match {
               case Success((amount, reason)) => if (reason != BillingResultReasons.LOW_BALANCE) {
-                Some(s"Processed Org ${orgId}. Charged: $amount. Reason: $reason")
+                val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
+                Some(s"""Processed Org <"https://admin.kifi.com/admin/organization/id/$orgId"|${org.name}>. Charged: $amount. Reason: $reason""")
               } else {
                 None
               }
               case Failure(ex) => {
-                log.error(s"Fatal Error processing Org ${orgId}. Reason: ${ex.getMessage}", ex)
-                Some(s"Fatal Error processing Org ${orgId}. Reason: ${ex.getMessage}. See log for stack trace.")
+                log.error(s"Fatal Error processing Org $orgId. Reason: ${ex.getMessage}", ex)
+                val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
+                Some(s"""Fatal Error processing Org <"https://admin.kifi.com/admin/organization/id/$orgId"|${org.name}>. Reason: ${ex.getMessage}. See log for stack trace.""")
               }
             }
         }.flatten.mkString("\n"))
       }
-      case Failure(ex) => reportToSlack(s"@channel Fatal Error during billing processing!")
+      case Failure(ex) => reportToSlack(s"@channel Fatal Error during billing processing! $ex")
     }
     resultsFuture.map(_ => ())
   }

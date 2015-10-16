@@ -82,16 +82,16 @@ class AdminPaymentsController @Inject() (
   }
 
   def grantExtraCredit(orgId: Id[Organization]) = AdminUserAction { request =>
-    val amount = request.body.asFormUrlEncoded.get.apply("amount").head.toInt
-    val memoRaw = request.body.asFormUrlEncoded.get.apply("memo").head.toString
-    val memo = if (memoRaw == "") None else Some(memoRaw)
-    val attributedToMember = request.body.asFormUrlEncoded.get.apply("member").headOption.map(id => Id[User](id.toLong))
+    val amount = request.body.asFormUrlEncoded.get.apply("amount").head.trim.toInt
+    val memo = request.body.asFormUrlEncoded.get.apply("memo").filterNot(_ == "").headOption.map(_.trim)
+    val attributedToMember = request.body.asFormUrlEncoded.get.get("member").flatMap(_.headOption.filterNot(_ == "").map(id => Id[User](id.trim.toLong)))
     val dollarAmount = DollarAmount(amount)
 
-    val (org, isAttributedToNonMember) = db.readOnlyMaster { implicit session =>
-      val org = organizationRepo.get(orgId)
+    val isAttributedToNonMember = db.readOnlyMaster { implicit session =>
+      val org = organizationRepo.get(orgId) //lets see if its actually a good id
+      assert(org.state == OrganizationStates.ACTIVE, s"Org state is not active $org")
       val isAttributedToNonMember = attributedToMember.exists(userId => orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isEmpty)
-      (org, isAttributedToNonMember)
+      isAttributedToNonMember
     }
 
     if ((amount < 0 || amount > 10000) && !EXTRA_SPECIAL_ADMINS.contains(request.userId)) {
@@ -102,7 +102,7 @@ class AdminPaymentsController @Inject() (
       Ok(s"User ${attributedToMember.get} is not a member of Organization $orgId")
     } else {
       planCommander.grantSpecialCredit(orgId, dollarAmount, Some(request.userId), attributedToMember, memo)
-      Ok(s"Sucessfully granted special credit of $dollarAmount to Organization $orgId.")
+      Ok(s"Successfully granted special credit of $dollarAmount to Organization $orgId.")
     }
   }
 
