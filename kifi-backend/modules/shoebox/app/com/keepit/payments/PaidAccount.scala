@@ -86,6 +86,8 @@ case class PaidAccount(
   def withNewPlan(newPlanId: Id[PaidPlan]): PaidAccount = this.copy(planId = newPlanId)
 
   def withCycleStart(newCycleStart: DateTime): PaidAccount = this.copy(billingCycleStart = newCycleStart)
+
+  def lastBillingFailed: Boolean = false //I believe Ryan is working on tracking that in this model (per github comment) so this should be filled in or replaced when that is done
 }
 
 object PaidAccountStates extends States[PaidAccount]

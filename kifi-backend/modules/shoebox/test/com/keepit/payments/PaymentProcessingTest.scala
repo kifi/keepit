@@ -157,9 +157,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
             .withBillingCycleStart(currentDateTime.minusMonths(1).minusDays(1))
             .saved
         }
-        val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        val BillingResult(charge, message, stripeResultOpt) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === DollarAmount.ZERO
-        message === "Not processed because conditions not met. Frozen: true."
+        message === BillingResultReason.CONDITIONS_NOT_MET(frozen = true)
 
         db.readOnlyMaster { implicit session =>
           inject[PaidAccountRepo].get(accountPre.id.get).credit === initialCredit
@@ -183,9 +183,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
             .withBillingCycleStart(initialBillingCycleStart)
             .saved
         }
-        val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        val BillingResult(charge, message, stripeResultOpt) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === DollarAmount.ZERO
-        message === "Not charging because of low balance"
+        message === BillingResultReason.LOW_BALANCE
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
@@ -210,9 +210,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
             .withCredit(initialCredit)
             .saved
         }
-        val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        val BillingResult(charge, message, stripeResultOpt) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === DollarAmount.ZERO
-        message === "Not processed because conditions not met. Frozen: false."
+        message === BillingResultReason.CONDITIONS_NOT_MET(frozen = false)
 
         db.readOnlyMaster { implicit session =>
           inject[PaidAccountRepo].get(accountPre.id.get).credit === initialCredit
@@ -247,9 +247,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           account
         }
 
-        val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        val BillingResult(charge, message, stripeResultOpt) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === DollarAmount(3 * price.cents) - initialCredit
-        message === "Billing Cycle elapsed"
+        message === BillingResultReason.BILLING_CYCLE_ELAPSED
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
@@ -286,9 +286,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           account
         }
 
-        val (charge, message) = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        val BillingResult(charge, message, stripeResultOpt) = Await.result(commander.processAccount(accountPre), Duration.Inf)
         charge === -initialCredit
-        message === "Max balance exceeded"
+        message === BillingResultReason.MAX_BALANCE_EXCEEDED
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
@@ -357,7 +357,10 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
 
         }
 
-        Await.result(commander.processAccount(accountPre), Duration.Inf) should throwA[Exception](message = "missing_default_payment_method")
+        val BillingResult(charge, message, stripeResultOpt) = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        charge === DollarAmount.ZERO
+        message === BillingResultReason.MISSING_PAYMENT_METHOD
+        stripeResultOpt === None
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
