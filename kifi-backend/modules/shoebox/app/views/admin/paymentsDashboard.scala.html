@@ -1,6 +1,7 @@
 @import com.keepit.controllers.admin.AdminPaymentsDashboard
 @(dashboard: AdminPaymentsDashboard)
 
+@if(dashboard.frozenAccounts.nonEmpty) {
 <h2>Frozen Accounts!</h2>
 <ul>
     @for(account <- dashboard.frozenAccounts) {
@@ -9,6 +10,7 @@
         </li>
     }
 </ul>
+}
 
 <table class="table table-condensed table-striped">
     <thead>
