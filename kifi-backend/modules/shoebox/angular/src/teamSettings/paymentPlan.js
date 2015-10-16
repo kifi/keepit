@@ -43,12 +43,14 @@ angular.module('kifi')
       var firstFreeTierPlan = freeTierPlans[0];
       $scope.plan.name = firstFreeTierPlan.name;
       $scope.plan.cycle = firstFreeTierPlan.cycle;
+      $scope.planSelectsForm.$setDirty();
     };
 
     $scope.changePlanToStandard = function () {
       var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
       var firstStandardTierPlan = standardTierPlans[0];
       $scope.plan.name = firstStandardTierPlan.name;
+      $scope.planSelectsForm.$setDirty();
     };
 
     var plansByTier = paymentPlans.plans;
