@@ -111,11 +111,20 @@ PageData.prototype = {
   howKept: function () {
     var keeps = this.keeps;
     if (keeps.length) {
-      var mine = keeps.filter(isMine);
-      if (mine.length) {
-        return mine.every(isSecret) ? 'private' : 'public';
-      }
-      return 'other';
+      // Visibilities with a higher index have greater precedence
+      var visibilityOptions = ['secret', 'organization', 'published', 'discoverable']
+      // Use a mapping to allow old styles named -public/private
+      var visibilityMap = {
+        'secret': 'private',
+        'organization': 'organization',
+        'published': 'public',
+        'discoverable': 'public'
+      };
+      var maxVisibilityIndex = -1;
+      keeps.filter(isMine).forEach(function (item) {
+        maxVisibilityIndex = Math.max(maxVisibilityIndex, visibilityOptions.indexOf(item.visibility));
+      });
+      return maxVisibilityIndex >= 0 ? visibilityMap[visibilityOptions[maxVisibilityIndex]] : 'other';
     }
     return null;
   },
@@ -2149,7 +2158,12 @@ function updateTabsWithKeptState() {
 
 function setIcon(howKept, tab) {
   log('[setIcon] tab:', tab.id, 'how:', howKept);
-  api.icon.set(tab, (howKept ? (howKept === 'private' ? 'icons/url_red' : 'icons/url_green') : 'icons/url_dark') + (silence ? '_II' : '') + '.png');
+  var icons = {
+    'private': 'icons/url_red',
+    'public': 'icons/url_green',
+    'organization': 'icons/url_blue'
+  }
+  api.icon.set(tab, (icons[howKept] || 'icons/url_dark') + (silence ? '_II' : '') + '.png');
 }
 
 function updateIconSilence(tab) {

@@ -4,5 +4,5 @@
     <span class="kifi-count"{{^boxCount}} style="display:none"{{/boxCount}}>{{boxCount}}</span>
   </span>
   <span class="kifi-dock-btn kifi-dock-compose" data-tip="c"></span>
-  <a class="kifi-keep-btn {{#isKept}}{{#isPrivate}}kifi-private{{/isPrivate}}{{^isPrivate}}kifi-public{{/isPrivate}}{{/isKept}}{{^isKept}}kifi-unkept{{/isKept}}" href="javascript:"></a>
+  <a class="kifi-keep-btn kifi-{{keptState}}" href="javascript:"></a>
 </kifi>
