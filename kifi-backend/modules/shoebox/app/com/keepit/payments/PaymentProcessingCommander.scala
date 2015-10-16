@@ -1,34 +1,26 @@
 package com.keepit.payments
 
-import java.net.URLEncoder
-
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.model.{ Organization, NotificationCategory, UserEmailAddressRepo, OrganizationRepo }
-import com.keepit.common.concurrent.{ ReactiveLock, FutureHelpers }
+import com.keepit.model.{ Organization }
+import com.keepit.common.concurrent.{ ReactiveLock }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
-import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
-import com.keepit.commanders.{ PathCommander, BasicSlackMessage }
-import com.keepit.common.net.{ DirectUrl, HttpClient }
-import com.keepit.common.akka.SafeFuture
+import com.keepit.common.net.{ HttpClient }
+import com.keepit.common.core._
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
-import play.api.libs.json.{ JsNull, Json }
-import play.api.Mode
-import play.api.Mode.Mode
+import play.api.libs.json.{ JsNull }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Try, Success, Failure }
 
 @ImplementedBy(classOf[PaymentProcessingCommanderImpl])
 trait PaymentProcessingCommander {
   def processAllBilling(): Future[Unit]
-  def forceChargeAccount(account: PaidAccount, amount: DollarAmount, description: Option[String]): Future[DollarAmount] //not private for admin use
-  def processAccount(account: PaidAccount): Future[(DollarAmount, String)]
+  def forceChargeAccount(orgId: Id[Organization], amount: DollarAmount): Future[AccountEvent] //not private for admin use
+  def processAccount(account: PaidAccount): Future[Seq[AccountEvent]]
 
   private[payments] val MIN_BALANCE: DollarAmount
   private[payments] val MAX_BALANCE: DollarAmount
@@ -46,185 +38,177 @@ class PaymentProcessingCommanderImpl @Inject() (
   accountLockHelper: AccountLockHelper,
   stripeClient: StripeClient,
   airbrake: AirbrakeNotifier,
-  pathCommander: PathCommander,
-  postOffice: LocalPostOffice,
-  emailRepo: UserEmailAddressRepo,
-  orgRepo: OrganizationRepo,
-  httpClient: HttpClient,
-  mode: Mode,
+  eventCommander: AccountEventTrackingCommander,
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
-  private[payments] val MAX_BALANCE = DollarAmount.wholeDollars(-1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
-  private[payments] val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
-
-  private val slackChannelUrl = "https://hooks.slack.com/services/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"
+  private[payments] val MAX_BALANCE = DollarAmount.wholeDollars(1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
+  private[payments] val MIN_BALANCE = DollarAmount.wholeDollars(1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
 
   private val processingLock = new ReactiveLock(2)
 
-  private object BillingResultReasons {
-    val LOW_BALANCE = "Not charging because of low balance"
-    val NO_LOCK = "Failed to get lock"
-    val MAX_BALANCE_EXCEEDED = "Max balance exceeded"
-    val BILLING_CYCLE_ELAPSED = "Billing Cycle elapsed"
-    def CONDITIONS_NOT_MET(frozen: Boolean) = s"Not processed because conditions not met. Frozen: ${frozen}."
-  }
-
-  private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
-    val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
-    val (userContacts, org) = db.readOnlyReplica { implicit session =>
-      val userContacts = account.userContacts.map { userId =>
-        Try(emailRepo.getByUser(userId)).toOption
-      }.flatten
-      (userContacts, orgRepo.get(account.orgId))
-    }
-    val emails = (account.emailContacts ++ userContacts).toSet.toSeq
-
-    val handle = org.handle
-
-    lastFourFuture.map { lastFour =>
-      val subject = s"We've charged you card for your Kfi Organization ${org.name}"
-      val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
-      |For more details please consult your account history at <a href="${pathCommander.pathForOrganization(org).absolute}/settings">www.kifi.com/$handle/settings<a>.</p>
-      |
-      |<p>Thanks,
-      |The Kifi Team</p>
-      """.stripMargin
-      val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
-      |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings.
-      |
-      |Thanks, <br/>
-      |The Kifi Team
-      """.stripMargin
-      db.readWrite { implicit session =>
-        postOffice.sendMail(ElectronicMail(
-          from = SystemEmailAddress.BILLING,
-          fromName = Some("Kifi Billing"),
-          to = emails,
-          subject = subject,
-          htmlBody = htmlBody,
-          textBody = Some(textBody),
-          category = NotificationCategory.NonUser.BILLING
-        ))
-      }
-    }
-  }
-
-  private def reportToSlack(msg: String): Future[Unit] = SafeFuture {
-    if (msg != "") {
-      val fullMsg = BasicSlackMessage(
-        text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
-        username = "PaymentProcessingCommander",
-        channel = Some("#billing-alerts")
-      )
-      httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
-    } else {
-      Future.successful(())
-    }
-  }
-
   def processAllBilling(): Future[Unit] = processingLock.withLockFuture {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(MAX_BALANCE, clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
-    if (relevantAccounts.length > 0) reportToSlack(s"Processing Payments. ${relevantAccounts.length} orgs to check.")
-    val resultsFuture = Future.sequence(relevantAccounts.map { account =>
-      processAccount(account).map { result =>
-        account.orgId -> Success(result)
-      }.recover {
-        case t: Throwable => account.orgId -> Failure(t)
-      }
-    })
-    resultsFuture.onComplete {
-      case Success(results) => {
-        reportToSlack(results.map {
-          case (orgId, result) =>
-            result match {
-              case Success((amount, reason)) => if (reason != BillingResultReasons.LOW_BALANCE) {
-                val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-                Some(s"""Processed Org <https://admin.kifi.com/admin/organization/id/$orgId|${URLEncoder.encode(org.name, "UTF-8")}>. Charged: $amount. Reason: $reason""")
-              } else {
-                None
-              }
-              case Failure(ex) => {
-                log.error(s"Fatal Error processing Org $orgId. Reason: ${ex.getMessage}", ex)
-                val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-                Some(s"""Fatal Error processing Org <https://admin.kifi.com/admin/organization/id/$orgId|${URLEncoder.encode(org.name, "UTF-8")}>. Reason: ${ex.getMessage}. See log for stack trace.""")
-              }
-            }
-        }.flatten.mkString("\n"))
-      }
-      case Failure(ex) => reportToSlack(s"@channel Fatal Error during billing processing! $ex")
-    }
-    resultsFuture.map(_ => ())
-  }
-
-  def processAccount(account: PaidAccount): Future[(DollarAmount, String)] = processingLock.withLockFuture {
-    accountLockHelper.maybeWithAccountLockAsync(account.orgId) {
-      log.info(s"[PPC][${account.orgId}] Starting Processing")
-      db.readWrite { implicit session =>
-        val plan = paidPlanRepo.get(account.planId)
-        val billingCycleElapsed = account.billingCycleStart.plusMonths(plan.billingCycle.month).isBefore(clock.now)
-        val maxBalanceExceeded = account.credit.cents < MAX_BALANCE.cents
-        val shouldProcess = !account.frozen && (billingCycleElapsed || maxBalanceExceeded)
-        if (shouldProcess) {
-          val newBillingCycleStart = account.billingCycleStart.plusMonths(plan.billingCycle.month)
-          val fullCyclePrice = DollarAmount(account.activeUsers * plan.pricePerCyclePerUser.cents)
-          val updatedAccountPreCharge = if (billingCycleElapsed) account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart) else account
-
-          if (account.credit.cents < MIN_BALANCE.cents) {
-            val chargeAmount = DollarAmount(-1 * updatedAccountPreCharge.credit.cents)
-            log.info(s"[PPC][${account.orgId}] Going to charge $chargeAmount")
-            val description = if (maxBalanceExceeded) s"Max balance exceeded charge for org ${account.orgId} of amount $chargeAmount" else s"Regular charge for org ${account.orgId} of amount $chargeAmount"
-            forceChargeAccount(updatedAccountPreCharge, chargeAmount, Some(description)).map { amount => amount -> (if (maxBalanceExceeded) BillingResultReasons.MAX_BALANCE_EXCEEDED else BillingResultReasons.BILLING_CYCLE_ELAPSED) }
-          } else {
-            log.info(s"[PPC][${account.orgId}] Not Charging. Balance less than $MIN_BALANCE (${account.credit})")
-            paidAccountRepo.save(updatedAccountPreCharge)
-            Future.successful(DollarAmount.ZERO -> BillingResultReasons.LOW_BALANCE)
-          }
-        } else {
-          Future.successful(DollarAmount.ZERO -> BillingResultReasons.CONDITIONS_NOT_MET(account.frozen))
+    if (relevantAccounts.length > 0) eventCommander.reportToSlack(s"Processing Payments. ${relevantAccounts.length} orgs to check.")
+    Future.sequence(relevantAccounts.map { account =>
+      processAccount(account).imap(_ => ()) recover {
+        case e: Exception => {
+          val message = s"Fatal error processing Org ${account.orgId}"
+          log.error(message, e)
+          airbrake.notify(message, e)
         }
       }
-    }.getOrElse(Future.successful(DollarAmount.ZERO -> BillingResultReasons.NO_LOCK))
+    }).imap(_ => ())
   }
 
-  def forceChargeAccount(account: PaidAccount, amount: DollarAmount, descriptionOpt: Option[String]): Future[DollarAmount] = {
+  def processAccount(account: PaidAccount): Future[Seq[AccountEvent]] = processingLock.withLockFuture {
+    accountLockHelper.maybeWithAccountLockAsync(account.orgId) {
+      log.info(s"[PPC][${account.orgId}] Starting Processing")
+      if (!account.frozen) {
+        val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(account.planId) }
+        val billingCycleElapsed = account.billingCycleStart.plusMonths(plan.billingCycle.month).isBefore(clock.now)
+        val maxBalanceExceeded = account.owed > MAX_BALANCE
+        val shouldProcess = (billingCycleElapsed || maxBalanceExceeded)
+        if (shouldProcess) {
+          val (billedAccount, billingEvent) = if (billingCycleElapsed) billAccount(account, plan) else (account, None)
+          if (billedAccount.owed > MIN_BALANCE) {
+            val chargeAction = if (billingCycleElapsed) AccountEventAction.PlanBillingCharge() else AccountEventAction.MaxBalanceExceededCharge()
+            chargeAccount(billedAccount, billedAccount.owed, chargeAction).map {
+              case (maybeChargedAccount, chargeEvent) =>
+                billingEvent.toSeq :+ chargeEvent
+            }
+          } else {
+            val lowBalanceIgnoredEvent = ignoreLowBalance(billedAccount)
+            Future.successful(billingEvent.toSeq :+ lowBalanceIgnoredEvent)
+          }
+        } else Future.successful(Seq.empty)
+      } else Future.successful(Seq.empty)
+    } getOrElse { throw new LockedAccountException(account.orgId) }
+  }
+
+  private def billAccount(account: PaidAccount, plan: PaidPlan): (PaidAccount, Some[AccountEvent]) = {
+    db.readWrite { implicit session =>
+      val newBillingCycleStart = account.billingCycleStart.plusMonths(plan.billingCycle.month)
+      val fullCyclePrice = DollarAmount(account.activeUsers * plan.pricePerCyclePerUser.cents)
+      val billedAccount = paidAccountRepo.save(account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart))
+      val billingEvent = accountEventRepo.save(AccountEvent(
+        eventTime = clock.now(),
+        accountId = account.id.get,
+        billingRelated = true,
+        whoDunnit = None,
+        whoDunnitExtra = JsNull,
+        kifiAdminInvolved = None,
+        action = AccountEventAction.PlanBilling(),
+        creditChange = billedAccount.credit - account.credit,
+        paymentMethod = None,
+        paymentCharge = None,
+        memo = None,
+        chargeId = None
+      ))
+      (billedAccount, Some(billingEvent))
+    }
+  }
+
+  private def ignoreLowBalance(account: PaidAccount): AccountEvent = {
+    db.readWrite { implicit session =>
+      accountEventRepo.save(AccountEvent(
+        eventTime = clock.now(),
+        accountId = account.id.get,
+        billingRelated = true,
+        whoDunnit = None,
+        whoDunnitExtra = JsNull,
+        kifiAdminInvolved = None,
+        action = AccountEventAction.LowBalanceIgnored(account.owed),
+        creditChange = DollarAmount.ZERO,
+        paymentMethod = None,
+        paymentCharge = None,
+        memo = None,
+        chargeId = None
+      ))
+    }
+  }
+
+  private def chargeAccount(account: PaidAccount, amount: DollarAmount, chargeAction: AccountEventAction): Future[(PaidAccount, AccountEvent)] = {
     db.readOnlyMaster { implicit session => paymentMethodRepo.getDefault(account.id.get) } match {
       case Some(pm) => {
-        val description = descriptionOpt.getOrElse("Forced charge for org ${account.orgId} of $amount")
+        val description = chargeAction match {
+          case AccountEventAction.PlanBillingCharge() => s"Regular charge for org ${account.orgId} of amount $amount"
+          case AccountEventAction.MaxBalanceExceededCharge() => s"Max balance exceeded charge for org ${account.orgId} of amount $amount"
+          case AccountEventAction.ForcedCharge() => s"Forced charge for org ${account.orgId} of $amount"
+        }
         stripeClient.processCharge(amount, pm.stripeToken, description).map {
           case StripeChargeSuccess(amount, chargeId) => {
             db.readWrite { implicit session =>
-              paidAccountRepo.save(account.withIncreasedCredit(amount))
-              accountEventRepo.save(AccountEvent(
+              val chargedAccount = paidAccountRepo.save(account.withIncreasedCredit(amount))
+              val chargeEvent = accountEventRepo.save(AccountEvent(
                 eventTime = clock.now(),
                 accountId = account.id.get,
                 billingRelated = true,
                 whoDunnit = None,
                 whoDunnitExtra = JsNull,
                 kifiAdminInvolved = None,
-                action = AccountEventAction.PlanBillingCharge(),
-                creditChange = amount,
+                action = chargeAction,
+                creditChange = chargedAccount.credit - account.credit,
                 paymentMethod = pm.id,
                 paymentCharge = Some(amount),
                 memo = None,
                 chargeId = Some(chargeId)
               ))
+              log.info(s"[PPC][${account.orgId}] Processed charge for amount $amount: $description")
+              (chargedAccount, chargeEvent)
             }
-            notifyOfCharge(account, pm.stripeToken, amount, chargeId)
-            log.info(s"[PPC][${account.orgId}] Processed charge for amount $amount: $description")
-            amount
           }
-          case StripeChargeFailure(code, message) => {
-            airbrake.notify(s"Stripe error charging org ${account.orgId}: $code, $message")
-            throw new Exception(message)
+          case failure @ StripeChargeFailure(code, message) => {
+            db.readWrite { implicit session =>
+              val updatedAccount: PaidAccount = account // todo(Léo): flag with potential actionRequired
+              val chargeFailureEvent = accountEventRepo.save(AccountEvent(
+                eventTime = clock.now(),
+                accountId = account.id.get,
+                billingRelated = true,
+                whoDunnit = None,
+                whoDunnitExtra = JsNull,
+                kifiAdminInvolved = None,
+                action = AccountEventAction.ChargeFailure(amount, failure),
+                creditChange = DollarAmount.ZERO,
+                paymentMethod = pm.id,
+                paymentCharge = None,
+                memo = None,
+                chargeId = None
+              ))
+              log.info(s"[PPC][${account.orgId}] Failed to charge via Stripe: $code, $message")
+              (updatedAccount, chargeFailureEvent)
+            }
           }
         }
       }
       case None => {
-        airbrake.notify(s"Missing default payment method for org ${account.orgId}")
-        throw new Exception("missing_default_payment_method")
+        db.readWrite { implicit session =>
+          val updatedAccount: PaidAccount = account // todo(Léo): flag with potential actionRequired
+          val missingPaymentMethodEvent = accountEventRepo.save(AccountEvent(
+            eventTime = clock.now(),
+            accountId = account.id.get,
+            billingRelated = true,
+            whoDunnit = None,
+            whoDunnitExtra = JsNull,
+            kifiAdminInvolved = None,
+            action = AccountEventAction.MissingPaymentMethod(),
+            creditChange = DollarAmount.ZERO,
+            paymentMethod = None,
+            paymentCharge = None,
+            memo = None,
+            chargeId = None
+          ))
+          log.info(s"[PPC][${account.orgId}] Missing default payment method!")
+          Future.successful((updatedAccount, missingPaymentMethodEvent))
+        }
       }
     }
   }
 
+  def forceChargeAccount(orgId: Id[Organization], amount: DollarAmount): Future[AccountEvent] = {
+    accountLockHelper.maybeWithAccountLockAsync(orgId) {
+      val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
+      chargeAccount(account, amount, AccountEventAction.ForcedCharge()).imap { case (_, chargeEvent) => chargeEvent }
+    } getOrElse { throw new LockedAccountException(orgId) }
+  }
 }

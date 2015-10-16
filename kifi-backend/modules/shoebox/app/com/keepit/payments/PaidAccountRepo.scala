@@ -80,7 +80,7 @@ class PaidAccountRepoImpl @Inject() (
   }
 
   def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount] = {
-    (for (row <- rows if !row.frozen && (row.credit < maxBalance || row.billingCycleStart < maxCycleAge)) yield row).list
+    (for (row <- rows if !row.frozen && (row.credit < -maxBalance || row.billingCycleStart < maxCycleAge)) yield row).list
   }
 
 }

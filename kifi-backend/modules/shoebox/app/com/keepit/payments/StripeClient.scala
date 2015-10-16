@@ -4,6 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.concurrent.ReactiveLock
 
 import com.google.inject.{ Singleton, Inject }
+import com.kifi.macros.json
 
 import play.api.libs.json.JsValue
 import play.api.Mode
@@ -22,6 +23,7 @@ trait StripeChargeResult
 
 case class StripeChargeSuccess(amount: DollarAmount, chargeId: String) extends StripeChargeResult
 
+@json
 case class StripeChargeFailure(code: String, message: String) extends StripeChargeResult
 
 trait StripeClient {
@@ -56,6 +58,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
       val charge = Charge.create(chargeParams.asJava)
       StripeChargeSuccess(DollarAmount(charge.getAmount()), charge.getId())
     } catch {
+      // todo(Léo): handle Stripe being down
       case ex: CardException => {
         StripeChargeFailure(ex.getCode(), ex.getMessage())
       }

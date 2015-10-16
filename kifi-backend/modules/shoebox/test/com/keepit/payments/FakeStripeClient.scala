@@ -25,7 +25,7 @@ class FakeStripeClientImpl extends StripeClient {
 
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult] = {
     if (failingMode) {
-      Future.failed(new Exception("boom"))
+      Future.successful(StripeChargeFailure("boom", "boom"))
     } else {
       val num = chargeCounter.getAndIncrement()
       val trans = FakeTransaction(s"faketransaction_$num", amount, token, description)

@@ -63,7 +63,7 @@ case class PaidAccount(
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 
-  def owed: DollarAmount = DollarAmount.ZERO max -credit
+  def owed: DollarAmount = -(DollarAmount.ZERO min credit)
 
   def withReducedCredit(reduction: DollarAmount): PaidAccount = {
     val newCredit = DollarAmount(credit.cents - reduction.cents)
