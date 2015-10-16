@@ -73,25 +73,25 @@ class PaymentProcessingCommanderImpl @Inject() (
   private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
     val (userContacts, org) = db.readOnlyReplica { implicit session =>
-      val userContacts = account.userContacts.map { userId =>
+      val userContacts = account.userContacts.flatMap { userId =>
         Try(emailRepo.getByUser(userId)).toOption
-      }.flatten
+      }
       (userContacts, orgRepo.get(account.orgId))
     }
-    val emails = (account.emailContacts ++ userContacts).toSet.toSeq
+    val emails = (account.emailContacts ++ userContacts).distinct
 
-    val handle = org.handle
+    val path = pathCommander.pathForOrganization(org).absolute + "/settings"
 
     lastFourFuture.map { lastFour =>
-      val subject = s"We've charged you card for your Kfi Organization ${org.name}"
+      val subject = s"We've charged you card for your Kifi Organization ${org.name}"
       val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
-      |For more details please consult your account history at <a href="${pathCommander.pathForOrganization(org).absolute}/settings">www.kifi.com/$handle/settings<a>.</p>
+      |For more details please consult your account history at <a href="$path">$path<a>.</p>
       |
       |<p>Thanks,
       |The Kifi Team</p>
       """.stripMargin
       val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
-      |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings.
+      |For more details please consult your account history at $path.
       |
       |Thanks, <br/>
       |The Kifi Team
