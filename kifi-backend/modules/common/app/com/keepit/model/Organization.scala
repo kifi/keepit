@@ -146,6 +146,7 @@ object OrganizationStates extends States[Organization]
 @json
 case class OrganizationHandle(value: String) extends AnyVal {
   def urlEncoded: String = URLEncoder.encode(value, UTF8)
+  override def toString = value
 }
 
 object OrganizationHandle {
