@@ -17,7 +17,7 @@
         <b ng-bind="billingState.billingDate | date:'yyyy-MM-dd'"></b>.
       </p>
     </li>
-    <li>
+    <li ng-if="billingState.balance[0] !== '-'">
       <p>
         <span>You have a&nbsp;</span>
         <u ng-bind="'credit of ' + billingState.balance"></u>
