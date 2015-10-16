@@ -18,6 +18,7 @@ trait AccountEventRepo extends Repo[AccountEvent] {
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent]
   def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
   def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
+  def getAllEvents(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
 
@@ -92,13 +93,19 @@ class AccountEventRepoImpl @Inject() (
     relevantEvents.sortBy(r => (r.eventTime desc, r.id desc)).take(limit).list
   }
 
-  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+  private def getEventsHelper(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession) = {
     val accountEvents = rows.filter(row => row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE)
     val relevantEvents = onlyRelatedToBillingOpt match {
       case Some(onlyRelatedToBilling) => accountEvents.filter(_.billingRelated === onlyRelatedToBilling)
       case None => accountEvents
     }
-    relevantEvents.sortBy(r => (r.eventTime desc, r.id)).take(limit).list
+    relevantEvents.sortBy(r => (r.eventTime desc, r.id))
+  }
+  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    getEventsHelper(accountId, onlyRelatedToBillingOpt).take(limit).list
+  }
+  def getAllEvents(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    getEventsHelper(accountId, onlyRelatedToBillingOpt).list
   }
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
