@@ -19,13 +19,14 @@ angular.module('kifi')
         $scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
         $scope.me = profileService.me;
         $scope.space = $scope.space || {};
+        $scope.libraryOwner = $scope.library.owner || $scope.me;
 
         $scope.unsetOrg = function () {
           // Allow moving if...
           if (!$scope.library.id || // we're creating a new library
               $scope.hasPermission(LIB_PERMISSION.MOVE_LIBRARY)) { // or we have permission to move the existing library
             $scope.libraryProps.selectedOrgId = undefined;
-            $scope.space.destination = $scope.me;
+            $scope.space.destination = $scope.library.owner;
           }
         };
 
@@ -38,6 +39,14 @@ angular.module('kifi')
             $scope.space.destination = $scope.me.orgs.filter(function(org) {
               return org.id === orgId;
             })[0];
+          }
+        };
+
+        $scope.orgs = function () {
+          if (!$scope.library.owner || $scope.library.owner.id === $scope.me.id) {
+            return $scope.me.orgs;
+          } else {
+            return [$scope.library.org];
           }
         };
 
