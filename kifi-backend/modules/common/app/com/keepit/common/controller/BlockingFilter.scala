@@ -38,7 +38,7 @@ object BlockingFilter extends Filter {
   )
 
   val tarpit = Seq(
-    "12.47.130.201",// Declara
+    "12.47.130.201", // Declara
     "24.6.100.185", // edcast
     "173.13.190.50" // edcast
   )
