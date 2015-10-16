@@ -1,8 +1,8 @@
 <div class="kf-team-activity-log">
   <h1 class="kf-team-activity-top-header">Activity Log</h1>
   <div kf-billing-summary billing-state="billingState"></div>
-  <p>You currently have <b ng-bind="profile.numMembers"></b> team members. All billing happens at the beginning of the month. All times are handled in the UTC timezone.</p>
   <div class="kf-container">
+    <div class="kf-container-header"><span>Activity</span></div>
     <table class="kf-team-activity-table" smart-scroll scroll-distance="'100%'" scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()">
       <thead>
         <tr>
