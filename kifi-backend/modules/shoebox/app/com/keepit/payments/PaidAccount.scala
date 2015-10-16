@@ -80,6 +80,9 @@ case class PaidAccount(
     this.copy(activeUsers = if (newActiveUsers < 0) 0 else newActiveUsers)
   }
 
+  def withUserContacts(newContacts: Seq[Id[User]]): PaidAccount = this.copy(userContacts = newContacts)
+  def withEmailContacts(newContacts: Seq[EmailAddress]): PaidAccount = this.copy(emailContacts = newContacts)
+
   def withNewPlan(newPlanId: Id[PaidPlan]): PaidAccount = this.copy(planId = newPlanId)
 
   def withCycleStart(newCycleStart: DateTime): PaidAccount = this.copy(billingCycleStart = newCycleStart)

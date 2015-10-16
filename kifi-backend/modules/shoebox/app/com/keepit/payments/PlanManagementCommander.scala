@@ -69,6 +69,7 @@ trait PlanManagementCommander {
 
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
+  private[payments] def addUserAccountContactHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): Option[AccountEvent]
 
   //ADMIN ONLY
   def isFrozen(orgId: Id[Organization]): Boolean
@@ -85,6 +86,7 @@ class PlanManagementCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   orgConfigRepo: OrganizationConfigurationRepo,
   basicUserRepo: BasicUserRepo,
+  emailRepo: UserEmailAddressRepo,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
@@ -175,6 +177,7 @@ class PlanManagementCommanderImpl @Inject() (
               attribution = ActionAttribution(user = Some(creator), admin = None),
               action = AccountEventAction.AdminAdded(creator)
             ))
+            addUserAccountContactHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             accountLockHelper.releaseAccountLockForSession(orgId, session)
             adminEvent
           }
@@ -229,8 +232,12 @@ class PlanManagementCommanderImpl @Inject() (
   def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
     val price: DollarAmount = remainingBillingCycleCost(account)
+    val emails = emailRepo.getAllByUser(userId)
     paidAccountRepo.save(
-      account.withIncreasedCredit(price).withFewerActiveUsers(1)
+      account.withIncreasedCredit(price)
+        .withFewerActiveUsers(1)
+        .withUserContacts(account.userContacts.diff(Seq(userId)))
+        .withEmailContacts(account.emailContacts.diff(Seq(emails.map(_.address))))
     )
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
@@ -300,6 +307,10 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent] = db.readWrite { implicit session =>
+    addUserAccountContactHelper(orgId, userId, attribution)
+  }
+
+  def addUserAccountContactHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): Option[AccountEvent] = {
     val account = paidAccountRepo.getByOrgId(orgId)
     if (!account.userContacts.contains(userId)) {
       val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId) :+ userId)
