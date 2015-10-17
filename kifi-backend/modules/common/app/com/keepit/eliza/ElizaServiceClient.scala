@@ -189,9 +189,8 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def flush(userId: Id[User]): Future[Unit] = {
-    // val payload = Json.obj("userId" -> userId, "data" -> Json.arr("flush"))
-    // call(Eliza.internal.sendToUser, payload).map(_ => ())
-    Future.successful((): Unit)
+    val payload = Json.obj("userId" -> userId, "data" -> Json.arr("flush"))
+    call(Eliza.internal.sendToUser, payload).map(_ => ())
   }
 
   def connectedClientCount: Future[Seq[Int]] = {

@@ -80,7 +80,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
     val emails = (account.emailContacts ++ userContacts).distinct
 
-    val path = pathCommander.pathForOrganization(org).absolute + "/settings"
+    val path = pathCommander.pathForOrganization(org).absolute + "/settings/activity"
 
     lastFourFuture.map { lastFour =>
       val subject = s"We've charged you card for your Kifi Organization ${org.name}"
