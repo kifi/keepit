@@ -50,7 +50,7 @@ trait LibraryAccessActions {
   private def lookupWriteAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
       case Some((libraryId, Some(userId), accessToken)) =>
-        if( libraryAccessCommander.canModifyLibrary(userId, libraryId) ) None
+        if (libraryAccessCommander.canModifyLibrary(libraryId, userId)) None
         else Some(Forbidden(Json.obj("error" -> "permission_denied")))
       case _ =>
         Some(BadRequest(Json.obj("error" -> "invalid_id")))
