@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
 
@@ -13,7 +14,7 @@ class LibraryAccessCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     permissionCommander: PermissionCommander,
-    libraryInviteRepo: LibraryInviteRepo) {
+    libraryInviteRepo: LibraryInviteRepo) extends Logging {
 
   def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean = {
     db.readOnlyReplica { implicit s =>
