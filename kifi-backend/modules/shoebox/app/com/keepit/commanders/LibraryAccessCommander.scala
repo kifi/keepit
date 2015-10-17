@@ -24,7 +24,6 @@ class LibraryAccessCommander @Inject() (
       def canIndirectlyEditLibrary = lib.organizationId.exists { orgId =>
         permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
       }
-      log.info(s"[LAC-CML] User $userId editing library $libraryId: ($canDirectlyEditLibrary, $canIndirectlyEditLibrary)")
       canDirectlyEditLibrary || canIndirectlyEditLibrary
     }
   }
