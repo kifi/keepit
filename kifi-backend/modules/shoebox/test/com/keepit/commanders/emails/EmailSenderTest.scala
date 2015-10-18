@@ -462,7 +462,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
-        email.subject === "An invitation to a Kifi library: Football"
+        email.subject === "Invite to join my Kifi library on Football"
         email.htmlBody.contains("http://dev.ezkeep.com:9000/tom/football?") === true
         email.htmlBody.contains("<span style=\"color:#999999\">Tom Brady</span>") === true
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
@@ -485,7 +485,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.LIBRARY_INVITATION)
-        email.subject === "An invitation to a Kifi library: Football"
+        email.subject === "Invite to join my Kifi library on Football"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true)
@@ -494,7 +494,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
         val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = false), Duration(5, "seconds")).get
-        emailWithoutPassPhrase.subject === "An invitation to a Kifi library: Football"
+        emailWithoutPassPhrase.subject === "Invite to join my Kifi library on Football"
         emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, true)
         val htmlWithoutPassPhrase = emailWithoutPassPhrase.htmlBody.value
@@ -518,7 +518,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
-        email.subject === "An invitation to a Kifi library: Football"
+        email.subject === "Invite to join my Kifi library on Football"
         email.htmlBody.value must contain(deepLink)
         email.htmlBody.value must contain("Hi Aaron")
         email.htmlBody.value must contain("Check out the \"Football\" library I created")
@@ -548,10 +548,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
-        email.subject === "I want to collaborate with you on Football"
+        email.subject === "Invite to collaborate on my Kifi library Football"
         email.htmlBody.value must contain(deepLink)
         email.htmlBody.value must contain("Hi Aaron")
-        email.htmlBody.value must contain("collaborate")
+        email.htmlBody.value must contain("help me build")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
@@ -574,7 +574,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         outbox(0) === email
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.NonUser.LIBRARY_INVITATION)
-        email.subject === "An invitation to a Kifi library: Football"
+        email.subject === "Invite to join my Kifi library on Football"
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, false)
@@ -583,7 +583,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         db.readWrite { implicit session => libraryRepo.save(lib1.copy(visibility = LibraryVisibility.PUBLISHED)) }
         val emailWithoutPassPhrase = Await.result(inviteSender.sendInvite(invite = inviteNonUser, isPlainEmail = true), Duration(5, "seconds")).get
-        emailWithoutPassPhrase.subject === "An invitation to a Kifi library: Football"
+        emailWithoutPassPhrase.subject === "Invite to join my Kifi library on Football"
         emailWithoutPassPhrase.to(0) === EmailAddress("aaronrodgers@gmail.com")
         params.map(emailWithoutPassPhrase.htmlBody.contains(_)) === List(true, true, true, false)
       }
@@ -605,7 +605,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
         email.category === NotificationCategory.toElectronicMailCategory(NotificationCategory.User.LIBRARY_INVITATION)
         email.extraHeaders.get(PostOffice.Headers.REPLY_TO) === "support@kifi.com"
-        email.subject === "An invitation to a Kifi library: Football"
+        email.subject === "Invite to join my Kifi library on Football"
         email.htmlBody.value must contain(deepLink)
         email.htmlBody.value must contain("check this out!")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
