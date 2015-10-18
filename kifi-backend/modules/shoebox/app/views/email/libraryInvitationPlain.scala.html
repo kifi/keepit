@@ -4,7 +4,8 @@ inviteMsg: Option[String],
 library: Library,
 libraryInfo: com.keepit.model.LibraryInfo,
 authToken: String,
-inviteAccess: LibraryAccess
+inviteAccess: LibraryAccess,
+teamName: Option[String]
 )
 
 @import com.keepit.common.mail.template.helpers._
@@ -23,11 +24,10 @@ inviteAccess: LibraryAccess
 
 @emailMessage = {
 @if(inviteAccess == LibraryAccess.READ_ONLY) {
-<p>I'm using Kifi to publish useful links I've collected. Check out the "@libraryInfo.name" library I created at <a href="@libraryUrl">www.kifi.com@libraryInfo.url</a>.</p>
+<p>I'm using Kifi to share, collect and organize my knowledge. Check out the "@libraryInfo.name" library I created at <a href="@libraryUrl">www.kifi.com@libraryInfo.url</a>@if(!teamName.isEmpty){ in the teamName.get team}.</p>
 <p>@description</p>
 } else {
-<p>Please help me build the "@libraryInfo.name" Kifi library - <a href="@libraryUrl">www.kifi.com@libraryInfo.url</a>,
-    so we can collaborate together. It's a great way to organize the links that we find.</p>
+<p>Please help me build the "@libraryInfo.name" Kifi library@if(!teamName.isEmpty){ in the teamName.get team} <a href="@libraryUrl">www.kifi.com@libraryInfo.url</a>. It's a great way to share, collect and organize our knowledge.</p>
 }
 }
 
