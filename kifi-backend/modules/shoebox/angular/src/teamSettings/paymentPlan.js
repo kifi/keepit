@@ -146,45 +146,6 @@ angular.module('kifi')
       }
     }, true);
 
-    function getPricePerUserPerCycle(plan) {
-      return moneyUnwrapFilter(plan.pricePerUser) / moneyUnwrapFilter(plan.cycle);
-    }
-
-    function getLeastEfficientPlan(tier) {
-      var highestPrice = getPricePerUserPerCycle(tier[0]);
-
-      return tier.reduce(function (highestPricePlanSoFar, plan) {
-        var price = getPricePerUserPerCycle(plan);
-        if (price > highestPrice) {
-          highestPrice = price;
-          return plan;
-        } else {
-          return highestPricePlanSoFar;
-        }
-      });
-    }
-
-    function getSavings(lessEfficientPlan, moreEfficientPlan) {
-      var ratio = moreEfficientPlan.cycle / lessEfficientPlan.cycle;
-      var savings = moneyUnwrapFilter(lessEfficientPlan.pricePerUser) * ratio - moneyUnwrapFilter(moreEfficientPlan.pricePerUser);
-
-      return savings;
-    }
-
-    function getCycleLabel(cycle) {
-      var PREDEFINED_CYCLE_LABELS = {
-        1: 'Monthly',
-        12: 'Anually'
-      };
-      var label = PREDEFINED_CYCLE_LABELS[cycle];
-
-      if (label) {
-        return label;
-      } else {
-        return 'Every ' + cycle + ' months';
-      }
-    }
-
     function getCyclesByTier(tier) {
       var cyclesSoFar = [];
       var leastEfficientPlan;
@@ -210,6 +171,45 @@ angular.module('kifi')
           };
         }
       }).filter(Boolean);
+    }
+
+    function getLeastEfficientPlan(tier) {
+      var highestPrice = getPricePerUserPerCycle(tier[0]);
+
+      return tier.reduce(function (highestPricePlanSoFar, plan) {
+        var price = getPricePerUserPerCycle(plan);
+        if (price > highestPrice) {
+          highestPrice = price;
+          return plan;
+        } else {
+          return highestPricePlanSoFar;
+        }
+      });
+    }
+
+    function getPricePerUserPerCycle(plan) {
+      return moneyUnwrapFilter(plan.pricePerUser) / moneyUnwrapFilter(plan.cycle);
+    }
+
+    function getSavings(lessEfficientPlan, moreEfficientPlan) {
+      var ratio = moreEfficientPlan.cycle / lessEfficientPlan.cycle;
+      var savings = moneyUnwrapFilter(lessEfficientPlan.pricePerUser) * ratio - moneyUnwrapFilter(moreEfficientPlan.pricePerUser);
+
+      return savings;
+    }
+
+    function getCycleLabel(cycle) {
+      var PREDEFINED_CYCLE_LABELS = {
+        1: 'Monthly',
+        12: 'Anually'
+      };
+      var label = PREDEFINED_CYCLE_LABELS[cycle];
+
+      if (label) {
+        return label;
+      } else {
+        return 'Every ' + cycle + ' months';
+      }
     }
 
     $scope.save = function () {
@@ -250,15 +250,15 @@ angular.module('kifi')
       saveSeriesDeferred.resolve();
     };
 
-    function resetForm() {
-      $scope.planSelectsForm.$setPristine();
-      $scope.plan.newCard = null;
-    }
-
     function onBeforeUnload(e) {
       var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
       (e || $window.event).returnValue = message; // for Firefox
       return message;
+    }
+
+    function resetForm() {
+      $scope.planSelectsForm.$setPristine();
+      $scope.plan.newCard = null;
     }
 
     [
