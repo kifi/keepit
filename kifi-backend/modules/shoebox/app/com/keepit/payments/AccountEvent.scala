@@ -16,7 +16,7 @@ import javax.crypto.spec.IvParameterSpec
 
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 
-trait AccountEventAction {
+sealed trait AccountEventAction {
   def eventType: String
   def toDbRow: (String, JsValue)
 }
@@ -39,15 +39,21 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def eventType: String = "plan_billing"
   }
 
-  case class PlanBillingCharge() extends AccountEventAction with Payloadless {
+  sealed trait ChargeEventAction extends AccountEventAction with Payloadless
+
+  case class PlanBillingCharge() extends ChargeEventAction {
     def eventType: String = "plan_billing_charge"
   }
 
-  case class MaxBalanceExceededCharge() extends AccountEventAction with Payloadless {
+  case class MaxBalanceExceededCharge() extends ChargeEventAction {
     def eventType: String = "max_balance_exceeded_charge"
   }
 
-  case class ForcedCharge() extends AccountEventAction with Payloadless {
+  case class RequiredCharge() extends ChargeEventAction {
+    def eventType: String = "required_charge"
+  }
+
+  case class ForcedCharge() extends ChargeEventAction {
     def eventType: String = "forced_charge"
   }
 
@@ -58,7 +64,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   }
 
   @json
-  case class ChargeFailure(amount: DollarAmount, failure: StripeChargeFailure) extends AccountEventAction {
+  case class ChargeFailure(amount: DollarAmount, code: String, message: String) extends AccountEventAction {
     def eventType: String = "charge_failure"
     def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
   }

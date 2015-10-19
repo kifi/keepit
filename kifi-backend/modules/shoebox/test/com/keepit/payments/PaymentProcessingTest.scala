@@ -1,6 +1,5 @@
 package com.keepit.payments
 
-import com.keepit.payments
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.model.{ PaidPlanFactory, Organization, User, PaidAccountFactory, OrganizationFactory, UserFactory }
@@ -132,6 +131,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount.activeUsers === 2
           updatedAccount.planId === plan.id.get
           updatedAccount.credit === accountOnFreePlan.credit - DollarAmount(2 * computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle).cents)
+          updatedAccount.status === PaidAccountStatus.Ok
         }
 
       }
@@ -160,7 +160,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         events should beEmpty
 
         db.readOnlyMaster { implicit session =>
-          inject[PaidAccountRepo].get(accountPre.id.get).credit === initialCredit
+          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
+          updatedAccount.credit === initialCredit
+          updatedAccount.status === accountPre.status
         }
 
       }
@@ -189,6 +191,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit
           updatedAccount.billingCycleStart === initialBillingCycleStart.plusMonths(1)
+          updatedAccount.status === PaidAccountStatus.Ok
         }
 
       }
@@ -214,7 +217,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         events should beEmpty
 
         db.readOnlyMaster { implicit session =>
-          inject[PaidAccountRepo].get(accountPre.id.get).credit === initialCredit
+          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
+          updatedAccount.credit === initialCredit
+          updatedAccount.status === PaidAccountStatus.Ok
         }
       }
     }
@@ -265,6 +270,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount.credit === DollarAmount.ZERO
           updatedAccount.owed === DollarAmount.ZERO
           updatedAccount.billingCycleStart === billingCycleStart.plusMonths(1)
+          updatedAccount.status === PaidAccountStatus.Ok
         }
 
       }
@@ -296,6 +302,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           account
         }
 
+        accountPre.owed should beGreaterThan(commander.MIN_BALANCE)
+        accountPre.owed should beGreaterThan(commander.MAX_BALANCE)
+
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
         events.map(_.action) === Seq(AccountEventAction.MaxBalanceExceededCharge())
         val Seq(chargeEvent) = events
@@ -307,16 +316,65 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === DollarAmount.ZERO
           updatedAccount.billingCycleStart === billingCycleStart
+          updatedAccount.status === PaidAccountStatus.Ok
         }
 
       }
     }
 
-    "update billing cycle and credit even when there is a stripe failure" in {
+    "do charge when charge is explicitly required, min balance is exceeded but billing cycle is not elapsed (with correct charge amount returned, correct new credit, and no new billing cycle start)" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
-        stripeClient.failingMode = true
+        val price = DollarAmount(438)
+        val billingCycleStart = currentDateTime
+        val initialCredit = -(commander.MIN_BALANCE + DollarAmount(1))
+        val accountPre = db.readWrite { implicit session =>
+          val user = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(user).saved
+          val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
+          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
+            .withBillingCycleStart(billingCycleStart)
+            .withCredit(initialCredit)
+            .withStatus(PaidAccountStatus.ChargeRequired)
+            .withActiveUsers(3)
+            .saved
+
+          inject[PaymentMethodRepo].save(PaymentMethod(
+            accountId = account.id.get,
+            default = true,
+            stripeToken = Await.result(stripeClient.getPermanentToken("fake_temporary_token", ""), Duration.Inf)
+          ))
+
+          account
+        }
+
+        accountPre.status === PaidAccountStatus.ChargeRequired
+        accountPre.owed should beGreaterThan(commander.MIN_BALANCE)
+        accountPre.owed should beLessThan(commander.MAX_BALANCE)
+
+        val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        events.map(_.action) === Seq(AccountEventAction.RequiredCharge())
+        val Seq(chargeEvent) = events
+
+        chargeEvent.paymentCharge === Some(accountPre.owed)
+        chargeEvent.creditChange === chargeEvent.paymentCharge.get
+
+        db.readOnlyMaster { implicit session =>
+          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
+          updatedAccount.credit === DollarAmount.ZERO
+          updatedAccount.billingCycleStart === billingCycleStart
+          updatedAccount.status === PaidAccountStatus.Ok
+        }
+
+      }
+    }
+
+    "update billing cycle and credit even when there is a card failure" in {
+      withDb(modules: _*) { implicit injector =>
+        val commander = inject[PaymentProcessingCommander]
+        val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
+        stripeClient.cardFailureMode = true
         val price = DollarAmount(438)
         val initialCredit = -commander.MAX_BALANCE - DollarAmount.wholeDollars(7)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
@@ -343,7 +401,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val billedAmount = price * 3
 
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        events.map(_.action) === Seq(AccountEventAction.PlanBilling(), AccountEventAction.ChargeFailure(accountPre.owed + billedAmount, StripeChargeFailure("boom", "boom")))
+        events.map(_.action) === Seq(AccountEventAction.PlanBilling(), AccountEventAction.ChargeFailure(accountPre.owed + billedAmount, "boom", "boom"))
 
         val billingEvent = events.head
         billingEvent.creditChange === -billedAmount
@@ -353,7 +411,53 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit - billedAmount
           updatedAccount.billingCycleStart === billingCycleStart.plusMonths(1)
-          // todo(Léo): updatedAccount.actionRequired === charge
+          updatedAccount.status === PaidAccountStatus.ChargeFailed
+        }
+      }
+    }
+
+    "do update billing cycle (when elapsed) or credit even when Stripe is down, require later charge" in {
+      withDb(modules: _*) { implicit injector =>
+        val commander = inject[PaymentProcessingCommander]
+        val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
+        stripeClient.stripeDownMode = true
+        val price = DollarAmount(438)
+        val initialCredit = -commander.MAX_BALANCE - DollarAmount.wholeDollars(7)
+        val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
+        val accountPre = db.readWrite { implicit session =>
+          val user = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(user).saved
+          val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
+
+          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
+            .withBillingCycleStart(billingCycleStart)
+            .withCredit(initialCredit)
+            .withActiveUsers(3)
+            .saved
+
+          inject[PaymentMethodRepo].save(PaymentMethod(
+            accountId = account.id.get,
+            default = true,
+            stripeToken = Await.result(stripeClient.getPermanentToken("fake_temporary_token", ""), Duration.Inf)
+          ))
+
+          account
+        }
+
+        val billedAmount = price * 3
+
+        val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        events.map(_.action) === Seq(AccountEventAction.PlanBilling())
+
+        val billingEvent = events.head
+        billingEvent.creditChange === -billedAmount
+        billingEvent.paymentCharge === None
+
+        db.readOnlyMaster { implicit session =>
+          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
+          updatedAccount.credit === initialCredit - billedAmount
+          updatedAccount.billingCycleStart === billingCycleStart.plusMonths(1)
+          updatedAccount.status === PaidAccountStatus.ChargeRequired
         }
 
       }
@@ -391,18 +495,10 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit - billedAmount
           updatedAccount.billingCycleStart === billingCycleStart.plusMonths(1)
-          // todo(Léo): updatedAccount.actionRequired === addPaymentMethod
+          updatedAccount.status === PaidAccountStatus.ChargeFailed
         }
 
       }
     }
   }
-
-  "do charge when account is explicitly flagged with actionRequired = charge" in {
-    withDb(modules: _*) { implicit injector =>
-      // todo(Léo): implement once PaidAccount.actionRequired has been implemented
-      1 === 1
-    }
-  }
-
 }
