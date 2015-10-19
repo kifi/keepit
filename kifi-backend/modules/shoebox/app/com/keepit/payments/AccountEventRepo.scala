@@ -110,6 +110,6 @@ class AccountEventRepoImpl @Inject() (
   }
 
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
-    rows.sortBy(ae => ae.eventTime desc).take(limit.value).list
+    rows.sortBy(ae => (ae.eventTime desc, ae.id desc)).take(limit.value).list
   }
 }
