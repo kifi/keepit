@@ -4,9 +4,9 @@ angular.module('kifi')
 
 .controller('OrgProfileSettingsCtrl', [
   '$window', '$rootScope', '$scope','$timeout', '$state',
-  'profileService', 'ORG_PERMISSION', '$location',
+  'profileService', 'orgProfileService', 'ORG_PERMISSION', '$location',
   function ($window, $rootScope, $scope, $timeout, $state,
-            profileService, ORG_PERMISSION, $location) {
+            profileService, orgProfileService, ORG_PERMISSION, $location) {
     $scope.state = $state;
     $scope.settings = $scope.settings.settings;
     $scope.canExportKeeps = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) !== -1);
@@ -48,5 +48,11 @@ angular.module('kifi')
     if (currentPage === 'export' && $scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) === -1) {
       $rootScope.$emit('errorImmediately');
     }
+
+    $scope.onClickTrack = function(event, action, type) {
+      if (event.which === 1) {
+        orgProfileService.trackEvent('user_clicked_page', $scope.profile, { action: action, type: type });
+      }
+    };
   }
 ]);
