@@ -459,11 +459,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
         val price = DollarAmount(438)
-        <<<<<<< HEAD
-        val initialCredit = -commander.MAX_BALANCE - DollarAmount.wholeDollars(7)
-        =======
         val initialCredit = commander.MAX_BALANCE - DollarAmount.dollars(7)
-        >>>>>>> b1bfa322806dadb24dc7c0384b13f127c1c7734e
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
