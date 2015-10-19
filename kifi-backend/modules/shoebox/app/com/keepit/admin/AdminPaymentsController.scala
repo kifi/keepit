@@ -191,6 +191,14 @@ class AdminPaymentsController @Inject() (
     Ok(planCommander.unfreeze(orgId).toString)
   }
 
+  def addOrgOwnersAsBillingContacts() = AdminUserAction { implicit request =>
+    db.readWrite { implicit session =>
+      organizationRepo.allActive.map { org =>
+        planCommander.addUserAccountContactHelper(org.id.get, org.ownerId, ActionAttribution(user = None, admin = request.adminUserId))
+      }
+    }
+    Ok
+  }
 }
 
 case class AdminAccountEventView(

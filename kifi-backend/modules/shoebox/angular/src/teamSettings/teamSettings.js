@@ -38,10 +38,9 @@ angular.module('kifi')
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           },
           {
-            title: 'Who can edit libraries within your team?',
+            title: 'Can admins edit libraries within the team?',
             description: (
-              'Select who can act as library owners, allowing them to ' +
-              'edit library settings and delete libraries within the team.'
+              'Admins will be able to edit and delete non-private libraries within the team'
             ),
             fieldKey: 'force_edit_libraries',
             selectOptions: getOptions(

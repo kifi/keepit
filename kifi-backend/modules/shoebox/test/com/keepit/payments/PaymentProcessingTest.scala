@@ -74,16 +74,6 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           (account, plan)
         }
 
-        commander.registerRemovedUser(orgId, userId, actionAttribution)
-
-        db.readWrite { implicit session =>
-          val accountFromThePast = accountRepo.get(accountId)
-          accountFromThePast.activeUsers === 0
-          accountFromThePast.credit === account.credit + computePartialCost(planPrice, accountFromThePast.billingCycleStart, billingCycle)
-          accountFromThePast.userContacts must not contain (userId)
-        }
-
-        commander.registerNewUser(orgId, userId, actionAttribution)
         commander.registerNewUser(orgId, userIdToo, actionAttribution)
 
         val currentCredit = db.readOnlyMaster { implicit session =>
