@@ -50,7 +50,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
         val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get(_))
         (account, org, paymentMethod)
       }
-      reportToSlack(s"[${org.name}][Payment: ${account.paymentStatus.value}}] ${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${savedEvent.id.get}]")
+      reportToSlack(s"[${org.name}][Payment: ${account.paymentStatus.value}}] ${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")
 
       // todo(Léo): not sure this one belongs here vs PaymentProcessingCommander
       event.chargeId.foreach { chargeId =>
