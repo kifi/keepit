@@ -64,6 +64,21 @@ angular.module('kifi', [
   }
 ])
 
+// Don't use parentheses to signify negative numbers in the currency filter
+.config([
+  '$provide',
+  function ($provide) {
+    $provide.decorator('$locale', [
+      '$delegate',
+      function($delegate) {
+        $delegate.NUMBER_FORMATS.PATTERNS[1].negPre = '-\u00A4';
+        $delegate.NUMBER_FORMATS.PATTERNS[1].negSuf = '';
+        return $delegate;
+      }
+    ]);
+  }
+])
+
 .factory('initParams', [
   '$location',
   function ($location) {

@@ -1,4 +1,4 @@
-<div ng-if="kifiAdmin && viewer.membership.role === 'admin' && billingState.balance > 0" kf-credit-banner credit="{{ billingState.balance }}"></div>
+<div ng-if="kifiAdmin && viewer.membership.role === 'admin' && (billingState.balance | isPositiveMoney)" kf-credit-banner credit="{{ billingState.balance }}"></div>
 <div class="kf-team-settings-fields">
   <h1 class="kf-team-settings-top-header">Member Privileges</h1>
   <h4 class="kf-team-settings-sub-header" ng-if="viewer.membership.role === 'member'">You have access to view these settings. Contact your <a class="kf-link" ui-sref="orgProfile.members">team admins</a> to edit them.</h4>

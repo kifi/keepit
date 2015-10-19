@@ -2,8 +2,10 @@
 
 angular.module('kifi')
 
-.directive('kfBillingSummary',
-  function () {
+.directive('kfBillingSummary', [
+  '$filter',
+  function ($filter) {
+    var isZeroMoneyFilter = $filter('isZeroMoney');
     return {
       restrict: 'A',
       replace: true,
@@ -13,9 +15,9 @@ angular.module('kifi')
       },
       link: function ($scope) {
         $scope.isPaidPlan = function () {
-          return $scope.billingState.plan.pricePerUser !== '$0.00'; // TODO: i18n will break this
+          return !isZeroMoneyFilter($scope.billingState.plan.pricePerUser); // TODO(carlos): switch to server-side isPaid flag
         };
       }
     };
   }
-);
+]);
