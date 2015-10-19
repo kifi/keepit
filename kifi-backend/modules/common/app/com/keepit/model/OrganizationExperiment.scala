@@ -60,10 +60,8 @@ object OrganizationExperimentType {
   }
 
   val FAKE = OrganizationExperimentType("fake")
-  val NON_PROFIT = OrganizationExperimentType("non_profit")
-  val EDUCATIONAL = OrganizationExperimentType("educational")
 
-  val _ALL = EDUCATIONAL :: NON_PROFIT :: FAKE :: Nil
+  val _ALL = FAKE :: Nil
 
   def get(str: String): OrganizationExperimentType = OrganizationExperimentType(str.toLowerCase.trim)
 }
