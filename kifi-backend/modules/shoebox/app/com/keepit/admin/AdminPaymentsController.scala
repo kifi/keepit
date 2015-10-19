@@ -188,6 +188,15 @@ class AdminPaymentsController @Inject() (
     Ok(planCommander.unfreeze(orgId).toString)
   }
 
+  def addOrgOwnersAsBillingContacts() = AdminUserAction { implicit request =>
+    db.readWrite { implicit session =>
+      organizationRepo.allActive.foreach { org =>
+        planCommander.addUserAccountContactHelper(org.id.get, org.ownerId, ActionAttribution(user = None, admin = request.adminUserId))
+      }
+    }
+    Ok
+  }
+
   def paymentsDashboard = AdminUserPage { implicit request =>
     val dashboard = db.readOnlyMaster { implicit session =>
       val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
@@ -198,7 +207,6 @@ class AdminPaymentsController @Inject() (
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))
   }
-
 }
 
 case class AdminAccountEventView(
