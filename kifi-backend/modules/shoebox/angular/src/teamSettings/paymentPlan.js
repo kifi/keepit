@@ -12,6 +12,8 @@ angular.module('kifi')
     $scope.billingState = billingState;
     $scope.card = billingState.card;
 
+    var picFilter = $filter('pic');
+
     var handler = StripeCheckout.configure({
       locale: 'auto'
     });
@@ -20,7 +22,7 @@ angular.module('kifi')
       // Open Checkout with further options
       handler
       .open({
-        image: $filter('pic')($scope.profile),
+        image: picFilter($scope.profile),
         name: 'Kifi Paid Plan',
         description: 'Unlock awesome paid-only features',
         allowRememberMe: false,
@@ -88,38 +90,44 @@ angular.module('kifi')
       return planName && planName.toLowerCase().indexOf('free') > -1;
     };
 
-    $scope.$watch('plan', function (newValue, oldValue) {
+    $scope.$watch('plan', function (newPlan, oldPlan) {
       var initializing = (
-        newValue.name === oldValue.name &&
-        newValue.cycle === oldValue.cycle
+        newPlan.name === oldPlan.name &&
+        newPlan.cycle === oldPlan.cycle
       );
 
-      if (!initializing && (newValue.name === null || newValue.cycle === null)) {
+      // Do nothing for the no-value options in the select
+      if (!initializing && (newPlan.name === null || ($scope.isPaidPlanName(newPlan.name) && newPlan.cycle === null))) {
         return;
       }
 
-      if (initializing || newValue.name !== oldValue.name) {
-        // Create the list of cycles available to this plan
-        var cyclesSoFar = [];
-        $scope.availableCycles = plansByTier[newValue.name].map(function (plan) {
-          if (cyclesSoFar.indexOf(plan.cycle) === -1) {
-            cyclesSoFar.push(plan.cycle); // prevent duplicates
+      // Don't let users re-save their current plan
+      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
+        resetForm();
+        return;
+      }
 
-            return {
-              value: plan.cycle,
-              label: plan.cycle + ' month' + (plan.cycle > 1 ? 's' : '')
-            };
-          }
-        }).filter(Boolean);
+      if (initializing || newPlan.name !== oldPlan.name) {
+        // Create the list of cycles available to this plan
+        $scope.availableCycles = getCyclesByTier(plansByTier[newPlan.name]);
 
         // If the old plan selected 12 months cycle (for example),
         // and the new plan does not have a 12 months option,
-        // then select the first cycle in the list.
-        if (newValue.name !== oldValue.name) {
-          $scope.plan.cycle = $scope.availableCycles[0] && $scope.availableCycles[0].value;
+        // then select the last cycle in the list.
+        if (newPlan.name !== oldPlan.name) {
+          var cycle;
+
+          if (currentPlan.name === newPlan.name) {
+            cycle = currentPlan.cycle;
+          } else {
+            var lastCycle = $scope.availableCycles.slice(-1)[0];
+            cycle = lastCycle && lastCycle.value;
+          }
+          $scope.plan.cycle = cycle;
         }
       }
 
+      // Set the currently selected plan object
       if (!initializing) {
         var selectedPlan = flatPlans.filter(function (p) {
           return (
@@ -136,18 +144,37 @@ angular.module('kifi')
       }
     }, true);
 
+    function getCyclesByTier(tier) {
+      var cyclesSoFar = [];
+
+      return tier.map(function (plan) {
+        if (cyclesSoFar.indexOf(plan.cycle) === -1) {
+          cyclesSoFar.push(plan.cycle); // prevent duplicates
+
+          return {
+            value: plan.cycle,
+            label: plan.cycle + ' month' + (plan.cycle > 1 ? 's' : '')
+          };
+        }
+      }).filter(Boolean);
+    }
+
     $scope.save = function () {
-      var deferred = $q.defer();
-      var promise = deferred.promise;
+      var saveSeriesDeferred = $q.defer();
+      var saveSeriesPromise = saveSeriesDeferred.promise;
+
+      saveSeriesPromise.then(function () {
+        $window.addEventListener('beforeunload', onBeforeUnload);
+      });
 
       if ($scope.plan.newCard) {
-        promise.then(function () {
+        saveSeriesPromise.then(function () {
           return billingService
           .setBillingCCToken($scope.profile.id, $scope.plan.newCard.id);
         });
       }
 
-      promise.then(function () {
+      saveSeriesPromise.then(function () {
         return billingService
         .setBillingPlan($scope.profile.id, ($scope.selectedPlan && $scope.selectedPlan.id) || currentPlan.id);
       })
@@ -161,14 +188,24 @@ angular.module('kifi')
           $state.reload('orgProfile.settings');
         }, 10);
       })
-      ['catch'](modalService.genericErrorModal);
+      ['catch'](modalService.genericErrorModal)
+      ['finally'](function () {
+        $window.removeEventListener('beforeunload', onBeforeUnload);
+      });
 
-      deferred.resolve();
+      // Start the promise chain
+      saveSeriesDeferred.resolve();
     };
 
     function resetForm() {
       $scope.planSelectsForm.$setPristine();
       $scope.plan.newCard = null;
+    }
+
+    function onBeforeUnload(e) {
+      var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
+      (e || $window.event).returnValue = message; // for Firefox
+      return message;
     }
 
     [
