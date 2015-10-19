@@ -69,7 +69,7 @@
         </div>
       <h2 class="kf-heading">Manage your Credit Card Information</h2>
       <p ng-if="!card">You haven't added a card yet.</p>
-      <p ng-if="card">Your current card is <b ng-bind="card.brand"></b> ****<b ng-bind="card.last4"></b></p>
+      <p ng-if="card">Your current card is <b ng-bind="card.brand"></b> ****<b ng-bind="card.lastFour"></b></p>
       <div>
         <button class="kf-button kf-button-large" ng-click="openStripeCheckout()">Add / Update Credit Card Info</button>
         <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">Your new card is ready to save</span>
@@ -85,7 +85,7 @@
         !plan.name ||
         (!plan.newCard && planSelectsForm.$pristine) ||
         (
-          !(card && card.last4) &&
+          !(card && card.lastFour) &&
           !plan.newCard
         )"
     >Save my plan preferences</button>
