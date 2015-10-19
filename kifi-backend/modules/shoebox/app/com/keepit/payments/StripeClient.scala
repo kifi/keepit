@@ -96,7 +96,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
 
   def getCardInfo(token: StripeToken): Future[CardInfo] = lock.withLock {
     val card = Customer.retrieve(token.token).getSources().getData().get(0).asInstanceOf[Card]
-    CardInfo(card.getLast4, card.getBrand)
+    CardInfo(token, card.getLast4, card.getBrand)
   }
 
 }

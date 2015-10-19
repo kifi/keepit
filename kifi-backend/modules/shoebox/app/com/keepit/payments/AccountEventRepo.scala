@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time._
-import com.keepit.model.User
+import com.keepit.model.{ Limit, User }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
@@ -14,18 +14,14 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[AccountEventRepoImpl])
 trait AccountEventRepo extends Repo[AccountEvent] {
-
   def getByAccountIdAndTime(accountId: Id[PaidAccount], before: DateTime, max: Int = 10, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
-
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent]
-
   def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
-
   def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
-
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
-
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
+
+  def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent]
 }
 
 @Singleton
@@ -113,4 +109,7 @@ class AccountEventRepoImpl @Inject() (
     (for (row <- rows if row.accountId === accountId && (row.eventType === "user_added" || row.eventType === "user_removed")) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
 
+  def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
+    rows.sortBy(ae => (ae.eventTime desc, ae.id desc)).take(limit.value).list
+  }
 }

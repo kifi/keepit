@@ -63,6 +63,8 @@ case class Library(
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 
+  def isActive: Boolean = state == LibraryStates.ACTIVE
+
 }
 
 object Library extends ModelWithPublicIdCompanion[Library] {

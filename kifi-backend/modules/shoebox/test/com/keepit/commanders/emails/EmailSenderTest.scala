@@ -704,7 +704,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           libMemRepo.save(LibraryMembership(libraryId = lib2.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
           (user1, user2)
         }
-        val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds"))
+        val email = Await.result(sender.sendToUser(user1.id.get, Some(toEmail)), Duration(5, "seconds")).get
         val html = email.htmlBody.value
         html must contain("Hey Clark,")
         html must contain("The Kifi Team")

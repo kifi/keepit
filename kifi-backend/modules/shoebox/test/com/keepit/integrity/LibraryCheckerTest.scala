@@ -114,5 +114,37 @@ class LibraryCheckerTest extends TestKitSupport with SpecificationLike with Shoe
         db.readOnlyReplica { implicit s => inject[KeepRepo].get(Id[Keep](1)).visibility === LibraryVisibility.DISCOVERABLE }
       }
     }
+    "fix deleted libraries" in {
+      withDb(modules: _*) { implicit injector =>
+        val (owner, lib, keeps) = db.readWrite { implicit session =>
+          val owner = UserFactory.user().saved
+          val lib = LibraryFactory.library().withOwner(owner).saved
+          val keeps = KeepFactory.keeps(10).map(_.withUser(owner).withLibrary(lib)).saved
+          libraryRepo.deactivate(lib)
+          val weirdlyDeadLib = libraryRepo.get(lib.id.get)
+          (owner, weirdlyDeadLib, keeps)
+        }
+
+        // make sure things are broken
+        db.readOnlyMaster { implicit session =>
+          libraryRepo.get(lib.id.get).state === LibraryStates.INACTIVE
+          keepRepo.getByIds(keeps.map(_.id.get).toSet).values.foreach { k => k.state === KeepStates.ACTIVE }
+          ktlRepo.getAllByLibraryId(lib.id.get).foreach { ktl => ktl.state === KeepToLibraryStates.ACTIVE }
+          ktuRepo.getAllByUserId(owner.id.get).foreach { ktu => ktu.state === KeepToUserStates.ACTIVE }
+        }
+
+        inject[LibrarySequenceNumberAssigner].assignSequenceNumbers()
+        libraryChecker.syncOnLibraryDelete()
+
+        // Make sure they're fixed
+        db.readOnlyMaster { implicit session =>
+          libraryRepo.get(lib.id.get).state === LibraryStates.INACTIVE
+          keepRepo.getByIds(keeps.map(_.id.get).toSet).values.foreach { k => k.state === KeepStates.INACTIVE }
+          ktlRepo.getAllByLibraryId(lib.id.get).foreach { ktl => ktl.state === KeepToLibraryStates.INACTIVE }
+          ktuRepo.getAllByUserId(owner.id.get).foreach { ktu => ktu.state === KeepToUserStates.INACTIVE } // TODO(ryan): keepscussions should make this part fail
+        }
+        1 === 1
+      }
+    }
   }
 }

@@ -55,8 +55,8 @@ class PaymentProcessingCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
-  private[payments] val MAX_BALANCE = DollarAmount.wholeDollars(-1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
-  private[payments] val MIN_BALANCE = DollarAmount.wholeDollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
+  private[payments] val MAX_BALANCE = DollarAmount.dollars(-1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
+  private[payments] val MIN_BALANCE = DollarAmount.dollars(-1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
 
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
 
@@ -73,25 +73,25 @@ class PaymentProcessingCommanderImpl @Inject() (
   private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
     val (userContacts, org) = db.readOnlyReplica { implicit session =>
-      val userContacts = account.userContacts.map { userId =>
+      val userContacts = account.userContacts.flatMap { userId =>
         Try(emailRepo.getByUser(userId)).toOption
-      }.flatten
+      }
       (userContacts, orgRepo.get(account.orgId))
     }
-    val emails = (account.emailContacts ++ userContacts).toSet.toSeq
+    val emails = (account.emailContacts ++ userContacts).distinct
 
-    val handle = org.handle
+    val path = pathCommander.pathForOrganization(org).absolute + "/settings/activity"
 
     lastFourFuture.map { lastFour =>
-      val subject = s"We've charged you card for your Kfi Organization ${org.name}"
+      val subject = s"We've charged you card for your Kifi Organization ${org.name}"
       val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
-      |For more details please consult your account history at <a href="${pathCommander.pathForOrganization(org).absolute}/settings">www.kifi.com/$handle/settings<a>.</p>
+      |For more details please consult your account history at <a href="$path">$path<a>.</p>
       |
       |<p>Thanks,
       |The Kifi Team</p>
       """.stripMargin
       val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
-      |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings.
+      |For more details please consult your account history at $path.
       |
       |Thanks, <br/>
       |The Kifi Team
@@ -124,7 +124,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   }
 
   def processAllBilling(): Future[Unit] = processingLock.withLockFuture {
-    val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(MAX_BALANCE, clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
+    val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRipeAccounts(maxBalance = MAX_BALANCE, maxCycleAge = clock.now.minusMonths(1)) } //we check at least monthly, even for accounts on longer billing cycles + accounts with large balance
     if (relevantAccounts.length > 0) reportToSlack(s"Processing Payments. ${relevantAccounts.length} orgs to check.")
     val resultsFuture = Future.sequence(relevantAccounts.map { account =>
       processAccount(account).map { result =>

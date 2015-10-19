@@ -20,7 +20,7 @@
         <div class="kf-org-member-upper-right">
           <label>
             <span>Receive billing emails?&nbsp;</span>
-            <input type="checkbox" ng-model="billingContactModel[member.id].enabled" ng-change="setBillingContacts()"/>
+            <input type="checkbox" ng-disabled="member.id === profile.ownerId" ng-model="billingContactModel[member.id].enabled" ng-change="setBillingContacts()"/>
           </label>
         </div>
       </div>

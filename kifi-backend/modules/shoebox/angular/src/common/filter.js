@@ -20,7 +20,6 @@ angular.module('kifi')
   };
 })
 
-
 .filter('pic', [
   'routeService',
   function (routeService) {
@@ -106,6 +105,78 @@ angular.module('kifi')
     return hundreds.slice(-1) === '0' ? hundreds.slice(0, -1) + 'K' : hundreds.replace(/(\d)$/, '.$1') + 'K';
   };
 })
+
+.filter('money', [
+  '$filter',
+  function ($filter) {
+    var currencyFilter = $filter('currency');
+
+    return function (moneyData) {
+      var type = typeof moneyData;
+      var unit;
+      var amount;
+
+      if (type === 'object') {
+        unit = Object.keys(moneyData)[0];
+        amount = moneyData[unit];
+      } else if (type === 'number') {
+        unit = 'cents';
+        amount = moneyData;
+      } else {
+        // treat it like a string
+        unit = null;
+        amount = moneyData + '';
+      }
+
+      switch (unit) {
+        case 'cents':
+          return currencyFilter(amount / 100);
+        default:
+          return amount;
+      }
+    };
+  }
+])
+
+.filter('isPositiveMoney', [
+  '$filter',
+  function ($filter) {
+    var moneyFilter = $filter('money');
+    var isZeroMoneyFilter = $filter('isZeroMoney');
+
+    return function (arg) {
+      var money = moneyFilter(arg);
+      return money && money[0] !== '-' && !isZeroMoneyFilter(arg);
+    };
+  }
+])
+
+.filter('isNegativeMoney', [
+  '$filter',
+  function ($filter) {
+    var moneyFilter = $filter('money');
+
+    return function (arg) {
+      var money = moneyFilter(arg);
+      return money && money[0] === '-';
+    };
+  }
+])
+
+.filter('isZeroMoney', [
+  '$filter',
+  function ($filter) {
+    var moneyFilter = $filter('money');
+    var notNonZeroDigitsRegex = /[^1-9]/g;
+
+    // If all of the digits are zero, then the amount must be zero.
+    // Likewise, if we remove all characters that aren't 1-9, it must be zero.
+    return function (arg) {
+      var money = moneyFilter(arg);
+      return money.replace(notNonZeroDigitsRegex, '') === '';
+    };
+  }
+])
 
 .filter('timeToRead', function () {
   var roundedMinutes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 30, 60];

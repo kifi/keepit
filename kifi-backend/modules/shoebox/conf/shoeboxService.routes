@@ -470,18 +470,11 @@ PUT     /site/user/me/email        @com.keepit.controllers.website.UserControlle
 DELETE  /site/user/me/email        @com.keepit.controllers.website.UserController.removeEmail()
 GET     /site/user/email            @com.keepit.controllers.website.UserController.getEmailInfo(email: EmailAddress)
 POST    /site/user/password         @com.keepit.controllers.website.UserController.changePassword()
-GET     /site/user/inviteCounts     @com.keepit.controllers.website.UserController.getInviteCounts()
-POST    /site/user/needMoreInvites  @com.keepit.controllers.website.UserController.needMoreInvites()
 GET     /site/user/import-status    @com.keepit.controllers.website.UserController.importStatus()
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/abooks           @com.keepit.controllers.website.UserController.abookInfo()
 GET     /site/user/settings         @com.keepit.controllers.website.UserController.getSettings()
 POST    /site/user/settings         @com.keepit.controllers.website.UserController.setSettings()
-
-GET     /site/user/personas             @com.keepit.controllers.website.UserPersonaController.getAllPersonas()
-POST    /site/user/personas              @com.keepit.controllers.website.UserPersonaController.selectPersonas()
-POST    /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.addPersona(name: String)
-DELETE  /site/user/personas/:name        @com.keepit.controllers.website.UserPersonaController.removePersona(name: String)
 
 # regex below prevents route from usurping requests intended for other routes, like /site/user/friends
 GET     /site/user/$id<[0-9a-f-]{36}> @com.keepit.controllers.website.UserController.basicUserInfo(id: ExternalId[User], friendCount: Boolean ?= false)
@@ -908,6 +901,9 @@ GET           /admin/payments/addCreditCard                @com.keepit.controlle
 POST          /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
 GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
+POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
+
+GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
 
 ##########################################
 # Common Healthcheck / service routes

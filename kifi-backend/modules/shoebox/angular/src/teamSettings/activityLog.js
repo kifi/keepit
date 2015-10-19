@@ -3,8 +3,9 @@
 angular.module('kifi')
 
 .controller('ActivityLogCtrl', [
-  '$scope', 'billingService', 'profile', 'modalService', 'Paginator',
-  function ($scope, billingService, profile, modalService, Paginator) {
+  '$scope', 'billingService', 'profile', 'billingState', 'modalService', 'Paginator',
+  function ($scope, billingService, profile, billingState, modalService, Paginator) {
+    $scope.billingState = billingState;
 
     var activityLogPaginator = new Paginator(activitySource);
 

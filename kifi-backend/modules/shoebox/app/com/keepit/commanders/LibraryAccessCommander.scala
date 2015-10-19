@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
 
@@ -13,7 +14,7 @@ class LibraryAccessCommander @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     permissionCommander: PermissionCommander,
-    libraryInviteRepo: LibraryInviteRepo) {
+    libraryInviteRepo: LibraryInviteRepo) extends Logging {
 
   def canModifyLibrary(libraryId: Id[Library], userId: Id[User]): Boolean = {
     db.readOnlyReplica { implicit s =>
@@ -30,23 +31,24 @@ class LibraryAccessCommander @Inject() (
   def canMoveTo(userId: Id[User], libId: Id[Library], to: LibrarySpace): Boolean = {
     val userCanModifyLibrary = canModifyLibrary(libId, userId)
 
-    val (canMoveFromSpace, canMoveToSpace) = db.readOnlyMaster { implicit session =>
+    val (canMoveToFromSpace) = db.readOnlyMaster { implicit session =>
       val library = libraryRepo.get(libId)
       val from: LibrarySpace = library.space
-      val canMoveFromSpace = from match {
+      lazy val canMoveFromSpace = from match {
         case OrganizationSpace(fromOrg) =>
           val fromPermissions = permissionCommander.getOrganizationPermissions(fromOrg, Some(userId))
           (fromPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES) || (userId == library.ownerId)) && fromPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES)
         case UserSpace(fromUser) => userId == library.ownerId
       }
-      val canMoveToSpace = to match {
+      lazy val canMoveToSpace = to match {
         case OrganizationSpace(toOrg) => permissionCommander.getOrganizationPermissions(toOrg, Some(userId)).contains(OrganizationPermission.ADD_LIBRARIES)
         case UserSpace(toUser) => toUser == library.ownerId
       }
-      (canMoveFromSpace, canMoveToSpace)
+      val isAlreadyInSpace = library.space == to
+      isAlreadyInSpace || (canMoveFromSpace && canMoveToSpace)
     }
 
-    userCanModifyLibrary && canMoveFromSpace && canMoveToSpace
+    userCanModifyLibrary && canMoveToFromSpace
   }
 
   def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {

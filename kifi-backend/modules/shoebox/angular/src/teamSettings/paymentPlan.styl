@@ -118,5 +118,24 @@ enterprisePlanColor = #f69256
   width: 100%
   padding: 10px
 
-.kf-payment-plan-save
+.kf-payment-plan-card-ready
+  margin-left: 5px
+
+.kf-button.kf-button-large.kf-payment-plan-save
+  display: block
   margin: 0 auto
+  background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
+  color: #fff
+
+  transition: opacity .5s
+
+  &:hover:not(:active)
+    background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
+
+  &:active
+    background: darken(linkBlueColor, 20%)
+
+.kf-payment-plan-save-wrapper
+  border-top: 1px solid #ccc
+  padding-top: 15px
+  margin-top: 17px
