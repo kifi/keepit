@@ -160,7 +160,7 @@ class PlanManagementCommanderImpl @Inject() (
                 activeUsers = 0,
                 billingCycleStart = clock.now
               ))
-              grantSpecialCreditHelper(orgId, DollarAmount.wholeDollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
+              grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
               } else {

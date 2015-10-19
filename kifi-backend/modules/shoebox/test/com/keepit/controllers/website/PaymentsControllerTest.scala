@@ -14,7 +14,7 @@ import com.keepit.model._
 import com.keepit.payments.{ PaidAccountRepo, BillingCycle, PaidPlanInfo, PaidPlanRepo, DollarAmount, PlanManagementCommander, PaidPlan, FakeStripeClientModule }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.JsObject
+import play.api.libs.json.{ Json, JsObject }
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -57,14 +57,14 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         val response = controller.getAccountState(publicId)(request)
         val payload = contentAsJson(response).as[JsObject]
         (payload \ "users").as[Int] must beEqualTo(account.activeUsers)
-        (payload \ "balance").as[String] must beEqualTo(account.credit.toDollarString)
-        (payload \ "charge").as[String] must beEqualTo((plan.pricePerCyclePerUser * account.activeUsers).toDollarString)
+        (payload \ "balance").as[JsObject] === Json.obj("cents" -> account.credit.toCents)
+        (payload \ "charge").as[JsObject] === Json.obj("cents" -> (plan.pricePerCyclePerUser * account.activeUsers).toCents)
 
         val planJson = (payload \ "plan").as[JsObject]
         val actualPlan = planCommander.currentPlan(org.id.get)
         (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
         (planJson \ "name").as[String] must beEqualTo(plan.displayName)
-        (planJson \ "pricePerUser").as[String] must beEqualTo(plan.pricePerCyclePerUser.toDollarString)
+        (planJson \ "pricePerUser").as[JsObject] === Json.obj("cents" -> plan.pricePerCyclePerUser.toCents)
         (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.month)
         (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
       }
