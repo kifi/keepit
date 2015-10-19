@@ -135,7 +135,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
         val price = DollarAmount(438)
-        val initialCredit = commander.MIN_BALANCE - DollarAmount.dollars(1)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.dollars(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -221,7 +221,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val commander = inject[PaymentProcessingCommander]
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         val price = DollarAmount(438)
-        val initialCredit = commander.MIN_BALANCE - DollarAmount.dollars(1)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.dollars(1)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
@@ -274,7 +274,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         val price = DollarAmount(438)
         val billingCycleStart = currentDateTime
-        val initialCredit = commander.MAX_BALANCE - DollarAmount.dollars(7)
+        val initialCredit = -commander.MAX_BALANCE - DollarAmount.dollars(7)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -320,7 +320,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         val price = DollarAmount(438)
         val billingCycleStart = currentDateTime
-        val initialCredit = -(commander.MIN_BALANCE + DollarAmount(1))
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -368,7 +368,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         stripeClient.cardFailureMode = true
         val price = DollarAmount(438)
-        val initialCredit = commander.MAX_BALANCE - DollarAmount.dollars(7)
+        val initialCredit = -commander.MAX_BALANCE - DollarAmount.dollars(7)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
@@ -459,7 +459,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
         val price = DollarAmount(438)
-        val initialCredit = commander.MAX_BALANCE - DollarAmount.dollars(7)
+        val initialCredit = -commander.MAX_BALANCE - DollarAmount.dollars(7)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
