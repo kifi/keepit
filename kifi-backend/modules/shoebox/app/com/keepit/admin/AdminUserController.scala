@@ -557,6 +557,17 @@ class AdminUserController @Inject() (
     }
   }
 
+  def addExperimentForUsers(experiment: String, userIdsString: String) = AdminUserAction { request =>
+    val userIds = userIdsString.split(",").map(id => Id[User](id.trim.toLong))
+    val successIds = userIds map { userId =>
+      addExperiment(requesterUserId = request.userId, userId, experiment) match {
+        case Right(expType) => Some(userId)
+        case Left(s) => None
+      }
+    }
+    Ok(Json.obj(experiment -> successIds.flatten.toSeq))
+  }
+
   def isSuperAdmin(userId: Id[User]) = {
     val SUPER_ADMIN_SET: Set[Id[User]] = Set(Id[User](1), Id[User](3))
     SUPER_ADMIN_SET contains userId
