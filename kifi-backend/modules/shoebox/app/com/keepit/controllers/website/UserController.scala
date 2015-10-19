@@ -383,29 +383,6 @@ class UserController @Inject() (
     }
   }
 
-  def getInviteCounts() = UserAction { request =>
-    db.readOnlyMaster { implicit s =>
-      val availableInvites = userValueRepo.getValue(request.userId, UserValues.availableInvites)
-      val invitesLeft = availableInvites - invitationRepo.getByUser(request.userId).length
-      Ok(Json.obj(
-        "total" -> availableInvites,
-        "left" -> invitesLeft
-      )).withHeaders("Cache-Control" -> "private, max-age=300")
-    }
-  }
-
-  def needMoreInvites() = UserAction { request =>
-    db.readWrite { implicit s =>
-      postOffice.sendMail(ElectronicMail(
-        from = SystemEmailAddress.INVITATION,
-        to = Seq(SystemEmailAddress.EISHAY),
-        subject = s"${request.user.firstName} ${request.user.lastName} wants more invites.",
-        htmlBody = s"Go to https://admin.kifi.com/admin/user/${request.userId} to give more invites.",
-        category = NotificationCategory.System.ADMIN))
-    }
-    Ok
-  }
-
   def uploadBinaryUserPicture() = MaybeUserAction(parse.maxLength(1024 * 1024 * 15, parse.temporaryFile)) { implicit request =>
     doUploadBinaryUserPicture
   }
