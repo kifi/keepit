@@ -53,9 +53,6 @@ trait OrganizationMembershipCommander {
   def addMembership(request: OrganizationMembershipAddRequest): Either[OrganizationFail, OrganizationMembershipAddResponse]
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse]
   def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse]
-
-  def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Map[OrganizationMembershipModifyRequest, Either[OrganizationFail, OrganizationMembershipModifyResponse]]
-  def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Map[OrganizationMembershipRemoveRequest, Either[OrganizationFail, OrganizationMembershipRemoveResponse]]
 }
 
 @Singleton
@@ -63,11 +60,11 @@ class OrganizationMembershipCommanderImpl @Inject() (
     db: Database,
     permissionCommander: PermissionCommander,
     primaryOrgForUserCache: PrimaryOrgForUserCache,
-    organizationRepo: OrganizationRepo,
-    organizationMembershipRepo: OrganizationMembershipRepo,
-    organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
-    organizationInviteRepo: OrganizationInviteRepo,
-    organizationExperimentRepo: OrganizationExperimentRepo,
+    orgRepo: OrganizationRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
+    orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    orgInviteRepo: OrganizationInviteRepo,
+    orgExperimentRepo: OrganizationExperimentRepo,
     userExperimentRepo: UserExperimentRepo,
     userRepo: UserRepo,
     elizaServiceClient: ElizaServiceClient,
@@ -85,8 +82,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]] = {
     primaryOrgForUserCache.getOrElseOpt(PrimaryOrgForUserKey(userId)) {
       db.readOnlyReplica { implicit s =>
-        organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption.orElse {
-          organizationMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption
+        orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption.orElse {
+          orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption
         }
       }
     }
@@ -94,7 +91,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
 
   def getMembership(orgId: Id[Organization], userId: Id[User]): Option[OrganizationMembership] = {
     db.readWrite { implicit session =>
-      organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId)
+      orgMembershipRepo.getByOrgIdAndUserId(orgId, userId)
     }
   }
 
@@ -102,18 +99,18 @@ class OrganizationMembershipCommanderImpl @Inject() (
     db.readOnlyMaster { implicit session =>
       if (!permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt).contains(OrganizationPermission.VIEW_MEMBERS)) Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
       else {
-        val members = organizationMembershipRepo.getSortedMembershipsByOrgId(orgId, offset, limit)
+        val members = orgMembershipRepo.getSortedMembershipsByOrgId(orgId, offset, limit)
         val invitees = includeInvitees match {
           case true =>
             if (members.length < limit.value) {
               val inviteLimit = Limit(Math.max(limit.value - members.length, 0))
               val inviteOffset = if (members.isEmpty) {
-                val totalMembers = organizationMembershipRepo.countByOrgId(orgId)
+                val totalMembers = orgMembershipRepo.countByOrgId(orgId)
                 Offset(offset.value - totalMembers)
               } else {
                 Offset(0)
               }
-              organizationInviteRepo.getByOrganizationAndDecision(orgId, decision = InvitationDecision.PENDING, inviteOffset, inviteLimit, includeAnonymous = false)
+              orgInviteRepo.getByOrganizationAndDecision(orgId, decision = InvitationDecision.PENDING, inviteOffset, inviteLimit, includeAnonymous = false)
             } else Seq.empty[OrganizationInvite]
           case false => Seq.empty[OrganizationInvite]
         }
@@ -124,31 +121,31 @@ class OrganizationMembershipCommanderImpl @Inject() (
 
   def getMemberIds(orgId: Id[Organization]): Set[Id[User]] = {
     db.readOnlyReplica { implicit session =>
-      organizationMembershipRepo.getAllByOrgId(orgId).map(_.userId)
+      orgMembershipRepo.getAllByOrgId(orgId).map(_.userId)
     }
   }
 
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
-      organizationMembershipRepo.getByUserId(userId, limit, offset).map(_.organizationId)
+      orgMembershipRepo.getByUserId(userId, limit, offset).map(_.organizationId)
     }
   }
 
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
-      organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+      orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
     }
   }
 
   def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]] = {
     db.readOnlyReplica { implicit session =>
-      organizationMembershipRepo.getAllByUserIds(userIds)
+      orgMembershipRepo.getAllByUserIds(userIds)
     }
   }
 
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]] = {
     db.readOnlyReplica { implicit session =>
-      val allOrgIds = organizationMembershipRepo.getAllByUserId(userId).map(_.organizationId)
+      val allOrgIds = orgMembershipRepo.getAllByUserId(userId).map(_.organizationId)
       allOrgIds.filter(permissionCommander.getOrganizationPermissions(_, viewerIdOpt).contains(OrganizationPermission.VIEW_ORGANIZATION))
     }
   }
@@ -186,10 +183,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
   }
 
   private def getValidationError(request: OrganizationMembershipRequest)(implicit session: RSession): Option[OrganizationFail] = {
-    val org = organizationRepo.get(request.orgId)
-    val requesterOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
+    val org = orgRepo.get(request.orgId)
+    val requesterOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.requesterId)
     val requesterPermissions = permissionCommander.getOrganizationPermissions(request.orgId, Some(request.requesterId))
-    val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
+    val targetOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId)
 
     (requesterOpt, request) match {
       case (_, _: OrganizationMembershipAddRequest) =>
@@ -214,16 +211,16 @@ class OrganizationMembershipCommanderImpl @Inject() (
 
   private def unsafeAddMembership(request: OrganizationMembershipAddRequest): OrganizationMembershipAddResponse = {
     val newMembership = db.readWrite { implicit session =>
-      val org = organizationRepo.get(request.orgId)
-      val targetOpt = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
+      val org = orgRepo.get(request.orgId)
+      val targetOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
       targetOpt match {
-        case Some(membership) if membership.isActive => organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+        case Some(membership) if membership.isActive => orgMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
         case inactiveMembershipOpt =>
           val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
           val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
-          val savedMembership = organizationMembershipRepo.save(newMembership)
-          organizationMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId).foreach { candidate =>
-            organizationMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
+          val savedMembership = orgMembershipRepo.save(newMembership)
+          orgMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId).foreach { candidate =>
+            orgMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
           }
           savedMembership
       }
@@ -248,9 +245,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
     getValidationError(request) match {
       case Some(fail) => Left(fail)
       case None =>
-        val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-        val org = organizationRepo.get(request.orgId)
-        val newMembership = organizationMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+        val membership = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+        val org = orgRepo.get(request.orgId)
+        val newMembership = orgMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
         (membership.role, newMembership.role) match { // assumes admins can only be added via modifying a membership, not creating one
           case (OrganizationRole.MEMBER, OrganizationRole.ADMIN) => planCommander.registerNewAdmin(org.id.get, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
           case (OrganizationRole.ADMIN, OrganizationRole.MEMBER) => planCommander.registerRemovedAdmin(org.id.get, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
@@ -262,8 +259,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
 
   private def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest): OrganizationMembershipRemoveResponse = {
     val oldRole = db.readWrite { implicit session =>
-      val membership = organizationMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-      organizationMembershipRepo.deactivate(membership)
+      val membership = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+      orgMembershipRepo.deactivate(membership)
       membership.role
     }
     planCommander.registerRemovedUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
@@ -278,11 +275,11 @@ class OrganizationMembershipCommanderImpl @Inject() (
   }
 
   private def maybeNotifySlackOfNewMember(orgId: Id[Organization], userId: Id[User]): Future[Unit] = db.readOnlyReplicaAsync { implicit session =>
-    val isOrgReal = !organizationExperimentRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE)
+    val isOrgReal = !orgExperimentRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE)
     val isUserReal = !userExperimentRepo.hasExperiment(userId, UserExperimentType.FAKE)
     val shouldNotifySlack = isOrgReal && isUserReal
     if (shouldNotifySlack) {
-      val org = organizationRepo.get(orgId)
+      val org = orgRepo.get(orgId)
       val user = userRepo.get(userId)
 
       val channel = "#org-members"
@@ -316,15 +313,9 @@ class OrganizationMembershipCommanderImpl @Inject() (
       case None => Right(unsafeAddMembership(request))
     }
   }
-  def addMemberships(requests: Seq[OrganizationMembershipAddRequest]): Map[OrganizationMembershipAddRequest, Either[OrganizationFail, OrganizationMembershipAddResponse]] = {
-    requests.map { request => request -> addMembership(request) }.toMap
-  }
 
   def modifyMembership(request: OrganizationMembershipModifyRequest): Either[OrganizationFail, OrganizationMembershipModifyResponse] =
     db.readWrite { implicit session => modifyMembershipHelper(request) }
-  def modifyMemberships(requests: Seq[OrganizationMembershipModifyRequest]): Map[OrganizationMembershipModifyRequest, Either[OrganizationFail, OrganizationMembershipModifyResponse]] = {
-    requests.map { request => request -> modifyMembership(request) }.toMap
-  }
 
   def removeMembership(request: OrganizationMembershipRemoveRequest): Either[OrganizationFail, OrganizationMembershipRemoveResponse] = {
     val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
@@ -332,8 +323,5 @@ class OrganizationMembershipCommanderImpl @Inject() (
       case Some(fail) => Left(fail)
       case None => Right(unsafeRemoveMembership(request))
     }
-  }
-  def removeMemberships(requests: Seq[OrganizationMembershipRemoveRequest]): Map[OrganizationMembershipRemoveRequest, Either[OrganizationFail, OrganizationMembershipRemoveResponse]] = {
-    requests.map { request => request -> removeMembership(request) }.toMap
   }
 }
