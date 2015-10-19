@@ -13,6 +13,8 @@ angular.module('kifi')
     $scope.card = billingState.card;
 
     var picFilter = $filter('pic');
+    var moneyFilter = $filter('money');
+    var moneyUnwrapFilter = $filter('moneyUnwrap');
 
     var handler = StripeCheckout.configure({
       locale: 'auto'
@@ -146,17 +148,68 @@ angular.module('kifi')
 
     function getCyclesByTier(tier) {
       var cyclesSoFar = [];
+      var leastEfficientPlan;
+      var extraText = '';
+      var savings;
+
+      if (!$scope.isFreePlanName(tier[0].name)) {
+        leastEfficientPlan = getLeastEfficientPlan(tier);
+      }
 
       return tier.map(function (plan) {
         if (cyclesSoFar.indexOf(plan.cycle) === -1) {
           cyclesSoFar.push(plan.cycle); // prevent duplicates
 
+          if (leastEfficientPlan && plan !== leastEfficientPlan) {
+            savings = getSavings(leastEfficientPlan, plan);
+            extraText = ' (You save ' + moneyFilter(savings) + ')';
+          }
+
           return {
             value: plan.cycle,
-            label: plan.cycle + ' month' + (plan.cycle > 1 ? 's' : '')
+            label: getCycleLabel(plan.cycle) + extraText
           };
         }
       }).filter(Boolean);
+    }
+
+    function getLeastEfficientPlan(tier) {
+      var highestPrice = getPricePerUserPerCycle(tier[0]);
+
+      return tier.reduce(function (highestPricePlanSoFar, plan) {
+        var price = getPricePerUserPerCycle(plan);
+        if (price > highestPrice) {
+          highestPrice = price;
+          return plan;
+        } else {
+          return highestPricePlanSoFar;
+        }
+      });
+    }
+
+    function getPricePerUserPerCycle(plan) {
+      return moneyUnwrapFilter(plan.pricePerUser) / moneyUnwrapFilter(plan.cycle);
+    }
+
+    function getSavings(lessEfficientPlan, moreEfficientPlan) {
+      var ratio = moreEfficientPlan.cycle / lessEfficientPlan.cycle;
+      var savings = moneyUnwrapFilter(lessEfficientPlan.pricePerUser) * ratio - moneyUnwrapFilter(moreEfficientPlan.pricePerUser);
+
+      return savings;
+    }
+
+    function getCycleLabel(cycle) {
+      var PREDEFINED_CYCLE_LABELS = {
+        1: 'Monthly',
+        12: 'Anually'
+      };
+      var label = PREDEFINED_CYCLE_LABELS[cycle];
+
+      if (label) {
+        return label;
+      } else {
+        return 'Every ' + cycle + ' months';
+      }
     }
 
     $scope.save = function () {
@@ -197,15 +250,15 @@ angular.module('kifi')
       saveSeriesDeferred.resolve();
     };
 
-    function resetForm() {
-      $scope.planSelectsForm.$setPristine();
-      $scope.plan.newCard = null;
-    }
-
     function onBeforeUnload(e) {
       var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
       (e || $window.event).returnValue = message; // for Firefox
       return message;
+    }
+
+    function resetForm() {
+      $scope.planSelectsForm.$setPristine();
+      $scope.plan.newCard = null;
     }
 
     [

@@ -23,7 +23,7 @@
         <u ng-bind="'credit of ' + (billingState.balance | money)"></u>
         <span ng-if="isPaidPlan()">
           <span>&nbsp;which will be applied before your&nbsp;</span>
-          <u>credit card ending in <b ng-bind="'' + billingState.card.last4"></b></u>
+          <u>credit card ending in <b ng-bind="'' + billingState.card.lastFour"></b></u>
           <span>&nbsp;is charged.</span>
         </span>
       </p>
