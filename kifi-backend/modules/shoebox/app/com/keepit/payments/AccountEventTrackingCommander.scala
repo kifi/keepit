@@ -17,7 +17,7 @@ import com.keepit.common.core._
 
 @ImplementedBy(classOf[AccountEventTrackingCommanderImpl])
 trait AccountEventTrackingCommander {
-  def track[E](event: AccountEvent)(implicit session: RWSession): AccountEvent
+  def track(event: AccountEvent)(implicit session: RWSession): AccountEvent
   def reportToSlack(msg: String): Future[Unit] // todo(Léo): *temporary* :)
 }
 
@@ -27,6 +27,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
     emailRepo: UserEmailAddressRepo,
     orgRepo: OrganizationRepo,
     eventRepo: AccountEventRepo,
+    accountRepo: PaidAccountRepo,
+    paymentMethodRepo: PaymentMethodRepo,
     pathCommander: PathCommander,
     postOffice: LocalPostOffice,
     stripeClient: StripeClient,
@@ -34,10 +36,21 @@ class AccountEventTrackingCommanderImpl @Inject() (
     mode: play.api.Mode.Mode,
     implicit val defaultContext: ExecutionContext) extends AccountEventTrackingCommander {
 
-  def track[E](event: AccountEvent)(implicit session: RWSession): AccountEvent = {
+  def track(event: AccountEvent)(implicit session: RWSession): AccountEvent = {
     eventRepo.save(event) tap { savedEvent =>
       if (savedEvent.billingRelated) session.onTransactionSuccess {
-        reportToSlack(s"$event")
+        val (account, org, paymentMethod) = db.readOnlyMaster { implicit session =>
+          val account = accountRepo.get(event.accountId)
+          val org = orgRepo.get(account.orgId)
+          val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get(_))
+          (account, org, paymentMethod)
+        }
+        reportToSlack(s"[${org.name}] ${event.action.eventType}] | Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")
+
+        // todo(Léo): not sure this one belongs here vs PaymentProcessingCommander
+        savedEvent.chargeId.foreach { chargeId =>
+          notifyOfCharge(account, paymentMethod.get.stripeToken, savedEvent.paymentCharge.get, chargeId)
+        }
       }
     }
   }
@@ -46,7 +59,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
   def reportToSlack(msg: String): Future[Unit] = SafeFuture {
-    if (msg != "") {
+    if (msg.nonEmpty) {
       val fullMsg = BasicSlackMessage(
         text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
         username = "AccountEvent",

@@ -48,11 +48,9 @@ object PaymentStatus {
   case object Failed extends PaymentStatus("failed")
 
   private val all = Set(Ok, Required, Pending, Failed)
-  def apply(value: String): PaymentStatus = all.find(_.value == value) match {
-    case Some(status) => status
-    case None => throw new IllegalArgumentException(s"Unknown PaymentStatus: $value")
+  def apply(value: String): PaymentStatus = all.find(_.value == value) getOrElse {
+    throw new IllegalArgumentException(s"Unknown PaymentStatus: $value")
   }
-  def unapply(status: PaymentStatus): Option[String] = Some(status.value)
 }
 
 case class PaidAccount(
