@@ -459,9 +459,10 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def getCurrentAndAvailablePlans(orgId: Id[Organization]): (Id[PaidPlan], Set[PaidPlan]) = db.readOnlyReplica { implicit session =>
-    val normalPlans = paidPlanRepo.getByKinds(Set(PaidPlan.Kind.NORMAL))
     val currentPlan = currentPlanHelper(orgId)
-    (currentPlan.id.get, normalPlans.toSet + currentPlan)
+    val currentPlans = paidPlanRepo.getByDisplayName(currentPlan.displayName) // get plans with same name, different billing cycles
+    val normalPlans = paidPlanRepo.getByKinds(Set(PaidPlan.Kind.NORMAL))
+    (currentPlan.id.get, normalPlans.toSet ++ currentPlans)
   }
 
   def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent] = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>

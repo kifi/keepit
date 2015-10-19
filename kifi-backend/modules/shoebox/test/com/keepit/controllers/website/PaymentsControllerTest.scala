@@ -11,7 +11,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.payments.{ PaidAccountRepo, BillingCycle, PaidPlanInfo, PaidPlanRepo, DollarAmount, PlanManagementCommander, PaidPlan, FakeStripeClientModule }
+import com.keepit.payments.{ ActionAttribution, PaidAccountRepo, BillingCycle, PaidPlanInfo, PaidPlanRepo, DollarAmount, PlanManagementCommander, PaidPlan, FakeStripeClientModule }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ Json, JsObject }
@@ -46,9 +46,30 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    def setupNormalPlans()(implicit injector: Injector) = {
+      db.readWrite { implicit s =>
+        val planRepo = inject[PaidPlanRepo]
+        val standardAnnualPlan = planRepo.save(
+          PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_annual"), displayName = "Standard",
+            billingCycle = BillingCycle(12), pricePerCyclePerUser = DollarAmount(8004),
+            editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
+        )
+        val standardBiannualPlan = planRepo.save(
+          PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_biannual"), displayName = "Standard",
+            billingCycle = BillingCycle(6), pricePerCyclePerUser = DollarAmount(8004),
+            editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
+        )
+        val standardMonthlyPlan = planRepo.save(
+          PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_monthly"), displayName = "Standard",
+            billingCycle = BillingCycle(1), pricePerCyclePerUser = DollarAmount(800),
+            editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
+        )
+        Seq(standardMonthlyPlan, standardBiannualPlan, standardAnnualPlan)
+      }
+    }
+
     "get an account's state" in {
       withDb(controllerTestModules: _*) { implicit injector =>
-        val planCommander = inject[PlanManagementCommander]
         val (org, owner, account, plan) = setup()
 
         val publicId = Organization.publicId(org.id.get)
@@ -61,7 +82,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         (payload \ "charge").as[JsObject] === Json.obj("cents" -> (plan.pricePerCyclePerUser * account.activeUsers).toCents)
 
         val planJson = (payload \ "plan").as[JsObject]
-        val actualPlan = planCommander.currentPlan(org.id.get)
+        val actualPlan = planManagementCommander.currentPlan(org.id.get)
         (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
         (planJson \ "name").as[String] must beEqualTo(plan.displayName)
         (planJson \ "pricePerUser").as[JsObject] === Json.obj("cents" -> plan.pricePerCyclePerUser.toCents)
@@ -86,31 +107,12 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get active plans" in {
+    "get active normal plans" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (org, owner, _, _) = setup()
         val publicId = Organization.publicId(org.id.get)
-        val currentPlan = inject[PlanManagementCommander].currentPlan(org.id.get)
-
-        val standardPlans = db.readWrite { implicit s =>
-          val planRepo = inject[PaidPlanRepo]
-          val standardAnnualPlan = planRepo.save(
-            PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_annual"), displayName = "Standard",
-              billingCycle = BillingCycle(12), pricePerCyclePerUser = DollarAmount(8004),
-              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
-          )
-          val standardBiannualPlan = planRepo.save(
-            PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_annual"), displayName = "Standard",
-              billingCycle = BillingCycle(6), pricePerCyclePerUser = DollarAmount(8004),
-              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
-          )
-          val standardMonthlyPlan = planRepo.save(
-            PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_monthly"), displayName = "Standard",
-              billingCycle = BillingCycle(1), pricePerCyclePerUser = DollarAmount(800),
-              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
-          )
-          Seq(standardMonthlyPlan, standardBiannualPlan, standardAnnualPlan)
-        }
+        val currentPlan = planManagementCommander.currentPlan(org.id.get)
+        val standardPlans = setupNormalPlans()
 
         inject[FakeUserActionsHelper].setUser(owner)
         val request = route.getAvailablePlans(publicId)
@@ -120,6 +122,58 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
         (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
         (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
+      }
+    }
+
+    "get custom plans when org is on one" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (org, owner, _, _) = setup()
+        val publicId = Organization.publicId(org.id.get)
+        val planRepo = inject[PaidPlanRepo]
+        val currentPlan = planManagementCommander.currentPlan(org.id.get)
+        val standardPlans = setupNormalPlans()
+
+        val customPlans = db.readWrite { implicit session =>
+          val enterpriseAnnual = planRepo.save(
+            PaidPlan(kind = PaidPlan.Kind.CUSTOM, name = Name[PaidPlan]("enterprise_annual"), displayName = "Enterprise",
+              billingCycle = BillingCycle(12), pricePerCyclePerUser = DollarAmount(80040),
+              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
+          )
+          val enterpriseBiannual = planRepo.save(
+            PaidPlan(kind = PaidPlan.Kind.CUSTOM, name = Name[PaidPlan]("enterprise_biannual"), displayName = "Enterprise",
+              billingCycle = BillingCycle(6), pricePerCyclePerUser = DollarAmount(80040),
+              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
+          )
+          val enterpriseMonthly = planRepo.save(
+            PaidPlan(kind = PaidPlan.Kind.CUSTOM, name = Name[PaidPlan]("enterprise_monthly"), displayName = "Enterprise",
+              billingCycle = BillingCycle(1), pricePerCyclePerUser = DollarAmount(8000),
+              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
+          )
+          Seq(enterpriseAnnual, enterpriseBiannual, enterpriseMonthly)
+        }
+
+        inject[FakeUserActionsHelper].setUser(owner)
+        val request = route.getAvailablePlans(publicId)
+        val response = controller.getAvailablePlans(publicId)(request)
+
+        // don't get any custom plans
+        val plansByName = contentAsJson(response)
+        (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
+        (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+        (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
+        (plansByName \ "plans" \ "Enterprise").as[Option[Seq[PaidPlanInfo]]] === None
+
+        planManagementCommander.changePlan(org.id.get, customPlans.head.id.get, ActionAttribution(None, admin = Some(Id[User](1)))) // only admins can put an org on a custom plan
+
+        val request2 = route.getAvailablePlans(publicId)
+        val response2 = controller.getAvailablePlans(publicId)(request2)
+
+        // don't get any custom plans
+        val plansByNameWithCustom = contentAsJson(response2)
+        (plansByNameWithCustom \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
+        (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+        (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
+        (plansByNameWithCustom \ "plans" \ "Enterprise").as[Option[Seq[PaidPlanInfo]]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
       }
     }
   }
