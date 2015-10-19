@@ -104,7 +104,7 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
-  def remainingBillingCycleCost(account: PaidAccount)(implicit session: RSession): DollarAmount = {
+  private def remainingBillingCycleCost(account: PaidAccount)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
     val cycleLengthMonth: Int = plan.billingCycle.month
     val cycleStart: DateTime = account.billingCycleStart
@@ -232,22 +232,7 @@ class PlanManagementCommanderImpl @Inject() (
   def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
     val price: DollarAmount = remainingBillingCycleCost(account)
-
-    val emails = emailRepo.getAllByUser(userId)
-    val newEmailContacts = account.emailContacts.diff(emails.map(_.address)) // TODO(cam): email contacts aren't exposed (10/16/15), once they are we need to create an event for each email contact removed, or refactor AccountEventAction.AccountContactsChanged to take multiple contacts
-    val newUserContacts = if (account.userContacts.contains(userId)) {
-      val ownerIdOpt = if (account.userContacts.length == 1) Some(orgRepo.get(orgId).ownerId) else None
-      accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
-        eventTime = clock.now,
-        accountId = orgId2AccountId(orgId),
-        attribution = attribution,
-        action = AccountEventAction.AccountContactsChanged(userAdded = ownerIdOpt, userRemoved = Some(userId), None, None)
-      ))
-      val newContacts = account.userContacts.diff(Seq(userId)) ++ ownerIdOpt.map(Seq[Id[User]](_)).getOrElse(Seq.empty[Id[User]])
-      newContacts
-    } else account.userContacts
-
-    val newAccount = account.withIncreasedCredit(price).withFewerActiveUsers(1).withUserContacts(newUserContacts).withEmailContacts(newEmailContacts)
+    val newAccount = account.withIncreasedCredit(price).withFewerActiveUsers(1).withUserContacts(account.userContacts.diff(Seq(userId)))
 
     paidAccountRepo.save(newAccount)
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(

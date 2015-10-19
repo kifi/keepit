@@ -190,7 +190,7 @@ class AdminPaymentsController @Inject() (
 
   def addOrgOwnersAsBillingContacts() = AdminUserAction { implicit request =>
     db.readWrite { implicit session =>
-      organizationRepo.allActive.map { org =>
+      organizationRepo.allActive.foreach { org =>
         planCommander.addUserAccountContactHelper(org.id.get, org.ownerId, ActionAttribution(user = None, admin = request.adminUserId))
       }
     }
