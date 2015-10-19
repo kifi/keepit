@@ -33,6 +33,7 @@ class PaidAccountRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val statusColumnType = MappedColumnType.base[PaidAccountStatus, String](_.value, PaidAccountStatus(_))
 
   type RepoImpl = PaidAccountTable
   class PaidAccountTable(tag: Tag) extends RepoTable[PaidAccount](db, tag, "paid_account") {
@@ -41,11 +42,12 @@ class PaidAccountRepoImpl @Inject() (
     def credit = column[DollarAmount]("credit", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
+    def status = column[PaidAccountStatus]("status", O.NotNull)
     def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
     def frozen = column[Boolean]("frozen", O.NotNull)
     def activeUsers = column[Int]("active_users", O.NotNull)
     def billingCycleStart = column[DateTime]("billing_cycle_start", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, status, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)

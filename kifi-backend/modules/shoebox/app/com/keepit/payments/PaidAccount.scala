@@ -43,6 +43,21 @@ object DollarAmount {
 @json
 case class SimpleAccountContactInfo(who: BasicUser, enabled: Boolean)
 
+sealed abstract class PaidAccountStatus(val value: String)
+object PaidAccountStatus {
+  case object Normal extends PaidAccountStatus("normal")
+  case object ChargeRequired extends PaidAccountStatus("charge_required")
+  case object ChargePending extends PaidAccountStatus("charge_pending")
+  case object ChargeFailed extends PaidAccountStatus("charge_failed")
+
+  private val all = Set(Normal, ChargeRequired, ChargePending, ChargeFailed)
+  def apply(value: String): PaidAccountStatus = all.find(_.value == value) match {
+    case Some(status) => status
+    case None => throw new IllegalArgumentException(s"Unknown PaidAccountStatus: $value")
+  }
+  def unapply(status: PaidAccountStatus): Option[String] = Some(status.value)
+}
+
 case class PaidAccount(
     id: Option[Id[PaidAccount]] = None,
     createdAt: DateTime = currentDateTime,
@@ -53,6 +68,7 @@ case class PaidAccount(
     credit: DollarAmount,
     userContacts: Seq[Id[User]],
     emailContacts: Seq[EmailAddress],
+    status: PaidAccountStatus = PaidAccountStatus.Normal,
     lockedForProcessing: Boolean = false,
     frozen: Boolean = false,
     activeUsers: Int,
