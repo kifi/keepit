@@ -23,11 +23,11 @@
            </span>
           </td>
           <td
-            ng-bind="b.creditChange"
+            ng-bind="b.creditChange | money"
             ng-class="{
-              'kf-team-activity-debit': b.creditChange[0] === '-',
-              'kf-team-activity-credit': b.creditChange[0] !== '-',
-              'kf-team-activity-nocharge': b.creditChange === '$0.00'
+              'kf-team-activity-debit': (b.creditChange | isNegativeMoney),
+              'kf-team-activity-credit': (b.creditChange | isPositiveMoney),
+              'kf-team-activity-nocharge': (b.creditChange | isZeroMoney)
             }"
           >
           </td>
