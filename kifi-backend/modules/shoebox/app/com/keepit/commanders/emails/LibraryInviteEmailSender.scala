@@ -36,14 +36,15 @@ class LibraryInviteEmailSender @Inject() (
       else None
 
     toRecipientOpt map { toRecipient =>
-      val (library, libraryInfo) = db.readWrite { implicit session =>
+      val (library, libraryInfo, teamName) = db.readWrite { implicit session =>
         val library = libraryRepo.get(invite.libraryId)
         val org = library.organizationId.map { id => orgRepo.get(id) }
         val libOwner = basicUserRepo.load(library.ownerId)
         val inviter = basicUserRepo.load(invite.inviterId)
         val libImage = libraryImageCommander.getBestImageForLibrary(library.id.get, ProcessedImageSize.Large.idealSize).map(_.asInfo)
         val libraryInfo = LibraryInfo.fromLibraryAndOwner(library, libImage, libOwner, org, Some(inviter))
-        (library, libraryInfo)
+        val teamName: Option[String] = library.organizationId map { id => orgRepo.get(id).name }
+        (library, libraryInfo, teamName)
       }
 
       val usePlainEmail = isPlainEmail || invite.userId.map { id => localUserExperimentCommander.userHasExperiment(id, UserExperimentType.PLAIN_EMAIL) }.getOrElse(false)
@@ -53,12 +54,12 @@ class LibraryInviteEmailSender @Inject() (
       val emailToSend = EmailToSend(
         fromName = Some(Left(invite.inviterId)),
         from = SystemEmailAddress.NOTIFICATIONS,
-        subject = if (invite.access == LibraryAccess.READ_ONLY) s"An invitation to a Kifi library: ${libraryInfo.name}" else s"I want to collaborate with you on ${libraryInfo.name}",
+        subject = if (invite.access == LibraryAccess.READ_ONLY) s"Invite to join my Kifi library on ${libraryInfo.name}" else s"Invite to collaborate on my Kifi library ${libraryInfo.name}",
         to = toRecipient,
         category = toRecipient.fold(_ => NotificationCategory.User.LIBRARY_INVITATION, _ => NotificationCategory.NonUser.LIBRARY_INVITATION),
         htmlTemplate = {
           if (usePlainEmail) {
-            views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, library, libraryInfo, authToken, invite.access)
+            views.html.email.libraryInvitationPlain(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, library, libraryInfo, authToken, invite.access, teamName)
           } else {
             views.html.email.libraryInvitation(toRecipient.left.toOption, fromUserId, trimmedInviteMsg, library, libraryInfo, authToken, invite.access)
           }

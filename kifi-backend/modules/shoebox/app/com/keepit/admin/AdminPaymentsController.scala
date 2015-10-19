@@ -52,21 +52,17 @@ class AdminPaymentsController @Inject() (
         channel.push(s"Processing org ${org.id.get}: ${org.name}\n")
         db.readWrite { implicit session =>
           paidAccountRepo.maybeGetByOrgId(org.id.get) match {
-            case Some(_) => {
+            case Some(_) =>
               channel.push(s"Paid account already exists. Doing nothing.\n")
-            }
-            case None => {
+            case None =>
               planCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.userId, session) match {
-                case Success(event) => {
+                case Success(event) =>
                   channel.push(s"Successfully created paid account for org ${org.id.get}\n")
                   channel.push(event.toString + "\n")
-                }
-                case Failure(ex) => {
+                case Failure(ex) =>
                   channel.push(s"Failed creating paid account for org ${org.id.get}: ${ex.getMessage}\n")
                   printStackTraceToChannel(ex, channel)
-                }
               }
-            }
           }
         }
         Thread.sleep(200)
@@ -160,6 +156,7 @@ class AdminPaymentsController @Inject() (
     }
     AdminAccountEventView(
       id = accountEvent.id.get,
+      accountId = accountEvent.accountId,
       action = accountEvent.action,
       eventTime = accountEvent.eventTime,
       billingRelated = accountEvent.billingRelated,
@@ -195,10 +192,30 @@ class AdminPaymentsController @Inject() (
     Ok(planCommander.unfreeze(orgId).toString)
   }
 
+  def addOrgOwnersAsBillingContacts() = AdminUserAction { implicit request =>
+    db.readWrite { implicit session =>
+      organizationRepo.allActive.foreach { org =>
+        planCommander.addUserAccountContactHelper(org.id.get, org.ownerId, ActionAttribution(user = None, admin = request.adminUserId))
+      }
+    }
+    Ok
+  }
+
+  def paymentsDashboard = AdminUserPage { implicit request =>
+    val dashboard = db.readOnlyMaster { implicit session =>
+      val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
+      val recentEvents = accountEventRepo.adminGetRecentEvents(Limit(100)).map(createAdminAccountEventView)
+      val accountIds = recentEvents.map(_.accountId).toSet
+      val orgsByAccountId = accountIds.map { accountId => accountId -> organizationRepo.get(paidAccountRepo.get(accountId).orgId) }.toMap
+      AdminPaymentsDashboard(frozenAccounts, recentEvents, orgsByAccountId)
+    }
+    Ok(views.html.admin.paymentsDashboard(dashboard))
+  }
 }
 
 case class AdminAccountEventView(
   id: Id[AccountEvent],
+  accountId: Id[PaidAccount],
   action: AccountEventAction,
   eventTime: DateTime,
   billingRelated: Boolean,
@@ -207,3 +224,8 @@ case class AdminAccountEventView(
   creditChange: DollarAmount,
   paymentCharge: Option[DollarAmount],
   memo: Option[String])
+
+case class AdminPaymentsDashboard(
+  frozenAccounts: Seq[PaidAccount],
+  recentEvents: Seq[AdminAccountEventView],
+  orgsByAccountId: Map[Id[PaidAccount], Organization])

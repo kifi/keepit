@@ -8,7 +8,7 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'billing/creditBanner.tpl.html',
       scope: {
-        credit: '@'
+        getCredit: '&credit'
       }
     };
   }
