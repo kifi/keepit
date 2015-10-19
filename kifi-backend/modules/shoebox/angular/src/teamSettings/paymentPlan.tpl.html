@@ -77,6 +77,17 @@
     </div>
   </form>
   <div class="kf-payment-plan-save-wrapper">
-    <button ng-click="save()" class="kf-button kf-button-large kf-payment-plan-save" ng-disabled="!plan.cycle || !plan.name || !(card && card.last4) || (!plan.newCard && planSelectsForm.$pristine)">Save my plan preferences</button>
+    <button
+      class="kf-button kf-button-large kf-payment-plan-save"
+      ng-click="save()"
+      ng-disabled="
+        !plan.cycle ||
+        !plan.name ||
+        (!plan.newCard && planSelectsForm.$pristine) ||
+        (
+          !(card && card.last4) &&
+          !plan.newCard
+        )"
+    >Save my plan preferences</button>
   </div>
 </div>

@@ -321,29 +321,25 @@ orgStats: OrganizationStatistics
         var memo = $("#extra-credit-memo").val();
         var member = $("#extra-credit-member").val();
         var payload = { "amount": amount, "memo": memo, "member": member };
-        var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.grantExtraCredit(orgStats.orgId)", payload);
-        deffered.done( function (data) {
+        var deferred = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.grantExtraCredit(orgStats.orgId)", payload);
+        deferred.done( function (data) {
             alert(data);
             location.reload();
         });
-        deffered.fail (function () {
+        deferred.fail (function () {
             console.log("FAIL:", arguments);
             alert("Sadly, something unexpected went wrong. See the console for possible more information.")
         })
     });
 
     $("#process-billing-now").click(function () {
-        if ("@orgStats.stripeToken" === "N/A") {
-            alert("There seems to be no active credit card on file");
-            return;
-        }
         if (confirm("Are you sure?")) {
-            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.processOrgNow(orgStats.orgId)", {});
-            deffered.done( function (data) {
+            var deferred = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.processOrgNow(orgStats.orgId)", {});
+            deferred.done( function (data) {
                 alert(data);
                 location.reload();
             });
-            deffered.fail (function () {
+            deferred.fail (function () {
                 console.log("FAIL:", arguments);
                 alert("Sadly, something unexpected went wrong. See the console for possible more information.")
             })
@@ -352,12 +348,12 @@ orgStats: OrganizationStatistics
 
     $("#unfreeze-account").click(function () {
         if (confirm("Are you sure?")) {
-            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.unfreezeAccount(orgStats.orgId)", {});
-            deffered.done( function (data) {
+            var deferred = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.unfreezeAccount(orgStats.orgId)", {});
+            deferred.done( function (data) {
                 alert("Frozen State of account is now: " + data);
                 location.reload();
             });
-            deffered.fail (function () {
+            deferred.fail (function () {
                 console.log("FAIL:", arguments);
                 alert("Sadly, something unexpected went wrong. See the console for possible more information.")
             })
@@ -368,12 +364,12 @@ orgStats: OrganizationStatistics
     $("#edit-plan").click(function () {
         var newPlanId = prompt("Enter New Plan Id")
         if (newPlanId != null) {
-            var deffered = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.changePlanForOrg(orgStats.orgId)", {planId: newPlanId});
-            deffered.done( function (data) {
+            var deferred = $.post("@com.keepit.controllers.admin.routes.AdminPaymentsController.changePlanForOrg(orgStats.orgId)", {planId: newPlanId});
+            deferred.done( function (data) {
                 alert(data);
                 location.reload();
             });
-            deffered.fail (function () {
+            deferred.fail (function () {
                 console.log("FAIL:", arguments);
                 alert("Sadly, something unexpected went wrong. See the console for possible more information.")
             })

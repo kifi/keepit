@@ -427,7 +427,8 @@ class OrganizationCommanderImpl @Inject() (
               orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
             case inactiveMembershipOpt =>
               orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
-              planManagementCommander.registerNewUser(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
+              planManagementCommander.registerNewAdmin(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
+              planManagementCommander.addUserAccountContact(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
 

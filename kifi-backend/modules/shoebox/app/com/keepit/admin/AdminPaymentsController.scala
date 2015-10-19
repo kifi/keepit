@@ -152,6 +152,7 @@ class AdminPaymentsController @Inject() (
     }
     AdminAccountEventView(
       id = accountEvent.id.get,
+      accountId = accountEvent.accountId,
       action = accountEvent.action,
       eventTime = accountEvent.eventTime,
       billingRelated = accountEvent.billingRelated,
@@ -187,19 +188,30 @@ class AdminPaymentsController @Inject() (
     Ok(planCommander.unfreeze(orgId).toString)
   }
 
-  def paymentsDashboard = AdminUserPage { implicit request =>
-    val (frozenAccounts, recentEvents) = db.readOnlyMaster { implicit session =>
-      val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
-      val recentEvents = accountEventRepo.adminGetRecentEvents(Limit(100)).map(createAdminAccountEventView)
-      (frozenAccounts, recentEvents)
+  def addOrgOwnersAsBillingContacts() = AdminUserAction { implicit request =>
+    db.readWrite { implicit session =>
+      organizationRepo.allActive.foreach { org =>
+        planCommander.addUserAccountContactHelper(org.id.get, org.ownerId, ActionAttribution(user = None, admin = request.adminUserId))
+      }
     }
-    Ok(views.html.admin.paymentsDashboard(AdminPaymentsDashboard(frozenAccounts, recentEvents)))
+    Ok
   }
 
+  def paymentsDashboard = AdminUserPage { implicit request =>
+    val dashboard = db.readOnlyMaster { implicit session =>
+      val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
+      val recentEvents = accountEventRepo.adminGetRecentEvents(Limit(100)).map(createAdminAccountEventView)
+      val accountIds = recentEvents.map(_.accountId).toSet
+      val orgsByAccountId = accountIds.map { accountId => accountId -> organizationRepo.get(paidAccountRepo.get(accountId).orgId) }.toMap
+      AdminPaymentsDashboard(frozenAccounts, recentEvents, orgsByAccountId)
+    }
+    Ok(views.html.admin.paymentsDashboard(dashboard))
+  }
 }
 
 case class AdminAccountEventView(
   id: Id[AccountEvent],
+  accountId: Id[PaidAccount],
   action: AccountEventAction,
   eventTime: DateTime,
   billingRelated: Boolean,
@@ -211,4 +223,5 @@ case class AdminAccountEventView(
 
 case class AdminPaymentsDashboard(
   frozenAccounts: Seq[PaidAccount],
-  recentEvents: Seq[AdminAccountEventView])
+  recentEvents: Seq[AdminAccountEventView],
+  orgsByAccountId: Map[Id[PaidAccount], Organization])

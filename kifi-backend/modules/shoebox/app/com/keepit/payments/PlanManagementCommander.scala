@@ -39,6 +39,7 @@ trait PlanManagementCommander {
   def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent]
   def removeEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Option[AccountEvent]
   def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent]
+  def addUserAccountContactHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): Option[AccountEvent]
   def addEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Option[AccountEvent]
   def getAccountContacts(orgId: Id[Organization]): (Seq[Id[User]], Seq[EmailAddress])
   def getSimpleContactInfos(orgId: Id[Organization]): Seq[SimpleAccountContactInfo]
@@ -69,7 +70,6 @@ trait PlanManagementCommander {
 
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
-  private[payments] def addUserAccountContactHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): Option[AccountEvent]
 
   //ADMIN ONLY
   def isFrozen(orgId: Id[Organization]): Boolean
@@ -160,7 +160,7 @@ class PlanManagementCommanderImpl @Inject() (
                 activeUsers = 0,
                 billingCycleStart = clock.now
               ))
-              grantSpecialCreditHelper(orgId, DollarAmount.wholeDollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
+              grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
               } else {
@@ -232,13 +232,9 @@ class PlanManagementCommanderImpl @Inject() (
   def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
     val price: DollarAmount = remainingBillingCycleCost(account)
-    val emails = emailRepo.getAllByUser(userId)
-    paidAccountRepo.save(
-      account.withIncreasedCredit(price)
-        .withFewerActiveUsers(1)
-        .withUserContacts(account.userContacts.diff(Seq(userId)))
-        .withEmailContacts(account.emailContacts.diff(Seq(emails.map(_.address))))
-    )
+    val newAccount = account.withIncreasedCredit(price).withFewerActiveUsers(1).withUserContacts(account.userContacts.diff(Seq(userId)))
+
+    paidAccountRepo.save(newAccount)
     accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
@@ -280,7 +276,8 @@ class PlanManagementCommanderImpl @Inject() (
 
   def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent] = db.readWrite { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
-    if (account.userContacts.contains(userId)) {
+    val org = orgRepo.get(orgId)
+    if (account.userContacts.contains(userId) && userId != org.ownerId) {
       val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId))
       paidAccountRepo.save(updatedAccount)
       Some(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
@@ -313,7 +310,7 @@ class PlanManagementCommanderImpl @Inject() (
   def addUserAccountContactHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): Option[AccountEvent] = {
     val account = paidAccountRepo.getByOrgId(orgId)
     if (!account.userContacts.contains(userId)) {
-      val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId) :+ userId)
+      val updatedAccount = account.copy(userContacts = account.userContacts :+ userId)
       paidAccountRepo.save(updatedAccount)
       Some(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
         eventTime = clock.now,

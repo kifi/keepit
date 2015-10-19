@@ -34,7 +34,7 @@ object PaidPlanInfo {
     (__ \ 'id).format[PublicId[PaidPlan]] and
     (__ \ 'name).format[String] and
     (__ \ 'fullName).format[String] and
-    (__ \ 'pricePerUser).format(DollarAmount.dollarStringFormat) and
+    (__ \ 'pricePerUser).format(DollarAmount.formatAsCents) and
     (__ \ 'cycle).format[BillingCycle] and
     (__ \ 'features).format[Set[Feature]]
   )(PaidPlanInfo.apply, unlift(PaidPlanInfo.unapply))
