@@ -257,7 +257,7 @@ object LibrarySlug {
 
   private val MaxLength = 50
   private val ReservedSlugs = Set("libraries", "connections", "followers", "keeps", "tags", "members")
-  private val BeforeTruncate = Seq("[^\\w\\s-]|_" -> "", "(\\s|--)+" -> "-", "^-" -> "") map compile
+  private val BeforeTruncate = Seq("[^0-9a-z\\u00A0-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFEF\\s-]|_" -> "", "\\s+" -> "-", "--+" -> "-", "^-" -> "") map compile
   private val AfterTruncate = Seq("-$" -> "") map compile
 
   def isValidSlug(slug: String): Boolean = {
