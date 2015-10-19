@@ -98,7 +98,7 @@ class PaymentProcessingCommanderImpl @Inject() (
       val newBillingCycleStart = account.billingCycleStart.plusMonths(plan.billingCycle.month)
       val fullCyclePrice = DollarAmount(account.activeUsers * plan.pricePerCyclePerUser.cents)
       val billedAccount = paidAccountRepo.save(account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart))
-      val billingEvent = accountEventRepo.save(AccountEvent(
+      val billingEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
         billingRelated = true,
@@ -119,7 +119,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   private def ignoreLowBalance(account: PaidAccount): (PaidAccount, AccountEvent) = {
     db.readWrite { implicit session =>
       val updatedAccount = if (account.paymentStatus == PaymentStatus.Required) paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Ok)) else account
-      val lowBalanceIgnoredEvent = accountEventRepo.save(AccountEvent(
+      val lowBalanceIgnoredEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
         billingRelated = true,
@@ -174,7 +174,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   private def endWithChargeSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], success: StripeChargeSuccess, action: ChargeEventAction): (PaidAccount, Some[AccountEvent]) = {
     db.readWrite(attempts = 3) { implicit session =>
       val chargedAccount = paidAccountRepo.save(account.withIncreasedCredit(success.amount).withPaymentStatus(PaymentStatus.Ok))
-      val chargeEvent = accountEventRepo.save(AccountEvent(
+      val chargeEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
         billingRelated = true,
@@ -196,7 +196,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   private def endWithChargeFailure(account: PaidAccount, paymentMethodId: Id[PaymentMethod], amount: DollarAmount, failure: StripeChargeFailure): (PaidAccount, Some[AccountEvent]) = {
     db.readWrite(attempts = 3) { implicit session =>
       val chargeFailedAccount: PaidAccount = paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Failed))
-      val chargeFailureEvent = accountEventRepo.save(AccountEvent(
+      val chargeFailureEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
         billingRelated = true,
@@ -218,7 +218,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   private def endWithMissingPaymentMethod(account: PaidAccount): (PaidAccount, Some[AccountEvent]) = {
     db.readWrite { implicit session =>
       val chargeFailedAccount: PaidAccount = paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Failed))
-      val missingPaymentMethodEvent = accountEventRepo.save(AccountEvent(
+      val missingPaymentMethodEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
         billingRelated = true,

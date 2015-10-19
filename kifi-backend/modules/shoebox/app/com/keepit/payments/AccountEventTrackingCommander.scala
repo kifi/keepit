@@ -13,10 +13,11 @@ import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
+import com.keepit.common.core._
 
 @ImplementedBy(classOf[AccountEventTrackingCommanderImpl])
 trait AccountEventTrackingCommander {
-  def track[E](event: AccountEvent)(implicit session: RWSession): Unit // todo(Léo): deal with async behavior ??? Use a plugin?
+  def track[E](event: AccountEvent)(implicit session: RWSession): AccountEvent
   def reportToSlack(msg: String): Future[Unit] // todo(Léo): *temporary* :)
 }
 
@@ -25,6 +26,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     db: Database,
     emailRepo: UserEmailAddressRepo,
     orgRepo: OrganizationRepo,
+    eventRepo: AccountEventRepo,
     pathCommander: PathCommander,
     postOffice: LocalPostOffice,
     stripeClient: StripeClient,
@@ -32,7 +34,13 @@ class AccountEventTrackingCommanderImpl @Inject() (
     mode: play.api.Mode.Mode,
     implicit val defaultContext: ExecutionContext) extends AccountEventTrackingCommander {
 
-  def track[E](event: AccountEvent)(implicit session: RWSession): Unit = ???
+  def track[E](event: AccountEvent)(implicit session: RWSession): AccountEvent = {
+    eventRepo.save(event) tap { savedEvent =>
+      if (savedEvent.billingRelated) session.onTransactionSuccess {
+        reportToSlack(s"$event")
+      }
+    }
+  }
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
 
@@ -41,7 +49,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     if (msg != "") {
       val fullMsg = BasicSlackMessage(
         text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
-        username = "PaymentProcessingCommander",
+        username = "AccountEvent",
         channel = Some("#billing-alerts")
       )
       httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
