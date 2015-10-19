@@ -12,6 +12,16 @@ angular.module('kifi')
     $scope.billingState = billingState;
     $scope.card = billingState.card;
 
+    var PREDEFINED_CYCLE_PERIOD = {
+      1: 'Monthly',
+      12: 'Annual'
+    };
+
+    var PREDEFINED_CYCLE_ADVERB = {
+      1: 'Monthly',
+      12: 'Annually'
+    };
+
     var picFilter = $filter('pic');
     var moneyFilter = $filter('money');
     var moneyUnwrapFilter = $filter('moneyUnwrap');
@@ -162,12 +172,12 @@ angular.module('kifi')
 
           if (leastEfficientPlan && plan !== leastEfficientPlan) {
             savings = getSavings(leastEfficientPlan, plan);
-            extraText = ' (You save ' + moneyFilter(savings) + ')';
+            extraText = ' (You save ' + moneyFilter(savings) + ' ' + PREDEFINED_CYCLE_ADVERB[plan.cycle] + ')';
           }
 
           return {
             value: plan.cycle,
-            label: getCycleLabel(plan.cycle) + extraText
+            label: getCycleLabel(plan) + extraText
           };
         }
       }).filter(Boolean);
@@ -198,18 +208,12 @@ angular.module('kifi')
       return savings;
     }
 
-    function getCycleLabel(cycle) {
-      var PREDEFINED_CYCLE_LABELS = {
-        1: 'Monthly',
-        12: 'Anually'
-      };
-      var label = PREDEFINED_CYCLE_LABELS[cycle];
+    function getCycleLabel(plan) {
+      var period = PREDEFINED_CYCLE_PERIOD[plan.cycle] || 'Every ' + plan.cycle + ' months';
+      var rate = moneyUnwrapFilter(plan.pricePerUser) / plan.cycle;
+      var rateString = moneyFilter(rate);
 
-      if (label) {
-        return label;
-      } else {
-        return 'Every ' + cycle + ' months';
-      }
+      return period + ' - ' + rateString + ' per user per month';
     }
 
     $scope.save = function () {
