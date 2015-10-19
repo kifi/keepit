@@ -131,7 +131,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount.activeUsers === 2
           updatedAccount.planId === plan.id.get
           updatedAccount.credit === accountOnFreePlan.credit - DollarAmount(2 * computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle).cents)
-          updatedAccount.status === PaidAccountStatus.Ok
+          updatedAccount.paymentStatus === PaymentStatus.Ok
         }
 
       }
@@ -162,7 +162,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit
-          updatedAccount.status === accountPre.status
+          updatedAccount.paymentStatus === accountPre.paymentStatus
         }
 
       }
@@ -191,7 +191,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit
           updatedAccount.billingCycleStart === initialBillingCycleStart.plusMonths(1)
-          updatedAccount.status === PaidAccountStatus.Ok
+          updatedAccount.paymentStatus === PaymentStatus.Ok
         }
 
       }
@@ -219,7 +219,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit
-          updatedAccount.status === PaidAccountStatus.Ok
+          updatedAccount.paymentStatus === PaymentStatus.Ok
         }
       }
     }
@@ -270,7 +270,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount.credit === DollarAmount.ZERO
           updatedAccount.owed === DollarAmount.ZERO
           updatedAccount.billingCycleStart === billingCycleStart.plusMonths(1)
-          updatedAccount.status === PaidAccountStatus.Ok
+          updatedAccount.paymentStatus === PaymentStatus.Ok
         }
 
       }
@@ -316,7 +316,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === DollarAmount.ZERO
           updatedAccount.billingCycleStart === billingCycleStart
-          updatedAccount.status === PaidAccountStatus.Ok
+          updatedAccount.paymentStatus === PaymentStatus.Ok
         }
 
       }
@@ -336,7 +336,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withBillingCycleStart(billingCycleStart)
             .withCredit(initialCredit)
-            .withStatus(PaidAccountStatus.ChargeRequired)
+            .withStatus(PaymentStatus.Required)
             .withActiveUsers(3)
             .saved
 
@@ -349,7 +349,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           account
         }
 
-        accountPre.status === PaidAccountStatus.ChargeRequired
+        accountPre.paymentStatus === PaymentStatus.Required
         accountPre.owed should beGreaterThan(commander.MIN_BALANCE)
         accountPre.owed should beLessThan(commander.MAX_BALANCE)
 
@@ -364,7 +364,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === DollarAmount.ZERO
           updatedAccount.billingCycleStart === billingCycleStart
-          updatedAccount.status === PaidAccountStatus.Ok
+          updatedAccount.paymentStatus === PaymentStatus.Ok
         }
 
       }
@@ -411,7 +411,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit - billedAmount
           updatedAccount.billingCycleStart === billingCycleStart.plusMonths(1)
-          updatedAccount.status === PaidAccountStatus.ChargeFailed
+          updatedAccount.paymentStatus === PaymentStatus.Failed
         }
       }
     }
@@ -457,7 +457,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit - billedAmount
           updatedAccount.billingCycleStart === billingCycleStart.plusMonths(1)
-          updatedAccount.status === PaidAccountStatus.ChargeRequired
+          updatedAccount.paymentStatus === PaymentStatus.Required
         }
 
       }
@@ -495,7 +495,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
           updatedAccount.credit === initialCredit - billedAmount
           updatedAccount.billingCycleStart === billingCycleStart.plusMonths(1)
-          updatedAccount.status === PaidAccountStatus.ChargeFailed
+          updatedAccount.paymentStatus === PaymentStatus.Failed
         }
 
       }

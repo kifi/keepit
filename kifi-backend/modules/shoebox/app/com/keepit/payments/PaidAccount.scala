@@ -43,19 +43,19 @@ object DollarAmount {
 @json
 case class SimpleAccountContactInfo(who: BasicUser, enabled: Boolean)
 
-sealed abstract class PaidAccountStatus(val value: String)
-object PaidAccountStatus {
-  case object Ok extends PaidAccountStatus("ok")
-  case object ChargeRequired extends PaidAccountStatus("charge_required")
-  case object ChargePending extends PaidAccountStatus("charge_pending")
-  case object ChargeFailed extends PaidAccountStatus("charge_failed")
+sealed abstract class PaymentStatus(val value: String)
+object PaymentStatus {
+  case object Ok extends PaymentStatus("ok")
+  case object Required extends PaymentStatus("required")
+  case object Pending extends PaymentStatus("pending")
+  case object Failed extends PaymentStatus("failed")
 
-  private val all = Set(Ok, ChargeRequired, ChargePending, ChargeFailed)
-  def apply(value: String): PaidAccountStatus = all.find(_.value == value) match {
+  private val all = Set(Ok, Required, Pending, Failed)
+  def apply(value: String): PaymentStatus = all.find(_.value == value) match {
     case Some(status) => status
-    case None => throw new IllegalArgumentException(s"Unknown PaidAccountStatus: $value")
+    case None => throw new IllegalArgumentException(s"Unknown PaymentStatus: $value")
   }
-  def unapply(status: PaidAccountStatus): Option[String] = Some(status.value)
+  def unapply(status: PaymentStatus): Option[String] = Some(status.value)
 }
 
 case class PaidAccount(
@@ -66,7 +66,7 @@ case class PaidAccount(
     orgId: Id[Organization],
     planId: Id[PaidPlan],
     credit: DollarAmount,
-    status: PaidAccountStatus = PaidAccountStatus.Ok,
+    paymentStatus: PaymentStatus = PaymentStatus.Ok,
     userContacts: Seq[Id[User]],
     emailContacts: Seq[EmailAddress],
     lockedForProcessing: Boolean = false,
@@ -77,7 +77,7 @@ case class PaidAccount(
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
-  def withStatus(status: PaidAccountStatus): PaidAccount = this.copy(status = status)
+  def withPaymentStatus(status: PaymentStatus): PaidAccount = this.copy(paymentStatus = status)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 
   def owed: DollarAmount = -(DollarAmount.ZERO min credit)

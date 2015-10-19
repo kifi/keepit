@@ -33,21 +33,21 @@ class PaidAccountRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
-  implicit val statusColumnType = MappedColumnType.base[PaidAccountStatus, String](_.value, PaidAccountStatus(_))
+  implicit val statusColumnType = MappedColumnType.base[PaymentStatus, String](_.value, PaymentStatus(_))
 
   type RepoImpl = PaidAccountTable
   class PaidAccountTable(tag: Tag) extends RepoTable[PaidAccount](db, tag, "paid_account") {
     def orgId = column[Id[Organization]]("org_id", O.NotNull)
     def planId = column[Id[PaidPlan]]("plan_id", O.NotNull)
     def credit = column[DollarAmount]("credit", O.NotNull)
-    def status = column[PaidAccountStatus]("status", O.NotNull)
+    def paymentStatus = column[PaymentStatus]("payment_status", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
     def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
     def frozen = column[Boolean]("frozen", O.NotNull)
     def activeUsers = column[Int]("active_users", O.NotNull)
     def billingCycleStart = column[DateTime]("billing_cycle_start", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, status, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, paymentStatus, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
@@ -82,7 +82,7 @@ class PaidAccountRepoImpl @Inject() (
   }
 
   def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount] = {
-    (for (row <- rows if !row.frozen && (row.credit < -maxBalance || row.billingCycleStart < maxCycleAge)) yield row).list
+    (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Required: PaymentStatus) || row.credit < -maxBalance || row.billingCycleStart < maxCycleAge)) yield row).list
   }
 
 }
