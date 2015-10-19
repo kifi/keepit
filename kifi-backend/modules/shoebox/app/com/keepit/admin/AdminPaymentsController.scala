@@ -9,6 +9,7 @@ import com.keepit.common.db.Id
 import org.joda.time.DateTime
 
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
+import play.api.libs.json.{ Json, JsArray }
 import play.twirl.api.HtmlFormat
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -104,8 +105,11 @@ class AdminPaymentsController @Inject() (
 
   def processOrgNow(orgId: Id[Organization]) = AdminUserAction.async { request =>
     val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
-    paymentProcessingCommander.processAccount(account).map { charged =>
-      Ok(charged.toString)
+    paymentProcessingCommander.processAccount(account).map { events =>
+      val result = JsArray(events.map { event =>
+        Json.obj(event.action.eventType -> event.creditChange.toDollarString)
+      })
+      Ok(result)
     }
   }
 

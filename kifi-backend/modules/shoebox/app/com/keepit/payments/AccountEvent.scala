@@ -1,7 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId }
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.time._
 import com.keepit.model.User
 import com.keepit.common.mail.EmailAddress
@@ -16,7 +16,7 @@ import javax.crypto.spec.IvParameterSpec
 
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 
-trait AccountEventAction {
+sealed trait AccountEventAction {
   def eventType: String
   def toDbRow: (String, JsValue)
 }
@@ -35,8 +35,42 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def eventType: String = "charge_back"
   }
 
-  case class PlanBillingCharge() extends AccountEventAction with Payloadless {
+  case class PlanBilling() extends AccountEventAction with Payloadless {
+    def eventType: String = "plan_billing"
+  }
+
+  sealed trait ChargeEventAction extends AccountEventAction with Payloadless
+
+  case class PlanBillingCharge() extends ChargeEventAction {
     def eventType: String = "plan_billing_charge"
+  }
+
+  case class MaxBalanceExceededCharge() extends ChargeEventAction {
+    def eventType: String = "max_balance_exceeded_charge"
+  }
+
+  case class RequiredCharge() extends ChargeEventAction {
+    def eventType: String = "required_charge"
+  }
+
+  case class ForcedCharge() extends ChargeEventAction {
+    def eventType: String = "forced_charge"
+  }
+
+  @json
+  case class LowBalanceIgnored(amount: DollarAmount) extends AccountEventAction {
+    def eventType: String = "low_balance_ignored"
+    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+  }
+
+  @json
+  case class ChargeFailure(amount: DollarAmount, code: String, message: String) extends AccountEventAction {
+    def eventType: String = "charge_failure"
+    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+  }
+
+  case class MissingPaymentMethod() extends AccountEventAction with Payloadless {
+    def eventType: String = "missing_payment_method"
   }
 
   @json

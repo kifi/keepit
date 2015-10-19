@@ -3,9 +3,6 @@ package com.keepit.payments
 import com.keepit.common.logging.Logging
 import com.keepit.common.concurrent.ReactiveLock
 
-import com.google.inject.{ Singleton, Inject }
-
-import play.api.libs.json.JsValue
 import play.api.Mode
 import play.api.Mode.Mode
 
@@ -18,7 +15,7 @@ import com.stripe.exception.CardException
 
 case class CardDetails(number: String, expMonth: Int, expYear: Int, cvc: String, cardholderName: String)
 
-trait StripeChargeResult
+sealed trait StripeChargeResult
 
 case class StripeChargeSuccess(amount: DollarAmount, chargeId: String) extends StripeChargeResult
 

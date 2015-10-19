@@ -24,6 +24,7 @@ object PaidAccountFactory {
     def withOrganization(org: Organization) = new PartialPaidAccount(account.copy(orgId = org.id.get))
     def withPlan(planId: Id[PaidPlan]) = new PartialPaidAccount(account.copy(planId = planId))
     def withCredit(amount: DollarAmount) = new PartialPaidAccount(account.copy(credit = amount))
+    def withStatus(status: PaymentStatus) = new PartialPaidAccount(account.copy(paymentStatus = status))
     def withBillingCycleStart(billingCycleStart: DateTime) = new PartialPaidAccount(account.copy(billingCycleStart = billingCycleStart))
     def withActiveUsers(activeUsers: Int) = new PartialPaidAccount(account.copy(activeUsers = activeUsers))
     def withFrozen(frozen: Boolean) = new PartialPaidAccount(account.copy(frozen = frozen))
