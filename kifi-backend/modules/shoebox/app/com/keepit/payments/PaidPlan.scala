@@ -22,6 +22,10 @@ import scala.util.{ Success, Failure, Try }
 @json
 case class BillingCycle(month: Int) extends AnyVal
 
+object BillingCycle {
+  def months(n: Int): BillingCycle = BillingCycle(n)
+}
+
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
   name: String,
