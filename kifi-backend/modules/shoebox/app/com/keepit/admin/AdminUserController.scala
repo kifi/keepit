@@ -173,7 +173,7 @@ class AdminUserController @Inject() (
     }
 
     for (su <- db.readOnlyReplica { implicit s => socialUserInfoRepo.getByUser(toUserId) }) {
-      socialGraphPlugin.asyncFetch(su)
+      try { socialGraphPlugin.asyncFetch(su) } catch { case e: Exception => log.error(s"while merging $fromUserId to $toUserId", e) }
     }
 
     Redirect(routes.AdminUserController.userView(toUserId))
