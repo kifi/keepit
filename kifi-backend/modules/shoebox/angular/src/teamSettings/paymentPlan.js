@@ -3,12 +3,13 @@
 angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
-  '$window', '$rootScope', '$scope', '$state', '$filter', 'billingState',
-  'billingService', 'modalService', 'StripeCheckout', 'messageTicker',
-  'paymentPlans',
-  function ($window, $rootScope, $scope, $state, $filter, billingState,
-            billingService, modalService, StripeCheckout, messageTicker,
-            paymentPlans) {
+  '$window', '$rootScope', '$scope', '$state', '$filter', '$q',
+  'billingState', 'billingService', 'modalService', 'StripeCheckout',
+  'messageTicker', 'paymentPlans', '$timeout',
+  function ($window, $rootScope, $scope, $state, $filter, $q,
+            billingState, billingService, modalService, StripeCheckout,
+            messageTicker, paymentPlans, $timeout) {
+    $scope.billingState = billingState;
     $scope.card = billingState.card;
 
     var handler = StripeCheckout.configure({
@@ -26,13 +27,7 @@ angular.module('kifi')
         panelLabel: 'Save My Card'
       })
       .then(function (response) {
-        var token = response[0];
-
-        return billingService
-        .setBillingCCToken($scope.profile.id, token.id)
-        .then(function () {
-          $state.reload();
-        });
+        $scope.plan.newCard = response[0];
       })
       ['catch'](function () {
         modalService.openGenericErrorModal({
@@ -48,12 +43,14 @@ angular.module('kifi')
       var firstFreeTierPlan = freeTierPlans[0];
       $scope.plan.name = firstFreeTierPlan.name;
       $scope.plan.cycle = firstFreeTierPlan.cycle;
+      $scope.planSelectsForm.$setDirty();
     };
 
     $scope.changePlanToStandard = function () {
       var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
       var firstStandardTierPlan = standardTierPlans[0];
       $scope.plan.name = firstStandardTierPlan.name;
+      $scope.planSelectsForm.$setDirty();
     };
 
     var plansByTier = paymentPlans.plans;
@@ -75,7 +72,8 @@ angular.module('kifi')
 
     $scope.plan = {
       name: currentPlan.name,
-      cycle: currentPlan.cycle //month
+      cycle: currentPlan.cycle, //months
+      newCard: null
     };
 
     $scope.isNoPlanName = function (planName) {
@@ -134,23 +132,63 @@ angular.module('kifi')
           return;
         }
 
-        billingService
-        .setBillingPlan($scope.profile.id, selectedPlan.id)
-        .then(function () {
-          messageTicker({
-            text: 'Saved Successfully',
-            type: 'green'
-          });
-        })
-        ['catch'](modalService.openGenericErrorModal);
+        $scope.selectedPlan = selectedPlan;
       }
     }, true);
 
+    $scope.save = function () {
+      var deferred = $q.defer();
+      var promise = deferred.promise;
+
+      if ($scope.plan.newCard) {
+        promise.then(function () {
+          return billingService
+          .setBillingCCToken($scope.profile.id, $scope.plan.newCard.id);
+        });
+      }
+
+      promise.then(function () {
+        return billingService
+        .setBillingPlan($scope.profile.id, ($scope.selectedPlan && $scope.selectedPlan.id) || currentPlan.id);
+      })
+      .then(function () {
+        messageTicker({
+          text: 'Saved Successfully',
+          type: 'green'
+        });
+        resetForm();
+        $timeout(function () {
+          $state.reload('orgProfile.settings');
+        }, 10);
+      })
+      ['catch'](modalService.genericErrorModal);
+
+      deferred.resolve();
+    };
+
+    function resetForm() {
+      $scope.planSelectsForm.$setPristine();
+      $scope.plan.newCard = null;
+    }
+
     [
       // Close Checkout on page navigation
-      $rootScope.$on('$stateChangeStart', function () {
+      $rootScope.$on('$stateChangeStart', function (event) {
         if (handler && handler.close) {
           handler.close();
+        }
+
+        if (!$scope.planSelectsForm.$pristine) {
+          var confirmText = (
+            'Are you sure you want to leave?' +
+            ' You haven\'t saved your payment information.' +
+            ' Click cancel to return and save.'
+          );
+
+          var confirmedLeave = !$window.confirm(confirmText);
+          if (confirmedLeave) {
+            event.preventDefault();
+          }
         }
       })
     ].forEach(function (deregister) {

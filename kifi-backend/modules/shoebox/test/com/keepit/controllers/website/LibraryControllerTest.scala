@@ -360,7 +360,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             val orgOwner = UserFactory.user().saved
             val libOwner = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(orgOwner).withMembers(Seq(libOwner)).withStrongAdmins().saved
-            val lib = LibraryFactory.library().withOwner(libOwner).withCollaborators(Seq(orgOwner)).withOrganization(org).saved
+            val lib = LibraryFactory.library().withOwner(libOwner).withOrganization(org).saved
             (orgOwner, libOwner, lib, org)
           }
 
