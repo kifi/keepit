@@ -1,34 +1,38 @@
 @import com.keepit.controllers.admin.AdminPaymentsDashboard
-@(dashboard: AdminPaymentsDashboard)
+@(dashboard: AdminPaymentsDashboard)(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@if(dashboard.frozenAccounts.nonEmpty) {
-<h2>Frozen Accounts!</h2>
-<ul>
-    @for(account <- dashboard.frozenAccounts) {
-        <li>
-            @{account.orgId}
-        </li>
+@views.html.admin.admin("Payments Dashboard", stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
+    @if(dashboard.frozenAccounts.nonEmpty) {
+    <h2>Frozen Accounts!</h2>
+    <ul>
+        @for(account <- dashboard.frozenAccounts) {
+            <li>
+                @{account.orgId}
+            </li>
+        }
+    </ul>
     }
-</ul>
+
+    <table class="table table-condensed table-striped">
+        <thead>
+        <th>Id</th><th>Organization</th><th>Action</th><th>Event Time</th><th>Billing Related?</th><th>Who Done It?</th><th>Admin?</th><th>Credit Change</th><th>Payment Charge</th><th>Memo</th><th>Extra</th>
+        </thead>
+        <tbody>
+        @for(event <- dashboard.recentEvents) {
+        <tr>
+            <td>@{event.id}</td>
+            <td>@adminHelper.orgDisplay(dashboard.orgsByAccountId(event.accountId))</td>
+            <td>@{event.action.eventType}</td>
+            <td>@adminHelper.dateTimeDisplay(event.eventTime)</td>
+            <td>@{event.billingRelated}</td>
+            <td>@event.whoDunnit.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
+            <td>@event.adminInvolved.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
+            <td>@{event.creditChange.toDollarString}</td>
+            <td>@{event.paymentCharge.map(_.toDollarString)}</td>
+            <td>@{event.memo.getOrElse("")}</td>
+            <td>@{event.action.toDbRow}</td>
+        </tr>
+        }
+        </tbody>
+    </table>
 }
-
-<table class="table table-condensed table-striped">
-    <thead>
-    <th>Id</th><th>Action</th><th>Event Time</th><th>Billing Related?</th><th>Who Done It?</th><th>Admin?</th><th>Credit Change</th><th>Payment Charge</th><th>Memo</th>
-    </thead>
-    <tbody>
-    @for(event <- dashboard.recentEvents) {
-    <tr>
-        <td>@{event.id}</td>
-        <td>@{event.action.eventType}</td>
-        <td>@adminHelper.dateTimeDisplay(event.eventTime)</td>
-        <td>@{event.billingRelated}</td>
-        <td>@event.whoDunnit.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
-        <td>@event.adminInvolved.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
-        <td>@{event.creditChange.toDollarString}</td>
-        <td>@{event.paymentCharge.map(_.toDollarString)}</td>
-        <td>@{event.memo.getOrElse("")}</td>
-    </tr>
-    }
-    </tbody>
-</table>

@@ -152,6 +152,7 @@ class AdminPaymentsController @Inject() (
     }
     AdminAccountEventView(
       id = accountEvent.id.get,
+      accountId = accountEvent.accountId,
       action = accountEvent.action,
       eventTime = accountEvent.eventTime,
       billingRelated = accountEvent.billingRelated,
@@ -188,18 +189,21 @@ class AdminPaymentsController @Inject() (
   }
 
   def paymentsDashboard = AdminUserPage { implicit request =>
-    val (frozenAccounts, recentEvents) = db.readOnlyMaster { implicit session =>
+    val dashboard = db.readOnlyMaster { implicit session =>
       val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
       val recentEvents = accountEventRepo.adminGetRecentEvents(Limit(100)).map(createAdminAccountEventView)
-      (frozenAccounts, recentEvents)
+      val accountIds = recentEvents.map(_.accountId).toSet
+      val orgsByAccountId = accountIds.map { accountId => accountId -> organizationRepo.get(paidAccountRepo.get(accountId).orgId) }.toMap
+      AdminPaymentsDashboard(frozenAccounts, recentEvents, orgsByAccountId)
     }
-    Ok(views.html.admin.paymentsDashboard(AdminPaymentsDashboard(frozenAccounts, recentEvents)))
+    Ok(views.html.admin.paymentsDashboard(dashboard))
   }
 
 }
 
 case class AdminAccountEventView(
   id: Id[AccountEvent],
+  accountId: Id[PaidAccount],
   action: AccountEventAction,
   eventTime: DateTime,
   billingRelated: Boolean,
@@ -211,4 +215,5 @@ case class AdminAccountEventView(
 
 case class AdminPaymentsDashboard(
   frozenAccounts: Seq[PaidAccount],
-  recentEvents: Seq[AdminAccountEventView])
+  recentEvents: Seq[AdminAccountEventView],
+  orgsByAccountId: Map[Id[PaidAccount], Organization])
