@@ -4,7 +4,7 @@ import com.amazonaws.services.cloudfront.model.InvalidArgumentException
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.time._
-import com.keepit.model.User
+import com.keepit.model.{ Organization, User }
 import com.keepit.common.mail.EmailAddress
 
 import com.kifi.macros.json
@@ -34,6 +34,7 @@ object AccountEventKind {
   case object PaymentMethodAdded extends AccountEventKind("payment_method_added")
   case object DefaultPaymentMethodChanged extends AccountEventKind("default_payment_method_changed")
   case object AccountContactsChanged extends AccountEventKind("account_contacts_changed")
+  case object OrganizationCreated extends AccountEventKind("organization_created")
 
   val all = Set(
     SpecialCredit,
@@ -50,7 +51,8 @@ object AccountEventKind {
     PlanChanged,
     PaymentMethodAdded,
     DefaultPaymentMethodChanged,
-    AccountContactsChanged
+    AccountContactsChanged,
+    OrganizationCreated
   )
   def get(str: String): Option[AccountEventKind] = all.find(_.value == str)
 }
@@ -155,6 +157,12 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
+  @json
+  case class OrganizationCreated(initialPlan: Id[PaidPlan]) extends AccountEventAction {
+    def eventType = AccountEventKind.OrganizationCreated
+    def toDbRow = eventType -> Json.toJson(this)
+  }
+
   def fromDb(eventType: AccountEventKind, extras: JsValue): AccountEventAction = eventType match {
     case AccountEventKind.SpecialCredit => SpecialCredit()
     case AccountEventKind.PlanBilling => extras.as[PlanBilling]
@@ -171,6 +179,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case AccountEventKind.PaymentMethodAdded => extras.as[PaymentMethodAdded]
     case AccountEventKind.DefaultPaymentMethodChanged => extras.as[DefaultPaymentMethodChanged]
     case AccountEventKind.AccountContactsChanged => extras.as[AccountContactsChanged]
+    case AccountEventKind.OrganizationCreated => extras.as[OrganizationCreated]
     case _ => throw new Exception(s"Invalid Event Type: $eventType")
 
   }
