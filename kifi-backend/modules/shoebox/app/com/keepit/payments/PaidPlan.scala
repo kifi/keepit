@@ -17,6 +17,10 @@ import javax.crypto.spec.IvParameterSpec
 @json
 case class BillingCycle(month: Int) extends AnyVal
 
+object BillingCycle {
+  def months(n: Int): BillingCycle = BillingCycle(n)
+}
+
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
   name: String,

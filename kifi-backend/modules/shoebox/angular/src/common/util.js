@@ -114,7 +114,13 @@ angular.module('util', [])
         return text;
       },
       generateSlug: function (name) {
-        var slug = name.toLowerCase().replace(/[^\w\s-]|_/g, '').replace(/(\s|--)+/g, '-').replace(/^-/, '').substr(0, 50).replace(/-$/, '');
+        var slug = name.toLowerCase()
+          .replace(/[^0-9a-z\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF\s-]|_/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/--+/g, '-')
+          .replace(/^-/, '')
+          .substr(0, 50)
+          .replace(/-$/, '');
         return RESERVED_SLUGS.indexOf(slug) >= 0 ? slug + '-' : slug;
       }
     };

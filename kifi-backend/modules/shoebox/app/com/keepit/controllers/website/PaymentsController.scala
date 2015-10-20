@@ -44,29 +44,26 @@ class PaymentsController @Inject() (
     Ok(Json.toJson(response))
   }
 
-  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
     planCommander.getActivePaymentMethods(request.orgId).find(_.default).map { pm =>
-      Ok(Json.obj(
-        "token" -> pm.stripeToken.token
-      ))
-    } getOrElse {
-      Ok(Json.obj())
-    }
+      stripeClient.getCardInfo(pm.stripeToken).map { cardInfo =>
+        Ok(Json.toJson(cardInfo))
+      }
+    }.getOrElse(Future.successful(BadRequest(Json.obj("error" -> "no_default_payment_method"))))
   }
 
   def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
-      case Some(token) => {
+      case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
+      case Some(token) =>
         stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").flatMap { realToken =>
-          stripeClient.getLastFourDigitsOfCard(realToken).map { lastFour =>
+          stripeClient.getCardInfo(realToken).map { cardInfo =>
             val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-            val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, lastFour)
-            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, lastFour)
-            Ok
+            val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, cardInfo.lastFour)
+            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, cardInfo.lastFour)
+            Ok(Json.toJson(cardInfo))
           }
         }
-      }
-      case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
     }
   }
 

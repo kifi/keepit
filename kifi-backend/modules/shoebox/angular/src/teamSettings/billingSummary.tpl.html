@@ -3,28 +3,63 @@
   <ul>
     <li>
       <p>
-        <span>You currently have&nbsp;</span>
-        <u ng-bind="billingState.users + ' team members'"></u>
-        <span>&nbsp;on the&nbsp;</span>
-        <u ng-bind="billingState.plan.fullName + ' plan'"></u>.
+        <span>You currently have</span>
+        <a class="kf-link kf-link-black kf-link-underline" ui-sref="orgProfile.members">
+          <span ng-bind="billingState.users"></span>
+          team
+          <span
+            ng-pluralize
+            count="billingState.users"
+            when="{
+              1: 'member',
+              other: 'members'
+            }"
+          ></span>
+        </a>
+        on the
+        <a
+          class="kf-link kf-link-black kf-link-underline"
+          ui-sref="orgProfile.settings.plan"
+        >
+          <span ng-bind="billingState.plan.fullName"></span> plan
+        </a>.
       </p>
     </li>
     <li ng-if="isPaidPlan()">
       <p>
-        As of today, your next bill will be
-        <b ng-bind="billingState.charge | money"></b>
-        on
-        <b ng-bind="billingState.billingDate | date:'yyyy-MM-dd'"></b>.
+        As of today, your plan will renew on
+        <b ng-bind="billingState.billingDate | date:'yyyy-MM-dd'"></b>
+        for
+        <b ng-bind="billingState.charge | money"></b>.
       </p>
+      <ul ng-if="billingState.balance | isNegativeMoney">
+        <li>
+          You <b>owe <span ng-bind="((billingState.balance | moneyUnwrap) * -1) | money"></span></b>
+          from previous unpaid invoices.
+        </li>
+      </ul>
     </li>
-    <li ng-if="billingState.balance | isPositiveMoney">
+    <li>
       <p>
-        <span>You have a&nbsp;</span>
-        <u ng-bind="'credit of ' + (billingState.balance | money)"></u>
-        <span ng-if="isPaidPlan()">
-          <span>&nbsp;which will be applied before your&nbsp;</span>
-          <u>credit card ending in <b ng-bind="'' + billingState.card.last4"></b></u>
-          <span>&nbsp;is charged.</span>
+        <span>You have a</span>
+        <a
+          class="kf-link kf-link-black kf-link-underline"
+          ui-sref="orgProfile.settings.plan"
+        >
+          credit of
+          <span ng-bind="!(billingState.balance | isPositiveMoney) ? (0 | money) : (billingState.balance | money)"></span>
+        </a><!--
+     --><span ng-if="!(billingState.card && (billingState.balance | isPositiveMoney))">.</span>
+        <span ng-if="billingState.card && (billingState.balance | isPositiveMoney)">
+          which will be applied before your
+          <a
+            class="kf-link kf-link-black kf-link-underline"
+            ui-sref="orgProfile.settings.plan"
+          >
+            credit card ending in
+            <b ng-bind="'' + billingState.card.lastFour"></b>
+          </a>
+          is charged.
         </span>
       </p>
     </li>

@@ -52,10 +52,14 @@ class ActivityLogCommanderImpl @Inject() (
       event.action match {
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
         case ChargeBack() => s"A ${event.creditChange.toDollarString} refund was issued to your card"
-        case PlanBillingCharge() => {
+        case PlanBilling(planId, _, _, _, _) => s"Your ${paidPlanRepo.get(planId)} plan was renewed."
+        case Charge() => {
           val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
-          s"Your card was charged ${event.creditChange.toDollarString} for your current plan [$invoiceText]"
+          s"Your card was charged ${event.creditChange.toDollarString} for your current balance. [$invoiceText]"
         }
+        case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
+        case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information."
+        case MissingPaymentMethod() => s"We failed to process your balance, please register a default payment method."
         case UserAdded(who) => Elements(basicUserRepo.load(who), "was added to your team", maybeUser.map(Elements("by", _)))
         case UserRemoved(who) => maybeUser match {
           case Some(`who`) => Elements(basicUserRepo.load(who), "left your team")
