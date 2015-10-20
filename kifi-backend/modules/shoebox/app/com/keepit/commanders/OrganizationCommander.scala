@@ -37,6 +37,7 @@ trait OrganizationCommander {
   def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse
   def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration
+  def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization]
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
@@ -108,7 +109,7 @@ class OrganizationCommanderImpl @Inject() (
 
   def getBasicOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): BasicOrganizationView = {
     // This function assumes that the org is active
-    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganization(orgId).get)
+    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganizationHelper(orgId).get)
     val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
     BasicOrganizationView(basicOrganization, membershipInfo)
   }
@@ -117,7 +118,7 @@ class OrganizationCommanderImpl @Inject() (
     val cacheFormattedMap = db.readOnlyReplica { implicit session =>
       basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
         missing.map(_.id).map {
-          orgId => orgId -> getBasicOrganization(orgId) // grab all the Option[BasicOrganization]
+          orgId => orgId -> getBasicOrganizationHelper(orgId) // grab all the Option[BasicOrganization]
         }.collect {
           case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
         }.map {
@@ -128,7 +129,7 @@ class OrganizationCommanderImpl @Inject() (
     cacheFormattedMap.map { case (orgKey, org) => (orgKey.id, org) }
   }
 
-  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = {
+  def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = {
     val org = orgRepo.get(orgId)
     if (org.isInactive) None
     else {

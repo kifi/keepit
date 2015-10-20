@@ -56,7 +56,7 @@ class PaymentsIntegrityCheckerTest extends TestKitSupport with SpecificationLike
         // first, break one of the events
         db.readWrite { implicit session =>
           val accountId = inject[PaidAccountRepo].getByOrgId(org.id.get).id.get
-          val lastEvent = inject[AccountEventRepo].getAllEvents(accountId, onlyRelatedToBillingOpt = None).last
+          val lastEvent = inject[AccountEventRepo].getAllByAccount(accountId).last
           inject[AccountEventRepo].save(lastEvent.copy(creditChange = lastEvent.creditChange + DollarAmount.dollars(1)))
         }
 

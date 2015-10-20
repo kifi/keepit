@@ -150,7 +150,7 @@ class PermissionCommanderImpl @Inject() (
     val removedPermissions: Set[LibraryPermission] = {
       val cannotRemoveLibraries = !orgPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES)
       Set(
-        cannotRemoveLibraries -> Set(LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
+        cannotRemoveLibraries -> Set(LibraryPermission.MOVE_LIBRARY)
       ).collect { case (true, ps) => ps }.flatten
     }
 
