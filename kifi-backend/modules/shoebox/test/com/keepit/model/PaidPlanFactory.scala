@@ -4,13 +4,12 @@ import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.Id
 import com.keepit.payments._
-import org.apache.commons.lang3.RandomStringUtils.random
 
 object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
 
   val testPlanEditableFeatures = Feature.ALL -- Set(Feature.ViewOrganization, Feature.ViewSettings)
-  val testPlanSettings: OrganizationSettings = OrganizationSettings.empty.setAll(Map(
+  val testPlanSettings: OrganizationSettings = OrganizationSettings(Map(
     Feature.PublishLibraries -> FeatureSetting.MEMBERS,
     Feature.InviteMembers -> FeatureSetting.MEMBERS,
     Feature.GroupMessaging -> FeatureSetting.MEMBERS,
