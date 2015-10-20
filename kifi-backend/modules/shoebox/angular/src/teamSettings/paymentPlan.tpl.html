@@ -51,9 +51,7 @@
           class="kf-payment-plan-select"
           ng-model="plan.name"
           ng-options="tier.value as tier.label for tier in availableTiers"
-        >
-          <option value="">Select a plan</option>
-        </select>
+        ></select>
       </div>
       <div ng-show="isPaidPlanName(plan.name)">
         <h2 class="kf-heading">Choose your Payment Frequency</h2>
@@ -63,9 +61,7 @@
             class="kf-payment-plan-select"
             ng-model="plan.cycle"
             ng-options="cycle.value as cycle.label for cycle in availableCycles"
-          >
-            <option value="">Select a payment frequency</option>
-          </select>
+          ></select>
         </div>
       <h2 class="kf-heading">Manage your Credit Card Information</h2>
       <p ng-if="!card">You haven't added a card yet.</p>
