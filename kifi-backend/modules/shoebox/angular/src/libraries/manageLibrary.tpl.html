@@ -34,6 +34,7 @@
             <div class="manage-lib-input-area">
               <div
                 kf-org-selector
+                ng-attr-data-kf-tooltip="{{ !hasPermission(LIB_PERMISSIONS.MOVE_LIBRARY) ? 'Your team does not allow you to move libraries out of the team.' : '' }}"
                 library-props="libraryProps"
                 library="library"
                 space="space"
@@ -83,9 +84,9 @@
                 on-click="onClickUpsellIntegration()"
                 on-hover="onHoverUpsellIntegration()"
               >
-                <span ng-if="space.destination.config.isPaid">
+                <span ng-if="!space.destination.config.showUpsells">
                   <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.DISABLED">
-                    No member of yor team can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
+                    No member of your team can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
                   </span>
                   <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.ADMIN">
                     Only admins can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
@@ -97,7 +98,7 @@
                     Integrations are disabled for {{ library.org.name }}
                   </span>
                 </span>
-                <span ng-if="!space.destination.config.isPaid && (space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin')">
+                <span ng-if="space.destination.config.showUpsells && (space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin')">
                   Enable Slack integration by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">upgrading your plan</a>.
                 </span>
               </span>

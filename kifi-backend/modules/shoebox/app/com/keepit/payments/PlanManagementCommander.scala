@@ -106,7 +106,7 @@ class PlanManagementCommanderImpl @Inject() (
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
   private def remainingBillingCycleCost(account: PaidAccount)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
-    val cycleLengthMonth: Int = plan.billingCycle.month
+    val cycleLengthMonth = plan.billingCycle.month
     val cycleStart: DateTime = account.billingCycleStart
     val cycleEnd: DateTime = cycleStart.plusMonths(cycleLengthMonth)
     val cycleLengthDays: Double = Days.daysBetween(cycleStart, cycleEnd).getDays.toDouble //note that this is different depending on the current month
@@ -122,16 +122,15 @@ class PlanManagementCommanderImpl @Inject() (
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent] = {
     implicit val s = session
     Try { paidPlanRepo.get(planId) } match {
-      case Success(plan) => {
+      case Success(plan) =>
         log.info(s"[PAC] $orgId: Plan exists.")
         if (plan.state != PaidPlanStates.ACTIVE) {
           Failure(new InvalidChange("plan_not_active"))
         } else {
           val maybeAccount = paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
-            case Some(pa) if pa.state == PaidAccountStates.ACTIVE => {
+            case Some(pa) if pa.state == PaidAccountStates.ACTIVE =>
               log.info(s"[PAC] $orgId: Account already exists.")
               Failure(new InvalidChange("account_exists"))
-            }
             case Some(pa) =>
               log.info(s"[PAC] $orgId: Recreating Account")
               val account = paidAccountRepo.save(PaidAccount(
@@ -169,9 +168,15 @@ class PlanManagementCommanderImpl @Inject() (
           }
           maybeAccount.map { account =>
             log.info(s"[PAC] $orgId: Registering First User")
+            val createdEvent = accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+              eventTime = clock.now,
+              accountId = account.id.get,
+              attribution = ActionAttribution(user = Some(creator), admin = None),
+              action = AccountEventAction.OrganizationCreated(planId)
+            ))
             registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             log.info(s"[PAC] $orgId: Registering First Admin")
-            val adminEvent = accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+            accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
               eventTime = clock.now,
               accountId = account.id.get,
               attribution = ActionAttribution(user = Some(creator), admin = None),
@@ -179,15 +184,13 @@ class PlanManagementCommanderImpl @Inject() (
             ))
             addUserAccountContactHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             accountLockHelper.releaseAccountLockForSession(orgId, session)
-            adminEvent
+            createdEvent
           }
         }
-      }
-      case Failure(ex) => {
+      case Failure(ex) =>
         log.error(s"[PAC] $orgId: Plan does not exist!", ex)
         airbrake.notify("Paid Plan Not available!!", ex)
         Failure(new InvalidChange("plan_not_available"))
-      }
     }
 
   }
@@ -367,7 +370,6 @@ class PlanManagementCommanderImpl @Inject() (
     accountEventRepo.save(AccountEvent(
       eventTime = clock.now(),
       accountId = account.id.get,
-      billingRelated = false,
       whoDunnit = attributedToMember,
       whoDunnitExtra = JsNull,
       kifiAdminInvolved = grantedByAdmin,
@@ -459,9 +461,10 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def getCurrentAndAvailablePlans(orgId: Id[Organization]): (Id[PaidPlan], Set[PaidPlan]) = db.readOnlyReplica { implicit session =>
-    val normalPlans = paidPlanRepo.getByKinds(Set(PaidPlan.Kind.NORMAL))
     val currentPlan = currentPlanHelper(orgId)
-    (currentPlan.id.get, normalPlans.toSet + currentPlan)
+    val currentPlans = paidPlanRepo.getByDisplayName(currentPlan.displayName) // get plans with same name, different billing cycles
+    val normalPlans = paidPlanRepo.getByKinds(Set(PaidPlan.Kind.NORMAL))
+    (currentPlan.id.get, normalPlans.toSet ++ currentPlans)
   }
 
   def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent] = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>
@@ -469,8 +472,8 @@ class PlanManagementCommanderImpl @Inject() (
     val newPlan = paidPlanRepo.get(newPlanId)
     val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM)
     if (newPlan.state == PaidPlanStates.ACTIVE && allowedKinds.contains(newPlan.kind)) {
-      val updatedAccount = account.withNewPlan(newPlanId)
       val refund = DollarAmount(remainingBillingCycleCost(account).cents * account.activeUsers)
+      val updatedAccount = account.withNewPlan(newPlanId)
       val newCharge = DollarAmount(remainingBillingCycleCost(updatedAccount).cents * account.activeUsers)
       paidAccountRepo.save(
         updatedAccount.withIncreasedCredit(refund).withReducedCredit(newCharge)

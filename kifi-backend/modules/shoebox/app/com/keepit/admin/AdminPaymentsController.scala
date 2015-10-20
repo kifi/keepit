@@ -9,6 +9,7 @@ import com.keepit.common.db.Id
 import org.joda.time.DateTime
 
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
+import play.api.libs.json.{ Json, JsArray }
 import play.twirl.api.HtmlFormat
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -104,8 +105,11 @@ class AdminPaymentsController @Inject() (
 
   def processOrgNow(orgId: Id[Organization]) = AdminUserAction.async { request =>
     val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
-    paymentProcessingCommander.processAccount(account).map { charged =>
-      Ok(charged.toString)
+    paymentProcessingCommander.processAccount(account).map { events =>
+      val result = JsArray(events.map { event =>
+        Json.obj(event.action.eventType.value -> event.creditChange.toDollarString)
+      })
+      Ok(result)
     }
   }
 
@@ -155,7 +159,6 @@ class AdminPaymentsController @Inject() (
       accountId = accountEvent.accountId,
       action = accountEvent.action,
       eventTime = accountEvent.eventTime,
-      billingRelated = accountEvent.billingRelated,
       whoDunnit = userWhoDunnit,
       adminInvolved = adminInvolved,
       creditChange = accountEvent.creditChange,
@@ -169,7 +172,7 @@ class AdminPaymentsController @Inject() (
     val PAGE_SIZE = 50
     val (allEvents, org) = db.readOnlyMaster { implicit s =>
       val account = paidAccountRepo.getByOrgId(orgId)
-      val allEvents = accountEventRepo.getByAccountAndState(account.id.get, AccountEventStates.ACTIVE)
+      val allEvents = accountEventRepo.getByAccount(account.id.get, offset = Offset(page * PAGE_SIZE), limit = Limit((page + 1) * PAGE_SIZE))
       val org = organizationRepo.get(orgId)
       (allEvents, org)
     }
@@ -214,7 +217,6 @@ case class AdminAccountEventView(
   accountId: Id[PaidAccount],
   action: AccountEventAction,
   eventTime: DateTime,
-  billingRelated: Boolean,
   whoDunnit: Option[User],
   adminInvolved: Option[User],
   creditChange: DollarAmount,

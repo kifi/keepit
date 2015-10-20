@@ -7,31 +7,35 @@
         </div>
         <ul>
           <li class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'team-settings' }">
-            <a class="kf-link" ui-sref="orgProfile.settings.team({ '#': 's-' })">Member Privileges</a>
+            <a class="kf-link" ng-click="onClickTrack($event, 'clickPrivileges', 'main')" ui-sref="orgProfile.settings.team({ '#': 's-' })">Member Privileges</a>
           </li>
           <!-- sublisting -->
           <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.team({ '#': 'team-profile-' })"
+              ng-click="onClickTrack($event, 'clickPrivileges', 'teamProfile')"
             >Team Profile</a>
           </li>
           <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.team({ '#': 'libraries-' })"
+              ng-click="onClickTrack($event, 'clickPrivileges', 'libraries')"
             >Libraries</a>
           </li>
           <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.team({ '#': 'members-' })"
+              ng-click="onClickTrack($event, 'clickPrivileges', 'members')"
             >Members</a>
           </li>
           <li ng-if="state.current.activenav === 'team-settings'" class="kf-ops-nav-item kf-ops-nav-item-inner">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.team({ '#': 'integrations-' })"
+              ng-click="onClickTrack($event, 'clickPrivileges', 'integrations')"
             >Integrations</a>
           </li>
           <!-- -->
@@ -39,18 +43,21 @@
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.plan"
+              ng-click="onClickTrack($event, 'clickPaymentPlan')"
             >Payment Plan</a>
           </li>
           <li ng-if="isAdminExperiment && canManagePlan" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'activity-log' }">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.activity"
+              ng-click="onClickTrack($event, 'clickActivityLog')"
             >Activity Log</a>
           </li>
           <li ng-if="isAdminExperiment && canManagePlan" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.contacts"
+              ng-click="onClickTrack($event, 'clickBillingContacts')"
             >Billing Contacts</a>
           </li>
           <li ng-if="canExportKeeps" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'export-keeps' }">
@@ -58,6 +65,7 @@
               class="kf-link"
               ui-sref="orgProfile.settings.export"
               ng-if="canExportKeeps"
+              ng-click="onClickTrack($event, 'clickExportKeeps')"
             >Export Keeps</a>
           </li>
           <!-- <li><a class="kf-link" href="#credit-card">Credit Card</a></li>

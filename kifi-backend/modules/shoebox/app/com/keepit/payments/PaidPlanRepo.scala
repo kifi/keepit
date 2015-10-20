@@ -13,6 +13,7 @@ import play.api.libs.json.{ JsArray, Json }
 @ImplementedBy(classOf[PaidPlanRepoImpl])
 trait PaidPlanRepo extends Repo[PaidPlan] {
   def getByKinds(kinds: Set[PaidPlan.Kind])(implicit session: RSession): Seq[PaidPlan]
+  def getByDisplayName(displayName: String)(implicit session: RSession): Set[PaidPlan]
 }
 
 @Singleton
@@ -52,6 +53,10 @@ class PaidPlanRepoImpl @Inject() (
 
   def getByKinds(states: Set[PaidPlan.Kind])(implicit session: RSession): Seq[PaidPlan] = {
     (for (row <- rows if row.state === PaidPlanStates.ACTIVE && row.kind.inSet(states)) yield row).list
+  }
+
+  def getByDisplayName(displayName: String)(implicit session: RSession): Set[PaidPlan] = {
+    rows.filter(row => row.state === PaidPlanStates.ACTIVE && row.displayName === displayName).list.toSet
   }
 
 }

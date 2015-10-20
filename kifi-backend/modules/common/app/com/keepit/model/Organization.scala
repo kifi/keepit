@@ -7,6 +7,7 @@ import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCache
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.path.Path
 import com.keepit.common.store.ImagePath
 import com.keepit.common.strings._
 import com.keepit.common.time._
@@ -168,7 +169,7 @@ case class BasicOrganization(
     avatarPath: ImagePath) {
 
   def abbreviatedName = this.name.abbreviate(33)
-
+  def path = Path(handle.value)
 }
 
 object BasicOrganization {

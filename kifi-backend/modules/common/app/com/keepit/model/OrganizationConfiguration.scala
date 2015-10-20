@@ -25,12 +25,12 @@ case class OrganizationConfiguration(
 object OrganizationConfigurationStates extends States[OrganizationConfiguration]
 
 case class ExternalOrganizationConfiguration(
-  isPaid: Boolean,
+  showUpsells: Boolean,
   settings: OrganizationSettingsWithEditability)
 
 object ExternalOrganizationConfiguration {
   implicit val writes = (
-    (__ \ 'isPaid).write[Boolean] and
+    (__ \ 'showUpsells).write[Boolean] and
     (__ \ 'settings).write[OrganizationSettingsWithEditability]
   )(unlift(ExternalOrganizationConfiguration.unapply))
 }
