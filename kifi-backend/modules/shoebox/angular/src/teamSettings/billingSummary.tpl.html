@@ -35,7 +35,7 @@
       <ul ng-if="billingState.balance | isNegativeMoney">
         <li>
           You <b>owe <span ng-bind="((billingState.balance | moneyUnwrap) * -1) | money"></span></b>
-          from previous unpaid invoices.
+          from previous invoices.
         </li>
       </ul>
     </li>
