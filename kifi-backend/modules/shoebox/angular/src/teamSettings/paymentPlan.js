@@ -237,7 +237,7 @@ angular.module('kifi')
         });
         resetForm();
         $timeout(function () {
-          $state.reload('orgProfile.settings');
+          $state.reload('orgProfile');
         }, 10);
       })
       ['catch'](modalService.genericErrorModal)
