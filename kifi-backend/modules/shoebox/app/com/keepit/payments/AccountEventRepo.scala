@@ -34,6 +34,7 @@ class AccountEventRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val accountEventKindMapper = MappedColumnType.base[AccountEventKind, String](_.value, AccountEventKind.get(_).get) // explicitly requires "good" data
 
   type RepoImpl = AccountEventTable
 
@@ -51,7 +52,7 @@ class AccountEventRepoImpl @Inject() (
 
     def kifiAdminInvolved = column[Option[Id[User]]]("kifi_admin_involved", O.Nullable)
 
-    def eventType = column[String]("event_type", O.NotNull)
+    def eventType = column[AccountEventKind]("event_type", O.NotNull)
 
     def eventTypeExtras = column[Option[JsValue]]("event_type_extras", O.Nullable)
 
@@ -113,7 +114,8 @@ class AccountEventRepoImpl @Inject() (
   }
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent] = {
-    (for (row <- rows if row.accountId === accountId && (row.eventType === "user_added" || row.eventType === "user_removed")) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
+    val (userAdded, userRemoved): (AccountEventKind, AccountEventKind) = (AccountEventKind.UserAdded, AccountEventKind.UserRemoved)
+    (for (row <- rows if row.accountId === accountId && (row.eventType === userAdded || row.eventType === userRemoved)) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
 
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
