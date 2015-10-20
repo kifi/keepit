@@ -1,16 +1,16 @@
 package com.keepit.test
 
-import com.keepit.commanders._
-import com.keepit.common.db.slick.SlickSessionProvider
-import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRouterImpl }
-import com.keepit.integrity.{ OrganizationChecker, KeepChecker, LibraryChecker }
-import com.keepit.model._
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.db.FakeSlickSessionProvider
-import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
-import com.keepit.normalizer.{ NormalizedURIInterner, NormalizationService }
-import com.keepit.payments.{ PaidAccountRepo, PlanManagementCommander, PaidPlanRepo }
+import com.keepit.commanders._
+import com.keepit.common.db.FakeSlickSessionProvider
+import com.keepit.common.db.slick.SlickSessionProvider
+import com.keepit.common.mail.ElectronicMailRepo
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRouterImpl }
+import com.keepit.integrity.{ KeepChecker, LibraryChecker, OrganizationChecker }
+import com.keepit.model._
+import com.keepit.normalizer.{ NormalizationService, NormalizedURIInterner }
+import com.keepit.payments.{ PaidAccountRepo, PaidPlanRepo, PaymentsIntegrityChecker, PlanManagementCommander }
 
 trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
 
@@ -71,6 +71,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def libraryChecker(implicit injector: Injector) = inject[LibraryChecker]
   def keepChecker(implicit injector: Injector) = inject[KeepChecker]
   def organizationChecker(implicit injector: Injector) = inject[OrganizationChecker]
+  def paymentsChecker(implicit injector: Injector) = inject[PaymentsIntegrityChecker]
   def permissionCommander(implicit injector: Injector) = inject[PermissionCommander].asInstanceOf[PermissionCommanderImpl]
   def keepExportCommander(implicit injector: Injector) = inject[KeepExportCommander].asInstanceOf[KeepExportCommanderImpl]
   def orgConfigRepo(implicit injector: Injector) = inject[OrganizationConfigurationRepo]
