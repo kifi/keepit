@@ -13,7 +13,7 @@ import com.keepit.common.time.DateTimeJsonFormat
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.social.SocialNetworkType
 import scala.util.Try
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.service.{ IpAddress, FortyTwoServices }
 import com.keepit.common.amazon.MyInstanceInfo
 import com.keepit.common.time._
 
@@ -153,7 +153,7 @@ class HeimdalContextBuilder extends Logging {
 
   def addRequestInfo(request: RequestHeader): Unit = {
     this += ("doNotTrack", request.headers.get("do-not-track").exists(_ == "1"))
-    addRemoteAddress(request.headers.get("X-Forwarded-For") getOrElse request.remoteAddress)
+    addRemoteAddress(IpAddress.fromRequest(request).ip)
     addUserAgent(request.headers.get("User-Agent").getOrElse(""))
     addKifiClientAndVersion(request)
 

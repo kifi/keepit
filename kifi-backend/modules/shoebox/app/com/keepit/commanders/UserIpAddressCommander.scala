@@ -234,8 +234,7 @@ class UserIpAddressCommander @Inject() (
   def logUserByRequest[T](request: UserRequest[T]): Unit = {
     val userId = request.userId
     val userAgent = UserAgent(request.headers.get("user-agent").getOrElse(""))
-    val raw_ip_string = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-    val ip = IpAddress(raw_ip_string.split(",").head)
+    val ip = IpAddress.fromRequest(request)
     try {
       actor.ref ! UserIpAddressEvent(userId, ip, userAgent)
     } catch {
