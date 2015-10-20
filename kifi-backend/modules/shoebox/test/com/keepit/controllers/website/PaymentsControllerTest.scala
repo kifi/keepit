@@ -50,30 +50,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get an account's state" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val planCommander = inject[PlanManagementCommander]
-        val (org, owner, account, plan) = setup()
-
-        val publicId = Organization.publicId(org.id.get)
-        inject[FakeUserActionsHelper].setUser(owner)
-        val request = route.getAccountState(publicId)
-        val response = controller.getAccountState(publicId)(request)
-        val payload = contentAsJson(response).as[JsObject]
-        (payload \ "users").as[Int] must beEqualTo(account.activeUsers)
-        (payload \ "balance").as[JsObject] === Json.obj("cents" -> account.credit.toCents)
-        (payload \ "charge").as[JsObject] === Json.obj("cents" -> (plan.pricePerCyclePerUser * account.activeUsers).toCents)
-
-        val planJson = (payload \ "plan").as[JsObject]
-        val actualPlan = planCommander.currentPlan(org.id.get)
-        (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
-        (planJson \ "name").as[String] must beEqualTo(plan.displayName)
-        (planJson \ "pricePerUser").as[JsObject] === Json.obj("cents" -> plan.pricePerCyclePerUser.toCents)
-        (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.month)
-        (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
-      }
-    }
-
     "get an organization's configuration" in {
       "use the correct format" in {
         withDb(controllerTestModules: _*) { implicit injector =>
