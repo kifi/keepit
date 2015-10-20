@@ -153,7 +153,8 @@ angular.module('kifi')
       var cyclesSoFar = [];
       var leastEfficientPlan;
       var extraText = '';
-      var savings;
+      var savingsPerUser;
+      var totalSavings;
 
       if (!$scope.isFreePlanName(tier[0].name)) {
         leastEfficientPlan = getLeastEfficientPlan(tier);
@@ -164,8 +165,9 @@ angular.module('kifi')
           cyclesSoFar.push(plan.cycle); // prevent duplicates
 
           if (leastEfficientPlan && plan !== leastEfficientPlan) {
-            savings = getSavings(leastEfficientPlan, plan);
-            extraText = ' (You save ' + moneyFilter(savings) + ' ' + PREDEFINED_CYCLE_ADVERB[plan.cycle] + ')';
+            savingsPerUser = getSavings(leastEfficientPlan, plan);
+            totalSavings = savingsPerUser * billingState.users;
+            extraText = ' (You save ' + moneyFilter(totalSavings) + ' ' + PREDEFINED_CYCLE_ADVERB[plan.cycle] + ')';
           }
 
           return {
