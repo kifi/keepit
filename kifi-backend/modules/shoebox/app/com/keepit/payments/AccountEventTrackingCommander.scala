@@ -43,11 +43,11 @@ class AccountEventTrackingCommanderImpl @Inject() (
   }
 
   private def report(event: AccountEvent): Unit = {
-    if (event.billingRelated) {
+    if (AccountEventKind.billing.contains(event.action.eventType)) {
       val (account, org, paymentMethod) = db.readOnlyMaster { implicit session =>
         val account = accountRepo.get(event.accountId)
         val org = orgRepo.get(account.orgId)
-        val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get(_))
+        val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get)
         (account, org, paymentMethod)
       }
       reportToSlack(s"[${org.name}][Payment: ${account.paymentStatus.value}}] ${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")

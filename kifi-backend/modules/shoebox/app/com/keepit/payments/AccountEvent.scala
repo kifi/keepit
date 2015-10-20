@@ -1,60 +1,85 @@
 package com.keepit.payments
 
-import com.amazonaws.services.cloudfront.model.InvalidArgumentException
-import com.keepit.common.db.{ States, ModelWithState, Id, State }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
-import com.keepit.common.time._
-import com.keepit.model.{ Organization, User }
-import com.keepit.common.mail.EmailAddress
-
-import com.kifi.macros.json
-
-import play.api.libs.json.{ JsValue, JsNull, Json }
-
-import org.joda.time.DateTime
-
 import javax.crypto.spec.IvParameterSpec
+
+import com.amazonaws.services.cloudfront.model.InvalidArgumentException
+import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.db.{ Id, ModelWithState, State, States }
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.time._
+import com.keepit.model.User
+import com.kifi.macros.json
+import org.joda.time.DateTime
+import play.api.libs.json.{ JsNull, JsValue, Json }
 
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 
 sealed abstract class AccountEventKind(val value: String)
 object AccountEventKind {
-  case object SpecialCredit extends AccountEventKind("special_credit")
-  case object PlanBilling extends AccountEventKind("plan_billing")
-  case object LowBalanceIgnored extends AccountEventKind("low_balance_ignored")
+  case object AccountContactsChanged extends AccountEventKind("account_contacts_changed")
+  case object AdminAdded extends AccountEventKind("admin_added")
+  case object AdminRemoved extends AccountEventKind("admin_removed")
   case object Charge extends AccountEventKind("charge")
   case object ChargeBack extends AccountEventKind("charge_back")
   case object ChargeFailure extends AccountEventKind("charge_failure")
+  case object DefaultPaymentMethodChanged extends AccountEventKind("default_payment_method_changed")
+  case object LowBalanceIgnored extends AccountEventKind("low_balance_ignored")
   case object MissingPaymentMethod extends AccountEventKind("missing_payment_method")
-  case object UserAdded extends AccountEventKind("user_added")
-  case object UserRemoved extends AccountEventKind("user_removed")
-  case object AdminAdded extends AccountEventKind("admin_added")
-  case object AdminRemoved extends AccountEventKind("admin_removed")
+  case object OrganizationCreated extends AccountEventKind("organization_created")
+  case object PlanBilling extends AccountEventKind("plan_billing")
   case object PlanChanged extends AccountEventKind("plan_changed")
   case object PaymentMethodAdded extends AccountEventKind("payment_method_added")
-  case object DefaultPaymentMethodChanged extends AccountEventKind("default_payment_method_changed")
-  case object AccountContactsChanged extends AccountEventKind("account_contacts_changed")
-  case object OrganizationCreated extends AccountEventKind("organization_created")
+  case object SpecialCredit extends AccountEventKind("special_credit")
+  case object UserAdded extends AccountEventKind("user_added")
+  case object UserRemoved extends AccountEventKind("user_removed")
 
-  val all = Set(
-    SpecialCredit,
-    PlanBilling,
-    LowBalanceIgnored,
+  val all: Set[AccountEventKind] = Set(
+    AccountContactsChanged,
+    AdminAdded,
+    AdminRemoved,
     Charge,
     ChargeBack,
     ChargeFailure,
-    MissingPaymentMethod,
-    UserAdded,
-    UserRemoved,
-    AdminAdded,
-    AdminRemoved,
-    PlanChanged,
-    PaymentMethodAdded,
     DefaultPaymentMethodChanged,
-    AccountContactsChanged,
-    OrganizationCreated
+    LowBalanceIgnored,
+    MissingPaymentMethod,
+    OrganizationCreated,
+    PaymentMethodAdded,
+    PlanBilling,
+    PlanChanged,
+    SpecialCredit,
+    UserAdded,
+    UserRemoved
   )
   def get(str: String): Option[AccountEventKind] = all.find(_.value == str)
+
+  val activityLog: Set[AccountEventKind] = Set(
+    Charge,
+    ChargeBack,
+    ChargeFailure,
+    DefaultPaymentMethodChanged,
+    PaymentMethodAdded,
+    PlanBilling,
+    PlanChanged,
+    SpecialCredit,
+    UserAdded,
+    UserRemoved
+  )
+
+  val billing: Set[AccountEventKind] = Set(
+    Charge,
+    ChargeBack,
+    ChargeFailure,
+    DefaultPaymentMethodChanged,
+    LowBalanceIgnored,
+    MissingPaymentMethod,
+    PaymentMethodAdded,
+    PlanBilling,
+    PlanChanged,
+    SpecialCredit,
+    UserAdded,
+    UserRemoved
+  )
 }
 
 sealed trait AccountEventAction {
@@ -180,8 +205,6 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case AccountEventKind.DefaultPaymentMethodChanged => extras.as[DefaultPaymentMethodChanged]
     case AccountEventKind.AccountContactsChanged => extras.as[AccountContactsChanged]
     case AccountEventKind.OrganizationCreated => extras.as[OrganizationCreated]
-    case _ => throw new Exception(s"Invalid Event Type: $eventType")
-
   }
 
 }
@@ -193,7 +216,6 @@ case class AccountEvent(
     state: State[AccountEvent] = AccountEventStates.ACTIVE,
     eventTime: DateTime,
     accountId: Id[PaidAccount],
-    billingRelated: Boolean,
     whoDunnit: Option[Id[User]],
     whoDunnitExtra: JsValue,
     kifiAdminInvolved: Option[Id[User]],
@@ -221,7 +243,6 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     state: State[AccountEvent],
     eventTime: DateTime,
     accountId: Id[PaidAccount],
-    billingRelated: Boolean,
     whoDunnit: Option[Id[User]],
     whoDunnitExtra: Option[JsValue],
     kifiAdminInvolved: Option[Id[User]],
@@ -239,7 +260,6 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       state,
       eventTime,
       accountId,
-      billingRelated,
       whoDunnit,
       whoDunnitExtra getOrElse JsNull,
       kifiAdminInvolved,
@@ -261,7 +281,6 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       e.state,
       e.eventTime,
       e.accountId,
-      e.billingRelated,
       e.whoDunnit,
       if (e.whoDunnitExtra == JsNull) None else Some(e.whoDunnitExtra),
       e.kifiAdminInvolved,
@@ -279,7 +298,6 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     AccountEvent(
       eventTime = eventTime,
       accountId = accountId,
-      billingRelated = false,
       whoDunnit = attribution.user,
       whoDunnitExtra = JsNull,
       kifiAdminInvolved = attribution.admin,

@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time._
-import com.keepit.model.{ Limit, User }
+import com.keepit.model.{ Offset, Limit, User }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
@@ -14,15 +14,16 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[AccountEventRepoImpl])
 trait AccountEventRepo extends Repo[AccountEvent] {
-  def getByAccountIdAndTime(accountId: Id[PaidAccount], before: DateTime, max: Int = 10, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
-  def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent]
-  def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
-  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
-  def getAllEvents(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
-  def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
-  def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
+  def getByAccount(accountId: Id[PaidAccount], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
+  def getAllByAccount(accountId: Id[PaidAccount], excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
+  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
+
+  def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
+  def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit)(implicit session: RSession): Seq[AccountEvent]
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent]
+
+  def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -39,86 +40,69 @@ class AccountEventRepoImpl @Inject() (
   type RepoImpl = AccountEventTable
 
   class AccountEventTable(tag: Tag) extends RepoTable[AccountEvent](db, tag, "account_event") {
-
     def eventTime = column[DateTime]("event_time", O.NotNull)
-
     def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
-
-    def billingRelated = column[Boolean]("billing_related", O.NotNull)
-
     def whoDunnit = column[Option[Id[User]]]("whodunnit", O.Nullable)
-
     def whoDunnitExtra = column[Option[JsValue]]("whodunnit_extra", O.Nullable)
-
     def kifiAdminInvolved = column[Option[Id[User]]]("kifi_admin_involved", O.Nullable)
-
     def eventType = column[AccountEventKind]("event_type", O.NotNull)
-
     def eventTypeExtras = column[Option[JsValue]]("event_type_extras", O.Nullable)
-
     def creditChange = column[DollarAmount]("credit_change", O.NotNull)
-
     def paymentMethod = column[Option[Id[PaymentMethod]]]("payment_method", O.Nullable)
-
     def paymentCharge = column[Option[DollarAmount]]("payment_charge", O.Nullable)
-
     def memo = column[Option[String]]("memo", O.Nullable)
-
     def chargeId = column[Option[String]]("charge_id", O.Nullable)
-
-    def * = (id.?, createdAt, updatedAt, state, eventTime, accountId, billingRelated, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, eventTime, accountId, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
+
+  def age(ae: AccountEventTable) = (ae.eventTime desc, ae.id desc)
 
   def table(tag: Tag) = new AccountEventTable(tag)
-
   initTable()
-
   override def deleteCache(accountEvent: AccountEvent)(implicit session: RSession): Unit = {}
-
   override def invalidateCache(accountEvent: AccountEvent)(implicit session: RSession): Unit = {}
 
-  def getByAccountIdAndTime(accountId: Id[PaidAccount], before: DateTime, max: Int = 10, excludeStates: Set[State[AccountEvent]] = Set(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
-    (for (row <- rows if row.accountId === accountId && row.eventTime < before && !row.state.inSet(excludeStates)) yield row).sortBy(row => row.eventTime desc).take(max).list
+  private def getByAccountHelper(accountId: Id[PaidAccount], excludeStateOpt: Option[State[AccountEvent]])(implicit session: RSession) =
+    rows.filter(ae => ae.accountId === accountId && ae.state =!= excludeStateOpt.orNull)
+  private def getByAccountAndKindsHelper(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], excludeStateOpt: Option[State[AccountEvent]])(implicit session: RSession) =
+    getByAccountHelper(accountId, excludeStateOpt).filter(ae => ae.eventType.inSet(kinds))
+
+  def getByAccount(accountId: Id[PaidAccount], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
+    getByAccountHelper(accountId, excludeStateOpt)
+      .sortBy(age)
+      .drop(offset.value)
+      .take(limit.value)
+      .list
+  }
+  def getAllByAccount(accountId: Id[PaidAccount], excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
+    getByAccountHelper(accountId, excludeStateOpt)
+      .sortBy(age)
+      .list
   }
 
-  def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent] = {
-    (for (row <- rows if row.accountId === accountId && row.state === state) yield row).sortBy(row => row.eventTime desc).list
-  }
-
-  def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
-    val accountEvents = rows.filter(row => row.accountId === accountId && (row.eventTime < beforeTime || (row.eventTime === beforeTime && row.id < beforeId)) && row.state =!= AccountEventStates.INACTIVE)
-    val relevantEvents = onlyRelatedToBillingOpt match {
-      case Some(onlyRelatedToBilling) => accountEvents.filter(_.billingRelated === onlyRelatedToBilling)
-      case None => accountEvents
-    }
-    relevantEvents.sortBy(r => (r.eventTime desc, r.id desc)).take(limit).list
-  }
-
-  private def getEventsHelper(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession) = {
-    val accountEvents = rows.filter(row => row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE)
-    val relevantEvents = onlyRelatedToBillingOpt match {
-      case Some(onlyRelatedToBilling) => accountEvents.filter(_.billingRelated === onlyRelatedToBilling)
-      case None => accountEvents
-    }
-    relevantEvents.sortBy(r => (r.eventTime desc, r.id))
-  }
-  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
-    getEventsHelper(accountId, onlyRelatedToBillingOpt).take(limit).list
-  }
-  def getAllEvents(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
-    getEventsHelper(accountId, onlyRelatedToBillingOpt).list
-  }
-
-  def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
-    (for (row <- rows if row.accountId === accountId) yield (row.state, row.updatedAt)).update((AccountEventStates.INACTIVE, clock.now))
+  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
+    getByAccountAndKindsHelper(accountId, kinds, excludeStateOpt)
+      .sortBy(age)
+      .drop(offset.value)
+      .take(limit.value)
+      .list
   }
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent] = {
     val (userAdded, userRemoved): (AccountEventKind, AccountEventKind) = (AccountEventKind.UserAdded, AccountEventKind.UserRemoved)
     (for (row <- rows if row.accountId === accountId && (row.eventType === userAdded || row.eventType === userRemoved)) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
-
+  def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
+    getByAccountHelper(accountId, excludeStateOpt = Some(AccountEventStates.INACTIVE))
+      .filter(row => row.eventTime < beforeTime || (row.eventTime === beforeTime && row.id < beforeId))
+      .sortBy(age)
+      .take(limit.value)
+      .list
+  }
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
-    rows.sortBy(ae => (ae.eventTime desc, ae.id desc)).take(limit.value).list
+    rows.sortBy(age).take(limit.value).list
+  }
+  def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
+    (for (row <- rows if row.accountId === accountId) yield (row.state, row.updatedAt)).update((AccountEventStates.INACTIVE, clock.now))
   }
 }

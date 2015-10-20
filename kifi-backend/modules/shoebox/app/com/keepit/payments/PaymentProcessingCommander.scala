@@ -95,7 +95,6 @@ class PaymentProcessingCommanderImpl @Inject() (
       val billingEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
-        billingRelated = true,
         whoDunnit = None,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,
@@ -116,7 +115,6 @@ class PaymentProcessingCommanderImpl @Inject() (
       val lowBalanceIgnoredEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
-        billingRelated = true,
         whoDunnit = None,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,
@@ -171,7 +169,6 @@ class PaymentProcessingCommanderImpl @Inject() (
       val chargeEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
-        billingRelated = true,
         whoDunnit = None,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,
@@ -193,7 +190,6 @@ class PaymentProcessingCommanderImpl @Inject() (
       val chargeFailureEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
-        billingRelated = true,
         whoDunnit = None,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,
@@ -215,7 +211,6 @@ class PaymentProcessingCommanderImpl @Inject() (
       val missingPaymentMethodEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
-        billingRelated = true,
         whoDunnit = None,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,

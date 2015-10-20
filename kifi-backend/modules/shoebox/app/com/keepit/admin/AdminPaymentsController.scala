@@ -159,7 +159,6 @@ class AdminPaymentsController @Inject() (
       accountId = accountEvent.accountId,
       action = accountEvent.action,
       eventTime = accountEvent.eventTime,
-      billingRelated = accountEvent.billingRelated,
       whoDunnit = userWhoDunnit,
       adminInvolved = adminInvolved,
       creditChange = accountEvent.creditChange,
@@ -173,7 +172,7 @@ class AdminPaymentsController @Inject() (
     val PAGE_SIZE = 50
     val (allEvents, org) = db.readOnlyMaster { implicit s =>
       val account = paidAccountRepo.getByOrgId(orgId)
-      val allEvents = accountEventRepo.getByAccountAndState(account.id.get, AccountEventStates.ACTIVE)
+      val allEvents = accountEventRepo.getByAccount(account.id.get, offset = Offset(page * PAGE_SIZE), limit = Limit((page + 1) * PAGE_SIZE))
       val org = organizationRepo.get(orgId)
       (allEvents, org)
     }
@@ -218,7 +217,6 @@ case class AdminAccountEventView(
   accountId: Id[PaidAccount],
   action: AccountEventAction,
   eventTime: DateTime,
-  billingRelated: Boolean,
   whoDunnit: Option[User],
   adminInvolved: Option[User],
   creditChange: DollarAmount,
