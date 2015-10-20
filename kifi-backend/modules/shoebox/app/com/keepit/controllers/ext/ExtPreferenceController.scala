@@ -9,6 +9,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.ElectronicMailCategory
 import com.keepit.common.net.URI
+import com.keepit.common.service.IpAddress
 import com.keepit.social.BasicUser
 import com.keepit.model._
 
@@ -89,8 +90,8 @@ class ExtPreferenceController @Inject() (
   }
 
   def getPrefs(version: Int) = UserAction.async { request =>
-    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-    val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("")
+    val ip = IpAddress.fromRequest(request).ip
+    val encryptedIp: String = scala.util.Try(crypt.crypt(ipkey, ip)).getOrElse("").trim
     val userId = request.user.id.get
     userCommander.setLastUserActive(userId) // The extension doesn't display Delighted surveys for the moment, so we
     // don't need to wait for that Future to complete before we move on

@@ -476,7 +476,7 @@ class AuthHelper @Inject() (
       code <- (request.body \ "code").asOpt[String]
       password <- (request.body \ "password").asOpt[String].filter(_.length >= 7)
     } yield {
-      val ip = request.headers.get("X-Forwarded-For").flatMap(IpAddress.fromXForwardedFor).getOrElse(IpAddress(request.remoteAddress))
+      val ip = IpAddress.fromRequest(request)
       userCommander.resetPassword(code, ip, password) match {
         case Right(userId) => db.readOnlyMaster { implicit session =>
           authenticateUser(userId, onError = { error =>
