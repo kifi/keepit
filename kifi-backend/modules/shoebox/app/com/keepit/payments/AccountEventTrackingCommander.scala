@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail }
 import com.keepit.common.net.{ HttpClient, DirectUrl }
-import com.keepit.model.{ OrganizationRepo, UserEmailAddressRepo, NotificationCategory }
+import com.keepit.model.{ DollarAmount, OrganizationRepo, UserEmailAddressRepo, NotificationCategory }
 import play.api.Mode
 import play.api.libs.json.Json
 

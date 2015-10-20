@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time._
-import com.keepit.model.{ Offset, Limit, User }
+import com.keepit.model.{ DollarAmount, Offset, Limit, User }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
@@ -34,7 +34,6 @@ class AccountEventRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
   implicit val accountEventKindMapper = MappedColumnType.base[AccountEventKind, String](_.value, AccountEventKind.get(_).get) // explicitly requires "good" data
 
   type RepoImpl = AccountEventTable

@@ -13,7 +13,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
-import com.keepit.payments.{ DollarAmount, PlanManagementCommander, PaidPlan }
+import com.keepit.payments.{ PlanManagementCommander, PaidPlan }
 import com.keepit.model._
 import com.keepit.common.time._
 import org.joda.time.DateTime

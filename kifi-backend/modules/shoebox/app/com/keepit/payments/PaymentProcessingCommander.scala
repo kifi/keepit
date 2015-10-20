@@ -4,7 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.model.{ Organization }
+import com.keepit.model.{ DollarAmount, Organization }
 import com.keepit.common.concurrent.{ ReactiveLock }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._

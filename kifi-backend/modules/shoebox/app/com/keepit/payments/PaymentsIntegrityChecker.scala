@@ -1,14 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{
-  Organization,
-  OrganizationRepo,
-  OrganizationMembershipRepo,
-  OrganizationMembershipStates,
-  OrganizationMembership,
-  User
-}
+import com.keepit.model._
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
@@ -82,17 +75,17 @@ class PaymentsIntegrityChecker @Inject() (
           userId -> events.tail.foldLeft(true) {
             case (isMember, event) =>
               event.action match {
-                case AccountEventAction.UserAdded(userId) if isMember => throw new Exception(s"""Consecutive "added" events for $userId on org $orgId. This should never happen.""")
-                case AccountEventAction.UserAdded(userId) => true
-                case AccountEventAction.UserRemoved(userId) if !isMember => throw new Exception(s"""Consecutive "removed" events for $userId on org $orgId. This should never happen.""")
-                case AccountEventAction.UserRemoved(userId) => false
+                case AccountEventAction.UserAdded(uid) if isMember => throw new Exception(s"""Consecutive "added" events for $userId on org $orgId. This should never happen.""")
+                case AccountEventAction.UserAdded(uid) => true
+                case AccountEventAction.UserRemoved(uid) if !isMember => throw new Exception(s"""Consecutive "removed" events for $userId on org $orgId. This should never happen.""")
+                case AccountEventAction.UserRemoved(uid) => false
                 case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
               }
           }
       }
 
-      val perceivedMemberIds: Set[Id[User]] = perceivedStateByUser.filter(_._2).map(_._1).toSet
-      val perceivedExMemberIds: Set[Id[User]] = perceivedStateByUser.filterNot(_._2).map(_._1).toSet
+      val perceivedMemberIds: Set[Id[User]] = perceivedStateByUser.filter(_._2).keySet
+      val perceivedExMemberIds: Set[Id[User]] = perceivedStateByUser.filterNot(_._2).keySet
 
       val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
       val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds

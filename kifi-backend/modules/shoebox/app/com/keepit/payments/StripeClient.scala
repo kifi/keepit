@@ -2,6 +2,7 @@ package com.keepit.payments
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.model.DollarAmount
 
 import play.api.Mode
 import play.api.Mode.Mode
