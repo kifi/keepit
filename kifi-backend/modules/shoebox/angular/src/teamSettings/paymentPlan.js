@@ -42,13 +42,6 @@ angular.module('kifi')
       })
       .then(function (response) {
         $scope.plan.newCard = response[0];
-      })
-      ['catch'](function () {
-        modalService.openGenericErrorModal({
-          modalData: {
-            genericErrorMessage: 'Your payment information was not updated.'
-          }
-        });
       });
     };
 
