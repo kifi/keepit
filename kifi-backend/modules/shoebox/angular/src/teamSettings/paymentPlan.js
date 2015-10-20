@@ -215,6 +215,25 @@ angular.module('kifi')
       var saveSeriesDeferred = $q.defer();
       var saveSeriesPromise = saveSeriesDeferred.promise;
 
+      // If nothing changed, pretend we saved it.
+      if (!$scope.plan.newCard && $scope.planSelectsForm.$pristine) {
+        messageTicker({
+          text: 'Saved Successfully',
+          type: 'green'
+        });
+        return;
+      }
+
+      // If the team doesn't have a card, show an error
+      if($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
+        modalService.openGenericErrorModal({
+          modalData: {
+            genericErrorMessage: 'Save unsuccessful. You must enter a card to upgrade.'
+          }
+        });
+        return;
+      }
+
       saveSeriesPromise.then(function () {
         $window.addEventListener('beforeunload', onBeforeUnload);
       });
