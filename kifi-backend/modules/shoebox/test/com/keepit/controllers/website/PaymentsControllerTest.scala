@@ -89,63 +89,65 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "get active normal plans" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (org, owner, _, _) = setup()
-        val publicId = Organization.publicId(org.id.get)
-        val currentPlan = planManagementCommander.currentPlan(org.id.get)
-        val standardPlans = setupNormalPlans()
+    "get paid plans" in {
+      "get active normal plans" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, _, _) = setup()
+          val publicId = Organization.publicId(org.id.get)
+          val currentPlan = planManagementCommander.currentPlan(org.id.get)
+          val standardPlans = setupNormalPlans()
 
-        inject[FakeUserActionsHelper].setUser(owner)
-        val request = route.getAvailablePlans(publicId)
-        val response = controller.getAvailablePlans(publicId)(request)
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getAvailablePlans(publicId)
+          val response = controller.getAvailablePlans(publicId)(request)
 
-        val plansByName = contentAsJson(response)
-        (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-        (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
-        (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
-      }
-    }
-
-    "get custom plans when org is on one" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (org, owner, _, _) = setup()
-        val publicId = Organization.publicId(org.id.get)
-        val currentPlan = planManagementCommander.currentPlan(org.id.get)
-        val standardPlans = setupNormalPlans()
-
-        val customPlans = db.readWrite { implicit session =>
-          val enterpriseAnnual = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
-            .withDisplayName("Enterprise").withBillingCycle(BillingCycle(12)).withPricePerCyclePerUser(80040).saved
-          val enterpriseBiannual = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
-            .withDisplayName("Enterprise").withBillingCycle(BillingCycle(6)).withPricePerCyclePerUser(40020).saved
-          val enterpriseMonthly = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
-            .withDisplayName("Enterprise").withBillingCycle(BillingCycle(1)).withPricePerCyclePerUser(8000).saved
-          Seq(enterpriseAnnual, enterpriseBiannual, enterpriseMonthly)
+          val plansByName = contentAsJson(response)
+          (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
+          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
         }
+      }
 
-        inject[FakeUserActionsHelper].setUser(owner)
-        val request = route.getAvailablePlans(publicId)
-        val response = controller.getAvailablePlans(publicId)(request)
+      "get custom plans when org is on one" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, _, _) = setup()
+          val publicId = Organization.publicId(org.id.get)
+          val currentPlan = planManagementCommander.currentPlan(org.id.get)
+          val standardPlans = setupNormalPlans()
 
-        // don't get any custom plans
-        val plansByName = contentAsJson(response)
-        (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-        (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
-        (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
-        (plansByName \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === None
+          val customPlans = db.readWrite { implicit session =>
+            val enterpriseAnnual = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
+              .withDisplayName("Enterprise").withBillingCycle(BillingCycle(12)).withPricePerCyclePerUser(80040).saved
+            val enterpriseBiannual = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
+              .withDisplayName("Enterprise").withBillingCycle(BillingCycle(6)).withPricePerCyclePerUser(40020).saved
+            val enterpriseMonthly = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
+              .withDisplayName("Enterprise").withBillingCycle(BillingCycle(1)).withPricePerCyclePerUser(8000).saved
+            Seq(enterpriseAnnual, enterpriseBiannual, enterpriseMonthly)
+          }
 
-        planManagementCommander.changePlan(org.id.get, customPlans.head.id.get, ActionAttribution(None, admin = Some(Id[User](1)))) // only admins can put an org on a custom plan
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getAvailablePlans(publicId)
+          val response = controller.getAvailablePlans(publicId)(request)
 
-        val request2 = route.getAvailablePlans(publicId)
-        val response2 = controller.getAvailablePlans(publicId)(request2)
+          // don't get any custom plans
+          val plansByName = contentAsJson(response)
+          (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
+          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
+          (plansByName \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === None
 
-        // don't get any custom plans
-        val plansByNameWithCustom = contentAsJson(response2)
-        (plansByNameWithCustom \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-        (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
-        (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
-        (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
+          planManagementCommander.changePlan(org.id.get, customPlans.head.id.get, ActionAttribution(None, admin = Some(Id[User](1)))) // only admins can put an org on a custom plan
+
+          val request2 = route.getAvailablePlans(publicId)
+          val response2 = controller.getAvailablePlans(publicId)(request2)
+
+          // don't get any custom plans
+          val plansByNameWithCustom = contentAsJson(response2)
+          (plansByNameWithCustom \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
+          (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
+          (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
+        }
       }
     }
 

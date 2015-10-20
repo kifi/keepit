@@ -101,17 +101,6 @@ angular.module('kifi')
         newPlan.cycle === oldPlan.cycle
       );
 
-      // Do nothing for the no-value options in the select
-      if (!initializing && (newPlan.name === null || ($scope.isPaidPlanName(newPlan.name) && newPlan.cycle === null))) {
-        return;
-      }
-
-      // Don't let users re-save their current plan
-      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
-        resetForm();
-        return;
-      }
-
       if (initializing || newPlan.name !== oldPlan.name) {
         // Create the list of cycles available to this plan
         $scope.availableCycles = getCyclesByTier(plansByTier[newPlan.name]);
@@ -146,6 +135,11 @@ angular.module('kifi')
         }
 
         $scope.selectedPlan = selectedPlan;
+      }
+
+      // Set pristine if the user moves back to the initial values
+      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
+        resetForm();
       }
     }, true);
 
@@ -214,6 +208,25 @@ angular.module('kifi')
     $scope.save = function () {
       var saveSeriesDeferred = $q.defer();
       var saveSeriesPromise = saveSeriesDeferred.promise;
+
+      // If nothing changed, pretend we saved it.
+      if (!$scope.plan.newCard && $scope.planSelectsForm.$pristine) {
+        messageTicker({
+          text: 'Saved Successfully',
+          type: 'green'
+        });
+        return;
+      }
+
+      // If the team doesn't have a card, show an error
+      if($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
+        modalService.openGenericErrorModal({
+          modalData: {
+            genericErrorMessage: 'Save unsuccessful. You must enter a card to upgrade.'
+          }
+        });
+        return;
+      }
 
       saveSeriesPromise.then(function () {
         $window.addEventListener('beforeunload', onBeforeUnload);
