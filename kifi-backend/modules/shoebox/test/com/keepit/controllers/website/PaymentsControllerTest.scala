@@ -10,6 +10,7 @@ import com.keepit.controllers.admin.AdminPaymentsController
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model._
 import com.keepit.payments.{ ActionAttribution, PaidAccountRepo, BillingCycle, PaidPlanInfo, PaidPlanRepo, DollarAmount, PlanManagementCommander, PaidPlan, FakeStripeClientModule }
 import com.keepit.test.ShoeboxTestInjector
@@ -129,26 +130,16 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (org, owner, _, _) = setup()
         val publicId = Organization.publicId(org.id.get)
-        val planRepo = inject[PaidPlanRepo]
         val currentPlan = planManagementCommander.currentPlan(org.id.get)
         val standardPlans = setupNormalPlans()
 
         val customPlans = db.readWrite { implicit session =>
-          val enterpriseAnnual = planRepo.save(
-            PaidPlan(kind = PaidPlan.Kind.CUSTOM, name = Name[PaidPlan]("enterprise_annual"), displayName = "Enterprise",
-              billingCycle = BillingCycle(12), pricePerCyclePerUser = DollarAmount(80040),
-              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
-          )
-          val enterpriseBiannual = planRepo.save(
-            PaidPlan(kind = PaidPlan.Kind.CUSTOM, name = Name[PaidPlan]("enterprise_biannual"), displayName = "Enterprise",
-              billingCycle = BillingCycle(6), pricePerCyclePerUser = DollarAmount(80040),
-              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
-          )
-          val enterpriseMonthly = planRepo.save(
-            PaidPlan(kind = PaidPlan.Kind.CUSTOM, name = Name[PaidPlan]("enterprise_monthly"), displayName = "Enterprise",
-              billingCycle = BillingCycle(1), pricePerCyclePerUser = DollarAmount(8000),
-              editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
-          )
+          val enterpriseAnnual = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
+            .withDisplayName("Enterprise").withBillingCycle(BillingCycle(12)).withPricePerCyclePerUser(80040).saved
+          val enterpriseBiannual = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
+            .withDisplayName("Enterprise").withBillingCycle(BillingCycle(6)).withPricePerCyclePerUser(40020).saved
+          val enterpriseMonthly = PaidPlanFactory.paidPlan().withKind(PaidPlan.Kind.CUSTOM)
+            .withDisplayName("Enterprise").withBillingCycle(BillingCycle(1)).withPricePerCyclePerUser(8000).saved
           Seq(enterpriseAnnual, enterpriseBiannual, enterpriseMonthly)
         }
 
@@ -161,7 +152,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
         (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
         (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
-        (plansByName \ "plans" \ "Enterprise").as[Option[Seq[PaidPlanInfo]]] === None
+        (plansByName \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === None
 
         planManagementCommander.changePlan(org.id.get, customPlans.head.id.get, ActionAttribution(None, admin = Some(Id[User](1)))) // only admins can put an org on a custom plan
 
@@ -173,7 +164,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         (plansByNameWithCustom \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
         (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
         (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
-        (plansByNameWithCustom \ "plans" \ "Enterprise").as[Option[Seq[PaidPlanInfo]]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
+        (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
       }
     }
   }
