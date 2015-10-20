@@ -381,8 +381,10 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def deleteLibrary(libraryId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Option[LibraryFail] = {
-    val oldLibrary = db.readOnlyMaster { implicit s => libraryRepo.get(libraryId) }
-    if (oldLibrary.ownerId != userId) {
+    val (oldLibrary, permissions) = db.readOnlyMaster { implicit s =>
+      (libraryRepo.get(libraryId), permissionCommander.getLibraryPermissions(libraryId, Some(userId)))
+    }
+    if (!permissions.contains(LibraryPermission.DELETE_LIBRARY)) {
       Some(LibraryFail(FORBIDDEN, "permission_denied"))
     } else if (oldLibrary.isSystemLibrary) {
       Some(LibraryFail(BAD_REQUEST, "cant_delete_system_generated_library"))
