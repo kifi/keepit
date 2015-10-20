@@ -118,9 +118,9 @@ class PaymentsIntegrityChecker @Inject() (
     accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
       val account = paidAccountRepo.getByOrgId(orgId)
       val accountId = account.id.get
-      val billingEvents = accountEventRepo.getAllEvents(accountId, onlyRelatedToBillingOpt = None)
+      val accountEvents = accountEventRepo.getAllByAccount(accountId)
 
-      val creditChanges = billingEvents.map(_.creditChange)
+      val creditChanges = accountEvents.map(_.creditChange)
       val computedCredit = creditChanges.fold(DollarAmount.ZERO)(_ + _)
       if (computedCredit == account.credit) 0
       else {

@@ -370,7 +370,6 @@ class PlanManagementCommanderImpl @Inject() (
     accountEventRepo.save(AccountEvent(
       eventTime = clock.now(),
       accountId = account.id.get,
-      billingRelated = false,
       whoDunnit = attributedToMember,
       whoDunnitExtra = JsNull,
       kifiAdminInvolved = grantedByAdmin,
