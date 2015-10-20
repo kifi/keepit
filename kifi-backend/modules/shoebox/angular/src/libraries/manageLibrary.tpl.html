@@ -34,6 +34,7 @@
             <div class="manage-lib-input-area">
               <div
                 kf-org-selector
+                ng-attr-data-kf-tooltip="{{ !hasPermission(LIB_PERMISSIONS.MOVE_LIBRARY) ? 'Your team does not allow you to move libraries out of the team.' : '' }}"
                 library-props="libraryProps"
                 library="library"
                 space="space"
