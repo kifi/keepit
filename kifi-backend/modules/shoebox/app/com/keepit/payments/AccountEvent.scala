@@ -119,8 +119,12 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
 
   def fromDb(eventType: String, extras: JsValue): AccountEventAction = eventType match {
     case "special_credit" => SpecialCredit()
-    case "charge_back" => ChargeBack()
+    case "plan_billing" => extras.as[PlanBilling]
+    case "low_balance_ignored" => extras.as[LowBalanceIgnored]
     case "charge" => Charge()
+    case "charge_back" => ChargeBack()
+    case "charge_failure" => extras.as[ChargeFailure]
+    case "missing_payment_method" => MissingPaymentMethod()
     case "user_added" => extras.as[UserAdded]
     case "user_removed" => extras.as[UserRemoved]
     case "admin_added" => extras.as[AdminAdded]
