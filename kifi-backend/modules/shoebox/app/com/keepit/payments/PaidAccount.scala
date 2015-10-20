@@ -61,6 +61,7 @@ case class PaidAccount(
     orgId: Id[Organization],
     planId: Id[PaidPlan],
     credit: DollarAmount,
+    paymentDueAt: Option[DateTime] = None,
     paymentStatus: PaymentStatus = PaymentStatus.Ok,
     userContacts: Seq[Id[User]],
     emailContacts: Seq[EmailAddress],
@@ -73,6 +74,7 @@ case class PaidAccount(
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
   def withPaymentStatus(status: PaymentStatus): PaidAccount = this.copy(paymentStatus = status)
+  def withPaymentDueAt(dueAt: DateTime): PaidAccount = this.copy(paymentDueAt = Some(dueAt))
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 
   def owed: DollarAmount = -(DollarAmount.ZERO min credit)

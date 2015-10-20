@@ -40,6 +40,7 @@ class PaidAccountRepoImpl @Inject() (
     def orgId = column[Id[Organization]]("org_id", O.NotNull)
     def planId = column[Id[PaidPlan]]("plan_id", O.NotNull)
     def credit = column[DollarAmount]("credit", O.NotNull)
+    def paymentDueAt = column[Option[DateTime]]("payment_due_at", O.Nullable)
     def paymentStatus = column[PaymentStatus]("payment_status", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
@@ -47,7 +48,7 @@ class PaidAccountRepoImpl @Inject() (
     def frozen = column[Boolean]("frozen", O.NotNull)
     def activeUsers = column[Int]("active_users", O.NotNull)
     def billingCycleStart = column[DateTime]("billing_cycle_start", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, paymentStatus, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, paymentDueAt, paymentStatus, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
