@@ -35,7 +35,7 @@
       <ul ng-if="billingState.balance | isNegativeMoney">
         <li>
           You <b>owe <span ng-bind="((billingState.balance | moneyUnwrap) * -1) | money"></span></b>
-          from previous unpaid invoices.
+          from previous invoices.
         </li>
       </ul>
     </li>
@@ -50,7 +50,7 @@
           <span ng-bind="!(billingState.balance | isPositiveMoney) ? (0 | money) : (billingState.balance | money)"></span>
         </a><!--
      --><span ng-if="!(billingState.card && (billingState.balance | isPositiveMoney))">.</span>
-        <span ng-if="billingState.card && (billingState.balance | isPositiveMoney)">
+        <span ng-if="billingState.card">
           which will be applied before your
           <a
             class="kf-link kf-link-black kf-link-underline"
