@@ -101,17 +101,6 @@ angular.module('kifi')
         newPlan.cycle === oldPlan.cycle
       );
 
-      // Do nothing for the no-value options in the select
-      if (!initializing && (newPlan.name === null || ($scope.isPaidPlanName(newPlan.name) && newPlan.cycle === null))) {
-        return;
-      }
-
-      // Don't let users re-save their current plan
-      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
-        resetForm();
-        return;
-      }
-
       if (initializing || newPlan.name !== oldPlan.name) {
         // Create the list of cycles available to this plan
         $scope.availableCycles = getCyclesByTier(plansByTier[newPlan.name]);
@@ -146,6 +135,11 @@ angular.module('kifi')
         }
 
         $scope.selectedPlan = selectedPlan;
+      }
+
+      // Set pristine if the user moves back to the initial values
+      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
+        resetForm();
       }
     }, true);
 
