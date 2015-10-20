@@ -63,7 +63,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
   def reportToSlack(msg: String): Future[Unit] = SafeFuture {
-    if (msg.nonEmpty) {
+    if (msg.nonEmpty && mode == play.api.Mode.Prod) {
       val fullMsg = BasicSlackMessage(
         text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
         username = "AccountEvent",
