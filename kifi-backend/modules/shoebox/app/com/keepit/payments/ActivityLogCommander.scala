@@ -1,13 +1,15 @@
 package com.keepit.payments
 
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
+import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
+import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.model.{ OrganizationRepo, OrganizationHandle, User, Organization }
+import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
@@ -27,6 +29,7 @@ class ActivityLogCommanderImpl @Inject() (
     accountEventRepo: AccountEventRepo,
     basicUserRepo: BasicUserRepo,
     organizationRepo: OrganizationRepo,
+    organizationCommander: OrganizationCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
@@ -83,6 +86,7 @@ class ActivityLogCommanderImpl @Inject() (
             case None => Elements("Your billing contacts were updated", maybeUser.map(Elements("by", _)))
           }
         }
+        case OrganizationCreated(orgId, creatorId) => Elements("The", organizationCommander.getBasicOrganizations(Set(orgId)).values.head, "team was created by", basicUserRepo.load(creatorId))
       }
     }
     SimpleAccountEventInfo(
@@ -108,7 +112,8 @@ object DescriptionElements {
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
-  implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.absolute
+  implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.relative
+  implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.relative
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> s"/${orgHandle.value}/settings/plan"
 
