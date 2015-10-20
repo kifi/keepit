@@ -54,7 +54,8 @@ class PaymentsController @Inject() (
 
   def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
-      case Some(token) => {
+      case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
+      case Some(token) =>
         stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").flatMap { realToken =>
           stripeClient.getCardInfo(realToken).map { cardInfo =>
             val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
@@ -63,8 +64,6 @@ class PaymentsController @Inject() (
             Ok(Json.toJson(cardInfo))
           }
         }
-      }
-      case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
     }
   }
 
@@ -98,11 +97,7 @@ class PaymentsController @Inject() (
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
             val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
-            val isPaid = !plan.displayName.toLowerCase.contains("free")
-            val result = ExternalOrganizationConfiguration(
-              isPaid,
-              OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures)
-            )
+            val result = ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures))
             Ok(Json.toJson(result))
         }
     }

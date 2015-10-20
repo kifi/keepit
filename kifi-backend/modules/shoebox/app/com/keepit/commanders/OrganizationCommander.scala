@@ -18,6 +18,7 @@ import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION 
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan, ActionAttribution }
+import play.api.Play
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -168,8 +169,7 @@ class OrganizationCommanderImpl @Inject() (
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration = {
     val config = orgConfigRepo.getByOrgId(orgId)
     val plan = planManagementCommander.currentPlanHelper(orgId)
-    val isPaid = !plan.displayName.toLowerCase.contains("free")
-    ExternalOrganizationConfiguration(isPaid, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
+    ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
@@ -313,7 +313,7 @@ class OrganizationCommanderImpl @Inject() (
           val org = handleCommander.autoSetOrganizationHandle(savedOrg) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
           maybeNotifySlackOfNewOrganization(org.id.get, request.requesterId)
 
-          val plan = paidPlanRepo.get(PaidPlan.DEFAULT)
+          val plan = if (Play.maybeApplication.exists(Play.isProd(_))) paidPlanRepo.get(PaidPlan.DEFAULT) else paidPlanRepo.get(Id[PaidPlan](1L))
           orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
           planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
 

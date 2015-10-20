@@ -1,5 +1,6 @@
 package com.keepit.payments
 
+import com.amazonaws.services.cloudfront.model.InvalidArgumentException
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.time._
@@ -16,123 +17,160 @@ import javax.crypto.spec.IvParameterSpec
 
 case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 
+sealed abstract class AccountEventKind(val value: String)
+object AccountEventKind {
+  case object SpecialCredit extends AccountEventKind("special_credit")
+  case object PlanBilling extends AccountEventKind("plan_billing")
+  case object LowBalanceIgnored extends AccountEventKind("low_balance_ignored")
+  case object Charge extends AccountEventKind("charge")
+  case object ChargeBack extends AccountEventKind("charge_back")
+  case object ChargeFailure extends AccountEventKind("charge_failure")
+  case object MissingPaymentMethod extends AccountEventKind("missing_payment_method")
+  case object UserAdded extends AccountEventKind("user_added")
+  case object UserRemoved extends AccountEventKind("user_removed")
+  case object AdminAdded extends AccountEventKind("admin_added")
+  case object AdminRemoved extends AccountEventKind("admin_removed")
+  case object PlanChanged extends AccountEventKind("plan_changed")
+  case object PaymentMethodAdded extends AccountEventKind("payment_method_added")
+  case object DefaultPaymentMethodChanged extends AccountEventKind("default_payment_method_changed")
+  case object AccountContactsChanged extends AccountEventKind("account_contacts_changed")
+
+  val all = Set(
+    SpecialCredit,
+    PlanBilling,
+    LowBalanceIgnored,
+    Charge,
+    ChargeBack,
+    ChargeFailure,
+    MissingPaymentMethod,
+    UserAdded,
+    UserRemoved,
+    AdminAdded,
+    AdminRemoved,
+    PlanChanged,
+    PaymentMethodAdded,
+    DefaultPaymentMethodChanged,
+    AccountContactsChanged
+  )
+  def get(str: String): Option[AccountEventKind] = all.find(_.value == str)
+}
+
 sealed trait AccountEventAction {
-  def eventType: String
-  def toDbRow: (String, JsValue)
+  def eventType: AccountEventKind
+  def toDbRow: (AccountEventKind, JsValue)
 }
 
 object AccountEventAction { //There is probably a deeper type hierarchy that can be used here...
 
   trait Payloadless { self: AccountEventAction =>
-    def toDbRow: (String, JsValue) = (eventType, JsNull)
+    def toDbRow: (AccountEventKind, JsValue) = (eventType, JsNull)
   }
 
   case class SpecialCredit() extends AccountEventAction with Payloadless {
-    def eventType: String = "special_credit"
+    def eventType = AccountEventKind.SpecialCredit
   }
 
-  case class ChargeBack() extends AccountEventAction with Payloadless {
-    def eventType: String = "charge_back"
+  @json
+  case class PlanBilling(plan: Id[PaidPlan], cycle: BillingCycle, price: DollarAmount, activeUsers: Int, startDate: DateTime) extends AccountEventAction {
+    def eventType = AccountEventKind.PlanBilling
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
-  case class PlanBilling() extends AccountEventAction with Payloadless {
-    def eventType: String = "plan_billing"
-  }
-
-  sealed trait ChargeEventAction extends AccountEventAction with Payloadless
-
-  case class PlanBillingCharge() extends ChargeEventAction {
-    def eventType: String = "plan_billing_charge"
-  }
-
-  case class MaxBalanceExceededCharge() extends ChargeEventAction {
-    def eventType: String = "max_balance_exceeded_charge"
-  }
-
-  case class RequiredCharge() extends ChargeEventAction {
-    def eventType: String = "required_charge"
-  }
-
-  case class ForcedCharge() extends ChargeEventAction {
-    def eventType: String = "forced_charge"
+  object PlanBilling {
+    def from(plan: PaidPlan, account: PaidAccount): PlanBilling = {
+      if (plan.id.get != account.planId) throw new InvalidArgumentException(s"Account ${account.id.get} is on plan ${account.planId}, not on plan ${plan.id.get}")
+      PlanBilling(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, account.activeUsers, account.billingCycleStart)
+    }
   }
 
   @json
   case class LowBalanceIgnored(amount: DollarAmount) extends AccountEventAction {
-    def eventType: String = "low_balance_ignored"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.LowBalanceIgnored
+    def toDbRow = eventType -> Json.toJson(this)
+  }
+
+  case class Charge() extends AccountEventAction with Payloadless {
+    def eventType = AccountEventKind.Charge
+  }
+
+  case class ChargeBack() extends AccountEventAction with Payloadless {
+    def eventType = AccountEventKind.ChargeBack
   }
 
   @json
   case class ChargeFailure(amount: DollarAmount, code: String, message: String) extends AccountEventAction {
-    def eventType: String = "charge_failure"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.ChargeFailure
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   case class MissingPaymentMethod() extends AccountEventAction with Payloadless {
-    def eventType: String = "missing_payment_method"
+    def eventType = AccountEventKind.MissingPaymentMethod
   }
 
   @json
   case class UserAdded(who: Id[User]) extends AccountEventAction {
-    def eventType: String = "user_added"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.UserAdded
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
   case class UserRemoved(who: Id[User]) extends AccountEventAction {
-    def eventType: String = "user_removed"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.UserRemoved
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
   case class AdminAdded(who: Id[User]) extends AccountEventAction {
-    def eventType: String = "admin_added"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.AdminAdded
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
   case class AdminRemoved(who: Id[User]) extends AccountEventAction {
-    def eventType: String = "admin_removed"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.AdminRemoved
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
   case class PlanChanged(oldPlan: Id[PaidPlan], newPlan: Id[PaidPlan]) extends AccountEventAction {
-    def eventType: String = "plan_changed"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.PlanChanged
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
   case class PaymentMethodAdded(id: Id[PaymentMethod], lastFour: String) extends AccountEventAction {
-    def eventType: String = "payment_method_added"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.PaymentMethodAdded
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
   case class DefaultPaymentMethodChanged(from: Option[Id[PaymentMethod]], to: Id[PaymentMethod], toLastFour: String) extends AccountEventAction {
-    def eventType: String = "default_payment_method_changed"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.DefaultPaymentMethodChanged
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
   case class AccountContactsChanged(userAdded: Option[Id[User]], userRemoved: Option[Id[User]], emailAdded: Option[EmailAddress], emailRemoved: Option[EmailAddress]) extends AccountEventAction {
-    def eventType: String = "account_contacts_changed"
-    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+    def eventType = AccountEventKind.AccountContactsChanged
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
-  def fromDb(eventType: String, extras: JsValue): AccountEventAction = eventType match {
-    case "special_credit" => SpecialCredit()
-    case "charge_back" => ChargeBack()
-    case "plan_billing_charge" => PlanBillingCharge()
-    case "user_added" => extras.as[UserAdded]
-    case "user_removed" => extras.as[UserRemoved]
-    case "admin_added" => extras.as[AdminAdded]
-    case "admin_removed" => extras.as[AdminRemoved]
-    case "plan_changed" => extras.as[PlanChanged]
-    case "payment_method_added" => extras.as[PaymentMethodAdded]
-    case "default_payment_method_changed" => extras.as[DefaultPaymentMethodChanged]
-    case "account_contacts_changed" => extras.as[AccountContactsChanged]
+  def fromDb(eventType: AccountEventKind, extras: JsValue): AccountEventAction = eventType match {
+    case AccountEventKind.SpecialCredit => SpecialCredit()
+    case AccountEventKind.PlanBilling => extras.as[PlanBilling]
+    case AccountEventKind.LowBalanceIgnored => extras.as[LowBalanceIgnored]
+    case AccountEventKind.Charge => Charge()
+    case AccountEventKind.ChargeBack => ChargeBack()
+    case AccountEventKind.ChargeFailure => extras.as[ChargeFailure]
+    case AccountEventKind.MissingPaymentMethod => MissingPaymentMethod()
+    case AccountEventKind.UserAdded => extras.as[UserAdded]
+    case AccountEventKind.UserRemoved => extras.as[UserRemoved]
+    case AccountEventKind.AdminAdded => extras.as[AdminAdded]
+    case AccountEventKind.AdminRemoved => extras.as[AdminRemoved]
+    case AccountEventKind.PlanChanged => extras.as[PlanChanged]
+    case AccountEventKind.PaymentMethodAdded => extras.as[PaymentMethodAdded]
+    case AccountEventKind.DefaultPaymentMethodChanged => extras.as[DefaultPaymentMethodChanged]
+    case AccountEventKind.AccountContactsChanged => extras.as[AccountContactsChanged]
     case _ => throw new Exception(s"Invalid Event Type: $eventType")
 
   }
@@ -178,7 +216,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     whoDunnit: Option[Id[User]],
     whoDunnitExtra: Option[JsValue],
     kifiAdminInvolved: Option[Id[User]],
-    eventType: String,
+    eventType: AccountEventKind,
     eventTypeExtras: Option[JsValue],
     creditChange: DollarAmount,
     paymentMethod: Option[Id[PaymentMethod]],

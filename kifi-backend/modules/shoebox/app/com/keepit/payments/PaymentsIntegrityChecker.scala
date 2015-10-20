@@ -55,89 +55,107 @@ class PaymentsIntegrityChecker @Inject() (
     }
   }
 
-  private def processMembershipsForAccount(orgId: Id[Organization]): Try[Option[Int]] = {
-    Try {
-      accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
-        val memberships: Map[Id[User], OrganizationMembership] = organizationMembershipRepo.getAllByOrgId(orgId, excludeState = None).map(m => m.userId -> m).toMap
-        val memberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.ACTIVE).map(_.userId).toSet
-        val exMemberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.INACTIVE).map(_.userId).toSet
+  private def processMembershipsForAccount(orgId: Id[Organization]): Option[Int] = {
+    accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
+      val memberships: Map[Id[User], OrganizationMembership] = organizationMembershipRepo.getAllByOrgId(orgId, excludeState = None).map(m => m.userId -> m).toMap
+      val memberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.ACTIVE).map(_.userId).toSet
+      val exMemberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.INACTIVE).map(_.userId).toSet
 
-        val account = paidAccountRepo.getByOrgId(orgId)
-        val accountId = account.id.get
-        val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMembershipEventsInOrder(accountId).groupBy { event =>
-          event.action match {
-            case AccountEventAction.UserAdded(userId) => userId
-            case AccountEventAction.UserRemoved(userId) => userId
-            case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
-          }
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val accountId = account.id.get
+      val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMembershipEventsInOrder(accountId).groupBy { event =>
+        event.action match {
+          case AccountEventAction.UserAdded(userId) => userId
+          case AccountEventAction.UserRemoved(userId) => userId
+          case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
         }
-
-        val perceivedStateByUser: Map[Id[User], Boolean] = eventsByUser.map {
-          case (userId, events) =>
-            log.info(s"[AEIC] Processing ${events.length} events for $userId on $orgId.")
-            val initialEvent: AccountEvent = events.head
-            initialEvent.action match {
-              case AccountEventAction.UserAdded(_) =>
-              case _ => throw new Exception(s"""First user event for $userId on org $orgId was not an "added" event. This should never happen.""")
-            }
-            userId -> events.tail.foldLeft(true) {
-              case (isMember, event) =>
-                event.action match {
-                  case AccountEventAction.UserAdded(userId) if isMember => throw new Exception(s"""Consecutive "added" events for $userId on org $orgId. This should never happen.""")
-                  case AccountEventAction.UserAdded(userId) => true
-                  case AccountEventAction.UserRemoved(userId) if !isMember => throw new Exception(s"""Consecutive "removed" events for $userId on org $orgId. This should never happen.""")
-                  case AccountEventAction.UserRemoved(userId) => false
-                  case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
-                }
-            }
-        }
-
-        val perceivedMemberIds: Set[Id[User]] = perceivedStateByUser.filter(_._2).map(_._1).toSet
-        val perceivedExMemberIds: Set[Id[User]] = perceivedStateByUser.filterNot(_._2).map(_._1).toSet
-
-        val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
-        val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
-
-        perceivedActiveButActuallyInactive.foreach { userId =>
-          log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
-          planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
-        }
-        perceivedInactiveButActuallyActive.foreach { userId =>
-          log.info(s"[AEIC] Events show user $userId as an inactive member of $orgId, which is not correct. Creating new UserAdded event.")
-          planManagementCommander.registerNewUserHelper(orgId, userId, ActionAttribution(None, None))
-        }
-        if (account.activeUsers != memberIds.size) {
-          log.info(s"[AEIC] Total active user count on account for org $orgId not correct. Is: ${account.activeUsers}. Should: ${memberIds.size}. Fixing.")
-          paidAccountRepo.save(account.copy(activeUsers = memberIds.size))
-        }
-
-        perceivedInactiveButActuallyActive.size + perceivedActiveButActuallyInactive.size
       }
-    }
 
+      val perceivedStateByUser: Map[Id[User], Boolean] = eventsByUser.map {
+        case (userId, events) =>
+          log.info(s"[AEIC] Processing ${events.length} events for $userId on $orgId.")
+          val initialEvent: AccountEvent = events.head
+          initialEvent.action match {
+            case AccountEventAction.UserAdded(_) =>
+            case _ => throw new Exception(s"""First user event for $userId on org $orgId was not an "added" event. This should never happen.""")
+          }
+          userId -> events.tail.foldLeft(true) {
+            case (isMember, event) =>
+              event.action match {
+                case AccountEventAction.UserAdded(userId) if isMember => throw new Exception(s"""Consecutive "added" events for $userId on org $orgId. This should never happen.""")
+                case AccountEventAction.UserAdded(userId) => true
+                case AccountEventAction.UserRemoved(userId) if !isMember => throw new Exception(s"""Consecutive "removed" events for $userId on org $orgId. This should never happen.""")
+                case AccountEventAction.UserRemoved(userId) => false
+                case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
+              }
+          }
+      }
+
+      val perceivedMemberIds: Set[Id[User]] = perceivedStateByUser.filter(_._2).map(_._1).toSet
+      val perceivedExMemberIds: Set[Id[User]] = perceivedStateByUser.filterNot(_._2).map(_._1).toSet
+
+      val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
+      val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
+
+      perceivedActiveButActuallyInactive.foreach { userId =>
+        log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
+        planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
+      }
+      perceivedInactiveButActuallyActive.foreach { userId =>
+        log.info(s"[AEIC] Events show user $userId as an inactive member of $orgId, which is not correct. Creating new UserAdded event.")
+        planManagementCommander.registerNewUserHelper(orgId, userId, ActionAttribution(None, None))
+      }
+      if (account.activeUsers != memberIds.size) {
+        log.info(s"[AEIC] Total active user count on account for org $orgId not correct. Is: ${account.activeUsers}. Should: ${memberIds.size}. Fixing.")
+        paidAccountRepo.save(account.copy(activeUsers = memberIds.size))
+      }
+
+      perceivedInactiveButActuallyActive.size + perceivedActiveButActuallyInactive.size
+    }
   }
 
-  def checkMemberships(): Unit = {
-    //the following two lines will need adjustment as the number of organizations grow
-    //val modulus = 7 //days of the week
-    val modulus = 1
-    //val partition = clock.now.getDayOfWeek() - 1 //what to do today
-    val partition = 0
+  private def processBalancesForAccount(orgId: Id[Organization]): Option[Int] = {
+    accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val accountId = account.id.get
+      val billingEvents = accountEventRepo.getAllEvents(accountId, onlyRelatedToBillingOpt = None)
+
+      val creditChanges = billingEvents.map(_.creditChange)
+      val computedCredit = creditChanges.fold(DollarAmount.ZERO)(_ + _)
+      if (computedCredit == account.credit) 0
+      else {
+        log.error(s"[AEIC] Computed credit for $orgId = $computedCredit but the account shows a credit of ${account.credit}")
+        1
+      }
+    }
+  }
+
+  private def checkAccount(orgId: Id[Organization]): Option[Int] = {
+    val discrepancies = Seq(
+      processMembershipsForAccount(orgId),
+      processBalancesForAccount(orgId)
+    )
+    if (discrepancies.exists(_.isEmpty)) None
+    else Some(discrepancies.map(_.get).sum)
+  }
+
+  def checkAccounts(modulus: Int = 7): Unit = {
+    // we are going to process ~1/modulus of the orgs, based on the date
+    val partition = clock.now.getDayOfYear % modulus
     val orgIds = db.readOnlyReplica { implicit session => organizationRepo.getIdSubsetByModulus(modulus, partition) }
+
     orgIds.foreach { orgId =>
-      processMembershipsForAccount(orgId) match {
+      Try(checkAccount(orgId)) match {
         case Success(Some(0)) => log.info(s"[AEIC] Successfully processed org $orgId. No discrepancies found.")
-        case Success(Some(n)) => {
+        case Success(Some(n)) =>
           reportToSlack(s"Successfully processed org $orgId. $n discrepancies found. Freezing Account. See logs for details.")
           log.info(s"[AEIC] Successfully processed org $orgId. $n discrepancies found. Freezing Account.")
           freezeAccount(orgId)
-        }
         case Success(None) => log.info(s"[AEIC] Could not process org $orgId due to account being locked.")
-        case Failure(ex) => {
+        case Failure(ex) =>
           reportToSlack(s"An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account. See logs for stack trace.")
           log.error(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account", ex)
           freezeAccount(orgId)
-        }
       }
     }
   }

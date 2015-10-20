@@ -9,7 +9,7 @@
     on-hover="onHoverUpsellEditLibrary(lib.org)"
     class="kf-upl-card-upsell"
   >
-    <span ng-if="getMeOrg().config.isPaid">
+    <span ng-if="!getMeOrg().config.showUpsells">
       <span ng-if="getMeOrg().viewer.membership.role === 'admin' && getMeOrg().config.settings.force_edit_libraries.setting === ORG_SETTING_VALUE.DISABLED">
         Only library owners can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
       </span>
@@ -20,7 +20,7 @@
         All team members can edit library settings.<br />Change this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: lib.org.handle })">settings</a>
       </span>
     </span>
-    <span ng-if="!getMeOrg().config.isPaid">
+    <span ng-if="getMeOrg().config.showUpsells">
       Enable admins or all team members to edit library settings by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">upgrading your plan</a>.
     </span>
   </span>
