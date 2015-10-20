@@ -134,7 +134,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val (org, owner, admin, member, _) = setup()
 
         val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withOrganization(org).saved }
-
+        val publicId = Library.publicId(library.id.get)
         val libraryCommander = inject[LibraryCommander]
 
         val ownerModifyRequest = LibraryModifications(name = Some("Elon's Main Library"))
@@ -151,6 +151,18 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
+
+        val controller = inject[LibraryController]
+        val route = com.keepit.controllers.website.routes.LibraryController.removeLibrary(publicId).url
+        inject[FakeUserActionsHelper].setUser(member)
+        val memberRequest = FakeRequest("POST", route)
+        val memberResponse = controller.removeLibrary(publicId)(memberRequest)
+        status(memberResponse) === 403
+
+        inject[FakeUserActionsHelper].setUser(admin)
+        val adminRequest = FakeRequest("POST", route)
+        val adminResponse = controller.removeLibrary(publicId)(adminRequest)
+        status(adminResponse) === 200
       }
     }
   }
@@ -236,7 +248,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
       withDb(modules: _*) { implicit injector =>
         val (org, owner, admin, member, _) = setup()
 
-        // Initially, removing libraries is completely disabled
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.RemoveLibraries -> FeatureSetting.ADMINS) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, initOrgSettings)) must beRight
 
