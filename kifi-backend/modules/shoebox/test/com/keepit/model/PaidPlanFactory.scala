@@ -31,7 +31,10 @@ object PaidPlanFactory {
 
   class PartialPaidPlan private[PaidPlanFactory] (plan: PaidPlan) {
     def withPricePerCyclePerUser(pricePerCyclePerUser: DollarAmount) = new PartialPaidPlan(plan.copy(pricePerCyclePerUser = pricePerCyclePerUser))
+    def withPricePerCyclePerUser(cents: Int) = new PartialPaidPlan(plan.copy(pricePerCyclePerUser = DollarAmount(cents)))
     def withBillingCycle(billingCycle: BillingCycle) = new PartialPaidPlan(plan.copy(billingCycle = billingCycle))
+    def withKind(kind: PaidPlan.Kind) = new PartialPaidPlan(plan.copy(kind = kind))
+    def withDisplayName(name: String) = new PartialPaidPlan(plan.copy(displayName = name))
     def get: PaidPlan = plan
   }
 
