@@ -48,8 +48,7 @@
         >
           credit of
           <span ng-bind="!(billingState.balance | isPositiveMoney) ? (0 | money) : (billingState.balance | money)"></span>
-        </a><!--
-     --><span ng-if="!(billingState.card && (billingState.balance | isPositiveMoney))">.</span>
+        </a>
         <span ng-if="billingState.card">
           which will be applied before your
           <a
