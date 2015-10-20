@@ -35,8 +35,8 @@ angular.module('kifi')
       handler
       .open({
         image: picFilter($scope.profile),
-        name: 'Kifi Paid Plan',
-        description: 'Unlock awesome paid-only features',
+        name: 'Kifi Teams',
+        description: 'Update your Teams Plan',
         allowRememberMe: false,
         panelLabel: 'Save My Card'
       })

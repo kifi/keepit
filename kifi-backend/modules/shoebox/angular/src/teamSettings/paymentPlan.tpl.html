@@ -67,7 +67,11 @@
       <p ng-if="!card">You haven't added a card yet.</p>
       <p ng-if="card">Your current card is <b ng-bind="card.brand"></b> ****<b ng-bind="card.lastFour"></b></p>
       <div>
-        <button class="kf-button kf-button-large" ng-click="openStripeCheckout()">Add / Update Credit Card Info</button>
+        <button
+          class="kf-button kf-button-large"
+          ng-click="openStripeCheckout()"
+          ng-bind="(card ? 'Change' : 'Add') + ' credit card'"
+        ></button>
         <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">Your new card is ready to save</span>
       </div>
     </div>
