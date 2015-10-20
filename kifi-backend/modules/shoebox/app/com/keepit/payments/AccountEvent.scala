@@ -158,7 +158,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   }
 
   @json
-  case class OrganizationCreated(orgId: Id[Organization], creatorId: Id[User]) extends AccountEventAction {
+  case class OrganizationCreated(initialPlan: Id[PaidPlan]) extends AccountEventAction {
     def eventType = AccountEventKind.OrganizationCreated
     def toDbRow = eventType -> Json.toJson(this)
   }

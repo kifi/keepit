@@ -49,7 +49,8 @@ class ActivityLogCommanderImpl @Inject() (
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
     import AccountEventAction._
     val maybeUser = event.whoDunnit.map(basicUserRepo.load)
-    implicit lazy val orgHandle = organizationRepo.get(paidAccountRepo.get(event.accountId).orgId).handle // used to build links to different sections, e.g. :handle/settings/plan
+    val org = organizationCommander.getBasicOrganizationHelper(paidAccountRepo.get(event.accountId).orgId).getOrElse(throw new Exception(s"Tried to build event info for dead org: $event"))
+    implicit val orgHandle = org.handle
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
@@ -86,7 +87,7 @@ class ActivityLogCommanderImpl @Inject() (
             case None => Elements("Your billing contacts were updated", maybeUser.map(Elements("by", _)))
           }
         }
-        case OrganizationCreated(orgId, creatorId) => Elements("The", organizationCommander.getBasicOrganizations(Set(orgId)).values.head, "team was created by", basicUserRepo.load(creatorId))
+        case OrganizationCreated(initialPlanId) => Elements("The", org, "team was created by", maybeUser.get, "and enrolled in", paidPlanRepo.get(initialPlanId))
       }
     }
     SimpleAccountEventInfo(
