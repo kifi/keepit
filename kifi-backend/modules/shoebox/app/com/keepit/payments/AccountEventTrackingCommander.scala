@@ -50,7 +50,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
         val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get)
         (account, org, paymentMethod)
       }
-      reportToSlack(s"[${org.name}][Payment: ${account.paymentStatus.value}}] ${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")
+      reportToSlack(s"[<https://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>][Payment: ${account.paymentStatus.value}][${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")
 
       // todo(Léo): not sure this one belongs here vs PaymentProcessingCommander
       event.chargeId.foreach { chargeId =>
@@ -78,12 +78,12 @@ class AccountEventTrackingCommanderImpl @Inject() (
   private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
     val (userContacts, org) = db.readOnlyReplica { implicit session =>
-      val userContacts = account.userContacts.map { userId =>
+      val userContacts = account.userContacts.flatMap { userId =>
         Try(emailRepo.getByUser(userId)).toOption
-      }.flatten
+      }
       (userContacts, orgRepo.get(account.orgId))
     }
-    val emails = (account.emailContacts ++ userContacts).toSet.toSeq
+    val emails = (account.emailContacts ++ userContacts).distinct
 
     val handle = org.handle
 
