@@ -1,5 +1,6 @@
 package com.keepit.payments
 
+import com.amazonaws.services.cloudfront.model.InvalidArgumentException
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.time._
@@ -31,36 +32,31 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def eventType: String = "special_credit"
   }
 
-  case class ChargeBack() extends AccountEventAction with Payloadless {
-    def eventType: String = "charge_back"
-  }
-
-  case class PlanBilling() extends AccountEventAction with Payloadless {
+  @json
+  case class PlanBilling(plan: Id[PaidPlan], cycle: BillingCycle, price: DollarAmount, activeUsers: Int, startDate: DateTime) extends AccountEventAction {
     def eventType: String = "plan_billing"
+    def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
   }
 
-  sealed trait ChargeEventAction extends AccountEventAction with Payloadless
-
-  case class PlanBillingCharge() extends ChargeEventAction {
-    def eventType: String = "plan_billing_charge"
-  }
-
-  case class MaxBalanceExceededCharge() extends ChargeEventAction {
-    def eventType: String = "max_balance_exceeded_charge"
-  }
-
-  case class RequiredCharge() extends ChargeEventAction {
-    def eventType: String = "required_charge"
-  }
-
-  case class ForcedCharge() extends ChargeEventAction {
-    def eventType: String = "forced_charge"
+  object PlanBilling {
+    def from(plan: PaidPlan, account: PaidAccount): PlanBilling = {
+      if (plan.id.get != account.planId) throw new InvalidArgumentException(s"Account ${account.id.get} is on plan ${account.planId}, not on plan ${plan.id.get}")
+      PlanBilling(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, account.activeUsers, account.billingCycleStart)
+    }
   }
 
   @json
   case class LowBalanceIgnored(amount: DollarAmount) extends AccountEventAction {
     def eventType: String = "low_balance_ignored"
     def toDbRow: (String, JsValue) = eventType -> Json.toJson(this)
+  }
+
+  case class Charge() extends AccountEventAction with Payloadless {
+    def eventType: String = "charge"
+  }
+
+  case class ChargeBack() extends AccountEventAction with Payloadless {
+    def eventType: String = "charge_back"
   }
 
   @json
@@ -124,7 +120,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   def fromDb(eventType: String, extras: JsValue): AccountEventAction = eventType match {
     case "special_credit" => SpecialCredit()
     case "charge_back" => ChargeBack()
-    case "plan_billing_charge" => PlanBillingCharge()
+    case "charge" => Charge()
     case "user_added" => extras.as[UserAdded]
     case "user_removed" => extras.as[UserRemoved]
     case "admin_added" => extras.as[AdminAdded]
