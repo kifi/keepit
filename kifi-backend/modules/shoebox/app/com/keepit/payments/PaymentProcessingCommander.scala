@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.payments.AccountEventAction.ChargeEventAction
+import com.kifi.macros.json
 
 import play.api.libs.json.{ JsNull }
 
@@ -32,7 +32,6 @@ trait PaymentProcessingCommander {
 class PaymentProcessingCommanderImpl @Inject() (
   db: Database,
   paymentMethodRepo: PaymentMethodRepo,
-  accountEventRepo: AccountEventRepo,
   paidAccountRepo: PaidAccountRepo,
   paidPlanRepo: PaidPlanRepo,
   clock: Clock,
@@ -74,12 +73,7 @@ class PaymentProcessingCommanderImpl @Inject() (
         if (shouldProcess) {
           val (billedAccount, billingEvent) = if (billingCycleElapsed) billAccount(account, plan) else (account, None)
           if (billedAccount.owed > MIN_BALANCE) {
-            val chargeAction = {
-              if (billingCycleElapsed) AccountEventAction.PlanBillingCharge()
-              else if (maxBalanceExceeded) AccountEventAction.MaxBalanceExceededCharge()
-              else AccountEventAction.RequiredCharge()
-            }
-            chargeAccount(billedAccount, billedAccount.owed, chargeAction).map(_._2) recover {
+            chargeAccount(billedAccount, billedAccount.owed).map(_._2) recover {
               case error: com.stripe.exception.StripeException => None
             } map {
               chargeEvent => Seq(billingEvent, chargeEvent).flatten
@@ -105,7 +99,7 @@ class PaymentProcessingCommanderImpl @Inject() (
         whoDunnit = None,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,
-        action = AccountEventAction.PlanBilling(),
+        action = AccountEventAction.PlanBilling.from(plan, account),
         creditChange = billedAccount.credit - account.credit,
         paymentMethod = None,
         paymentCharge = None,
@@ -137,7 +131,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
-  private def chargeAccount(account: PaidAccount, amount: DollarAmount, chargeAction: ChargeEventAction): Future[(PaidAccount, Option[AccountEvent])] = {
+  private def chargeAccount(account: PaidAccount, amount: DollarAmount): Future[(PaidAccount, Option[AccountEvent])] = {
     account.paymentStatus match {
       case PaymentStatus.Ok | PaymentStatus.Required => {
 
@@ -147,14 +141,14 @@ class PaymentProcessingCommanderImpl @Inject() (
               paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Pending))
             }
 
-            stripeClient.processCharge(amount, pm.stripeToken, toChargeDescription(pendingChargeAccount, amount, chargeAction)) andThen {
+            stripeClient.processCharge(amount, pm.stripeToken, s"Charging organization ${account.orgId} owing ${account.owed}") andThen {
               case Failure(ex) =>
                 log.error(s"[PPC][${account.orgId}] Unexpected exception while processing charge via Stripe.", ex)
                 db.readWrite(attempts = 3) { implicit session =>
                   paidAccountRepo.save(pendingChargeAccount.withPaymentStatus(PaymentStatus.Required))
                 }
             } map {
-              case success: StripeChargeSuccess => endWithChargeSuccess(pendingChargeAccount, pm.id.get, success, chargeAction)
+              case success: StripeChargeSuccess => endWithChargeSuccess(pendingChargeAccount, pm.id.get, success)
               case failure: StripeChargeFailure => endWithChargeFailure(pendingChargeAccount, pm.id.get, amount, failure)
             }
           }
@@ -171,7 +165,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
-  private def endWithChargeSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], success: StripeChargeSuccess, action: ChargeEventAction): (PaidAccount, Some[AccountEvent]) = {
+  private def endWithChargeSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], success: StripeChargeSuccess): (PaidAccount, Some[AccountEvent]) = {
     db.readWrite(attempts = 3) { implicit session =>
       val chargedAccount = paidAccountRepo.save(account.withIncreasedCredit(success.amount).withPaymentStatus(PaymentStatus.Ok))
       val chargeEvent = eventCommander.track(AccountEvent(
@@ -181,14 +175,14 @@ class PaymentProcessingCommanderImpl @Inject() (
         whoDunnit = None,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,
-        action = action,
+        action = AccountEventAction.Charge(),
         creditChange = chargedAccount.credit - account.credit,
         paymentMethod = Some(paymentMethodId),
         paymentCharge = Some(success.amount),
         memo = None,
         chargeId = Some(success.chargeId)
       ))
-      log.info(s"[PPC][${account.orgId}] Processed charge for amount ${success.amount}: ${toChargeDescription(account, success.amount, action)}})")
+      log.info(s"[PPC][${account.orgId}] Processed charge for amount ${success.amount}")
       (chargedAccount, Some(chargeEvent))
     }
   }
@@ -237,17 +231,10 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
-  private def toChargeDescription(account: PaidAccount, amount: DollarAmount, action: ChargeEventAction) = action match {
-    case AccountEventAction.PlanBillingCharge() => s"Regular charge for org ${account.orgId} of amount $amount"
-    case AccountEventAction.MaxBalanceExceededCharge() => s"Max balance exceeded charge for org ${account.orgId} of amount $amount"
-    case AccountEventAction.RequiredCharge() => s"Required charge for org ${account.orgId} of $amount"
-    case AccountEventAction.ForcedCharge() => s"Forced charge for org ${account.orgId} of $amount"
-  }
-
   def forceChargeAccount(orgId: Id[Organization], amount: DollarAmount): Future[Option[AccountEvent]] = {
     accountLockHelper.maybeWithAccountLockAsync(orgId) {
       val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
-      chargeAccount(account, amount, AccountEventAction.ForcedCharge()).imap { case (_, chargeEvent) => chargeEvent }
+      chargeAccount(account, amount).imap { case (_, chargeEvent) => chargeEvent }
     } getOrElse { throw new LockedAccountException(orgId) }
   }
 }
