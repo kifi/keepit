@@ -168,8 +168,7 @@ class OrganizationCommanderImpl @Inject() (
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration = {
     val config = orgConfigRepo.getByOrgId(orgId)
     val plan = planManagementCommander.currentPlanHelper(orgId)
-    val isPaid = !plan.displayName.toLowerCase.contains("free")
-    ExternalOrganizationConfiguration(isPaid, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
+    ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
@@ -427,7 +426,8 @@ class OrganizationCommanderImpl @Inject() (
               orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
             case inactiveMembershipOpt =>
               orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
-              planManagementCommander.registerNewUser(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
+              planManagementCommander.registerNewAdmin(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
+              planManagementCommander.addUserAccountContact(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
           }
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
 

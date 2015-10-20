@@ -38,16 +38,14 @@ angular.module('kifi')
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
           },
           {
-            title: 'Who can edit libraries within your team?',
+            title: 'Can admins edit libraries within the team?',
             description: (
-              'Select who is able to edit library settings such as' +
-              ' visibility, title, and membership.' +
-              ' Library owners will always be able to edit their libraries.'
+              'Admins will be able to edit and delete non-private libraries within the team.'
             ),
             fieldKey: 'force_edit_libraries',
             selectOptions: getOptions(
-              { label: 'Library owner only', value: ORG_SETTING_VALUE.DISABLED },
-              ORG_SETTING_VALUE.ADMIN
+              { label: 'No', value: ORG_SETTING_VALUE.DISABLED },
+              { label: 'Yes', value: ORG_SETTING_VALUE.ADMIN }
             )
           },
           {
@@ -68,16 +66,16 @@ angular.module('kifi')
             title: 'Who can see the members list of this team?',
             description: (
               'Select who is able to see the list of team members.' +
-              ' "Anyone" means it is public and discoverable in' +
-              ' search engine\'s results like Google.'
+              ' "Anyone" means it is public and discoverable using' +
+              ' search engines like Google.'
             ),
             fieldKey: 'view_members',
             selectOptions: getOptions(ORG_SETTING_VALUE.ANYONE, ORG_SETTING_VALUE.MEMBER)
           },
           {
-            title: 'Who can add members to the team?',
+            title: 'Who can invite members to the team?',
             description: (
-              'Select who is able to add members to your team.'
+              'Select who is able to invite members to your team.'
             ),
             fieldKey: 'invite_members',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
@@ -106,7 +104,7 @@ angular.module('kifi')
           {
             title: $sce.trustAsHtml(
               'Who can' +
-              ' <a href="http://blog.kifi.com/slack-library-subscriptions/" target="_blank">create a Slack integration</a>' +
+              ' <a class="kf-link" href="http://blog.kifi.com/slack-library-subscriptions/" target="_blank">create a Slack integration</a>' +
               ' with Kifi?'
             ),
             description: (

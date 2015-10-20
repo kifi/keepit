@@ -908,6 +908,8 @@ POST          /admin/payments/addCreditCard                @com.keepit.controlle
 GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 
+GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
+
 ##########################################
 # Common Healthcheck / service routes
 ##########################################

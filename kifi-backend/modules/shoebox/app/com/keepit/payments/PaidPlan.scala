@@ -4,7 +4,6 @@ import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId, PublicIdConfiguration }
 import com.keepit.common.time._
 import com.keepit.model._
-import play.api.data.validation.ValidationError
 
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -14,10 +13,6 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 
 import javax.crypto.spec.IvParameterSpec
-
-import play.api.libs.json.Format
-
-import scala.util.{ Success, Failure, Try }
 
 @json
 case class BillingCycle(month: Int) extends AnyVal
@@ -34,7 +29,7 @@ object PaidPlanInfo {
     (__ \ 'id).format[PublicId[PaidPlan]] and
     (__ \ 'name).format[String] and
     (__ \ 'fullName).format[String] and
-    (__ \ 'pricePerUser).format(DollarAmount.dollarStringFormat) and
+    (__ \ 'pricePerUser).format(DollarAmount.formatAsCents) and
     (__ \ 'cycle).format[BillingCycle] and
     (__ \ 'features).format[Set[Feature]]
   )(PaidPlanInfo.apply, unlift(PaidPlanInfo.unapply))
@@ -77,13 +72,17 @@ case class PaidPlan(
       case _ => displayName + " " + cycleString
     }
   }
+
+  def isDefault = this.id.contains(PaidPlan.DEFAULT)
+  def showUpsells: Boolean = PaidPlan.showUpsells(this)
 }
 
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
   protected[this] val publicIdPrefix = "pp"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-81, 48, 82, -97, 110, 73, -46, -55, 43, 73, -107, -90, 89, 21, 116, -101))
 
-  val DEFAULT = Id[PaidPlan](1L)
+  val DEFAULT = Id[PaidPlan](3L)
+  def showUpsells(plan: PaidPlan) = Set(Id[PaidPlan](1L), Id[PaidPlan](3L), DEFAULT).contains(plan.id.get)
 
   @json
   case class Kind(name: String) extends AnyVal

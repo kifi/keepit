@@ -59,7 +59,7 @@ class LibraryFeedController @Inject() (
               val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || redirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
-            } else if (libraryAccessCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
+            } else if (library.isPublished) {
               feedCommander.libraryFeed(library, count, offset) map { rss =>
                 Result(
                   header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/rss+xml; charset=utf-8")),
@@ -86,7 +86,7 @@ class LibraryFeedController @Inject() (
               val uri = libPathCommander.getPathForLibraryUrlEncoded(library) + dropPathSegment(dropPathSegment(request.uri))
               val status = if (!isLibraryAlias || userRedirectStatusOpt.contains(303)) 303 else 301
               Future.successful(Redirect(uri, status))
-            } else if (libraryAccessCommander.canViewLibrary(request.userOpt.flatMap(_.id), library, authToken)) {
+            } else if (library.isPublished) {
               atomCommander.libraryFeed(library, count, offset) map { atom =>
                 Result(
                   header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/atom+xml; charset=utf-8")),

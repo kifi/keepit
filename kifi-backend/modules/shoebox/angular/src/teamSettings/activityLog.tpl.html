@@ -1,27 +1,33 @@
 <div class="kf-team-activity-log">
   <h1 class="kf-team-activity-top-header">Activity Log</h1>
-  <p>You currently have <b ng-bind="profile.numMembers"></b> team members. All billing happens at the beginning of the month. All times are handled in the UTC timezone.</p>
+  <div kf-billing-summary billing-state="billingState"></div>
   <div class="kf-container">
+    <div class="kf-container-header"><span>Activity</span></div>
     <table class="kf-team-activity-table" smart-scroll scroll-distance="'100%'" scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()">
+      <thead>
+        <tr>
+          <th>Date<small>(UTC)</small></th>
+          <th>Description</th>
+          <th>Change<small>(US Dollars)</small></th>
+        </tr>
+      </thead>
       <tbody>
         <tr ng-repeat="b in billingEvents">
           <td ng-bind="b.eventTime | amDateFormat:'YYYY-MM-DD'"></td>
-          <td>
-            <span
-              ng-repeat="descriptionSegment in b.description"
-            ><!-- prevent unwanted inline whitespace between description segments
-           --><span ng-if="!descriptionSegment.url" ng-bind="descriptionSegment.text"></span><!--
-           --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text"></a><!--
-           --><span ng-if="!$last">&nbsp;</span><!--
-       --></span><!--
-       --><span>.</span>
+          <td class="kf-team-activity-entry">
+            <span ng-repeat="descriptionSegment in b.description">
+              <!-- Use comments to eliminate whitespace before  -->
+              <span ng-if="!descriptionSegment.url" ng-bind="descriptionSegment.text"></span><!--
+             --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text"></a><!--
+             --><span ng-bind="$last ? '.' : ' '"></span>
+           </span>
           </td>
           <td
-            ng-bind="b.creditChange"
+            ng-bind="b.creditChange | money"
             ng-class="{
-              'kf-team-activity-debit': b.creditChange[0] === '-',
-              'kf-team-activity-credit': b.creditChange[0] !== '-',
-              'kf-team-activity-nocharge': b.creditChange === '$0.00'
+              'kf-team-activity-debit': (b.creditChange | isNegativeMoney),
+              'kf-team-activity-credit': (b.creditChange | isPositiveMoney),
+              'kf-team-activity-nocharge': (b.creditChange | isZeroMoney)
             }"
           >
           </td>
