@@ -55,7 +55,10 @@ angular.module('kifi')
               ' and into another location e.g. another team.'
             ),
             fieldKey: 'remove_libraries',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(
+              ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN,
+              { label: 'Admins & library owners', value: ORG_SETTING_VALUE.MEMBER }
+            )
           }
         ]
       },

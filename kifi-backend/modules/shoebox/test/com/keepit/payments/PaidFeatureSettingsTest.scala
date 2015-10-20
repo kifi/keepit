@@ -237,7 +237,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val (org, owner, admin, member, _) = setup()
 
         // Initially, removing libraries is completely disabled
-        val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.RemoveLibraries -> FeatureSetting.DISABLED) }
+        val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.RemoveLibraries -> FeatureSetting.ADMINS) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, initOrgSettings)) must beRight
 
         val (ownerLibrary, adminLibrary, memberLibrary) = db.readWrite { implicit session =>
@@ -251,13 +251,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val ownerModifyRequest = LibraryModifications(space = Some(UserSpace(owner.id.get)))
         val adminModifyRequest = LibraryModifications(space = Some(UserSpace(admin.id.get)))
         val memberModifyRequest = LibraryModifications(space = Some(UserSpace(member.id.get)))
-
-        libraryCommander.modifyLibrary(ownerLibrary.id.get, owner.id.get, ownerModifyRequest) must beLeft
-        libraryCommander.modifyLibrary(adminLibrary.id.get, admin.id.get, adminModifyRequest) must beLeft
-        libraryCommander.modifyLibrary(memberLibrary.id.get, member.id.get, memberModifyRequest) must beLeft
-
-        val orgSettings1 = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.RemoveLibraries -> FeatureSetting.ADMINS) }
-        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, orgSettings1)) must beRight
 
         libraryCommander.modifyLibrary(ownerLibrary.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(adminLibrary.id.get, admin.id.get, adminModifyRequest) must beRight
