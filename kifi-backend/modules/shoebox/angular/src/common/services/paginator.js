@@ -49,13 +49,16 @@ angular.module('kifi')
       var fetchPromise = sourceFunction(pageNumber, pageSize)
         .then(function (items) {
           this.hasMoreItems = this._calcServerHasMore(items);
-          this.loading = false;
           this.init = true;
           this.items = this.items.concat(items);
 
           return this.items;
         }.bind(this))
+        ['catch'](function () {
+          this.fetchPageNumber--;
+        })
         ['finally'](function () {
+          this.loading = false;
           this._cachedFetch = null;
         }.bind(this));
 

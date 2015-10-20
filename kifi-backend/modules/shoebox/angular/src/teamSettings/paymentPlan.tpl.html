@@ -21,8 +21,8 @@
       <div class="kf-payment-plan-card kf-payment-plan-card-basic">
         <div class="kf-payment-plan-card-title">Standard</div>
         <div class="kf-payment-plan-card-cost">6.67</div>
-        <p ng-if="!isPaidPlanName(plan.name)" class="kf-payment-plan-card-description">per user per month when billed anually</p>
-        <p ng-if="!isPaidPlanName(plan.name)" class="kf-payment-plan-card-description">$8 billed monthly</p>
+        <p class="kf-payment-plan-card-description">per user per month when billed annually</p>
+        <p class="kf-payment-plan-card-description">$8 billed monthly</p>
         <div class="kf-payment-plan-card-bottom">
           <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
           <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(plan.name)">Your current plan</p>
@@ -45,15 +45,13 @@
       </div>
     </div>
     <form name="planSelectsForm">
-      <p>Select your team's plan. Get details on the plans we offer on the <a class="kf-link" href="#">pricing page</a></p>
+      <p>Select your team's plan. Get details on the plans we offer on the <a class="kf-link" href="/pricing" target="_self">pricing page</a></p>
       <div class="custom-select kf-button">
         <select
           class="kf-payment-plan-select"
           ng-model="plan.name"
           ng-options="tier.value as tier.label for tier in availableTiers"
-        >
-          <option value="">Select a plan</option>
-        </select>
+        ></select>
       </div>
       <div ng-show="isPaidPlanName(plan.name)">
         <h2 class="kf-heading">Choose your Payment Frequency</h2>
@@ -63,13 +61,11 @@
             class="kf-payment-plan-select"
             ng-model="plan.cycle"
             ng-options="cycle.value as cycle.label for cycle in availableCycles"
-          >
-            <option value="">Select a payment frequency</option>
-          </select>
+          ></select>
         </div>
       <h2 class="kf-heading">Manage your Credit Card Information</h2>
       <p ng-if="!card">You haven't added a card yet.</p>
-      <p ng-if="card">Your current card is <b ng-bind="card.brand"></b> ****<b ng-bind="card.last4"></b></p>
+      <p ng-if="card">Your current card is <b ng-bind="card.brand"></b> ****<b ng-bind="card.lastFour"></b></p>
       <div>
         <button class="kf-button kf-button-large" ng-click="openStripeCheckout()">Add / Update Credit Card Info</button>
         <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">Your new card is ready to save</span>
@@ -85,7 +81,7 @@
         !plan.name ||
         (!plan.newCard && planSelectsForm.$pristine) ||
         (
-          !(card && card.last4) &&
+          !(card && card.lastFour) &&
           !plan.newCard
         )"
     >Save my plan preferences</button>

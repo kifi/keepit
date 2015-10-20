@@ -135,7 +135,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
         val price = DollarAmount(438)
-        val initialCredit = commander.MIN_BALANCE - DollarAmount.dollars(1)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.dollars(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -166,18 +166,19 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val price = DollarAmount(438)
         val initialCredit = -commander.MIN_BALANCE + DollarAmount(1)
         val initialBillingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
-        val accountPre = db.readWrite { implicit session =>
+        val (accountPre, plan) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
+          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withCredit(initialCredit)
             .withBillingCycleStart(initialBillingCycleStart)
             .saved
+          (account, plan)
         }
         accountPre.owed should beLessThan(commander.MIN_BALANCE)
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        events.map(_.action) === Seq(AccountEventAction.PlanBilling(), AccountEventAction.LowBalanceIgnored(accountPre.owed))
+        events.map(_.action) === Seq(AccountEventAction.PlanBilling.from(plan, accountPre), AccountEventAction.LowBalanceIgnored(accountPre.owed))
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
@@ -221,9 +222,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val commander = inject[PaymentProcessingCommander]
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         val price = DollarAmount(438)
-        val initialCredit = commander.MIN_BALANCE - DollarAmount.dollars(1)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.dollars(1)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
-        val accountPre = db.readWrite { implicit session =>
+        val (accountPre, plan) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
@@ -240,7 +241,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
             stripeToken = Await.result(stripeClient.getPermanentToken("fake_temporary_token", ""), Duration.Inf)
           ))
 
-          account
+          (account, plan)
         }
 
         accountPre.owed === -initialCredit
@@ -248,7 +249,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         billedAmount - initialCredit should beGreaterThan(DollarAmount.ZERO)
 
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        events.map(_.action) === Seq(AccountEventAction.PlanBilling(), AccountEventAction.PlanBillingCharge())
+        events.map(_.action) === Seq(AccountEventAction.PlanBilling.from(plan, accountPre), AccountEventAction.Charge())
         val Seq(billingEvent, chargeEvent) = events
 
         billingEvent.creditChange === -billedAmount
@@ -274,7 +275,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         val price = DollarAmount(438)
         val billingCycleStart = currentDateTime
-        val initialCredit = commander.MAX_BALANCE - DollarAmount.dollars(7)
+        val initialCredit = -commander.MAX_BALANCE - DollarAmount.dollars(7)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -298,7 +299,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         accountPre.owed should beGreaterThan(commander.MAX_BALANCE)
 
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        events.map(_.action) === Seq(AccountEventAction.MaxBalanceExceededCharge())
+        events.map(_.action) === Seq(AccountEventAction.Charge())
         val Seq(chargeEvent) = events
 
         chargeEvent.paymentCharge === Some(accountPre.owed)
@@ -320,7 +321,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         val price = DollarAmount(438)
         val billingCycleStart = currentDateTime
-        val initialCredit = -(commander.MIN_BALANCE + DollarAmount(1))
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -346,7 +347,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         accountPre.owed should beLessThan(commander.MAX_BALANCE)
 
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        events.map(_.action) === Seq(AccountEventAction.RequiredCharge())
+        events.map(_.action) === Seq(AccountEventAction.Charge())
         val Seq(chargeEvent) = events
 
         chargeEvent.paymentCharge === Some(accountPre.owed)
@@ -368,9 +369,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         stripeClient.cardFailureMode = true
         val price = DollarAmount(438)
-        val initialCredit = commander.MAX_BALANCE - DollarAmount.dollars(7)
+        val initialCredit = -commander.MAX_BALANCE - DollarAmount.dollars(7)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
-        val accountPre = db.readWrite { implicit session =>
+        val (accountPre, plan) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
@@ -387,13 +388,13 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
             stripeToken = Await.result(stripeClient.getPermanentToken("fake_temporary_token", ""), Duration.Inf)
           ))
 
-          account
+          (account, plan)
         }
 
         val billedAmount = price * 3
 
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        events.map(_.action) === Seq(AccountEventAction.PlanBilling(), AccountEventAction.ChargeFailure(accountPre.owed + billedAmount, "boom", "boom"))
+        events.map(_.action) === Seq(AccountEventAction.PlanBilling.from(plan, accountPre), AccountEventAction.ChargeFailure(accountPre.owed + billedAmount, "boom", "boom"))
 
         val billingEvent = events.head
         billingEvent.creditChange === -billedAmount
@@ -416,7 +417,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val price = DollarAmount(438)
         val initialCredit = -commander.MAX_BALANCE - DollarAmount.dollars(7)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
-        val accountPre = db.readWrite { implicit session =>
+        val (accountPre, plan) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
@@ -433,13 +434,13 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
             stripeToken = Await.result(stripeClient.getPermanentToken("fake_temporary_token", ""), Duration.Inf)
           ))
 
-          account
+          (account, plan)
         }
 
         val billedAmount = price * 3
 
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        events.map(_.action) === Seq(AccountEventAction.PlanBilling())
+        events.map(_.action) === Seq(AccountEventAction.PlanBilling.from(plan, accountPre))
 
         val billingEvent = events.head
         billingEvent.creditChange === -billedAmount
@@ -459,25 +460,25 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
         val price = DollarAmount(438)
-        val initialCredit = commander.MAX_BALANCE - DollarAmount.dollars(7)
+        val initialCredit = -commander.MAX_BALANCE - DollarAmount.dollars(7)
         val billingCycleStart = currentDateTime.minusMonths(1).minusDays(1)
-        val accountPre = db.readWrite { implicit session =>
+        val (accountPre, plan) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
 
-          PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
+          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
             .withBillingCycleStart(billingCycleStart)
             .withCredit(initialCredit)
             .withActiveUsers(3)
             .saved
-
+          (account, plan)
         }
 
         val billedAmount = price * 3
 
         val events = Await.result(commander.processAccount(accountPre), Duration.Inf)
-        events.map(_.action) === Seq(AccountEventAction.PlanBilling(), AccountEventAction.MissingPaymentMethod())
+        events.map(_.action) === Seq(AccountEventAction.PlanBilling.from(plan, accountPre), AccountEventAction.MissingPaymentMethod())
 
         val billingEvent = events.head
         billingEvent.creditChange === -billedAmount

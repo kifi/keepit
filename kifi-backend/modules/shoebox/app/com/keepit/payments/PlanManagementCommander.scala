@@ -106,7 +106,7 @@ class PlanManagementCommanderImpl @Inject() (
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
   private def remainingBillingCycleCost(account: PaidAccount)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
-    val cycleLengthMonth: Int = plan.billingCycle.month
+    val cycleLengthMonth = plan.billingCycle.month
     val cycleStart: DateTime = account.billingCycleStart
     val cycleEnd: DateTime = cycleStart.plusMonths(cycleLengthMonth)
     val cycleLengthDays: Double = Days.daysBetween(cycleStart, cycleEnd).getDays.toDouble //note that this is different depending on the current month
@@ -470,8 +470,8 @@ class PlanManagementCommanderImpl @Inject() (
     val newPlan = paidPlanRepo.get(newPlanId)
     val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM)
     if (newPlan.state == PaidPlanStates.ACTIVE && allowedKinds.contains(newPlan.kind)) {
-      val updatedAccount = account.withNewPlan(newPlanId)
       val refund = DollarAmount(remainingBillingCycleCost(account).cents * account.activeUsers)
+      val updatedAccount = account.withNewPlan(newPlanId)
       val newCharge = DollarAmount(remainingBillingCycleCost(updatedAccount).cents * account.activeUsers)
       paidAccountRepo.save(
         updatedAccount.withIncreasedCredit(refund).withReducedCredit(newCharge)

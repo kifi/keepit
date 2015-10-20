@@ -18,6 +18,7 @@ trait AccountEventRepo extends Repo[AccountEvent] {
   def getByAccountAndState(accountId: Id[PaidAccount], state: State[AccountEvent])(implicit session: RSession): Seq[AccountEvent]
   def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
   def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
+  def getAllEvents(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent]
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
 
@@ -33,6 +34,7 @@ class AccountEventRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val accountEventKindMapper = MappedColumnType.base[AccountEventKind, String](_.value, AccountEventKind.get(_).get) // explicitly requires "good" data
 
   type RepoImpl = AccountEventTable
 
@@ -50,7 +52,7 @@ class AccountEventRepoImpl @Inject() (
 
     def kifiAdminInvolved = column[Option[Id[User]]]("kifi_admin_involved", O.Nullable)
 
-    def eventType = column[String]("event_type", O.NotNull)
+    def eventType = column[AccountEventKind]("event_type", O.NotNull)
 
     def eventTypeExtras = column[Option[JsValue]]("event_type_extras", O.Nullable)
 
@@ -92,13 +94,19 @@ class AccountEventRepoImpl @Inject() (
     relevantEvents.sortBy(r => (r.eventTime desc, r.id desc)).take(limit).list
   }
 
-  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+  private def getEventsHelper(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession) = {
     val accountEvents = rows.filter(row => row.accountId === accountId && row.state =!= AccountEventStates.INACTIVE)
     val relevantEvents = onlyRelatedToBillingOpt match {
       case Some(onlyRelatedToBilling) => accountEvents.filter(_.billingRelated === onlyRelatedToBilling)
       case None => accountEvents
     }
-    relevantEvents.sortBy(r => (r.eventTime desc, r.id)).take(limit).list
+    relevantEvents.sortBy(r => (r.eventTime desc, r.id))
+  }
+  def getEvents(accountId: Id[PaidAccount], limit: Int, onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    getEventsHelper(accountId, onlyRelatedToBillingOpt).take(limit).list
+  }
+  def getAllEvents(accountId: Id[PaidAccount], onlyRelatedToBillingOpt: Option[Boolean])(implicit session: RSession): Seq[AccountEvent] = {
+    getEventsHelper(accountId, onlyRelatedToBillingOpt).list
   }
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
@@ -106,7 +114,8 @@ class AccountEventRepoImpl @Inject() (
   }
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent] = {
-    (for (row <- rows if row.accountId === accountId && (row.eventType === "user_added" || row.eventType === "user_removed")) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
+    val (userAdded, userRemoved): (AccountEventKind, AccountEventKind) = (AccountEventKind.UserAdded, AccountEventKind.UserRemoved)
+    (for (row <- rows if row.accountId === accountId && (row.eventType === userAdded || row.eventType === userRemoved)) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
 
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {

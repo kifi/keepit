@@ -138,6 +138,19 @@ angular.module('kifi')
   }
 ])
 
+.filter('moneyUnwrap', function () {
+  return function (amount, unit) {
+    if (typeof amount === 'object') {
+      if (typeof unit === 'undefined') {
+        unit = Object.keys(amount)[0];
+      }
+      return amount[unit];
+    } else {
+      return amount;
+    }
+  };
+})
+
 .filter('isPositiveMoney', [
   '$filter',
   function ($filter) {

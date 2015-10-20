@@ -15,7 +15,9 @@ import org.joda.time.{ Days, DateTime }
 object OrganizationFactoryHelper {
   implicit class OrganizationPersister(partialOrganization: PartialOrganization) {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
-      val plan = PaidPlanFactory.paidPlan().saved
+      val plan = partialOrganization.planOpt.map { id =>
+        injector.getInstance(classOf[PaidPlanRepo]).get(Id[PaidPlan](id))
+      }.getOrElse(PaidPlanFactory.paidPlan().saved)
       val orgTemplate = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
       val handleCommander = injector.getInstance(classOf[HandleCommander])
       val org = if (orgTemplate.primaryHandle.isEmpty) {

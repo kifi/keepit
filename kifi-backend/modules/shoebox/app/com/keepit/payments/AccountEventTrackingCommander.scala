@@ -38,19 +38,23 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   def track(event: AccountEvent)(implicit session: RWSession): AccountEvent = {
     eventRepo.save(event) tap { savedEvent =>
-      if (savedEvent.billingRelated) session.onTransactionSuccess {
-        val (account, org, paymentMethod) = db.readOnlyMaster { implicit session =>
-          val account = accountRepo.get(event.accountId)
-          val org = orgRepo.get(account.orgId)
-          val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get(_))
-          (account, org, paymentMethod)
-        }
-        reportToSlack(s"[${org.name}][Payment: ${account.paymentStatus.value}}] ${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")
+      session.onTransactionSuccess { report(savedEvent) }
+    }
+  }
 
-        // todo(Léo): not sure this one belongs here vs PaymentProcessingCommander
-        savedEvent.chargeId.foreach { chargeId =>
-          notifyOfCharge(account, paymentMethod.get.stripeToken, savedEvent.paymentCharge.get, chargeId)
-        }
+  private def report(event: AccountEvent): Unit = {
+    if (event.billingRelated) {
+      val (account, org, paymentMethod) = db.readOnlyMaster { implicit session =>
+        val account = accountRepo.get(event.accountId)
+        val org = orgRepo.get(account.orgId)
+        val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get(_))
+        (account, org, paymentMethod)
+      }
+      reportToSlack(s"[${org.name}][Payment: ${account.paymentStatus.value}}] ${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")
+
+      // todo(Léo): not sure this one belongs here vs PaymentProcessingCommander
+      event.chargeId.foreach { chargeId =>
+        notifyOfCharge(account, paymentMethod.get.stripeToken, event.paymentCharge.get, chargeId)
       }
     }
   }

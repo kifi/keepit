@@ -6,14 +6,18 @@ import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
+import org.specs2.matcher._
 import com.keepit.controllers.admin.AdminPaymentsController
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model._
 import com.keepit.payments.{ ActionAttribution, PaidAccountRepo, BillingCycle, PaidPlanInfo, PaidPlanRepo, DollarAmount, PlanManagementCommander, PaidPlan, FakeStripeClientModule }
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.lang3.RandomStringUtils
+import org.specs2.matcher.{ Expectable, Matcher, Delta }
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ Json, JsObject }
 import play.api.mvc.Call
@@ -66,29 +70,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
         )
         Seq(standardMonthlyPlan, standardBiannualPlan, standardAnnualPlan)
-      }
-    }
-
-    "get an account's state" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (org, owner, account, plan) = setup()
-
-        val publicId = Organization.publicId(org.id.get)
-        inject[FakeUserActionsHelper].setUser(owner)
-        val request = route.getAccountState(publicId)
-        val response = controller.getAccountState(publicId)(request)
-        val payload = contentAsJson(response).as[JsObject]
-        (payload \ "users").as[Int] must beEqualTo(account.activeUsers)
-        (payload \ "balance").as[JsObject] === Json.obj("cents" -> account.credit.toCents)
-        (payload \ "charge").as[JsObject] === Json.obj("cents" -> (plan.pricePerCyclePerUser * account.activeUsers).toCents)
-
-        val planJson = (payload \ "plan").as[JsObject]
-        val actualPlan = planManagementCommander.currentPlan(org.id.get)
-        (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
-        (planJson \ "name").as[String] must beEqualTo(plan.displayName)
-        (planJson \ "pricePerUser").as[JsObject] === Json.obj("cents" -> plan.pricePerCyclePerUser.toCents)
-        (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.month)
-        (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
       }
     }
 
@@ -165,6 +146,150 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
         (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
         (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
+      }
+    }
+
+    "report an account's state" in {
+      "have all the expected fields" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val planCommander = inject[PlanManagementCommander]
+          val (org, owner, account, plan) = setup()
+
+          val publicId = Organization.publicId(org.id.get)
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getAccountState(publicId)
+          val response = controller.getAccountState(publicId)(request)
+          val payload = contentAsJson(response).as[JsObject]
+          (payload \ "users").as[Int] must beEqualTo(account.activeUsers)
+          (payload \ "balance").as[JsObject] === Json.obj("cents" -> account.credit.toCents)
+          (payload \ "charge").as[JsObject] === Json.obj("cents" -> (plan.pricePerCyclePerUser * account.activeUsers).toCents)
+
+          val planJson = (payload \ "plan").as[JsObject]
+          val actualPlan = planCommander.currentPlan(org.id.get)
+          (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
+          (planJson \ "name").as[String] must beEqualTo(plan.displayName)
+          (planJson \ "pricePerUser").as[JsObject] === Json.obj("cents" -> plan.pricePerCyclePerUser.toCents)
+          (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.month)
+          (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
+        }
+      }
+      "when changing plans" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, curPlan, newPlan) = db.readWrite { implicit session =>
+            val curPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle.months(1)).withPricePerCyclePerUser(DollarAmount.ZERO).saved
+            val newPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle.months(1)).withPricePerCyclePerUser(DollarAmount.dollars(42)).saved
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withPlan(curPlan.id.get.id).saved
+            (org, owner, curPlan, newPlan)
+          }
+          val orgId = Organization.publicId(org.id.get)
+          val newPlanId = PaidPlan.publicId(newPlan.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+
+          val initialBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
+          val response1 = controller.getAccountState(orgId)(route.getAccountState(orgId))
+          status(response1) === OK
+          val result1 = contentAsJson(response1)
+          (result1 \ "plan" \ "pricePerUser").as[DollarAmount](DollarAmount.formatAsCents) === curPlan.pricePerCyclePerUser
+          (result1 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === initialBalance
+
+          val setRequest = route.updatePlan(orgId, newPlanId)
+          val setResponse = controller.updatePlan(orgId, newPlanId)(setRequest)
+          status(setResponse) === OK
+          val finalBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
+          finalBalance must beLessThan(initialBalance) // simple sanity check, actual logic should be tested in the commander
+
+          val response2 = controller.getAccountState(orgId)(route.getAccountState(orgId))
+          status(response2) === OK
+          val result2 = contentAsJson(response2)
+          (result2 \ "plan" \ "pricePerUser").as[DollarAmount](DollarAmount.formatAsCents) === newPlan.pricePerCyclePerUser
+          (result2 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === finalBalance
+        }
+      }
+
+      "when adding/removing members" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, rando, plan) = db.readWrite { implicit session =>
+            val plan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle.months(1)).withPricePerCyclePerUser(DollarAmount.dollars(42)).saved
+            val owner = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withPlan(plan.id.get.id).saved
+            (org, owner, rando, plan)
+          }
+          val orgId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+
+          val initialBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
+          val response1 = controller.getAccountState(orgId)(route.getAccountState(orgId))
+          status(response1) === OK
+          val result1 = contentAsJson(response1)
+          (result1 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === initialBalance
+
+          orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get, adminIdOpt = None))
+
+          val addedBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
+          addedBalance must beLessThan(initialBalance) // simple sanity check, actual logic should be tested in the commander
+
+          val response2 = controller.getAccountState(orgId)(route.getAccountState(orgId))
+          status(response2) === OK
+          val result2 = contentAsJson(response2)
+          (result2 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === addedBalance
+
+          orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(org.id.get, owner.id.get, rando.id.get))
+
+          val removedBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
+          removedBalance === initialBalance
+
+          val response3 = controller.getAccountState(orgId)(route.getAccountState(orgId))
+          status(response3) === OK
+          val result3 = contentAsJson(response3)
+          (result3 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === removedBalance
+        }
+      }
+    }
+    "get and set a credit card token" in {
+      "handle permissions correctly" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, orgAdmin, member, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val orgAdmin = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withAdmins(Seq(orgAdmin)).withMembers(Seq(member)).saved
+            (org, owner, orgAdmin, member, rando)
+          }
+          val publicId = Organization.publicId(org.id.get)
+
+          val goodUsers = Seq(owner, orgAdmin)
+          val badUsers = Seq(member, rando)
+
+          for (user <- goodUsers) {
+            inject[FakeUserActionsHelper].setUser(user)
+            val setPayload = Json.obj("token" -> RandomStringUtils.randomAlphanumeric(10))
+            val setRequest = route.setCreditCardToken(publicId).withBody(setPayload)
+            val setResponse = controller.setCreditCardToken(publicId)(setRequest)
+            status(setResponse) === OK
+
+            val getRequest = route.getCreditCardToken(publicId)
+            val getResponse = controller.getCreditCardToken(publicId)(getRequest)
+            status(getResponse) === OK
+            (contentAsJson(getResponse) \ "token").asOpt[String] must beSome
+          }
+          for (user <- badUsers) {
+            inject[FakeUserActionsHelper].setUser(user)
+            val setPayload = Json.obj("token" -> RandomStringUtils.randomAlphanumeric(10))
+            val setRequest = route.setCreditCardToken(publicId).withBody(setPayload)
+            val setResponse = controller.setCreditCardToken(publicId)(setRequest)
+            status(setResponse) === FORBIDDEN
+
+            val getRequest = route.getCreditCardToken(publicId)
+            val getResponse = controller.getCreditCardToken(publicId)(getRequest)
+            status(getResponse) === FORBIDDEN
+          }
+          1 === 1
+        }
       }
     }
   }
