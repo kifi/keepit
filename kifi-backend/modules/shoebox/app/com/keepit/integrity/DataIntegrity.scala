@@ -62,7 +62,7 @@ private[integrity] class DataIntegrityActor @Inject() (
     case SystemLibraryCheck =>
       libraryChecker.checkSystemLibraries()
     case PaymentsMembershipCheck =>
-      paymentsChecker.checkMemberships()
+      paymentsChecker.checkAccounts()
     case Cron =>
       self ! CleanOrphans
       self ! SequenceNumberCheck

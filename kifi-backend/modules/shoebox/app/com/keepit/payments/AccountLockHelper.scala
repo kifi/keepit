@@ -9,6 +9,8 @@ import com.google.inject.Inject
 
 import scala.concurrent.{ Future, ExecutionContext }
 
+case class LockedAccountException(orgId: Id[Organization]) extends Exception(s"Failed to acquire account lock for organization $orgId")
+
 class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRepo, implicit val ec: ExecutionContext) {
 
   def acquireAccountLockForSession(orgId: Id[Organization], session: RWSession, attempts: Int = 1): Boolean = {

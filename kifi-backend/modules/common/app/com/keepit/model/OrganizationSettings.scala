@@ -140,7 +140,7 @@ object Feature {
   case object RemoveLibraries extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.REMOVE_LIBRARIES.value
     val permission = OrganizationPermission.REMOVE_LIBRARIES
-    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
+    val settings: Set[FeatureSetting] = Set(ADMINS, MEMBERS)
   }
 
   case object CreateSlackIntegration extends Feature with FeatureWithPermissions {

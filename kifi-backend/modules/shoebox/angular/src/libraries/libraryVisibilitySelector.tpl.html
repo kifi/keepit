@@ -28,7 +28,7 @@
         on-click="onClickUpsellPublic()"
         on-hover="onHoverUpsellPublic()"
       >
-      <span ng-if="space.config.isPaid">
+      <span ng-if="!space.config.showUpsells">
         <span ng-if="(space.viewer.membership && space.viewer.membership.role === 'admin') && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER">
           Any member can make libraries public. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
         </span>
@@ -42,7 +42,7 @@
           Public libraries are disabled for {{ space.name }}. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.handle })">settings</a>
         </span>
       </span>
-      <span ng-if="!space.config.isPaid">
+      <span ng-if="space.config.showUpsells">
         Restrict who can make libraries public by <a class="kf-link" href="#">upgrading your plan</a>.
       </span>
     </label>

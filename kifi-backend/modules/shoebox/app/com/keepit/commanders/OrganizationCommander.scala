@@ -18,6 +18,7 @@ import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION 
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan, ActionAttribution }
+import play.api.Play
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -36,6 +37,7 @@ trait OrganizationCommander {
   def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse
   def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration
+  def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization]
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
@@ -107,7 +109,7 @@ class OrganizationCommanderImpl @Inject() (
 
   def getBasicOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): BasicOrganizationView = {
     // This function assumes that the org is active
-    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganization(orgId).get)
+    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganizationHelper(orgId).get)
     val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
     BasicOrganizationView(basicOrganization, membershipInfo)
   }
@@ -116,7 +118,7 @@ class OrganizationCommanderImpl @Inject() (
     val cacheFormattedMap = db.readOnlyReplica { implicit session =>
       basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
         missing.map(_.id).map {
-          orgId => orgId -> getBasicOrganization(orgId) // grab all the Option[BasicOrganization]
+          orgId => orgId -> getBasicOrganizationHelper(orgId) // grab all the Option[BasicOrganization]
         }.collect {
           case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
         }.map {
@@ -127,7 +129,7 @@ class OrganizationCommanderImpl @Inject() (
     cacheFormattedMap.map { case (orgKey, org) => (orgKey.id, org) }
   }
 
-  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = {
+  def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = {
     val org = orgRepo.get(orgId)
     if (org.isInactive) None
     else {
@@ -168,8 +170,7 @@ class OrganizationCommanderImpl @Inject() (
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration = {
     val config = orgConfigRepo.getByOrgId(orgId)
     val plan = planManagementCommander.currentPlanHelper(orgId)
-    val isPaid = !plan.displayName.toLowerCase.contains("free")
-    ExternalOrganizationConfiguration(isPaid, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
+    ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
@@ -313,7 +314,7 @@ class OrganizationCommanderImpl @Inject() (
           val org = handleCommander.autoSetOrganizationHandle(savedOrg) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
           maybeNotifySlackOfNewOrganization(org.id.get, request.requesterId)
 
-          val plan = paidPlanRepo.get(PaidPlan.DEFAULT)
+          val plan = if (Play.maybeApplication.exists(Play.isProd(_))) paidPlanRepo.get(PaidPlan.DEFAULT) else paidPlanRepo.get(Id[PaidPlan](1L))
           orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
           planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
 

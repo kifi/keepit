@@ -5,6 +5,7 @@ import java.util.regex.Pattern
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.http._
+import com.keepit.common.service.IpAddress
 import controllers.AssetsBuilder
 import org.apache.commons.io.IOUtils
 import play.api.Play.current
@@ -77,7 +78,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
       val pickOpt = Try(request.getQueryString("v").map(_.toInt)).toOption.flatten
 
       pickOpt.flatMap(v => versions.find(_.version == v)).getOrElse {
-        //        val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+        //        val ip = IpAddress.fromRequest(request).ip
         //        val hash = Math.abs(ip.hashCode) % 100
         //        (if (hash < 50) Version10 else Version9) tap { w => log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$w") }
         Version11

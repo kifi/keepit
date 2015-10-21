@@ -4,6 +4,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 
 import java.util.concurrent.atomic.AtomicInteger
+import com.stripe.exception.APIConnectionException
 
 case class FakeTransaction(id: String, amount: DollarAmount, token: StripeToken, description: String)
 
@@ -14,7 +15,8 @@ class FakeStripeClientImpl extends StripeClient {
 
   var transactions = Map[StripeToken, ArrayBuffer[FakeTransaction]]()
 
-  var failingMode = false
+  var cardFailureMode = false
+  var stripeDownMode = false
 
   private def newToken(): Future[StripeToken] = Future.successful {
     val num = tokenCounter.getAndIncrement()
@@ -24,8 +26,9 @@ class FakeStripeClientImpl extends StripeClient {
   }
 
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult] = {
-    if (failingMode) {
-      Future.failed(new Exception("boom"))
+    if (stripeDownMode) Future.failed(new APIConnectionException("Stripe is down!"))
+    else if (cardFailureMode) {
+      Future.successful(StripeChargeFailure("boom", "boom"))
     } else {
       val num = chargeCounter.getAndIncrement()
       val trans = FakeTransaction(s"faketransaction_$num", amount, token, description)

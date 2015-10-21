@@ -12,7 +12,19 @@ angular.module('kifi')
     $scope.billingState = billingState;
     $scope.card = billingState.card;
 
+    var PREDEFINED_CYCLE_PERIOD = {
+      1: 'Monthly',
+      12: 'Annual'
+    };
+
+    var PREDEFINED_CYCLE_ADVERB = {
+      1: 'Monthly',
+      12: 'Annually'
+    };
+
     var picFilter = $filter('pic');
+    var moneyFilter = $filter('money');
+    var moneyUnwrapFilter = $filter('moneyUnwrap');
 
     var handler = StripeCheckout.configure({
       locale: 'auto'
@@ -23,20 +35,13 @@ angular.module('kifi')
       handler
       .open({
         image: picFilter($scope.profile),
-        name: 'Kifi Paid Plan',
-        description: 'Unlock awesome paid-only features',
+        name: 'Kifi Teams',
+        description: 'Update your Teams Plan',
         allowRememberMe: false,
         panelLabel: 'Save My Card'
       })
       .then(function (response) {
         $scope.plan.newCard = response[0];
-      })
-      ['catch'](function () {
-        modalService.openGenericErrorModal({
-          modalData: {
-            genericErrorMessage: 'Your payment information was not updated.'
-          }
-        });
       });
     };
 
@@ -96,17 +101,6 @@ angular.module('kifi')
         newPlan.cycle === oldPlan.cycle
       );
 
-      // Do nothing for the no-value options in the select
-      if (!initializing && (newPlan.name === null || ($scope.isPaidPlanName(newPlan.name) && newPlan.cycle === null))) {
-        return;
-      }
-
-      // Don't let users re-save their current plan
-      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
-        resetForm();
-        return;
-      }
-
       if (initializing || newPlan.name !== oldPlan.name) {
         // Create the list of cycles available to this plan
         $scope.availableCycles = getCyclesByTier(plansByTier[newPlan.name]);
@@ -142,26 +136,97 @@ angular.module('kifi')
 
         $scope.selectedPlan = selectedPlan;
       }
+
+      // Set pristine if the user moves back to the initial values
+      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
+        resetForm();
+      }
     }, true);
 
     function getCyclesByTier(tier) {
       var cyclesSoFar = [];
+      var leastEfficientPlan;
+      var extraText = '';
+      var savingsPerUser;
+      var totalSavings;
+
+      if (!$scope.isFreePlanName(tier[0].name)) {
+        leastEfficientPlan = getLeastEfficientPlan(tier);
+      }
 
       return tier.map(function (plan) {
         if (cyclesSoFar.indexOf(plan.cycle) === -1) {
           cyclesSoFar.push(plan.cycle); // prevent duplicates
 
+          if (leastEfficientPlan && plan !== leastEfficientPlan) {
+            savingsPerUser = getSavings(leastEfficientPlan, plan);
+            totalSavings = savingsPerUser * billingState.users;
+            extraText = ' (You save ' + moneyFilter(totalSavings) + ' ' + PREDEFINED_CYCLE_ADVERB[plan.cycle] + ')';
+          }
+
           return {
             value: plan.cycle,
-            label: plan.cycle + ' month' + (plan.cycle > 1 ? 's' : '')
+            label: getCycleLabel(plan) + extraText
           };
         }
       }).filter(Boolean);
     }
 
+    function getLeastEfficientPlan(tier) {
+      var highestPrice = getPricePerUserPerCycle(tier[0]);
+
+      return tier.reduce(function (highestPricePlanSoFar, plan) {
+        var price = getPricePerUserPerCycle(plan);
+        if (price > highestPrice) {
+          highestPrice = price;
+          return plan;
+        } else {
+          return highestPricePlanSoFar;
+        }
+      });
+    }
+
+    function getPricePerUserPerCycle(plan) {
+      return moneyUnwrapFilter(plan.pricePerUser) / moneyUnwrapFilter(plan.cycle);
+    }
+
+    function getSavings(lessEfficientPlan, moreEfficientPlan) {
+      var ratio = moreEfficientPlan.cycle / lessEfficientPlan.cycle;
+      var savings = moneyUnwrapFilter(lessEfficientPlan.pricePerUser) * ratio - moneyUnwrapFilter(moreEfficientPlan.pricePerUser);
+
+      return savings;
+    }
+
+    function getCycleLabel(plan) {
+      var period = PREDEFINED_CYCLE_PERIOD[plan.cycle] || 'Every ' + plan.cycle + ' months';
+      var rate = moneyUnwrapFilter(plan.pricePerUser) / plan.cycle;
+      var rateString = moneyFilter(rate);
+
+      return period + ' - ' + rateString + ' per user per month';
+    }
+
     $scope.save = function () {
       var saveSeriesDeferred = $q.defer();
       var saveSeriesPromise = saveSeriesDeferred.promise;
+
+      // If nothing changed, pretend we saved it.
+      if (!$scope.plan.newCard && $scope.planSelectsForm.$pristine) {
+        messageTicker({
+          text: 'Saved Successfully',
+          type: 'green'
+        });
+        return;
+      }
+
+      // If the team doesn't have a card, show an error
+      if($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
+        modalService.openGenericErrorModal({
+          modalData: {
+            genericErrorMessage: 'Save unsuccessful. You must enter a card to upgrade.'
+          }
+        });
+        return;
+      }
 
       saveSeriesPromise.then(function () {
         $window.addEventListener('beforeunload', onBeforeUnload);
@@ -185,7 +250,7 @@ angular.module('kifi')
         });
         resetForm();
         $timeout(function () {
-          $state.reload('orgProfile.settings');
+          $state.reload('orgProfile');
         }, 10);
       })
       ['catch'](modalService.genericErrorModal)
@@ -197,15 +262,15 @@ angular.module('kifi')
       saveSeriesDeferred.resolve();
     };
 
-    function resetForm() {
-      $scope.planSelectsForm.$setPristine();
-      $scope.plan.newCard = null;
-    }
-
     function onBeforeUnload(e) {
       var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
       (e || $window.event).returnValue = message; // for Firefox
       return message;
+    }
+
+    function resetForm() {
+      $scope.planSelectsForm.$setPristine();
+      $scope.plan.newCard = null;
     }
 
     [

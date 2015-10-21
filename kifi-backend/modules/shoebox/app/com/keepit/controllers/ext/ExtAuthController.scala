@@ -118,7 +118,7 @@ class ExtAuthController @Inject() (
           }
         }
 
-        val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+        val ip = IpAddress.fromRequest(request).ip
         val encryptedIp: String = crypt.crypt(ipkey, ip).trim
 
         Ok(Json.obj(
