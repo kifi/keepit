@@ -45,6 +45,28 @@ angular.module('kifi')
       });
     };
 
+    $scope.downgradeModalOrSave = function () {
+      if ($scope.selectedPlan.features.length >= currentPlan.features.length) {
+        $scope.save();
+      } else {
+        openDowngradeModal();
+      }
+    };
+
+    function openDowngradeModal () {
+      modalService.open({
+        template: 'teamSettings/downgradeConfirmModal.tpl.html',
+        modalData: {
+          save: function () {
+            $scope.save();
+          },
+          close: function () {
+            modalService.close();
+          }
+        }
+      });
+    }
+
     $scope.changePlanToFree = function () {
       var freeTierPlans = plansByTier[Object.keys(plansByTier)[0]];
       var firstFreeTierPlan = freeTierPlans[0];
