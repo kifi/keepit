@@ -199,7 +199,6 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
-  implicit val errFormat = PaymentsIntegrityError.dbFormat
   @json
   case class IntegrityError(err: PaymentsIntegrityError) extends AccountEventAction {
     def eventType = AccountEventKind.IntegrityError

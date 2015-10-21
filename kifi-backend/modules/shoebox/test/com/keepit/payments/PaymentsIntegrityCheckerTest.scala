@@ -4,6 +4,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.db.Id
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
@@ -15,6 +16,7 @@ import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
+import play.api.libs.json.{ JsSuccess, Json }
 
 class PaymentsIntegrityCheckerTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   def modules = Seq(
@@ -30,6 +32,16 @@ class PaymentsIntegrityCheckerTest extends TestKitSupport with SpecificationLike
   )
 
   "PaymentsIntegrityChecker" should {
+    "serialize and deserialize errors" in {
+      val all = Seq[PaymentsIntegrityError](
+        PaymentsIntegrityError.CouldNotGetAccountLock("cngal"),
+        PaymentsIntegrityError.InconsistentAccountBalance(DollarAmount.cents(42), DollarAmount.dollars(19)),
+        PaymentsIntegrityError.MissingOrganizationMember(Id[User](42)),
+        PaymentsIntegrityError.ExtraOrganizationMember(Id[User](1231))
+      )
+      val dump = Json.toJson(all)
+      dump.validate[Seq[PaymentsIntegrityError]] === JsSuccess(all)
+    }
     "do nothing if there's nothing wrong" in {
       withDb(modules: _*) { implicit injector =>
         val (org, owner, members) = db.readWrite { implicit session =>
