@@ -89,6 +89,7 @@
   }
 
   function trackEvent(action, props) {
+    //$log.log(action, props);
     if (isAnalyticsEnabled()) { // TODO: fake implementation for tests
       if ('path' in props && !props.type) {
         props.type = getLocation(props.path);
