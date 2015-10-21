@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('OrgProfileCreateCtrl', [
-  '$scope', 'orgProfileService', '$state', 'profileService', 'modalService',
-  function($scope, orgProfileService, $state, profileService, modalService) {
+  '$scope', '$analytics', '$timeout', 'orgProfileService', '$state', 'profileService', 'modalService',
+  function($scope, $analytics, $timeout, orgProfileService, $state, profileService, modalService) {
     $scope.orgName = '';
     $scope.orgSlug = ''; // Not yet implemented.
     $scope.disableCreate = false;
@@ -23,5 +23,11 @@ angular.module('kifi')
         $scope.disableCreate = false;
       });
     };
+
+    $timeout(function () {
+      $analytics.eventTrack('user_viewed_page', {
+        type: 'createTeam'
+      });
+    });
   }
 ]);
