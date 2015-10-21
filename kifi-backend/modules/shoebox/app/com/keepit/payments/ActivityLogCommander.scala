@@ -54,6 +54,7 @@ class ActivityLogCommanderImpl @Inject() (
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
+        case IntegrityError(err) => Elements("Found and corrected an error in the account") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
         case ChargeBack() => s"A ${event.creditChange.toDollarString} refund was issued to your card"
         case PlanBilling(planId, _, _, _, _) => s"Your ${paidPlanRepo.get(planId)} plan was renewed."

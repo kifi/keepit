@@ -23,6 +23,7 @@ object AccountEventKind {
   case object ChargeBack extends AccountEventKind("charge_back")
   case object ChargeFailure extends AccountEventKind("charge_failure")
   case object DefaultPaymentMethodChanged extends AccountEventKind("default_payment_method_changed")
+  case object IntegrityError extends AccountEventKind("integrity_error")
   case object LowBalanceIgnored extends AccountEventKind("low_balance_ignored")
   case object MissingPaymentMethod extends AccountEventKind("missing_payment_method")
   case object OrganizationCreated extends AccountEventKind("organization_created")
@@ -188,6 +189,12 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
+  @json
+  case class IntegrityError(err: JsValue) extends AccountEventAction {
+    def eventType = AccountEventKind.IntegrityError
+    def toDbRow = eventType -> Json.toJson(this)
+  }
+
   def fromDb(eventType: AccountEventKind, extras: JsValue): AccountEventAction = eventType match {
     case AccountEventKind.SpecialCredit => SpecialCredit()
     case AccountEventKind.PlanBilling => extras.as[PlanBilling]
@@ -195,6 +202,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case AccountEventKind.Charge => Charge()
     case AccountEventKind.ChargeBack => ChargeBack()
     case AccountEventKind.ChargeFailure => extras.as[ChargeFailure]
+    case AccountEventKind.IntegrityError => extras.as[IntegrityError]
     case AccountEventKind.MissingPaymentMethod => MissingPaymentMethod()
     case AccountEventKind.UserAdded => extras.as[UserAdded]
     case AccountEventKind.UserRemoved => extras.as[UserRemoved]
@@ -310,6 +318,27 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     )
   }
 
+  def fromIntegrityError(accountId: Id[PaidAccount], err: PaymentsIntegrityError): AccountEvent = {
+    val cost = err match {
+      case PaymentsIntegrityError.CouldNotGetAccountLock(memo) => DollarAmount.ZERO
+      case PaymentsIntegrityError.ExtraOrganizationMember(extra) => DollarAmount.ZERO
+      case PaymentsIntegrityError.MissingOrganizationMember(missing) => DollarAmount.ZERO
+      case PaymentsIntegrityError.InconsistentAccountBalance(computed, actual) => DollarAmount.ZERO
+    }
+    AccountEvent(
+      eventTime = currentDateTime,
+      accountId = accountId,
+      whoDunnit = None,
+      whoDunnitExtra = JsNull,
+      kifiAdminInvolved = None,
+      action = AccountEventAction.IntegrityError(Json.toJson(err)),
+      creditChange = -cost,
+      paymentMethod = None,
+      paymentCharge = None,
+      memo = None,
+      chargeId = None
+    )
+  }
 }
 
 object AccountEventStates extends States[AccountEvent]
