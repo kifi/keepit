@@ -5,6 +5,7 @@ import com.keepit.commanders.{ BasicSlackMessage, PathCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail }
 import com.keepit.common.net.{ HttpClient, DirectUrl }
 import com.keepit.model.{ OrganizationRepo, UserEmailAddressRepo, NotificationCategory }
@@ -34,10 +35,14 @@ class AccountEventTrackingCommanderImpl @Inject() (
     stripeClient: StripeClient,
     httpClient: HttpClient,
     mode: play.api.Mode.Mode,
+    airbrake: AirbrakeNotifier,
     implicit val defaultContext: ExecutionContext) extends AccountEventTrackingCommander {
 
   def track(event: AccountEvent)(implicit session: RWSession): AccountEvent = {
     eventRepo.save(event) tap { savedEvent =>
+      if (savedEvent.action.eventType == AccountEventKind.IntegrityError) {
+        accountRepo.save(accountRepo.get(savedEvent.accountId).freeze)
+      }
       session.onTransactionSuccess { report(savedEvent) }
     }
   }
@@ -56,6 +61,9 @@ class AccountEventTrackingCommanderImpl @Inject() (
       event.chargeId.foreach { chargeId =>
         notifyOfCharge(account, paymentMethod.get.stripeToken, event.paymentCharge.get, chargeId)
       }
+    }
+    if (event.action.eventType == AccountEventKind.IntegrityError) {
+      airbrake.notify(s"Froze account ${event.accountId} because of integrity error: ${event.action}")
     }
   }
 

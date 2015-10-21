@@ -42,6 +42,7 @@ object AccountEventKind {
     ChargeBack,
     ChargeFailure,
     DefaultPaymentMethodChanged,
+    IntegrityError,
     LowBalanceIgnored,
     MissingPaymentMethod,
     OrganizationCreated,
@@ -189,8 +190,9 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
+  implicit val errFormat = PaymentsIntegrityError.dbFormat
   @json
-  case class IntegrityError(err: JsValue) extends AccountEventAction {
+  case class IntegrityError(err: PaymentsIntegrityError) extends AccountEventAction {
     def eventType = AccountEventKind.IntegrityError
     def toDbRow = eventType -> Json.toJson(this)
   }
@@ -331,7 +333,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       whoDunnit = None,
       whoDunnitExtra = JsNull,
       kifiAdminInvolved = None,
-      action = AccountEventAction.IntegrityError(Json.toJson(err)),
+      action = AccountEventAction.IntegrityError(err),
       creditChange = -cost,
       paymentMethod = None,
       paymentCharge = None,

@@ -8,28 +8,38 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.HttpClient
 import com.keepit.common.time._
 import com.keepit.model.{ Organization, OrganizationMembership, OrganizationMembershipRepo, OrganizationMembershipStates, OrganizationRepo, User }
+import com.kifi.macros.json
 import play.api.Mode.Mode
-import play.api.libs.json.{ Json, Writes }
+import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
 
-sealed abstract class PaymentsIntegrityError(val value: String)
+sealed abstract class PaymentsIntegrityError(val value: String) {
+  def dump: JsObject
+}
 object PaymentsIntegrityError {
-  case class CouldNotGetAccountLock(memo: String) extends PaymentsIntegrityError("could_not_get_account_lock")
-  case class InconsistentAccountBalance(computedBalance: DollarAmount, accountBalance: DollarAmount) extends PaymentsIntegrityError("inconsistent_account_balance")
-  case class MissingOrganizationMember(missingMember: Id[User]) extends PaymentsIntegrityError("missing_organization_member")
-  case class ExtraOrganizationMember(extraMember: Id[User]) extends PaymentsIntegrityError("extra_organization_member")
+  private val accountLockError = "could_not_get_account_lock"
+  private val accountBalanceError = "inconsistent_account_balance"
+  private val missingOrgMemberError = "missing_organization_member"
+  private val extraOrgMemberError = "extra_organization_member"
+  @json case class CouldNotGetAccountLock(memo: String) extends PaymentsIntegrityError(accountLockError) { def dump = Json.toJson(this).as[JsObject] }
+  @json case class InconsistentAccountBalance(computedBalance: DollarAmount, accountBalance: DollarAmount) extends PaymentsIntegrityError(accountBalanceError) { def dump = Json.toJson(this).as[JsObject] }
+  @json case class MissingOrganizationMember(missingMember: Id[User]) extends PaymentsIntegrityError(missingOrgMemberError) { def dump = Json.toJson(this).as[JsObject] }
+  @json case class ExtraOrganizationMember(extraMember: Id[User]) extends PaymentsIntegrityError(extraOrgMemberError) { def dump = Json.toJson(this).as[JsObject] }
 
-  implicit val writes: Writes[PaymentsIntegrityError] = Writes { err =>
-    val bonus = err match {
-      case CouldNotGetAccountLock(memo) => Json.obj("memo" -> memo)
-      case InconsistentAccountBalance(computed, actual) => Json.obj("computed" -> computed, "actual" -> actual)
-      case MissingOrganizationMember(missing) => Json.obj("missing" -> missing)
-      case ExtraOrganizationMember(extra) => Json.obj("extra" -> extra)
-    }
-    Json.obj("error" -> err.value) ++ bonus
-  }
+  val dbFormat: Format[PaymentsIntegrityError] = Format(
+    Reads { j =>
+      val err = (j.as[JsObject] \ "error").as[String]
+      err match {
+        case `accountLockError` => j.validate[CouldNotGetAccountLock]
+        case `accountBalanceError` => j.validate[InconsistentAccountBalance]
+        case `missingOrgMemberError` => j.validate[MissingOrganizationMember]
+        case `extraOrgMemberError` => j.validate[ExtraOrganizationMember]
+      }
+    },
+    Writes { err => Json.obj("error" -> err.value) ++ err.dump }
+  )
 }
 
 @Singleton
