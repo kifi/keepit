@@ -73,6 +73,7 @@ object AccountEventKind {
     ChargeBack,
     ChargeFailure,
     DefaultPaymentMethodChanged,
+    IntegrityError,
     LowBalanceIgnored,
     MissingPaymentMethod,
     PaymentMethodAdded,
@@ -321,12 +322,6 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
   }
 
   def fromIntegrityError(accountId: Id[PaidAccount], err: PaymentsIntegrityError): AccountEvent = {
-    val cost = err match {
-      case PaymentsIntegrityError.CouldNotGetAccountLock(memo) => DollarAmount.ZERO
-      case PaymentsIntegrityError.ExtraOrganizationMember(extra) => DollarAmount.ZERO
-      case PaymentsIntegrityError.MissingOrganizationMember(missing) => DollarAmount.ZERO
-      case PaymentsIntegrityError.InconsistentAccountBalance(computed, actual) => DollarAmount.ZERO
-    }
     AccountEvent(
       eventTime = currentDateTime,
       accountId = accountId,
@@ -334,7 +329,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
       whoDunnitExtra = JsNull,
       kifiAdminInvolved = None,
       action = AccountEventAction.IntegrityError(err),
-      creditChange = -cost,
+      creditChange = DollarAmount.ZERO,
       paymentMethod = None,
       paymentCharge = None,
       memo = None,

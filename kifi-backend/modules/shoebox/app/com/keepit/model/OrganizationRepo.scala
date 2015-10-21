@@ -145,7 +145,7 @@ class OrganizationRepoImpl @Inject() (
 
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""select id from organization where state='active' and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
+    sql"""select id from organization where state='active' and frozen = false and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
   }
 
   def getAllByState(state: State[Organization])(implicit session: RSession): Set[Organization] = rows.filter(row => row.state === state).list.toSet
