@@ -16,29 +16,37 @@ import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
 
 sealed abstract class PaymentsIntegrityError(val value: String) {
-  def dump: JsObject
+  def dump: JsValue
 }
 object PaymentsIntegrityError {
   private val accountLockError = "could_not_get_account_lock"
   private val accountBalanceError = "inconsistent_account_balance"
   private val missingOrgMemberError = "missing_organization_member"
   private val extraOrgMemberError = "extra_organization_member"
-  @json case class CouldNotGetAccountLock(memo: String) extends PaymentsIntegrityError(accountLockError) { def dump = Json.toJson(this).as[JsObject] }
-  @json case class InconsistentAccountBalance(computedBalance: DollarAmount, accountBalance: DollarAmount) extends PaymentsIntegrityError(accountBalanceError) { def dump = Json.toJson(this).as[JsObject] }
-  @json case class MissingOrganizationMember(missingMember: Id[User]) extends PaymentsIntegrityError(missingOrgMemberError) { def dump = Json.toJson(this).as[JsObject] }
-  @json case class ExtraOrganizationMember(extraMember: Id[User]) extends PaymentsIntegrityError(extraOrgMemberError) { def dump = Json.toJson(this).as[JsObject] }
+  @json case class CouldNotGetAccountLock(memo: String) extends PaymentsIntegrityError(accountLockError) {
+    def dump = Json.toJson(this)(implicitly[Format[CouldNotGetAccountLock]])
+  }
+  @json case class InconsistentAccountBalance(computedBalance: DollarAmount, accountBalance: DollarAmount) extends PaymentsIntegrityError(accountBalanceError) {
+    def dump = Json.toJson(this)(implicitly[Format[InconsistentAccountBalance]])
+  }
+  @json case class MissingOrganizationMember(missingMember: Id[User]) extends PaymentsIntegrityError(missingOrgMemberError) {
+    def dump = Json.toJson(this)(implicitly[Format[MissingOrganizationMember]])
+  }
+  @json case class ExtraOrganizationMember(extraMember: Id[User]) extends PaymentsIntegrityError(extraOrgMemberError) {
+    def dump = Json.toJson(this)(implicitly[Format[ExtraOrganizationMember]])
+  }
 
-  val dbFormat: Format[PaymentsIntegrityError] = Format(
+  implicit val dbFormat: Format[PaymentsIntegrityError] = Format(
     Reads { j =>
       val err = (j.as[JsObject] \ "error").as[String]
       err match {
-        case `accountLockError` => j.validate[CouldNotGetAccountLock]
-        case `accountBalanceError` => j.validate[InconsistentAccountBalance]
-        case `missingOrgMemberError` => j.validate[MissingOrganizationMember]
-        case `extraOrgMemberError` => j.validate[ExtraOrganizationMember]
+        case `accountLockError` => (j \ "data").validate[CouldNotGetAccountLock]
+        case `accountBalanceError` => (j \ "data").validate[InconsistentAccountBalance]
+        case `missingOrgMemberError` => (j \ "data").validate[MissingOrganizationMember]
+        case `extraOrgMemberError` => (j \ "data").validate[ExtraOrganizationMember]
       }
     },
-    Writes { err => Json.obj("error" -> err.value) ++ err.dump }
+    Writes { err => Json.obj("error" -> err.value, "data" -> err.dump) }
   )
 }
 
