@@ -9,10 +9,6 @@ angular.module('kifi')
     $scope.orgSlug = ''; // Not yet implemented.
     $scope.disableCreate = false;
 
-    if (profileService.me.experiments.indexOf('organization') > -1) {
-      $scope.org_experiment = true;
-    }
-
     $scope.createOrg = function() {
       $scope.disableCreate = true;
 

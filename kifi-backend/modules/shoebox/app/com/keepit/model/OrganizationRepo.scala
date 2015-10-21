@@ -20,7 +20,6 @@ trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organiz
   def getOrgByName(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Option[Organization]
   def searchOrgsByNameFuzzy(name: String, state: State[Organization] = OrganizationStates.ACTIVE)(implicit session: RSession): Seq[Organization]
   def getPotentialOrganizationsForUser(userId: Id[User])(implicit session: RSession): Seq[Organization]
-  def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
   def getAllByState(state: State[Organization])(implicit session: RSession): Set[Organization]
 }
 
@@ -141,11 +140,6 @@ class OrganizationRepoImpl @Inject() (
         );""".as[Id[Organization]].list.toSet
 
     getByIds(orgIds).values.toSeq
-  }
-
-  def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    sql"""select id from organization where state='active' and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
   }
 
   def getAllByState(state: State[Organization])(implicit session: RSession): Set[Organization] = rows.filter(row => row.state === state).list.toSet

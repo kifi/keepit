@@ -66,19 +66,6 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
 
     "serve rss for" in {
       "logged in user with access to" in {
-        "private library owned by user with experiment" in {
-          withDb(modules: _*) { implicit injector =>
-            val (user, library, privateLibrary) = setup
-            inject[FakeUserActionsHelper].setUser(user)
-
-            val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value).url
-            val request = FakeRequest("GET", rssPath)
-            val libraryFeedController = inject[LibraryFeedController]
-
-            val result = libraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value)(request)
-            status(result) should equalTo(OK)
-          }
-        }
         "public library owned by user with experiment" in {
           withDb(modules: _*) { implicit injector =>
             val (user, library, privateLibrary) = setup
@@ -89,24 +76,6 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
             val libraryFeedController = inject[LibraryFeedController]
 
             val result = libraryFeedController.libraryRSSFeed(user.username, library.slug.value)(request)
-            status(result) should equalTo(OK)
-          }
-        }
-        "with access to private library owned by user without experiment" in {
-          withDb(modules: _*) { implicit injector =>
-            val (user, library, privateLibrary) = setup
-            val otherUser = db.readWrite { implicit s =>
-              val user1 = UserFactory.user().withName("Colin", "Lane").withUsername("colin").saved
-              libraryMembershipRepo.save(LibraryMembership(libraryId = privateLibrary.id.get, userId = user1.id.get, access = LibraryAccess.READ_ONLY))
-              user1
-            }
-            inject[FakeUserActionsHelper].setUser(otherUser)
-
-            val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value).url
-            val request = FakeRequest("GET", rssPath)
-            val libraryFeedController = inject[LibraryFeedController]
-
-            val result = libraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value)(request)
             status(result) should equalTo(OK)
           }
         }
@@ -158,6 +127,19 @@ class LibraryFeedControllerTest extends Specification with ShoeboxTestInjector {
             val result = libraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value)(request)
             status(result) should equalTo(NOT_FOUND)
           }
+        }
+      }
+      "private library" in {
+        withDb(modules: _*) { implicit injector =>
+          val (user, library, privateLibrary) = setup
+          inject[FakeUserActionsHelper].setUser(user)
+
+          val rssPath = com.keepit.controllers.website.routes.LibraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value).url
+          val request = FakeRequest("GET", rssPath)
+          val libraryFeedController = inject[LibraryFeedController]
+
+          val result = libraryFeedController.libraryRSSFeed(user.username, privateLibrary.slug.value)(request)
+          status(result) should equalTo(NOT_FOUND)
         }
       }
     }

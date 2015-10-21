@@ -1,12 +1,14 @@
+@import com.keepit.common.mail.template.helpers.discussionLink
+
 @(threadInfo: com.keepit.eliza.model.ThreadEmailInfo)
-@visitThisPageUrl = @{threadInfo.pageUrlWithTracking("clickedArticleVisitLink")}
-@articleTitleUrl = @{threadInfo.pageUrlWithTracking("clickedArticleTitle")}
-@articleDomainUrl = @{threadInfo.pageUrlWithTracking("clickedArticleDomain")}
-@articleImageUrl = @{threadInfo.pageUrlWithTracking("clickedArticleImage")}
+@visitThisPageUrl = @{discussionLink(threadInfo.uriId, threadInfo.threadId.id, "clickedArticleVisitLink")}
+@articleTitleUrl = @{discussionLink(threadInfo.uriId, threadInfo.threadId.id, "clickedArticleTitle")}
+@articleDomainUrl = @{discussionLink(threadInfo.uriId, threadInfo.threadId.id, "clickedArticleDomain")}
+@articleImageUrl = @{discussionLink(threadInfo.uriId, threadInfo.threadId.id, "clickedArticleImage")}
 <table width="100%" border="0" cellspacing="0" cellpadding="0">
   @threadInfo.heroImageUrl.map{ heroImageUrl =>
     <tr>
-        <td class="img_1" width="620" valign="top"><a href="@articleImageUrl" target="_blank"><img src="https:@heroImageUrl" width="620" class="img_1" style="display:block; padding-bottom: 5px;" border="0" title="Visit @threadInfo.pageName"/></a></td>
+        <td class="img_1" width="620" valign="top"><a href="@articleImageUrl" target="_blank"><img src="https:@heroImageUrl" width="620" class="img_1" style="display:block; padding-bottom: 5px;" border="0" title="Visit @threadInfo.pageName" alt="Go to the page"/></a></td>
     </tr>
   }
   <tr>

@@ -85,8 +85,8 @@ angular.module('kifi')
           return 'Please try a longer name';
         } else if (name.length > 50) {
           return 'Please try a shorter name';
-        } else if (/['"\/\\]/.test(name)) {
-          return 'Please no slashes or quotes in your library name';
+        } else if (/[\/]/.test(name)) {
+          return 'Please no slashes in your library name';
         } else if (oldName && name !== oldName && _.some(infos, {name: name})) {
           return 'You already have a library with this name';
         } else {
@@ -309,7 +309,7 @@ angular.module('kifi')
 
         return deferred.promise;
       },
-      
+
       getFtueLibraries: function () {
         return net.getFtueLibraries();
       },

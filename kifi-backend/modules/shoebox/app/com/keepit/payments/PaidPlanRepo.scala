@@ -3,6 +3,7 @@ package com.keepit.payments
 import com.keepit.common.db.slick.{ InvalidDatabaseEncodingException, Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.{ State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.json.TraversableFormat
 import com.keepit.common.time.Clock
 import com.keepit.model.{ OrganizationSettings, Name, Feature }
 
@@ -12,6 +13,7 @@ import play.api.libs.json.{ JsArray, Json }
 @ImplementedBy(classOf[PaidPlanRepoImpl])
 trait PaidPlanRepo extends Repo[PaidPlan] {
   def getByKinds(kinds: Set[PaidPlan.Kind])(implicit session: RSession): Seq[PaidPlan]
+  def getByDisplayName(displayName: String)(implicit session: RSession): Set[PaidPlan]
 }
 
 @Singleton
@@ -27,7 +29,7 @@ class PaidPlanRepoImpl @Inject() (
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
   implicit val featureSetTypeMapper = MappedColumnType.base[Set[Feature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
-    { str => Json.parse(str).as[Set[Feature]] }
+    { str => Json.parse(str).as[Set[Feature]](TraversableFormat.safeSetReads[Feature]) }
   )
 
   type RepoImpl = PaidPlanTable
@@ -51,6 +53,10 @@ class PaidPlanRepoImpl @Inject() (
 
   def getByKinds(states: Set[PaidPlan.Kind])(implicit session: RSession): Seq[PaidPlan] = {
     (for (row <- rows if row.state === PaidPlanStates.ACTIVE && row.kind.inSet(states)) yield row).list
+  }
+
+  def getByDisplayName(displayName: String)(implicit session: RSession): Set[PaidPlan] = {
+    rows.filter(row => row.state === PaidPlanStates.ACTIVE && row.displayName === displayName).list.toSet
   }
 
 }

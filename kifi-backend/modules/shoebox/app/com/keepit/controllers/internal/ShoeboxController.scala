@@ -79,6 +79,8 @@ class ShoeboxController @Inject() (
   emailTemplateSender: EmailTemplateSender,
   newKeepsInLibraryCommander: NewKeepsInLibraryCommander,
   libraryInfoCommander: LibraryInfoCommander,
+  libraryCardCommander: LibraryCardCommander,
+  libraryMembershipCommander: LibraryMembershipCommander,
   userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
@@ -145,18 +147,6 @@ class ShoeboxController @Inject() (
         Ok("false")
     }
   }
-
-  def sendMailToUser = Action(parse.tolerantJson(maxLength = 1024 * 500)) { request =>
-    val userId = Id[User]((request.body \ "user").as[Long])
-    val email = (request.body \ "email").as[ElectronicMail]
-
-    val addrs = db.readOnlyReplica(2) { implicit session => emailAddressRepo.getAllByUser(userId) }
-    for (addr <- addrs.find(_.verifiedAt.isDefined).orElse(addrs.headOption)) {
-      db.readWrite(attempts = 3) { implicit session => postOffice.sendMail(email.copy(to = List(addr.address))) }
-    }
-    Ok("true")
-  }
-
   def processAndSendMail = Action.async(parse.tolerantJson(maxLength = 1024 * 500)) { request =>
     request.body.asOpt[EmailToSend] match {
       case Some(module) =>
@@ -497,12 +487,12 @@ class ShoeboxController @Inject() (
     val viewerId = (request.body \ "viewerId").asOpt[Id[User]]
 
     val libraryCardInfosWithId = db.readOnlyReplica { implicit session =>
-      val libraryById = libraryRepo.getByIds(libraryIds)
-      val libraries = libraryIds.map(libraryById.apply)
+      val libraryById = libraryRepo.getActiveByIds(libraryIds)
+      val libraries = libraryIds.flatMap(libraryById.get)
       val owners = basicUserRepo.loadAll(libraries.map(_.ownerId))
 
       val libSeq = libraries.toSeq
-      val libraryCardInfos = libraryInfoCommander.createLibraryCardInfos(libSeq, owners, viewerId, withFollowing = true, idealSize = idealImageSize)
+      val libraryCardInfos = libraryCardCommander.createLibraryCardInfos(libSeq, owners, viewerId, withFollowing = true, idealSize = idealImageSize)
 
       libSeq.map(_.id.get) zip libraryCardInfos
     }
@@ -529,7 +519,7 @@ class ShoeboxController @Inject() (
   }
 
   def getLibrariesWithWriteAccess(userId: Id[User]) = Action { request =>
-    val libraryIds = libraryInfoCommander.getLibrariesWithWriteAccess(userId)
+    val libraryIds = libraryMembershipCommander.getLibrariesWithWriteAccess(userId)
     Ok(Json.toJson(libraryIds))
   }
 

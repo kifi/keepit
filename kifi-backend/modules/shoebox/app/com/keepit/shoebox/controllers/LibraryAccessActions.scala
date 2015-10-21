@@ -2,8 +2,7 @@ package com.keepit.shoebox.controllers
 
 import java.util.concurrent.TimeUnit
 
-import com.google.common.cache.{ Cache, CacheBuilder }
-import com.keepit.commanders.{ LibraryAccessCommander, LibraryInfoCommander, LibraryCommander }
+import com.keepit.commanders.{ LibraryAccessCommander }
 import com.keepit.common.controller.{ MaybeUserRequest, UserActions, UserRequest }
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
@@ -12,14 +11,12 @@ import play.api.libs.json.Json
 import play.api.mvc.{ ActionFilter, Controller, Result }
 
 import scala.concurrent.Future
-import scala.util.Success
 
 trait LibraryAccessActions {
   self: UserActions with Controller =>
 
   val publicIdConfig: com.keepit.common.crypto.PublicIdConfiguration
   implicit private val implicitPublicId = publicIdConfig
-  val libraryInfoCommander: LibraryInfoCommander
   val libraryAccessCommander: LibraryAccessCommander
 
   def LibraryViewAction(id: PublicId[Library]) = new ActionFilter[MaybeUserRequest] {
@@ -53,12 +50,8 @@ trait LibraryAccessActions {
   private def lookupWriteAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
       case Some((libraryId, Some(userId), accessToken)) =>
-        libraryAccessCommander.userAccess(userId, libraryId, None) match {
-          case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) =>
-            None
-          case _ =>
-            Some(Forbidden(Json.obj("error" -> "permission_denied")))
-        }
+        if (libraryAccessCommander.canModifyLibrary(libraryId, userId)) None
+        else Some(Forbidden(Json.obj("error" -> "permission_denied")))
       case _ =>
         Some(BadRequest(Json.obj("error" -> "invalid_id")))
     }

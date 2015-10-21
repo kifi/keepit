@@ -1,6 +1,7 @@
 package com.keepit.common.service
 
 import play.api.libs.json._
+import play.api.mvc.RequestHeader
 
 object IpAddress {
   val ipPattern = """^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"""
@@ -14,10 +15,19 @@ object IpAddress {
   implicit def longToIp(long: Long): IpAddress = {
     IpAddress(((long >> 24) & 0xFF) + "." + ((long >> 16) & 0xFF) + "." + ((long >> 8) & 0xFF) + "." + (long & 0xFF))
   }
+
+  def fromRequest(request: RequestHeader) = {
+    request.headers.get("X-Forwarded-For").flatMap(fromXForwardedFor).getOrElse(IpAddress(request.remoteAddress))
+  }
+
+  def fromXForwardedFor(xForwardedFor: String): Option[IpAddress] = {
+    xForwardedFor.split(",").map(_.trim()).sortBy(_.startsWith("10.")).headOption.map(IpAddress.apply)
+  }
 }
 
 case class IpAddress(ip: String) {
-  if (!ip.matches(IpAddress.ipPattern)) {
+  import IpAddress._
+  if (!ip.matches(ipPattern)) {
     throw new IllegalArgumentException(s"ip address $ip does not match ip pattern")
   }
   def datacenterIp: Boolean = ip.toString.startsWith("10.")

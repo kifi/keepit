@@ -101,10 +101,11 @@ class LibraryTest extends Specification with ShoeboxTestInjector {
 
     "generate valid library slugs" in {
       Seq(
-        "-- Foo, Bar & Baz! --" -> "foo-bar-baz",
-        "Far-away Places I’d like to go" -> "far-away-places-id-like-to-go",
-        "Gift Ideas -- For That Special Someone" -> "gift-ideas-for-that-special-someone",
+        "-- Foo's, Bar & Baz! --" -> "foos-bar-baz",
+        "Far-away Places I’d   like to gó" -> "far-away-places-i’d-like-to-gó",
+        "Gift Ideas -- For That Special Someone/Someones" -> "gift-ideas-for-that-special-someonesomeones",
         "A Super Long Library Name That Surely Never Would Be Actually Chosen" -> "a-super-long-library-name-that-surely-never-would",
+        "מה נשמע" -> "מה-נשמע",
         "Connections" -> "connections-") map {
           case (name, slug) =>
             LibrarySlug.generateFromName(name) === slug

@@ -32,12 +32,24 @@ class GratificationEmailSender @Inject() (
     gratDatas.map { gratData => sendEmailLock.withLockFuture { emailTemplateSender.send(emailToSend(gratData, toAddress)) } }
   }
 
-  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None): Future[ElectronicMail] = {
+  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None): Future[Option[ElectronicMail]] = {
 
     val fGratData = gratificationCommander.getGratData(userId)
+    val thresh = 2
 
     fGratData.flatMap { gratData =>
-      emailTemplateSender.send(emailToSend(gratData, toAddress))
+      val hasEnoughData = gratData.isEligible && (
+        gratData.keepViews.totalCount > thresh ||
+        gratData.libraryFollows.totalCount > thresh ||
+        gratData.libraryViews.totalCount > thresh ||
+        gratData.rekeeps.totalCount > thresh
+      )
+      if (hasEnoughData) {
+        val email = emailToSend(gratData, toAddress)
+        if (email.textTemplate.exists(_.toString().length > 160)) {
+          emailTemplateSender.send(emailToSend(gratData, toAddress)).map(Some(_))
+        } else Future.successful(None)
+      } else Future.successful(None)
     }
   }
 

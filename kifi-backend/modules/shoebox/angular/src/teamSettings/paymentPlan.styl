@@ -1,14 +1,21 @@
-freePlanColor = #8A74B9
-basicPlanColor = #1067BD
-enterprisePlanColor = #118730
+freePlanColor = #5ab7e7
+basicPlanColor = #56b362
+enterprisePlanColor = #f69256
+
+.kf-payment-plan
+  h2
+    font-size: 20px
+
+  p
+    font-size: 14px
 
 .kf-payment-plan-top-header
   margin-bottom: 10px
 
-.kf-team-plan-cards
+.kf-payment-plan-cards
   justify-content: space-around
 
-.kf-team-plan-card
+.kf-payment-plan-card
   box-sizing: border-box
   position: relative
   display: inline-block
@@ -18,28 +25,33 @@ enterprisePlanColor = #118730
   padding: 5px 10px
   border-radius: 12px
   box-shadow: 2px 2px 4px 0px rgba(0, 0, 0, .5)
-  font-size: 12px
-  text-align: center
   color: #fff
+  text-align: center
   font-smoothing: antialiased
-  transition: .33s ease-in-out
+  transition: transform .33s ease-in-out, box-shadow .33s ease-in-out
+
+  p
+    font-size: 12px
 
   &:hover
     box-shadow: 2px 2px 8px 4px rgba(0, 0, 0, .33)
     transform: scale(1.05, 1.05)
 
-.kf-team-plan-card-description
+.kf-payment-plan-card-description
   margin: 0
   font-smoothing: antialiased
 
-  + .kf-team-plan-card-description
+  + .kf-payment-plan-card-description
     margin-top: 5px
 
-.kf-team-plan-card-title
+.kf-payment-plan-card-current
+  margin: 11px
+
+.kf-payment-plan-card-title
   heading_lg()
   font-weight: bold
 
-.kf-team-plan-card-cost
+.kf-payment-plan-card-cost
   position: relative
   display: inline-block
   font-size: 36px
@@ -55,14 +67,14 @@ enterprisePlanColor = #118730
     right: 100%
     font-size: 24px
 
-.kf-team-plan-card-bottom
+.kf-payment-plan-card-bottom
   position: absolute
   right: 0
   bottom: 0
   left: 0
   margin-bottom: 10px
 
-.kf-team-plan-card-cta
+.kf-payment-plan-card-cta
   margin-top: 8px
   padding: 5px 10px
   background: none
@@ -82,22 +94,53 @@ enterprisePlanColor = #118730
     transition: none
     box-shadow: 0 0 4px 2px rgba(0, 0, 0, .15)
 
-.kf-team-plan-card-soon
+  &.ng-leave
+    transition: none
+
+
+.kf-payment-plan-card-soon
   width: 100%
   margin: 0 -10px
   padding: 18px 10px
   background-color: rgba(255, 255, 255, .25)
   font-size: 18px
 
-.kf-team-plan-card-free
+.kf-payment-plan-card-free
   background-color: freePlanColor
 
-.kf-team-plan-card-basic
+.kf-payment-plan-card-basic
   background-color: basicPlanColor
 
-.kf-team-plan-card-enterprise
+.kf-payment-plan-card-enterprise
   background-color: enterprisePlanColor
 
-.kf-team-plan-select
+.kf-payment-plan-select
   width: 100%
   padding: 10px
+
+.kf-payment-plan-card-ready
+  margin-left: 5px
+
+.kf-button.kf-button-large.kf-payment-plan-save
+  display: block
+  margin: 0 auto
+  background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
+  color: #fff
+
+  transition: opacity .5s
+
+  &:hover:not(:active)
+    background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
+
+  &:active
+    background: darken(linkBlueColor, 20%)
+
+.kf-payment-plan-save-wrapper
+  border-top: 1px solid #ccc
+  padding-top: 15px
+  margin-top: 17px
+
+.kf-downgrade-features-list
+  list-style-type: disc
+  margin-left: 40px
+  margin-top: 5px

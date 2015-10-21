@@ -1,7 +1,7 @@
 package com.keepit.integrity
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ LibraryInfoCommander, LibraryCommander }
+import com.keepit.commanders.{ KeepCommander, KeepToLibraryCommander, LibraryInfoCommander, LibraryCommander }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -15,6 +15,9 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     val clock: Clock,
     val db: Database,
     val keepRepo: KeepRepo,
+    val keepCommander: KeepCommander,
+    val ktlRepo: KeepToLibraryRepo,
+    val ktlCommander: KeepToLibraryCommander,
     libraryCommander: LibraryCommander,
     val libraryMembershipRepo: LibraryMembershipRepo,
     val libraryRepo: LibraryRepo,
@@ -28,6 +31,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
   private[integrity] val LAST_KEPT_AND_KEEP_COUNT_NAME = Name[SequenceNumber[Keep]]("integrity_plugin_library_sync")
   private[integrity] val MEMBER_COUNT_NAME = Name[SequenceNumber[LibraryMembership]]("integrity_plugin_library_member_count")
   private[integrity] val LIBRARY_MOVED_NAME = Name[SequenceNumber[Library]]("integrity_plugin_library_moved")
+  private[integrity] val LIBRARY_DELETED_NAME = Name[SequenceNumber[Library]]("integrity_plugin_library_deleted")
   private val MEMBER_FETCH_SIZE = 500
   private val KEEP_FETCH_SIZE = 500
   private val LIBRARY_FETCH_SIZE = 250
@@ -36,6 +40,39 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     syncLibraryLastKeptAndKeepCount() // reads keeps, updates libraries
     syncLibraryMemberCounts() // reads libraryMembership, updates libraries
     syncOnLibraryMove() // reads libraries, updates keeps. (This is kind of recursive, but not really as I only update the ones that are wrong.)
+    syncOnLibraryDelete()
+  }
+
+  private[integrity] def syncOnLibraryDelete(): Unit = {
+    val libraries = db.readOnlyReplica { implicit s =>
+      val lastSeq = getLastSeqNum(LIBRARY_DELETED_NAME)
+      libraryRepo.getBySequenceNumber(lastSeq, LIBRARY_FETCH_SIZE)
+    }
+
+    libraries.map(_.seq).maxOpt.foreach { maxSeq =>
+      libraries.foreach { library =>
+        if (!library.isActive) {
+          db.readWrite { implicit session =>
+            val zombieKtls = ktlRepo.getAllByLibraryId(library.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
+            if (zombieKtls.nonEmpty) {
+              //airbrake.notify(s"Library ${library.id.get} has zombie ktls: ${zombieKtls.map(_.id.get)}")
+              log.error(s"Library ${library.id.get} has zombie ktls: ${zombieKtls.map(_.id.get)}")
+
+              // TODO(ryan): when it's acceptable for a keep to be removed from a library, kill the code below and replace it with this commented out line
+              // zombieKtls.foreach(ktlCommander.deactivate)
+              zombieKtls.foreach { ktl =>
+                val keep = keepRepo.get(ktl.keepId)
+                keepCommander.deactivateKeep(keep)
+              }
+            }
+          }
+        }
+      }
+
+      db.readWrite { implicit session =>
+        systemValueRepo.setSequenceNumber(LIBRARY_MOVED_NAME, maxSeq)
+      }
+    }
   }
 
   private[integrity] def syncOnLibraryMove(): Unit = {

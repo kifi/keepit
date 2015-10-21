@@ -25,6 +25,7 @@ class PaymentsController @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
+    activityLogCommander: ActivityLogCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -33,48 +34,36 @@ class PaymentsController @Inject() (
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def getAccountState(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
-    val card = planCommander.getDefaultPaymentMethod(request.orgId).map { method =>
-      stripeClient.getCardInfo(method.stripeToken).map(Some(_))
-    }.getOrElse(Future.successful(None))
-
-    card.map { card =>
-      Ok(Json.toJson(AccountStateResponse(
-        credit = planCommander.getCurrentCredit(request.orgId),
-        users = orgMembershipCommander.getMemberIds(request.orgId).size,
-        plan = planCommander.currentPlan(request.orgId).asInfo,
-        card = card
-      )))
-    }
+    planCommander.getAccountState(request.orgId).map { response => Ok(Json.toJson(response)) }
   }
 
-  def getActivePlans() = UserAction { implicit request =>
-    val plans = planCommander.getAvailablePlans(request.adminUserId)
-    Ok(Json.toJson(plans.map(_.asInfo)))
+  def getAvailablePlans(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { implicit request =>
+    val (currentPlanId, availablePlans) = planCommander.getCurrentAndAvailablePlans(request.orgId)
+    val sortedAvailablePlansByName = availablePlans.map(_.asInfo).groupBy(_.name).map { case (name, plans) => name -> plans.toSeq.sortBy(_.cycle.month) }
+    val response = AvailablePlansResponse(PaidPlan.publicId(currentPlanId), sortedAvailablePlansByName)
+    Ok(Json.toJson(response))
   }
 
-  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
     planCommander.getActivePaymentMethods(request.orgId).find(_.default).map { pm =>
-      Ok(Json.obj(
-        "token" -> pm.stripeToken.token
-      ))
-    } getOrElse {
-      Ok(Json.obj())
-    }
+      stripeClient.getCardInfo(pm.stripeToken).map { cardInfo =>
+        Ok(Json.toJson(cardInfo))
+      }
+    }.getOrElse(Future.successful(BadRequest(Json.obj("error" -> "no_default_payment_method"))))
   }
 
   def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
-      case Some(token) => {
+      case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
+      case Some(token) =>
         stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").flatMap { realToken =>
-          stripeClient.getLastFourDigitsOfCard(realToken).map { lastFour =>
+          stripeClient.getCardInfo(realToken).map { cardInfo =>
             val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-            val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, lastFour)
-            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, lastFour)
-            Ok
+            val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, cardInfo.lastFour)
+            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, cardInfo.lastFour)
+            Ok(Json.toJson(cardInfo))
           }
         }
-      }
-      case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
     }
   }
 
@@ -108,10 +97,7 @@ class PaymentsController @Inject() (
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
             val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
-            val result = ExternalOrganizationConfiguration(
-              plan.name.name,
-              OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures)
-            )
+            val result = ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures))
             Ok(Json.toJson(result))
         }
     }
@@ -132,14 +118,14 @@ class PaymentsController @Inject() (
   }
 
   def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val infos = planCommander.getAccountEvents(request.orgId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
+    val infos = activityLogCommander.getAccountEvents(request.orgId, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
     Ok(Json.obj("events" -> infos))
   }
 
   def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     AccountEvent.decodePublicId(beforePubId) match {
       case Success(beforeId) => {
-        val infos = planCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, limit, onlyRelatedToBillingFilter = None).map(planCommander.buildSimpleEventInfo)
+        val infos = activityLogCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
       }
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))

@@ -1,0 +1,66 @@
+<div class="kf-billing-summary kf-container">
+  <div class="kf-container-header"><span>Overview</span></div>
+  <ul>
+    <li>
+      <p>
+        <span>You currently have</span>
+        <a class="kf-link kf-link-black kf-link-underline" ui-sref="orgProfile.members">
+          <span ng-bind="billingState.users"></span>
+          team
+          <span
+            ng-pluralize
+            count="billingState.users"
+            when="{
+              1: 'member',
+              other: 'members'
+            }"
+          ></span>
+        </a>
+        on the
+        <a
+          class="kf-link kf-link-black kf-link-underline"
+          ui-sref="orgProfile.settings.plan"
+        >
+          <span ng-bind="billingState.plan.fullName"></span> plan
+        </a>.
+      </p>
+    </li>
+    <li ng-if="isPaidPlan()">
+      <p>
+        As of today, your plan will renew on
+        <b ng-bind="billingState.billingDate | date:'yyyy-MM-dd'"></b>
+        for
+        <b ng-bind="billingState.charge | money"></b>.
+      </p>
+      <ul ng-if="billingState.balance | isNegativeMoney">
+        <li>
+          You <b>owe <span ng-bind="((billingState.balance | moneyUnwrap) * -1) | money"></span></b>
+          from previous invoices.
+        </li>
+      </ul>
+    </li>
+    <li>
+      <p>
+        <span>You have a</span>
+        <a
+          class="kf-link kf-link-black kf-link-underline"
+          ui-sref="orgProfile.settings.plan"
+        >
+          credit of
+          <span ng-bind="!(billingState.balance | isPositiveMoney) ? (0 | money) : (billingState.balance | money)"></span>
+        </a>
+        <span ng-if="billingState.card">
+          which will be applied before your
+          <a
+            class="kf-link kf-link-black kf-link-underline"
+            ui-sref="orgProfile.settings.plan"
+          >
+            credit card ending in
+            <b ng-bind="'' + billingState.card.lastFour"></b>
+          </a>
+          is charged.
+        </span>
+      </p>
+    </li>
+  </ul>
+</div>

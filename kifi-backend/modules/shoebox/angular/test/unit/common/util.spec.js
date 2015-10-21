@@ -189,7 +189,7 @@ describe('util', function () {
   describe('util.generateSlug', function () {
     it('correctly generates library slugs', function () {
       expect(util.generateSlug('-- Foo, Bar & Baz! --')).toBe('foo-bar-baz');
-      expect(util.generateSlug('Far-away Places I’d like to go')).toBe('far-away-places-id-like-to-go');
+      expect(util.generateSlug('Far-away Places I’d like to go')).toBe('far-away-places-i’d-like-to-go');
       expect(util.generateSlug('Gift Ideas -- For That Special Someone')).toBe('gift-ideas-for-that-special-someone');
       expect(util.generateSlug('A Super Long Library Name That Surely Never Would Be Actually Chosen'))
         .toBe('a-super-long-library-name-that-surely-never-would');

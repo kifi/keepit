@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgSelector', [
-  'profileService', 'LIB_PERMISSION', 'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function(profileService, LIB_PERMISSION, ORG_PERMISSION, ORG_SETTING_VALUE) {
+  'profileService', 'LIB_PERMISSION', 'ORG_PERMISSION', 'ORG_SETTING_VALUE', 'orgProfileService',
+  function(profileService, LIB_PERMISSION, ORG_PERMISSION, ORG_SETTING_VALUE, orgProfileService) {
     return {
       restrict: 'A',
       templateUrl: 'common/directives/orgSelector/orgSelector.tpl.html',
@@ -19,13 +19,14 @@ angular.module('kifi')
         $scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
         $scope.me = profileService.me;
         $scope.space = $scope.space || {};
+        $scope.libraryOwner = $scope.library.owner || $scope.me;
 
         $scope.unsetOrg = function () {
           // Allow moving if...
           if (!$scope.library.id || // we're creating a new library
               $scope.hasPermission(LIB_PERMISSION.MOVE_LIBRARY)) { // or we have permission to move the existing library
             $scope.libraryProps.selectedOrgId = undefined;
-            $scope.space.destination = $scope.me;
+            $scope.space.destination = $scope.library.owner;
           }
         };
 
@@ -38,6 +39,14 @@ angular.module('kifi')
             $scope.space.destination = $scope.me.orgs.filter(function(org) {
               return org.id === orgId;
             })[0];
+          }
+        };
+
+        $scope.orgs = function () {
+          if (!$scope.library.owner || $scope.library.owner.id === $scope.me.id) {
+            return $scope.me.orgs;
+          } else {
+            return [$scope.library.org];
           }
         };
 
@@ -80,11 +89,11 @@ angular.module('kifi')
         };
 
         $scope.onClickUpsellRelocate = function () {
-
+          orgProfileService.trackEvent('user_clicked_page', $scope.space.destination, { action: 'clickSelectorUpsell' });
         };
 
         $scope.onHoverUpsellRelocate = function () {
-
+          orgProfileService.trackEvent('user_viewed_page', $scope.space.destination, { action: 'viewSelectorUpsell' });
         };
       }
     };

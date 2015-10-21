@@ -173,7 +173,7 @@ class AdminUserController @Inject() (
     }
 
     for (su <- db.readOnlyReplica { implicit s => socialUserInfoRepo.getByUser(toUserId) }) {
-      socialGraphPlugin.asyncFetch(su)
+      try { socialGraphPlugin.asyncFetch(su) } catch { case e: Exception => log.error(s"while merging $fromUserId to $toUserId", e) }
     }
 
     Redirect(routes.AdminUserController.userView(toUserId))
@@ -555,6 +555,17 @@ class AdminUserController @Inject() (
       case Right(expType) => Ok(Json.obj(experiment -> true))
       case Left(s) => Forbidden
     }
+  }
+
+  def addExperimentForUsers(experiment: String, userIdsString: String) = AdminUserAction { request =>
+    val userIds = userIdsString.split(",").map(id => Id[User](id.trim.toLong))
+    val successIds = userIds map { userId =>
+      addExperiment(requesterUserId = request.userId, userId, experiment) match {
+        case Right(expType) => Some(userId)
+        case Left(s) => None
+      }
+    }
+    Ok(Json.obj(experiment -> successIds.flatten.toSeq))
   }
 
   def isSuperAdmin(userId: Id[User]) = {

@@ -7,7 +7,7 @@ import com.keepit.commanders.emails.LibraryInviteEmailSender
 import com.keepit.common.core._
 import com.keepit.common.time._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
@@ -39,6 +39,7 @@ trait LibraryInviteCommander {
   def notifyInviteeAboutInvitationToJoinLibrary(inviter: User, lib: Library, libOwner: BasicUser, inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit
   def notifyLibOwnerAboutInvitationToTheirLibrary(inviter: User, lib: Library, libOwner: BasicUser, userImage: String, libImageOpt: Option[LibraryImage], inviteeMap: Map[Id[User], LibraryInviteeUser]): Unit
   def revokeInvitationToLibrary(libraryId: Id[Library], inviterId: Id[User], invitee: Either[ExternalId[User], EmailAddress]): Either[(String, String), String]
+  def createInviteInfo(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String])(implicit session: RSession): Option[LibraryInviteInfo]
 
   type LibraryInviteeUser = { def isCollaborator: Boolean }
 }
@@ -429,5 +430,16 @@ class LibraryInviteCommanderImpl @Inject() (
       case Right(None) => Left("error" -> "library_invite_not_found")
       case Left(error) => Left("error" -> error)
     }
+  }
+
+  def createInviteInfo(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String])(implicit session: RSession): Option[LibraryInviteInfo] = {
+    val invites: Seq[LibraryInvite] = userId.toSeq.flatMap(libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, _)) ++ authToken.toSeq.flatMap(libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, _))
+    for {
+      access <- invites.map(_.access).maxOpt
+      (lastInvitedAt, inviter) <- invites.maxByOpt(_.createdAt).map { invite =>
+        val basicInviter = basicUserRepo.load(invite.inviterId)
+        (invite.createdAt, basicInviter)
+      }
+    } yield LibraryInviteInfo(access, lastInvitedAt, inviter)
   }
 }

@@ -1,28 +1,24 @@
 package com.keepit.payments
 
-import com.keepit.commanders.{ PermissionCommander, OrganizationCommander }
-import com.keepit.common.logging.Logging
-import com.keepit.common.db.slick.Database
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.common.time._
-import com.keepit.model._
-import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.social.BasicUserRepo
-
-import scala.concurrent.ExecutionContext
-import scala.util.{ Try, Success, Failure }
-
-import play.api.libs.json.{ JsObject, JsValue, Writes, JsNull }
 import java.math.{ BigDecimal, MathContext, RoundingMode }
 
-import play.api.libs.json.JsNull
-
 import com.google.inject.{ ImplementedBy, Inject }
-
+import com.keepit.commanders.PermissionCommander
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time._
+import com.keepit.model._
 import org.joda.time.{ DateTime, Days }
+import play.api.libs.json._
+
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 abstract class PlanManagementException(msg: String) extends Exception(msg)
 class UnauthorizedChange(msg: String) extends PlanManagementException(msg)
@@ -41,13 +37,16 @@ trait PlanManagementCommander {
   def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent]
   def removeEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Option[AccountEvent]
   def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent]
+  def addUserAccountContactHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): Option[AccountEvent]
   def addEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Option[AccountEvent]
   def getAccountContacts(orgId: Id[Organization]): (Seq[Id[User]], Seq[EmailAddress])
   def getSimpleContactInfos(orgId: Id[Organization]): Seq[SimpleAccountContactInfo]
   def updateUserContact(orgId: Id[Organization], extId: ExternalId[User], enabled: Boolean, attribution: ActionAttribution): Option[AccountEvent]
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], attributedToMember: Option[Id[User]], memo: Option[String]): AccountEvent
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
+
+  def getAccountState(orgId: Id[Organization]): Future[AccountStateResponse]
 
   def currentPlan(orgId: Id[Organization]): PaidPlan
   def currentPlanHelper(orgId: Id[Organization])(implicit session: RSession): PaidPlan
@@ -57,6 +56,7 @@ trait PlanManagementCommander {
   def grandfatherPlan(id: Id[PaidPlan]): Try[PaidPlan]
   def deactivatePlan(id: Id[PaidPlan]): Try[PaidPlan]
 
+  def getCurrentAndAvailablePlans(orgId: Id[Organization]): (Id[PaidPlan], Set[PaidPlan])
   def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan]
   def changePlan(orgId: Id[Organization], newPlan: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent]
   def getBillingCycleStart(orgId: Id[Organization]): DateTime
@@ -66,35 +66,32 @@ trait PlanManagementCommander {
   def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[AccountEvent]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
 
-  def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
-  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
-
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
 
   //ADMIN ONLY
   def isFrozen(orgId: Id[Organization]): Boolean
   def unfreeze(orgId: Id[Organization]): Option[Boolean]
-
-  //UTILITIES
-  def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
 }
 
 class PlanManagementCommanderImpl @Inject() (
   db: Database,
   paymentMethodRepo: PaymentMethodRepo,
-  accountEventRepo: AccountEventRepo,
   paidAccountRepo: PaidAccountRepo,
+  accountEventRepo: AccountEventRepo,
   paidPlanRepo: PaidPlanRepo,
   orgRepo: OrganizationRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   orgConfigRepo: OrganizationConfigurationRepo,
   basicUserRepo: BasicUserRepo,
+  emailRepo: UserEmailAddressRepo,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
   accountLockHelper: AccountLockHelper,
+  eventTrackingCommander: AccountEventTrackingCommander,
   permissionCommander: PermissionCommander,
+  stripe: StripeClient,
   implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends PlanManagementCommander with Logging {
@@ -108,7 +105,7 @@ class PlanManagementCommanderImpl @Inject() (
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
   private def remainingBillingCycleCost(account: PaidAccount)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
-    val cycleLengthMonth: Int = plan.billingCycle.month
+    val cycleLengthMonth = plan.billingCycle.month
     val cycleStart: DateTime = account.billingCycleStart
     val cycleEnd: DateTime = cycleStart.plusMonths(cycleLengthMonth)
     val cycleLengthDays: Double = Days.daysBetween(cycleStart, cycleEnd).getDays.toDouble //note that this is different depending on the current month
@@ -120,20 +117,19 @@ class PlanManagementCommanderImpl @Inject() (
 
   }
 
-  //very explicitely accepts a db session to allow account creation on org creation within the same db session
+  //very explicitly accepts a db session to allow account creation on org creation within the same db session
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent] = {
     implicit val s = session
     Try { paidPlanRepo.get(planId) } match {
-      case Success(plan) => {
+      case Success(plan) =>
         log.info(s"[PAC] $orgId: Plan exists.")
         if (plan.state != PaidPlanStates.ACTIVE) {
           Failure(new InvalidChange("plan_not_active"))
         } else {
           val maybeAccount = paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
-            case Some(pa) if pa.state == PaidAccountStates.ACTIVE => {
+            case Some(pa) if pa.state == PaidAccountStates.ACTIVE =>
               log.info(s"[PAC] $orgId: Account already exists.")
               Failure(new InvalidChange("account_exists"))
-            }
             case Some(pa) =>
               log.info(s"[PAC] $orgId: Recreating Account")
               val account = paidAccountRepo.save(PaidAccount(
@@ -162,7 +158,7 @@ class PlanManagementCommanderImpl @Inject() (
                 activeUsers = 0,
                 billingCycleStart = clock.now
               ))
-              grantSpecialCreditHelper(orgId, DollarAmount.wholeDollars(50), None, Some("Welcome to Kifi!"))
+              grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account)
               } else {
@@ -171,24 +167,29 @@ class PlanManagementCommanderImpl @Inject() (
           }
           maybeAccount.map { account =>
             log.info(s"[PAC] $orgId: Registering First User")
+            val createdEvent = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+              eventTime = clock.now,
+              accountId = account.id.get,
+              attribution = ActionAttribution(user = Some(creator), admin = None),
+              action = AccountEventAction.OrganizationCreated(planId)
+            ))
             registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             log.info(s"[PAC] $orgId: Registering First Admin")
-            val adminEvent = accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+            eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
               eventTime = clock.now,
               accountId = account.id.get,
               attribution = ActionAttribution(user = Some(creator), admin = None),
               action = AccountEventAction.AdminAdded(creator)
             ))
+            addUserAccountContactHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             accountLockHelper.releaseAccountLockForSession(orgId, session)
-            adminEvent
+            createdEvent
           }
         }
-      }
-      case Failure(ex) => {
+      case Failure(ex) =>
         log.error(s"[PAC] $orgId: Plan does not exist!", ex)
         airbrake.notify("Paid Plan Not available!!", ex)
         Failure(new InvalidChange("plan_not_available"))
-      }
     }
 
   }
@@ -211,13 +212,13 @@ class PlanManagementCommanderImpl @Inject() (
 
   }
 
-  private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession) = {
+  def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession) = {
     val account = paidAccountRepo.getByOrgId(orgId)
     val price: DollarAmount = remainingBillingCycleCost(account)
     paidAccountRepo.save(
       account.withReducedCredit(price).withMoreActiveUsers(1)
     )
-    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+    eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = account.id.get,
       attribution = attribution,
@@ -230,13 +231,13 @@ class PlanManagementCommanderImpl @Inject() (
     registerNewUserHelper(orgId, userId, attribution)
   }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
 
-  private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
+  def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
     val price: DollarAmount = remainingBillingCycleCost(account)
-    paidAccountRepo.save(
-      account.withIncreasedCredit(price).withFewerActiveUsers(1)
-    )
-    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+    val newAccount = account.withIncreasedCredit(price).withFewerActiveUsers(1).withUserContacts(account.userContacts.diff(Seq(userId)))
+
+    paidAccountRepo.save(newAccount)
+    eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
       attribution = attribution,
@@ -249,8 +250,12 @@ class PlanManagementCommanderImpl @Inject() (
     registerRemovedUserHelper(orgId, userId, attribution)
   }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
 
-  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
-    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
+    registerNewAdminHelper(orgId, userId, attribution)
+  }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
+
+  def registerNewAdminHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
+    eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
       attribution = attribution,
@@ -258,8 +263,12 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = db.readWrite { implicit session =>
-    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
+    registerRemovedAdminHelper(orgId, userId, attribution)
+  }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
+
+  def registerRemovedAdminHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
+    eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
       attribution = attribution,
@@ -269,10 +278,11 @@ class PlanManagementCommanderImpl @Inject() (
 
   def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent] = db.readWrite { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
-    if (account.userContacts.contains(userId)) {
+    val org = orgRepo.get(orgId)
+    if (account.userContacts.contains(userId) && userId != org.ownerId) {
       val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId))
       paidAccountRepo.save(updatedAccount)
-      Some(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+      Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
         eventTime = clock.now,
         accountId = updatedAccount.id.get,
         attribution = attribution,
@@ -286,7 +296,7 @@ class PlanManagementCommanderImpl @Inject() (
     if (account.emailContacts.contains(emailAddress)) {
       val updatedAccount = account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress))
       paidAccountRepo.save(updatedAccount)
-      Some(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+      Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
         eventTime = clock.now,
         accountId = updatedAccount.id.get,
         attribution = attribution,
@@ -296,11 +306,15 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent] = db.readWrite { implicit session =>
+    addUserAccountContactHelper(orgId, userId, attribution)
+  }
+
+  def addUserAccountContactHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): Option[AccountEvent] = {
     val account = paidAccountRepo.getByOrgId(orgId)
     if (!account.userContacts.contains(userId)) {
-      val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId) :+ userId)
+      val updatedAccount = account.copy(userContacts = account.userContacts :+ userId)
       paidAccountRepo.save(updatedAccount)
-      Some(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+      Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
         eventTime = clock.now,
         accountId = updatedAccount.id.get,
         attribution = attribution,
@@ -314,7 +328,7 @@ class PlanManagementCommanderImpl @Inject() (
     if (!account.emailContacts.contains(emailAddress)) {
       val updatedAccount = account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress) :+ emailAddress)
       paidAccountRepo.save(updatedAccount)
-      Some(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+      Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
         eventTime = clock.now,
         accountId = updatedAccount.id.get,
         attribution = attribution,
@@ -349,14 +363,13 @@ class PlanManagementCommanderImpl @Inject() (
     }
   }
 
-  private def grantSpecialCreditHelper(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String])(implicit session: RWSession): AccountEvent = {
+  private def grantSpecialCreditHelper(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], attributedToMember: Option[Id[User]], memo: Option[String])(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
     paidAccountRepo.save(account.withIncreasedCredit(amount))
-    accountEventRepo.save(AccountEvent(
+    eventTrackingCommander.track(AccountEvent(
       eventTime = clock.now(),
       accountId = account.id.get,
-      billingRelated = false,
-      whoDunnit = None,
+      whoDunnit = attributedToMember,
       whoDunnitExtra = JsNull,
       kifiAdminInvolved = grantedByAdmin,
       action = AccountEventAction.SpecialCredit(),
@@ -368,12 +381,34 @@ class PlanManagementCommanderImpl @Inject() (
     ))
   }
 
-  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], memo: Option[String]): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
-    grantSpecialCreditHelper(orgId, amount, grantedByAdmin, memo)
+  def grantSpecialCredit(orgId: Id[Organization], amount: DollarAmount, grantedByAdmin: Option[Id[User]], attributedToMember: Option[Id[User]], memo: Option[String]): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
+    grantSpecialCreditHelper(orgId, amount, grantedByAdmin, attributedToMember, memo)
   }.get
 
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount = db.readOnlyMaster { implicit session =>
     paidAccountRepo.getByOrgId(orgId).credit
+  }
+
+  def getAccountState(orgId: Id[Organization]): Future[AccountStateResponse] = {
+    val (account, plan) = db.readOnlyReplica { implicit session =>
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val plan = paidPlanRepo.get(account.planId)
+      (account, plan)
+    }
+    val cardFut = getDefaultPaymentMethod(orgId).map { method =>
+      stripe.getCardInfo(method.stripeToken).map(Some(_))
+    }.getOrElse(Future.successful(None))
+
+    cardFut.map { card =>
+      AccountStateResponse(
+        users = account.activeUsers,
+        billingDate = account.billingCycleStart.plusMonths(plan.billingCycle.month),
+        balance = account.credit,
+        charge = plan.pricePerCyclePerUser * account.activeUsers,
+        plan.asInfo,
+        card
+      )
+    }
   }
 
   def currentPlan(orgId: Id[Organization]): PaidPlan = db.readOnlyMaster { implicit session =>
@@ -424,18 +459,37 @@ class PlanManagementCommanderImpl @Inject() (
     paidPlanRepo.getByKinds(kinds)
   }
 
+  def getCurrentAndAvailablePlans(orgId: Id[Organization]): (Id[PaidPlan], Set[PaidPlan]) = db.readOnlyReplica { implicit session =>
+    val currentPlan = currentPlanHelper(orgId)
+    val currentPlans = paidPlanRepo.getByDisplayName(currentPlan.displayName) // get plans with same name, different billing cycles
+    val normalPlans = paidPlanRepo.getByKinds(Set(PaidPlan.Kind.NORMAL))
+    (currentPlan.id.get, normalPlans.toSet ++ currentPlans)
+  }
+
   def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent] = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
+    val oldPlan = paidPlanRepo.get(account.planId)
     val newPlan = paidPlanRepo.get(newPlanId)
-    val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM)
+    val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM) + oldPlan.kind
     if (newPlan.state == PaidPlanStates.ACTIVE && allowedKinds.contains(newPlan.kind)) {
-      val updatedAccount = account.withNewPlan(newPlanId)
+
+      if (newPlan.editableFeatures != oldPlan.editableFeatures) {
+        val oldConfig = orgConfigRepo.getByOrgId(orgId)
+        val restrictedFeatures = oldPlan.editableFeatures -- newPlan.editableFeatures
+        val restrictedSettings = restrictedFeatures.map(f => f -> newPlan.defaultSettings.settingFor(f).getOrElse {
+          throw new RuntimeException(s"${oldPlan.id.get} has a feature ${f.value} that ${newPlan.id.get} does not have a default setting for")
+        }).toMap
+        val newSettings = oldConfig.settings.setAll(restrictedSettings)
+        orgConfigRepo.save(oldConfig.withSettings(newSettings))
+      }
+
       val refund = DollarAmount(remainingBillingCycleCost(account).cents * account.activeUsers)
+      val updatedAccount = account.withNewPlan(newPlanId)
       val newCharge = DollarAmount(remainingBillingCycleCost(updatedAccount).cents * account.activeUsers)
       paidAccountRepo.save(
         updatedAccount.withIncreasedCredit(refund).withReducedCredit(newCharge)
       )
-      Success(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+      Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
         eventTime = clock.now,
         accountId = account.id.get,
         attribution = attribution,
@@ -464,7 +518,7 @@ class PlanManagementCommanderImpl @Inject() (
       default = false,
       stripeToken = stripeToken
     ))
-    accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+    eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = accountId,
       attribution = attribution,
@@ -484,7 +538,7 @@ class PlanManagementCommanderImpl @Inject() (
         paymentMethodRepo.save(oldDefault.copy(default = false))
       }
       paymentMethodRepo.save(newDefault.copy(default = true))
-      Success(accountEventRepo.save(AccountEvent.simpleNonBillingEvent(
+      Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
         eventTime = clock.now,
         accountId = accountId,
         attribution = attribution,
@@ -497,16 +551,6 @@ class PlanManagementCommanderImpl @Inject() (
     getActivePaymentMethods(orgId).find(_.default)
   }
 
-  def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
-    val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getEvents(accountId, limit, onlyRelatedToBilling)
-  }
-
-  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
-    val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getEventsBefore(accountId, beforeTime, beforeId, limit, onlyRelatedToBilling)
-  }
-
   def isFrozen(orgId: Id[Organization]): Boolean = db.readOnlyMaster { implicit session =>
     paidAccountRepo.getByOrgId(orgId).frozen
   }
@@ -516,82 +560,4 @@ class PlanManagementCommanderImpl @Inject() (
       paidAccountRepo.getByOrgId(orgId).copy(frozen = false)
     ).frozen
   }
-
-  def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
-    import AccountEventAction._
-    val maybeUser = event.whoDunnit.map(basicUserRepo.load)
-    val maybeAdmin = event.kifiAdminInvolved.map(basicUserRepo.load)
-    val whoDunnit = (maybeUser, maybeAdmin) match {
-      case (Some(user), Some(admin)) => s"${user.firstName} ${user.lastName} with Kifi Admin ${admin.firstName} ${admin.lastName}"
-      case (Some(user), None) => s"${user.firstName} ${user.lastName}"
-      case (None, Some(admin)) => s"Kifi Admin ${admin.firstName} ${admin.lastName}"
-      case (None, None) => s"System"
-    }
-    val shortName = event.action match {
-      case SpecialCredit() => "Special Credit Given"
-      case ChargeBack() => "Charge back to your Card"
-      case PlanBillingCharge() => "Regular cost of your Plan charged entirely to your card on file"
-      case UserChangeCredit() => "Credit for reduction in number of Users"
-      case UserAdded(who) => {
-        val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} added to your team"
-      }
-      case UserRemoved(who) => {
-        val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} removed from your team"
-      }
-      case AdminAdded(who) => {
-        val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} made an admin of your team"
-      }
-      case AdminRemoved(who) => {
-        val user = basicUserRepo.load(who)
-        s"${user.firstName} ${user.lastName} no longer an admin of your team"
-      }
-      case PlanChanged(oldPlanId, newPlanId) => {
-        val oldPlan = paidPlanRepo.get(oldPlanId)
-        val newPlan = paidPlanRepo.get(newPlanId)
-        s"Plan Changed from ${oldPlan.name} to ${newPlan.name}"
-      }
-      case PaymentMethodAdded(_, _) => "New Payment Method Added"
-      case DefaultPaymentMethodChanged(_, _, _) => "Default Payment Method Changed"
-      case AccountContactsChanged(userAdded: Option[Id[User]], userRemoved: Option[Id[User]], emailAdded: Option[EmailAddress], emailRemoved: Option[EmailAddress]) => {
-        val userAddedOpt: Option[String] = userAdded.map { userId =>
-          val bu = basicUserRepo.load(userId)
-          s"${bu.firstName} ${bu.lastName}"
-        }
-        val userRemovedOpt: Option[String] = userRemoved.map { userId =>
-          val bu = basicUserRepo.load(userId)
-          s"${bu.firstName} ${bu.lastName}"
-        }
-        val emailAddedOpt: Option[String] = emailAdded.map(_.address)
-        val emailRemovedOpt: Option[String] = emailRemoved.map(_.address)
-        val addedSeq: Seq[String] = (userAddedOpt.toSeq ++ emailAddedOpt.toSeq)
-        val removedSeq: Seq[String] = (userRemovedOpt.toSeq ++ emailRemovedOpt.toSeq)
-        val added: String = if (addedSeq.isEmpty) "" else s" Added: ${addedSeq.mkString(", ")}."
-        val removed: String = if (removedSeq.isEmpty) "" else s" Removed: ${removedSeq.mkString(", ")}."
-        s"Account Contacts Changed.${added}${removed}"
-      }
-    }
-    val extraInfo = event.action match {
-      case PaymentMethodAdded(_, lastFour) => Some(s"Card ending in $lastFour added")
-      case DefaultPaymentMethodChanged(_, _, newLastFour) => Some(s"Changed to card ending in $newLastFour")
-      case PlanBillingCharge() => {
-        val chargeIdNotFoundText = s"not found, please contact ${SystemEmailAddress.BILLING}"
-        Some(s"Invoice # ${event.chargeId.getOrElse(chargeIdNotFoundText)}")
-      }
-      case _ => None
-    }
-    SimpleAccountEventInfo(
-      id = AccountEvent.publicId(event.id.get),
-      eventTime = event.eventTime,
-      shortName = shortName,
-      extraInfo = extraInfo,
-      whoDunnit = whoDunnit,
-      creditChange = event.creditChange,
-      paymentCharge = event.paymentCharge,
-      memo = event.memo
-    )
-  }
 }
-

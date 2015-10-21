@@ -166,7 +166,11 @@ class KeepRepoTest extends Specification with ShoeboxTestInjector {
         keepsWithoutOrgId1.size === 30
       }
     }
-
+    "format the sql query for getPrivateCountByTimeAndSource" in {
+      withDb() { implicit injector =>
+        db.readOnlyMaster { implicit session => keepRepo.getPrivateCountByTimeAndSource(currentDateTime, currentDateTime, KeepSource.keeper) }
+        1 === 1
+      }
+    }
   }
-
 }

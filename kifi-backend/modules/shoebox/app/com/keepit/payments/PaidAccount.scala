@@ -9,19 +9,28 @@ import com.keepit.social.BasicUser
 
 import com.kifi.macros.json
 import org.joda.time.DateTime
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 @json
-case class DollarAmount(cents: Int) extends AnyVal {
-  def +(other: DollarAmount) = DollarAmount(cents + other.cents)
-
+case class DollarAmount(cents: Int) extends Ordered[DollarAmount] {
+  def compare(that: DollarAmount) = cents compare that.cents
+  def +(other: DollarAmount): DollarAmount = DollarAmount(cents + other.cents)
+  def -(other: DollarAmount): DollarAmount = DollarAmount(cents - other.cents)
+  def *(x: Int) = DollarAmount(cents * x)
+  def max(other: DollarAmount): DollarAmount = DollarAmount(cents max other.cents)
+  def min(other: DollarAmount): DollarAmount = DollarAmount(cents min other.cents)
   override def toString = toDollarString
-  def toDollarString: String = if (cents < 0) "-" + DollarAmount(-cents).toDollarString else "$%d.%02d".format(cents / 100, cents % 100)
+  def toDollarString: String = if (cents < 0) "-" + (-this).toDollarString else "$%d.%02d".format(cents / 100, cents % 100)
 
-  def negative = DollarAmount(-1 * cents)
+  def unary_- = DollarAmount(-1 * cents)
+
+  def toCents: Int = cents
 }
 
 object DollarAmount {
-  def wholeDollars(dollars: Int): DollarAmount = DollarAmount(dollars * 100)
+  def cents(cents: Int): DollarAmount = DollarAmount(cents)
+  def dollars(dollars: Int): DollarAmount = DollarAmount(dollars * 100)
 
   val ZERO = DollarAmount(0)
 
@@ -29,10 +38,24 @@ object DollarAmount {
     import db.Driver.simple._
     MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.apply)
   }
+  val formatAsCents: Format[DollarAmount] = (__ \ 'cents).format[Int].inmap(DollarAmount.cents, _.toCents)
 }
 
 @json
 case class SimpleAccountContactInfo(who: BasicUser, enabled: Boolean)
+
+sealed abstract class PaymentStatus(val value: String)
+object PaymentStatus {
+  case object Ok extends PaymentStatus("ok")
+  case object Required extends PaymentStatus("required")
+  case object Pending extends PaymentStatus("pending")
+  case object Failed extends PaymentStatus("failed")
+
+  private val all = Set(Ok, Required, Pending, Failed)
+  def apply(value: String): PaymentStatus = all.find(_.value == value) getOrElse {
+    throw new IllegalArgumentException(s"Unknown PaymentStatus: $value")
+  }
+}
 
 case class PaidAccount(
     id: Option[Id[PaidAccount]] = None,
@@ -42,6 +65,7 @@ case class PaidAccount(
     orgId: Id[Organization],
     planId: Id[PaidPlan],
     credit: DollarAmount,
+    paymentStatus: PaymentStatus = PaymentStatus.Ok,
     userContacts: Seq[Id[User]],
     emailContacts: Seq[EmailAddress],
     lockedForProcessing: Boolean = false,
@@ -52,7 +76,10 @@ case class PaidAccount(
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
+  def withPaymentStatus(status: PaymentStatus): PaidAccount = this.copy(paymentStatus = status)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
+
+  def owed: DollarAmount = -(DollarAmount.ZERO min credit)
 
   def withReducedCredit(reduction: DollarAmount): PaidAccount = {
     val newCredit = DollarAmount(credit.cents - reduction.cents)
@@ -68,6 +95,9 @@ case class PaidAccount(
     val newActiveUsers = activeUsers - howMany
     this.copy(activeUsers = if (newActiveUsers < 0) 0 else newActiveUsers)
   }
+
+  def withUserContacts(newContacts: Seq[Id[User]]): PaidAccount = this.copy(userContacts = newContacts)
+  def withEmailContacts(newContacts: Seq[EmailAddress]): PaidAccount = this.copy(emailContacts = newContacts)
 
   def withNewPlan(newPlanId: Id[PaidPlan]): PaidAccount = this.copy(planId = newPlanId)
 

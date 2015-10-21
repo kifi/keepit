@@ -1,12 +1,19 @@
 package com.keepit.model
 
+import com.keepit.common.json.TraversableFormat
+import com.keepit.model.Feature.InvalidSettingForFeatureException
 import play.api.libs.json._
 
+import scala.util.{ Failure, Success, Try }
+
 case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
-  def setAll(newKvs: Map[Feature, FeatureSetting]): OrganizationSettings = {
-    this.copy(kvs = kvs ++ newKvs)
-  }
-  def withSettings(newKvs: (Feature, FeatureSetting)*): OrganizationSettings = setAll(newKvs.toMap)
+  def features: Set[Feature] = kvs.keySet
+  def settingFor(f: Feature): Option[FeatureSetting] = kvs.get(f)
+
+  def withFeatureSetTo(fs: (Feature, FeatureSetting)): OrganizationSettings = setAll(Map(fs._1 -> fs._2))
+  def setAll(newKvs: Map[Feature, FeatureSetting]): OrganizationSettings = this.copy(kvs = kvs ++ newKvs)
+  def overwriteWith(that: OrganizationSettings): OrganizationSettings = this.setAll(that.kvs)
+
   def extraPermissionsFor(roleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = kvs.collect {
     case (feature: FeatureWithPermissions, setting: FeatureSetting) => feature.extraPermissionsFor(roleOpt, setting)
   }.toSet.flatten
@@ -20,20 +27,12 @@ case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
 
 object OrganizationSettings {
   val empty = OrganizationSettings(Map.empty)
+
+  private implicit def settingReadsByFeature(f: Feature): Reads[FeatureSetting] = f.settingReads
+  private val featureMapReads: Reads[Map[Feature, FeatureSetting]] = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSetting]
   val dbFormat: Format[OrganizationSettings] = Format(
-    Reads { jsv =>
-      jsv.validate[JsObject].map { obj =>
-        OrganizationSettings(obj.fieldSet.map {
-          case (f, s) =>
-            val feature = Feature(f)
-            val setting = s.as(feature.settingReads)
-            feature -> setting
-        }.toMap)
-      }
-    },
-    Writes { orgSettings =>
-      Json.toJson(orgSettings.kvs.map { case (feature, setting) => feature.value -> setting.value })
-    }
+    Reads { jsv => jsv.validate[Map[Feature, FeatureSetting]](featureMapReads).map(OrganizationSettings(_)) },
+    Writes { os => Json.toJson(os.kvs.map { case (f, s) => f.value -> s.value }) }
   )
 
   val siteFormat = dbFormat
@@ -52,8 +51,8 @@ sealed trait Feature {
   val value: String
   def settings: Set[FeatureSetting]
 
-  private def toSetting(x: String): Option[FeatureSetting] = settings.find(_.value == x)
-  def settingReads: Reads[FeatureSetting] = __.read[String].map(x => toSetting(x).get)
+  private def toSetting(x: String): FeatureSetting = settings.find(_.value == x).getOrElse(throw new InvalidSettingForFeatureException(this, x))
+  def settingReads: Reads[FeatureSetting] = Reads { j => j.validate[String].map(toSetting) }
 }
 sealed trait FeatureWithPermissions {
   val permission: OrganizationPermission
@@ -78,6 +77,9 @@ object FeatureSetting {
 }
 
 object Feature {
+  case class InvalidSettingForFeatureException(feature: Feature, str: String) extends Exception(s""""$str" is not a valid setting for feature ${feature.value}""")
+  case class FeatureNotFoundException(featureStr: String) extends Exception(s"""Feature "$featureStr" not found""")
+
   val ALL: Set[Feature] = Set(
     PublishLibraries,
     InviteMembers,
@@ -91,7 +93,7 @@ object Feature {
     ExportKeeps,
     ViewSettings
   )
-  def apply(str: String): Feature = ALL.find(_.value == str).get
+  def apply(str: String): Feature = ALL.find(_.value == str).getOrElse(throw new FeatureNotFoundException(str))
 
   implicit val format: Format[Feature] = Format(
     __.read[String].map(Feature(_)),
@@ -120,7 +122,7 @@ object Feature {
   case object ForceEditLibraries extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.FORCE_EDIT_LIBRARIES.value
     val permission = OrganizationPermission.FORCE_EDIT_LIBRARIES
-    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
+    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS)
   }
 
   case object ViewOrganization extends Feature with FeatureWithPermissions {
@@ -138,7 +140,7 @@ object Feature {
   case object RemoveLibraries extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.REMOVE_LIBRARIES.value
     val permission = OrganizationPermission.REMOVE_LIBRARIES
-    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
+    val settings: Set[FeatureSetting] = Set(ADMINS, MEMBERS)
   }
 
   case object CreateSlackIntegration extends Feature with FeatureWithPermissions {

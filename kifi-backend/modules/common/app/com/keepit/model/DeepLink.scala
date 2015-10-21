@@ -25,12 +25,6 @@ case class DeepLink(
     state: State[DeepLink] = DeepLinkStates.ACTIVE) extends ModelWithState[DeepLink] {
   def withId(id: Id[DeepLink]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-
-  def url(implicit fortyTwoServices: FortyTwoServices) = "%s/r/%s".format(fortyTwoServices.baseUrl, token.value)
-
-  def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
-
-  def withNormUriId(normUriId: Id[NormalizedURI]) = copy(uriId = Some(normUriId))
 }
 
 object DeepLinkStates extends States[DeepLink]

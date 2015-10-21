@@ -72,6 +72,15 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     }
   }
 
+  def libraryCard(libraryId: Id[Library])(implicit injector: Injector): LibraryCardInfo = {
+    val viewerOpt = inject[FakeUserActionsHelper].fixedUser.flatMap(_.id)
+    db.readOnlyMaster { implicit session =>
+      val library = libraryRepo.get(libraryId)
+      val owner = basicUserRepo.load(library.ownerId)
+      inject[LibraryCardCommander].createLibraryCardInfo(library, owner, viewerOpt, withFollowing = true, ProcessedImageSize.Medium.idealSize)
+    }
+  }
+
   "KeepsController" should {
 
     "allKeeps" in {
@@ -159,7 +168,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "summary":{},
               "siteName":"Amazon",
               "libraryId":"${pubLibId1.id}",
-              "library":${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+              "library":${Json.toJson(libraryCard(lib1.id.get))}
               },
             {
               "id":"${bookmark1.externalId.toString}",
@@ -184,7 +193,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               "summary":{},
               "siteName":"Google",
               "libraryId":"${pubLibId1.id}",
-              "library":${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+              "library":${Json.toJson(libraryCard(lib1.id.get))}
               }
           ]}
         """)
@@ -274,7 +283,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                 "summary":{},
                 "siteName":"Amazon",
                 "libraryId":"${pubLibId1.id}",
-                "library": ${Json.toJson(BasicLibrary(lib1, BasicUser.fromUser(user1), orgHandle = None))}
+                "library":${Json.toJson(libraryCard(lib1.id.get))}
               }
             ]
           }
@@ -336,7 +345,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "summary":{},
                       "siteName":"Kifi",
                       "libraryId":"${Library.publicId(u1Main.id.get)(inject[PublicIdConfiguration]).id}",
-                      "library":${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get)(inject[PublicIdConfiguration]), name = "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
@@ -357,7 +366,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get), name = "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     }
                   ],
                   "helprank":"click"
@@ -421,7 +430,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library": ${Json.toJson(BasicLibrary(Library.publicId(u1Main.id.get), "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     }
                   ],
                   "helprank":"click"
@@ -483,7 +492,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "summary":{},
                                       "siteName":"Facebook",
                                       "libraryId":"lzmfsKLJyou6",
-                                      "library": ${Json.toJson(BasicLibrary(Library.publicId(u3Main.id.get), "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
+                                      "library":${Json.toJson(libraryCard(u3Main.id.get))}
                                     },
                                     {
                                       "id":"${keeps3(0).externalId.toString}",
@@ -504,7 +513,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "summary":{},
                                       "siteName":"Kifi",
                                       "libraryId":"lzmfsKLJyou6",
-                                      "library": ${Json.toJson(BasicLibrary(Library.publicId(u3Main.id.get), "My Main Library", path = "/test/main", LibraryVisibility.DISCOVERABLE, color = None))}
+                                      "library":${Json.toJson(libraryCard(u3Main.id.get))}
                                     }
                                   ],
                                   "helprank":"click"

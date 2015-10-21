@@ -1,16 +1,23 @@
 package com.keepit.model
 
+import java.math.{ MathContext, RoundingMode, BigDecimal }
+
 import com.google.inject.Injector
 import com.keepit.commanders.HandleCommander
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.time._
 import com.keepit.model.OrganizationFactory.PartialOrganization
 import com.keepit.payments._
 import com.keepit.model.PaidPlanFactoryHelper._
+import org.joda.time.{ Days, DateTime }
 
 object OrganizationFactoryHelper {
   implicit class OrganizationPersister(partialOrganization: PartialOrganization) {
     def saved(implicit injector: Injector, session: RWSession): Organization = {
-      val plan = PaidPlanFactory.paidPlan().saved
+      val plan = partialOrganization.planOpt.map { id =>
+        injector.getInstance(classOf[PaidPlanRepo]).get(Id[PaidPlan](id))
+      }.getOrElse(PaidPlanFactory.paidPlan().saved)
       val orgTemplate = injector.getInstance(classOf[OrganizationRepo]).save(partialOrganization.org.copy(id = None))
       val handleCommander = injector.getInstance(classOf[HandleCommander])
       val org = if (orgTemplate.primaryHandle.isEmpty) {
@@ -29,9 +36,12 @@ object OrganizationFactoryHelper {
       orgMemRepo.save(org.newMembership(org.ownerId, OrganizationRole.ADMIN))
       for (admin <- partialOrganization.admins) {
         orgMemRepo.save(org.newMembership(admin.id.get, OrganizationRole.ADMIN))
+        injector.getInstance(classOf[PlanManagementCommanderImpl]).registerNewAdminHelper(org.id.get, admin.id.get, ActionAttribution(Some(org.ownerId), None))
       }
+
       for (member <- partialOrganization.members) {
         orgMemRepo.save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
+        injector.getInstance(classOf[PlanManagementCommanderImpl]).registerNewUserHelper(org.id.get, member.id.get, ActionAttribution(Some(org.ownerId), None))
       }
       val libraryRepo = injector.getInstance(classOf[LibraryRepo])
       val libraryMembershipRepo = injector.getInstance(classOf[LibraryMembershipRepo])

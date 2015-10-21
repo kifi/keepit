@@ -41,8 +41,9 @@ import com.keepit.common.akka.SafeFuture
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.keepit.common.performance._
 import scala.concurrent.Future
-import com.keepit.heimdal.HeimdalContextBuilderFactory
+import com.keepit.heimdal.{ UserEvent, UserEventTypes, HeimdalContext, HeimdalServiceClient, HeimdalContextBuilderFactory }
 import com.keepit.inject.FortyTwoConfig
+import com.keepit.common.core._
 
 object AuthHelper {
   val PWD_MIN_LEN = 7
@@ -76,6 +77,7 @@ class AuthHelper @Inject() (
     userCommander: UserCommander,
     twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
+    heimdal: HeimdalServiceClient,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val config: PublicIdConfiguration,
     resetPasswordEmailSender: ResetPasswordEmailSender,
@@ -189,7 +191,7 @@ class AuthHelper @Inject() (
     libAuthToken: Option[String],
     orgPublicId: Option[PublicId[Organization]],
     orgAuthToken: Option[String],
-    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_]): Result = {
+    isFinalizedImmediately: Boolean)(implicit request: MaybeUserRequest[_], context: HeimdalContext): Result = {
 
     // This is a Big ball of mud. Hopefully we can restore a bit of sanity.
     // This function does some end-of-the-line wiring after registration. We support registrations directly from an API,
@@ -221,8 +223,8 @@ class AuthHelper @Inject() (
       (libraryPublicId, libAuthToken, orgPublicId, orgAuthToken) match { // assumes only one intent exists per request
         case (Some(libPubId), authTokenOpt, _, _) =>
           Some(AutoFollowLibrary(libPubId, authTokenOpt))
-        case (_, _, Some(orgPublicId), Some(authToken)) =>
-          Some(AutoJoinOrganization(orgPublicId, authToken))
+        case (_, _, Some(orgPubId), Some(authToken)) =>
+          Some(AutoJoinOrganization(orgPubId, authToken))
         case _ => None
       }
     }.getOrElse(NoIntent)
@@ -249,18 +251,42 @@ class AuthHelper @Inject() (
             SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
           }
         }
+
+        val completedSignupEvent = UserEvent(user.id.get, context, UserEventTypes.COMPLETED_SIGNUP)
+        heimdal.trackEvent(completedSignupEvent)
     }
+
+    type IntentAction = PostRegIntent ?=> Unit
+
+    val createUserValues: IntentAction = {
+      case o: AutoJoinOrganization =>
+      case l: AutoFollowLibrary =>
+      case _ =>
+      // This enables the FTUI for new users
+      //        db.readWrite { implicit session =>
+      //          userValueRepo.setValue(user.id.get, UserValueName.HAS_SEEN_FTUE, false)
+      //        }
+    }
+
+    val performPrimaryIntentAction: IntentAction = {
+      case AutoFollowLibrary(libId, authTokenOpt) =>
+        authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
+      case AutoJoinOrganization(orgPubId, authToken) =>
+        authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
+    }
+
+    Seq(createUserValues, performPrimaryIntentAction)
+      .map(_.lift)
+      .foreach(i => i(intent))
 
     val uri = intent match {
       case AutoFollowLibrary(libId, authTokenOpt) =>
-        authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
         val url = Library.decodePublicId(libId).map { libraryId =>
           val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
           libPathCommander.getPathForLibrary(library)
         }.getOrElse("/")
         url
       case AutoJoinOrganization(orgPubId, authToken) =>
-        authCommander.autoJoinOrg(user.id.get, orgPubId, authToken)
         val url = Organization.decodePublicId(orgPubId).map { orgId =>
           val handle = db.readOnlyMaster { implicit session => orgRepo.get(orgId) }.handle
           s"/${handle.value}"
@@ -450,7 +476,7 @@ class AuthHelper @Inject() (
       code <- (request.body \ "code").asOpt[String]
       password <- (request.body \ "password").asOpt[String].filter(_.length >= 7)
     } yield {
-      val ip = IpAddress(request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress))
+      val ip = IpAddress.fromRequest(request)
       userCommander.resetPassword(code, ip, password) match {
         case Right(userId) => db.readOnlyMaster { implicit session =>
           authenticateUser(userId, onError = { error =>

@@ -63,7 +63,5 @@ object OrganizationExperimentType {
 
   val _ALL = FAKE :: Nil
 
-  private val _ALL_MAP: Map[String, OrganizationExperimentType] = _ALL.map(e => e.value -> e).toMap
-
   def get(str: String): OrganizationExperimentType = OrganizationExperimentType(str.toLowerCase.trim)
 }

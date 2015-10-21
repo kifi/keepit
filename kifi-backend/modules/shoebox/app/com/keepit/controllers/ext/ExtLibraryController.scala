@@ -76,7 +76,7 @@ class ExtLibraryController @Inject() (
         }
 
         val membershipInfo = membership.map { mem =>
-          db.readOnlyReplica { implicit session => libraryInfoCommander.createMembershipInfo(mem) }
+          db.readOnlyReplica { implicit session => libraryMembershipCommander.createMembershipInfo(mem) }
         }
 
         LibraryData(
@@ -131,7 +131,7 @@ class ExtLibraryController @Inject() (
                 organizationAvatarCommander.getBestImageByOrgId(orgId, ExtLibraryController.defaultImageSize).imagePath
               }
               val membershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(lib.id.get, request.userId)
-              val membershipInfo = membershipOpt.map(libraryInfoCommander.createMembershipInfo)
+              val membershipInfo = membershipOpt.map(libraryMembershipCommander.createMembershipInfo)
 
               LibraryData(
                 id = Library.publicId(lib.id.get),

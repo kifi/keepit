@@ -66,8 +66,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
             nUrl = None,
             pageTitle = None,
             participants = None,
-            participantsHash = None,
-            replyable = false
+            participantsHash = None
           ))
           userThreadRepo.save(UserThread(
             user = user1,
@@ -76,8 +75,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
             lastSeen = None,
             lastMsgFromOther = None,
             lastNotification = JsNull,
-            unread = true,
-            replyable = true
+            unread = true
           ))
           userThreadRepo.count === 1
           val toMail = userThreadRepo.getUserThreadsForEmailing(clock.now().plusMinutes(16))
@@ -96,8 +94,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
             nUrl = None,
             pageTitle = None,
             participants = None,
-            participantsHash = None,
-            replyable = false
+            participantsHash = None
           ))
           userThreadRepo.save(UserThread(
             user = user1,
@@ -122,8 +119,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
             nUrl = None,
             pageTitle = None,
             participants = None,
-            participantsHash = None,
-            replyable = false
+            participantsHash = None
           ))
           userThreadRepo.save(UserThread(
             user = user1,
@@ -134,8 +130,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
             lastNotification = JsNull,
             lastActive = Some(inject[Clock].now),
             started = true,
-            unread = true,
-            replyable = true
+            unread = true
           ))
         }
         db.readOnlyMaster { implicit s =>

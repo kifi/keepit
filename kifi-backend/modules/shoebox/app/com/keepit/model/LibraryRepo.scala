@@ -21,7 +21,7 @@ import scala.slick.jdbc.{ PositionedResult, GetResult, StaticQuery }
 
 @ImplementedBy(classOf[LibraryRepoImpl])
 trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
-  def getByIds(ids: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
+  def getActiveByIds(ids: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def getByUser(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE), excludeAccess: Option[LibraryAccess] = None)(implicit session: RSession): Seq[(LibraryMembership, Library)]
   def getLibrariesWithWriteAccess(userId: Id[User], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[(Library, LibraryMembership)]
   def getLibrariesWithOpenWriteAccess(organizationId: Id[Organization], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Seq[Library]
@@ -157,9 +157,9 @@ class LibraryRepoImpl @Inject() (
     }
   }
 
-  def getByIds(ids: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
+  def getActiveByIds(ids: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
     idCache.bulkGetOrElse(ids.map(LibraryIdKey)) { missingKeys =>
-      val q = { for { row <- rows if row.id.inSet(missingKeys.map(_.id)) } yield row }
+      val q = rows.filter(lib => lib.id.inSet(missingKeys.map(_.id)) && lib.state === LibraryStates.ACTIVE)
       q.list.map { x => LibraryIdKey(x.id.get) -> x }.toMap
     }.map { case (key, lib) => key.id -> lib }
   }

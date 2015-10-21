@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.PaidAccountFactory.PartialPaidAccount
-import com.keepit.payments.{ PlanManagementCommander, PaidAccount, PaidAccountRepo, PaidPlanRepo }
+import com.keepit.payments.{ PaidAccount, PaidAccountRepo, PaidPlanRepo }
 
 object PaidAccountFactoryHelper {
   implicit class PaidAccountPersister(partialPaidAccount: PartialPaidAccount) {

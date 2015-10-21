@@ -22,6 +22,8 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def tryGetAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount]
+
+  def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
 }
 
 @Singleton
@@ -33,19 +35,21 @@ class PaidAccountRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = DollarAmount.columnType(db)
+  implicit val statusColumnType = MappedColumnType.base[PaymentStatus, String](_.value, PaymentStatus(_))
 
   type RepoImpl = PaidAccountTable
   class PaidAccountTable(tag: Tag) extends RepoTable[PaidAccount](db, tag, "paid_account") {
     def orgId = column[Id[Organization]]("org_id", O.NotNull)
     def planId = column[Id[PaidPlan]]("plan_id", O.NotNull)
     def credit = column[DollarAmount]("credit", O.NotNull)
+    def paymentStatus = column[PaymentStatus]("payment_status", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
     def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
     def frozen = column[Boolean]("frozen", O.NotNull)
     def activeUsers = column[Int]("active_users", O.NotNull)
     def billingCycleStart = column[DateTime]("billing_cycle_start", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, paymentStatus, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
@@ -80,7 +84,11 @@ class PaidAccountRepoImpl @Inject() (
   }
 
   def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount] = {
-    (for (row <- rows if row.credit < maxBalance || row.billingCycleStart < maxCycleAge) yield row).list
+    (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Required: PaymentStatus) || row.credit < -maxBalance || row.billingCycleStart < maxCycleAge)) yield row).list
   }
 
+  def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""select org_id from paid_account where state='active' and frozen = false and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
+  }
 }

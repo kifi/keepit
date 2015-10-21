@@ -33,10 +33,8 @@ trait LibraryInfoCommander {
   def getKeepsCount(libraryId: Id[Library]): Future[Int]
   def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Future[FullLibraryInfo]
   def getLibraryMembersAndInvitees(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): Seq[MaybeLibraryMember]
-  def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails]
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)]
-  def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo]
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]]
   def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], showKeepCreateTime: Boolean = true, useMultilibLogic: Boolean = false): Future[FullLibraryInfo]
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
@@ -46,11 +44,6 @@ trait LibraryInfoCommander {
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
   def getLibraryWithHandleAndSlug(handle: Handle, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
-  def getMarketingSiteSuggestedLibraries: Future[Seq[LibraryCardInfo]]
-  def createLibraryCardInfo(lib: Library, owner: BasicUser, viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo
-  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
-  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])]
-  def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo
 }
 
 class LibraryInfoCommanderImpl @Inject() (
@@ -67,7 +60,9 @@ class LibraryInfoCommanderImpl @Inject() (
     twitterSyncRepo: TwitterSyncStateRepo,
     keepRepo: KeepRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryMembershipCommander: LibraryMembershipCommander,
     libraryImageCommander: LibraryImageCommander,
+    libraryInviteCommander: LibraryInviteCommander,
     ktlRepo: KeepToLibraryRepo,
     libPathCommander: PathCommander,
     airbrake: AirbrakeNotifier,
@@ -109,21 +104,6 @@ class LibraryInfoCommanderImpl @Inject() (
     libPathCommander.getPathForLibrary(library)
   }
 
-  def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo = {
-    LibraryMembershipInfo(mem.access, mem.listed, mem.subscribedToUpdates, permissionCommander.getLibraryPermissions(mem.libraryId, Some(mem.userId)))
-  }
-
-  private def createInviteInfo(libraryId: Id[Library], userId: Option[Id[User]], authToken: Option[String])(implicit session: RSession): Option[LibraryInviteInfo] = {
-    val invites: Seq[LibraryInvite] = userId.toSeq.flatMap(libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, _)) ++ authToken.toSeq.flatMap(libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, _))
-    for {
-      access <- invites.map(_.access).maxOpt
-      (lastInvitedAt, inviter) <- invites.maxByOpt(_.createdAt).map { invite =>
-        val basicInviter = basicUserRepo.load(invite.inviterId)
-        (invite.createdAt, basicInviter)
-      }
-    } yield LibraryInviteInfo(access, lastInvitedAt, inviter)
-  }
-
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails] = {
     db.readOnlyReplica { implicit session =>
 
@@ -142,7 +122,7 @@ class LibraryInfoCommanderImpl @Inject() (
         val membershipOpt = membershipsByLibraryId.get(libId).flatten
         val path = libPathCommander.pathForLibrary(lib)
         val permissions = permissionCommander.getLibraryPermissions(libId, viewerId)
-        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(createMembershipInfo), lib.ownerId, path, permissions)
+        libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(libraryMembershipCommander.createMembershipInfo), lib.ownerId, path, permissions)
       }.toMap
     }
   }
@@ -227,8 +207,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val basicOrgViewByIdF = {
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
       db.readOnlyReplicaAsync { implicit s =>
-        val orgMap = orgRepo.getByIds(allOrgsShown)
-        orgMap.keys.map(orgId => orgId -> organizationCommander.getBasicOrganizationViewHelper(orgId, viewerUserIdOpt, authTokenOpt = None)).toMap
+        organizationCommander.getBasicOrganizationViewsHelper(allOrgsShown, viewerUserIdOpt, authTokenOpt = None)
       }
     }
 
@@ -255,7 +234,7 @@ class LibraryInfoCommanderImpl @Inject() (
         libraries.flatMap { library =>
           val libraryId = library.id.get
           libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, viewerUserId).map { membership =>
-            libraryId -> createMembershipInfo(membership)
+            libraryId -> libraryMembershipCommander.createMembershipInfo(membership)
           }
         }
       } toMap
@@ -265,7 +244,7 @@ class LibraryInfoCommanderImpl @Inject() (
       db.readOnlyMaster { implicit session =>
         libraries.flatMap { library =>
           val libraryId = library.id.get
-          createInviteInfo(libraryId, viewerUserIdOpt, authTokens.get(libraryId)).map(libraryId -> _)
+          libraryInviteCommander.createInviteInfo(libraryId, viewerUserIdOpt, authTokens.get(libraryId)).map(libraryId -> _)
         }
       } toMap
     }
@@ -327,15 +306,6 @@ class LibraryInfoCommanderImpl @Inject() (
     Future.sequence(futureFullLibraryInfos)
   }
 
-  def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo] = {
-    userIdOpt.flatMap { userId =>
-      db.readOnlyReplica { implicit s =>
-        val membershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId)
-        membershipOpt.map(createMembershipInfo)
-      }
-    }
-  }
-
   private def getSourceAttribution(libId: Id[Library]): Option[LibrarySourceAttribution] = {
     db.readOnlyReplica { implicit s =>
       twitterSyncRepo.getFirstHandleByLibraryId(libId).map {
@@ -355,10 +325,6 @@ class LibraryInfoCommanderImpl @Inject() (
         val sortedFollowers = sortUsersByImage(followers)
         info.copy(followers = sortedFollowers.take(maxMembersShown))
     }
-  }
-
-  def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]] = {
-    db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) }
   }
 
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)]) = {
@@ -474,205 +440,6 @@ class LibraryInfoCommanderImpl @Inject() (
       libraryRepo.getBySpaceAndSlug(space, slug).map((_, false)) orElse
         libraryAliasRepo.getBySpaceAndSlug(space, slug).map(alias => (libraryRepo.get(alias.libraryId), true)).filter(_._1.state == LibraryStates.ACTIVE)
     }
-  }
-
-  def getMarketingSiteSuggestedLibraries: Future[Seq[LibraryCardInfo]] = {
-    val valueOpt = db.readOnlyReplica { implicit s =>
-      systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName)
-    }
-
-    valueOpt map { value =>
-      val systemValueLibraries = Json.fromJson[Seq[MarketingSuggestedLibrarySystemValue]](Json.parse(value)).fold(
-        err => {
-          airbrake.notify(s"Invalid JSON format for Seq[MarketingSuggestedLibrarySystemValue]: $err")
-          Seq.empty[MarketingSuggestedLibrarySystemValue]
-        },
-        identity
-      ).zipWithIndex.map { case (valuex, idx) => valuex.id -> (valuex, idx) }.toMap
-
-      val libIds = systemValueLibraries.keySet
-      val libs = db.readOnlyReplica { implicit s =>
-        libraryRepo.getLibraries(libIds).values.toSeq.filter(_.visibility == LibraryVisibility.PUBLISHED)
-      }
-      val infos: ParSeq[LibraryCardInfo] = db.readOnlyMaster { implicit s =>
-        val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)
-        createLibraryCardInfos(libs, owners, None, false, ProcessedImageSize.Medium.idealSize)
-      }
-
-      SafeFuture {
-        infos.zip(libs).map {
-          case (info, lib) =>
-            val (extraInfo, idx) = systemValueLibraries(lib.id.get)
-            idx -> LibraryCardInfo(
-              id = info.id,
-              name = info.name,
-              description = None, // not currently used
-              color = info.color,
-              image = info.image,
-              slug = info.slug,
-              visibility = lib.visibility,
-              owner = info.owner,
-              numKeeps = info.numKeeps,
-              numFollowers = info.numFollowers,
-              followers = Seq.empty,
-              numCollaborators = info.numCollaborators,
-              collaborators = Seq.empty,
-              lastKept = info.lastKept,
-              following = None,
-              membership = None,
-              invite = None,
-              permissions = Set.empty,
-              caption = extraInfo.caption,
-              modifiedAt = lib.updatedAt,
-              path = info.path,
-              kind = lib.kind,
-              org = info.org,
-              orgMemberAccess = lib.organizationMemberAccess
-            )
-        }.seq.sortBy(_._1).map(_._2)
-      }
-    } getOrElse Future.successful(Seq.empty)
-  }
-
-  def createLibraryCardInfo(lib: Library, owner: BasicUser, viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo = {
-    db.readOnlyMaster { implicit session =>
-      createLibraryCardInfos(Seq(lib), Map(lib.ownerId -> owner), viewerOpt, withFollowing, idealSize).head
-    }
-  }
-
-  @AlertingTimer(2 seconds)
-  @StatsdTiming("libraryInfoCommander.createLibraryCardInfos")
-  def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerIdOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo] = {
-    val libIds = libs.map(_.id.get).toSet
-    val membershipsToLibsMap = viewerIdOpt.map { viewerId =>
-      libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewerId)
-    } getOrElse Map.empty
-    val orgViews = organizationCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerIdOpt, authTokenOpt = None)
-    libs.par map { lib => // may want to optimize queries below into bulk queries
-      val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
-      val (numFollowers, followersSample, numCollaborators, collabsSample) = {
-        val countMap = libraryMembershipRepo.countWithLibraryIdByAccess(lib.id.get)
-        val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(lib.id.get)) 0 else countMap.readOnly
-        val numCollaborators = countMap.readWrite
-
-        val collaborators = libraryMembershipRepo.someWithLibraryIdAndAccess(lib.id.get, 3, LibraryAccess.READ_WRITE)
-        val followers = libraryMembershipRepo.someWithLibraryIdAndAccess(lib.id.get, 3, LibraryAccess.READ_ONLY)
-        val collabIds = collaborators.map(_.userId).toSet
-        val followerIds = followers.map(_.userId).toSet
-        val userSample = basicUserRepo.loadAll(followerIds ++ collabIds) //we don't care about the order now anyway
-        val followersSample = followerIds.map(id => userSample(id)).toSeq
-        val collabsSample = collabIds.map(id => userSample(id)).toSeq
-        (numFollowers, followersSample, numCollaborators, collabsSample)
-      }
-
-      val owner = owners(lib.ownerId)
-      val orgViewOpt = lib.organizationId.map(orgViews.apply)
-      val path = LibraryPathHelper.formatLibraryPath(owner, orgViewOpt.map(_.basicOrganization.handle), lib.slug)
-
-      val membershipOpt = membershipsToLibsMap.get(lib.id.get).flatten
-      val membershipInfoOpt = membershipOpt.map(createMembershipInfo)
-      val inviteInfoOpt = createInviteInfo(lib.id.get, viewerIdOpt, None)
-
-      val isFollowing = if (withFollowing && membershipOpt.isDefined) {
-        Some(membershipOpt.isDefined)
-      } else {
-        None
-      }
-
-      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, viewerIdOpt)
-
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, permissions, path, orgViewOpt)
-    }
-  }
-
-  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = {
-    val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
-      libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE))
-    val userIds = memberships.values.map(_.map(_.userId)).flatten.toSet
-    val allBasicUsers = basicUserRepo.loadAll(userIds)
-
-    val basicOrgViewById = organizationCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, Some(viewerId), authTokenOpt = None)
-
-    libs.par map { lib =>
-      val libMems = memberships(lib.id.get)
-      val viewerMem = libMems.find(_.userId == viewerId).get
-      val subscriptions = librarySubscriptionRepo.getByLibraryId(lib.id.get).map { sub => LibrarySubscription.toSubKey(sub) }
-      val (numFollowers, numCollaborators, collabsSample) = if (libMems.length > 1) {
-        val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(lib.id.get)) 0 else libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
-        val numCollaborators = libMems.length - 1
-        val collabsSample = libMems.filter(_.access != LibraryAccess.OWNER)
-          .sortBy(_.userId != viewerId)
-          .take(4).map(m => allBasicUsers(m.userId))
-        (numFollowers, numCollaborators, collabsSample)
-      } else {
-        (0, 0, Seq.empty)
-      }
-      val basicOrgViewOpt = lib.organizationId.map(basicOrgViewById.apply)
-      val owner = basicUserRepo.load(lib.ownerId)
-      val path = LibraryPathHelper.formatLibraryPath(owner = owner, basicOrgViewOpt.map(_.basicOrganization.handle), slug = lib.slug)
-
-      if (!userIds.contains(lib.ownerId)) {
-        airbrake.notify(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue? does the owner has a library membership object?")
-      }
-
-      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, Some(viewerId))
-
-      val info = LibraryCardInfo(
-        id = Library.publicId(lib.id.get),
-        name = lib.name,
-        description = None, // not needed
-        color = lib.color,
-        image = None, // not needed
-        slug = lib.slug,
-        kind = lib.kind,
-        visibility = lib.visibility,
-        owner = allBasicUsers(lib.ownerId),
-        numKeeps = lib.keepCount,
-        numFollowers = numFollowers,
-        followers = Seq.empty, // not needed
-        numCollaborators = numCollaborators,
-        collaborators = collabsSample,
-        lastKept = lib.lastKept.getOrElse(lib.createdAt),
-        following = None, // not needed
-        membership = None, // not needed
-        invite = None, // not needed
-        permissions = permissions,
-        path = path,
-        modifiedAt = lib.updatedAt,
-        org = basicOrgViewOpt,
-        orgMemberAccess = lib.organizationMemberAccess)
-      (info, viewerMem, subscriptions)
-    }
-  }
-
-  @StatsdTiming("libraryInfoCommander.createLibraryCardInfo")
-  private def createLibraryCardInfo(lib: Library, image: Option[LibraryImage], owner: BasicUser, numFollowers: Int,
-    followers: Seq[BasicUser], numCollaborators: Int, collaborators: Seq[BasicUser], isFollowing: Option[Boolean], membershipInfoOpt: Option[LibraryMembershipInfo], inviteInfoOpt: Option[LibraryInviteInfo], permissions: Set[LibraryPermission], path: String, orgView: Option[BasicOrganizationView]): LibraryCardInfo = {
-    LibraryCardInfo(
-      id = Library.publicId(lib.id.get),
-      name = lib.name,
-      description = lib.description,
-      color = lib.color,
-      image = image.map(_.asInfo),
-      slug = lib.slug,
-      visibility = lib.visibility,
-      owner = owner,
-      numKeeps = lib.keepCount,
-      numFollowers = numFollowers,
-      followers = LibraryCardInfo.chooseFollowers(followers),
-      numCollaborators = numCollaborators,
-      collaborators = LibraryCardInfo.chooseCollaborators(collaborators),
-      lastKept = lib.lastKept.getOrElse(lib.createdAt),
-      following = isFollowing,
-      membership = membershipInfoOpt,
-      invite = inviteInfoOpt,
-      permissions = permissions,
-      modifiedAt = lib.updatedAt,
-      kind = lib.kind,
-      path = path,
-      org = orgView,
-      orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None
-    )
   }
 
   def getLibraryMembersAndInvitees(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): Seq[MaybeLibraryMember] = {

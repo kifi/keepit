@@ -1,3 +1,4 @@
+
 'use strict';
 
 angular.module('kifi')
@@ -9,7 +10,6 @@ angular.module('kifi')
   connections: 'Connections',
   followers: 'Followers'
 })
-
 
 .controller('UserProfileCtrl', [
   '$scope', '$analytics', '$location', '$rootScope', '$state', '$window', 'profile',
@@ -24,7 +24,7 @@ angular.module('kifi')
     $scope.showInvitedLibraries = function () {
       return $scope.profile && $scope.profile.numInvitedLibraries && $scope.viewingOwnProfile;
     };
-    
+
     //
     // Internal functions.
     //
@@ -70,14 +70,20 @@ angular.module('kifi')
 
       $analytics.eventTrack($rootScope.userLoggedIn ? 'user_clicked_page' : 'visitor_clicked_page', profileEventTrackAttributes);
     }
-    
 
     //
     // Watches and listeners.
     //
-    
- 
+
     [
+      $rootScope.$on('$stateChangeStart', function (event, toState, toParams, fromState, fromParams) {
+        // ui-router wants to navigate to the userOrOrg route because the URL matches,
+        // so we tell it not to if we know we're staying in this space.
+        if (/^userOrOrg/.test(toState.name) && toParams.handle === fromParams.handle) {
+          event.preventDefault();
+        }
+      }),
+
       $rootScope.$on('$stateChangeSuccess', function (event, toState, toParams, fromState, fromParams) {
         // When routing among the nested states, track page view again.
         if (/^userProfile/.test(toState.name) && /^userProfile/.test(fromState.name) && toParams.handle === fromParams.handle) {
@@ -86,7 +92,6 @@ angular.module('kifi')
         }
         if (/^userProfile\.libraries\./.test(toState.name)) {
           $scope.libraryType = toState.name.split('.').pop();
-          
         }
       }),
       $rootScope.$on('getCurrentLibrary', function (e, args) {

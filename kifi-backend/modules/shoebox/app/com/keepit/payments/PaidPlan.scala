@@ -4,7 +4,6 @@ import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId, PublicIdConfiguration }
 import com.keepit.common.time._
 import com.keepit.model._
-import play.api.data.validation.ValidationError
 
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -15,20 +14,30 @@ import org.joda.time.DateTime
 
 import javax.crypto.spec.IvParameterSpec
 
-import play.api.libs.json.Format
-
-import scala.util.{ Success, Failure, Try }
-
 @json
 case class BillingCycle(month: Int) extends AnyVal
 
-@json
+object BillingCycle {
+  def months(n: Int): BillingCycle = BillingCycle(n)
+}
+
 case class PaidPlanInfo(
   id: PublicId[PaidPlan],
   name: String,
+  fullName: String,
   pricePerUser: DollarAmount,
   cycle: BillingCycle,
   features: Set[Feature])
+object PaidPlanInfo {
+  implicit val format = (
+    (__ \ 'id).format[PublicId[PaidPlan]] and
+    (__ \ 'name).format[String] and
+    (__ \ 'fullName).format[String] and
+    (__ \ 'pricePerUser).format(DollarAmount.formatAsCents) and
+    (__ \ 'cycle).format[BillingCycle] and
+    (__ \ 'features).format[Set[Feature]]
+  )(PaidPlanInfo.apply, unlift(PaidPlanInfo.unapply))
+}
 
 case class PaidPlan(
     id: Option[Id[PaidPlan]] = None,
@@ -36,8 +45,8 @@ case class PaidPlan(
     updatedAt: DateTime = currentDateTime,
     state: State[PaidPlan] = PaidPlanStates.ACTIVE,
     kind: PaidPlan.Kind,
-    name: Name[PaidPlan],
-    displayName: String,
+    name: Name[PaidPlan], // as is, deprecated. need to migrate the .displayName column values over to this column, then use .name instead of .displayName in-code
+    displayName: String, // not actually a display name, use fullName instead TODO: migrate this over to `.name`
     billingCycle: BillingCycle,
     pricePerCyclePerUser: DollarAmount,
     editableFeatures: Set[Feature],
@@ -50,17 +59,34 @@ case class PaidPlan(
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
     id = PaidPlan.publicId(id.get),
     name = displayName,
+    fullName = fullName,
     pricePerUser = pricePerCyclePerUser,
     cycle = billingCycle,
     features = editableFeatures
   )
+
+  def fullName = {
+    val cycleString = billingCycle.month match {
+      case 1 => "Monthly"
+      case 12 => "Annual"
+      case _ => "Custom"
+    }
+    displayName match {
+      case freeName if freeName.toLowerCase.contains("free") => displayName
+      case _ => displayName + " " + cycleString
+    }
+  }
+
+  def isDefault = this.id.contains(PaidPlan.DEFAULT)
+  def showUpsells: Boolean = PaidPlan.showUpsells(this)
 }
 
 object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
   protected[this] val publicIdPrefix = "pp"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-81, 48, 82, -97, 110, 73, -46, -55, 43, 73, -107, -90, 89, 21, 116, -101))
 
-  val DEFAULT = Id[PaidPlan](1L)
+  val DEFAULT = Id[PaidPlan](3L)
+  def showUpsells(plan: PaidPlan) = Set(Id[PaidPlan](1L), Id[PaidPlan](3L), DEFAULT).contains(plan.id.get)
 
   @json
   case class Kind(name: String) extends AnyVal
