@@ -22,6 +22,8 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def tryGetAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount]
+
+  def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
 }
 
 @Singleton
@@ -85,4 +87,8 @@ class PaidAccountRepoImpl @Inject() (
     (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Required: PaymentStatus) || row.credit < -maxBalance || row.billingCycleStart < maxCycleAge)) yield row).list
   }
 
+  def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""select org_id from paid_account where state='active' and frozen = false and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
+  }
 }
