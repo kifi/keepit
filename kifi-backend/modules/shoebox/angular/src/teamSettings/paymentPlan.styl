@@ -97,7 +97,6 @@ enterprisePlanColor = #f69256
   &.ng-leave
     transition: none
 
-
 .kf-payment-plan-card-soon
   width: 100%
   margin: 0 -10px
@@ -144,3 +143,21 @@ enterprisePlanColor = #f69256
   list-style-type: disc
   margin-left: 40px
   margin-top: 5px
+
+.kf-payment-plan-error-text
+  color: errorRed
+  height: 17px
+  margin: 14px 0
+
+  &.ng-enter
+    margin: 0
+    opacity: 0
+    height: 0
+    transform: translateY(5px)
+    transition: .2s
+
+  &.ng-enter-active
+    margin: 14px 0
+    opacity: 1
+    height: 17px
+    transform: translateY(0)
