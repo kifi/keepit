@@ -105,30 +105,26 @@ class PaymentsController @Inject() (
 
   def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     PaidPlan.decodePublicId(planPubId) match {
-      case Success(planId) => {
+      case Success(planId) =>
         val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
         planCommander.changePlan(request.orgId, planId, attribution) match {
           case Success(_) => Ok(Json.toJson(planCommander.currentPlan(request.orgId).asInfo))
           case Failure(ex) => BadRequest(Json.obj("error" -> ex.getMessage))
         }
-
-      }
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_plan_id"))
     }
   }
 
-  def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val infos = activityLogCommander.getAccountEvents(request.orgId, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
-    Ok(Json.obj("events" -> infos))
-  }
-
-  def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    AccountEvent.decodePublicId(beforePubId) match {
-      case Success(beforeId) => {
-        val infos = activityLogCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
+  def getEvents(pubId: PublicId[Organization], limit: Int, pubBookendOpt: Option[String]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+    val bookendOptTry = pubBookendOpt match {
+      case None => Success(None)
+      case Some(pubBookend) => AccountEvent.decodePublicId(PublicId(pubBookend)).map(Some(_))
+    }
+    bookendOptTry match {
+      case Success(bookendOpt) =>
+        val infos = activityLogCommander.getAccountEvents(request.orgId, bookendOpt, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
-      }
-      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_bookend_id"))
     }
   }
 }
