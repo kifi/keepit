@@ -204,8 +204,13 @@ class AdminPaymentsController @Inject() (
     val dashboard = db.readOnlyMaster { implicit session =>
       val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
       val recentEvents = accountEventRepo.adminGetRecentEvents(Limit(100)).map(createAdminAccountEventView)
-      val accountIds = recentEvents.map(_.accountId).toSet
-      val orgsByAccountId = accountIds.map { accountId => accountId -> organizationRepo.get(paidAccountRepo.get(accountId).orgId) }.toMap
+      val orgsByAccountId = {
+        val accountIds = frozenAccounts.map(_.id.get).toSet ++ recentEvents.map(_.accountId).toSet
+        val accountsById = paidAccountRepo.getActiveByIds(accountIds)
+        val orgIds = accountsById.values.map(_.orgId).toSet
+        val orgsById = organizationRepo.getByIds(orgIds)
+        accountIds.map { accountId => accountId -> orgsById(accountsById(accountId).orgId) }.toMap
+      }
       AdminPaymentsDashboard(frozenAccounts, recentEvents, orgsByAccountId)
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))
