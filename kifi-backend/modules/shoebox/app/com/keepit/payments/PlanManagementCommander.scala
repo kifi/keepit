@@ -468,9 +468,21 @@ class PlanManagementCommanderImpl @Inject() (
 
   def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent] = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
+    val oldPlan = paidPlanRepo.get(account.planId)
     val newPlan = paidPlanRepo.get(newPlanId)
-    val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM)
+    val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM) + oldPlan.kind
     if (newPlan.state == PaidPlanStates.ACTIVE && allowedKinds.contains(newPlan.kind)) {
+
+      if (newPlan.editableFeatures != oldPlan.editableFeatures) {
+        val oldConfig = orgConfigRepo.getByOrgId(orgId)
+        val restrictedFeatures = oldPlan.editableFeatures -- newPlan.editableFeatures
+        val restrictedSettings = restrictedFeatures.map(f => f -> newPlan.defaultSettings.settingFor(f).getOrElse {
+          throw new RuntimeException(s"${oldPlan.id.get} has a feature ${f.value} that ${newPlan.id.get} does not have a default setting for")
+        }).toMap
+        val newSettings = oldConfig.settings.setAll(restrictedSettings)
+        orgConfigRepo.save(oldConfig.withSettings(newSettings))
+      }
+
       val refund = DollarAmount(remainingBillingCycleCost(account).cents * account.activeUsers)
       val updatedAccount = account.withNewPlan(newPlanId)
       val newCharge = DollarAmount(remainingBillingCycleCost(updatedAccount).cents * account.activeUsers)

@@ -29,7 +29,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   private def controller(implicit injector: Injector) = inject[PaymentsController]
   private def route = com.keepit.controllers.website.routes.PaymentsController
-  private def adminRoute = com.keepit.controllers.admin.routes.AdminPaymentsController
 
   val controllerTestModules = Seq(
     FakeHeimdalServiceClientModule(),
@@ -148,6 +147,41 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
           (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
         }
+      }
+    }
+
+    "change paid plans" in {
+      withDb(controllerTestModules: _*) { implicit injector =>
+        val (org, owner, _, _) = setup()
+
+        val (restrictedPlan, currentConfig) = db.readWrite { implicit session =>
+          val restrictedPlan = PaidPlanFactory.paidPlan().withEditableFeatures(Set(Feature.EditOrganization)).saved
+          val currentConfig = orgConfigRepo.getByOrgId(org.id.get)
+          (restrictedPlan, currentConfig)
+        }
+
+        val featureSettingsToReset: Map[Feature, FeatureSetting] = Map( // random features with hopefully altered settings
+          Feature.PublishLibraries -> FeatureSetting.DISABLED,
+          Feature.InviteMembers -> FeatureSetting.ADMINS,
+          Feature.ForceEditLibraries -> FeatureSetting.ADMINS
+        )
+        val featureSettingsToMaintain = Map(Feature.EditOrganization -> FeatureSetting.DISABLED)
+        val alteredSettings = currentConfig.settings.setAll(featureSettingsToReset ++ featureSettingsToMaintain)
+        currentConfig.settings !== alteredSettings // assert settings will actually change from old default
+        restrictedPlan.defaultSettings !== alteredSettings // assert settings will actually change to new default
+
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, alteredSettings))
+
+        // upgrade plans, will reset org config to restrictedPlan.defaultSettings
+        planManagementCommander.changePlan(org.id.get, restrictedPlan.id.get, ActionAttribution(None, None))
+        val newConfig = db.readWrite { implicit session => orgConfigRepo.getByOrgId(org.id.get) }
+        featureSettingsToReset.keys.map { feature =>
+          newConfig.settings.settingFor(feature) === restrictedPlan.defaultSettings.settingFor(feature)
+        }
+        featureSettingsToMaintain.keys.map { feature =>
+          newConfig.settings.settingFor(feature) === featureSettingsToMaintain.get(feature)
+        }
+        1 === 1
       }
     }
 

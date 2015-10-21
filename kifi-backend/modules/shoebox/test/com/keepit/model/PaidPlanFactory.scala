@@ -35,6 +35,8 @@ object PaidPlanFactory {
     def withBillingCycle(billingCycle: BillingCycle) = new PartialPaidPlan(plan.copy(billingCycle = billingCycle))
     def withKind(kind: PaidPlan.Kind) = new PartialPaidPlan(plan.copy(kind = kind))
     def withDisplayName(name: String) = new PartialPaidPlan(plan.copy(displayName = name))
+    def withDefaultSettings(defaultSettings: OrganizationSettings) = new PartialPaidPlan(plan.copy(defaultSettings = defaultSettings))
+    def withEditableFeatures(editableFeatures: Set[Feature]) = new PartialPaidPlan(plan.copy(editableFeatures = editableFeatures))
     def get: PaidPlan = plan
   }
 
