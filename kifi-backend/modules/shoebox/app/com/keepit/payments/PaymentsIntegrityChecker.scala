@@ -159,14 +159,17 @@ class PaymentsIntegrityChecker @Inject() (
 
     orgIds.foreach { orgId =>
       Try(checkAccount(orgId)) match {
-        case Success(errs) =>
+        case Success(errs) if errs.nonEmpty =>
+          freezeAccount(orgId)
           db.readWrite { implicit session =>
             val accountId = paidAccountRepo.getAccountId(orgId)
             errs.foreach { err => eventTrackingCommander.track(AccountEvent.fromIntegrityError(accountId, err)) }
           }
+        case Success(Set.empty) =>
+          log.info(s"[AEIC] Checked on $orgId and it was totally fine")
         case Failure(ex) =>
-          airbrake.notify(ex)
           log.error(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage}. Freezing Account", ex)
+          airbrake.notify(ex)
           freezeAccount(orgId)
       }
     }
