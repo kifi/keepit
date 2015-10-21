@@ -51,7 +51,7 @@ object VertexDataId {
   implicit def toOrganizationId(orgReaderId: VertexDataId[OrganizationReader]): Id[Organization] = Id(orgReaderId.id)
 
   implicit def fromIpAddress(ipAddr: IpAddress): VertexDataId[IpAddressReader] = VertexDataId(IpAddress.ipToLong(ipAddr))
-  implicit def toIpAddress(ipReaderId: VertexDataId[IpAddressReader]): IpAddress = IpAddress.longToIp(ipReaderId.id)
+  implicit def toIpAddress(ipReaderId: VertexDataId[IpAddressReader]): IpAddress = IpAddress.lossyLongToIp(ipReaderId.id)
 
   implicit def fromDomainId(domainId: Id[Domain]): VertexDataId[DomainReader] = VertexDataId(domainId.id)
   implicit def toDomainId(domainReaderId: VertexDataId[DomainReader]): Id[Domain] = Id(domainReaderId.id)

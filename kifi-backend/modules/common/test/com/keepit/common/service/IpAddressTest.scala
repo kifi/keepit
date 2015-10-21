@@ -30,11 +30,11 @@ class IpAddressTest extends Specification {
     }
 
     "preserve identity in long mapping for ipv4" in {
-      IpAddress.longToIp(IpAddress.ipToLong(IpAddress("192.168.0.1"))) === IpV4Address("192.168.0.1")
+      IpAddress.lossyLongToIp(IpAddress.ipToLong(IpAddress("192.168.0.1"))) === IpV4Address("192.168.0.1")
     }
 
     "do best in long mapping for ipv6" in {
-      IpAddress.longToIp(IpAddress.ipToLong(IpAddress("0:0:0:0:0:8a2e:36f:bfd8"))) === IpV6Address("0:0:0:0:0:8a2e:36f:bfd8")
+      IpAddress.lossyLongToIp(IpAddress.ipToLong(IpAddress("0:0:0:0:0:8a2e:36f:bfd8"))) === IpV6Address("0:0:0:0:0:8a2e:36f:bfd8")
       IpAddress.ipToLong(IpAddress("0:0:0:0:0:8a2e:36f:bfd8")) !== IpAddress.ipToLong(IpAddress("0:0:0:0:0:8a2e:36f:bfd9"))
       IpAddress.ipToLong(IpAddress("1:0:0:0:0:8a2e:36f:bfd8")) !== IpAddress.ipToLong(IpAddress("0:0:0:0:0:8a2e:36f:bfd8"))
     }

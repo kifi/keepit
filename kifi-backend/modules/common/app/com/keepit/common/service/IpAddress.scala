@@ -23,7 +23,7 @@ object IpAddress {
     }
   }
 
-  def longToIp(long: Long): IpAddress = {
+  def lossyLongToIp(long: Long): IpAddress = {
     // Not perfect, but does pull IPv4 addresses out correctly.
     // Notice, however, that there are way more IPv6 addresses than longs. So, longToIp(ipToLong(ip)) != ip for nearly all IPv6s.
     if (long > 0L && long < 4294967295L) { // IPv4
