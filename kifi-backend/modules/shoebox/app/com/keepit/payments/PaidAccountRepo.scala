@@ -14,6 +14,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[PaidAccountRepoImpl])
 trait PaidAccountRepo extends Repo[PaidAccount] {
+  def getActiveByIds(ids: Set[Id[PaidAccount]])(implicit session: RSession): Map[Id[PaidAccount], PaidAccount]
   //every org should have a PaidAccount, created during org creation. Every time this method gets called that better exist.
   def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): PaidAccount
   def maybeGetByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount]
@@ -58,6 +59,10 @@ class PaidAccountRepoImpl @Inject() (
   override def deleteCache(paidAccount: PaidAccount)(implicit session: RSession): Unit = {}
 
   override def invalidateCache(paidAccount: PaidAccount)(implicit session: RSession): Unit = {}
+
+  def getActiveByIds(ids: Set[Id[PaidAccount]])(implicit session: RSession): Map[Id[PaidAccount], PaidAccount] = {
+    rows.filter(row => row.id.inSet(ids) && row.state === PaidAccountStates.ACTIVE).list.map { acc => acc.id.get -> acc }.toMap
+  }
 
   def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): PaidAccount = {
     (for (row <- rows if row.orgId === orgId && !row.state.inSet(excludeStates)) yield row).first
