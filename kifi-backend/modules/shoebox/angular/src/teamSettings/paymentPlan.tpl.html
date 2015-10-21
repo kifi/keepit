@@ -44,7 +44,7 @@
         </div>
       </div>
     </div>
-    <form name="planSelectsForm">
+    <form class="kf-container-section" name="planSelectsForm">
       <p>Select your team's plan. Get details on the plans we offer on the <a class="kf-link" href="/pricing" target="_self">pricing page</a></p>
       <div class="custom-select kf-button">
         <select
@@ -74,14 +74,18 @@
       <div>
         <button
           class="kf-button kf-button-large"
+          ng-class="{
+            'kf-button-error': cardError
+          }"
           ng-click="openStripeCheckout()"
           ng-bind="(card ? 'Change' : 'Add') + ' credit card'"
         ></button>
         <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">Your new card is ready to save</span>
       </div>
+      <p class="kf-payment-plan-error-text" ng-if="cardError">You must enter a credit card in order to update your plan.</p>
     </div>
   </form>
-  <div class="kf-payment-plan-save-wrapper">
+  <div class="kf-container-section">
     <button
       class="kf-button kf-button-large kf-payment-plan-save"
       ng-click="warningModalOrSave()"
