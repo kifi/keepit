@@ -42,7 +42,7 @@ orgStats: OrganizationStatistics
         </form>
         </td></tr>
     <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
-    <tr><td>Plan</td><td>@orgStats.plan.id (Price per User per Cycle: @orgStats.plan.pricePerCyclePerUser, Cycle Length: @orgStats.plan.billingCycle.month month)<button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
+    <tr><td>Plan</td><td>@{orgStats.plan.id} ($/User/Cycle: @{orgStats.plan.pricePerCyclePerUser}, Cycle Length: @{orgStats.plan.billingCycle.month} months)<button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
     <tr><td>Billing Cycle Start</td><td>@adminHelper.dateTimeDisplay(orgStats.billingCycleStart)</td></tr>
     <tr><td>Credit</td><td>@orgStats.credit<button id="process-billing-now" class="btn btn-default btn-xs">Process Payments Now</button></td></tr>
     <tr>
