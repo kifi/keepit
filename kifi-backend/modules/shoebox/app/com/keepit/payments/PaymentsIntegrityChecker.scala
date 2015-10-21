@@ -147,7 +147,7 @@ class PaymentsIntegrityChecker @Inject() (
   def checkAccounts(modulus: Int = 7): Unit = {
     // we are going to process ~1/modulus of the orgs, based on the date
     val partition = clock.now.getDayOfYear % modulus
-    val orgIds = db.readOnlyReplica { implicit session => organizationRepo.getIdSubsetByModulus(modulus, partition) }
+    val orgIds = db.readOnlyReplica { implicit session => paidAccountRepo.getIdSubsetByModulus(modulus, partition) }
 
     orgIds.foreach { orgId =>
       Try(checkAccount(orgId)) match {
