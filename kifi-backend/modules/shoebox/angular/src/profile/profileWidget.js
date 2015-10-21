@@ -51,6 +51,10 @@ angular.module('kifi')
         };
 
         scope.createTeam = function () {
+          $analytics.eventTrack('user_clicked_page', {
+            'type' : 'homeFeed',
+            'action' : 'clickedCreateTeamRighthandRail'
+          });
           $state.go('teams.new');
         };
 
