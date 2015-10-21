@@ -46,10 +46,16 @@ angular.module('kifi')
     };
 
     $scope.downgradeModalOrSave = function () {
-      if ($scope.selectedPlan.features.length >= currentPlan.features.length) {
-        $scope.save();
-      } else {
+      if ($scope.selectedPlan && $scope.isFreePlanName($scope.selectedPlan.name)) {
         openDowngradeModal();
+      } else if ($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
+        modalService.openGenericErrorModal({
+          modalData: {
+            genericErrorMessage: 'Save unsuccessful. You must enter a card to upgrade.'
+          }
+        });
+      } else {
+        $scope.save();
       }
     };
 
@@ -236,16 +242,6 @@ angular.module('kifi')
         messageTicker({
           text: 'Saved Successfully',
           type: 'green'
-        });
-        return;
-      }
-
-      // If the team doesn't have a card, show an error
-      if($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
-        modalService.openGenericErrorModal({
-          modalData: {
-            genericErrorMessage: 'Save unsuccessful. You must enter a card to upgrade.'
-          }
         });
         return;
       }
