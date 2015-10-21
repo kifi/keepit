@@ -45,7 +45,7 @@ angular.module('kifi')
       });
     };
 
-    $scope.downgradeModalOrSave = function () {
+    $scope.warningModalOrSave = function () {
       if ($scope.selectedPlan && $scope.isFreePlanName($scope.selectedPlan.name)) {
         openDowngradeModal();
       } else if ($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
