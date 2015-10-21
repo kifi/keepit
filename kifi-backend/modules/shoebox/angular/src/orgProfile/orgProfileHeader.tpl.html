@@ -69,7 +69,7 @@
             ng-class="{ 'active': state.current.activetab === 'libraries' }"
           >
             <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
-            <div class="kf-oph-stats-name">Libraries</div>
+            <div class="kf-oph-stats-name" ng-pluralize count="profile.numLibraries" when="{'1':'Library', 'other':'Libraries'}"></div>
           </a>
           <a
             ng-if="plan.settings.membership.view_members.setting === ORG_SETTING_VALUE.ANYONE || canViewMembers"
@@ -79,7 +79,7 @@
             ng-class="{ 'active': state.current.activetab === 'members' }"
           >
             <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
-            <div class="kf-oph-stats-name">Members</div>
+            <div class="kf-oph-stats-name" ng-pluralize count="profile.numMembers" when="{'1': 'Member', 'other':'Members'}"></div>
             <span
               ng-if="viewer.membership.role === 'admin'"
               kf-upsell
