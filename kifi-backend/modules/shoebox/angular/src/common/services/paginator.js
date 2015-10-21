@@ -56,7 +56,7 @@ angular.module('kifi')
         }.bind(this))
         ['catch'](function () {
           this.fetchPageNumber--;
-        })
+        }.bind(this))
         ['finally'](function () {
           this.loading = false;
           this._cachedFetch = null;
