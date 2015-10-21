@@ -1,7 +1,7 @@
 package com.keepit.payments
 
-import com.keepit.common.db._
-import com.keepit.common.json.KeyFormat
+import com.keepit.common.db.slick.DataBaseComponent
+import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
@@ -34,6 +34,10 @@ object DollarAmount {
 
   val ZERO = DollarAmount(0)
 
+  def columnType(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.apply)
+  }
   val formatAsCents: Format[DollarAmount] = (__ \ 'cents).format[Int].inmap(DollarAmount.cents, _.toCents)
 }
 

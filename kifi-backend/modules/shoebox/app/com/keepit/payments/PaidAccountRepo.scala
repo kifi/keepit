@@ -34,7 +34,7 @@ class PaidAccountRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val statusColumnType = MappedColumnType.base[PaymentStatus, String](_.value, PaymentStatus(_))
 
   type RepoImpl = PaidAccountTable

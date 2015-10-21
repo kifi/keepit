@@ -7,7 +7,8 @@ import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion 
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import com.keepit.model.User
+import com.keepit.model.{ CreditReward, User }
+import com.keepit.common.mail.EmailAddress
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsNull, JsValue, Json }
@@ -31,6 +32,7 @@ object AccountEventKind {
   case object PlanChanged extends AccountEventKind("plan_changed")
   case object PaymentMethodAdded extends AccountEventKind("payment_method_added")
   case object SpecialCredit extends AccountEventKind("special_credit")
+  case object RewardCredit extends AccountEventKind("reward_credit")
   case object UserAdded extends AccountEventKind("user_added")
   case object UserRemoved extends AccountEventKind("user_removed")
 
@@ -98,6 +100,12 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
 
   case class SpecialCredit() extends AccountEventAction with Payloadless {
     def eventType = AccountEventKind.SpecialCredit
+  }
+
+  @json
+  case class RewardCredit(rewardId: Id[CreditReward]) extends AccountEventAction {
+    def eventType = AccountEventKind.RewardCredit
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
@@ -200,6 +208,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
 
   def fromDb(eventType: AccountEventKind, extras: JsValue): AccountEventAction = eventType match {
     case AccountEventKind.SpecialCredit => SpecialCredit()
+    case AccountEventKind.RewardCredit => extras.as[RewardCredit]
     case AccountEventKind.PlanBilling => extras.as[PlanBilling]
     case AccountEventKind.LowBalanceIgnored => extras.as[LowBalanceIgnored]
     case AccountEventKind.Charge => Charge()
