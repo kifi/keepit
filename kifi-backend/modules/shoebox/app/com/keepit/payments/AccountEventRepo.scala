@@ -67,15 +67,6 @@ class AccountEventRepoImpl @Inject() (
   private def getByAccountAndKindsHelper(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], excludeStateOpt: Option[State[AccountEvent]])(implicit session: RSession) =
     getByAccountHelper(accountId, excludeStateOpt).filter(ae => ae.eventType.inSet(kinds))
 
-  private def before(bookendOpt: Option[Id[AccountEvent]])(implicit session: RSession) = {
-    bookendOpt match {
-      case None => (row: AccountEventTable) => true
-      case Some(bookend) =>
-        val bookendTime = rows.filter(_.id === bookend).map(_.eventTime).first
-        (row: AccountEventTable) => row.eventTime < bookendTime || (row.eventTime === bookendTime && row.id < bookend)
-    }
-  }
-
   def getByAccount(accountId: Id[PaidAccount], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
     getByAccountHelper(accountId, excludeStateOpt)
       .sortBy(age)
@@ -106,13 +97,6 @@ class AccountEventRepoImpl @Inject() (
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent] = {
     val (userAdded, userRemoved): (AccountEventKind, AccountEventKind) = (AccountEventKind.UserAdded, AccountEventKind.UserRemoved)
     (for (row <- rows if row.accountId === accountId && (row.eventType === userAdded || row.eventType === userRemoved)) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
-  }
-  def getByAccountAndKindsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
-    getByAccountHelper(accountId, excludeStateOpt = Some(AccountEventStates.INACTIVE))
-      .filter(row => row.eventTime < beforeTime || (row.eventTime === beforeTime && row.id < beforeId))
-      .sortBy(age)
-      .take(limit.value)
-      .list
   }
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
     rows.sortBy(age).take(limit.value).list
