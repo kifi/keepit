@@ -5,7 +5,7 @@ import com.keepit.common.db.{ State }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.json.TraversableFormat
 import com.keepit.common.time.Clock
-import com.keepit.model.{ OrganizationSettings, Name, Feature }
+import com.keepit.model.{ DollarAmount, OrganizationSettings, Name, Feature }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import play.api.libs.json.{ JsArray, Json }
@@ -24,7 +24,6 @@ class PaidPlanRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
   implicit val billingCycleColumnType = MappedColumnType.base[BillingCycle, Int](_.month, BillingCycle(_))
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
   implicit val featureSetTypeMapper = MappedColumnType.base[Set[Feature], String](

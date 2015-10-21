@@ -107,6 +107,8 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val keepLibrariesHashMapper = MappedColumnType.base[LibrariesHash, Int](_.value, LibrariesHash.apply)
   implicit val keepParticipantsHashMapper = MappedColumnType.base[ParticipantsHash, Int](_.value, ParticipantsHash.apply)
 
+  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.toCents, DollarAmount.cents)
+
   implicit val recipientMapper = MappedColumnType.base[Recipient, String](
     {recip =>
       val result = Recipient.unapply(recip).get
