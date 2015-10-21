@@ -40,9 +40,6 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   def track(event: AccountEvent)(implicit session: RWSession): AccountEvent = {
     eventRepo.save(event) tap { savedEvent =>
-      if (savedEvent.action.eventType == AccountEventKind.IntegrityError) {
-        accountRepo.save(accountRepo.get(savedEvent.accountId).freeze)
-      }
       session.onTransactionSuccess { report(savedEvent) }
     }
   }
@@ -63,7 +60,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
       }
     }
     if (event.action.eventType == AccountEventKind.IntegrityError) {
-      airbrake.notify(s"Froze account ${event.accountId} because of integrity error: ${event.action}")
+      airbrake.notify(s"Account ${event.accountId} has an integrity error: ${event.action}")
     }
   }
 

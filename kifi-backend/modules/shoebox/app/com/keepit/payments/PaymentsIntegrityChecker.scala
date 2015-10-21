@@ -72,7 +72,7 @@ class PaymentsIntegrityChecker @Inject() (
     }
   }
 
-  private def processMembershipsForAccount(orgId: Id[Organization]): Set[PaymentsIntegrityError] = accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
+  private def processMembershipsForAccount(orgId: Id[Organization]): Seq[PaymentsIntegrityError] = accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
     val memberships: Map[Id[User], OrganizationMembership] = organizationMembershipRepo.getAllByOrgId(orgId, excludeState = None).map(m => m.userId -> m).toMap
     val memberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.ACTIVE).map(_.userId).toSet
     val exMemberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.INACTIVE).map(_.userId).toSet
@@ -113,40 +113,40 @@ class PaymentsIntegrityChecker @Inject() (
     val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
     val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
 
-    val extraMemberErrors: Set[PaymentsIntegrityError] = perceivedActiveButActuallyInactive.map { userId =>
+    val extraMemberErrors: Seq[PaymentsIntegrityError] = perceivedActiveButActuallyInactive.map { userId =>
       log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
       planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
       PaymentsIntegrityError.ExtraOrganizationMember(userId)
-    }
-    val missingMemberErrors: Set[PaymentsIntegrityError] = perceivedInactiveButActuallyActive.map { userId =>
+    }.toSeq
+    val missingMemberErrors: Seq[PaymentsIntegrityError] = perceivedInactiveButActuallyActive.map { userId =>
       log.info(s"[AEIC] Events show user $userId as an inactive member of $orgId, which is not correct. Creating new UserAdded event.")
       planManagementCommander.registerNewUserHelper(orgId, userId, ActionAttribution(None, None))
       PaymentsIntegrityError.MissingOrganizationMember(userId)
-    }
+    }.toSeq
     if (account.activeUsers != memberIds.size) {
       log.info(s"[AEIC] Total active user count on account for org $orgId not correct. Is: ${account.activeUsers}. Should: ${memberIds.size}. Fixing.")
       paidAccountRepo.save(account.copy(activeUsers = memberIds.size))
     }
 
     extraMemberErrors ++ missingMemberErrors
-  }.getOrElse(Set(PaymentsIntegrityError.CouldNotGetAccountLock("member check")))
+  }.getOrElse(Seq(PaymentsIntegrityError.CouldNotGetAccountLock("member check")))
 
-  private def processBalancesForAccount(orgId: Id[Organization]): Set[PaymentsIntegrityError] = accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
+  private def processBalancesForAccount(orgId: Id[Organization]): Seq[PaymentsIntegrityError] = accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
     val accountId = account.id.get
     val accountEvents = accountEventRepo.getAllByAccount(accountId)
 
     val creditChanges = accountEvents.map(_.creditChange)
     val computedCredit = creditChanges.fold(DollarAmount.ZERO)(_ + _)
-    if (computedCredit == account.credit) Set.empty[PaymentsIntegrityError]
+    if (computedCredit == account.credit) Seq.empty
     else {
       log.error(s"[AEIC] Computed credit for $orgId = $computedCredit but the account shows a credit of ${account.credit}")
-      Set[PaymentsIntegrityError](PaymentsIntegrityError.InconsistentAccountBalance(computedBalance = computedCredit, accountBalance = account.credit))
+      Seq(PaymentsIntegrityError.InconsistentAccountBalance(computedBalance = computedCredit, accountBalance = account.credit))
     }
-  }.getOrElse(Set[PaymentsIntegrityError](PaymentsIntegrityError.CouldNotGetAccountLock("balance check")))
+  }.getOrElse(Seq(PaymentsIntegrityError.CouldNotGetAccountLock("balance check")))
 
-  private def checkAccount(orgId: Id[Organization]): Set[PaymentsIntegrityError] = {
-    Set(
+  private def checkAccount(orgId: Id[Organization]): Seq[PaymentsIntegrityError] = {
+    Seq(
       processMembershipsForAccount(orgId),
       processBalancesForAccount(orgId)
     ).flatten
@@ -159,14 +159,16 @@ class PaymentsIntegrityChecker @Inject() (
 
     orgIds.foreach { orgId =>
       Try(checkAccount(orgId)) match {
+        case Success(Seq()) => log.info(s"[AEIC] Checked on $orgId and it was totally fine")
         case Success(errs) =>
+          freezeAccount(orgId)
           db.readWrite { implicit session =>
             val accountId = paidAccountRepo.getAccountId(orgId)
             errs.foreach { err => eventTrackingCommander.track(AccountEvent.fromIntegrityError(accountId, err)) }
           }
         case Failure(ex) =>
-          airbrake.notify(ex)
           log.error(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage}. Freezing Account", ex)
+          airbrake.notify(ex)
           freezeAccount(orgId)
       }
     }
