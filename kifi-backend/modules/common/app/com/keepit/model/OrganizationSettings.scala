@@ -4,9 +4,8 @@ import com.keepit.common.json.TraversableFormat
 import com.keepit.model.Feature.InvalidSettingForFeatureException
 import play.api.libs.json._
 
-import scala.util.{ Failure, Success, Try }
-
 case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
+  require(features == Feature.ALL)
   def features: Set[Feature] = kvs.keySet
   def settingFor(f: Feature): Option[FeatureSetting] = kvs.get(f)
 
