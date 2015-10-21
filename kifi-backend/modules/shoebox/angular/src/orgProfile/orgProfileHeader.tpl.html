@@ -69,7 +69,7 @@
             ng-class="{ 'active': state.current.activetab === 'libraries' }"
           >
             <div class="kf-oph-stats-count">{{profile.numLibraries|num}}</div>
-            <div class="kf-oph-stats-name">Libraries</div>
+            <div class="kf-oph-stats-name" ng-pluralize count="profile.numLibraries" when="{'1':'Library', 'other':'Libraries'}"></div>
           </a>
           <div class="kf-oph-stats-a-members">
             <a
@@ -77,10 +77,10 @@
               class="kf-oph-stats-a kf-button-textonly"
               ui-sref="orgProfile.members"
               ng-click="onClickTrack($event, 'clickedProfileMembers')"
-              ng-class="{ 'active': state.current.activetab === 'members' }"
+              ng-class="{ 'active': state.current.activetab === 'members', 'kf-oph-stats-a-upsell': viewer.membership.role === 'admin' }"
             >
               <div class="kf-oph-stats-count">{{profile.numMembers|num}}</div>
-              <div class="kf-oph-stats-name">Members</div>
+              <div class="kf-oph-stats-name" ng-pluralize count="profile.numMembers" when="{'1': 'Member', 'other':'Members'}"></div>
             </a>
             <span
               ng-if="viewer.membership.role === 'admin'"

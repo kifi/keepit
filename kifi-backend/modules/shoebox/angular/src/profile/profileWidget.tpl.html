@@ -62,8 +62,8 @@
               </a>
             </td>
             <td>
-              <a href="{{ org | profileUrl }}" class="stat-title" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')">
-                Libraries
+              <a href="{{ org | profileUrl }}" class="stat-title" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')"
+                 ng-pluralize count="org.numLibraries" when="{'1':'Library', 'other':'Libraries'}">
               </a>
             </td>
           </tr>
@@ -74,8 +74,8 @@
               </a>
             </td>
             <td>
-              <a href="{{ org | profileUrl:'members' }}" class="stat-title" ng-click="registerEvent('clickedOrgMembersProfileWidget')">
-                Members
+              <a href="{{ org | profileUrl:'members' }}" class="stat-title" ng-click="registerEvent('clickedOrgMembersProfileWidget')"
+                 ng-pluralize count="org.numMembers" when="{'1':'Member', 'other':'Members'}">
               </a>
             </td>
           </tr>

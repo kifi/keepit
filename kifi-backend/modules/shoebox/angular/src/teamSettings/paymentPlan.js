@@ -42,6 +42,7 @@ angular.module('kifi')
       })
       .then(function (response) {
         $scope.plan.newCard = response[0];
+        $scope.cardError = false;
       });
     };
 
@@ -49,12 +50,9 @@ angular.module('kifi')
       if ($scope.selectedPlan && $scope.isFreePlanName($scope.selectedPlan.name)) {
         openDowngradeModal();
       } else if ($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
-        modalService.openGenericErrorModal({
-          modalData: {
-            genericErrorMessage: 'Save unsuccessful. You must enter a card to upgrade.'
-          }
-        });
+        $scope.cardError = true;
       } else {
+        $scope.cardError = false;
         $scope.save();
       }
     };
