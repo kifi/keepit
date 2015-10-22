@@ -209,7 +209,6 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
             val (owner, members) = (users.head, users.tail)
             val org = OrganizationFactory.organization().withOwner(owner).withMembers(members).saved
             val orgGeneralLib = libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head
-            println(libraryRepo.getBySpaceAndKind(org.id.get, LibraryKind.SYSTEM_ORG_GENERAL).head)
             val orgLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user).withOrganization(org)).saved.toSet }.toMap
             val personalLibs = users.map { user => user.id.get -> LibraryFactory.libraries(3).map(_.withOwner(user)).saved.toSet }.toMap
             (org, owner, members, orgLibs, personalLibs, orgGeneralLib)
