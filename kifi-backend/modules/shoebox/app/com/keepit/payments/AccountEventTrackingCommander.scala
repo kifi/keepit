@@ -44,7 +44,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def report(event: AccountEvent): Unit = {
+  private def report(event: AccountEvent): Unit = if (mode == play.api.Mode.Prod) {
     if (AccountEventKind.billing.contains(event.action.eventType)) {
       val (account, org, paymentMethod) = db.readOnlyMaster { implicit session =>
         val account = accountRepo.get(event.accountId)
