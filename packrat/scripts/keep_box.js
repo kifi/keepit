@@ -508,9 +508,10 @@ k.keepBox = k.keepBox || (function () {
       var title;
       var message;
 
-      // TODO(carlos): This logic only works if one visibility is disabled at a time.
-      // This will need to be reworked if, for example, both public and team visibility
-      // are disabled.
+      $this
+      .removeClass('kifi-keep-box-new-lib-visibility-item-no-orgs')
+      .removeClass('kifi-keep-box-new-lib-visibility-item-link-to-create-team');
+
       if ($box.data('organizations').length === 0) {
         $this
         .addClass('kifi-keep-box-new-lib-visibility-item-linked')
