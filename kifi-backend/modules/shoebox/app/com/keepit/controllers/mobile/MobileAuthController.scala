@@ -10,6 +10,7 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
+import com.keepit.common.service.IpAddress
 import com.keepit.common.time.Clock
 import com.keepit.controllers.core.{ AuthController, AuthHelper }
 import com.keepit.heimdal.{ ContextDoubleData, HeimdalContext, HeimdalContextBuilderFactory, HeimdalServiceClient, UserEvent, UserEventTypes }
@@ -46,7 +47,7 @@ class MobileAuthController @Inject() (
   private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
   def whatIsMyIp() = MaybeUserAction { request =>
-    val ip = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
+    val ip = IpAddress.fromRequest(request).ip
     Ok(ip)
   }
 

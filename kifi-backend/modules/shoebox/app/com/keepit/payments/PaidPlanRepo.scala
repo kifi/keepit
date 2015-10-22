@@ -13,6 +13,7 @@ import play.api.libs.json.{ JsArray, Json }
 @ImplementedBy(classOf[PaidPlanRepoImpl])
 trait PaidPlanRepo extends Repo[PaidPlan] {
   def getByKinds(kinds: Set[PaidPlan.Kind])(implicit session: RSession): Seq[PaidPlan]
+  def getByDisplayName(displayName: String)(implicit session: RSession): Set[PaidPlan]
 }
 
 @Singleton
@@ -23,7 +24,7 @@ class PaidPlanRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val billingCycleColumnType = MappedColumnType.base[BillingCycle, Int](_.month, BillingCycle(_))
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
   implicit val featureSetTypeMapper = MappedColumnType.base[Set[Feature], String](
@@ -52,6 +53,10 @@ class PaidPlanRepoImpl @Inject() (
 
   def getByKinds(states: Set[PaidPlan.Kind])(implicit session: RSession): Seq[PaidPlan] = {
     (for (row <- rows if row.state === PaidPlanStates.ACTIVE && row.kind.inSet(states)) yield row).list
+  }
+
+  def getByDisplayName(displayName: String)(implicit session: RSession): Set[PaidPlan] = {
+    rows.filter(row => row.state === PaidPlanStates.ACTIVE && row.displayName === displayName).list.toSet
   }
 
 }

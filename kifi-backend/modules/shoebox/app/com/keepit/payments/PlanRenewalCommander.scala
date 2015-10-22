@@ -63,7 +63,6 @@ class PlanRenewalCommanderImpl @Inject() (
           val billingEvent = eventCommander.track(AccountEvent(
             eventTime = clock.now(),
             accountId = account.id.get,
-            billingRelated = true,
             whoDunnit = None,
             whoDunnitExtra = JsNull,
             kifiAdminInvolved = None,

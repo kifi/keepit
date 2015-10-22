@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('LoggedInHeaderCtrl', [
-  '$scope', '$rootElement', '$rootScope', '$document', 'profileService', 'libraryService',
+  '$scope', '$rootElement', '$analytics', '$rootScope', '$document', 'profileService', 'libraryService',
   '$location', 'util', 'KEY', 'modalService', '$timeout', '$state', 'mobileOS',
   function (
-    $scope, $rootElement, $rootScope, $document, profileService, libraryService,
+    $scope, $rootElement, $analytics, $rootScope, $document, profileService, libraryService,
     $location, util, KEY, modalService, $timeout, $state, mobileOS) {
 
     $scope.search = {text: $state.params.q || '', focused: false, suggesting: false, libraryChip: false};
@@ -152,7 +152,7 @@ angular.module('kifi')
     };
 
     $scope.shouldShowCreateTeam = function () {
-      return $scope.me.experiments.indexOf('admin') !== -1 || ($scope.me.experiments.indexOf('create_team') !== -1 && $scope.me.orgs.length === 0);
+      return $scope.me.experiments.indexOf('admin') !== -1 || ($scope.me.experiments.indexOf('create_team') !== -1 && $scope.me.orgs.length <= 1);
     };
 
     $scope.addKeeps = function () {
@@ -172,6 +172,10 @@ angular.module('kifi')
     };
 
     $scope.createTeam = function () {
+      $analytics.eventTrack('user_clicked_page', {
+        type: $location.path(),
+        action: 'clickedCreateTeamPlusDropDown'
+      });
       $state.go('teams.new');
     };
 

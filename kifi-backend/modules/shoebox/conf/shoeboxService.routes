@@ -332,6 +332,7 @@ GET     /about/join_us              @com.keepit.controllers.website.HomeControll
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
+GET     /imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
 GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
 GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
 GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
@@ -904,6 +905,7 @@ POST          /admin/payments/unfreezeAccount              @com.keepit.controlle
 POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
 
 GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
+
 
 ##########################################
 # Common Healthcheck / service routes

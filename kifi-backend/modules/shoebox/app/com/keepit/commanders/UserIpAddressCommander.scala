@@ -123,7 +123,8 @@ class UserIpAddressEventLogger @Inject() (
     }
 
     if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake
-      && !Set("108.60.110.146").contains(event.ip.ip) && !Play.maybeApplication.forall(_.mode == Mode.Dev)) {
+      && !Set("67.161.4.140").contains(event.ip.ip) //office ip address
+      && !Play.maybeApplication.forall(_.mode == Mode.Dev)) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
     }
@@ -234,8 +235,7 @@ class UserIpAddressCommander @Inject() (
   def logUserByRequest[T](request: UserRequest[T]): Unit = {
     val userId = request.userId
     val userAgent = UserAgent(request.headers.get("user-agent").getOrElse(""))
-    val raw_ip_string = request.headers.get("X-Forwarded-For").getOrElse(request.remoteAddress)
-    val ip = IpAddress(raw_ip_string.split(",").head)
+    val ip = IpAddress.fromRequest(request)
     try {
       actor.ref ! UserIpAddressEvent(userId, ip, userAgent)
     } catch {

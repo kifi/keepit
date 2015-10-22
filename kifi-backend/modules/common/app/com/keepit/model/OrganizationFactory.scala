@@ -5,8 +5,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import org.apache.commons.lang3.RandomStringUtils
 
-import scala.util.Random.nextInt
-
 object OrganizationFactory {
   private[this] val idx = new AtomicLong(10000 + System.currentTimeMillis() % 100)
 
@@ -22,7 +20,9 @@ object OrganizationFactory {
       members: Seq[User] = Seq.empty[User],
       invitedUsers: Seq[User] = Seq.empty[User],
       invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress],
-      nonstandardSettings: Map[Feature, FeatureSetting] = Map.empty) {
+      nonstandardSettings: Map[Feature, FeatureSetting] = Map.empty,
+      // TODO(ryan): this Long is literally my least favorite thing in the world right now
+      planOpt: Option[Long] = None) {
 
     def withName(newName: String) = this.copy(org = org.withName(newName))
     def withOwner(newOwner: User) = this.copy(org = org.withOwner(newOwner.id.get))
@@ -39,5 +39,7 @@ object OrganizationFactory {
     // admins can force-edit
     def withStrongAdmins() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ForceEditLibraries -> FeatureSetting.ADMINS))
     def secret() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ViewOrganization -> FeatureSetting.MEMBERS) + (Feature.ViewMembers -> FeatureSetting.MEMBERS))
+
+    def withPlan(planId: Long) = this.copy(planOpt = Some(planId))
   }
 }

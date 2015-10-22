@@ -47,7 +47,7 @@ class GraphManagerTest extends Specification with GraphTestInjector with GraphTe
           nbs.map { x: VertexId => x.asId[IpAddressReader].id } === Set(IpAddress.ipToLong(ipAddress1))
 
           // ip address to users
-          v.moveTo(VertexDataId[IpAddressReader](ipAddress1))
+          v.moveTo(VertexDataId[IpAddressReader](IpAddress.ipToLong(ipAddress1)))
           nbs = getNeighbors(v, (IpAddressReader, UserReader, TimestampEdgeReader), true)
           nbs.map { x: VertexId => x.asId[UserReader].id } === Set(1, 2)
 

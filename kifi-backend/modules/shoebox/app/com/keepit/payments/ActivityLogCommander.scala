@@ -1,21 +1,23 @@
 package com.keepit.payments
 
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
+import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
+import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.model.{ OrganizationRepo, OrganizationHandle, User, Organization }
+import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
-  def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
-  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], max: Int, onlyRelatedToBillingFilter: Option[Boolean]): Seq[AccountEvent]
+  def getAccountEvents(orgId: Id[Organization], limit: Limit): Seq[AccountEvent]
+  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit): Seq[AccountEvent]
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
 }
 
@@ -25,38 +27,42 @@ class ActivityLogCommanderImpl @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
+    creditRewardRepo: CreditRewardRepo,
     basicUserRepo: BasicUserRepo,
     organizationRepo: OrganizationRepo,
+    organizationCommander: OrganizationCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def getAccountEvents(orgId: Id[Organization], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEvents(orgId: Id[Organization], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getEvents(accountId, limit, onlyRelatedToBilling)
+    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.billing, Offset(0), limit)
   }
 
-  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Int, onlyRelatedToBilling: Option[Boolean]): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getEventsBefore(accountId, beforeTime, beforeId, limit, onlyRelatedToBilling)
+    accountEventRepo.getEventsBefore(accountId, beforeTime, beforeId, limit)
   }
 
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
     import AccountEventAction._
     val maybeUser = event.whoDunnit.map(basicUserRepo.load)
-    implicit lazy val orgHandle = organizationRepo.get(paidAccountRepo.get(event.accountId).orgId).handle // used to build links to different sections, e.g. :handle/settings/plan
+    val org = organizationCommander.getBasicOrganizationHelper(paidAccountRepo.get(event.accountId).orgId).getOrElse(throw new Exception(s"Tried to build event info for dead org: $event"))
+    implicit val orgHandle = org.handle
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
+        case RewardCredit(id) => Elements("You earned", creditRewardRepo.get(id))
+        case IntegrityError(err) => Elements("Found and corrected an error in the account") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
         case ChargeBack() => s"A ${event.creditChange.toDollarString} refund was issued to your card"
         case PlanBilling(planId, _, _, _, _) => s"Your ${paidPlanRepo.get(planId)} plan was renewed."
-        case Charge() => {
+        case Charge() =>
           val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
           s"Your card was charged ${event.creditChange.toDollarString} for your current balance. [$invoiceText]"
-        }
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
         case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information."
         case MissingPaymentMethod() => s"We failed to process your balance, please register a default payment method."
@@ -83,6 +89,7 @@ class ActivityLogCommanderImpl @Inject() (
             case None => Elements("Your billing contacts were updated", maybeUser.map(Elements("by", _)))
           }
         }
+        case OrganizationCreated(initialPlanId) => Elements("The", org, "team was created by", maybeUser.get, "and enrolled in", paidPlanRepo.get(initialPlanId))
       }
     }
     SimpleAccountEventInfo(
@@ -108,7 +115,9 @@ object DescriptionElements {
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
-  implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.absolute
+  implicit def fromCreditReward(cr: CreditReward): BasicElement = cr.credit.toDollarString
+  implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.relative
+  implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.relative
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> s"/${orgHandle.value}/settings/plan"
 

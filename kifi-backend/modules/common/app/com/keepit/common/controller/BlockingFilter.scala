@@ -1,5 +1,7 @@
 package com.keepit.common.controller
 
+import com.keepit.common.service.IpAddress
+
 import scala.concurrent.Promise
 import play.api.mvc.{ Results, Result, RequestHeader, Filter }
 
@@ -7,8 +9,8 @@ import scala.concurrent.Future
 
 object BlockingFilter extends Filter {
   def apply(nextFilter: (RequestHeader) => Future[Result])(requestHeader: RequestHeader): Future[Result] = {
-    val ip = requestHeader.headers.get("X-Forwarded-For").getOrElse(requestHeader.remoteAddress)
-    if (blocked.exists(b => ip.startsWith(b)) && !requestHeader.path.contains("logout") && requestHeader.session.get(KifiSession.FORTYTWO_USER_ID).isDefined) {
+    val ip = IpAddress.fromRequest(requestHeader)
+    if (blocked.exists(b => ip.ip.startsWith(b)) && !requestHeader.path.contains("logout") && requestHeader.session.get(KifiSession.FORTYTWO_USER_ID).isDefined) {
       Future.successful(Results.Redirect("/logout"))
     } else if (tarpit.contains(ip)) {
       throwThemInAPit(nextFilter(requestHeader))
@@ -27,10 +29,12 @@ object BlockingFilter extends Filter {
     "95.5.131.183",
     "103.60.176.",
     "103.240.169.",
+    "110.55.2.",
     "112.196.92.",
     "115.111.183.",
     "117.248.149.",
     "117.205.151.",
+    "122.173.134.",
     "124.253.252.",
     "150.129.198.",
     "180.87.245.",

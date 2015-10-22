@@ -55,7 +55,10 @@ angular.module('kifi')
               ' and into another location e.g. another team.'
             ),
             fieldKey: 'remove_libraries',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(
+              ORG_SETTING_VALUE.ADMIN,
+              { label: 'Admins & library owners', value: ORG_SETTING_VALUE.MEMBER }
+            )
           }
         ]
       },
@@ -118,7 +121,7 @@ angular.module('kifi')
           {
             title: 'Who can export this team\'s keeps?',
             description: (
-              'Select who is able to download all of your team\'s keeps for safe keeping.'
+              'Select who is able to export keeps from public and team visible libraries.'
             ),
             fieldKey: 'export_keeps',
             selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN)

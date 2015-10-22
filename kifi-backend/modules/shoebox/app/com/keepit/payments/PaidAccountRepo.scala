@@ -13,6 +13,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[PaidAccountRepoImpl])
 trait PaidAccountRepo extends Repo[PaidAccount] {
+  def getActiveByIds(ids: Set[Id[PaidAccount]])(implicit session: RSession): Map[Id[PaidAccount], PaidAccount]
   //every org should have a PaidAccount, created during org creation. Every time this method gets called that better exist.
   def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): PaidAccount
   def maybeGetByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount]
@@ -22,6 +23,7 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def getRenewable()(implicit session: RSession): Seq[PaidAccount]
   def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount]
+  def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
 }
 
 @Singleton
@@ -33,7 +35,7 @@ class PaidAccountRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
+  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val statusColumnType = MappedColumnType.base[PaymentStatus, String](_.value, PaymentStatus(_))
 
   type RepoImpl = PaidAccountTable
@@ -58,6 +60,10 @@ class PaidAccountRepoImpl @Inject() (
   override def deleteCache(paidAccount: PaidAccount)(implicit session: RSession): Unit = {}
 
   override def invalidateCache(paidAccount: PaidAccount)(implicit session: RSession): Unit = {}
+
+  def getActiveByIds(ids: Set[Id[PaidAccount]])(implicit session: RSession): Map[Id[PaidAccount], PaidAccount] = {
+    rows.filter(row => row.id.inSet(ids) && row.state === PaidAccountStates.ACTIVE).list.map { acc => acc.id.get -> acc }.toMap
+  }
 
   def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): PaidAccount = {
     (for (row <- rows if row.orgId === orgId && !row.state.inSet(excludeStates)) yield row).first
@@ -99,5 +105,10 @@ class PaidAccountRepoImpl @Inject() (
 
   def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount] = {
     (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Ok: PaymentStatus) || row.credit < -maxBalance || row.paymentDueAt < clock.now())) yield row).sortBy(_.paymentDueAt).list
+  }
+
+  def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {
+    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
+    sql"""select org_id from paid_account where state='active' and frozen = false and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
   }
 }

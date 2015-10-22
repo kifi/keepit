@@ -193,6 +193,10 @@ ophImageWidth = 100px
   overflow: hidden
   position: relative
 
+  &.default-image
+    &:after
+      bottom: 0
+
   &:after
     content: 'Upload new'
     position: absolute
@@ -213,3 +217,15 @@ ophImageWidth = 100px
 
 .kf-oph-upsell-invite .kf-tooltip-body
   width: 175px
+
+.kf-oph-upsell-members
+  position: absolute
+  right: 8px
+  top: 7px
+
+.kf-oph-stats-a-members
+  position: relative
+  display: inline-block
+
+  .kf-oph-stats-a-upsell
+    padding-right: 30px

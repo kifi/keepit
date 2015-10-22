@@ -8,7 +8,7 @@ CREATE TABLE user_ip_addresses (
 	updated_at datetime NOT NULL,
 	state varchar(20) NOT NULL,
 	user_id bigint(20) NOT NULL,
-	ip_address VARCHAR(15) NOT NULL,
+	ip_address VARCHAR(39) NOT NULL,
 	agent_type VARCHAR(20) NOT NULL,
 
 	PRIMARY KEY(id),

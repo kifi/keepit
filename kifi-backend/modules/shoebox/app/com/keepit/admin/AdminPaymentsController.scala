@@ -107,7 +107,7 @@ class AdminPaymentsController @Inject() (
     val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
     paymentProcessingCommander.processAccount(account).map {
       case (_, event) =>
-        val result = Json.obj(event.action.eventType -> event.creditChange.toDollarString)
+        val result = Json.obj(event.action.eventType.value -> event.creditChange.toDollarString)
         Ok(result)
     }
   }
@@ -158,7 +158,6 @@ class AdminPaymentsController @Inject() (
       accountId = accountEvent.accountId,
       action = accountEvent.action,
       eventTime = accountEvent.eventTime,
-      billingRelated = accountEvent.billingRelated,
       whoDunnit = userWhoDunnit,
       adminInvolved = adminInvolved,
       creditChange = accountEvent.creditChange,
@@ -172,7 +171,7 @@ class AdminPaymentsController @Inject() (
     val PAGE_SIZE = 50
     val (allEvents, org) = db.readOnlyMaster { implicit s =>
       val account = paidAccountRepo.getByOrgId(orgId)
-      val allEvents = accountEventRepo.getByAccountAndState(account.id.get, AccountEventStates.ACTIVE)
+      val allEvents = accountEventRepo.getByAccount(account.id.get, offset = Offset(page * PAGE_SIZE), limit = Limit((page + 1) * PAGE_SIZE))
       val org = organizationRepo.get(orgId)
       (allEvents, org)
     }
@@ -204,8 +203,13 @@ class AdminPaymentsController @Inject() (
     val dashboard = db.readOnlyMaster { implicit session =>
       val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
       val recentEvents = accountEventRepo.adminGetRecentEvents(Limit(100)).map(createAdminAccountEventView)
-      val accountIds = recentEvents.map(_.accountId).toSet
-      val orgsByAccountId = accountIds.map { accountId => accountId -> organizationRepo.get(paidAccountRepo.get(accountId).orgId) }.toMap
+      val orgsByAccountId = {
+        val accountIds = frozenAccounts.map(_.id.get).toSet ++ recentEvents.map(_.accountId).toSet
+        val accountsById = paidAccountRepo.getActiveByIds(accountIds)
+        val orgIds = accountsById.values.map(_.orgId).toSet
+        val orgsById = organizationRepo.getByIds(orgIds)
+        accountIds.map { accountId => accountId -> orgsById(accountsById(accountId).orgId) }.toMap
+      }
       AdminPaymentsDashboard(frozenAccounts, recentEvents, orgsByAccountId)
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))
@@ -217,7 +221,6 @@ case class AdminAccountEventView(
   accountId: Id[PaidAccount],
   action: AccountEventAction,
   eventTime: DateTime,
-  billingRelated: Boolean,
   whoDunnit: Option[User],
   adminInvolved: Option[User],
   creditChange: DollarAmount,

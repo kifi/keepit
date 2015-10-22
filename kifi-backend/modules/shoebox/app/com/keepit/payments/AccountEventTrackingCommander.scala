@@ -5,6 +5,7 @@ import com.keepit.commanders.{ BasicSlackMessage, PathCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail }
 import com.keepit.common.net.{ HttpClient, DirectUrl }
 import com.keepit.model.{ OrganizationRepo, UserEmailAddressRepo, NotificationCategory }
@@ -34,6 +35,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     stripeClient: StripeClient,
     httpClient: HttpClient,
     mode: play.api.Mode.Mode,
+    airbrake: AirbrakeNotifier,
     implicit val defaultContext: ExecutionContext) extends AccountEventTrackingCommander {
 
   def track(event: AccountEvent)(implicit session: RWSession): AccountEvent = {
@@ -42,20 +44,23 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def report(event: AccountEvent): Unit = {
-    if (event.billingRelated) {
+  private def report(event: AccountEvent): Unit = if (mode == play.api.Mode.Prod) {
+    if (AccountEventKind.billing.contains(event.action.eventType)) {
       val (account, org, paymentMethod) = db.readOnlyMaster { implicit session =>
         val account = accountRepo.get(event.accountId)
         val org = orgRepo.get(account.orgId)
-        val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get(_))
+        val paymentMethod = event.paymentMethod.map(paymentMethodRepo.get)
         (account, org, paymentMethod)
       }
-      reportToSlack(s"[${org.name}][Payment: ${account.paymentStatus.value}}] ${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")
+      reportToSlack(s"[<https://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>][Payment: ${account.paymentStatus.value}][${event.action.eventType}] => Credit: ${event.creditChange.toDollarString} | Charge: ${event.paymentCharge.getOrElse(DollarAmount.ZERO).toDollarString} [Event #${event.id.get}]")
 
       // todo(Léo): not sure this one belongs here vs PaymentProcessingCommander
       event.chargeId.foreach { chargeId =>
         notifyOfCharge(account, paymentMethod.get.stripeToken, event.paymentCharge.get, chargeId)
       }
+    }
+    if (event.action.eventType == AccountEventKind.IntegrityError) {
+      airbrake.notify(s"Account ${event.accountId} has an integrity error: ${event.action}")
     }
   }
 
@@ -63,7 +68,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
   def reportToSlack(msg: String): Future[Unit] = SafeFuture {
-    if (msg.nonEmpty) {
+    if (msg.nonEmpty && mode == play.api.Mode.Prod) {
       val fullMsg = BasicSlackMessage(
         text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
         username = "AccountEvent",
@@ -78,12 +83,12 @@ class AccountEventTrackingCommanderImpl @Inject() (
   private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Unit = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
     val (userContacts, org) = db.readOnlyReplica { implicit session =>
-      val userContacts = account.userContacts.map { userId =>
+      val userContacts = account.userContacts.flatMap { userId =>
         Try(emailRepo.getByUser(userId)).toOption
-      }.flatten
+      }
       (userContacts, orgRepo.get(account.orgId))
     }
-    val emails = (account.emailContacts ++ userContacts).toSet.toSeq
+    val emails = (account.emailContacts ++ userContacts).distinct
 
     val handle = org.handle
 

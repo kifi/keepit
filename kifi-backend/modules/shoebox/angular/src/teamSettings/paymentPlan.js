@@ -11,6 +11,7 @@ angular.module('kifi')
             messageTicker, paymentPlans, $timeout) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
+    $scope.upgrade = !!$state.params.upgrade;
 
     var PREDEFINED_CYCLE_PERIOD = {
       1: 'Monthly',
@@ -35,22 +36,41 @@ angular.module('kifi')
       handler
       .open({
         image: picFilter($scope.profile),
-        name: 'Kifi Paid Plan',
-        description: 'Unlock awesome paid-only features',
+        name: 'Kifi Teams',
+        description: 'Update your Teams Plan',
         allowRememberMe: false,
         panelLabel: 'Save My Card'
       })
       .then(function (response) {
         $scope.plan.newCard = response[0];
-      })
-      ['catch'](function () {
-        modalService.openGenericErrorModal({
-          modalData: {
-            genericErrorMessage: 'Your payment information was not updated.'
-          }
-        });
+        $scope.cardError = false;
       });
     };
+
+    $scope.warningModalOrSave = function () {
+      if ($scope.selectedPlan && $scope.isFreePlanName($scope.selectedPlan.name)) {
+        openDowngradeModal();
+      } else if ($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
+        $scope.cardError = true;
+      } else {
+        $scope.cardError = false;
+        $scope.save();
+      }
+    };
+
+    function openDowngradeModal () {
+      modalService.open({
+        template: 'teamSettings/downgradeConfirmModal.tpl.html',
+        modalData: {
+          save: function () {
+            $scope.save();
+          },
+          close: function () {
+            modalService.close();
+          }
+        }
+      });
+    }
 
     $scope.changePlanToFree = function () {
       var freeTierPlans = plansByTier[Object.keys(plansByTier)[0]];
@@ -84,11 +104,21 @@ angular.module('kifi')
       };
     });
 
-    $scope.plan = {
-      name: currentPlan.name,
-      cycle: currentPlan.cycle, //months
-      newCard: null
-    };
+
+    if ($scope.upgrade) {
+      var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
+      $scope.plan = {
+        name: standardTierPlans[1].name,
+        cycle: standardTierPlans[1].cycle,
+        newCard: null
+      };
+    } else {
+      $scope.plan = {
+        name: currentPlan.name,
+        cycle: currentPlan.cycle, //months
+        newCard: null
+      };
+    }
 
     $scope.isNoPlanName = function (planName) {
       return !planName;
@@ -107,17 +137,6 @@ angular.module('kifi')
         newPlan.name === oldPlan.name &&
         newPlan.cycle === oldPlan.cycle
       );
-
-      // Do nothing for the no-value options in the select
-      if (!initializing && (newPlan.name === null || ($scope.isPaidPlanName(newPlan.name) && newPlan.cycle === null))) {
-        return;
-      }
-
-      // Don't let users re-save their current plan
-      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
-        resetForm();
-        return;
-      }
 
       if (initializing || newPlan.name !== oldPlan.name) {
         // Create the list of cycles available to this plan
@@ -154,13 +173,19 @@ angular.module('kifi')
 
         $scope.selectedPlan = selectedPlan;
       }
+
+      // Set pristine if the user moves back to the initial values
+      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
+        resetForm();
+      }
     }, true);
 
     function getCyclesByTier(tier) {
       var cyclesSoFar = [];
       var leastEfficientPlan;
       var extraText = '';
-      var savings;
+      var savingsPerUser;
+      var totalSavings;
 
       if (!$scope.isFreePlanName(tier[0].name)) {
         leastEfficientPlan = getLeastEfficientPlan(tier);
@@ -171,8 +196,9 @@ angular.module('kifi')
           cyclesSoFar.push(plan.cycle); // prevent duplicates
 
           if (leastEfficientPlan && plan !== leastEfficientPlan) {
-            savings = getSavings(leastEfficientPlan, plan);
-            extraText = ' (You save ' + moneyFilter(savings) + ' ' + PREDEFINED_CYCLE_ADVERB[plan.cycle] + ')';
+            savingsPerUser = getSavings(leastEfficientPlan, plan);
+            totalSavings = savingsPerUser * billingState.users;
+            extraText = ' (You save ' + moneyFilter(totalSavings) + ' ' + PREDEFINED_CYCLE_ADVERB[plan.cycle] + ')';
           }
 
           return {
@@ -220,6 +246,15 @@ angular.module('kifi')
       var saveSeriesDeferred = $q.defer();
       var saveSeriesPromise = saveSeriesDeferred.promise;
 
+      // If nothing changed, pretend we saved it.
+      if (!$scope.plan.newCard && $scope.planSelectsForm.$pristine) {
+        messageTicker({
+          text: 'Saved Successfully',
+          type: 'green'
+        });
+        return;
+      }
+
       saveSeriesPromise.then(function () {
         $window.addEventListener('beforeunload', onBeforeUnload);
       });
@@ -242,7 +277,7 @@ angular.module('kifi')
         });
         resetForm();
         $timeout(function () {
-          $state.reload('orgProfile.settings');
+          $state.reload('orgProfile');
         }, 10);
       })
       ['catch'](modalService.genericErrorModal)

@@ -18,6 +18,7 @@ import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION 
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan, ActionAttribution }
+import play.api.Play
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -36,8 +37,10 @@ trait OrganizationCommander {
   def getAccountFeatureSettings(orgId: Id[Organization]): OrganizationSettingsResponse
   def getExternalOrgConfiguration(orgId: Id[Organization]): ExternalOrganizationConfiguration
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration
+  def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization]
   def getBasicOrganizations(orgIds: Set[Id[Organization]]): Map[Id[Organization], BasicOrganization]
   def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
+  def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library]
   def createOrganization(request: OrganizationCreateRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationCreateResponse]
   def modifyOrganization(request: OrganizationModifyRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationModifyResponse]
   def setAccountFeatureSettings(request: OrganizationSettingsRequest): Either[OrganizationFail, OrganizationSettingsResponse]
@@ -107,7 +110,7 @@ class OrganizationCommanderImpl @Inject() (
 
   def getBasicOrganizationViewHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): BasicOrganizationView = {
     // This function assumes that the org is active
-    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganization(orgId).get)
+    val basicOrganization = basicOrganizationIdCache.getOrElse(BasicOrganizationIdKey(orgId))(getBasicOrganizationHelper(orgId).get)
     val membershipInfo = getMembershipInfoHelper(orgId, viewerIdOpt, authTokenOpt)
     BasicOrganizationView(basicOrganization, membershipInfo)
   }
@@ -116,7 +119,7 @@ class OrganizationCommanderImpl @Inject() (
     val cacheFormattedMap = db.readOnlyReplica { implicit session =>
       basicOrganizationIdCache.bulkGetOrElse(orgIds.map(BasicOrganizationIdKey)) { missing =>
         missing.map(_.id).map {
-          orgId => orgId -> getBasicOrganization(orgId) // grab all the Option[BasicOrganization]
+          orgId => orgId -> getBasicOrganizationHelper(orgId) // grab all the Option[BasicOrganization]
         }.collect {
           case (orgId, Some(basicOrg)) => orgId -> basicOrg // take only the active orgs (inactive ones are None)
         }.map {
@@ -127,7 +130,7 @@ class OrganizationCommanderImpl @Inject() (
     cacheFormattedMap.map { case (orgKey, org) => (orgKey.id, org) }
   }
 
-  def getBasicOrganization(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = {
+  def getBasicOrganizationHelper(orgId: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = {
     val org = orgRepo.get(orgId)
     if (org.isInactive) None
     else {
@@ -168,8 +171,7 @@ class OrganizationCommanderImpl @Inject() (
   def getExternalOrgConfigurationHelper(orgId: Id[Organization])(implicit session: RSession): ExternalOrganizationConfiguration = {
     val config = orgConfigRepo.getByOrgId(orgId)
     val plan = planManagementCommander.currentPlanHelper(orgId)
-    val isPaid = !plan.displayName.toLowerCase.contains("free")
-    ExternalOrganizationConfiguration(isPaid, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
+    ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(config.settings, plan.editableFeatures))
   }
 
   def getOrganizationInfo(orgId: Id[Organization], viewerIdOpt: Option[Id[User]])(implicit session: RSession): OrganizationInfo = {
@@ -232,7 +234,7 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
-  private def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
+  def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
     val viewerLibraryMemberships = userIdOpt.map(libraryMembershipRepo.getWithUserId(_).map(_.libraryId).toSet).getOrElse(Set.empty[Id[Library]])
     val includeOrgVisibleLibs = userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(orgId, _).isDefined)
     libraryRepo.getVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships, offset, limit)
@@ -313,11 +315,11 @@ class OrganizationCommanderImpl @Inject() (
           val org = handleCommander.autoSetOrganizationHandle(savedOrg) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
           maybeNotifySlackOfNewOrganization(org.id.get, request.requesterId)
 
-          val plan = paidPlanRepo.get(PaidPlan.DEFAULT)
+          val plan = if (Play.maybeApplication.exists(Play.isProd(_))) paidPlanRepo.get(PaidPlan.DEFAULT) else paidPlanRepo.get(Id[PaidPlan](1L))
           orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
           planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
 
-          orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
+          orgMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = request.requesterId, role = OrganizationRole.ADMIN))
           val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
 
@@ -416,29 +418,25 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse] = {
-    val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
-    validationError match {
-      case Some(orgFail) => Left(orgFail)
-      case None =>
-        db.readWrite { implicit session =>
+    db.readWrite { implicit session =>
+      getValidationError(request) match {
+        case Some(orgFail) => Left(orgFail)
+        case None =>
           val org = orgRepo.get(request.orgId)
-          orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner, excludeState = None) match {
-            case Some(membership) if membership.isActive =>
-              orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
-            case inactiveMembershipOpt =>
-              orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
-              planManagementCommander.registerNewAdmin(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
-              planManagementCommander.addUserAccountContact(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
+          if (orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner).isDefined) {
+            orgMembershipCommander.modifyMembershipHelper(OrganizationMembershipModifyRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN))
+          } else {
+            orgMembershipCommander.addMembershipHelper(OrganizationMembershipAddRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN, adminIdOpt = None))
           }
+          planManagementCommander.addUserAccountContactHelper(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
-
           libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL).foreach { lib =>
             libraryCommander.unsafeTransferLibrary(lib.id.get, request.newOwner)
           }
 
           organizationAnalytics.trackOrganizationEvent(modifiedOrg, userRepo.get(request.requesterId), request)
           Right(OrganizationTransferResponse(request, modifiedOrg))
-        }
+      }
     }
   }
 
