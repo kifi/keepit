@@ -36,7 +36,7 @@ object DollarAmount {
 
   def columnType(db: DataBaseComponent) = {
     import db.Driver.simple._
-    MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.apply)
+    MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.cents)
   }
   val formatAsCents: Format[DollarAmount] = (__ \ 'cents).format[Int].inmap(DollarAmount.cents, _.toCents)
 }

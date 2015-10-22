@@ -27,6 +27,7 @@ class ActivityLogCommanderImpl @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
+    creditRewardRepo: CreditRewardRepo,
     basicUserRepo: BasicUserRepo,
     organizationRepo: OrganizationRepo,
     organizationCommander: OrganizationCommander,
@@ -54,6 +55,7 @@ class ActivityLogCommanderImpl @Inject() (
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
+        case RewardCredit(id) => Elements("You earned", creditRewardRepo.get(id))
         case IntegrityError(err) => Elements("Found and corrected an error in the account") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
         case ChargeBack() => s"A ${event.creditChange.toDollarString} refund was issued to your card"
@@ -113,6 +115,7 @@ object DescriptionElements {
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
+  implicit def fromCreditReward(cr: CreditReward): BasicElement = cr.credit.toDollarString
   implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.relative
   implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.relative
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
