@@ -319,7 +319,7 @@ class OrganizationCommanderImpl @Inject() (
           orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
           planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
 
-          orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
+          orgMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = request.requesterId, role = OrganizationRole.ADMIN))
           val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
 
@@ -418,29 +418,25 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   def transferOrganization(request: OrganizationTransferRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationTransferResponse] = {
-    val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
-    validationError match {
-      case Some(orgFail) => Left(orgFail)
-      case None =>
-        db.readWrite { implicit session =>
+    db.readWrite { implicit session =>
+      getValidationError(request) match {
+        case Some(orgFail) => Left(orgFail)
+        case None =>
           val org = orgRepo.get(request.orgId)
-          orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner, excludeState = None) match {
-            case Some(membership) if membership.isActive =>
-              orgMembershipRepo.save(org.modifiedMembership(membership, newRole = OrganizationRole.ADMIN))
-            case inactiveMembershipOpt =>
-              orgMembershipRepo.save(org.newMembership(request.newOwner, OrganizationRole.ADMIN).copy(id = inactiveMembershipOpt.flatMap(_.id)))
-              planManagementCommander.registerNewAdmin(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
-              planManagementCommander.addUserAccountContact(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
+          if (orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner).isDefined) {
+            orgMembershipCommander.modifyMembershipHelper(OrganizationMembershipModifyRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN))
+          } else {
+            orgMembershipCommander.addMembershipHelper(OrganizationMembershipAddRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN, adminIdOpt = None))
           }
+          planManagementCommander.addUserAccountContactHelper(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))
-
           libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL).foreach { lib =>
             libraryCommander.unsafeTransferLibrary(lib.id.get, request.newOwner)
           }
 
           organizationAnalytics.trackOrganizationEvent(modifiedOrg, userRepo.get(request.requesterId), request)
           Right(OrganizationTransferResponse(request, modifiedOrg))
-        }
+      }
     }
   }
 

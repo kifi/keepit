@@ -1,0 +1,89 @@
+package com.keepit.payments
+
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
+import com.keepit.common.db.{ Id, State }
+import com.keepit.common.logging.Logging
+import com.keepit.common.time.Clock
+import com.keepit.model.{ Organization, User }
+import org.joda.time.DateTime
+
+import scala.util.{ Failure, Success, Try }
+
+case class UnavailableCreditCodeException(code: CreditCode) extends Exception(s"Credit code $code is unavailable")
+
+@ImplementedBy(classOf[CreditCodeInfoRepoImpl])
+trait CreditCodeInfoRepo extends Repo[CreditCodeInfo] {
+  def getByOrg(orgId: Id[Organization], excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo]
+  def getByCode(code: CreditCode, excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo]
+  def create(info: CreditCodeInfo)(implicit session: RWSession): Try[CreditCodeInfo]
+}
+
+@Singleton
+class CreditCodeInfoRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock)
+    extends DbRepo[CreditCodeInfo] with CreditCodeInfoRepo with Logging {
+
+  import db.Driver.simple._
+
+  implicit val creditCodeTypeMapper = CreditCode.columnType(db)
+  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
+  implicit val kindColumnType = MappedColumnType.base[CreditCodeKind, String](_.kind, CreditCodeKind.apply)
+  implicit val statusColumnType = MappedColumnType.base[CreditCodeStatus, String](_.value, CreditCodeStatus.apply)
+
+  type RepoImpl = CreditCodeInfoTable
+  class CreditCodeInfoTable(tag: Tag) extends RepoTable[CreditCodeInfo](db, tag, "credit_code_info") {
+    def code = column[CreditCode]("code", O.NotNull)
+    def kind = column[CreditCodeKind]("kind", O.NotNull)
+    def status = column[CreditCodeStatus]("status", O.NotNull)
+    def referrerUserId = column[Option[Id[User]]]("referrer_user_id", O.Nullable)
+    def referrerOrganizationId = column[Option[Id[Organization]]]("referrer_organization_id", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, code, kind, status, referrerUserId, referrerOrganizationId) <> ((CreditCodeInfoRepo.applyFromDbRow _).tupled, CreditCodeInfoRepo.unapplyToDbRow)
+  }
+
+  def table(tag: Tag) = new CreditCodeInfoTable(tag)
+  initTable()
+
+  override def deleteCache(info: CreditCodeInfo)(implicit session: RSession): Unit = {}
+  override def invalidateCache(info: CreditCodeInfo)(implicit session: RSession): Unit = {}
+
+  def getByOrg(orgId: Id[Organization], excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo] = {
+    rows.filter(row => row.referrerOrganizationId === orgId && row.state =!= excludeStateOpt.orNull).firstOption
+  }
+  def getByCode(code: CreditCode, excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo] =
+    rows.filter(row => row.code === code && row.state =!= excludeStateOpt.orNull).firstOption
+  def create(info: CreditCodeInfo)(implicit session: RWSession): Try[CreditCodeInfo] = {
+    if (rows.filter(row => row.code === info.code).exists.run) Failure(UnavailableCreditCodeException(info.code))
+    else Success(save(info))
+  }
+}
+
+object CreditCodeInfoRepo {
+  def applyFromDbRow(
+    id: Option[Id[CreditCodeInfo]],
+    createdAt: DateTime,
+    updatedAt: DateTime,
+    state: State[CreditCodeInfo],
+    code: CreditCode,
+    kind: CreditCodeKind,
+    status: CreditCodeStatus,
+    referrerUserId: Option[Id[User]],
+    referrerOrganizationId: Option[Id[Organization]]) = {
+    val referrer = referrerUserId.map(CreditCodeReferrer(_, referrerOrganizationId))
+    CreditCodeInfo(id, createdAt, updatedAt, state, code, kind, status, referrer)
+  }
+
+  def unapplyToDbRow(info: CreditCodeInfo) = Some((
+    info.id,
+    info.createdAt,
+    info.updatedAt,
+    info.state,
+    info.code,
+    info.kind,
+    info.status,
+    info.referrer.map(_.userId),
+    info.referrer.flatMap(_.organizationId)
+  ))
+}

@@ -1,16 +1,11 @@
-package com.keepit.model
+package com.keepit.payments
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.{DbRepo, DataBaseComponent, Repo}
-import com.keepit.common.db.{ States, ModelWithState, State, Id }
-import com.keepit.common.logging.Logging
+import com.keepit.common.db.{Id, ModelWithState, State, States}
 import com.keepit.common.time._
-import com.keepit.payments.{AccountEvent, DollarAmount, PaidAccount}
+import com.keepit.model.{Organization, User}
 import org.joda.time.DateTime
 import play.api.libs.json._
 
-import scala.concurrent.duration.Duration
 import scala.util.Try
 
 trait Reward {
@@ -19,15 +14,14 @@ trait Reward {
   val info: status.I
 
   override def equals(that: Any): Boolean = that match {
-    case thatReward: Reward => {
+    case thatReward: Reward =>
       kind == thatReward.kind &&
         status == thatReward.status &&
         info == thatReward.info
-    }
     case _ => false
   }
 
-  override def hashCode: Int = Seq(kind, status, info).map(_.hashCode()).reduce(_ | _)
+  override def hashCode: Int = Seq(kind, status, info).map(_.hashCode()).reduce(_ ^ _)
 }
 
 sealed abstract class RewardKind(val kind: String) {
@@ -105,21 +99,20 @@ object RewardStatus {
 }
 
 object RewardKind {
-  
   case object Coupon extends RewardKind("coupon") with RewardStatus.WithEmptyInfo {
     case object Used extends Status("used")
     protected val allStatus: Set[S] = Set(Used)
     val applicable: Used.type = Used
   }
 
-  case object OrgCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
+  case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
     protected val allStatus: Set[S] = Set(Created)
     val applicable: Created.type = Created
   }
 
-  case object OrgReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
+  case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
     case object Upgraded extends Status("upgraded")
@@ -127,7 +120,7 @@ object RewardKind {
     val applicable: Upgraded.type = Upgraded
   }
 
-  private val all: Set[RewardKind] = Set(Coupon, OrgCreation, OrgReferral)
+  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral)
 
   def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
     case Some(validKind) => validKind
@@ -179,119 +172,11 @@ case class CreditReward(
     applied: Option[Id[AccountEvent]],
     reward: Reward,
     unrepeatable: Option[UnrepeatableRewardKey],
-    validityPeriod: Option[Duration],
     code: Option[UsedCreditCode]) extends ModelWithState[CreditReward] {
   def withId(id: Id[CreditReward]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
 object CreditReward {
-  def applyFromDbRow(
-    id: Option[Id[CreditReward]],
-    createdAt: DateTime,
-    updatedAt: DateTime,
-    state: State[CreditReward],
-    accountId: Id[PaidAccount],
-    credit: DollarAmount,
-    applied: Option[Id[AccountEvent]],
-    kind: RewardKind,
-    status: String,
-    info: Option[JsValue],
-    unrepeatable: Option[UnrepeatableRewardKey],
-    validityPeriod: Option[Duration],
-    code: Option[CreditCode],
-    singleUse: Option[Boolean]
-  ): CreditReward = {
-    CreditReward(
-      id,
-      createdAt,
-      updatedAt,
-      state,
-      accountId,
-      credit,
-      applied,
-      Reward.applyFromDbRow(kind, status, info),
-      unrepeatable,
-      validityPeriod,
-      code.map(UsedCreditCode.applyFromDbRow(_, singleUse))
-    )
-  }
-
-  def unapplyToDbRow(creditReward: CreditReward) = {
-    Reward.unapplyToDbRow(creditReward.reward).map { case (kind, status, info) =>
-      val (code, singleUse): (Option[CreditCode], Option[Boolean]) = creditReward.code.flatMap(UsedCreditCode.unapplyToDbRow).map {
-        case (actualCode, singleUse) => (Some(actualCode), singleUse)
-      } getOrElse (None, None)
-      (
-        creditReward.id,
-        creditReward.createdAt,
-        creditReward.updatedAt,
-        creditReward.state,
-        creditReward.accountId,
-        creditReward.credit,
-        creditReward.applied,
-        kind,
-        status,
-        info,
-        creditReward.unrepeatable,
-        creditReward.validityPeriod,
-        code,
-        singleUse
-      )
-    }
-  }
 }
 
-@ImplementedBy(classOf[CreditRewardRepoImpl])
-trait CreditRewardRepo extends Repo[CreditReward] {
-  def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward]
-}
-
-// Unique index on (code, singleUse) - single-use codes can only be used once overall
-// Unique index on (kind, unrepeatable) - two codes of the same unrepeatable kind cannot be applied
-// Referential integrity constraint from CreditReward.code CreditCode.code
-// Referential integrity constraint from CreditReward.accountId to PaidAccount.id
-// Referential integrity constraint from CreditReward.{accountId, applied, credit} to AccountEvent.{accountId, id, credit}
-
-@Singleton
-class CreditRewardRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock)
-  extends DbRepo[CreditReward] with CreditRewardRepo with Logging {
-
-  import db.Driver.simple._
-
-  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
-  implicit val kindColumnType = MappedColumnType.base[RewardKind, String](_.kind, RewardKind.apply)
-  implicit val creditCodeTypeMapper = CreditCode.columnType(db)
-  implicit val unrepeatableTypeMapper = MappedColumnType.base[UnrepeatableRewardKey, String](_.toKey, UnrepeatableRewardKey.fromKey)
-
-  type RepoImpl = CreditRewardTable
-  class CreditRewardTable(tag: Tag) extends RepoTable[CreditReward](db, tag, "credit_reward") {
-
-    def accountId = column[Id[PaidAccount]]("account_id", O.NotNull)
-    def credit = column[DollarAmount]("credit", O.NotNull)
-    def applied = column[Option[Id[AccountEvent]]]("applied", O.Nullable)
-
-    def kind = column[RewardKind]("kind", O.NotNull)
-    def status = column[String]("status", O.NotNull)
-    def info = column[Option[JsValue]]("info", O.Nullable)
-
-    def unrepeatable = column[Option[UnrepeatableRewardKey]]("unrepeatable", O.Nullable)
-    def validityPeriod = column[Option[Duration]]("validity_period", O.Nullable)
-
-    def code = column[Option[CreditCode]]("code", O.Nullable)
-    def singleUse = column[Option[Boolean]]("single_use", O.Nullable)
-
-    def * = (id.?, createdAt, updatedAt, state, accountId, credit, applied, kind, status, info, unrepeatable, validityPeriod, code, singleUse) <> ((CreditReward.applyFromDbRow _).tupled, CreditReward.unapplyToDbRow)
-  }
-
-  def table(tag: Tag) = new CreditRewardTable(tag)
-  initTable()
-
-  override def deleteCache(creditReward: CreditReward)(implicit session: RSession): Unit = {}
-
-  override def invalidateCache(creditReward: CreditReward)(implicit session: RSession): Unit = {}
-
-  def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward] = ???
-}

@@ -44,13 +44,6 @@ case class Organization(
 
   def abbreviatedName = this.name.abbreviate(33)
 
-  def newMembership(userId: Id[User], role: OrganizationRole): OrganizationMembership = {
-    OrganizationMembership(organizationId = id.get, userId = userId, role = role)
-  }
-
-  def modifiedMembership(membership: OrganizationMembership, newRole: OrganizationRole): OrganizationMembership =
-    membership.copy(role = newRole)
-
   def handle: OrganizationHandle = {
     primaryHandle match {
       case Some(h) => h.original

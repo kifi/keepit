@@ -33,14 +33,14 @@ object OrganizationFactoryHelper {
       val userRepo = injector.getInstance(classOf[UserRepo])
       assume(userRepo.get(org.ownerId).id.isDefined)
       val orgMemRepo = injector.getInstance(classOf[OrganizationMembershipRepo])
-      orgMemRepo.save(org.newMembership(org.ownerId, OrganizationRole.ADMIN))
+      orgMemRepo.save(OrganizationMembership(organizationId = org.id.get, userId = org.ownerId, role = OrganizationRole.ADMIN))
       for (admin <- partialOrganization.admins) {
-        orgMemRepo.save(org.newMembership(admin.id.get, OrganizationRole.ADMIN))
+        orgMemRepo.save(OrganizationMembership(organizationId = org.id.get, userId = admin.id.get, role = OrganizationRole.ADMIN))
         injector.getInstance(classOf[PlanManagementCommanderImpl]).registerNewAdminHelper(org.id.get, admin.id.get, ActionAttribution(Some(org.ownerId), None))
       }
 
       for (member <- partialOrganization.members) {
-        orgMemRepo.save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
+        orgMemRepo.save(OrganizationMembership(organizationId = org.id.get, userId = member.id.get, role = OrganizationRole.MEMBER))
         injector.getInstance(classOf[PlanManagementCommanderImpl]).registerNewUserHelper(org.id.get, member.id.get, ActionAttribution(Some(org.ownerId), None))
       }
       val libraryRepo = injector.getInstance(classOf[LibraryRepo])
