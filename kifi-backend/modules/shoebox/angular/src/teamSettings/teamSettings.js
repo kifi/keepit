@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
-  '$window', '$rootScope', '$scope', '$state', '$sce', 'billingState',
+  '$window', '$rootScope', '$scope', '$state', '$sce', '$analytics', '$timeout', 'billingState',
   'orgProfileService', 'profileService', 'billingService', 'messageTicker',
   'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function ($window, $rootScope, $scope, $state, $sce, billingState,
+  function ($window, $rootScope, $scope, $state, $sce, $analytics, $timeout, billingState,
             orgProfileService, profileService, billingService, messageTicker,
             ORG_PERMISSION, ORG_SETTING_VALUE) {
     $scope.ORG_PERMISSION = ORG_PERMISSION;
@@ -159,6 +159,14 @@ angular.module('kifi')
       return heading.toLowerCase().replace(' ', '-');
     };
 
+    $scope.onHoverUpsellPrivileges = function () {
+      orgProfileService.trackEvent('user_viewed_page', $scope.profile, { action: 'viewPrivilegesUpsell' });
+    };
+
+    $scope.onClickUpsellPrivileges = function () {
+      orgProfileService.trackEvent('user_clicked_page', $scope.profile, { action: 'clickPrivilegesUpsell' });
+    };
+
     function getOptions() {
       var items = Array.prototype.slice.apply(arguments);
       var options = [ // This is what the <select>s will read from
@@ -208,5 +216,11 @@ angular.module('kifi')
     }
 
     $scope.kifiAdmin = (profileService.me.experiments.indexOf('admin') !== -1);
+
+    $timeout(function () {
+      $analytics.eventTrack('user_viewed_page', {
+        type: 'memberPrivileges'
+      });
+    });
   }
 ]);

@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('BillingContactsCtrl', [
-  '$window', '$scope', '$q', 'orgProfileService', 'billingService',
-  'modalService', 'messageTicker',
-  function ($window, $scope, $q, orgProfileService, billingService,
-            modalService, messageTicker) {
+  '$window', '$scope', '$q', '$timeout', '$analytics',
+  'orgProfileService', 'billingService', 'modalService', 'messageTicker',
+  function ($window, $scope, $q, $timeout, $analytics,
+    orgProfileService, billingService, modalService, messageTicker) {
 
     $scope.billingContactModel = {};
     $scope.admins = null;
@@ -66,5 +66,11 @@ angular.module('kifi')
       (e || $window.event).returnValue = message; // for Firefox
       return message;
     }
+
+    $timeout(function () {
+      $analytics.eventTrack('user_viewed_page', {
+        type: 'billingContacts'
+      });
+    });
   }
 ]);

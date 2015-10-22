@@ -4,11 +4,12 @@ angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
   '$window', '$rootScope', '$scope', '$state', '$filter', '$q',
+  '$timeout', '$analytics',
   'billingState', 'billingService', 'modalService', 'profileService',
-  'StripeCheckout', 'messageTicker', 'paymentPlans', '$timeout',
-  function ($window, $rootScope, $scope, $state, $filter, $q,
-            billingState, billingService, modalService, profileService,
-            StripeCheckout, messageTicker, paymentPlans, $timeout) {
+  'StripeCheckout', 'messageTicker', 'paymentPlans',
+  function ($window, $rootScope, $scope, $state, $filter, $q, $timeout,
+            $analytics, billingState, billingService, modalService,
+            profileService, StripeCheckout, messageTicker, paymentPlans) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
     $scope.upgrade = !!$state.params.upgrade;
@@ -327,6 +328,12 @@ angular.module('kifi')
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
+    });
+
+    $timeout(function () {
+      $analytics.eventTrack('user_viewed_page', {
+        type: 'paymentPlan'
+      });
     });
   }
 ]);
