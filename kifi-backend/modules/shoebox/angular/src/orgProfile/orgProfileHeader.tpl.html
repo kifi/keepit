@@ -56,7 +56,7 @@
                 </span>
               </span>
               <span ng-if="plan.showUpsells">
-                Restrict who can invite new members by <a class="kf-link" ui-sref="orgProfile.settings.plan">upgrading your plan</a>.
+                Restrict who can invite new members by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: profile.handle, upgrade: true })">upgrading your plan</a>.
               </span>
             </span>
           </div>
@@ -98,7 +98,7 @@
                 </span>
               </span>
               <span ng-if="plan.showUpsells">
-                Restrict who can view your team's members by <a class="kf-link" ui-sref="orgProfile.settings.plan">upgrading your plan</a>.
+                Restrict who can view your team's members by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: profile.handle, upgrade: true })">upgrading your plan</a>.
               </span>
             </span>
           </div>
