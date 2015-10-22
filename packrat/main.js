@@ -708,7 +708,7 @@ api.port.on({
     }
     tracker.track('user_clicked_pane', {type: 'libraryChooser', action: 'unkept'});
   },
-  keeps_and_libraries_and_organizations_and_me: function (_, respond, tab) {
+  keeps_and_libraries_and_organizations_and_me_and_experiments: function (_, respond, tab) {
     var d = pageData[tab.nUri];
     loadLibraries(function (libraries) {
       var recentLibIds = loadRecentLibs();
@@ -727,6 +727,7 @@ api.port.on({
         libraries: libraries,
         organizations: organizations,
         me: me,
+        experiments: experiments,
         posting: experiments.indexOf('explicit_social_posting') >= 0
       });
 
