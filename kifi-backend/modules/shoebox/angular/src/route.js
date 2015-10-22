@@ -171,7 +171,7 @@ angular.module('kifi')
         activenav: 'billing-contacts'
       })
       .state('orgProfile.settings.plan', {
-        url: '/plan',
+        url: '/plan?upgrade',
         controller: 'PaymentPlanCtrl',
         templateUrl: 'teamSettings/paymentPlan.tpl.html',
         activetab: 'settings',
@@ -193,6 +193,13 @@ angular.module('kifi')
         templateUrl: 'teamSettings/activityLog.tpl.html',
         activetab: 'settings',
         activenav: 'activity-log'
+      })
+      .state('orgProfile.settings.credits', {
+        url: '/credits',
+        controller: 'EarnCreditsCtrl',
+        templateUrl: 'teamSettings/earnCredits.tpl.html',
+        activetab: 'settings',
+        activenav: 'earn-credits'
       })
       .state('teams', {
         url: '/teams',

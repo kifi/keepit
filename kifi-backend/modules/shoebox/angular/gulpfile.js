@@ -109,7 +109,8 @@ var libJsFiles = [
   'managed-lib/selectionchange.js',
   'managed-lib/angular-smart-scroll/src/angular-smart-scroll.js',
   'lib/angulartics/dist/angulartics.min.js',
-  ['lib/fuse.js/src/fuse.js', 'lib/fuse.js/src/fuse.min.js']
+  ['lib/fuse.js/src/fuse.js', 'lib/fuse.js/src/fuse.min.js'],
+  'lib/angular-clipboard/angular-clipboard.js'
 ];
 
 var devFiles = function (files) {

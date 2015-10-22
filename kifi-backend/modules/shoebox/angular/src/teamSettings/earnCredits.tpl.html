@@ -1,0 +1,16 @@
+<div class="kf-earn-credits">
+  <h1 class="kf-earn-credits-top-header">Earn Credit</h1>
+  <section class="kf-container kf-earn-credits-refer">
+    <div class="kf-container-header">
+      <h2 class="kf-heading">Refer a team to Kifi and earn credit</h2>
+    </div>
+    <div class="kf-main-pane-earn-credits">
+      <p>Share Kifi with other companies and they'll get a $100 credit. We'll credit you $100 for the referral when they upgrade after joining with your referral code.</p>
+      <text class="kf-referral-code-txt" ng-model="referralCode">{{referralCode}}</text><button clipboard text="referralCode" ng-click="showCopied()" class="kf-referral-btn kf-referral-btn-copy">Copy</button>
+      <text class="kf-referral-copy-msg" ng-if="copied">Copied</text>
+    </div>
+  </section>
+  <div kf-redeem-credits profile="profile" standalone="true"></div>
+  <h3 class="kf-earn-credits-activity kf-earn-credits-activity-header">Coming Soon: your team's referral activity</h3>
+  <p class="kf-earn-credits-activity kf-earn-credits-activity-body">In the meantime, we'll email you if anyone uses your referral code upon creating and upgrading a team.</p>
+</div>

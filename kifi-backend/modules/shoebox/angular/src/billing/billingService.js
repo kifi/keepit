@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('billingService', [
-  '$analytics', 'net',
-  function ($analytics, net) {
+  '$analytics', 'net', '$timeout',
+  function ($analytics, net, $timeout) {
     function getResponseData(response) {
       return response.data;
     }
@@ -15,7 +15,8 @@ angular.module('kifi')
         net.getBillingContacts,
         net.getBillingEvents,
         net.getBillingEventsBefore,
-        net.getBillingPlans
+        net.getBillingPlans,
+        net.getReferralCode
       ].forEach(function (endpoint) {
         endpoint.clearCache();
       });
@@ -75,6 +76,25 @@ angular.module('kifi')
           invalidateCache();
           return response;
         });
+      },
+      getReferralCode: function (pubId) {
+        return pubId;
+//        return net
+//        .getReferralCode(pubId)
+//        .then(function (response) {
+//          return response;
+//        });
+      },
+      applyReferralCode: function(pubId, code) {
+        return $timeout(function() {
+          return { pubId: pubId, code: code, creditAdded: 500 };
+        });
+//        return net
+//        .applyReferralCode(pubId, code)
+//        .then(function (response) {
+//          invalidateCache();
+//          return response;
+//        });
       },
       invalidateCache: invalidateCache
     };

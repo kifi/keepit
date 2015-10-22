@@ -51,6 +51,8 @@ angular.module('kifi')
       getBillingEventsBefore: get(shoebox, '/admin/billing/eventsBefore?pubId=:pubId&limit=:limit&beforeTime=:beforeTime&beforePubId=:beforePubId', 30),
       getBillingPlans: get(shoebox, '/admin/billing/plans?pubId=:pubId', 30),
       setBillingPlan: post(shoebox, '/admin/billing/plan?pubId=:pubId&planPubId=:planPubId'),
+      getReferralCode: get(shoebox, '/admin/billing/code?pubId=:pubId'),
+      applyReferralCode: post(shoebox, '/admin/billing/code?pubId=:pubId&code=:code'),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
 

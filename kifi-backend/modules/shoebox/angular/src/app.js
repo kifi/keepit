@@ -9,6 +9,7 @@ angular.module('kifi', [
   'util',
   'antiscroll',
   'nodraginput',
+  'angular-clipboard',
   'jun.smartScroll',
   'angularMoment',
   'jun.facebook',
