@@ -171,7 +171,7 @@ angular.module('kifi')
         activenav: 'billing-contacts'
       })
       .state('orgProfile.settings.plan', {
-        url: '/plan',
+        url: '/plan?upgrade',
         controller: 'PaymentPlanCtrl',
         templateUrl: 'teamSettings/paymentPlan.tpl.html',
         activetab: 'settings',
