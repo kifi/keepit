@@ -13,7 +13,7 @@ object PaidAccountFactory {
 
   def paidAccount(): PartialPaidAccount = {
     new PartialPaidAccount(PaidAccount(id = Some(Id[PaidAccount](idx.incrementAndGet())), orgId = Id[Organization](idx.incrementAndGet()),
-      planId = Id[PaidPlan](idx.incrementAndGet()), credit = DollarAmount(0), userContacts = Seq.empty, emailContacts = Seq.empty, activeUsers = 0, billingCycleStart = currentDateTime))
+      planId = Id[PaidPlan](idx.incrementAndGet()), credit = DollarAmount(0), userContacts = Seq.empty, emailContacts = Seq.empty, activeUsers = 0, billingCycleStart = currentDateTime, planRenewal = currentDateTime))
   }
 
   def paidAccounts(count: Int): Seq[PartialPaidAccount] = List.fill(count)(paidAccount())
@@ -26,6 +26,7 @@ object PaidAccountFactory {
     def withCredit(amount: DollarAmount) = new PartialPaidAccount(account.copy(credit = amount))
     def withStatus(status: PaymentStatus) = new PartialPaidAccount(account.copy(paymentStatus = status))
     def withBillingCycleStart(billingCycleStart: DateTime) = new PartialPaidAccount(account.copy(billingCycleStart = billingCycleStart))
+    def withPlanRenewal(renewal: DateTime) = new PartialPaidAccount(account.copy(planRenewal = renewal))
     def withActiveUsers(activeUsers: Int) = new PartialPaidAccount(account.copy(activeUsers = activeUsers))
     def withFrozen(frozen: Boolean) = new PartialPaidAccount(account.copy(frozen = frozen))
     def withPaymentDueAt(dueAt: DateTime) = new PartialPaidAccount(account.copy(paymentDueAt = Some(dueAt)))
