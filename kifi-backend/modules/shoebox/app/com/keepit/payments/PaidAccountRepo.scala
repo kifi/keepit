@@ -3,13 +3,12 @@ package com.keepit.payments
 import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
-import com.keepit.common.time.Clock
-import com.keepit.model.{ Name, User, Organization }
+import com.keepit.common.time._
+import com.keepit.model.{ Limit, User, Organization }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.core._
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import play.api.libs.json.{ Json, JsString, JsObject }
-
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[PaidAccountRepoImpl])
@@ -21,13 +20,15 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount]
   def tryGetAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
-  def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount]
+  def getRenewable()(implicit session: RSession): Seq[PaidAccount]
+  def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount]
 }
 
 @Singleton
 class PaidAccountRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[PaidAccount] with PaidAccountRepo {
+    val clock: Clock,
+    planRepo: PaidPlanRepoImpl) extends DbRepo[PaidAccount] with PaidAccountRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -82,8 +83,21 @@ class PaidAccountRepoImpl @Inject() (
     (for (row <- rows if row.orgId === orgId && row.lockedForProcessing === true) yield row.lockedForProcessing).update(false) > 0
   }
 
-  def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount] = {
-    (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Required: PaymentStatus) || row.credit < -maxBalance || row.billingCycleStart < maxCycleAge)) yield row).list
+  def getRenewable()(implicit session: RSession): Seq[PaidAccount] = {
+    val now = clock.now()
+    val plans = planRepo.all().collect { case plan if plan.state == PaidPlanStates.ACTIVE => plan.id.get -> plan }.toMap
+    val maxCycleStart = now minusMonths plans.values.map(_.billingCycle.month).minOpt.getOrElse(0) // necessary condition (optimization)
+
+    val maybeRenewableAccounts = (for {
+      account <- rows if account.state === PaidAccountStates.ACTIVE && !account.frozen && account.billingCycleStart < maxCycleStart
+    } yield account).sortBy(account => (account.billingCycleStart, account.id)).list
+
+    def billingCycleEnd(account: PaidAccount) = account.billingCycleStart plusMonths plans(account.planId).billingCycle.month
+
+    maybeRenewableAccounts.filter(billingCycleEnd(_) < now)
   }
 
+  def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount] = {
+    (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Ok: PaymentStatus) || row.credit < -maxBalance || row.paymentDueAt < clock.now())) yield row).sortBy(_.paymentDueAt).list
+  }
 }

@@ -28,6 +28,8 @@ object PaidAccountFactory {
     def withBillingCycleStart(billingCycleStart: DateTime) = new PartialPaidAccount(account.copy(billingCycleStart = billingCycleStart))
     def withActiveUsers(activeUsers: Int) = new PartialPaidAccount(account.copy(activeUsers = activeUsers))
     def withFrozen(frozen: Boolean) = new PartialPaidAccount(account.copy(frozen = frozen))
+    def withPaymentDueAt(dueAt: DateTime) = new PartialPaidAccount(account.copy(paymentDueAt = Some(dueAt)))
+    def withPaymentStatus(status: PaymentStatus) = new PartialPaidAccount(account.copy(paymentStatus = status))
     def get: PaidAccount = account
   }
 

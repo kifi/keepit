@@ -1,7 +1,6 @@
 package com.keepit.payments
 
 import com.keepit.common.db._
-import com.keepit.common.json.KeyFormat
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
@@ -43,11 +42,10 @@ case class SimpleAccountContactInfo(who: BasicUser, enabled: Boolean)
 sealed abstract class PaymentStatus(val value: String)
 object PaymentStatus {
   case object Ok extends PaymentStatus("ok")
-  case object Required extends PaymentStatus("required")
   case object Pending extends PaymentStatus("pending")
   case object Failed extends PaymentStatus("failed")
 
-  private val all = Set(Ok, Required, Pending, Failed)
+  private val all = Set(Ok, Pending, Failed)
   def apply(value: String): PaymentStatus = all.find(_.value == value) getOrElse {
     throw new IllegalArgumentException(s"Unknown PaymentStatus: $value")
   }
@@ -74,7 +72,7 @@ case class PaidAccount(
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
   def withPaymentStatus(status: PaymentStatus): PaidAccount = this.copy(paymentStatus = status)
-  def withPaymentDueAt(dueAt: DateTime): PaidAccount = this.copy(paymentDueAt = Some(dueAt))
+  def withPaymentDueAt(dueAt: Option[DateTime]): PaidAccount = this.copy(paymentDueAt = dueAt)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 
   def owed: DollarAmount = -(DollarAmount.ZERO min credit)
