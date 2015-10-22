@@ -496,20 +496,17 @@ k.keepBox = k.keepBox || (function () {
         setVisibility.call(this, e);
       }
     })
-    .on('click', '.kifi-keep-box-new-lib-visibility-item-no-orgs', function () {
+    .on('click', '.kifi-keep-box-new-lib-visibility-item-disabled.kifi-keep-box-new-lib-visibility-item-no-orgs', function () {
       window.open('https://www.kifi.com/teams');
     })
-    .on('click', '.kifi-keep-box-new-lib-visibility-item-link-to-create-team', function () {
+    .on('click', '.kifi-keep-box-new-lib-visibility-item-disabled.kifi-keep-box-new-lib-visibility-item-link-to-create-team', function () {
       window.open('https://www.kifi.com/teams/new');
     });
 
-    $view.hoverfu('.kifi-keep-box-new-lib-visibility-item', function (configureHover) {
+    $view.hoverfu('.kifi-keep-box-new-lib-visibility-item-disabled', function (configureHover) {
       var $this = $(this);
       var title;
       var message;
-      if ($this.children('[disabled]').length === 0) {
-        return;
-      }
 
       // TODO(carlos): This logic only works if one visibility is disabled at a time.
       // This will need to be reworked if, for example, both public and team visibility
@@ -582,12 +579,20 @@ k.keepBox = k.keepBox || (function () {
     } else if ($box.find('[name="kifi-visibility"][value="organization"]:checked').length === 1) {
       $box.find('[name="kifi-visibility"][value="secret"]').focus().click();
     }
-    $box.find('[name="kifi-visibility"][value="organization"]').prop('disabled', !isOrganization);
+    $box
+    .find('[name="kifi-visibility"][value="organization"]')
+    .prop('disabled', !isOrganization)
+    .closest('.kifi-keep-box-new-lib-visibility-item')
+    .toggleClass('kifi-keep-box-new-lib-visibility-item-disabled', !isOrganization);
 
     if (!canPublish && $box.find('[name="kifi-visibility"][value="published"]:checked').length === 1) {
       $box.find('[name="kifi-visibility"][value="organization"]').focus().click();
     }
-    $box.find('[name="kifi-visibility"][value="published"]').prop('disabled', !canPublish);
+    $box
+    .find('[name="kifi-visibility"][value="published"]')
+    .prop('disabled', !canPublish)
+    .closest('.kifi-keep-box-new-lib-visibility-item')
+    .toggleClass('kifi-keep-box-new-lib-visibility-item-disabled', !canPublish);
 
     api.port.emit('track_pane_click', {
       type: 'createLibrary',
