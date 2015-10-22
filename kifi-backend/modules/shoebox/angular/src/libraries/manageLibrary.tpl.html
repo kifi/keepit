@@ -34,7 +34,7 @@
             <div class="manage-lib-input-area">
               <div
                 kf-org-selector
-                ng-attr-data-kf-tooltip="{{ !hasPermission(LIB_PERMISSIONS.MOVE_LIBRARY) ? 'Your team does not allow you to move libraries out of the team.' : '' }}"
+                ng-attr-data-kf-tooltip="{{ !hasPermission(LIB_PERMISSION.MOVE_LIBRARY) ? 'Your team does not allow you to move libraries out of the team.' : undefined }}"
                 library-props="libraryProps"
                 library="library"
                 space="space"
@@ -99,7 +99,7 @@
                   </span>
                 </span>
                 <span ng-if="space.destination.config.showUpsells && (space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin')">
-                  Enable Slack integration by <a class="kf-link" target="_self" href="https://www.kifi.com/teams">upgrading your plan</a>.
+                  Enable Slack integrations by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: space.destination.handle, upgrade: true })">upgrading your plan</a>.
                 </span>
               </span>
             </div>

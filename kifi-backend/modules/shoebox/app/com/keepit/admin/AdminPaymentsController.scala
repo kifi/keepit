@@ -105,11 +105,10 @@ class AdminPaymentsController @Inject() (
 
   def processOrgNow(orgId: Id[Organization]) = AdminUserAction.async { request =>
     val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
-    paymentProcessingCommander.processAccount(account).map { events =>
-      val result = JsArray(events.map { event =>
-        Json.obj(event.action.eventType.value -> event.creditChange.toDollarString)
-      })
-      Ok(result)
+    paymentProcessingCommander.processAccount(account).map {
+      case (_, event) =>
+        val result = Json.obj(event.action.eventType.value -> event.creditChange.toDollarString)
+        Ok(result)
     }
   }
 
@@ -204,8 +203,13 @@ class AdminPaymentsController @Inject() (
     val dashboard = db.readOnlyMaster { implicit session =>
       val frozenAccounts = paidAccountRepo.all.filter(_.frozen)
       val recentEvents = accountEventRepo.adminGetRecentEvents(Limit(100)).map(createAdminAccountEventView)
-      val accountIds = recentEvents.map(_.accountId).toSet
-      val orgsByAccountId = accountIds.map { accountId => accountId -> organizationRepo.get(paidAccountRepo.get(accountId).orgId) }.toMap
+      val orgsByAccountId = {
+        val accountIds = frozenAccounts.map(_.id.get).toSet ++ recentEvents.map(_.accountId).toSet
+        val accountsById = paidAccountRepo.getActiveByIds(accountIds)
+        val orgIds = accountsById.values.map(_.orgId).toSet
+        val orgsById = organizationRepo.getByIds(orgIds)
+        accountIds.map { accountId => accountId -> orgsById(accountsById(accountId).orgId) }.toMap
+      }
       AdminPaymentsDashboard(frozenAccounts, recentEvents, orgsByAccountId)
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))

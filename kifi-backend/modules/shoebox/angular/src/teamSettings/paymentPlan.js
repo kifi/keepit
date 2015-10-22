@@ -4,13 +4,14 @@ angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
   '$window', '$rootScope', '$scope', '$state', '$filter', '$q',
-  'billingState', 'billingService', 'modalService', 'StripeCheckout',
-  'messageTicker', 'paymentPlans', '$timeout',
+  'billingState', 'billingService', 'modalService', 'profileService',
+  'StripeCheckout', 'messageTicker', 'paymentPlans', '$timeout',
   function ($window, $rootScope, $scope, $state, $filter, $q,
-            billingState, billingService, modalService, StripeCheckout,
-            messageTicker, paymentPlans, $timeout) {
+            billingState, billingService, modalService, profileService,
+            StripeCheckout, messageTicker, paymentPlans, $timeout) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
+    $scope.upgrade = !!$state.params.upgrade;
 
     var PREDEFINED_CYCLE_PERIOD = {
       1: 'Monthly',
@@ -31,10 +32,15 @@ angular.module('kifi')
     });
 
     $scope.openStripeCheckout = function () {
+      var me = profileService.me;
+      var emailObject = (me.primaryEmail || me.emails[0] || {}); // extra defensive
+      var emailAddress = emailObject.address;
+
       // Open Checkout with further options
       handler
       .open({
         image: picFilter($scope.profile),
+        email: emailAddress,
         name: 'Kifi Teams',
         description: 'Update your Teams Plan',
         allowRememberMe: false,
@@ -42,6 +48,7 @@ angular.module('kifi')
       })
       .then(function (response) {
         $scope.plan.newCard = response[0];
+        $scope.cardError = false;
       });
     };
 
@@ -49,12 +56,9 @@ angular.module('kifi')
       if ($scope.selectedPlan && $scope.isFreePlanName($scope.selectedPlan.name)) {
         openDowngradeModal();
       } else if ($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
-        modalService.openGenericErrorModal({
-          modalData: {
-            genericErrorMessage: 'Save unsuccessful. You must enter a card to upgrade.'
-          }
-        });
+        $scope.cardError = true;
       } else {
+        $scope.cardError = false;
         $scope.save();
       }
     };
@@ -105,11 +109,21 @@ angular.module('kifi')
       };
     });
 
-    $scope.plan = {
-      name: currentPlan.name,
-      cycle: currentPlan.cycle, //months
-      newCard: null
-    };
+
+    if ($scope.upgrade) {
+      var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
+      $scope.plan = {
+        name: standardTierPlans[1].name,
+        cycle: standardTierPlans[1].cycle,
+        newCard: null
+      };
+    } else {
+      $scope.plan = {
+        name: currentPlan.name,
+        cycle: currentPlan.cycle, //months
+        newCard: null
+      };
+    }
 
     $scope.isNoPlanName = function (planName) {
       return !planName;

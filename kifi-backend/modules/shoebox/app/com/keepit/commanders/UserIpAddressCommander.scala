@@ -123,7 +123,8 @@ class UserIpAddressEventLogger @Inject() (
     }
 
     if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake
-      && !Set("108.60.110.146").contains(event.ip.ip) && !Play.maybeApplication.forall(_.mode == Mode.Dev)) {
+      && !Set("67.161.4.140").contains(event.ip.ip) //office ip address
+      && !Play.maybeApplication.forall(_.mode == Mode.Dev)) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))
     }

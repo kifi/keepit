@@ -34,8 +34,9 @@ class AccountEventRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount(_))
-  implicit val accountEventKindMapper = MappedColumnType.base[AccountEventKind, String](_.value, AccountEventKind.get(_).get) // explicitly requires "good" data
+  case class AccountEventKindNotFoundException(s: String) extends Exception(s"""AccountEventKind "$s" not found""")
+  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
+  implicit val accountEventKindMapper = MappedColumnType.base[AccountEventKind, String](_.value, s => AccountEventKind.get(s).getOrElse(throw new AccountEventKindNotFoundException(s))) // explicitly requires "good" data
 
   type RepoImpl = AccountEventTable
 
