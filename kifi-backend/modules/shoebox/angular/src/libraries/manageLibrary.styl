@@ -99,18 +99,27 @@
 
 .manage-lib-input-wrapper
   display: flex
+  flex-direction: column
   margin-bottom: 15px
+
+
+  @media (min-width: 480px)
+    flex-direction: row
 
   &.kf-color
     font-size: 0
 
+.manage-lib-colors
+  display: flex
+  justify-content: center
+  flex-wrap: wrap
 
 .manage-lib-input-area
-  flex: 1 0 0
+  flex: 1
 
 .manage-lib-heading
   min-width: 100px
-  padding-top: 10px
+  padding: 10px 0
   font-size: 15px
   font-weight: bold
   color: kifiBlack
