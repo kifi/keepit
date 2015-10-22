@@ -319,7 +319,7 @@ class OrganizationCommanderImpl @Inject() (
           orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
           planManagementCommander.createAndInitializePaidAccountForOrganization(org.id.get, plan.id.get, request.requesterId, session).get
 
-          orgMembershipRepo.save(org.newMembership(userId = request.requesterId, role = OrganizationRole.ADMIN))
+          orgMembershipRepo.save(OrganizationMembership(organizationId = org.id.get, userId = request.requesterId, role = OrganizationRole.ADMIN))
           val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
 
@@ -426,7 +426,7 @@ class OrganizationCommanderImpl @Inject() (
           if (orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner).isDefined) {
             orgMembershipCommander.modifyMembershipHelper(OrganizationMembershipModifyRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN))
           } else {
-            orgMembershipCommander.addMembershipHelper(OrganizationMembershipAddRequest(request.orgId, request.requesterId, request.newOwner, adminIdOpt = None))
+            orgMembershipCommander.addMembershipHelper(OrganizationMembershipAddRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN, adminIdOpt = None))
           }
           planManagementCommander.addUserAccountContactHelper(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))

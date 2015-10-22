@@ -203,8 +203,7 @@ class MobileOrganizationControllerTest extends Specification with ShoeboxTestInj
       def setupDelete(implicit injector: Injector) = db.readWrite { implicit session =>
         val owner = UserFactory.user().withName("Dr", "Papaya").saved
         val member = UserFactory.user().withName("Hansel", "Schmidt").saved
-        val org = OrganizationFactory.organization().withOwner(owner).withName("Papaya Republic of California").withHandle(OrganizationHandle("papaya_republic")).saved
-        inject[OrganizationMembershipRepo].save(org.newMembership(member.id.get, OrganizationRole.MEMBER))
+        val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
         (org, owner, member)
       }
 

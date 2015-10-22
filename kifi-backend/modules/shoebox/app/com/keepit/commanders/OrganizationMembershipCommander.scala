@@ -225,10 +225,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
       val org = orgRepo.get(request.orgId)
       val targetOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
       targetOpt match {
-        case Some(membership) if membership.isActive => orgMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+        case Some(membership) if membership.isActive => orgMembershipRepo.save(membership.withRole(request.newRole))
         case inactiveMembershipOpt =>
           val membershipIdOpt = inactiveMembershipOpt.flatMap(_.id)
-          val newMembership = org.newMembership(request.targetId, request.newRole).copy(id = membershipIdOpt)
+          val newMembership = OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole).copy(id = membershipIdOpt)
           val savedMembership = orgMembershipRepo.save(newMembership)
           orgMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId).foreach { candidate =>
             orgMembershipCandidateRepo.save(candidate.copy(state = OrganizationMembershipCandidateStates.INACTIVE))
@@ -260,7 +260,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
         if (membership.role == request.newRole) Right(OrganizationMembershipModifyResponse(request, membership))
         else {
           val org = orgRepo.get(request.orgId)
-          val newMembership = orgMembershipRepo.save(org.modifiedMembership(membership, request.newRole))
+          val newMembership = orgMembershipRepo.save(membership.withRole(request.newRole))
           (membership.role, newMembership.role) match {
             // assumes admins can only be added via modifying a membership, not creating one
             case (OrganizationRole.MEMBER, OrganizationRole.ADMIN) => planCommander.registerNewAdmin(org.id.get, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))

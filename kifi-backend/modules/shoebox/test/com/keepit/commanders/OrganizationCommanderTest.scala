@@ -115,34 +115,28 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val orgCommander = inject[OrganizationCommander]
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-          val users = db.readWrite { implicit session =>
-            PaidPlanFactory.paidPlan().saved
-            UserFactory.users(3).saved
-          }
-
-          val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
-          val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must beRight
-          val org = createResponse.right.get.newOrg
-
-          db.readWrite { implicit session =>
-            orgMembershipRepo.save(org.newMembership(userId = users(1).id.get, role = OrganizationRole.MEMBER))
+          val (org, owner, member, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).saved
+            (org, owner, member, rando)
           }
 
           // Random non-members shouldn't be able to modify the org
-          val nonmemberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(2).id.get,
+          val nonmemberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = rando.id.get,
             modifications = OrganizationModifications(name = Some("User 42 Rules!")))
           val nonmemberModifyResponse = orgCommander.modifyOrganization(nonmemberModifyRequest)
           nonmemberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
           // Neither should a generic member
-          val memberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(1).id.get,
+          val memberModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = member.id.get,
             modifications = OrganizationModifications(name = Some("User 2 Rules!")))
           val memberModifyResponse = orgCommander.modifyOrganization(memberModifyRequest)
           memberModifyResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
           // An owner can do whatever they want
-          val ownerModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = users(0).id.get,
+          val ownerModifyRequest = OrganizationModifyRequest(orgId = org.id.get, requesterId = owner.id.get,
             modifications = OrganizationModifications(name = Some("The view is nice from up here"), site = Some("www.kifi.com")))
           val ownerModifyResponse = orgCommander.modifyOrganization(ownerModifyRequest)
           ownerModifyResponse must beRight
@@ -162,38 +156,32 @@ class OrganizationCommanderTest extends TestKitSupport with SpecificationLike wi
           val orgCommander = inject[OrganizationCommander]
           val orgMembershipRepo = inject[OrganizationMembershipRepo]
 
-          val users = db.readWrite { implicit session =>
-            PaidPlanFactory.paidPlan().saved
-            UserFactory.users(4).saved
-          }
-
-          val createRequest = OrganizationCreateRequest(requesterId = users(0).id.get, OrganizationInitialValues(name = "Kifi"))
-          val createResponse = orgCommander.createOrganization(createRequest)
-          createResponse must beRight
-          val org = createResponse.right.get.newOrg
-
-          db.readWrite { implicit session =>
-            orgMembershipRepo.save(org.newMembership(userId = users(1).id.get, role = OrganizationRole.ADMIN))
-            orgMembershipRepo.save(org.newMembership(userId = users(2).id.get, role = OrganizationRole.MEMBER))
+          val (org, owner, admin, member, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val admin = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withAdmins(Seq(admin)).withMembers(Seq(member)).saved
+            (org, owner, admin, member, rando)
           }
 
           // Random non-members shouldn't be able to delete the org
-          val nonmemberDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = users(3).id.get)
+          val nonmemberDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = rando.id.get)
           val nonmemberDeleteResponse = orgCommander.deleteOrganization(nonmemberDeleteRequest)
           nonmemberDeleteResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
           // Neither should a generic member
-          val memberDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = users(2).id.get)
+          val memberDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = member.id.get)
           val memberDeleteResponse = orgCommander.deleteOrganization(memberDeleteRequest)
           memberDeleteResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
           // Even an owner can't, if they aren't the "original" owner
-          val ownerDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = users(1).id.get)
+          val ownerDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = admin.id.get)
           val ownerDeleteResponse = orgCommander.deleteOrganization(ownerDeleteRequest)
           ownerDeleteResponse === Left(OrganizationFail.INSUFFICIENT_PERMISSIONS)
 
           // The OG owner can do whatever they want
-          val trueOwnerDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = users(0).id.get)
+          val trueOwnerDeleteRequest = OrganizationDeleteRequest(orgId = org.id.get, requesterId = owner.id.get)
           val trueOwnerDeleteResponse = orgCommander.deleteOrganization(trueOwnerDeleteRequest)
           trueOwnerDeleteResponse must beRight
           trueOwnerDeleteResponse.right.get.request === trueOwnerDeleteRequest

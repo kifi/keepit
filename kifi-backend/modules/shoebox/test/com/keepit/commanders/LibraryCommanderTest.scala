@@ -855,7 +855,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val starLabsOrg = orgRepo.save(Organization(name = "Star Labs", ownerId = harrison.id.get, primaryHandle = None, description = None, site = None))
           val starLabsLib = library().withOwner(harrison).withVisibility(LibraryVisibility.ORGANIZATION).withOrganizationIdOpt(starLabsOrg.id).saved
 
-          val membership = orgMembershipRepo.save(starLabsOrg.newMembership(userId = barry.id.get, role = OrganizationRole.MEMBER))
+          val membership = orgMembershipRepo.save(OrganizationMembership(organizationId = starLabsOrg.id.get, userId = barry.id.get, role = OrganizationRole.MEMBER))
 
           starLabsLib.organizationId must equalTo(starLabsOrg.id)
           membership.state must equalTo(OrganizationMembershipStates.ACTIVE)
