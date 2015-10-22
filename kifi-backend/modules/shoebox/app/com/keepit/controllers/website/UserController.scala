@@ -335,7 +335,8 @@ class UserController @Inject() (
       SHOW_DELIGHTED_QUESTION,
       HAS_NO_PASSWORD,
       USE_MINIMAL_KEEP_CARD,
-      HAS_SEEN_FTUE
+      HAS_SEEN_FTUE,
+      COMPANY_NAME
     )
   }
 
