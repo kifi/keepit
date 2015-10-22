@@ -13,6 +13,7 @@ import com.keepit.common.net.{ HttpClient, NonOKResponseException, DirectUrl, UR
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
@@ -80,6 +81,7 @@ class OrganizationCommanderImpl @Inject() (
     handleCommander: HandleCommander,
     planManagementCommander: PlanManagementCommander,
     basicOrganizationIdCache: BasicOrganizationIdCache,
+    eliza: ElizaServiceClient,
     httpClient: HttpClient,
     implicit val executionContext: ExecutionContext) extends OrganizationCommander with Logging {
 
@@ -374,6 +376,19 @@ class OrganizationCommanderImpl @Inject() (
     }
   }
 
+  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
+    val currentConfig = orgConfigRepo.getByOrgId(orgId)
+    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
+
+    val members = orgMembershipRepo.getAllByOrgId(orgId)
+    if (currentConfig.settings != settings) {
+      session.onTransactionSuccess {
+        members.foreach(mem => eliza.flush(mem.userId))
+      }
+    }
+    OrganizationSettingsResponse(newConfig)
+  }
+
   def deleteOrganization(request: OrganizationDeleteRequest)(implicit eventContext: HeimdalContext): Either[OrganizationFail, OrganizationDeleteResponse] = {
     val validationError = db.readOnlyReplica { implicit session => getValidationError(request) }
     validationError match {
@@ -463,11 +478,5 @@ class OrganizationCommanderImpl @Inject() (
       val collabLibCount = libraryMembershipRepo.countWithAccessByLibraryId(libraries.map(_.id.get).toSet, LibraryAccess.READ_WRITE).count { case (_, memberCount) => memberCount > 0 }
       OrgTrackingValues(libraryCount, keepCount, inviteCount, collabLibCount)
     }
-  }
-
-  def unsafeSetAccountFeatureSettings(orgId: Id[Organization], settings: OrganizationSettings)(implicit session: RWSession): OrganizationSettingsResponse = {
-    val currentConfig = orgConfigRepo.getByOrgId(orgId)
-    val newConfig = orgConfigRepo.save(currentConfig.withSettings(settings))
-    OrganizationSettingsResponse(newConfig)
   }
 }
