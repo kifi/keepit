@@ -17,7 +17,7 @@ trait AccountEventRepo extends Repo[AccountEvent] {
   def getByAccount(accountId: Id[PaidAccount], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
   def getAllByAccount(accountId: Id[PaidAccount], excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
-  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], beforeBookend: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
+  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent]
@@ -80,13 +80,13 @@ class AccountEventRepoImpl @Inject() (
       .list
   }
 
-  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], bookendOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
+  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
     val allEvents = getByAccountAndKindsHelper(accountId, kinds, excludeStateOpt)
-    val filteredEvents = bookendOpt match {
+    val filteredEvents = fromIdOpt match {
       case None => allEvents
-      case Some(bookend) =>
-        val bookendTime = rows.filter(_.id === bookend).map(_.eventTime).first
-        allEvents.filter(ae => ae.eventTime < bookendTime || (ae.eventTime === bookendTime && ae.id < bookend))
+      case Some(fromId) =>
+        val fromTime = rows.filter(_.id === fromId).map(_.eventTime).first
+        allEvents.filter(ae => ae.eventTime < fromTime || (ae.eventTime === fromTime && ae.id < fromId))
     }
     filteredEvents
       .sortBy(age)

@@ -16,7 +16,7 @@ import play.api.libs.json.{ Writes, Json }
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
-  def getAccountEvents(orgId: Id[Organization], bookendOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent]
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent]
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
 }
 
@@ -35,9 +35,9 @@ class ActivityLogCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def getAccountEvents(orgId: Id[Organization], bookendOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.activityLog, bookendOpt, limit)
+    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.activityLog, fromIdOpt, limit)
   }
 
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
