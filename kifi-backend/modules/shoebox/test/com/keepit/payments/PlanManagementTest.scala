@@ -59,7 +59,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
           account.lockedForProcessing === false
 
           //"fast forward" to test proration
-          accountRepo.save(account.copy(billingCycleStart = account.billingCycleStart.minusDays(12)))
+          accountRepo.save(account.copy(billingCycleStart = account.billingCycleStart.minusDays(12), planRenewal = account.planRenewal.minusDays(12)))
 
           (account, plan)
         }
@@ -103,7 +103,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
         //"fast forward" again to test proration of plan change cost
         db.readWrite { implicit session =>
           val currentAccount = accountRepo.get(accountId)
-          accountRepo.save(currentAccount.copy(billingCycleStart = currentAccount.billingCycleStart.minusDays(5)))
+          accountRepo.save(currentAccount.copy(billingCycleStart = currentAccount.billingCycleStart.minusDays(5), planRenewal = account.planRenewal.minusDays(5)))
         }
 
         commander.changePlan(orgId, plan.id.get, actionAttribution)

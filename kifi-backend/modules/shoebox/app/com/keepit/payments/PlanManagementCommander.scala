@@ -130,37 +130,21 @@ class PlanManagementCommanderImpl @Inject() (
             case Some(pa) if pa.state == PaidAccountStates.ACTIVE =>
               log.info(s"[PAC] $orgId: Account already exists.")
               Failure(new InvalidChange("account_exists"))
-            case Some(pa) =>
-              log.info(s"[PAC] $orgId: Recreating Account")
-              val account = paidAccountRepo.save(PaidAccount(
-                id = pa.id,
-                orgId = orgId,
-                planId = planId,
-                credit = DollarAmount(0),
-                userContacts = Seq.empty,
-                emailContacts = Seq.empty,
-                activeUsers = 0,
-                billingCycleStart = clock.now
-              ))
-              if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account)
-              } else {
-                Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
-              }
-            case None =>
+            case inactiveAccountMaybe =>
               log.info(s"[PAC] $orgId: Creating Account")
               val account = paidAccountRepo.save(PaidAccount(
+                id = inactiveAccountMaybe.flatMap(_.id),
                 orgId = orgId,
                 planId = planId,
                 credit = DollarAmount(0),
+                planRenewal = clock.now() plusMonths plan.billingCycle.month,
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
                 activeUsers = 0,
                 billingCycleStart = clock.now
               ))
-              grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account)
+                Success(account) // todo(Léo): roll into rewards
               } else {
                 Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
               }
@@ -173,6 +157,7 @@ class PlanManagementCommanderImpl @Inject() (
               attribution = ActionAttribution(user = Some(creator), admin = None),
               action = AccountEventAction.OrganizationCreated(planId)
             ))
+            grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!"))
             registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             log.info(s"[PAC] $orgId: Registering First Admin")
             eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(

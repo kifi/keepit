@@ -52,13 +52,14 @@ class PlanRenewalCommanderImpl @Inject() (
       accountLockHelper.maybeSessionWithAccountLock(account.orgId) { implicit session =>
         val now = clock.now()
         val plan = paidPlanRepo.get(account.planId)
-        val renewsAt = account.billingCycleStart plusMonths plan.billingCycle.month
-        if (renewsAt isBefore now) {
-          val newBillingCycleStart = account.billingCycleStart.plusMonths(plan.billingCycle.month)
+        val planRenewal = account.billingCycleStart plusMonths plan.billingCycle.month
+        if (planRenewal isBefore now) {
+          val newBillingCycleStart = planRenewal
+          val newPlanRenewal = account.planRenewal plusMonths plan.billingCycle.month
           val fullCyclePrice = plan.pricePerCyclePerUser * account.activeUsers
           val paymentDueAt = if (fullCyclePrice > DollarAmount.ZERO) Some(now) else account.paymentDueAt
           val renewedAccount = paidAccountRepo.save(
-            account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart).withPaymentDueAt(paymentDueAt)
+            account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart).withPlanRenewal(newPlanRenewal).withPaymentDueAt(paymentDueAt)
           )
           val billingEvent = eventCommander.track(AccountEvent(
             eventTime = clock.now(),
@@ -74,7 +75,7 @@ class PlanRenewalCommanderImpl @Inject() (
             chargeId = None
           ))
           Success(billingEvent)
-        } else Failure(UnexpectedPlanRenewalException(account.orgId, renewsAt))
+        } else Failure(UnexpectedPlanRenewalException(account.orgId, planRenewal))
       } getOrElse Failure(LockedAccountException(account.orgId))
     } else Failure(FrozenAccountException(account.orgId))
   }
