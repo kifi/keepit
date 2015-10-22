@@ -108,8 +108,8 @@ angular.module('kifi')
     if ($scope.upgrade) {
       var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
       $scope.plan = {
-        name: standardTierPlans[0].name,
-        cycle: standardTierPlans[0].cycle,
+        name: standardTierPlans[1].name,
+        cycle: standardTierPlans[1].cycle,
         newCard: null
       };
     } else {
