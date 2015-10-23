@@ -19,6 +19,7 @@ CREATE TABLE credit_code_info (
 	CONSTRAINT credit_code_info_f_organization FOREIGN KEY (referrer_organization_id) REFERENCES organization(id)
 );
 
+CREATE INDEX account_event_i_account_id_id_credit ON account_event (account_id, id, credit_change);
 CREATE TABLE credit_reward (
 	id BIGINT(20) NOT NULL AUTO_INCREMENT,
 	created_at DATETIME NOT NULL,
@@ -39,8 +40,7 @@ CREATE TABLE credit_reward (
 	UNIQUE KEY credit_reward_u_kind_unrepeatable (kind, unrepeatable),
 	CONSTRAINT credit_reward_f_code FOREIGN KEY (code) REFERENCES credit_code_info(code),
 	CONSTRAINT credit_reward_f_account_id FOREIGN KEY (account_id) REFERENCES paid_account(id),
-	-- MYSQL:
-	-- CONSTRAINT credit_reward_f_account_id_applied_credit FOREIGN KEY (account_id, applied, credit) REFERENCES account_event(account_id, id, credit)
+	CONSTRAINT credit_reward_f_account_id_applied_credit FOREIGN KEY (account_id, applied, credit) REFERENCES account_event(account_id, id, credit_change)
 );
 
 insert into evolutions(name, description) values('404.sql', 'create credit_code_info and credit_reward');
