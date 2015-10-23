@@ -327,7 +327,7 @@ class LibraryRepoImpl @Inject() (
     val query =
       sql"""select lib.* from library_membership lm, library lib
            where lm.library_id = lib.id and lm.user_id = $userId
-           and (lm.access='owner' or lm.access='read_write')
+           and (lm.access='owner' or lm.access='read_write') and lib.organization_id is null
            and lib.state = 'active' and lm.state = 'active' and (lib.keep_count > 0
            and lm.listed and lib.visibility = 'published')
            order by #${getOrderBySql("lib", "lm", ordering, direction, orderedByPriority)} limit ${page.itemsToDrop}, ${page.size}"""
@@ -339,7 +339,7 @@ class LibraryRepoImpl @Inject() (
     val query =
       sql"""select lib.* from library_membership lm, library lib
            where lm.library_id = lib.id and lm.user_id = $userId
-           and (lm.access='owner' or lm.access='read_write') and lib.state = 'active'
+           and (lm.access='owner' or lm.access='read_write') and lib.organization_id is null and lib.state = 'active'
            and lm.state = 'active' and ((lib.keep_count > 0 and lm.listed
            and lib.visibility = 'published') or
            (lib.id in (select lm.library_id from library_membership lm where lm.user_id = $friendId and lm.state = 'active')))
