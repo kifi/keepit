@@ -71,9 +71,8 @@
     <div class="kf-container-section">
       <div kf-redeem-credits profile="profile" standalone="false"></div>
     </div>
-    <div class="kf-container-section">
+    <div class="kf-container-section" ng-show="isPaidPlanName(plan.name)">
       <form name="creditCardForm">
-        <div ng-show="isPaidPlanName(plan.name)">
           <h2 class="kf-heading">Manage your Credit Card Information</h2>
           <p>
             <span ng-if="!card">You haven't added a card yet, and you'll need to add a card to upgrade your plan.</span>
@@ -94,7 +93,6 @@
             <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">Your new card is ready to save</span>
           </div>
           <p class="kf-payment-plan-error-text" ng-if="cardError">You must enter a credit card in order to update your plan.</p>
-        </div>
       </form>
     </div>
   <div class="kf-container-section kf-payment-plan-save-container" ng-if="!planSelectsForm.$pristine || !creditCardForm.$pristine || upgrade || plan.newCard">
