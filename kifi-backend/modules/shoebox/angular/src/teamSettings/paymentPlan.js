@@ -276,8 +276,16 @@ angular.module('kifi')
         .setBillingPlan($scope.profile.id, ($scope.selectedPlan && $scope.selectedPlan.id) || currentPlan.id);
       })
       .then(function () {
+        var successMessage;
+
+        if ($scope.isPaidPlanName($scope.selectedPlan.name)) {
+          successMessage = 'You successfully upgraded your team to the Standard Plan';
+        } else {
+          successMessage = 'You successfully downgraded your team to the Free Plan';
+        }
+
         messageTicker({
-          text: 'Saved Successfully',
+          text: successMessage,
           type: 'green'
         });
         resetForm();
