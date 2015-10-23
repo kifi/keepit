@@ -260,7 +260,8 @@ angular.module('kifi')
       });
 
       if ($scope.plan.newCard) {
-        saveSeriesPromise.then(function () {
+        saveSeriesPromise
+        .then(function () {
           return billingService
           .setBillingCCToken($scope.profile.id, $scope.plan.newCard.id);
         });

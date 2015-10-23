@@ -9,7 +9,7 @@
         <div class="kf-payment-plan-card-cost">0</div>
         <div class="kf-payment-plan-card-bottom">
           <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-          <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(plan.name)">Your selected plan</p>
+          <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(plan.name)">Currently selected</p>
           <button
             class="kf-payment-plan-card-cta"
             ng-if="!isFreePlanName(plan.name)"
@@ -25,7 +25,7 @@
         <p class="kf-payment-plan-card-description">$8 billed monthly</p>
         <div class="kf-payment-plan-card-bottom">
           <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-          <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(plan.name)">Your selected plan</p>
+          <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(plan.name)">Currently selected</p>
           <button
             class="kf-payment-plan-card-cta"
             ng-if="!isPaidPlanName(plan.name)"
@@ -69,8 +69,8 @@
         <span ng-if="card">
           Your current card is <b ng-bind="card.brand"></b> ****<b ng-bind="card.lastFour"></b>.
         </span>
+        <span>Available credits will always be applied before charging your team's credit card.</span>
       </p>
-      <p>If you have credits available, we'll apply those before charging your card.</p>
       <div class="kf-payment-plan-card-wrapper">
         <button
           class="kf-button kf-button-large"
@@ -82,7 +82,15 @@
         ></button>
         <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">That worked! Click below to save and update your plan.</span>
       </div>
-      <p class="kf-payment-plan-error-text" ng-if="cardError">You must enter a credit card in order to update your plan.</p>
+      <p class="kf-payment-plan-error-text" ng-if="cardError && (billingState.balance | isPositiveMoney)">
+        Enter a credit card to update your plan.
+        We'll use your team's
+        <span ng-bind="billingState.balance | money"></span>
+        in credits before charging a credit card.
+      </p>
+      <p class="kf-payment-plan-error-text" ng-if="cardError && !(billingState.balance | isPositiveMoney)">
+        Enter a credit card in order to update your plan.
+      </p>
     </div>
   </form>
   <div class="kf-container-section kf-payment-plan-save-container" ng-if="currentPlan.id != getSelectedPlan().id || plan.newCard">
