@@ -13,6 +13,7 @@ import play.api.libs.json._
 @ImplementedBy(classOf[CreditRewardRepoImpl])
 trait CreditRewardRepo extends Repo[CreditReward] {
   def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward]
+  def getByCreditCode(code: CreditCode)(implicit session: RSession): Set[CreditReward]
 }
 
 // Unique index on (code, singleUse) - single-use codes can only be used once overall
@@ -55,11 +56,15 @@ class CreditRewardRepoImpl @Inject() (
   override def deleteCache(creditReward: CreditReward)(implicit session: RSession): Unit = {}
   override def invalidateCache(creditReward: CreditReward)(implicit session: RSession): Unit = {}
 
+  private def activeRows = rows.filter(_.state === CreditRewardStates.ACTIVE)
   def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward] = {
     val kind = reward.kind
     val status = reward.kind.writeStatus(reward.status)
     val info = reward.status.infoFormat.writes(reward.info)
-    rows.filter(row => row.kind === kind && row.status === status && row.info === info).list.toSet
+    activeRows.filter(row => row.kind === kind && row.status === status && row.info === info).list.toSet
+  }
+  def getByCreditCode(code: CreditCode)(implicit session: RSession): Set[CreditReward] = {
+    activeRows.filter(row => row.code === code).list.toSet
   }
 }
 

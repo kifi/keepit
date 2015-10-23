@@ -176,4 +176,5 @@ case class CreditReward(
     code: Option[UsedCreditCode]) extends ModelWithState[CreditReward] {
   def withId(id: Id[CreditReward]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withAppliedEvent(event: AccountEvent) = this.copy(applied = Some(event.id.get))
 }

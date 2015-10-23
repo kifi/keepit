@@ -83,6 +83,8 @@ case class CreditCodeInfo(
   def withId(id: Id[CreditCodeInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
+  def isSingleUse: Boolean = CreditCodeKind.isSingleUse(kind)
+
   def credit: DollarAmount = CreditCodeKind.creditValue(kind)
   def referrerCredit: Option[DollarAmount] = CreditCodeKind.referrerCreditValue(kind)
 }
@@ -100,6 +102,7 @@ sealed abstract class CreditCodeFail(val status: Int, val message: String) exten
 object CreditCodeFail {
   case class UnavailableCreditCodeException(code: CreditCode) extends CreditCodeFail(CONFLICT, s"Credit code $code is unavailable")
   case class CreditCodeNotFoundException(code: CreditCode) extends CreditCodeFail(BAD_REQUEST, s"Credit code $code does not exist")
-  case class CreditCodeNotApplicable(req: CreditCodeApplyRequest) extends CreditCodeFail(BAD_REQUEST, s"Credit code ${req.code} cannot be applied by user ${req.applierId} in org ${req.orgId}")
+  case class CreditCodeAbuseException(req: CreditCodeApplyRequest) extends CreditCodeFail(BAD_REQUEST, s"Credit code ${req.code} cannot be applied by user ${req.applierId} in org ${req.orgId}")
+  case class CreditCodeAlreadyBurnedException(code: CreditCode) extends CreditCodeFail(BAD_REQUEST, s"Credit code $code has already been used")
   case class NoPaidAccountException(userId: Id[User], orgIdOpt: Option[Id[Organization]]) extends CreditCodeFail(BAD_REQUEST, s"User $userId in org $orgIdOpt has no paid account")
 }
