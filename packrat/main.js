@@ -50,15 +50,20 @@ function clearDataCache() {
 (function (ab) {
   ab.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
   ab.addReporter(function airbrake(notice, opts) {
+    var msg = notice.errors && notice.errors[0] && notice.errors[0].message && notice.errors[0].message;
+    var noReport = ['disconnected port object', 'Cannot access a chrome-extension', 'executeScript failed'];
+    var validError = noReport.every(function (i) { return msg.indexOf(i) === -1; });
     log.apply(null, ['#c00', '[airbrake]'].concat(notice.errors));
-    notice.params = breakLoops(notice.params);
-    notice.context.environment = api.isPackaged() && !api.mode.isDev() ? 'production' : 'development';
-    notice.context.version = api.version;
-    notice.context.userAgent = api.browser.userAgent;
-    notice.context.userId = me && me.id;
-    sendXhr('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, {}, function (o) {
-      log('[airbrake]', o.url);
-    });
+    if (validError) {
+      notice.params = breakLoops(notice.params);
+      notice.context.environment = api.isPackaged() && !api.mode.isDev() ? 'production' : 'development';
+      notice.context.version = api.version;
+      notice.context.userAgent = api.browser.userAgent;
+      notice.context.userId = me && me.id;
+      sendXhr('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, {}, function (o) {
+        log('[airbrake]', o.url);
+      });
+    }
   });
   api.timers.setTimeout(api.errors.init.bind(null, ab), 0);
 
