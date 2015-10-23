@@ -16,8 +16,7 @@ import play.api.libs.json.{ Writes, Json }
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
-  def getAccountEvents(orgId: Id[Organization], limit: Limit): Seq[AccountEvent]
-  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit): Seq[AccountEvent]
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent]
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
 }
 
@@ -37,14 +36,9 @@ class ActivityLogCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def getAccountEvents(orgId: Id[Organization], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.billing, Offset(0), limit)
-  }
-
-  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
-    val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getEventsBefore(accountId, beforeTime, beforeId, limit)
+    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.activityLog, fromIdOpt, limit)
   }
 
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
@@ -60,6 +54,7 @@ class ActivityLogCommanderImpl @Inject() (
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
         case ChargeBack() => s"A ${event.creditChange.toDollarString} refund was issued to your card"
         case PlanBilling(planId, _, _, _, _) => s"Your ${paidPlanRepo.get(planId)} plan was renewed."
+        case PlanRenewal(planId, _, _, _, _) => s"Your ${paidPlanRepo.get(planId)} plan was renewed."
         case Charge() =>
           val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
           s"Your card was charged ${event.creditChange.toDollarString} for your current balance. [$invoiceText]"

@@ -105,11 +105,10 @@ class AdminPaymentsController @Inject() (
 
   def processOrgNow(orgId: Id[Organization]) = AdminUserAction.async { request =>
     val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
-    paymentProcessingCommander.processAccount(account).map { events =>
-      val result = JsArray(events.map { event =>
-        Json.obj(event.action.eventType.value -> event.creditChange.toDollarString)
-      })
-      Ok(result)
+    paymentProcessingCommander.processAccount(account).map {
+      case (_, event) =>
+        val result = Json.obj(event.action.eventType.value -> event.creditChange.toDollarString)
+        Ok(result)
     }
   }
 

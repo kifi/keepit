@@ -79,6 +79,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getLibrariesWithInactiveOwner()(implicit session: RSession): Seq[Id[Library]]
 
   def deactivate(model: Library)(implicit session: RWSession): Unit
+  def countPublishedNonEmptyOrgLibraries(orgId: Id[Organization], minKeepCount: Int = 2)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -493,6 +494,10 @@ class LibraryRepoImpl @Inject() (
 
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library] = {
     (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).take(size).list
+  }
+
+  def countPublishedNonEmptyOrgLibraries(orgId: Id[Organization], minKeepCount: Int = 2)(implicit session: RSession): Int = {
+    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE && r.orgId === orgId && r.keepCount >= minKeepCount) yield r.id).length.run
   }
 
   def pagePublished(page: Paginator = Paginator.fromStart(20))(implicit session: RSession): Seq[Library] = {

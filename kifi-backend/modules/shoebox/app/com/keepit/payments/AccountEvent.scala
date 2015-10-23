@@ -108,16 +108,22 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
-  @json
+  @json // deprecated
   case class PlanBilling(plan: Id[PaidPlan], cycle: BillingCycle, price: DollarAmount, activeUsers: Int, startDate: DateTime) extends AccountEventAction {
     def eventType = AccountEventKind.PlanBilling
     def toDbRow = eventType -> Json.toJson(this)
   }
 
-  object PlanBilling {
-    def from(plan: PaidPlan, account: PaidAccount): PlanBilling = {
+  @json
+  case class PlanRenewal(plan: Id[PaidPlan], cycle: BillingCycle, price: DollarAmount, activeUsers: Int, renewalDate: DateTime) extends AccountEventAction {
+    def eventType = AccountEventKind.PlanBilling
+    def toDbRow = eventType -> Json.toJson(this)
+  }
+
+  object PlanRenewal {
+    def from(plan: PaidPlan, account: PaidAccount): PlanRenewal = {
       if (plan.id.get != account.planId) throw new InvalidArgumentException(s"Account ${account.id.get} is on plan ${account.planId}, not on plan ${plan.id.get}")
-      PlanBilling(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, account.activeUsers, account.billingCycleStart)
+      PlanRenewal(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, account.activeUsers, account.planRenewal)
     }
   }
 

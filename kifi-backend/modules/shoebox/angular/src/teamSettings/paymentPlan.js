@@ -4,11 +4,12 @@ angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
   '$window', '$rootScope', '$scope', '$state', '$filter', '$q',
-  'billingState', 'billingService', 'modalService', 'StripeCheckout',
-  'messageTicker', 'paymentPlans', '$timeout',
-  function ($window, $rootScope, $scope, $state, $filter, $q,
-            billingState, billingService, modalService, StripeCheckout,
-            messageTicker, paymentPlans, $timeout) {
+  '$timeout', '$analytics',
+  'billingState', 'billingService', 'modalService', 'profileService',
+  'StripeCheckout', 'messageTicker', 'paymentPlans',
+  function ($window, $rootScope, $scope, $state, $filter, $q, $timeout,
+            $analytics, billingState, billingService, modalService,
+            profileService, StripeCheckout, messageTicker, paymentPlans) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
     $scope.upgrade = !!$state.params.upgrade;
@@ -32,12 +33,17 @@ angular.module('kifi')
     });
 
     $scope.openStripeCheckout = function () {
+      var me = profileService.me;
+      var emailObject = (me.primaryEmail || me.emails[0] || {}); // extra defensive
+      var emailAddress = emailObject.address;
+
       // Open Checkout with further options
       handler
       .open({
         image: picFilter($scope.profile),
+        email: emailAddress,
         name: 'Kifi Teams',
-        description: 'Update your Teams Plan',
+        description: 'Update your team\'s plan',
         allowRememberMe: false,
         panelLabel: 'Save My Card'
       })
@@ -271,8 +277,16 @@ angular.module('kifi')
         .setBillingPlan($scope.profile.id, ($scope.selectedPlan && $scope.selectedPlan.id) || currentPlan.id);
       })
       .then(function () {
+        var successMessage;
+
+        if ($scope.isPaidPlanName($scope.selectedPlan.name)) {
+          successMessage = 'You successfully upgraded your team to the Standard Plan';
+        } else {
+          successMessage = 'You successfully downgraded your team to the Free Plan';
+        }
+
         messageTicker({
-          text: 'Saved Successfully',
+          text: successMessage,
           type: 'green'
         });
         resetForm();
@@ -322,6 +336,12 @@ angular.module('kifi')
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
+    });
+
+    $timeout(function () {
+      $analytics.eventTrack('user_viewed_page', {
+        type: 'paymentPlan'
+      });
     });
   }
 ]);

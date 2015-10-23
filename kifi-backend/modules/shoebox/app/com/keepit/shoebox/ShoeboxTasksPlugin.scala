@@ -7,7 +7,7 @@ import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.shoebox.rover.ShoeboxArticleIngestionActor
 import us.theatr.akka.quartz.QuartzActor
 import com.keepit.commanders.TwitterSyncCommander
-import com.keepit.payments.PaymentProcessingCommander
+import com.keepit.payments.{ PlanRenewalCommander, PaymentProcessingCommander }
 
 import scala.concurrent.duration._
 
@@ -22,6 +22,7 @@ class ShoeboxTasksPlugin @Inject() (
     system: ActorSystem,
     quartz: ActorInstance[QuartzActor],
     articleIngestionActor: ActorInstance[ShoeboxArticleIngestionActor],
+    planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
@@ -33,8 +34,9 @@ class ShoeboxTasksPlugin @Inject() (
       twitterSyncCommander.syncAll()
     }
 
-    scheduleTaskOnOneMachine(system, 30 minute, 4 hours, paymentsProcessing) {
-      paymentProcessingCommander.processAllBilling()
+    scheduleTaskOnLeader(system, 30 minute, 4 hours, paymentsProcessing) {
+      planRenewalCommander.processDueRenewals()
+      paymentProcessingCommander.processDuePayments()
     }
 
     scheduleTaskOnOneMachine(articleIngestionActor.system, 3 minutes, 1 minute, articleIngestionActor.ref, ShoeboxArticleIngestionActor.StartIngestion, "ArticleUpdate Ingestion")

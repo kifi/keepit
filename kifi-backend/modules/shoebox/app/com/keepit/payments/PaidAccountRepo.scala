@@ -3,13 +3,12 @@ package com.keepit.payments
 import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
-import com.keepit.common.time.Clock
-import com.keepit.model.{ Name, User, Organization }
+import com.keepit.common.time._
+import com.keepit.model.{ Limit, User, Organization }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.core._
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import play.api.libs.json.{ Json, JsString, JsObject }
-
 import org.joda.time.DateTime
 
 @ImplementedBy(classOf[PaidAccountRepoImpl])
@@ -22,15 +21,16 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount]
   def tryGetAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
-  def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount]
-
+  def getRenewable()(implicit session: RSession): Seq[PaidAccount]
+  def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount]
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
 }
 
 @Singleton
 class PaidAccountRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[PaidAccount] with PaidAccountRepo {
+    val clock: Clock,
+    planRepo: PaidPlanRepoImpl) extends DbRepo[PaidAccount] with PaidAccountRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -43,14 +43,15 @@ class PaidAccountRepoImpl @Inject() (
     def orgId = column[Id[Organization]]("org_id", O.NotNull)
     def planId = column[Id[PaidPlan]]("plan_id", O.NotNull)
     def credit = column[DollarAmount]("credit", O.NotNull)
+    def planRenewal = column[DateTime]("plan_renewal", O.NotNull)
+    def paymentDueAt = column[Option[DateTime]]("payment_due_at", O.Nullable)
     def paymentStatus = column[PaymentStatus]("payment_status", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
     def emailContacts = column[Seq[EmailAddress]]("email_contacts", O.NotNull)
     def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
     def frozen = column[Boolean]("frozen", O.NotNull)
     def activeUsers = column[Int]("active_users", O.NotNull)
-    def billingCycleStart = column[DateTime]("billing_cycle_start", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, paymentStatus, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, planRenewal, paymentDueAt, paymentStatus, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
@@ -88,8 +89,12 @@ class PaidAccountRepoImpl @Inject() (
     (for (row <- rows if row.orgId === orgId && row.lockedForProcessing === true) yield row.lockedForProcessing).update(false) > 0
   }
 
-  def getRipeAccounts(maxBalance: DollarAmount, maxCycleAge: DateTime)(implicit session: RSession): Seq[PaidAccount] = {
-    (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Required: PaymentStatus) || row.credit < -maxBalance || row.billingCycleStart < maxCycleAge)) yield row).list
+  def getRenewable()(implicit session: RSession): Seq[PaidAccount] = {
+    (for (row <- rows if row.state === PaidAccountStates.ACTIVE && !row.frozen && row.planRenewal < clock.now()) yield row).sortBy(_.planRenewal).list
+  }
+
+  def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount] = {
+    (for (row <- rows if row.state === PaidAccountStates.ACTIVE && !row.frozen && row.paymentStatus === (PaymentStatus.Ok: PaymentStatus) && (row.credit < -maxBalance || row.paymentDueAt < clock.now())) yield row).sortBy(_.paymentDueAt).list
   }
 
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {

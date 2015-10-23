@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
-import com.keepit.model.{ Username, User, Library, URL }
+import com.keepit.model._
 import org.joda.time.DateTime
 import com.keepit.common.time.ISO_8601_DAY_FORMAT
 
@@ -26,6 +26,15 @@ case class UserMetadataKey(id: Id[User], tab: UserProfileTab) extends Key[String
 
 class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[UserMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+case class OrgMetadataKey(id: Id[Organization]) extends Key[String] {
+  override val version = 1
+  val namespace = "org_metadata_by_id"
+  def toKey(): String = s"${id.id.toString}"
+}
+
+class OrgMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[OrgMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 /**
  * https://developers.facebook.com/docs/sharing/best-practices
@@ -55,6 +64,7 @@ class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostP
 trait PublicPageMetaTags {
   def formatOpenGraphForLibrary: String
   def formatOpenGraphForUser: String
+  def formatOpenGraphForOrg: String
 }
 
 case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMetaTags {
@@ -62,6 +72,8 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
   def formatOpenGraphForLibrary: String = formatOpenGraph
 
   def formatOpenGraphForUser: String = formatOpenGraph
+
+  def formatOpenGraphForOrg: String = formatOpenGraph
 
   private def formatOpenGraph: String =
     s"""
@@ -139,6 +151,10 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
       |<meta property="profile:last_name" content="$lastName">
       |$facebookIdTag
      """.stripMargin
+  }
+
+  def formatOpenGraphForOrg: String = {
+    titleAndMetaTags("profile")
   }
 
   //  verify with https://developers.facebook.com/tools/debug/og/object/

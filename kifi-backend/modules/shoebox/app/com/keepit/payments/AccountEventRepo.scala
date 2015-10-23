@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time._
-import com.keepit.model.{ Offset, Limit, User }
+import com.keepit.model.{ SortDirection, Offset, Limit, User }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 
@@ -17,10 +17,9 @@ trait AccountEventRepo extends Repo[AccountEvent] {
   def getByAccount(accountId: Id[PaidAccount], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
   def getAllByAccount(accountId: Id[PaidAccount], excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
-  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
+  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
-  def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit)(implicit session: RSession): Seq[AccountEvent]
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent]
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
@@ -81,10 +80,16 @@ class AccountEventRepoImpl @Inject() (
       .list
   }
 
-  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
-    getByAccountAndKindsHelper(accountId, kinds, excludeStateOpt)
+  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
+    val allEvents = getByAccountAndKindsHelper(accountId, kinds, excludeStateOpt)
+    val filteredEvents = fromIdOpt match {
+      case None => allEvents
+      case Some(fromId) =>
+        val fromTime = rows.filter(_.id === fromId).map(_.eventTime).first
+        allEvents.filter(ae => ae.eventTime < fromTime || (ae.eventTime === fromTime && ae.id < fromId))
+    }
+    filteredEvents
       .sortBy(age)
-      .drop(offset.value)
       .take(limit.value)
       .list
   }
@@ -92,13 +97,6 @@ class AccountEventRepoImpl @Inject() (
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent] = {
     val (userAdded, userRemoved): (AccountEventKind, AccountEventKind) = (AccountEventKind.UserAdded, AccountEventKind.UserRemoved)
     (for (row <- rows if row.accountId === accountId && (row.eventType === userAdded || row.eventType === userRemoved)) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
-  }
-  def getEventsBefore(accountId: Id[PaidAccount], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
-    getByAccountHelper(accountId, excludeStateOpt = Some(AccountEventStates.INACTIVE))
-      .filter(row => row.eventTime < beforeTime || (row.eventTime === beforeTime && row.id < beforeId))
-      .sortBy(age)
-      .take(limit.value)
-      .list
   }
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
     rows.sortBy(age).take(limit.value).list

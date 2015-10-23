@@ -59,7 +59,7 @@ trait PlanManagementCommander {
   def getCurrentAndAvailablePlans(orgId: Id[Organization]): (Id[PaidPlan], Set[PaidPlan])
   def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan]
   def changePlan(orgId: Id[Organization], newPlan: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent]
-  def getBillingCycleStart(orgId: Id[Organization]): DateTime
+  def getPlanRenewal(orgId: Id[Organization]): DateTime
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
@@ -106,8 +106,8 @@ class PlanManagementCommanderImpl @Inject() (
   private def remainingBillingCycleCost(account: PaidAccount)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
     val cycleLengthMonth = plan.billingCycle.month
-    val cycleStart: DateTime = account.billingCycleStart
-    val cycleEnd: DateTime = cycleStart.plusMonths(cycleLengthMonth)
+    val cycleStart: DateTime = account.planRenewal.minusMonths(cycleLengthMonth)
+    val cycleEnd: DateTime = account.planRenewal
     val cycleLengthDays: Double = Days.daysBetween(cycleStart, cycleEnd).getDays.toDouble //note that this is different depending on the current month
     val remaining: Double = Days.daysBetween(clock.now, cycleEnd).getDays.toDouble
     val fraction: Double = remaining / cycleLengthDays
@@ -130,37 +130,20 @@ class PlanManagementCommanderImpl @Inject() (
             case Some(pa) if pa.state == PaidAccountStates.ACTIVE =>
               log.info(s"[PAC] $orgId: Account already exists.")
               Failure(new InvalidChange("account_exists"))
-            case Some(pa) =>
-              log.info(s"[PAC] $orgId: Recreating Account")
-              val account = paidAccountRepo.save(PaidAccount(
-                id = pa.id,
-                orgId = orgId,
-                planId = planId,
-                credit = DollarAmount(0),
-                userContacts = Seq.empty,
-                emailContacts = Seq.empty,
-                activeUsers = 0,
-                billingCycleStart = clock.now
-              ))
-              if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account)
-              } else {
-                Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
-              }
-            case None =>
+            case inactiveAccountMaybe =>
               log.info(s"[PAC] $orgId: Creating Account")
               val account = paidAccountRepo.save(PaidAccount(
+                id = inactiveAccountMaybe.flatMap(_.id),
                 orgId = orgId,
                 planId = planId,
                 credit = DollarAmount(0),
+                planRenewal = clock.now() plusMonths plan.billingCycle.month,
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
-                activeUsers = 0,
-                billingCycleStart = clock.now
+                activeUsers = 0
               ))
-              grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account)
+                Success(account) // todo(Léo): roll into rewards
               } else {
                 Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
               }
@@ -173,6 +156,7 @@ class PlanManagementCommanderImpl @Inject() (
               attribution = ActionAttribution(user = Some(creator), admin = None),
               action = AccountEventAction.OrganizationCreated(planId)
             ))
+            grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!"))
             registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             log.info(s"[PAC] $orgId: Registering First Admin")
             eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
@@ -402,7 +386,7 @@ class PlanManagementCommanderImpl @Inject() (
     cardFut.map { card =>
       AccountStateResponse(
         users = account.activeUsers,
-        billingDate = account.billingCycleStart.plusMonths(plan.billingCycle.month),
+        billingDate = account.planRenewal,
         balance = account.credit,
         charge = plan.pricePerCyclePerUser * account.activeUsers,
         plan.asInfo,
@@ -503,8 +487,8 @@ class PlanManagementCommanderImpl @Inject() (
     Failure(new Exception("failed_getting_account_lock"))
   }
 
-  def getBillingCycleStart(orgId: Id[Organization]): DateTime = db.readOnlyMaster { implicit session =>
-    paidAccountRepo.getByOrgId(orgId).billingCycleStart
+  def getPlanRenewal(orgId: Id[Organization]): DateTime = db.readOnlyMaster { implicit session =>
+    paidAccountRepo.getByOrgId(orgId).planRenewal
   }
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod] = db.readOnlyMaster { implicit session =>

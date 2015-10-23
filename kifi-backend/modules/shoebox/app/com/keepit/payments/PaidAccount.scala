@@ -1,7 +1,7 @@
 package com.keepit.payments
 
+import com.keepit.common.db._
 import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.mail.EmailAddress
@@ -47,11 +47,10 @@ case class SimpleAccountContactInfo(who: BasicUser, enabled: Boolean)
 sealed abstract class PaymentStatus(val value: String)
 object PaymentStatus {
   case object Ok extends PaymentStatus("ok")
-  case object Required extends PaymentStatus("required")
   case object Pending extends PaymentStatus("pending")
   case object Failed extends PaymentStatus("failed")
 
-  private val all = Set(Ok, Required, Pending, Failed)
+  private val all = Set(Ok, Pending, Failed)
   def apply(value: String): PaymentStatus = all.find(_.value == value) getOrElse {
     throw new IllegalArgumentException(s"Unknown PaymentStatus: $value")
   }
@@ -65,18 +64,21 @@ case class PaidAccount(
     orgId: Id[Organization],
     planId: Id[PaidPlan],
     credit: DollarAmount,
+    planRenewal: DateTime,
+    paymentDueAt: Option[DateTime] = None,
     paymentStatus: PaymentStatus = PaymentStatus.Ok,
     userContacts: Seq[Id[User]],
     emailContacts: Seq[EmailAddress],
     lockedForProcessing: Boolean = false,
     frozen: Boolean = false,
-    activeUsers: Int,
-    billingCycleStart: DateTime) extends ModelWithState[PaidAccount] {
+    activeUsers: Int) extends ModelWithState[PaidAccount] {
 
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
   def withState(state: State[PaidAccount]): PaidAccount = this.copy(state = state)
+  def withPlanRenewal(renewal: DateTime): PaidAccount = this.copy(planRenewal = renewal)
   def withPaymentStatus(status: PaymentStatus): PaidAccount = this.copy(paymentStatus = status)
+  def withPaymentDueAt(dueAt: Option[DateTime]): PaidAccount = this.copy(paymentDueAt = dueAt)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
 
   def owed: DollarAmount = -(DollarAmount.ZERO min credit)
@@ -100,8 +102,6 @@ case class PaidAccount(
   def withEmailContacts(newContacts: Seq[EmailAddress]): PaidAccount = this.copy(emailContacts = newContacts)
 
   def withNewPlan(newPlanId: Id[PaidPlan]): PaidAccount = this.copy(planId = newPlanId)
-
-  def withCycleStart(newCycleStart: DateTime): PaidAccount = this.copy(billingCycleStart = newCycleStart)
 }
 
 object PaidAccountStates extends States[PaidAccount]

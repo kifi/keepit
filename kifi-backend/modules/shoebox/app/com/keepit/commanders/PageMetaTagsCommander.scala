@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
@@ -176,8 +177,13 @@ class PageMetaTagsCommander @Inject() (
     val fullUrl = s"${applicationConfig.applicationBaseUrl}${userPathOnly(username)}"
     if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
   }
+  private def getOrgProfileUrl(primaryHandle: PrimaryOrganizationHandle): String = {
+    val fullUrl = s"${applicationConfig.applicationBaseUrl}${orgPathOnly(primaryHandle)}"
+    if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
+  }
 
   private def userPathOnly(username: Username): String = s"/${username.value}"
+  private def orgPathOnly(primaryHandle: PrimaryOrganizationHandle): String = s"/${primaryHandle.original.value}"
 
   def userMetaTags(user: User, tab: UserProfileTab): Future[PublicPageMetaTags] = {
     val urlPath = userPathOnly(user.username)
@@ -208,6 +214,34 @@ class PageMetaTagsCommander @Inject() (
         unsafeFirstName = user.firstName,
         unsafeLastName = user.lastName,
         profileUrl = url,
+        noIndex = countLibraries == 0, //no public libraries - no index
+        related = Seq.empty)
+    }
+  }
+
+  def orgMetaTags(org: Organization): Future[PublicPageMetaTags] = {
+    val urlPath = org.primaryHandle.map(h => orgPathOnly(h))
+    val url = org.primaryHandle.map(h => getOrgProfileUrl(h))
+    val countLibrariesF = db.readOnlyMasterAsync { implicit s =>
+      libraryRepo.countPublishedNonEmptyOrgLibraries(org.id.get)
+    }
+    for {
+      countLibraries <- countLibrariesF
+    } yield {
+      val title = s"${org.name} Team on Kifi"
+      PublicPageMetaFullTags(
+        unsafeTitle = title,
+        url = url.getOrElse(""),
+        urlPathOnly = urlPath.getOrElse(""),
+        feedName = None,
+        unsafeDescription = s"${org.description.getOrElse(title)}",
+        images = Seq(),
+        facebookId = None,
+        createdAt = org.createdAt,
+        updatedAt = org.updatedAt,
+        unsafeFirstName = "",
+        unsafeLastName = "",
+        profileUrl = url.getOrElse(""),
         noIndex = countLibraries == 0, //no public libraries - no index
         related = Seq.empty)
     }
