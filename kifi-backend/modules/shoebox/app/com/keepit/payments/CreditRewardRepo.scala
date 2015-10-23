@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.model.User
 import org.joda.time.DateTime
 import play.api.libs.json._
 
@@ -41,9 +42,11 @@ class CreditRewardRepoImpl @Inject() (
     def status = column[String]("status", O.NotNull)
     def info = column[Option[JsValue]]("info", O.Nullable)
     def unrepeatable = column[Option[UnrepeatableRewardKey]]("unrepeatable", O.Nullable)
+
     def code = column[Option[CreditCode]]("code", O.Nullable)
     def singleUse = column[Option[Boolean]]("single_use", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, accountId, credit, applied, kind, status, info, unrepeatable, code, singleUse) <> ((CreditRewardRepo.applyFromDbRow _).tupled, CreditRewardRepo.unapplyToDbRow)
+    def usedBy = column[Option[Id[User]]]("used_by", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, accountId, credit, applied, kind, status, info, unrepeatable, code, singleUse, usedBy) <> ((CreditRewardRepo.applyFromDbRow _).tupled, CreditRewardRepo.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new CreditRewardTable(tag)
@@ -74,7 +77,8 @@ object CreditRewardRepo {
     info: Option[JsValue],
     unrepeatable: Option[UnrepeatableRewardKey],
     code: Option[CreditCode],
-    singleUse: Option[Boolean]): CreditReward = {
+    singleUse: Option[Boolean],
+    usedBy: Option[Id[User]]): CreditReward = {
     CreditReward(
       id,
       createdAt,
@@ -85,16 +89,16 @@ object CreditRewardRepo {
       applied,
       Reward.applyFromDbRow(kind, status, info),
       unrepeatable,
-      code.map(UsedCreditCode.applyFromDbRow(_, singleUse))
+      code.map(UsedCreditCode.applyFromDbRow(_, singleUse, usedBy.get))
     )
   }
 
   def unapplyToDbRow(creditReward: CreditReward) = {
     Reward.unapplyToDbRow(creditReward.reward).map {
       case (kind, status, info) =>
-        val (code, singleUse) = creditReward.code.flatMap(UsedCreditCode.unapplyToDbRow).map {
-          case (actualCode, su) => (Some(actualCode), su)
-        }.getOrElse(None, None)
+        val (code, singleUse, usedBy) = creditReward.code.flatMap(UsedCreditCode.unapplyToDbRow).map {
+          case (actualCode, su, userId) => (Some(actualCode), su, Some(userId))
+        }.getOrElse(None, None, None)
         (
           creditReward.id,
           creditReward.createdAt,
@@ -108,7 +112,8 @@ object CreditRewardRepo {
           info,
           creditReward.unrepeatable,
           code,
-          singleUse
+          singleUse,
+          usedBy
         )
     }
   }

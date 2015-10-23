@@ -7,11 +7,10 @@ import com.keepit.common.db.{ Id, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.model.{ Organization, User }
+import com.keepit.payments.CreditCodeFail.UnavailableCreditCodeException
 import org.joda.time.DateTime
 
 import scala.util.{ Failure, Success, Try }
-
-case class UnavailableCreditCodeException(code: CreditCode) extends Exception(s"Credit code $code is unavailable")
 
 @ImplementedBy(classOf[CreditCodeInfoRepoImpl])
 trait CreditCodeInfoRepo extends Repo[CreditCodeInfo] {

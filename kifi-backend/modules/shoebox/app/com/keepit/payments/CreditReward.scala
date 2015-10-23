@@ -128,13 +128,14 @@ object RewardKind {
   }
 }
 
-case class UsedCreditCode(code: CreditCode, singleUse: Boolean)
+// subset of CreditCodeInfo
+case class UsedCreditCode(code: CreditCode, singleUse: Boolean, usedBy: Id[User])
 object UsedCreditCode {
-  def apply(code: CreditCode, kind: CreditCodeKind): UsedCreditCode = UsedCreditCode(code, CreditCodeKind.isSingleUse(kind))
-  def apply(codeInfo: CreditCodeInfo): UsedCreditCode = UsedCreditCode(codeInfo.code, codeInfo.kind)
+  def apply(code: CreditCode, kind: CreditCodeKind, usedBy: Id[User]): UsedCreditCode = UsedCreditCode(code, CreditCodeKind.isSingleUse(kind), usedBy)
+  def apply(codeInfo: CreditCodeInfo, usedBy: Id[User]): UsedCreditCode = UsedCreditCode(codeInfo.code, CreditCodeKind.isSingleUse(codeInfo.kind), usedBy)
 
-  def applyFromDbRow(code: CreditCode, singleUse: Option[Boolean]): UsedCreditCode = UsedCreditCode(code, singleUse.contains(true))
-  def unapplyToDbRow(code: UsedCreditCode): Option[(CreditCode, Option[Boolean])] = Some((code.code, if (code.singleUse) Some(true) else None))
+  def applyFromDbRow(code: CreditCode, singleUse: Option[Boolean], usedBy: Id[User]): UsedCreditCode = UsedCreditCode(code, singleUse.contains(true), usedBy)
+  def unapplyToDbRow(code: UsedCreditCode): Option[(CreditCode, Option[Boolean], Id[User])] = Some((code.code, if (code.singleUse) Some(true) else None, code.usedBy))
 }
 
 sealed trait UnrepeatableRewardKey {
@@ -176,7 +177,3 @@ case class CreditReward(
   def withId(id: Id[CreditReward]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
-
-object CreditReward {
-}
-

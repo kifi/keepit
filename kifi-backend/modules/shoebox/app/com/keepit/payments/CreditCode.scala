@@ -9,6 +9,8 @@ import com.keepit.common.time._
 import com.keepit.model.{ Organization, User }
 import org.joda.time.DateTime
 import play.api.libs.json._
+import play.api.http.Status._
+import play.api.mvc.Results.Status
 
 case class CreditCode(value: String) {
   def urlEncoded: String = URLEncoder.encode(value, UTF8)
@@ -38,6 +40,15 @@ object CreditCodeKind {
   def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
     case Some(validKind) => validKind
     case None => throw new IllegalArgumentException(s"Unknown CreditCodeKind: $kind")
+  }
+
+  def creditValue(kind: CreditCodeKind) = kind match {
+    case Coupon => DollarAmount.dollars(42)
+    case OrganizationReferral => DollarAmount.dollars(19)
+  }
+  def referrerCreditValue(kind: CreditCodeKind) = kind match {
+    case Coupon => None
+    case OrganizationReferral => Some(DollarAmount.dollars(100))
   }
 }
 
@@ -71,9 +82,24 @@ case class CreditCodeInfo(
     referrer: Option[CreditCodeReferrer]) extends ModelWithState[CreditCodeInfo] {
   def withId(id: Id[CreditCodeInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-}
 
-object CreditCodeInfo {
+  def credit: DollarAmount = CreditCodeKind.creditValue(kind)
+  def referrerCredit: Option[DollarAmount] = CreditCodeKind.referrerCreditValue(kind)
 }
 
 case class CreditCodeRewards(target: CreditReward, referrer: Option[CreditReward])
+
+case class CreditCodeApplyRequest(
+  code: CreditCode,
+  applierId: Id[User],
+  orgId: Option[Id[Organization]])
+
+sealed abstract class CreditCodeFail(val status: Int, val message: String) extends Exception(message) {
+  def asErrorResponse = Status(status)(Json.obj("error" -> message))
+}
+object CreditCodeFail {
+  case class UnavailableCreditCodeException(code: CreditCode) extends CreditCodeFail(CONFLICT, s"Credit code $code is unavailable")
+  case class CreditCodeNotFoundException(code: CreditCode) extends CreditCodeFail(BAD_REQUEST, s"Credit code $code does not exist")
+  case class CreditCodeNotApplicable(req: CreditCodeApplyRequest) extends CreditCodeFail(BAD_REQUEST, s"Credit code ${req.code} cannot be applied by user ${req.applierId} in org ${req.orgId}")
+  case class NoPaidAccountException(userId: Id[User], orgIdOpt: Option[Id[Organization]]) extends CreditCodeFail(BAD_REQUEST, s"User $userId in org $orgIdOpt has no paid account")
+}
