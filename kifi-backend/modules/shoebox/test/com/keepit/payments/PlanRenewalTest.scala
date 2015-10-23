@@ -22,26 +22,27 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
     "get renewable accounts" in {
       withDb(modules: _*) { implicit injector =>
         val accountRepo = inject[PaidAccountRepo]
+        val now = currentDateTime
         db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val monthlyPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle(1)).saved
           val yearlyPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle(12)).saved
           val (kifiId, kifiAccount) = {
             val kifiOrg = OrganizationFactory.organization().withOwner(user).withName("Kifi").saved
-            (kifiOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(kifiOrg).withPlan(monthlyPlan.id.get).withBillingCycleStart(currentDateTime).saved)
+            (kifiOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(kifiOrg).withPlan(monthlyPlan.id.get).withBillingCycleStart(now).withPlanRenewal(now plusMonths monthlyPlan.billingCycle.month).saved)
           }
 
           val (googleId, googleAccount) = {
             val googleOrg = OrganizationFactory.organization().withOwner(user).withName("Google").saved
-            (googleOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(googleOrg).withPlan(monthlyPlan.id.get).withBillingCycleStart(currentDateTime).saved)
+            (googleOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(googleOrg).withPlan(monthlyPlan.id.get).withBillingCycleStart(now).withPlanRenewal(now plusMonths monthlyPlan.billingCycle.month).saved)
           }
 
           accountRepo.getRenewable() === Seq()
 
-          val renewableGoogle = accountRepo.save(googleAccount.withCycleStart(currentDateTime minusMonths 2).withPlanRenewal(currentDateTime minusMonths 1))
+          val renewableGoogle = accountRepo.save(googleAccount.withCycleStart(now minusMonths 2).withPlanRenewal(now minusMonths 2 plusMonths monthlyPlan.billingCycle.month))
           accountRepo.getRenewable() === Seq(renewableGoogle)
 
-          val renewableKifi = accountRepo.save(kifiAccount.withCycleStart(currentDateTime minusMonths 1).withPlanRenewal(currentDateTime))
+          val renewableKifi = accountRepo.save(kifiAccount.withCycleStart(now minusMonths 1).withPlanRenewal(now minusMonths 1 plusMonths monthlyPlan.billingCycle.month))
           accountRepo.getRenewable() === Seq(renewableGoogle, renewableKifi)
 
           val yearlyGoogle = accountRepo.save(renewableGoogle.withNewPlan(yearlyPlan.id.get))
@@ -167,6 +168,7 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
             .withCredit(DollarAmount.ZERO)
             .withActiveUsers(activeUsers)
             .withBillingCycleStart(billingCycleStart)
+            .withPlanRenewal(billingCycleStart plusMonths billingCycle.month)
             .withPaymentDueAt(paymentDueAt)
             .saved
           (account, plan)
