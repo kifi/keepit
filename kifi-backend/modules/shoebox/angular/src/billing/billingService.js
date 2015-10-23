@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('billingService', [
-  '$analytics', 'net',
-  function ($analytics, net) {
+  '$analytics', 'net', 'orgProfileService',
+  function ($analytics, net, orgProfileService) {
     function getResponseData(response) {
       return response.data;
     }
@@ -67,6 +67,7 @@ angular.module('kifi')
         .setBillingPlan(pubId, planId)
         .then(function (response) {
           invalidateCache();
+          orgProfileService.invalidateOrgProfileCache();
           return response;
         });
       },
