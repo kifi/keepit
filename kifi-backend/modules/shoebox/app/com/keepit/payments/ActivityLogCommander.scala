@@ -16,8 +16,7 @@ import play.api.libs.json.{ Writes, Json }
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
-  def getAccountEvents(orgId: Id[Organization], limit: Limit): Seq[AccountEvent]
-  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit): Seq[AccountEvent]
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent]
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
 }
 
@@ -37,14 +36,9 @@ class ActivityLogCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def getAccountEvents(orgId: Id[Organization], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.billing, Offset(0), limit)
-  }
-
-  def getAccountEventsBefore(orgId: Id[Organization], beforeTime: DateTime, beforeId: Id[AccountEvent], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
-    val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getEventsBefore(accountId, beforeTime, beforeId, limit)
+    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.activityLog, fromIdOpt, limit)
   }
 
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
