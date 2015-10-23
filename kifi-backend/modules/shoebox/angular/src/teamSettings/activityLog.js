@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('ActivityLogCtrl', [
-  '$scope', 'billingService', 'profile', 'billingState', 'modalService', 'Paginator',
-  function ($scope, billingService, profile, billingState, modalService, Paginator) {
+  '$scope', '$analytics', '$timeout', 'billingService', 'profile', 'billingState', 'modalService', 'Paginator',
+  function ($scope, $analytics, $timeout, billingService, profile, billingState, modalService, Paginator) {
     $scope.billingState = billingState;
 
     var activityLogPaginator = new Paginator(activitySource);
@@ -41,5 +41,11 @@ angular.module('kifi')
     };
 
     $scope.fetch();
+
+    $timeout(function () {
+      $analytics.eventTrack('user_viewed_page', {
+        type: 'activityLog'
+      });
+    });
   }
 ]);
