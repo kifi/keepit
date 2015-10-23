@@ -358,7 +358,7 @@ class LibraryRepoImpl @Inject() (
     val query = sql"""select lib.* from library lib
                   inner join library_membership lm on lm.user_id = $userId
                   and lib.id = lm.library_id and lib.state='active' and lm.state='active'
-                  and (lm.access='owner' or lm.access='read_write')
+                  and (lm.access='owner' or lm.access='read_write') and lib.organization_id is null
                   order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
                   #${getOrderBySql("lib", "lm", ordering, direction, orderedByPriority)} limit #${page.itemsToDrop}, #${page.size}"""
     query.as[Library].list
