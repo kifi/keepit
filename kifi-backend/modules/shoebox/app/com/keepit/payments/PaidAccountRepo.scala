@@ -105,7 +105,7 @@ class PaidAccountRepoImpl @Inject() (
   }
 
   def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount] = {
-    (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Ok: PaymentStatus) || row.credit < -maxBalance || row.paymentDueAt < clock.now())) yield row).sortBy(_.paymentDueAt).list
+    (for (row <- rows if !row.frozen && row.paymentStatus === (PaymentStatus.Ok: PaymentStatus) && (row.credit < -maxBalance || row.paymentDueAt < clock.now())) yield row).sortBy(_.paymentDueAt).list
   }
 
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {
