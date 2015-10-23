@@ -39,6 +39,7 @@ class KifiSiteRouter @Inject() (
   orgInviteCommander: OrganizationInviteCommander,
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
+  orgMetadataCache: OrgMetadataCache,
   applicationConfig: FortyTwoConfig,
   organizationAnalytics: OrganizationAnalytics,
   airbrake: AirbrakeNotifier,
@@ -134,7 +135,7 @@ class KifiSiteRouter @Inject() (
           val foundHandle = Handle.fromOrganizationHandle(org.handle)
           Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
         } getOrElse {
-          AngularApp.app()
+          AngularApp.app(() => orgMetadata(org))
         }
     } getOrElse notFound(request)
   }
@@ -272,6 +273,16 @@ class KifiSiteRouter @Inject() (
   }
 
   private val WebAppPage = MaybeUserPage andThen MobileAppFilter andThen NonActiveUserFilter
+
+  private def orgMetadata(org: Organization): Future[String] = try {
+    orgMetadataCache.getOrElseFuture(OrgMetadataKey(org.id.get)) {
+      pageMetaTagsCommander.orgMetaTags(org).imap(_.formatOpenGraphForOrg)
+    }
+  } catch {
+    case e: Throwable =>
+      airbrake.notify(s"on getting library metadata for $org", e)
+      Future.successful("")
+  }
 
   private def userMetadata(user: User, tab: UserProfileTab): Future[String] = try {
     userMetadataCache.getOrElseFuture(UserMetadataKey(user.id.get, tab)) {
