@@ -6,7 +6,7 @@
     </div>
     <div class="kf-main-pane-earn-credits">
       <p>Share Kifi with other companies and they'll get a $100 credit. We'll credit you $100 for the referral when they upgrade after joining with your referral code.</p>
-      <text class="kf-referral-code-txt" ng-model="referralCode">{{referralCode}}</text><button clipboard text="referralCode" ng-click="showCopied()" class="kf-referral-btn kf-referral-btn-copy">Copy</button>
+      <text class="kf-referral-code-txt" clipboard text="referralCode" ng-model="referralCode" ng-click="showCopied()">{{referralCode}}</text><button clipboard text="referralCode" ng-click="showCopied()" class="kf-referral-btn kf-referral-btn-copy">Copy</button>
       <text class="kf-referral-copy-msg" ng-if="copied">Copied</text>
     </div>
   </section>
