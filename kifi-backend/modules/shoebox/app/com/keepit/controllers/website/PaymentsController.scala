@@ -116,7 +116,7 @@ class PaymentsController @Inject() (
   }
 
   def getEvents(pubId: PublicId[Organization], limit: Int, fromPubIdOpt: Option[String]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val fromIdOptTry = fromPubIdOpt match {
+    val fromIdOptTry = fromPubIdOpt.filter(_.nonEmpty) match {
       case None => Success(None)
       case Some(fromPubId) => AccountEvent.decodePublicId(PublicId(fromPubId)).map(Some(_))
     }
@@ -124,7 +124,7 @@ class PaymentsController @Inject() (
       case Success(fromIdOpt) =>
         val infos = activityLogCommander.getAccountEvents(request.orgId, fromIdOpt, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
-      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_bookend_id"))
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_event_id"))
     }
   }
 }
