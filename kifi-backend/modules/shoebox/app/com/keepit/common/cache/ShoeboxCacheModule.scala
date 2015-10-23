@@ -278,12 +278,17 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Singleton
   @Provides
   def libraryMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new LibraryMetadataCache(stats, accessLog, (innerRepo, 1 minutes), (outerRepo, 30 days))
+    new LibraryMetadataCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides
   def userMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new UserMetadataCache(stats, accessLog, (innerRepo, 1 minutes), (outerRepo, 30 days))
+    new UserMetadataCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
+
+  @Singleton
+  @Provides
+  def orgMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new OrgMetadataCache(stats, accessLog, (innerRepo, 30 minutes), (outerRepo, 30 days))
 
   @Singleton
   @Provides

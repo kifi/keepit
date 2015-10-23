@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Provider, Singleton }
-import com.keepit.commanders.{ OrganizationPermissionsNamespaceKey, OrganizationPermissionsNamespaceCache, OrganizationPermissionsCache }
+import com.keepit.commanders._
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -28,6 +28,7 @@ class OrganizationRepoImpl @Inject() (
     val db: DataBaseComponent,
     val clock: Clock,
     orgCache: OrganizationCache,
+    orgMetadataCache: OrgMetadataCache,
     basicOrgCache: BasicOrganizationIdCache,
     orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
     orgPermissionsCache: OrganizationPermissionsCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
@@ -53,6 +54,7 @@ class OrganizationRepoImpl @Inject() (
   initTable()
 
   override def deleteCache(model: Organization)(implicit session: RSession) {
+    orgMetadataCache.remove(OrgMetadataKey(model.id.get))
     orgCache.remove(OrganizationKey(model.id.get))
     basicOrgCache.remove(BasicOrganizationIdKey(model.id.get))
     orgPermissionsNamespaceCache.remove(OrganizationPermissionsNamespaceKey(model.id.get))
