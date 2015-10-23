@@ -1322,21 +1322,31 @@ api.port.on({
     api.tabs.close(tab.id);
   },
   open_deep_link: function(link, _, tab) {
+    var tabIdWithLink;
     if (link.inThisTab || tab.nUri === link.nUri) {
+      tabIdWithLink = tab.id;
       awaitDeepLink(link, tab.id);
+      trackClick();
     } else {
       var tabs = tabsByUrl[link.nUri];
-      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // page's normalized URI may have changed
-        awaitDeepLink(link, tab.id);
-        api.tabs.select(tab.id);
+      var existingTab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri);
+      if (existingTab && existingTab.id) {  // page's normalized URI may have changed
+        tabIdWithLink = existingTab.id;
+        awaitDeepLink(link, existingTab.id);
+        api.tabs.select(existingTab.id);
+        trackClick();
       } else {
         api.tabs.open(link.nUri, function (tabId) {
+          tabIdWithLink = tabId;
           awaitDeepLink(link, tabId);
+          trackClick();
         });
       }
     }
-    if (link.from === 'notice') {
-      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'view', category: 'message'});
+    function trackClick() {
+      if (link.from === 'notice' && tabIdWithLink) {
+        tracker.track('user_clicked_pane', {type: trackingLocatorFor(tabIdWithLink), action: 'view', category: 'message'});
+      }
     }
   },
   open_support_chat: function (_, __, tab) {
