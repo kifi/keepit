@@ -7,7 +7,7 @@
     <ul>
         @for(account <- dashboard.frozenAccounts) {
             <li>
-                @{account.orgId}
+                @adminHelper.orgDisplay(dashboard.orgsByAccountId(account.id.get))
             </li>
         }
     </ul>

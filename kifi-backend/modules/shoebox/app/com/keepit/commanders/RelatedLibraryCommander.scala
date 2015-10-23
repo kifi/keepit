@@ -22,13 +22,14 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[RelatedLibraryCommanderImpl])
 trait RelatedLibraryCommander {
   def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])]
-  def suggestedLibraries(libId: Id[Library]): Future[(Seq[RelatedLibrary])]
+  def suggestedLibraries(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[RelatedLibrary])]
 }
 
 @Singleton
 class RelatedLibraryCommanderImpl @Inject() (
     db: Database,
     libRepo: LibraryRepo,
+    orgCommander: OrganizationCommander,
     libMemRepo: LibraryMembershipRepo,
     libraryInfoCommander: LibraryInfoCommander,
     cortex: CortexServiceClient,
@@ -36,7 +37,6 @@ class RelatedLibraryCommanderImpl @Inject() (
     libQualityHelper: LibraryQualityHelper,
     relatedLibsCache: RelatedLibrariesCache,
     topLibsCache: TopFollowedLibrariesCache,
-    libraryRepo: LibraryRepo,
     airbrake: AirbrakeNotifier) extends RelatedLibraryCommander with Logging {
 
   protected val DEFAULT_MIN_FOLLOW = 5
@@ -49,64 +49,65 @@ class RelatedLibraryCommanderImpl @Inject() (
   // main method
   def suggestedLibrariesInfo(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[(Seq[FullLibraryInfo], Seq[RelatedLibraryKind])] = {
     val t0 = System.currentTimeMillis
+    val suggestedLibsFut = suggestedLibraries(libId, userIdOpt)
 
-    val library = db.readOnlyReplica { implicit session =>
-      libraryRepo.get(libId)
+    val userLibs: Set[Id[Library]] = userIdOpt match {
+      case Some(userId) => db.readOnlyReplica { implicit s => libMemRepo.getWithUserId(userId) }.map { _.libraryId }.toSet
+      case None => Set()
     }
 
-    if (library.state == LibraryStates.INACTIVE || library.visibility == LibraryVisibility.SECRET || library.visibility == LibraryVisibility.ORGANIZATION || library.keepCount == 0) {
-      // We do not serve suggested libraries here
-      Future.successful((Seq.empty, Seq.empty))
-    } else {
-      val suggestedLibsFut = suggestedLibraries(libId)
-
-      val userLibs: Set[Id[Library]] = userIdOpt match {
-        case Some(userId) => db.readOnlyReplica { implicit s => libMemRepo.getWithUserId(userId) }.map { _.libraryId }.toSet
-        case None => Set()
-      }
-
-      suggestedLibsFut
-        .map { libs => libs.filter { l => !userLibs.contains(l.library.id.get) }.take(RETURN_SIZE) }
-        .flatMap { relatedLibs =>
-          val t1 = System.currentTimeMillis
-          val (libs, kinds) = relatedLibs.map { x => (x.library, x.kind) }.unzip
-          // why full library info!?!?
-          val fullInfosFut = libraryInfoCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { _.map { _._2 } }
-          fullInfosFut.map { info =>
-            val t2 = System.currentTimeMillis
-            statsd.timing("commander.RelatedLibraryCommander.getSuggestedLibs", t1 - t0, 1.0)
-            statsd.timing("commander.RelatedLibraryCommander.getFullLibInfo", t2 - t1, 1.0)
-            if (info.size == kinds.size) (info, kinds)
-            else {
-              airbrake.notify(s"error in getting suggested libraries for lib ${libId}, user: ${userIdOpt}. info array and kinds array do not match in size.")
-              (Seq(), Seq())
-            }
+    suggestedLibsFut
+      .map { libs => libs.filter { l => !userLibs.contains(l.library.id.get) }.take(RETURN_SIZE) }
+      .flatMap { relatedLibs =>
+        val t1 = System.currentTimeMillis
+        val (libs, kinds) = relatedLibs.map { x => (x.library, x.kind) }.unzip
+        // why full library info!?!?
+        val fullInfosFut = libraryInfoCommander.createFullLibraryInfos(userIdOpt, true, 10, 0, ProcessedImageSize.Large.idealSize, libs, ProcessedImageSize.Large.idealSize, withKeepTime = true).map { _.map { _._2 } }
+        fullInfosFut.map { info =>
+          val t2 = System.currentTimeMillis
+          statsd.timing("commander.RelatedLibraryCommander.getSuggestedLibs", t1 - t0, 1.0)
+          statsd.timing("commander.RelatedLibraryCommander.getFullLibInfo", t2 - t1, 1.0)
+          if (info.size == kinds.size) (info, kinds)
+          else {
+            airbrake.notify(s"error in getting suggested libraries for lib ${libId}, user: ${userIdOpt}. info array and kinds array do not match in size.")
+            (Seq(), Seq())
           }
         }
-    }
-
+      }
   }
 
-  def suggestedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = {
-
-    val relatedLibs = relatedLibsCache.getOrElseFuture(RelatedLibariesKey(libId)) {
-      val topicRelatedF = topicRelatedLibraries(libId)
-      val ownerLibsF = librariesFromSameOwner(libId)
-      val popularF = topFollowedLibraries()
-      for {
-        topicRelated <- topicRelatedF
-        ownerLibs <- ownerLibsF
-        popular <- popularF
-      } yield {
-        val libs = topicRelated ++
-          ownerLibs.sortBy(-_.library.memberCount).take(SUB_RETURN_SIZE) ++
-          util.Random.shuffle(popular.filter(_.library.id.get != libId)).take(SUB_RETURN_SIZE)
-
-        RelatedLibraries(libs.filterNot(isUnwantedLibrary).distinctBy(_.library.id.get))
-      }
+  def suggestedLibraries(libId: Id[Library], userIdOpt: Option[Id[User]]): Future[Seq[RelatedLibrary]] = {
+    val library = db.readOnlyReplica { implicit session =>
+      libRepo.get(libId)
     }
 
-    relatedLibs.map(_.libs)
+    if (library.state == LibraryStates.INACTIVE || library.visibility == LibraryVisibility.SECRET || library.keepCount == 0) {
+      // We do not serve suggested libraries here
+      Future.successful(Seq.empty)
+    } else {
+      val relatedLibs = relatedLibsCache.getOrElseFuture(RelatedLibariesKey(libId)) {
+        val libsF = library.organizationId match {
+          case Some(_) =>
+            val topicRelated = topicRelatedLibraries(libId)
+            val sameOrg: Future[Seq[RelatedLibrary]] = librariesFromSameOrg(library, userIdOpt)
+            topicRelated.flatMap(tr => sameOrg.map(so => tr ++ so))
+          case None =>
+            val topicRelatedF = topicRelatedLibraries(libId)
+            val ownerLibsF = librariesFromSameOwner(libId).map(_.sortBy(-_.library.memberCount).take(SUB_RETURN_SIZE))
+            val popularF = topFollowedLibraries().map(ls => util.Random.shuffle(ls.filter(_.library.id.get != libId)).take(SUB_RETURN_SIZE))
+            for {
+              topicRelated <- topicRelatedF
+              ownerLibs <- ownerLibsF
+              popular <- popularF
+            } yield topicRelated ++ ownerLibs ++ popular
+        }
+        libsF.map { libs =>
+          RelatedLibraries(libs.filterNot(isUnwantedLibrary).distinctBy(_.library.id.get))
+        }
+      }
+
+      relatedLibs.map(_.libs)
+    }
   }
 
   def topicRelatedLibraries(libId: Id[Library]): Future[Seq[RelatedLibrary]] = {
@@ -138,6 +139,13 @@ class RelatedLibraryCommanderImpl @Inject() (
         TopFollowedLibraries(libs)
       }
     }.map { _.libs }
+  }
+
+  private def librariesFromSameOrg(library: Library, userIdOpt: Option[Id[User]]): Future[Seq[RelatedLibrary]] = {
+    db.readOnlyReplicaAsync { implicit s =>
+      val libs = orgCommander.getLibrariesVisibleToUserHelper(library.organizationId.get, userIdOpt, Offset.ZERO, Limit(SUB_RETURN_SIZE))
+      libs.map(lib => RelatedLibrary(lib, RelatedLibraryKind.OWNER))
+    }
   }
 
   private lazy val fakeUsers = userCommander.getAllFakeUsers()

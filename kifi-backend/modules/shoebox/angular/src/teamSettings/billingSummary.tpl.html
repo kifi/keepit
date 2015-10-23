@@ -48,8 +48,9 @@
         >
           credit of
           <span ng-bind="!(billingState.balance | isPositiveMoney) ? (0 | money) : (billingState.balance | money)"></span>
-        </a>
-        <span ng-if="billingState.card">
+        </a><!--
+     --><span ng-if="!(isPaidPlan() && billingState.card)">.</span>
+        <span ng-if="isPaidPlan() && billingState.card">
           which will be applied before your
           <a
             class="kf-link kf-link-black kf-link-underline"

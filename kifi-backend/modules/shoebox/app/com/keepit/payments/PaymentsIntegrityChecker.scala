@@ -1,29 +1,54 @@
 package com.keepit.payments
 
-import com.keepit.common.db.slick.Database
-import com.keepit.model.{
-  Organization,
-  OrganizationRepo,
-  OrganizationMembershipRepo,
-  OrganizationMembershipStates,
-  OrganizationMembership,
-  User
-}
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.time._
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient }
-import com.keepit.commanders.BasicSlackMessage
-import com.keepit.common.akka.SafeFuture
-
-import scala.util.{ Try, Success, Failure }
-import scala.concurrent.{ Future, ExecutionContext }
-
-import play.api.Mode
+import com.keepit.common.net.HttpClient
+import com.keepit.common.time._
+import com.keepit.model.{ Organization, OrganizationMembership, OrganizationMembershipRepo, OrganizationMembershipStates, OrganizationRepo, User }
+import com.kifi.macros.json
 import play.api.Mode.Mode
-import play.api.libs.json.Json
+import play.api.libs.json._
 
-import com.google.inject.{ Singleton, Inject }
+import scala.concurrent.ExecutionContext
+import scala.util.{ Failure, Success, Try }
+
+sealed abstract class PaymentsIntegrityError(val value: String) {
+  def dump: JsValue
+}
+object PaymentsIntegrityError {
+  private val accountLockError = "could_not_get_account_lock"
+  private val accountBalanceError = "inconsistent_account_balance"
+  private val missingOrgMemberError = "missing_organization_member"
+  private val extraOrgMemberError = "extra_organization_member"
+  @json case class CouldNotGetAccountLock(memo: String) extends PaymentsIntegrityError(accountLockError) {
+    def dump = Json.toJson(this)(implicitly[Format[CouldNotGetAccountLock]])
+  }
+  @json case class InconsistentAccountBalance(computedBalance: DollarAmount, accountBalance: DollarAmount) extends PaymentsIntegrityError(accountBalanceError) {
+    def dump = Json.toJson(this)(implicitly[Format[InconsistentAccountBalance]])
+  }
+  @json case class MissingOrganizationMember(missingMember: Id[User]) extends PaymentsIntegrityError(missingOrgMemberError) {
+    def dump = Json.toJson(this)(implicitly[Format[MissingOrganizationMember]])
+  }
+  @json case class ExtraOrganizationMember(extraMember: Id[User]) extends PaymentsIntegrityError(extraOrgMemberError) {
+    def dump = Json.toJson(this)(implicitly[Format[ExtraOrganizationMember]])
+  }
+
+  implicit val dbFormat: Format[PaymentsIntegrityError] = Format(
+    Reads { j =>
+      val err = (j.as[JsObject] \ "error").as[String]
+      err match {
+        case `accountLockError` => (j \ "data").validate[CouldNotGetAccountLock]
+        case `accountBalanceError` => (j \ "data").validate[InconsistentAccountBalance]
+        case `missingOrgMemberError` => (j \ "data").validate[MissingOrganizationMember]
+        case `extraOrgMemberError` => (j \ "data").validate[ExtraOrganizationMember]
+      }
+    },
+    Writes { err => Json.obj("error" -> err.value, "data" -> err.dump) }
+  )
+}
 
 @Singleton
 class PaymentsIntegrityChecker @Inject() (
@@ -33,21 +58,13 @@ class PaymentsIntegrityChecker @Inject() (
     organizationMembershipRepo: OrganizationMembershipRepo,
     accountLockHelper: AccountLockHelper,
     accountEventRepo: AccountEventRepo,
+    eventTrackingCommander: AccountEventTrackingCommander,
     paidAccountRepo: PaidAccountRepo,
     planManagementCommander: PlanManagementCommander,
     httpClient: HttpClient,
     mode: Mode,
+    airbrake: AirbrakeNotifier,
     implicit val defaultContext: ExecutionContext) extends Logging {
-
-  private val slackChannelUrl = "https://hooks.slack.com/services/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"
-
-  private def reportToSlack(msg: String): Future[Unit] = SafeFuture {
-    val fullMsg = BasicSlackMessage(
-      text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
-      username = "PaymentsIntegrityChecker"
-    )
-    httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
-  }
 
   private def freezeAccount(orgId: Id[Organization]): Unit = {
     db.readWrite { implicit session =>
@@ -55,106 +72,103 @@ class PaymentsIntegrityChecker @Inject() (
     }
   }
 
-  private def processMembershipsForAccount(orgId: Id[Organization]): Option[Int] = {
-    accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
-      val memberships: Map[Id[User], OrganizationMembership] = organizationMembershipRepo.getAllByOrgId(orgId, excludeState = None).map(m => m.userId -> m).toMap
-      val memberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.ACTIVE).map(_.userId).toSet
-      val exMemberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.INACTIVE).map(_.userId).toSet
+  private def processMembershipsForAccount(orgId: Id[Organization]): Seq[PaymentsIntegrityError] = accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
+    val memberships: Map[Id[User], OrganizationMembership] = organizationMembershipRepo.getAllByOrgId(orgId, excludeState = None).map(m => m.userId -> m).toMap
+    val memberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.ACTIVE).map(_.userId).toSet
+    val exMemberIds: Set[Id[User]] = memberships.values.filter(_.state == OrganizationMembershipStates.INACTIVE).map(_.userId).toSet
 
-      val account = paidAccountRepo.getByOrgId(orgId)
-      val accountId = account.id.get
-      val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMembershipEventsInOrder(accountId).groupBy { event =>
-        event.action match {
-          case AccountEventAction.UserAdded(userId) => userId
-          case AccountEventAction.UserRemoved(userId) => userId
-          case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
+    val account = paidAccountRepo.getByOrgId(orgId)
+    val accountId = account.id.get
+    val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMembershipEventsInOrder(accountId).groupBy { event =>
+      event.action match {
+        case AccountEventAction.UserAdded(userId) => userId
+        case AccountEventAction.UserRemoved(userId) => userId
+        case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
+      }
+    }
+
+    val perceivedStateByUser: Map[Id[User], Boolean] = eventsByUser.map {
+      case (userId, events) =>
+        log.info(s"[AEIC] Processing ${events.length} events for $userId on $orgId.")
+        val initialEvent: AccountEvent = events.head
+        initialEvent.action match {
+          case AccountEventAction.UserAdded(_) =>
+          case _ => throw new Exception(s"""First user event for $userId on org $orgId was not an "added" event. This should never happen.""")
         }
-      }
-
-      val perceivedStateByUser: Map[Id[User], Boolean] = eventsByUser.map {
-        case (userId, events) =>
-          log.info(s"[AEIC] Processing ${events.length} events for $userId on $orgId.")
-          val initialEvent: AccountEvent = events.head
-          initialEvent.action match {
-            case AccountEventAction.UserAdded(_) =>
-            case _ => throw new Exception(s"""First user event for $userId on org $orgId was not an "added" event. This should never happen.""")
-          }
-          userId -> events.tail.foldLeft(true) {
-            case (isMember, event) =>
-              event.action match {
-                case AccountEventAction.UserAdded(userId) if isMember => throw new Exception(s"""Consecutive "added" events for $userId on org $orgId. This should never happen.""")
-                case AccountEventAction.UserAdded(userId) => true
-                case AccountEventAction.UserRemoved(userId) if !isMember => throw new Exception(s"""Consecutive "removed" events for $userId on org $orgId. This should never happen.""")
-                case AccountEventAction.UserRemoved(userId) => false
-                case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
-              }
-          }
-      }
-
-      val perceivedMemberIds: Set[Id[User]] = perceivedStateByUser.filter(_._2).map(_._1).toSet
-      val perceivedExMemberIds: Set[Id[User]] = perceivedStateByUser.filterNot(_._2).map(_._1).toSet
-
-      val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
-      val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
-
-      perceivedActiveButActuallyInactive.foreach { userId =>
-        log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
-        planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
-      }
-      perceivedInactiveButActuallyActive.foreach { userId =>
-        log.info(s"[AEIC] Events show user $userId as an inactive member of $orgId, which is not correct. Creating new UserAdded event.")
-        planManagementCommander.registerNewUserHelper(orgId, userId, ActionAttribution(None, None))
-      }
-      if (account.activeUsers != memberIds.size) {
-        log.info(s"[AEIC] Total active user count on account for org $orgId not correct. Is: ${account.activeUsers}. Should: ${memberIds.size}. Fixing.")
-        paidAccountRepo.save(account.copy(activeUsers = memberIds.size))
-      }
-
-      perceivedInactiveButActuallyActive.size + perceivedActiveButActuallyInactive.size
+        userId -> events.tail.foldLeft(true) {
+          case (isMember, event) =>
+            event.action match {
+              case AccountEventAction.UserAdded(`userId`) if isMember => throw new Exception(s"""Consecutive "added" events for $userId on org $orgId. This should never happen.""")
+              case AccountEventAction.UserAdded(`userId`) => true
+              case AccountEventAction.UserRemoved(`userId`) if !isMember => throw new Exception(s"""Consecutive "removed" events for $userId on org $orgId. This should never happen.""")
+              case AccountEventAction.UserRemoved(`userId`) => false
+              case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
+            }
+        }
     }
-  }
 
-  private def processBalancesForAccount(orgId: Id[Organization]): Option[Int] = {
-    accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
-      val account = paidAccountRepo.getByOrgId(orgId)
-      val accountId = account.id.get
-      val accountEvents = accountEventRepo.getAllByAccount(accountId)
+    val perceivedMemberIds: Set[Id[User]] = perceivedStateByUser.filter(_._2).keySet
+    val perceivedExMemberIds: Set[Id[User]] = perceivedStateByUser.filterNot(_._2).keySet
 
-      val creditChanges = accountEvents.map(_.creditChange)
-      val computedCredit = creditChanges.fold(DollarAmount.ZERO)(_ + _)
-      if (computedCredit == account.credit) 0
-      else {
-        log.error(s"[AEIC] Computed credit for $orgId = $computedCredit but the account shows a credit of ${account.credit}")
-        1
-      }
+    val perceivedActiveButActuallyInactive = (perceivedMemberIds & exMemberIds) | (perceivedMemberIds -- memberIds -- exMemberIds) //first part is ones that were active at some point, second part is completely phantom ones
+    val perceivedInactiveButActuallyActive = memberIds -- perceivedMemberIds
+
+    val extraMemberErrors: Seq[PaymentsIntegrityError] = perceivedActiveButActuallyInactive.map { userId =>
+      log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
+      planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
+      PaymentsIntegrityError.ExtraOrganizationMember(userId)
+    }.toSeq
+    val missingMemberErrors: Seq[PaymentsIntegrityError] = perceivedInactiveButActuallyActive.map { userId =>
+      log.info(s"[AEIC] Events show user $userId as an inactive member of $orgId, which is not correct. Creating new UserAdded event.")
+      planManagementCommander.registerNewUserHelper(orgId, userId, ActionAttribution(None, None))
+      PaymentsIntegrityError.MissingOrganizationMember(userId)
+    }.toSeq
+    if (account.activeUsers != memberIds.size) {
+      log.info(s"[AEIC] Total active user count on account for org $orgId not correct. Is: ${account.activeUsers}. Should: ${memberIds.size}. Fixing.")
+      paidAccountRepo.save(account.copy(activeUsers = memberIds.size))
     }
-  }
 
-  private def checkAccount(orgId: Id[Organization]): Option[Int] = {
-    val discrepancies = Seq(
+    extraMemberErrors ++ missingMemberErrors
+  }.getOrElse(Seq(PaymentsIntegrityError.CouldNotGetAccountLock("member check")))
+
+  private def processBalancesForAccount(orgId: Id[Organization]): Seq[PaymentsIntegrityError] = accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
+    val account = paidAccountRepo.getByOrgId(orgId)
+    val accountId = account.id.get
+    val accountEvents = accountEventRepo.getAllByAccount(accountId)
+
+    val creditChanges = accountEvents.map(_.creditChange)
+    val computedCredit = creditChanges.fold(DollarAmount.ZERO)(_ + _)
+    if (computedCredit == account.credit) Seq.empty
+    else {
+      log.error(s"[AEIC] Computed credit for $orgId = $computedCredit but the account shows a credit of ${account.credit}")
+      Seq(PaymentsIntegrityError.InconsistentAccountBalance(computedBalance = computedCredit, accountBalance = account.credit))
+    }
+  }.getOrElse(Seq(PaymentsIntegrityError.CouldNotGetAccountLock("balance check")))
+
+  private def checkAccount(orgId: Id[Organization]): Seq[PaymentsIntegrityError] = {
+    Seq(
       processMembershipsForAccount(orgId),
       processBalancesForAccount(orgId)
-    )
-    if (discrepancies.exists(_.isEmpty)) None
-    else Some(discrepancies.map(_.get).sum)
+    ).flatten
   }
 
   def checkAccounts(modulus: Int = 7): Unit = {
     // we are going to process ~1/modulus of the orgs, based on the date
     val partition = clock.now.getDayOfYear % modulus
-    val orgIds = db.readOnlyReplica { implicit session => organizationRepo.getIdSubsetByModulus(modulus, partition) }
+    val orgIds = db.readOnlyReplica { implicit session => paidAccountRepo.getIdSubsetByModulus(modulus, partition) }
 
     orgIds.foreach { orgId =>
       Try(checkAccount(orgId)) match {
-        case Success(Some(0)) => log.info(s"[AEIC] Successfully processed org $orgId. No discrepancies found.")
-        case Success(Some(n)) =>
-          reportToSlack(s"Successfully processed org $orgId. $n discrepancies found. Freezing Account. See logs for details.")
-          log.info(s"[AEIC] Successfully processed org $orgId. $n discrepancies found. Freezing Account.")
+        case Success(Seq()) => log.info(s"[AEIC] Checked on $orgId and it was totally fine")
+        case Success(errs) =>
           freezeAccount(orgId)
-        case Success(None) => log.info(s"[AEIC] Could not process org $orgId due to account being locked.")
+          db.readWrite { implicit session =>
+            val accountId = paidAccountRepo.getAccountId(orgId)
+            errs.foreach { err => eventTrackingCommander.track(AccountEvent.fromIntegrityError(accountId, err)) }
+          }
         case Failure(ex) =>
-          reportToSlack(s"An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account. See logs for stack trace.")
-          log.error(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage()}. Freezing Account", ex)
+          log.error(s"[AEIC] An error occured during the check for $orgId: ${ex.getMessage}. Freezing Account", ex)
+          airbrake.notify(ex)
           freezeAccount(orgId)
       }
     }

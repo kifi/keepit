@@ -6,12 +6,11 @@ import com.google.inject.Injector
 import com.keepit.common.logging.Logging
 import com.keepit.common.store._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
 import org.specs2.mutable.Specification
-import play.api.libs.Files.TemporaryFile
-import com.keepit.commanders.OrganizationAvatarConfiguration._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -38,10 +37,8 @@ class OrganizationAvatarCommanderTest extends Specification with ShoeboxTestInje
     db.readWrite { implicit session =>
       val user1 = UserFactory.user().withName("Abe", "Lincoln").withUsername("abe").saved
       val user2 = UserFactory.user().withName("Bob", "Dole").withUsername("bob").saved
-      val org1 = inject[OrganizationRepo].save(Organization(name = "Abe's Hardware", ownerId = user1.id.get, primaryHandle = None, description = None, site = None))
-      val org2 = inject[OrganizationRepo].save(Organization(name = "Bob's Tools", ownerId = user2.id.get, primaryHandle = None, description = None, site = None))
-      inject[OrganizationMembershipRepo].save(org1.newMembership(userId = user1.id.get, role = OrganizationRole.ADMIN))
-      inject[OrganizationMembershipRepo].save(org2.newMembership(userId = user2.id.get, role = OrganizationRole.ADMIN))
+      val org1 = OrganizationFactory.organization().withOwner(user1).saved
+      val org2 = OrganizationFactory.organization().withOwner(user2).saved
       (user1, user2, org1, org2)
     }
   }

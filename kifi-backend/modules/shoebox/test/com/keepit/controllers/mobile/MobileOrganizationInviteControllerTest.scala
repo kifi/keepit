@@ -40,7 +40,6 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
             val invitee = UserFactory.user().withName("New", "Guy").saved
             val owner = UserFactory.user().withName("Kifi", "Kifi").saved
             val org = OrganizationFactory.organization().withOwner(owner).withHandle(OrganizationHandle("kifi")).saved
-            inject[OrganizationMembershipRepo].save(org.newMembership(owner.id.get, OrganizationRole.ADMIN))
 
             val invite = inject[OrganizationInviteRepo].save(OrganizationInvite(organizationId = org.id.get, inviterId = owner.id.get, userId = invitee.id, role = OrganizationRole.MEMBER))
             (invitee, invite)
@@ -231,8 +230,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val (inviter, org) = db.readWrite { implicit session =>
             val inviter = UserFactory.user().saved
             val owner = UserFactory.user().saved
-            val org = OrganizationFactory.organization().withOwner(owner).withWeakMembers().saved
-            inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER))
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter)).withWeakMembers().saved
             (inviter, org)
           }
 
@@ -250,8 +248,7 @@ class MobileOrganizationInviteControllerTest extends Specification with ShoeboxT
           val inviter = db.readWrite { implicit session =>
             val inviter = UserFactory.user().withName("Mr", "Inviter").saved
             val owner = UserFactory.user().withName("Kifi", "Kifi").saved
-            val org = OrganizationFactory.organization().withOwner(owner).withHandle(OrganizationHandle("kifi")).saved
-            inject[OrganizationMembershipRepo].save(org.newMembership(inviter.id.get, OrganizationRole.MEMBER))
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(inviter)).saved
             inviter
           }
 

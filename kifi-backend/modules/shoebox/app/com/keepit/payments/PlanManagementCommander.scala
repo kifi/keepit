@@ -130,37 +130,21 @@ class PlanManagementCommanderImpl @Inject() (
             case Some(pa) if pa.state == PaidAccountStates.ACTIVE =>
               log.info(s"[PAC] $orgId: Account already exists.")
               Failure(new InvalidChange("account_exists"))
-            case Some(pa) =>
-              log.info(s"[PAC] $orgId: Recreating Account")
-              val account = paidAccountRepo.save(PaidAccount(
-                id = pa.id,
-                orgId = orgId,
-                planId = planId,
-                credit = DollarAmount(0),
-                userContacts = Seq.empty,
-                emailContacts = Seq.empty,
-                activeUsers = 0,
-                billingCycleStart = clock.now
-              ))
-              if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account)
-              } else {
-                Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
-              }
-            case None =>
+            case inactiveAccountMaybe =>
               log.info(s"[PAC] $orgId: Creating Account")
               val account = paidAccountRepo.save(PaidAccount(
+                id = inactiveAccountMaybe.flatMap(_.id),
                 orgId = orgId,
                 planId = planId,
                 credit = DollarAmount(0),
+                planRenewal = clock.now() plusMonths plan.billingCycle.month,
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
                 activeUsers = 0,
                 billingCycleStart = clock.now
               ))
-              grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!")) // todo(Léo): roll into rewards
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account)
+                Success(account) // todo(Léo): roll into rewards
               } else {
                 Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
               }
@@ -173,6 +157,7 @@ class PlanManagementCommanderImpl @Inject() (
               attribution = ActionAttribution(user = Some(creator), admin = None),
               action = AccountEventAction.OrganizationCreated(planId)
             ))
+            grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!"))
             registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             log.info(s"[PAC] $orgId: Registering First Admin")
             eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
@@ -468,9 +453,21 @@ class PlanManagementCommanderImpl @Inject() (
 
   def changePlan(orgId: Id[Organization], newPlanId: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent] = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>
     val account = paidAccountRepo.getByOrgId(orgId)
+    val oldPlan = paidPlanRepo.get(account.planId)
     val newPlan = paidPlanRepo.get(newPlanId)
-    val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM)
+    val allowedKinds = Set(PaidPlan.Kind.NORMAL) ++ attribution.admin.map(_ => PaidPlan.Kind.CUSTOM) + oldPlan.kind
     if (newPlan.state == PaidPlanStates.ACTIVE && allowedKinds.contains(newPlan.kind)) {
+
+      if (newPlan.editableFeatures != oldPlan.editableFeatures) {
+        val oldConfig = orgConfigRepo.getByOrgId(orgId)
+        val restrictedFeatures = oldPlan.editableFeatures -- newPlan.editableFeatures
+        val restrictedSettings = restrictedFeatures.map(f => f -> newPlan.defaultSettings.settingFor(f).getOrElse {
+          throw new RuntimeException(s"${oldPlan.id.get} has a feature ${f.value} that ${newPlan.id.get} does not have a default setting for")
+        }).toMap
+        val newSettings = oldConfig.settings.setAll(restrictedSettings)
+        orgConfigRepo.save(oldConfig.withSettings(newSettings))
+      }
+
       val refund = DollarAmount(remainingBillingCycleCost(account).cents * account.activeUsers)
       val updatedAccount = account.withNewPlan(newPlanId)
       val newCharge = DollarAmount(remainingBillingCycleCost(updatedAccount).cents * account.activeUsers)

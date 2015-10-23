@@ -8,6 +8,7 @@ import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model.User
+import com.keepit.common.mail.EmailAddress
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsNull, JsValue, Json }
@@ -23,6 +24,7 @@ object AccountEventKind {
   case object ChargeBack extends AccountEventKind("charge_back")
   case object ChargeFailure extends AccountEventKind("charge_failure")
   case object DefaultPaymentMethodChanged extends AccountEventKind("default_payment_method_changed")
+  case object IntegrityError extends AccountEventKind("integrity_error")
   case object LowBalanceIgnored extends AccountEventKind("low_balance_ignored")
   case object MissingPaymentMethod extends AccountEventKind("missing_payment_method")
   case object OrganizationCreated extends AccountEventKind("organization_created")
@@ -30,6 +32,7 @@ object AccountEventKind {
   case object PlanChanged extends AccountEventKind("plan_changed")
   case object PaymentMethodAdded extends AccountEventKind("payment_method_added")
   case object SpecialCredit extends AccountEventKind("special_credit")
+  case object RewardCredit extends AccountEventKind("reward_credit")
   case object UserAdded extends AccountEventKind("user_added")
   case object UserRemoved extends AccountEventKind("user_removed")
 
@@ -41,6 +44,7 @@ object AccountEventKind {
     ChargeBack,
     ChargeFailure,
     DefaultPaymentMethodChanged,
+    IntegrityError,
     LowBalanceIgnored,
     MissingPaymentMethod,
     OrganizationCreated,
@@ -71,6 +75,7 @@ object AccountEventKind {
     ChargeBack,
     ChargeFailure,
     DefaultPaymentMethodChanged,
+    IntegrityError,
     LowBalanceIgnored,
     MissingPaymentMethod,
     PaymentMethodAdded,
@@ -98,6 +103,12 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   }
 
   @json
+  case class RewardCredit(rewardId: Id[CreditReward]) extends AccountEventAction {
+    def eventType = AccountEventKind.RewardCredit
+    def toDbRow = eventType -> Json.toJson(this)
+  }
+
+  @json // deprecated
   case class PlanBilling(plan: Id[PaidPlan], cycle: BillingCycle, price: DollarAmount, activeUsers: Int, startDate: DateTime) extends AccountEventAction {
     def eventType = AccountEventKind.PlanBilling
     def toDbRow = eventType -> Json.toJson(this)
@@ -107,6 +118,19 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def from(plan: PaidPlan, account: PaidAccount): PlanBilling = {
       if (plan.id.get != account.planId) throw new InvalidArgumentException(s"Account ${account.id.get} is on plan ${account.planId}, not on plan ${plan.id.get}")
       PlanBilling(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, account.activeUsers, account.billingCycleStart)
+    }
+  }
+
+  @json
+  case class PlanRenewal(plan: Id[PaidPlan], cycle: BillingCycle, price: DollarAmount, activeUsers: Int, renewalDate: DateTime) extends AccountEventAction {
+    def eventType = AccountEventKind.PlanBilling
+    def toDbRow = eventType -> Json.toJson(this)
+  }
+
+  object PlanRenewal {
+    def from(plan: PaidPlan, account: PaidAccount): PlanBilling = {
+      if (plan.id.get != account.planId) throw new InvalidArgumentException(s"Account ${account.id.get} is on plan ${account.planId}, not on plan ${plan.id.get}")
+      PlanBilling(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, account.activeUsers, account.planRenewal)
     }
   }
 
@@ -188,13 +212,21 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
+  @json
+  case class IntegrityError(err: PaymentsIntegrityError) extends AccountEventAction {
+    def eventType = AccountEventKind.IntegrityError
+    def toDbRow = eventType -> Json.toJson(this)
+  }
+
   def fromDb(eventType: AccountEventKind, extras: JsValue): AccountEventAction = eventType match {
     case AccountEventKind.SpecialCredit => SpecialCredit()
+    case AccountEventKind.RewardCredit => extras.as[RewardCredit]
     case AccountEventKind.PlanBilling => extras.as[PlanBilling]
     case AccountEventKind.LowBalanceIgnored => extras.as[LowBalanceIgnored]
     case AccountEventKind.Charge => Charge()
     case AccountEventKind.ChargeBack => ChargeBack()
     case AccountEventKind.ChargeFailure => extras.as[ChargeFailure]
+    case AccountEventKind.IntegrityError => extras.as[IntegrityError]
     case AccountEventKind.MissingPaymentMethod => MissingPaymentMethod()
     case AccountEventKind.UserAdded => extras.as[UserAdded]
     case AccountEventKind.UserRemoved => extras.as[UserRemoved]
@@ -310,6 +342,21 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     )
   }
 
+  def fromIntegrityError(accountId: Id[PaidAccount], err: PaymentsIntegrityError): AccountEvent = {
+    AccountEvent(
+      eventTime = currentDateTime,
+      accountId = accountId,
+      whoDunnit = None,
+      whoDunnitExtra = JsNull,
+      kifiAdminInvolved = None,
+      action = AccountEventAction.IntegrityError(err),
+      creditChange = DollarAmount.ZERO,
+      paymentMethod = None,
+      paymentCharge = None,
+      memo = None,
+      chargeId = None
+    )
+  }
 }
 
 object AccountEventStates extends States[AccountEvent]

@@ -14,12 +14,12 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model._
-import com.keepit.payments.{ ActionAttribution, PaidAccountRepo, BillingCycle, PaidPlanInfo, PaidPlanRepo, DollarAmount, PlanManagementCommander, PaidPlan, FakeStripeClientModule }
+import com.keepit.payments._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.matcher.{ Expectable, Matcher, Delta }
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ Json, JsObject }
+import play.api.libs.json.{ JsValue, Json, JsObject }
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -29,7 +29,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
   private def controller(implicit injector: Injector) = inject[PaymentsController]
   private def route = com.keepit.controllers.website.routes.PaymentsController
-  private def adminRoute = com.keepit.controllers.admin.routes.AdminPaymentsController
 
   val controllerTestModules = Seq(
     FakeHeimdalServiceClientModule(),
@@ -289,6 +288,49 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             val getRequest = route.getCreditCardToken(publicId)
             val getResponse = controller.getCreditCardToken(publicId)(getRequest)
             status(getResponse) === FORBIDDEN
+          }
+          1 === 1
+        }
+      }
+    }
+
+    "serve up the activity log" in {
+      "page through events correctly" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner, rando)
+          }
+          val publicId = Organization.publicId(org.id.get)
+          // Populate the activity log with a ton of dumb events
+          val n = 5
+          (1 to n).foreach { _ =>
+            orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get, adminIdOpt = None))
+            orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(org.id.get, owner.id.get, rando.id.get))
+          }
+
+          val pageSize = 3
+          val expectedPages = db.readOnlyMaster { implicit session =>
+            inject[AccountEventRepo].count must beGreaterThanOrEqualTo(3 * pageSize)
+            val allEvents = inject[AccountEventRepo].all.filter(e => AccountEventKind.activityLog.contains(e.action.eventType))
+            val orderedEvents = allEvents.sortBy(ae => (ae.eventTime.getMillis, ae.id.get.id)).reverse
+            orderedEvents.map(e => e.id.get).grouped(pageSize).toList
+          }
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val actualPages = Iterator.iterate(Seq.empty[Id[AccountEvent]]) { prevPage =>
+            val bookendOpt = prevPage.lastOption.map(AccountEvent.publicId(_).id)
+            val request = route.getEvents(publicId, pageSize, bookendOpt)
+            val response = controller.getEvents(publicId, pageSize, bookendOpt)(request)
+            val events = (contentAsJson(response) \ "events").as[Seq[JsValue]]
+            events.map { j => AccountEvent.decodePublicId((j \ "id").as[PublicId[AccountEvent]]).get }
+          }.toStream.tail.takeWhile(_.nonEmpty).toList
+
+          actualPages.length === expectedPages.length
+          (actualPages zip expectedPages) foreach {
+            case (actual, expected) => actual === expected
           }
           1 === 1
         }

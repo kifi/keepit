@@ -105,30 +105,26 @@ class PaymentsController @Inject() (
 
   def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     PaidPlan.decodePublicId(planPubId) match {
-      case Success(planId) => {
+      case Success(planId) =>
         val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
         planCommander.changePlan(request.orgId, planId, attribution) match {
           case Success(_) => Ok(Json.toJson(planCommander.currentPlan(request.orgId).asInfo))
           case Failure(ex) => BadRequest(Json.obj("error" -> ex.getMessage))
         }
-
-      }
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_plan_id"))
     }
   }
 
-  def getEvents(pubId: PublicId[Organization], limit: Int) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    val infos = activityLogCommander.getAccountEvents(request.orgId, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
-    Ok(Json.obj("events" -> infos))
-  }
-
-  def getEventsBefore(pubId: PublicId[Organization], limit: Int, beforeTime: DateTime, beforePubId: PublicId[AccountEvent]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    AccountEvent.decodePublicId(beforePubId) match {
-      case Success(beforeId) => {
-        val infos = activityLogCommander.getAccountEventsBefore(request.orgId, beforeTime, beforeId, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
+  def getEvents(pubId: PublicId[Organization], limit: Int, fromPubIdOpt: Option[String]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+    val fromIdOptTry = fromPubIdOpt match {
+      case None => Success(None)
+      case Some(fromPubId) => AccountEvent.decodePublicId(PublicId(fromPubId)).map(Some(_))
+    }
+    fromIdOptTry match {
+      case Success(fromIdOpt) =>
+        val infos = activityLogCommander.getAccountEvents(request.orgId, fromIdOpt, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
-      }
-      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_before_id"))
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_bookend_id"))
     }
   }
 }

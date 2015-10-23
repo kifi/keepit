@@ -191,19 +191,21 @@ tooltip-arrow-right()
 .kf-tooltip-parent
   tooltip-parent()
 
-  &.kf-tooltip-parent-noclose
+  &.kf-tooltip-parent-noclose:hover
     &:after
       content: ''
-      position: absolute;
+      position: absolute
+      width: 160px
       top: -15px
-      right: 0
       bottom: 0
-      left: 0
+      left: calc(50% - 77px)
 
     &[data-kf-tooltip-position="right"]:after
       top: 0
-      right: -15px
-      left: 100%
+      right: -16px
+      left: auto
+      width: 200%
+      height: 60px
 
     &[data-kf-tooltip-position="bottom"]:after
       top: 100%
@@ -213,6 +215,8 @@ tooltip-arrow-right()
       top: 0
       right: 100%
       left: -15px
+      width: 200%
+      height: 60px
 
   .kf-tooltip-body
     tooltip-body()

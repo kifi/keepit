@@ -432,7 +432,7 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Provides @Singleton
   def orgPermissionsNamespaceCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new OrganizationPermissionsNamespaceCache(stats, accessLog, (innerRepo, 5 minutes), (outerRepo, 7 days))
+    new OrganizationPermissionsNamespaceCache(stats, accessLog, (outerRepo, 7 days))
 
   @Provides @Singleton
   def orgPermissionsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =

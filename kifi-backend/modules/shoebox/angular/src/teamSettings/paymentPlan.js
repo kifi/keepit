@@ -4,13 +4,15 @@ angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
   '$window', '$rootScope', '$scope', '$state', '$filter', '$q',
-  'billingState', 'billingService', 'modalService', 'StripeCheckout',
-  'messageTicker', 'paymentPlans', '$timeout',
-  function ($window, $rootScope, $scope, $state, $filter, $q,
-            billingState, billingService, modalService, StripeCheckout,
-            messageTicker, paymentPlans, $timeout) {
+  '$timeout', '$analytics',
+  'billingState', 'billingService', 'modalService', 'profileService',
+  'StripeCheckout', 'messageTicker', 'paymentPlans',
+  function ($window, $rootScope, $scope, $state, $filter, $q, $timeout,
+            $analytics, billingState, billingService, modalService,
+            profileService, StripeCheckout, messageTicker, paymentPlans) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
+    $scope.upgrade = !!$state.params.upgrade;
 
     var PREDEFINED_CYCLE_PERIOD = {
       1: 'Monthly',
@@ -31,19 +33,50 @@ angular.module('kifi')
     });
 
     $scope.openStripeCheckout = function () {
+      var me = profileService.me;
+      var emailObject = (me.primaryEmail || me.emails[0] || {}); // extra defensive
+      var emailAddress = emailObject.address;
+
       // Open Checkout with further options
       handler
       .open({
         image: picFilter($scope.profile),
+        email: emailAddress,
         name: 'Kifi Teams',
-        description: 'Update your Teams Plan',
+        description: 'Update your team\'s plan',
         allowRememberMe: false,
         panelLabel: 'Save My Card'
       })
       .then(function (response) {
         $scope.plan.newCard = response[0];
+        $scope.cardError = false;
       });
     };
+
+    $scope.warningModalOrSave = function () {
+      if ($scope.selectedPlan && $scope.isFreePlanName($scope.selectedPlan.name)) {
+        openDowngradeModal();
+      } else if ($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
+        $scope.cardError = true;
+      } else {
+        $scope.cardError = false;
+        $scope.save();
+      }
+    };
+
+    function openDowngradeModal () {
+      modalService.open({
+        template: 'teamSettings/downgradeConfirmModal.tpl.html',
+        modalData: {
+          save: function () {
+            $scope.save();
+          },
+          close: function () {
+            modalService.close();
+          }
+        }
+      });
+    }
 
     $scope.changePlanToFree = function () {
       var freeTierPlans = plansByTier[Object.keys(plansByTier)[0]];
@@ -77,11 +110,21 @@ angular.module('kifi')
       };
     });
 
-    $scope.plan = {
-      name: currentPlan.name,
-      cycle: currentPlan.cycle, //months
-      newCard: null
-    };
+
+    if ($scope.upgrade) {
+      var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
+      $scope.plan = {
+        name: standardTierPlans[1].name,
+        cycle: standardTierPlans[1].cycle,
+        newCard: null
+      };
+    } else {
+      $scope.plan = {
+        name: currentPlan.name,
+        cycle: currentPlan.cycle, //months
+        newCard: null
+      };
+    }
 
     $scope.isNoPlanName = function (planName) {
       return !planName;
@@ -218,16 +261,6 @@ angular.module('kifi')
         return;
       }
 
-      // If the team doesn't have a card, show an error
-      if($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
-        modalService.openGenericErrorModal({
-          modalData: {
-            genericErrorMessage: 'Save unsuccessful. You must enter a card to upgrade.'
-          }
-        });
-        return;
-      }
-
       saveSeriesPromise.then(function () {
         $window.addEventListener('beforeunload', onBeforeUnload);
       });
@@ -244,8 +277,16 @@ angular.module('kifi')
         .setBillingPlan($scope.profile.id, ($scope.selectedPlan && $scope.selectedPlan.id) || currentPlan.id);
       })
       .then(function () {
+        var successMessage;
+
+        if ($scope.isPaidPlanName($scope.selectedPlan.name)) {
+          successMessage = 'You successfully upgraded your team to the Standard Plan';
+        } else {
+          successMessage = 'You successfully downgraded your team to the Free Plan';
+        }
+
         messageTicker({
-          text: 'Saved Successfully',
+          text: successMessage,
           type: 'green'
         });
         resetForm();
@@ -295,6 +336,12 @@ angular.module('kifi')
       })
     ].forEach(function (deregister) {
       $scope.$on('$destroy', deregister);
+    });
+
+    $timeout(function () {
+      $analytics.eventTrack('user_viewed_page', {
+        type: 'paymentPlan'
+      });
     });
   }
 ]);

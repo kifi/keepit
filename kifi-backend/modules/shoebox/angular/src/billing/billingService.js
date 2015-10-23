@@ -14,7 +14,6 @@ angular.module('kifi')
         net.getBillingState,
         net.getBillingContacts,
         net.getBillingEvents,
-        net.getBillingEventsBefore,
         net.getBillingPlans
       ].forEach(function (endpoint) {
         endpoint.clearCache();
@@ -53,14 +52,9 @@ angular.module('kifi')
           return response;
         });
       },
-      getBillingEvents: function (pubId, limit) {
+      getBillingEvents: function (pubId, limit, fromId) {
         return net
-        .getBillingEvents(pubId, limit)
-        .then(getResponseData);
-      },
-      getBillingEventsBefore: function (pubId, limit, beforeTime, beforeId) {
-        return net
-        .getBillingEventsBefore(pubId, limit, beforeTime, beforeId)
+        .getBillingEvents(pubId, limit, fromId)
         .then(getResponseData);
       },
       getBillingPlans: function (pubId) {
