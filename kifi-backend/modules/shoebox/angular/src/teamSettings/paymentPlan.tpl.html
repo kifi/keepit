@@ -93,7 +93,7 @@
       </p>
     </div>
   </form>
-  <div class="kf-container-section kf-payment-plan-save-container" ng-if="!planSelectsForm.$pristine || upgrade || plan.newCard">
+  <div class="kf-container-section kf-payment-plan-save-container" ng-if="currentPlan.id != getSelectedPlan().id || plan.newCard">
     <button
       class="kf-button kf-button-large kf-payment-plan-save"
       ng-click="warningModalOrSave()"
