@@ -276,11 +276,10 @@ angular.module('kifi')
           var successMessage;
 
           if ($scope.isPaidPlanName(selectedPlan.name)) {
-            successMessage = 'You successfully upgraded your team to the Standard Plan';
+            successMessage = 'You successfully upgraded your team\'s plan.';
           } else {
-            successMessage = 'You successfully downgraded your team to the Free Plan';
+            successMessage = 'You downgraded your team\'s plan';
           }
-
           messageTicker({
             text: successMessage,
             type: 'green'
