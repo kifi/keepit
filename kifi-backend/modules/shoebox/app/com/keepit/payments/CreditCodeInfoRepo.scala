@@ -7,7 +7,7 @@ import com.keepit.common.db.{ Id, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.model.{ Organization, User }
-import com.keepit.payments.CreditCodeFail.UnavailableCreditCodeException
+import com.keepit.payments.CreditRewardFail.UnavailableCreditCodeException
 import org.joda.time.DateTime
 
 import scala.util.{ Failure, Success, Try }
@@ -36,10 +36,11 @@ class CreditCodeInfoRepoImpl @Inject() (
   class CreditCodeInfoTable(tag: Tag) extends RepoTable[CreditCodeInfo](db, tag, "credit_code_info") {
     def code = column[CreditCode]("code", O.NotNull)
     def kind = column[CreditCodeKind]("kind", O.NotNull)
+    def credit = column[DollarAmount]("credit", O.NotNull)
     def status = column[CreditCodeStatus]("status", O.NotNull)
     def referrerUserId = column[Option[Id[User]]]("referrer_user_id", O.Nullable)
     def referrerOrganizationId = column[Option[Id[Organization]]]("referrer_organization_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, code, kind, status, referrerUserId, referrerOrganizationId) <> ((CreditCodeInfoRepo.applyFromDbRow _).tupled, CreditCodeInfoRepo.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, state, code, kind, credit, status, referrerUserId, referrerOrganizationId) <> ((CreditCodeInfoRepo.applyFromDbRow _).tupled, CreditCodeInfoRepo.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new CreditCodeInfoTable(tag)
@@ -67,11 +68,12 @@ object CreditCodeInfoRepo {
     state: State[CreditCodeInfo],
     code: CreditCode,
     kind: CreditCodeKind,
+    credit: DollarAmount,
     status: CreditCodeStatus,
     referrerUserId: Option[Id[User]],
     referrerOrganizationId: Option[Id[Organization]]) = {
     val referrer = referrerUserId.map(CreditCodeReferrer(_, referrerOrganizationId))
-    CreditCodeInfo(id, createdAt, updatedAt, state, code, kind, status, referrer)
+    CreditCodeInfo(id, createdAt, updatedAt, state, code, kind, credit, status, referrer)
   }
 
   def unapplyToDbRow(info: CreditCodeInfo) = Some((
@@ -81,6 +83,7 @@ object CreditCodeInfoRepo {
     info.state,
     info.code,
     info.kind,
+    info.credit,
     info.status,
     info.referrer.map(_.userId),
     info.referrer.flatMap(_.organizationId)

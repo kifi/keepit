@@ -9,6 +9,7 @@ CREATE TABLE credit_code_info (
 	state VARCHAR(20) NOT NULL,
 	code VARCHAR(128) NOT NULL,
 	kind VARCHAR(64) NOT NULL,
+	credit int(10) NOT NULL,
 	status VARCHAR(32) NOT NULL,
 	referrer_user_id BIGINT(20) DEFAULT NULL,
 	referrer_organization_id BIGINT(20) DEFAULT NULL,
@@ -37,7 +38,7 @@ CREATE TABLE credit_reward (
 
 	PRIMARY KEY(id),
 	UNIQUE KEY credit_reward_u_code_single_use (code, single_use),
-	UNIQUE KEY credit_reward_u_kind_unrepeatable (kind, unrepeatable),
+	UNIQUE KEY credit_reward_u_unrepeatable (unrepeatable),
 	CONSTRAINT credit_reward_f_code FOREIGN KEY (code) REFERENCES credit_code_info(code),
 	CONSTRAINT credit_reward_f_account_id FOREIGN KEY (account_id) REFERENCES paid_account(id),
 	CONSTRAINT credit_reward_f_account_id_applied_credit FOREIGN KEY (account_id, applied, credit) REFERENCES account_event(account_id, id, credit_change)

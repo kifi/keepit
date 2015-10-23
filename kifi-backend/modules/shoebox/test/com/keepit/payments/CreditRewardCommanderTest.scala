@@ -4,7 +4,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model.{ OrganizationFactory, UserFactory }
-import com.keepit.payments.CreditCodeFail.CreditCodeAlreadyBurnedException
+import com.keepit.payments.CreditRewardFail.{ UnrepeatableRewardKeyCollisionException, CreditCodeAlreadyBurnedException }
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
@@ -42,20 +42,19 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
     "apply referral codes" in {
       "prevent invalid attempts at code application" in {
         withDb(modules: _*) { implicit injector =>
-          val (owner, org1, org2) = db.readWrite { implicit session =>
-            val owner = UserFactory.user().saved
-            val org1 = OrganizationFactory.organization().withOwner(owner).saved
-            val org2 = OrganizationFactory.organization().withOwner(owner).saved
-            (owner, org1, org2)
+          val (org1, org2) = db.readWrite { implicit session =>
+            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            (org1, org2)
           }
 
           val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
           db.readOnlyMaster { implicit session => creditCodeInfoRepo.all.map(_.code) === Seq(code) }
 
           val badRequestsAndTheirFailures = Seq(
-            CreditCodeApplyRequest(code, owner.id.get, None) -> CreditCodeFail.NoPaidAccountException(owner.id.get, None),
-            CreditCodeApplyRequest(CreditCode("garbagecode"), owner.id.get, Some(org2.id.get)) -> CreditCodeFail.CreditCodeNotFoundException(CreditCode("garbagecode")),
-            CreditCodeApplyRequest(code, owner.id.get, Some(org1.id.get)) -> CreditCodeFail.CreditCodeAbuseException(CreditCodeApplyRequest(code, owner.id.get, Some(org1.id.get)))
+            CreditCodeApplyRequest(code, org1.ownerId, None) -> CreditRewardFail.NoPaidAccountException(org1.ownerId, None),
+            CreditCodeApplyRequest(CreditCode("garbagecode"), org2.ownerId, Some(org2.id.get)) -> CreditRewardFail.CreditCodeNotFoundException(CreditCode("garbagecode")),
+            CreditCodeApplyRequest(code, org1.ownerId, Some(org1.id.get)) -> CreditRewardFail.CreditCodeAbuseException(CreditCodeApplyRequest(code, org1.ownerId, Some(org1.id.get)))
           )
           for ((badRequest, fail) <- badRequestsAndTheirFailures) {
             creditRewardCommander.applyCreditCode(badRequest) must beFailedTry(fail)
@@ -65,18 +64,17 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
       }
       "apply org referral credit codes on org creation" in {
         withDb(modules: _*) { implicit injector =>
-          val (owner, org1, org2) = db.readWrite { implicit session =>
-            val owner = UserFactory.user().saved
-            val org1 = OrganizationFactory.organization().withOwner(owner).saved
-            val org2 = OrganizationFactory.organization().withOwner(owner).saved
-            (owner, org1, org2)
+          val (org1, org2) = db.readWrite { implicit session =>
+            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            (org1, org2)
           }
 
           val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
           db.readOnlyMaster { implicit session => creditCodeInfoRepo.all.map(_.code) === Seq(code) }
 
           val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org2.id.get).credit }
-          val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, owner.id.get, Some(org2.id.get))).get
+          val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, org2.ownerId, Some(org2.id.get))).get
           val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org2.id.get).credit }
           finalCredit - initialCredit === rewards.target.credit
 
@@ -91,6 +89,31 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           paymentsChecker.checkAccount(org2.id.get) must beEmpty
         }
       }
+      "prevent polygamous referrals" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org1, org2, org3) = db.readWrite { implicit session =>
+            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org3 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            (org1, org2, org3)
+          }
+
+          val code1 = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+          val code2 = creditRewardCommander.getOrCreateReferralCode(org2.id.get)
+
+          // org1 and org2 both invite org3
+          // org3 accepts from org1
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code1, org3.ownerId, Some(org3.id.get))) must beSuccessfulTry
+          // so they can't accept from anyone else (or double-accept from org1)
+          val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.NewOrganization(org3.id.get))
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code1, org3.ownerId, Some(org3.id.get))) must beFailedTry(expectedFailure)
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code2, org3.ownerId, Some(org3.id.get))) must beFailedTry(expectedFailure)
+
+          paymentsChecker.checkAccount(org1.id.get) must beEmpty
+          paymentsChecker.checkAccount(org2.id.get) must beEmpty
+          paymentsChecker.checkAccount(org3.id.get) must beEmpty
+        }
+      }
     }
 
     "apply coupon codes" in {
@@ -101,6 +124,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val org = OrganizationFactory.organization().withOwner(owner).saved
             val coupon = creditCodeInfoRepo.create(CreditCodeInfo(
               kind = CreditCodeKind.Coupon,
+              credit = CreditCodeKind.creditValue(CreditCodeKind.Coupon),
               code = CreditCode(RandomStringUtils.randomAlphanumeric(20)),
               status = CreditCodeStatus.Open,
               referrer = None)).get
@@ -130,6 +154,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val org2 = OrganizationFactory.organization().withOwner(owner).saved
             val coupon = creditCodeInfoRepo.create(CreditCodeInfo(
               kind = CreditCodeKind.Coupon,
+              credit = CreditCodeKind.creditValue(CreditCodeKind.Coupon),
               code = CreditCode(RandomStringUtils.randomAlphanumeric(20)),
               status = CreditCodeStatus.Open,
               referrer = None)).get
@@ -145,6 +170,41 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             creditRewardRepo.count === 1
             val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
             rewardCreditEvents must haveSize(1)
+          }
+
+          paymentsChecker.checkAccount(org1.id.get) must beEmpty
+          paymentsChecker.checkAccount(org2.id.get) must beEmpty
+        }
+      }
+    }
+    "apply promo codes" in {
+      "let a promo code be used by multiple orgs, but each only once" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org1, org2, promo) = db.readWrite { implicit session =>
+            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val promo = creditCodeInfoRepo.create(CreditCodeInfo(
+              kind = CreditCodeKind.Promotion,
+              credit = DollarAmount.dollars(42),
+              code = CreditCode("kifirocks-2015"),
+              status = CreditCodeStatus.Open,
+              referrer = None)).get
+            (org1, org2, promo)
+          }
+
+          for (org <- Seq(org1, org2)) {
+            val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org.id.get).credit }
+            val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(promo.code, org.ownerId, Some(org.id.get))).get
+            rewards.referrer must beNone
+            val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org.id.get).credit }
+            finalCredit - initialCredit === rewards.target.credit
+          }
+
+          db.readOnlyMaster { implicit session =>
+            creditRewardRepo.count === 2
+            val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
+            rewardCreditEvents must haveSize(2)
+            rewardCreditEvents.map(e => paidAccountRepo.get(e.accountId).orgId) === Seq(org1.id.get, org2.id.get)
           }
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
