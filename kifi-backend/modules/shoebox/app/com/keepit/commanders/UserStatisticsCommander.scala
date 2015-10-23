@@ -100,7 +100,7 @@ case class OrganizationStatistics(
   allMemberChatStats: Seq[SummaryByYearWeek],
   credit: DollarAmount,
   stripeToken: String,
-  billingCycleStart: DateTime,
+  planRenewal: DateTime,
   plan: PaidPlan,
   accountFrozen: Boolean)
 
@@ -272,7 +272,7 @@ class UserStatisticsCommander @Inject() (
     val credit = planManagementCommander.getCurrentCredit(orgId)
     val stripeToken = planManagementCommander.getDefaultPaymentMethod(orgId).map(_.stripeToken.token).getOrElse("N/A")
     val plan = planManagementCommander.currentPlan(orgId)
-    val billingCycleStart = planManagementCommander.getBillingCycleStart(orgId)
+    val planRenewal = planManagementCommander.getPlanRenewal(orgId)
     val accountFrozen = planManagementCommander.isFrozen(orgId)
 
     for {
@@ -300,7 +300,7 @@ class UserStatisticsCommander @Inject() (
       allMemberChatStats = allMemberChatStats,
       credit = credit,
       stripeToken = stripeToken,
-      billingCycleStart = billingCycleStart,
+      planRenewal = planRenewal,
       plan = plan,
       accountFrozen = accountFrozen
     )

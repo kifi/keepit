@@ -7,7 +7,6 @@ import com.keepit.model.PaidPlanFactoryHelper.PaidPlanPersister
 import com.keepit.model.PaidAccountFactoryHelper.PaidAccountPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
-import com.keepit.payments.AccountEventAction.PlanBilling
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 
@@ -26,27 +25,24 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
         db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val monthlyPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle(1)).saved
-          val yearlyPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle(12)).saved
           val (kifiId, kifiAccount) = {
             val kifiOrg = OrganizationFactory.organization().withOwner(user).withName("Kifi").saved
-            (kifiOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(kifiOrg).withPlan(monthlyPlan.id.get).withBillingCycleStart(now).withPlanRenewal(now plusMonths monthlyPlan.billingCycle.month).saved)
+            (kifiOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(kifiOrg).withPlan(monthlyPlan.id.get).withPlanRenewal(now plusMonths 1).saved)
           }
 
           val (googleId, googleAccount) = {
             val googleOrg = OrganizationFactory.organization().withOwner(user).withName("Google").saved
-            (googleOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(googleOrg).withPlan(monthlyPlan.id.get).withBillingCycleStart(now).withPlanRenewal(now plusMonths monthlyPlan.billingCycle.month).saved)
+            (googleOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(googleOrg).withPlan(monthlyPlan.id.get).withPlanRenewal(now plusMonths 1).saved)
           }
 
           accountRepo.getRenewable() === Seq()
 
-          val renewableGoogle = accountRepo.save(googleAccount.withCycleStart(now minusMonths 2).withPlanRenewal(now minusMonths 2 plusMonths monthlyPlan.billingCycle.month))
+          val renewableGoogle = accountRepo.save(googleAccount.withPlanRenewal(now minusMonths 2))
           accountRepo.getRenewable() === Seq(renewableGoogle)
 
-          val renewableKifi = accountRepo.save(kifiAccount.withCycleStart(now minusMonths 1).withPlanRenewal(now minusMonths 1 plusMonths monthlyPlan.billingCycle.month))
+          val renewableKifi = accountRepo.save(kifiAccount.withPlanRenewal(now minusMonths 1))
           accountRepo.getRenewable() === Seq(renewableGoogle, renewableKifi)
 
-          val yearlyGoogle = accountRepo.save(renewableGoogle.withNewPlan(yearlyPlan.id.get))
-          accountRepo.getRenewable() === Seq(renewableKifi)
         }
 
       }
@@ -66,7 +62,7 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
             .withPlan(plan.id.get)
             .withFrozen(true)
             .withCredit(DollarAmount.ZERO)
-            .withBillingCycleStart(currentDateTime.minusMonths(1).minusDays(1))
+            .withPlanRenewal(currentDateTime minusDays 7)
             .saved
         }
         commander.renewPlan(accountPre) should beAFailedTry(FrozenAccountException(accountPre.orgId))
@@ -81,8 +77,6 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
     "refuse to renew an account's plan before its renewal date" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PlanRenewalCommanderImpl]
-        val now = currentDateTime
-        val billingCycleStart = now.minusMonths(1).plusDays(1)
         val billingCycle = BillingCycle(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
@@ -92,12 +86,11 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
             .withOrganizationId(org.id.get)
             .withPlan(plan.id.get)
             .withCredit(DollarAmount.ZERO)
-            .withBillingCycleStart(billingCycleStart)
+            .withPlanRenewal(currentDateTime plusDays 7)
             .saved
         }
 
-        val renewsAt = billingCycleStart plusMonths billingCycle.month
-        commander.renewPlan(accountPre) should beAFailedTry(UnexpectedPlanRenewalException(accountPre.orgId, renewsAt))
+        commander.renewPlan(accountPre) should beAFailedTry(UnnecessaryPlanRenewalException(accountPre))
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
@@ -110,7 +103,6 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PlanRenewalCommanderImpl]
         val now = currentDateTime
-        val billingCycleStart = now.minusMonths(1).minusDays(1)
         val billingCycle = BillingCycle(1)
         val price = DollarAmount.dollars(10)
         val activeUsers = 5
@@ -122,8 +114,7 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
             .withOrganizationId(org.id.get)
             .withPlan(plan.id.get)
             .withCredit(DollarAmount.ZERO)
-            .withBillingCycleStart(billingCycleStart)
-            .withPlanRenewal(billingCycleStart plusMonths billingCycle.month)
+            .withPlanRenewal(currentDateTime minusDays 7)
             .withActiveUsers(activeUsers)
             .saved
           (account, plan)
@@ -135,12 +126,11 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
         val renewal = commander.renewPlan(accountPre)
         renewal should beASuccessfulTry
 
-        renewal.get.action === PlanBilling(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, accountPre.activeUsers, billingCycleStart)
+        renewal.get.action === AccountEventAction.PlanRenewal(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, accountPre.activeUsers, accountPre.planRenewal)
         renewal.get.creditChange === -renewalCost
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
-          updatedAccount.billingCycleStart === (accountPre.billingCycleStart plusMonths billingCycle.month)
           updatedAccount.planRenewal === (accountPre.planRenewal plusMonths billingCycle.month)
           updatedAccount.credit === (accountPre.credit - renewalCost)
           updatedAccount.paymentDueAt should beSome
@@ -152,12 +142,10 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
     "do not update paymentDueAt when renewing a free plan" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PlanRenewalCommanderImpl]
-        val now = currentDateTime
-        val billingCycleStart = now.minusMonths(1).minusDays(1)
         val billingCycle = BillingCycle(1)
         val price = DollarAmount.ZERO // free plan
         val activeUsers = 5
-        val paymentDueAt = now plusDays 10 // arbitrary
+        val paymentDueAt = currentDateTime plusDays 10 // arbitrary
         val (accountPre, plan) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -167,8 +155,7 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
             .withPlan(plan.id.get)
             .withCredit(DollarAmount.ZERO)
             .withActiveUsers(activeUsers)
-            .withBillingCycleStart(billingCycleStart)
-            .withPlanRenewal(billingCycleStart plusMonths billingCycle.month)
+            .withPlanRenewal(currentDateTime minusDays 7)
             .withPaymentDueAt(paymentDueAt)
             .saved
           (account, plan)
@@ -180,12 +167,11 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
         val renewal = commander.renewPlan(accountPre)
         renewal should beASuccessfulTry
 
-        renewal.get.action === PlanBilling(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, accountPre.activeUsers, billingCycleStart)
+        renewal.get.action === AccountEventAction.PlanRenewal(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, accountPre.activeUsers, accountPre.planRenewal)
         renewal.get.creditChange === -renewalCost
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
-          updatedAccount.billingCycleStart === (accountPre.billingCycleStart plusMonths billingCycle.month)
           updatedAccount.planRenewal === (accountPre.planRenewal plusMonths billingCycle.month)
           updatedAccount.credit === (accountPre.credit - renewalCost)
           updatedAccount.paymentDueAt === accountPre.paymentDueAt

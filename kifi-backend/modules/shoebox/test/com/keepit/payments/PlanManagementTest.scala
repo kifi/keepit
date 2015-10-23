@@ -19,9 +19,10 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
     FakeStripeClientModule()
   )
 
-  private def computePartialCost(fullCost: DollarAmount, cycleStart: DateTime, billingCycle: BillingCycle): DollarAmount = {
+  private def computePartialCost(fullCost: DollarAmount, renewalDate: DateTime, billingCycle: BillingCycle): DollarAmount = {
     val MATH_CONTEXT = new MathContext(34, RoundingMode.HALF_DOWN)
-    val cycleEnd: DateTime = cycleStart.plusMonths(billingCycle.month)
+    val cycleStart: DateTime = renewalDate minusMonths billingCycle.month
+    val cycleEnd: DateTime = renewalDate
     val cycleLengthDays: Double = Days.daysBetween(cycleStart, cycleEnd).getDays.toDouble
     val remaining: Double = Days.daysBetween(currentDateTime, cycleEnd).getDays.toDouble
     val fraction: Double = remaining / cycleLengthDays
@@ -55,11 +56,11 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
           val account = accountRepo.get(accountId)
           account.activeUsers === 1
           account.userContacts === Seq(userId)
-          account.credit === DollarAmount.dollars(50) - computePartialCost(planPrice, account.billingCycleStart, billingCycle)
+          account.credit === DollarAmount.dollars(50) - computePartialCost(planPrice, account.planRenewal, billingCycle)
           account.lockedForProcessing === false
 
           //"fast forward" to test proration
-          accountRepo.save(account.copy(billingCycleStart = account.billingCycleStart.minusDays(12), planRenewal = account.planRenewal.minusDays(12)))
+          accountRepo.save(account.copy(planRenewal = account.planRenewal.minusDays(12)))
 
           (account, plan)
         }
@@ -69,7 +70,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
         val currentCredit = db.readOnlyMaster { implicit session =>
           val updatedAccount = accountRepo.get(accountId)
           updatedAccount.activeUsers === 2
-          updatedAccount.credit === account.credit - computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle)
+          updatedAccount.credit === account.credit - computePartialCost(planPrice, updatedAccount.planRenewal, billingCycle)
           updatedAccount.credit
         }
 
@@ -96,14 +97,14 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = accountRepo.get(accountId)
           updatedAccount.activeUsers === 2
           updatedAccount.planId === freePlan.id.get
-          updatedAccount.credit === setCredit + DollarAmount(2 * computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle).cents)
+          updatedAccount.credit === setCredit + DollarAmount(2 * computePartialCost(planPrice, updatedAccount.planRenewal, billingCycle).cents)
           updatedAccount
         }
 
         //"fast forward" again to test proration of plan change cost
         db.readWrite { implicit session =>
           val currentAccount = accountRepo.get(accountId)
-          accountRepo.save(currentAccount.copy(billingCycleStart = currentAccount.billingCycleStart.minusDays(5), planRenewal = account.planRenewal.minusDays(5)))
+          accountRepo.save(currentAccount.copy(planRenewal = account.planRenewal.minusDays(5)))
         }
 
         commander.changePlan(orgId, plan.id.get, actionAttribution)
@@ -112,7 +113,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
           val updatedAccount = accountRepo.get(accountId)
           updatedAccount.activeUsers === 2
           updatedAccount.planId === plan.id.get
-          updatedAccount.credit === accountOnFreePlan.credit - DollarAmount(2 * computePartialCost(planPrice, updatedAccount.billingCycleStart, billingCycle).cents)
+          updatedAccount.credit === accountOnFreePlan.credit - DollarAmount(2 * computePartialCost(planPrice, updatedAccount.planRenewal, billingCycle).cents)
           updatedAccount.paymentStatus === PaymentStatus.Ok
         }
 
