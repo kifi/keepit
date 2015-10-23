@@ -16,16 +16,9 @@ angular.module('kifi')
     function activitySource(pageNumber, pageSize) {
       var bottomEvent = $scope.billingEvents && $scope.billingEvents.slice(-1).pop();
 
-      if (bottomEvent) {
-        // we already have some events, so use getBillingEventsBefore
-        return billingService
-        .getBillingEventsBefore(profile.organization.id, pageSize, bottomEvent.eventTime, bottomEvent.id)
-        .then(getEvents);
-      } else {
-        return billingService
-        .getBillingEvents(profile.organization.id, pageSize)
-        .then(getEvents);
-      }
+      return billingService
+      .getBillingEvents(profile.organization.id, pageSize, bottomEvent && bottomEvent.id)
+      .then(getEvents);
     }
 
     $scope.billingEvents = null;
