@@ -42,7 +42,7 @@ angular.module('kifi')
         image: picFilter($scope.profile),
         email: emailAddress,
         name: 'Kifi Teams',
-        description: 'Update your Teams Plan',
+        description: 'Update your team\'s plan',
         allowRememberMe: false,
         panelLabel: 'Save My Card'
       })
