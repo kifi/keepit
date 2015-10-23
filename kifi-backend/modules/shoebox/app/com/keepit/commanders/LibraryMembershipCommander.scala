@@ -321,7 +321,7 @@ class LibraryMembershipCommanderImpl @Inject() (
           category = pushCat)
       }
     }
-    if (access == LibraryAccess.READ_WRITE) {
+    if (access == LibraryAccess.READ_WRITE && lib.kind != LibraryKind.SYSTEM_ORG_GENERAL) {
       elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
         Recipient(lib.ownerId),
         currentDateTime,
