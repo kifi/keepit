@@ -266,16 +266,22 @@ angular.module('kifi')
       });
 
       if ($scope.plan.newCard) {
-        saveSeriesPromise.then(function () {
+        saveSeriesPromise
+        .then(function () {
           return billingService
           .setBillingCCToken($scope.profile.id, $scope.plan.newCard.id);
         });
       }
 
-      saveSeriesPromise.then(function () {
-        return billingService
-        .setBillingPlan($scope.profile.id, ($scope.selectedPlan && $scope.selectedPlan.id) || currentPlan.id);
-      })
+      if (!$scope.planSelectsForm.$pristine) {
+        saveSeriesPromise
+        .then(function () {
+          return billingService
+          .setBillingPlan($scope.profile.id, ($scope.selectedPlan && $scope.selectedPlan.id) || currentPlan.id);
+        });
+      }
+
+      saveSeriesPromise
       .then(function () {
         var successMessage;
 
@@ -284,7 +290,6 @@ angular.module('kifi')
         } else {
           successMessage = 'You successfully downgraded your team to the Free Plan';
         }
-
         messageTicker({
           text: successMessage,
           type: 'green'
