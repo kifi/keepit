@@ -178,7 +178,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
       }
     }
     "apply promo codes" in {
-      "let a promo code be used by multiple orgs, but each only once" in {
+      "let a promo code be used by multiple orgs" in {
         withDb(modules: _*) { implicit injector =>
           val (org1, org2, promo) = db.readWrite { implicit session =>
             val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
@@ -209,6 +209,42 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
           paymentsChecker.checkAccount(org2.id.get) must beEmpty
+        }
+      }
+      "do not let orgs mix referral codes or multiple promo codes" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org1, org2, org3, promos) = db.readWrite { implicit session =>
+            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org3 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val promos = (1 to 3).toList.map { i =>
+              creditCodeInfoRepo.create(CreditCodeInfo(
+                kind = CreditCodeKind.Promotion,
+                credit = DollarAmount.dollars(42),
+                code = CreditCode(s"kifirocks-2015-$i"),
+                status = CreditCodeStatus.Open,
+                referrer = None)).get
+            }
+            (org1, org2, org3, promos)
+          }
+
+          val referralCode = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+          // org2 accepts a referral
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(referralCode, org2.ownerId, Some(org2.id.get))) must beSuccessfulTry
+          // org3 uses a promo code
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(promos.head.code, org3.ownerId, Some(org3.id.get))) must beSuccessfulTry
+
+          for (org <- Seq(org2, org3)) {
+            val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.NewOrganization(org.id.get))
+            creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(referralCode, org.ownerId, Some(org.id.get))) must beFailedTry(expectedFailure)
+            for (promo <- promos) {
+              creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(promo.code, org.ownerId, Some(org.id.get))) must beFailedTry(expectedFailure)
+            }
+          }
+
+          paymentsChecker.checkAccount(org1.id.get) must beEmpty
+          paymentsChecker.checkAccount(org2.id.get) must beEmpty
+          paymentsChecker.checkAccount(org3.id.get) must beEmpty
         }
       }
     }
