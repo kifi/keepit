@@ -71,7 +71,7 @@
         </span>
       </p>
       <p>If you have credits available, we'll apply those before charging your card.</p>
-      <div>
+      <div class="kf-payment-plan-card-wrapper">
         <button
           class="kf-button kf-button-large"
           ng-class="{
@@ -80,7 +80,7 @@
           ng-click="openStripeCheckout()"
           ng-bind="(card ? 'Change' : 'Add') + ' credit card'"
         ></button>
-        <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">Your new card is ready to save</span>
+        <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">That worked! Click below to save and update your plan.</span>
       </div>
       <p class="kf-payment-plan-error-text" ng-if="cardError">You must enter a credit card in order to update your plan.</p>
     </div>
