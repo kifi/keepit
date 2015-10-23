@@ -99,7 +99,7 @@ class AccountEventRepoImpl @Inject() (
     (for (row <- rows if row.accountId === accountId && (row.eventType === userAdded || row.eventType === userRemoved)) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
   def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
-    rows.sortBy(age).take(limit.value).list
+    rows.filter(row => row.state === AccountEventStates.ACTIVE).sortBy(age).take(limit.value).list
   }
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
     (for (row <- rows if row.accountId === accountId) yield (row.state, row.updatedAt)).update((AccountEventStates.INACTIVE, clock.now))
