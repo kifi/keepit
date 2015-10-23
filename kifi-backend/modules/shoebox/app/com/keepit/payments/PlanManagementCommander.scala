@@ -59,7 +59,7 @@ trait PlanManagementCommander {
   def getCurrentAndAvailablePlans(orgId: Id[Organization]): (Id[PaidPlan], Set[PaidPlan])
   def getAvailablePlans(grantedByAdmin: Option[Id[User]] = None): Seq[PaidPlan]
   def changePlan(orgId: Id[Organization], newPlan: Id[PaidPlan], attribution: ActionAttribution): Try[AccountEvent]
-  def getBillingCycleStart(orgId: Id[Organization]): DateTime
+  def getPlanRenewal(orgId: Id[Organization]): DateTime
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
@@ -106,8 +106,8 @@ class PlanManagementCommanderImpl @Inject() (
   private def remainingBillingCycleCost(account: PaidAccount)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
     val cycleLengthMonth = plan.billingCycle.month
-    val cycleStart: DateTime = account.billingCycleStart
-    val cycleEnd: DateTime = cycleStart.plusMonths(cycleLengthMonth)
+    val cycleStart: DateTime = account.planRenewal.minusMonths(cycleLengthMonth)
+    val cycleEnd: DateTime = account.planRenewal
     val cycleLengthDays: Double = Days.daysBetween(cycleStart, cycleEnd).getDays.toDouble //note that this is different depending on the current month
     val remaining: Double = Days.daysBetween(clock.now, cycleEnd).getDays.toDouble
     val fraction: Double = remaining / cycleLengthDays
@@ -140,8 +140,7 @@ class PlanManagementCommanderImpl @Inject() (
                 planRenewal = clock.now() plusMonths plan.billingCycle.month,
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
-                activeUsers = 0,
-                billingCycleStart = clock.now
+                activeUsers = 0
               ))
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
                 Success(account) // todo(Léo): roll into rewards
@@ -387,7 +386,7 @@ class PlanManagementCommanderImpl @Inject() (
     cardFut.map { card =>
       AccountStateResponse(
         users = account.activeUsers,
-        billingDate = account.billingCycleStart.plusMonths(plan.billingCycle.month),
+        billingDate = account.planRenewal,
         balance = account.credit,
         charge = plan.pricePerCyclePerUser * account.activeUsers,
         plan.asInfo,
@@ -488,8 +487,8 @@ class PlanManagementCommanderImpl @Inject() (
     Failure(new Exception("failed_getting_account_lock"))
   }
 
-  def getBillingCycleStart(orgId: Id[Organization]): DateTime = db.readOnlyMaster { implicit session =>
-    paidAccountRepo.getByOrgId(orgId).billingCycleStart
+  def getPlanRenewal(orgId: Id[Organization]): DateTime = db.readOnlyMaster { implicit session =>
+    paidAccountRepo.getByOrgId(orgId).planRenewal
   }
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod] = db.readOnlyMaster { implicit session =>

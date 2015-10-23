@@ -71,8 +71,7 @@ case class PaidAccount(
     emailContacts: Seq[EmailAddress],
     lockedForProcessing: Boolean = false,
     frozen: Boolean = false,
-    activeUsers: Int,
-    billingCycleStart: DateTime) extends ModelWithState[PaidAccount] {
+    activeUsers: Int) extends ModelWithState[PaidAccount] {
 
   def withId(id: Id[PaidAccount]): PaidAccount = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaidAccount = this.copy(updatedAt = now)
@@ -103,8 +102,6 @@ case class PaidAccount(
   def withEmailContacts(newContacts: Seq[EmailAddress]): PaidAccount = this.copy(emailContacts = newContacts)
 
   def withNewPlan(newPlanId: Id[PaidPlan]): PaidAccount = this.copy(planId = newPlanId)
-
-  def withCycleStart(newCycleStart: DateTime): PaidAccount = this.copy(billingCycleStart = newCycleStart)
 }
 
 object PaidAccountStates extends States[PaidAccount]
