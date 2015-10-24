@@ -145,7 +145,7 @@ class PaymentsIntegrityChecker @Inject() (
     }
   }.getOrElse(Seq(PaymentsIntegrityError.CouldNotGetAccountLock("balance check")))
 
-  private def checkAccount(orgId: Id[Organization]): Seq[PaymentsIntegrityError] = {
+  def checkAccount(orgId: Id[Organization]): Seq[PaymentsIntegrityError] = {
     Seq(
       processMembershipsForAccount(orgId),
       processBalancesForAccount(orgId)

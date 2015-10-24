@@ -2,24 +2,29 @@ package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.{ State, Id }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.logging.Logging
+import com.keepit.payments.CreditRewardFail.UnrepeatableRewardKeyCollisionException
 import com.keepit.common.time._
 import com.keepit.model.User
 import org.joda.time.DateTime
 import play.api.libs.json._
 
+import scala.util.{ Failure, Success, Try }
+
 @ImplementedBy(classOf[CreditRewardRepoImpl])
 trait CreditRewardRepo extends Repo[CreditReward] {
+  def create(model: CreditReward)(implicit session: RWSession): Try[CreditReward]
   def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward]
+  def getByCreditCode(code: CreditCode)(implicit session: RSession): Set[CreditReward]
 }
 
 // Unique index on (code, singleUse) - single-use codes can only be used once overall
 // Unique index on (kind, unrepeatable) - two codes of the same unrepeatable kind cannot be applied
 // Referential integrity constraint from CreditReward.code CreditCode.code
 // Referential integrity constraint from CreditReward.accountId to PaidAccount.id
-// Referential integrity constraint from CreditReward.{accountId, applied, credit} to AccountEvent.{accountId, id, credit}
+// Referential integrity constraint from CreditReward.{accountId, applied, credit} to AccountEvent.{accountId, id, creditChange}
 @Singleton
 class CreditRewardRepoImpl @Inject() (
   val db: DataBaseComponent,
@@ -55,11 +60,21 @@ class CreditRewardRepoImpl @Inject() (
   override def deleteCache(creditReward: CreditReward)(implicit session: RSession): Unit = {}
   override def invalidateCache(creditReward: CreditReward)(implicit session: RSession): Unit = {}
 
+  private def activeRows = rows.filter(_.state === CreditRewardStates.ACTIVE)
+
+  def create(model: CreditReward)(implicit session: RWSession): Try[CreditReward] = {
+    if (model.unrepeatable.exists(key => rows.filter(row => row.unrepeatable === key).exists.run)) Failure(UnrepeatableRewardKeyCollisionException(model.unrepeatable.get))
+    else Success(save(model))
+  }
+
   def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward] = {
     val kind = reward.kind
     val status = reward.kind.writeStatus(reward.status)
     val info = reward.status.infoFormat.writes(reward.info)
-    rows.filter(row => row.kind === kind && row.status === status && row.info === info).list.toSet
+    activeRows.filter(row => row.kind === kind && row.status === status && row.info === info).list.toSet
+  }
+  def getByCreditCode(code: CreditCode)(implicit session: RSession): Set[CreditReward] = {
+    activeRows.filter(row => row.code === code).list.toSet
   }
 }
 
