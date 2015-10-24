@@ -21,7 +21,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
 
   private def computePartialCost(from: DateTime, renewalDate: DateTime, billingCycle: BillingCycle, fullCost: DollarAmount): DollarAmount = {
     val MATH_CONTEXT = new MathContext(34, RoundingMode.HALF_DOWN)
-    val cycleStart: DateTime = renewalDate minusMonths billingCycle.month
+    val cycleStart: DateTime = renewalDate minusMonths billingCycle.months
     val cycleEnd: DateTime = renewalDate
     val cycleLengthDays: Double = Days.daysBetween(cycleStart, cycleEnd).getDays.toDouble
     val remaining: Double = Days.daysBetween(from, cycleEnd).getDays.toDouble max 0

@@ -25,7 +25,7 @@ class PaidPlanRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val dollarAmountColumnType = DollarAmount.columnType(db)
-  implicit val billingCycleColumnType = MappedColumnType.base[BillingCycle, Int](_.month, BillingCycle(_))
+  implicit val billingCycleColumnType = MappedColumnType.base[BillingCycle, Int](_.months, BillingCycle(_))
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
   implicit val featureSetTypeMapper = MappedColumnType.base[Set[Feature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
