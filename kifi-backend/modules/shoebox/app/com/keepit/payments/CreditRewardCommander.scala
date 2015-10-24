@@ -38,7 +38,7 @@ class CreditRewardCommanderImpl @Inject() (
       val creditCodeInfo = creditCodeInfoRepo.getByOrg(orgId).getOrElse {
         val kind = CreditCodeKind.OrganizationReferral
         val creditCodeInfo = CreditCodeInfo(
-          code = CreditCode(RandomStringUtils.randomAlphanumeric(20)),
+          code = CreditCode.normalize(RandomStringUtils.randomAlphanumeric(20)),
           kind = kind,
           credit = CreditCodeKind.creditValue(kind),
           status = CreditCodeStatus.Open,

@@ -2,7 +2,6 @@ package com.keepit.payments
 
 import java.net.URLEncoder
 
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.strings._
@@ -14,6 +13,7 @@ import play.api.http.Status._
 import play.api.mvc.Results.Status
 
 case class CreditCode(value: String) {
+  require(value == value.toLowerCase.trim, "CreditCode is not normalized!")
   def urlEncoded: String = URLEncoder.encode(value, UTF8)
 }
 
@@ -22,7 +22,7 @@ object CreditCode {
   implicit val format: Format[CreditCode] = Format(Reads.of[String].map(normalize(_)), Writes[CreditCode](code => JsString(code.value)))
   def columnType(db: DataBaseComponent) = {
     import db.Driver.simple._
-    MappedColumnType.base[CreditCode, String](_.value, CreditCode.apply)
+    MappedColumnType.base[CreditCode, String](_.value, CreditCode(_))
   }
 }
 

@@ -125,7 +125,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val coupon = creditCodeInfoRepo.create(CreditCodeInfo(
               kind = CreditCodeKind.Coupon,
               credit = CreditCodeKind.creditValue(CreditCodeKind.Coupon),
-              code = CreditCode(RandomStringUtils.randomAlphanumeric(20)),
+              code = CreditCode.normalize(RandomStringUtils.randomAlphanumeric(20)),
               status = CreditCodeStatus.Open,
               referrer = None)).get
             (owner, org, coupon)
@@ -155,7 +155,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val coupon = creditCodeInfoRepo.create(CreditCodeInfo(
               kind = CreditCodeKind.Coupon,
               credit = CreditCodeKind.creditValue(CreditCodeKind.Coupon),
-              code = CreditCode(RandomStringUtils.randomAlphanumeric(20)),
+              code = CreditCode.normalize(RandomStringUtils.randomAlphanumeric(20)),
               status = CreditCodeStatus.Open,
               referrer = None)).get
             (owner, org1, org2, coupon)
@@ -186,7 +186,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val promo = creditCodeInfoRepo.create(CreditCodeInfo(
               kind = CreditCodeKind.Promotion,
               credit = DollarAmount.dollars(42),
-              code = CreditCode("kifirocks-2015"),
+              code = CreditCode.normalize("kifirocks-2015"),
               status = CreditCodeStatus.Open,
               referrer = None)).get
             (org1, org2, promo)
@@ -221,7 +221,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
               creditCodeInfoRepo.create(CreditCodeInfo(
                 kind = CreditCodeKind.Promotion,
                 credit = DollarAmount.dollars(42),
-                code = CreditCode(s"kifirocks-2015-$i"),
+                code = CreditCode.normalize(s"kifirocks-2015-$i"),
                 status = CreditCodeStatus.Open,
                 referrer = None)).get
             }
