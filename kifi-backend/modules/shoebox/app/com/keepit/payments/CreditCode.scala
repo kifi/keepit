@@ -2,6 +2,7 @@ package com.keepit.payments
 
 import java.net.URLEncoder
 
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.strings._
