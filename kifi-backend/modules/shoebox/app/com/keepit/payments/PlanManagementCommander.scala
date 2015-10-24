@@ -21,8 +21,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 abstract class PlanManagementException(msg: String) extends Exception(msg)
-class UnauthorizedChange(msg: String) extends PlanManagementException(msg)
-class InvalidChange(msg: String) extends PlanManagementException(msg)
+case class UnauthorizedChange(msg: String) extends PlanManagementException(msg)
+case class InvalidChange(msg: String) extends PlanManagementException(msg)
 
 @ImplementedBy(classOf[PlanManagementCommanderImpl])
 trait PlanManagementCommander {
@@ -102,19 +102,20 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
+  def newPlansStartDate(now: DateTime): DateTime = (now plusDays 1).withTimeAtStartOfDay()
+
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
-  private def remainingBillingCycleCost(account: PaidAccount)(implicit session: RSession): DollarAmount = {
+  def remainingBillingCycleCost(account: PaidAccount, from: DateTime)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
     val cycleLengthMonth = plan.billingCycle.month
     val cycleStart: DateTime = account.planRenewal.minusMonths(cycleLengthMonth)
     val cycleEnd: DateTime = account.planRenewal
     val cycleLengthDays: Double = Days.daysBetween(cycleStart, cycleEnd).getDays.toDouble //note that this is different depending on the current month
-    val remaining: Double = Days.daysBetween(clock.now, cycleEnd).getDays.toDouble
+    val remaining: Double = Days.daysBetween(from, cycleEnd).getDays.toDouble max 0
     val fraction: Double = remaining / cycleLengthDays
     val fullPrice = new BigDecimal(plan.pricePerCyclePerUser.cents, MATH_CONTEXT)
     val remainingPrice = fullPrice.multiply(new BigDecimal(fraction, MATH_CONTEXT), MATH_CONTEXT).setScale(0, RoundingMode.HALF_DOWN)
     DollarAmount(remainingPrice.intValueExact)
-
   }
 
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
@@ -137,13 +138,13 @@ class PlanManagementCommanderImpl @Inject() (
                 orgId = orgId,
                 planId = planId,
                 credit = DollarAmount(0),
-                planRenewal = clock.now() plusMonths plan.billingCycle.month,
+                planRenewal = newPlansStartDate(clock.now()),
                 userContacts = Seq.empty,
                 emailContacts = Seq.empty,
                 activeUsers = 0
               ))
               if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account) // todo(Léo): roll into rewards
+                Success(account)
               } else {
                 Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
               }
@@ -154,7 +155,7 @@ class PlanManagementCommanderImpl @Inject() (
               eventTime = clock.now,
               accountId = account.id.get,
               attribution = ActionAttribution(user = Some(creator), admin = None),
-              action = AccountEventAction.OrganizationCreated(planId)
+              action = AccountEventAction.OrganizationCreated(planId, Some(account.planRenewal))
             ))
             grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!"))
             registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
@@ -198,16 +199,17 @@ class PlanManagementCommanderImpl @Inject() (
 
   def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession) = {
     val account = paidAccountRepo.getByOrgId(orgId)
-    val price: DollarAmount = remainingBillingCycleCost(account)
+    val now = clock.now()
+    val price: DollarAmount = remainingBillingCycleCost(account, from = now)
     paidAccountRepo.save(
       account.withReducedCredit(price).withMoreActiveUsers(1)
     )
     eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-      eventTime = clock.now,
+      eventTime = now,
       accountId = account.id.get,
       attribution = attribution,
       action = AccountEventAction.UserAdded(userId),
-      creditChange = DollarAmount(-1 * price.cents)
+      creditChange = -price
     ))
   }
 
@@ -217,12 +219,13 @@ class PlanManagementCommanderImpl @Inject() (
 
   def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     val account = paidAccountRepo.getByOrgId(orgId)
-    val price: DollarAmount = remainingBillingCycleCost(account)
+    val now = clock.now()
+    val price: DollarAmount = remainingBillingCycleCost(account, from = now)
     val newAccount = account.withIncreasedCredit(price).withFewerActiveUsers(1).withUserContacts(account.userContacts.diff(Seq(userId)))
 
     paidAccountRepo.save(newAccount)
     eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-      eventTime = clock.now,
+      eventTime = now,
       accountId = orgId2AccountId(orgId),
       attribution = attribution,
       action = AccountEventAction.UserRemoved(userId),
@@ -468,18 +471,16 @@ class PlanManagementCommanderImpl @Inject() (
           orgConfigRepo.save(oldConfig.withSettings(newSettings))
         }
 
-        val refund = DollarAmount(remainingBillingCycleCost(account).cents * account.activeUsers)
-        val updatedAccount = account.withNewPlan(newPlanId)
-        val newCharge = DollarAmount(remainingBillingCycleCost(updatedAccount).cents * account.activeUsers)
-        paidAccountRepo.save(
-          updatedAccount.withIncreasedCredit(refund).withReducedCredit(newCharge)
-        )
+        val now = clock.now()
+        val newPlanStartDate = newPlansStartDate(now)
+        val refund = remainingBillingCycleCost(account, from = newPlanStartDate) * account.activeUsers
+        val updatedAccount = paidAccountRepo.save(account.withNewPlan(newPlanId).withIncreasedCredit(refund).withPlanRenewal(newPlanStartDate))
         Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-          eventTime = clock.now,
+          eventTime = now,
           accountId = account.id.get,
           attribution = attribution,
-          action = AccountEventAction.PlanChanged(account.planId, newPlanId),
-          creditChange = DollarAmount(refund.cents - newCharge.cents)
+          action = AccountEventAction.PlanChanged(account.planId, newPlanId, Some(updatedAccount.planRenewal)),
+          creditChange = refund
         )))
       } else {
         Failure(new InvalidChange("plan_not_available"))
