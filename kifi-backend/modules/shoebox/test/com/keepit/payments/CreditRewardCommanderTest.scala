@@ -9,6 +9,8 @@ import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 
+import scala.util.Random
+
 //things to test: add_user, remvove_user, change plan free to paid, all paths through charge processing
 
 class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInjector {
@@ -124,7 +126,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val org = OrganizationFactory.organization().withOwner(owner).saved
             val coupon = creditCodeInfoRepo.create(CreditCodeInfo(
               kind = CreditCodeKind.Coupon,
-              credit = CreditCodeKind.creditValue(CreditCodeKind.Coupon),
+              credit = DollarAmount.dollars(50 + Random.nextInt(50)),
               code = CreditCode.normalize(RandomStringUtils.randomAlphanumeric(20)),
               status = CreditCodeStatus.Open,
               referrer = None)).get
@@ -154,7 +156,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val org2 = OrganizationFactory.organization().withOwner(owner).saved
             val coupon = creditCodeInfoRepo.create(CreditCodeInfo(
               kind = CreditCodeKind.Coupon,
-              credit = CreditCodeKind.creditValue(CreditCodeKind.Coupon),
+              credit = DollarAmount.dollars(50 + Random.nextInt(50)),
               code = CreditCode.normalize(RandomStringUtils.randomAlphanumeric(20)),
               status = CreditCodeStatus.Open,
               referrer = None)).get

@@ -44,17 +44,6 @@ object CreditCodeKind {
     case Some(validKind) => validKind
     case None => throw new IllegalArgumentException(s"Unknown CreditCodeKind: $kind")
   }
-
-  def creditValue(kind: CreditCodeKind) = kind match {
-    case Coupon => DollarAmount.dollars(42)
-    case OrganizationReferral => DollarAmount.dollars(19)
-    case Promotion => throw new IllegalArgumentException("Promotion credit codes do not have a defined value for the redeemer")
-  }
-  def referrerCreditValue(kind: CreditCodeKind) = kind match {
-    case Coupon => None
-    case OrganizationReferral => Some(DollarAmount.dollars(100))
-    case Promotion => throw new IllegalArgumentException("Promotion credit codes do not have a defined value for the referrer")
-  }
 }
 
 case class CreditCodeReferrer(userId: Id[User], organizationId: Option[Id[Organization]])
@@ -90,8 +79,6 @@ case class CreditCodeInfo(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
   def isSingleUse: Boolean = CreditCodeKind.isSingleUse(kind)
-
-  def referrerCredit: Option[DollarAmount] = CreditCodeKind.referrerCreditValue(kind)
 }
 
 case class CreditCodeRewards(target: CreditReward, referrer: Option[CreditReward])

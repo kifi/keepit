@@ -32,6 +32,9 @@ class CreditRewardCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
 
+  private val newOrgReferralCredit = DollarAmount.dollars(100)
+  private val orgReferrerCredit = DollarAmount.dollars(100)
+
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode = {
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
@@ -40,7 +43,7 @@ class CreditRewardCommanderImpl @Inject() (
         val creditCodeInfo = CreditCodeInfo(
           code = CreditCode.normalize(RandomStringUtils.randomAlphanumeric(20)),
           kind = kind,
-          credit = CreditCodeKind.creditValue(kind),
+          credit = newOrgReferralCredit,
           status = CreditCodeStatus.Open,
           referrer = Some(CreditCodeReferrer.fromOrg(org))
         )
@@ -104,7 +107,7 @@ class CreditRewardCommanderImpl @Inject() (
 
           referrerCreditReward <- creditRewardRepo.create(CreditReward(
             accountId = accountId,
-            credit = creditCodeInfo.referrerCredit.get,
+            credit = orgReferrerCredit,
             applied = None,
             reward = referrerReward,
             unrepeatable = Some(UnrepeatableRewardKey.Referral(from = creditCodeInfo.referrer.get.organizationId.get, to = orgId.get)),
