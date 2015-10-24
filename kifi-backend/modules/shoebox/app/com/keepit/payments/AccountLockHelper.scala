@@ -48,9 +48,9 @@ class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRep
     val hasLock = db.readWrite { session => acquireAccountLockForSession(orgId, session, attempts) }
     if (hasLock) {
       try {
-        val resFut = f
-        resFut.onComplete { _ =>
-          db.readWrite { session => releaseAccountLockForSession(orgId, session) }
+        val resFut = f.andThen {
+          case _ =>
+            db.readWrite { session => releaseAccountLockForSession(orgId, session) }
         }
         Some(resFut)
       } catch {
