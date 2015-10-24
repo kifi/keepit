@@ -321,6 +321,7 @@ class LibraryMembershipCommanderImpl @Inject() (
           category = pushCat)
       }
     }
+    
     if (lib.kind != LibraryKind.SYSTEM_ORG_GENERAL) {
       access match {
         case LibraryAccess.READ_WRITE =>

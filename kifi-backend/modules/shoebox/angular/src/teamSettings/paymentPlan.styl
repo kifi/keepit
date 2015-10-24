@@ -117,15 +117,47 @@ enterprisePlanColor = #f69256
   width: 100%
   padding: 10px
 
+.kf-payment-plan-card-wrapper
+  display: flex
+  align-items: center
+
 .kf-payment-plan-card-ready
-  margin-left: 5px
+  position: relative
+  flex: 1
+  padding-right: 5px
+  padding-left: 22px
+  color: accentGreen
+
+  &:before
+    content: '✓'
+    position: absolute
+    top: 0
+    bottom: 0
+    left: 6px
+    height: 18px
+    margin: auto
+
+  &.ng-enter
+    transition: .33s
+    opacity: 0
+    transform: translateX(-25%)
+
+    &:before
+      transition: .45s cubic-bezier(0.5, -0.5, 0.5, 1.5)
+      transform: scale(10)
+
+  &.ng-enter-active
+    opacity: 1
+    transform: translateX(0)
+
+    &:before
+      transform: scale(1)
 
 .kf-button.kf-button-large.kf-payment-plan-save
   display: block
   margin: 0 auto
   background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
   color: #fff
-
   transition: opacity .5s
 
   &:hover:not(:active)
@@ -160,7 +192,6 @@ enterprisePlanColor = #f69256
 
 .kf-payment-plan-error-text
   color: errorRed
-  height: 17px
   margin: 14px 0
 
   &.ng-enter
