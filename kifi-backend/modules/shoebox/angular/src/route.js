@@ -119,7 +119,7 @@ angular.module('kifi')
         'abstract': true
       })
       .state('orgProfile.members', {
-        url: '/members?openInviteModal',
+        url: '/members?openInviteModal&addMany',
         controller: 'OrgProfileMemberManageCtrl',
         templateUrl: 'orgProfile/orgProfileMemberManage.tpl.html',
         activetab: 'members'
