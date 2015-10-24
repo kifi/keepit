@@ -321,20 +321,25 @@ class LibraryMembershipCommanderImpl @Inject() (
           category = pushCat)
       }
     }
-    if (access == LibraryAccess.READ_WRITE && lib.kind != LibraryKind.SYSTEM_ORG_GENERAL) {
-      elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
-        Recipient(lib.ownerId),
-        currentDateTime,
-        newFollowerId,
-        lib.id.get
-      ))
-    } else {
-      elizaClient.sendNotificationEvent(OwnedLibraryNewFollower(
-        Recipient(lib.ownerId),
-        currentDateTime,
-        newFollowerId,
-        lib.id.get
-      ))
+    
+    if (lib.kind != LibraryKind.SYSTEM_ORG_GENERAL) {
+      access match {
+        case LibraryAccess.READ_WRITE =>
+          elizaClient.sendNotificationEvent(OwnedLibraryNewCollaborator(
+            Recipient(lib.ownerId),
+            currentDateTime,
+            newFollowerId,
+            lib.id.get
+          ))
+        case LibraryAccess.READ_ONLY =>
+          elizaClient.sendNotificationEvent(OwnedLibraryNewFollower(
+            Recipient(lib.ownerId),
+            currentDateTime,
+            newFollowerId,
+            lib.id.get
+          ))
+        case _ =>
+      }
     }
   }
 

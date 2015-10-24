@@ -54,7 +54,7 @@ angular.module('kifi')
     };
 
     $scope.warningModalOrSave = function () {
-      if ($scope.selectedPlan && $scope.isFreePlanName($scope.selectedPlan.name)) {
+      if (!$scope.isFreePlanName($scope.currentPlan.name) && $scope.isFreePlanName($scope.plan.name)) {
         openDowngradeModal();
       } else if ($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
         $scope.cardError = true;
@@ -99,7 +99,7 @@ angular.module('kifi')
       return acc.concat(plansByTier[key]);
     }, []);
 
-    var currentPlan = flatPlans.filter(function (p) {
+    $scope.currentPlan = flatPlans.filter(function (p) {
       return p.id === paymentPlans.current;
     }).pop();
 
@@ -120,8 +120,8 @@ angular.module('kifi')
       };
     } else {
       $scope.plan = {
-        name: currentPlan.name,
-        cycle: currentPlan.cycle, //months
+        name: $scope.currentPlan.name,
+        cycle: $scope.currentPlan.cycle, //months
         newCard: null
       };
     }
@@ -136,6 +136,15 @@ angular.module('kifi')
 
     $scope.isFreePlanName = function (planName) {
       return planName && planName.toLowerCase().indexOf('free') > -1;
+    };
+
+    $scope.getSelectedPlan = function() {
+      return flatPlans.filter(function (p) {
+        return (
+          p.name === $scope.plan.name &&
+          p.cycle === $scope.plan.cycle
+        );
+      }).pop();
     };
 
     $scope.$watch('plan', function (newPlan, oldPlan) {
@@ -154,8 +163,8 @@ angular.module('kifi')
         if (newPlan.name !== oldPlan.name) {
           var cycle;
 
-          if (currentPlan.name === newPlan.name) {
-            cycle = currentPlan.cycle;
+          if ($scope.currentPlan.name === newPlan.name) {
+            cycle = $scope.currentPlan.cycle;
           } else {
             var lastCycle = $scope.availableCycles.slice(-1)[0];
             cycle = lastCycle && lastCycle.value;
@@ -164,24 +173,8 @@ angular.module('kifi')
         }
       }
 
-      // Set the currently selected plan object
-      if (!initializing) {
-        var selectedPlan = flatPlans.filter(function (p) {
-          return (
-            p.name === $scope.plan.name &&
-            p.cycle === $scope.plan.cycle
-          );
-        }).pop();
-
-        if (!selectedPlan) {
-          return;
-        }
-
-        $scope.selectedPlan = selectedPlan;
-      }
-
       // Set pristine if the user moves back to the initial values
-      if (!initializing && !$scope.plan.newCard && (newPlan.name === currentPlan.name && newPlan.cycle === currentPlan.cycle)) {
+      if (!initializing && !$scope.plan.newCard && (newPlan.name === $scope.currentPlan.name && newPlan.cycle === $scope.currentPlan.cycle)) {
         resetForm();
       }
     }, true);
@@ -252,8 +245,9 @@ angular.module('kifi')
       var saveSeriesDeferred = $q.defer();
       var saveSeriesPromise = saveSeriesDeferred.promise;
 
+      var selectedPlan = $scope.getSelectedPlan();
       // If nothing changed, pretend we saved it.
-      if (!$scope.plan.newCard && $scope.planSelectsForm.$pristine) {
+      if (!$scope.plan.newCard && ($scope.currentPlan.id === selectedPlan.id) && $scope.planSelectsForm.$pristine) {
         messageTicker({
           text: 'Saved Successfully',
           type: 'green'
@@ -273,36 +267,33 @@ angular.module('kifi')
         });
       }
 
-      if (!$scope.planSelectsForm.$pristine) {
-        saveSeriesPromise
-        .then(function () {
+      if (selectedPlan && selectedPlan.id !== $scope.currentPlan.id) {
+        saveSeriesPromise.then(function () {
           return billingService
-          .setBillingPlan($scope.profile.id, ($scope.selectedPlan && $scope.selectedPlan.id) || currentPlan.id);
+          .setBillingPlan($scope.profile.id, selectedPlan.id);
+        })
+        .then(function () {
+          var successMessage;
+
+          if ($scope.isPaidPlanName(selectedPlan.name)) {
+            successMessage = 'You successfully upgraded your team\'s plan.';
+          } else {
+            successMessage = 'You downgraded your team\'s plan';
+          }
+          messageTicker({
+            text: successMessage,
+            type: 'green'
+          });
+          resetForm();
+          $timeout(function () {
+            $state.reload('orgProfile');
+          }, 10);
+        })
+        ['catch'](modalService.genericErrorModal)
+        ['finally'](function () {
+          $window.removeEventListener('beforeunload', onBeforeUnload);
         });
       }
-
-      saveSeriesPromise
-      .then(function () {
-        var successMessage;
-
-        if ($scope.isPaidPlanName($scope.selectedPlan.name)) {
-          successMessage = 'You successfully upgraded your team to the Standard Plan';
-        } else {
-          successMessage = 'You successfully downgraded your team to the Free Plan';
-        }
-        messageTicker({
-          text: successMessage,
-          type: 'green'
-        });
-        resetForm();
-        $timeout(function () {
-          $state.reload('orgProfile');
-        }, 10);
-      })
-      ['catch'](modalService.genericErrorModal)
-      ['finally'](function () {
-        $window.removeEventListener('beforeunload', onBeforeUnload);
-      });
 
       // Start the promise chain
       saveSeriesDeferred.resolve();
