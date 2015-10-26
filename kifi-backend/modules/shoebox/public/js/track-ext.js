@@ -1,10 +1,19 @@
-/* global mixpanel */
+/* global mixpanel,amplitude */
 (function (win) {
 	'use strict';
 
 	var $ = win.jQuery,
 		document = win.document,
-		$html = $('html');
+		$html = $('html'),
+		amplitude = win.amplitude;
+
+	var registerProperties = $html.data('trackRegister');
+	// jQuery will parse the string into a JS Object if it's valid JSON
+	if (registerProperties && registerProperties.constructor === Object) {
+		mixpanel.register(registerProperties);
+	} else if (registerProperties && win.console && win.console.error) {
+		win.console.error('Invalid value of html[data-track-register] %s', registerProperties);
+	}
 
 	// on load, track view event
 	$(document).ready(function () {
@@ -28,8 +37,8 @@
 				}
 			}
 			catch (e) {
-				if (win.console && win.console.log) {
-					win.console.log('could not track', e, e.stack);
+				if (win.console && win.console.error) {
+					win.console.error('could not track', e, e.stack);
 				}
 			}
 		}
@@ -40,6 +49,14 @@
 		Tracker.trackClick(this);
 	});
 
+	function initUser() {
+		initUserCalled = true;
+
+		var distinctId = mixpanel.get_distinct_id();
+		if (amplitude && distinctId) {
+			amplitude.setDeviceId(distinctId);
+		}
+	}
 
 	function getClickEventName() {
 		return $html.data('trackClickEvent');
@@ -73,9 +90,40 @@
 		return data;
 	}
 
+	function addRegisteredProperties(properties) {
+		return $.extend({}, registerProperties, properties);
+	}
+
+	var eventQueue = [];
+	var initUserCalled = false;
+
+	// it's possible this function is called before mixpanel is done initializing. window.mixpanel is initially an
+	// array before the javascript file is downloaded, but we don't want to record any events until
+	// mixpanel is initialized and we've set the amplitude deviceId to mixpanel distinct_id property
 	function track(name, data) {
-		data = addDefaultValues(data);
-		return mixpanel.track(name, data);
+		eventQueue.push({name: name, data: data});
+		return processEventQueue();
+	}
+
+	function processEventQueue() {
+		if (mixpanel.__loaded) {
+			if (!initUserCalled) initUser();
+
+			eventQueue.forEach(function(event) {
+				var properties = addDefaultValues(event.data);
+				mixpanel.track(event.name, properties);
+
+				if (amplitude) {
+					// amplitude doesn't have an equivalent to mixpanel.register so we need to add these super properties to each event
+					properties = addRegisteredProperties(properties);
+					amplitude.logEvent(event.name, properties);
+				}
+			});
+
+			eventQueue.length = 0;
+		} else {
+			setTimeout(processEventQueue, 100); // try again in 100ms
+		}
 	}
 
 })(this);
