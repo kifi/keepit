@@ -132,11 +132,16 @@ class PaymentsController @Inject() (
   def getReferralCode(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE) { request =>
     Ok(Json.obj("code" -> creditRewardCommander.getOrCreateReferralCode(request.orgId)))
   }
-  def redeemCreditCode(pubId: PublicId[Organization], code: String) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE) { request =>
-    creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(CreditCode(code), request.request.userId, Some(request.orgId))).map { rewards =>
-      Ok(Json.obj("value" -> rewards.target.credit))
-    }.recover {
-      case f: CreditRewardFail => f.asErrorResponse
-    }.get
+  def redeemCreditCode(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE)(parse.tolerantJson) { request =>
+    val codeOpt = (request.body \ "code").asOpt[String].map(CreditCode(_))
+    codeOpt match {
+      case None => BadRequest(Json.obj("error" -> "missing_credit_code"))
+      case Some(code) =>
+        creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, request.request.userId, Some(request.orgId))).map { rewards =>
+          Ok(Json.obj("value" -> rewards.target.credit))
+        }.recover {
+          case f: CreditRewardFail => f.asErrorResponse
+        }.get
+    }
   }
 }

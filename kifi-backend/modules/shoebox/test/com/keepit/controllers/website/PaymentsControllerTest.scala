@@ -337,5 +337,43 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+    "handle credit codes" in {
+      "give an org its referral code" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getReferralCode(publicId)
+          val response = controller.getReferralCode(publicId)(request)
+          status(response) === OK
+          (contentAsJson(response) \ "code").as[String] === creditRewardCommander.getOrCreateReferralCode(org.id.get).value
+        }
+      }
+      "let an org redeem a credit code" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org1, org2, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org1 = OrganizationFactory.organization().withOwner(owner).saved
+            val org2 = OrganizationFactory.organization().withOwner(owner).saved
+            (org1, org2, owner)
+          }
+          val publicId = Organization.publicId(org2.id.get)
+          val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val payload = Json.obj("code" -> code.value)
+          val request = route.redeemCreditCode(publicId).withBody(payload)
+          val response = controller.redeemCreditCode(publicId)(request)
+
+          status(response) === OK
+          (contentAsJson(response) \ "value").as[DollarAmount] === DollarAmount.dollars(100)
+        }
+      }
+    }
   }
 }
