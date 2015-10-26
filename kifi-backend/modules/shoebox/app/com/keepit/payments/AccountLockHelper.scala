@@ -13,7 +13,7 @@ case class LockedAccountException(orgId: Id[Organization]) extends Exception(s"F
 
 class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRepo, implicit val ec: ExecutionContext) {
 
-  def acquireAccountLockForSession(orgId: Id[Organization], session: RWSession, attempts: Int = 1): Boolean = {
+  private def acquireAccountLockForSession(orgId: Id[Organization], session: RWSession, attempts: Int = 1): Boolean = {
     val hasLock = try {
       paidAccountRepo.tryGetAccountLock(orgId)(session)
     } catch {
@@ -27,21 +27,25 @@ class AccountLockHelper @Inject() (db: Database, paidAccountRepo: PaidAccountRep
     }
   }
 
-  def releaseAccountLockForSession(orgId: Id[Organization], session: RWSession): Boolean = {
+  private def releaseAccountLockForSession(orgId: Id[Organization], session: RWSession): Boolean = {
     paidAccountRepo.releaseAccountLock(orgId)(session)
   }
 
-  def maybeSessionWithAccountLock[T](orgId: Id[Organization], attempts: Int = 1)(f: RWSession => T): Option[T] = db.readWrite { implicit session =>
+  def maybeWithAccountLock[T](orgId: Id[Organization], attempts: Int = 1)(f: => T)(implicit session: RWSession): Option[T] = {
     val hasLock = acquireAccountLockForSession(orgId, session, attempts)
     if (hasLock) {
       try {
-        Some(f(session))
+        Some(f)
       } finally {
         releaseAccountLockForSession(orgId, session)
       }
     } else {
       None
     }
+  }
+
+  def maybeSessionWithAccountLock[T](orgId: Id[Organization], attempts: Int = 1)(f: RWSession => T): Option[T] = db.readWrite { implicit session =>
+    maybeWithAccountLock(orgId, attempts)(f(session))
   }
 
   def maybeWithAccountLockAsync[T](orgId: Id[Organization], attempts: Int = 1)(f: => Future[T]): Option[Future[T]] = db.readWrite { implicit session =>
