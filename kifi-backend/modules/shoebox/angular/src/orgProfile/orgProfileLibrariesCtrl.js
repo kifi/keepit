@@ -98,6 +98,27 @@ angular.module('kifi')
 
     $scope.canCreateLibraries = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.ADD_LIBRARIES) !== -1);
 
+    $scope.openInviteModal = function () {
+      if (!$scope.canInvite) {
+        return;
+      }
+
+      modalService.open({
+        template: 'orgProfile/orgProfileInviteSearchModal.tpl.html',
+        modalData: {
+          organization: organization,
+          addMany: $stateParams.addMany,
+          returnAction: function (inviteData) {
+            var invitees = inviteData.invitees || [];
+            var flattenedInvitees = invitees.map(function(invitee) {
+                return invitee.id || invitee.email;
+             });
+            orgProfileService.trackEvent('user_clicked_page', organization, { type: 'orgLibraries' , action: 'clickedInvite', orgInvitees: flattenedInvitees });
+          }
+        }
+      });
+    };
+
     $scope.shouldShowMoveCard = function () {
       return $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();
     };
@@ -115,6 +136,8 @@ angular.module('kifi')
 
     if ($stateParams.openCreateLibrary) {
       $scope.openCreateLibrary();
+    } else if ($stateParams.openInviteModal === 'true') {
+      $scope.openInviteModal();
     }
 
     resetAndFetchLibraries();

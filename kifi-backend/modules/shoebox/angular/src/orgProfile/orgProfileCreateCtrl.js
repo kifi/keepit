@@ -16,7 +16,7 @@ angular.module('kifi')
       .createOrg(this.orgName)
       .then(function(handle) {
         profileService.fetchMe(); // update the me object
-        $state.go('orgProfile.members', { handle: handle, openInviteModal: true, addMany: true  });
+        $state.go('orgProfile.libraries', { handle: handle, openInviteModal: true, addMany: true  });
       })
       ['catch'](function () {
         modalService.openGenericErrorModal();
