@@ -56,6 +56,9 @@ object PaymentStatus {
   }
 }
 
+case class FrozenAccountException(orgId: Id[Organization]) extends Exception(s"Organization $orgId's account is frozen!")
+case class InvalidPaymentStatusException(orgId: Id[Organization], status: PaymentStatus) extends Exception(s"Invalid payment status for organization $orgId: ${status.value}")
+
 case class PaidAccount(
     id: Option[Id[PaidAccount]] = None,
     createdAt: DateTime = currentDateTime,

@@ -131,50 +131,10 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
-          updatedAccount.planRenewal === (accountPre.planRenewal plusMonths billingCycle.month)
+          updatedAccount.planRenewal === (accountPre.planRenewal plusMonths billingCycle.months)
           updatedAccount.credit === (accountPre.credit - renewalCost)
           updatedAccount.paymentDueAt should beSome
           updatedAccount.paymentDueAt.get should beLessThan(currentDateTime)
-        }
-      }
-    }
-
-    "do not update paymentDueAt when renewing a free plan" in {
-      withDb(modules: _*) { implicit injector =>
-        val commander = inject[PlanRenewalCommanderImpl]
-        val billingCycle = BillingCycle(1)
-        val price = DollarAmount.ZERO // free plan
-        val activeUsers = 5
-        val paymentDueAt = currentDateTime plusDays 10 // arbitrary
-        val (accountPre, plan) = db.readWrite { implicit session =>
-          val user = UserFactory.user().saved
-          val org = OrganizationFactory.organization().withOwner(user).saved
-          val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(billingCycle).saved
-          val account = PaidAccountFactory.paidAccount()
-            .withOrganizationId(org.id.get)
-            .withPlan(plan.id.get)
-            .withCredit(DollarAmount.ZERO)
-            .withActiveUsers(activeUsers)
-            .withPlanRenewal(currentDateTime minusDays 7)
-            .withPaymentDueAt(paymentDueAt)
-            .saved
-          (account, plan)
-        }
-
-        val renewalCost = plan.pricePerCyclePerUser * accountPre.activeUsers
-        renewalCost === DollarAmount.ZERO
-
-        val renewal = commander.renewPlan(accountPre)
-        renewal should beASuccessfulTry
-
-        renewal.get.action === AccountEventAction.PlanRenewal(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, accountPre.activeUsers, accountPre.planRenewal)
-        renewal.get.creditChange === -renewalCost
-
-        db.readOnlyMaster { implicit session =>
-          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
-          updatedAccount.planRenewal === (accountPre.planRenewal plusMonths billingCycle.month)
-          updatedAccount.credit === (accountPre.credit - renewalCost)
-          updatedAccount.paymentDueAt === accountPre.paymentDueAt
         }
       }
     }

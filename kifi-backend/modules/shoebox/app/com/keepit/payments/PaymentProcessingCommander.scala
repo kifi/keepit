@@ -10,14 +10,17 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import org.joda.time.DateTime
 
 import play.api.libs.json.{ JsNull }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Failure
 
-case class FrozenAccountException(orgId: Id[Organization]) extends Exception(s"Organization $orgId's account is frozen!")
-case class InvalidPaymentStatusException(orgId: Id[Organization], status: PaymentStatus) extends Exception(s"Invalid payment status for organization $orgId: ${status.value}")
+case class PaymentCycle(months: Int) extends AnyVal
+object PaymentCycle {
+  def months(n: Int): PaymentCycle = PaymentCycle(n)
+}
 
 @ImplementedBy(classOf[PaymentProcessingCommanderImpl])
 trait PaymentProcessingCommander {
@@ -27,6 +30,7 @@ trait PaymentProcessingCommander {
 
   private[payments] val MIN_BALANCE: DollarAmount
   private[payments] val MAX_BALANCE: DollarAmount
+  private[payments] val PAYMENT_CYCLE: PaymentCycle
 
 }
 
@@ -44,9 +48,15 @@ class PaymentProcessingCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
-  private[payments] val MAX_BALANCE = DollarAmount.dollars(1000)
-  //if you owe us more than $100 we will charge your card even if your billing cycle is not up
+  private[payments] val MAX_BALANCE = DollarAmount.dollars(1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
   private[payments] val MIN_BALANCE = DollarAmount.dollars(1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
+  private[payments] val PAYMENT_CYCLE = PaymentCycle.months(1) //how often oustanding balances will be charged
+
+  private def nextPaymentDueAt(account: PaidAccount): Option[DateTime] = {
+    val strictlyDueAt = clock.now() plusMonths PAYMENT_CYCLE.months
+    val looselyDueAt = strictlyDueAt plusDays 1
+    if (account.planRenewal isBefore looselyDueAt) None else Some(strictlyDueAt) // do not schedule a payment just before plan renewal
+  }
 
   private val processingLock = new ReactiveLock(1)
   def processDuePayments(): Future[Unit] = processingLock.withLockFuture {
@@ -95,7 +105,7 @@ class PaymentProcessingCommanderImpl @Inject() (
 
   private def ignoreLowBalance(account: PaidAccount): (PaidAccount, AccountEvent) = {
     db.readWrite { implicit session =>
-      val updatedAccount = paidAccountRepo.save(account.withPaymentDueAt(None))
+      val updatedAccount = paidAccountRepo.save(account.withPaymentDueAt(nextPaymentDueAt(account)))
       val lowBalanceIgnoredEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
@@ -150,7 +160,7 @@ class PaymentProcessingCommanderImpl @Inject() (
 
   private def endWithChargeSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], success: StripeChargeSuccess): (PaidAccount, AccountEvent) = {
     db.readWrite(attempts = 3) { implicit session =>
-      val chargedAccount = paidAccountRepo.save(account.withIncreasedCredit(success.amount).withPaymentStatus(PaymentStatus.Ok).withPaymentDueAt(None))
+      val chargedAccount = paidAccountRepo.save(account.withIncreasedCredit(success.amount).withPaymentStatus(PaymentStatus.Ok).withPaymentDueAt(nextPaymentDueAt(account)))
       val chargeEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,

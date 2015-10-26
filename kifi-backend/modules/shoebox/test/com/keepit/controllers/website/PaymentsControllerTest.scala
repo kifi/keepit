@@ -103,7 +103,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
 
           val plansByName = contentAsJson(response)
           (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
         }
       }
@@ -132,7 +132,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           // don't get any custom plans
           val plansByName = contentAsJson(response)
           (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
           (plansByName \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === None
 
@@ -144,9 +144,9 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           // don't get any custom plans
           val plansByNameWithCustom = contentAsJson(response2)
           (plansByNameWithCustom \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
-          (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
+          (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.months))
         }
       }
     }
@@ -171,7 +171,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
           (planJson \ "name").as[String] must beEqualTo(plan.displayName)
           (planJson \ "pricePerUser").as[JsObject] === Json.obj("cents" -> plan.pricePerCyclePerUser.toCents)
-          (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.month)
+          (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.months)
           (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
         }
       }
