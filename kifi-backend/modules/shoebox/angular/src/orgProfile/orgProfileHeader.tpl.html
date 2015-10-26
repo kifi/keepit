@@ -59,6 +59,14 @@
                 Restrict who can invite new members by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: profile.handle, upgrade: true })">upgrading your plan</a>.
               </span>
             </span>
+            <div ng-if="viewer.membership && plan.showUpsells && billingState !== null" class="kf-oph-credit-banner">
+              <div
+                kf-credit-banner
+                credit="(billingState.balance | isPositiveMoney) ? billingState.balance : 0"
+                on-earn-more="onCreditBannerEarnMore()"
+                on-use-it="onCreditBannerUseIt()"
+              ></div>
+            </div>
           </div>
         </div>
         <nav class="kf-oph-stats">

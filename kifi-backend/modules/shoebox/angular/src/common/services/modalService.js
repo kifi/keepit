@@ -20,6 +20,8 @@ angular.module('kifi')
         scope.modalData = opts.modalData;
       }
 
+      scope.close = close;
+
       $compile($modal)(scope);
       angular.element('.kf-app').append($modal);
 
