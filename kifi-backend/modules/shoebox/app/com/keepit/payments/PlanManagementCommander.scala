@@ -529,21 +529,25 @@ class PlanManagementCommanderImpl @Inject() (
 
   def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, newLastFour: String): Try[AccountEvent] = db.readWrite { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    val newDefault = paymentMethodRepo.get(newDefaultId)
     val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
-    if (newDefault.state != PaymentMethodStates.ACTIVE) {
-      Failure(new InvalidChange("payment_method_not_available"))
-    } else {
-      oldDefaultOpt.map { oldDefault =>
-        paymentMethodRepo.save(oldDefault.copy(default = false))
+    if (!oldDefaultOpt.flatMap(_.id).contains(newDefaultId)) {
+      val newDefault = paymentMethodRepo.get(newDefaultId)
+      if (newDefault.state == PaymentMethodStates.ACTIVE) {
+        oldDefaultOpt.map { oldDefault =>
+          paymentMethodRepo.save(oldDefault.copy(default = false))
+        }
+        paymentMethodRepo.save(newDefault.copy(default = true))
+        Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+          eventTime = clock.now,
+          accountId = accountId,
+          attribution = attribution,
+          action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
+        )))
+      } else {
+        Failure(new InvalidChange("payment_method_not_available"))
       }
-      paymentMethodRepo.save(newDefault.copy(default = true))
-      Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-        eventTime = clock.now,
-        accountId = accountId,
-        attribution = attribution,
-        action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
-      )))
+    } else {
+      Failure(new InvalidChange("payment_method_already_selected"))
     }
   }
 
