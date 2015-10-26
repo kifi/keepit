@@ -91,6 +91,7 @@ class PlanManagementCommanderImpl @Inject() (
   userRepo: UserRepo,
   accountLockHelper: AccountLockHelper,
   eventTrackingCommander: AccountEventTrackingCommander,
+  creditRewardCommander: CreditRewardCommander,
   permissionCommander: PermissionCommander,
   stripe: StripeClient,
   implicit val defaultContext: ExecutionContext,
@@ -98,6 +99,7 @@ class PlanManagementCommanderImpl @Inject() (
     extends PlanManagementCommander with Logging {
 
   private val MATH_CONTEXT = new MathContext(34, RoundingMode.HALF_DOWN)
+  private val orgCreationCredit = DollarAmount.dollars(50)
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
     paidAccountRepo.getAccountId(orgId)
@@ -158,7 +160,14 @@ class PlanManagementCommanderImpl @Inject() (
               attribution = ActionAttribution(user = Some(creator), admin = None),
               action = AccountEventAction.OrganizationCreated(planId, Some(account.planRenewal))
             ))
-            grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!"))
+            creditRewardCommander.createCreditReward(CreditReward(
+              accountId = account.id.get,
+              credit = orgCreationCredit,
+              applied = None,
+              reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+              unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
+              code = None
+            ), userAttribution = creator).get._2.get
             registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
             log.info(s"[PAC] $orgId: Registering First Admin")
             eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(

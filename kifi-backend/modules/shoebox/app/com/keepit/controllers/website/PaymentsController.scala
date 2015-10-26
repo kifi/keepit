@@ -26,6 +26,7 @@ class PaymentsController @Inject() (
     paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
     activityLogCommander: ActivityLogCommander,
+    creditRewardCommander: CreditRewardCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -126,5 +127,16 @@ class PaymentsController @Inject() (
         Ok(Json.obj("events" -> infos))
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_event_id"))
     }
+  }
+
+  def getReferralCode(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE) { request =>
+    Ok(Json.obj("code" -> creditRewardCommander.getOrCreateReferralCode(request.orgId)))
+  }
+  def redeemCreditCode(pubId: PublicId[Organization], code: String) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE) { request =>
+    creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(CreditCode(code), request.request.userId, Some(request.orgId))).map { rewards =>
+      Ok(Json.obj("value" -> rewards.target.credit))
+    }.recover {
+      case f: CreditRewardFail => f.asErrorResponse
+    }.get
   }
 }
