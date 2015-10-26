@@ -13,7 +13,6 @@
     <span
       ng-if="spaceIsOrg(space.destination) && !((space.destination.viewer.membership && space.destination.viewer.membership.role !== 'admin') && space.destination.viewer.permissions.indexOf(ORG_PERMISSION.REMOVE_LIBRARIES) !== -1)"
       kf-upsell
-      position="right"
       on-click="onClickUpsellRelocate()"
       on-hover="onHoverUpsellRelocate()"
     >
