@@ -105,6 +105,7 @@ class SocialWanderingCommander @Inject() (
   private def buildSociallyRelatedPeopleForOrg(orgId: Id[Organization], journal: TeleportationJournal, limit: Int) = {
     val relatedUsers = ListBuffer[(Id[User], Double)]()
     val relatedEmailAccounts = ListBuffer[(Id[EmailAccountInfo], Double)]()
+    val allRelated = Seq(relatedUsers, relatedEmailAccounts)
 
     journal.getVisited().foreach {
       case (id, score) if id.kind == UserReader =>
@@ -119,7 +120,7 @@ class SocialWanderingCommander @Inject() (
     SociallyRelatedEntitiesForOrg(
       users = RelatedEntities.top(orgId, relatedUsers, limit),
       emailAccounts = RelatedEntities.top(orgId, relatedEmailAccounts, limit),
-      journal.getCompletedSteps()
+      allRelated.map(_.map(_._2).sum).sum
     )
   }
 
