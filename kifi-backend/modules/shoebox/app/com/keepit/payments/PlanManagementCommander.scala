@@ -175,7 +175,7 @@ class PlanManagementCommanderImpl @Inject() (
                 log.info(s"[PAC] $orgId: Account successfully created!")
                 Success(creationEvent)
               } getOrElse {
-                Failure(LockedAccountException(orgId))
+                throw LockedAccountException(orgId)
               }
           }
         }
