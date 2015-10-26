@@ -250,6 +250,24 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
         }
       }
     }
+
+    "let me do awesome things" in {
+      withDb(modules: _*) { implicit injector =>
+        val (org1, org2) = db.readWrite { implicit session =>
+          (
+            OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved,
+            OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+          )
+        }
+
+        val referralCode = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+        val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(referralCode, org2.ownerId, Some(org2.id.get))).get
+
+        println(rewards.target.reward.dump(creditRewardCommander))
+        println(rewards.referrer.get.reward.dump(creditRewardCommander))
+        1 === 1
+      }
+    }
   }
 
 }

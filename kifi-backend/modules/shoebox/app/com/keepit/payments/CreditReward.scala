@@ -8,7 +8,7 @@ import play.api.libs.json._
 
 import scala.util.Try
 
-trait Reward {
+trait Reward { self =>
   val kind: RewardKind
   val status: kind.S
   val info: status.I
@@ -20,6 +20,13 @@ trait Reward {
         info == thatReward.info
     case _ => false
   }
+
+  def dump(implicit entityFinder: CreditRewardCommander): JsObject =
+    Json.obj(
+      "kind" -> kind.kind,
+      "status" -> kind.writeStatus(status),
+      "info" -> status.externalInfoDump(info)
+    )
 
   override def hashCode: Int = Seq(kind, status, info).map(_.hashCode()).reduce(_ ^ _)
 }
@@ -38,6 +45,7 @@ sealed abstract class RewardKind(val kind: String) {
 sealed abstract class RewardStatus(val status: String) {
   type I
   def infoFormat: Format[I]
+  def externalInfoDump(info: I)(implicit finder: CreditRewardCommander): JsValue
 }
 
 object Reward {
@@ -48,6 +56,7 @@ object Reward {
       val info: status.I = i
     }
   }
+
 
   def unapply(reward: Reward): Option[(reward.kind.type, reward.kind.S, reward.status.I)] = {
     Some((
@@ -79,10 +88,12 @@ object RewardStatus {
 
   trait WithIndependentInfo[F] { self: RewardKind =>
     def infoFormat: Format[F]
+    def externalInfoDump(info: F)(implicit finder: CreditRewardCommander): JsValue
 
     sealed abstract class Status(status: String) extends RewardStatus(status) {
       type I = F
       def infoFormat = self.infoFormat
+      def externalInfoDump(info: F)(implicit finder: CreditRewardCommander): JsValue = self.externalInfoDump(info)
     }
     type S = Status
   }
@@ -95,6 +106,7 @@ object RewardStatus {
       },
       Writes(None => JsNull)
     )
+    def externalInfoDump(info: None.type)(implicit finder: CreditRewardCommander): JsValue = JsNull
   }
 }
 
@@ -113,6 +125,7 @@ object RewardKind {
 
   case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     val infoFormat = Id.format[Organization]
+    def externalInfoDump(info: Id[Organization])(implicit finder: CreditRewardCommander): JsValue = Json.toJson(finder.getBasicOrganization(info))
     case object Created extends Status("created")
     protected val allStatus: Set[S] = Set(Created)
     val applicable: Created.type = Created
@@ -120,6 +133,7 @@ object RewardKind {
 
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     val infoFormat = Id.format[Organization]
+    def externalInfoDump(info: Id[Organization])(implicit finder: CreditRewardCommander): JsValue = Json.toJson(finder.getBasicOrganization(info))
     case object Created extends Status("created")
     case object Upgraded extends Status("upgraded")
     protected val allStatus: Set[S] = Set(Created, Upgraded)

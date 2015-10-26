@@ -1,15 +1,16 @@
 package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.OrganizationCommander
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.model.{ User, OrganizationRepo, Organization }
+import com.keepit.model.{ BasicOrganization, User, OrganizationRepo, Organization }
 import com.keepit.payments.CreditRewardFail.{ CreditCodeAlreadyBurnedException, CreditCodeAbuseException, NoPaidAccountException, CreditCodeNotFoundException }
 import org.apache.commons.lang3.RandomStringUtils
-import play.api.libs.json.JsNull
+import play.api.libs.json.{ Json, JsObject, JsNull }
 
 import scala.concurrent.ExecutionContext
 import scala.util.{ Success, Failure, Try }
@@ -18,12 +19,15 @@ import scala.util.{ Success, Failure, Try }
 trait CreditRewardCommander {
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards]
+
+  def getBasicOrganization(orgId: Id[Organization]): BasicOrganization
 }
 
 @Singleton
 class CreditRewardCommanderImpl @Inject() (
   db: Database,
   orgRepo: OrganizationRepo,
+  orgCommander: OrganizationCommander,
   creditCodeInfoRepo: CreditCodeInfoRepo,
   creditRewardRepo: CreditRewardRepo,
   accountRepo: PaidAccountRepo,
@@ -145,5 +149,9 @@ class CreditRewardCommanderImpl @Inject() (
       ))
       creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent))
     }
+  }
+
+  def getBasicOrganization(orgId: Id[Organization]): BasicOrganization = db.readOnlyReplica { implicit session =>
+    orgCommander.getBasicOrganizationHelper(orgId).get
   }
 }
