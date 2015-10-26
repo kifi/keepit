@@ -287,11 +287,12 @@ class UserProfileCommanderTest extends Specification with ShoeboxTestInjector {
       }
 
       val relationship = SociallyRelatedEntitiesForUser(
-        RelatedEntities[User, User](owner.id.get, Seq(user4.id.get -> .1, user5.id.get -> .4, user2.id.get -> .2, user3.id.get -> .3)),
-        RelatedEntities[User, SocialUserInfo](owner.id.get, Seq.empty),
-        RelatedEntities[User, SocialUserInfo](owner.id.get, Seq.empty),
-        RelatedEntities[User, EmailAccountInfo](owner.id.get, Seq.empty),
-        RelatedEntities[User, Organization](owner.id.get, Seq.empty)
+        RelatedEntities[User, User](owner.id.get, Seq(user4.id.get -> 1, user5.id.get -> 4, user2.id.get -> 2, user3.id.get -> 3), normalizingConstant = 10),
+        RelatedEntities[User, SocialUserInfo](owner.id.get, Seq.empty, normalizingConstant = 0),
+        RelatedEntities[User, SocialUserInfo](owner.id.get, Seq.empty, normalizingConstant = 0),
+        RelatedEntities[User, EmailAccountInfo](owner.id.get, Seq.empty, normalizingConstant = 0),
+        RelatedEntities[User, Organization](owner.id.get, Seq.empty, normalizingConstant = 0),
+        normalizingConstant = 10
       )
 
       Await.result(inject[GraphServiceClient].getSociallyRelatedEntitiesForUser(viewer.id.get), Duration.Inf) === None
