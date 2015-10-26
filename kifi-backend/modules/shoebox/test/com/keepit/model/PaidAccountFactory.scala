@@ -13,7 +13,7 @@ object PaidAccountFactory {
 
   def paidAccount(): PartialPaidAccount = {
     new PartialPaidAccount(PaidAccount(id = Some(Id[PaidAccount](idx.incrementAndGet())), orgId = Id[Organization](idx.incrementAndGet()),
-      planId = Id[PaidPlan](idx.incrementAndGet()), credit = DollarAmount(0), userContacts = Seq.empty, emailContacts = Seq.empty, activeUsers = 0, planRenewal = currentDateTime))
+      planId = Id[PaidPlan](idx.incrementAndGet()), credit = DollarAmount(0), userContacts = Seq.empty, emailContacts = Seq.empty, activeUsers = 0, planRenewal = currentDateTime plusDays 15))
   }
 
   def paidAccounts(count: Int): Seq[PartialPaidAccount] = List.fill(count)(paidAccount())

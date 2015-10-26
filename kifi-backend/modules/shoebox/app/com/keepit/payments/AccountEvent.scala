@@ -176,8 +176,8 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
-  @json
-  case class PlanChanged(oldPlan: Id[PaidPlan], newPlan: Id[PaidPlan]) extends AccountEventAction {
+  @json // todo(Léo): remove Option when old events have been cleared
+  case class PlanChanged(oldPlan: Id[PaidPlan], newPlan: Id[PaidPlan], startDate: Option[DateTime]) extends AccountEventAction {
     def eventType = AccountEventKind.PlanChanged
     def toDbRow = eventType -> Json.toJson(this)
   }
@@ -200,8 +200,8 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
-  @json
-  case class OrganizationCreated(initialPlan: Id[PaidPlan]) extends AccountEventAction {
+  @json // todo(Léo): remove Option when old events have been cleared
+  case class OrganizationCreated(initialPlan: Id[PaidPlan], planStartDate: Option[DateTime]) extends AccountEventAction {
     def eventType = AccountEventKind.OrganizationCreated
     def toDbRow = eventType -> Json.toJson(this)
   }

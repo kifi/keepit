@@ -68,7 +68,7 @@ class ActivityLogCommanderImpl @Inject() (
         }
         case AdminAdded(who) => Elements(basicUserRepo.load(who), "was made an admin", maybeUser.map(Elements("by", _)))
         case AdminRemoved(who) => Elements(basicUserRepo.load(who), "(admin) was made a member by", maybeUser.map(Elements("by", _)))
-        case PlanChanged(oldPlanId, newPlanId) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
+        case PlanChanged(oldPlanId, newPlanId, _) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
         case PaymentMethodAdded(_, lastFour) => Elements(s"A credit card ending in $lastFour was added", maybeUser.map(Elements("by", _)))
         case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your team's default payment method was changed to the card ending in $lastFour", maybeUser.map(Elements("by", _)))
         case AccountContactsChanged(userAdded: Option[Id[User]], userRemoved: Option[Id[User]], emailAdded: Option[EmailAddress], emailRemoved: Option[EmailAddress]) => {
@@ -84,7 +84,7 @@ class ActivityLogCommanderImpl @Inject() (
             case None => Elements("Your billing contacts were updated", maybeUser.map(Elements("by", _)))
           }
         }
-        case OrganizationCreated(initialPlanId) => Elements("The", org, "team was created by", maybeUser.get, "and enrolled in", paidPlanRepo.get(initialPlanId))
+        case OrganizationCreated(initialPlanId, _) => Elements("The", org, "team was created by", maybeUser.get, "and enrolled in", paidPlanRepo.get(initialPlanId))
       }
     }
     SimpleAccountEventInfo(

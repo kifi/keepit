@@ -23,6 +23,7 @@ import play.api.libs.json.{ JsValue, Json, JsObject }
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import com.keepit.common.time._
 
 class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -199,7 +200,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val setResponse = controller.updatePlan(orgId, newPlanId)(setRequest)
           status(setResponse) === OK
           val finalBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
-          finalBalance must beLessThan(initialBalance) // simple sanity check, actual logic should be tested in the commander
 
           val response2 = controller.getAccountState(orgId)(route.getAccountState(orgId))
           status(response2) === OK
@@ -216,6 +216,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             val owner = UserFactory.user().saved
             val rando = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(owner).withPlan(plan.id.get.id).saved
+            paidAccountRepo.save(paidAccountRepo.getByOrgId(org.id.get).withPlanRenewal(currentDateTime plusDays 15)) // set future renewal date to test partial refunds / costs
             (org, owner, rando, plan)
           }
           val orgId = Organization.publicId(org.id.get)
