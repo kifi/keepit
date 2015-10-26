@@ -130,12 +130,12 @@ class PlanManagementCommanderImpl @Inject() (
         if (plan.state != PaidPlanStates.ACTIVE) {
           Failure(new InvalidChange("plan_not_active"))
         } else {
-          val maybeAccount = paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
+          paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
             case Some(pa) if pa.state == PaidAccountStates.ACTIVE =>
               log.info(s"[PAC] $orgId: Account already exists.")
               Failure(new InvalidChange("account_exists"))
             case inactiveAccountMaybe =>
-              log.info(s"[PAC] $orgId: Creating Account")
+              log.info(s"[PAC] $orgId: Creating Account...")
               val account = paidAccountRepo.save(PaidAccount(
                 id = inactiveAccountMaybe.flatMap(_.id),
                 orgId = orgId,
@@ -146,39 +146,37 @@ class PlanManagementCommanderImpl @Inject() (
                 emailContacts = Seq.empty,
                 activeUsers = 0
               ))
-              if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account)
-              } else {
-                Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
+
+              val attribution = ActionAttribution(user = Some(creator), admin = None)
+
+              val creationEvent = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+                eventTime = clock.now,
+                accountId = account.id.get,
+                attribution = attribution,
+                action = AccountEventAction.OrganizationCreated(planId, Some(account.planRenewal))
+              ))
+
+              accountLockHelper.maybeWithAccountLock(orgId) {
+                log.info(s"[PAC] $orgId: Granting creation reward...")
+                creditRewardCommander.createCreditReward(CreditReward(
+                  accountId = account.id.get,
+                  credit = orgCreationCredit,
+                  applied = None,
+                  reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+                  unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
+                  code = None
+                ), userAttribution = creator).get._2.get
+
+                log.info(s"[PAC] $orgId: Registering owner...")
+                registerNewUserHelper(orgId, creator, attribution)
+                registerNewAdminHelper(orgId, creator, attribution)
+                addUserAccountContactHelper(orgId, creator, attribution)
+
+                log.info(s"[PAC] $orgId: Account successfully created!")
+                Success(creationEvent)
+              } getOrElse {
+                Failure(LockedAccountException(orgId))
               }
-          }
-          maybeAccount.map { account =>
-            log.info(s"[PAC] $orgId: Registering First User")
-            val createdEvent = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-              eventTime = clock.now,
-              accountId = account.id.get,
-              attribution = ActionAttribution(user = Some(creator), admin = None),
-              action = AccountEventAction.OrganizationCreated(planId, Some(account.planRenewal))
-            ))
-            creditRewardCommander.createCreditReward(CreditReward(
-              accountId = account.id.get,
-              credit = orgCreationCredit,
-              applied = None,
-              reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
-              unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
-              code = None
-            ), userAttribution = creator).get._2.get
-            registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
-            log.info(s"[PAC] $orgId: Registering First Admin")
-            eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-              eventTime = clock.now,
-              accountId = account.id.get,
-              attribution = ActionAttribution(user = Some(creator), admin = None),
-              action = AccountEventAction.AdminAdded(creator)
-            ))
-            addUserAccountContactHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
-            accountLockHelper.releaseAccountLockForSession(orgId, session)
-            createdEvent
           }
         }
       case Failure(ex) =>
