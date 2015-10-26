@@ -15,7 +15,7 @@ import org.joda.time.DateTime
 import javax.crypto.spec.IvParameterSpec
 
 @json
-case class BillingCycle(month: Int) extends AnyVal
+case class BillingCycle(months: Int) extends AnyVal
 
 object BillingCycle {
   def months(n: Int): BillingCycle = BillingCycle(n)
@@ -66,7 +66,7 @@ case class PaidPlan(
   )
 
   def fullName = {
-    val cycleString = billingCycle.month match {
+    val cycleString = billingCycle.months match {
       case 1 => "Monthly"
       case 12 => "Annual"
       case _ => "Custom"

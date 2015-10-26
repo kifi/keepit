@@ -29,7 +29,9 @@ class GratificationEmailSender @Inject() (
   def apply(userId: Id[User], toAddress: Option[EmailAddress]) = sendToUser(userId, toAddress)
 
   def sendToUsersWithData(gratDatas: Seq[GratificationData], toAddress: Option[EmailAddress] = None): Seq[Future[ElectronicMail]] = {
-    gratDatas.map { gratData => sendEmailLock.withLockFuture { emailTemplateSender.send(emailToSend(gratData, toAddress)) } }
+    gratDatas.filter(_.isEligible).map { gratData =>
+      sendEmailLock.withLockFuture { emailTemplateSender.send(emailToSend(gratData, toAddress)) }
+    }
   }
 
   def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None): Future[Option[ElectronicMail]] = {

@@ -10,7 +10,7 @@ import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRouterImpl }
 import com.keepit.integrity.{ KeepChecker, LibraryChecker, OrganizationChecker }
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationService, NormalizedURIInterner }
-import com.keepit.payments.{ PaidAccountRepo, PaidPlanRepo, PaymentsIntegrityChecker, PlanManagementCommander }
+import com.keepit.payments._
 
 trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
 
@@ -80,4 +80,8 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def libSubCommander(implicit injector: Injector) = inject[LibrarySubscriptionCommander].asInstanceOf[LibrarySubscriptionCommanderImpl]
   def deepLinkRouter(implicit injector: Injector) = inject[DeepLinkRouter].asInstanceOf[DeepLinkRouterImpl]
   def paidAccountRepo(implicit injector: Injector) = inject[PaidAccountRepo]
+  def accountEventRepo(implicit injector: Injector) = inject[AccountEventRepo]
+  def creditCodeInfoRepo(implicit injector: Injector) = inject[CreditCodeInfoRepo]
+  def creditRewardRepo(implicit injector: Injector) = inject[CreditRewardRepo]
+  def creditRewardCommander(implicit injector: Injector) = inject[CreditRewardCommander]
 }

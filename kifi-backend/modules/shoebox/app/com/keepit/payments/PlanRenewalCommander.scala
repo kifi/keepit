@@ -50,11 +50,10 @@ class PlanRenewalCommanderImpl @Inject() (
         val now = clock.now()
         val plan = paidPlanRepo.get(account.planId)
         if (account.planRenewal isBefore now) {
-          val nextPlanRenewal = account.planRenewal plusMonths plan.billingCycle.month
+          val nextPlanRenewal = account.planRenewal plusMonths plan.billingCycle.months
           val fullCyclePrice = plan.pricePerCyclePerUser * account.activeUsers
-          val paymentDueAt = if (fullCyclePrice > DollarAmount.ZERO) Some(now) else account.paymentDueAt
           val renewedAccount = paidAccountRepo.save(
-            account.withReducedCredit(fullCyclePrice).withPlanRenewal(nextPlanRenewal).withPaymentDueAt(paymentDueAt)
+            account.withReducedCredit(fullCyclePrice).withPlanRenewal(nextPlanRenewal).withPaymentDueAt(Some(now))
           )
           val billingEvent = eventCommander.track(AccountEvent(
             eventTime = clock.now(),
