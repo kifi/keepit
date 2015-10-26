@@ -4,9 +4,11 @@ angular.module('kifi')
 
 .controller('OrgProfileLibrariesCtrl', [
   '$rootScope', '$scope', '$stateParams', 'profile', 'profileService',
-  'orgProfileService', 'modalService', 'Paginator', 'ORG_PERMISSION',
+  'libraryService', 'orgProfileService', 'modalService', 'Paginator',
+  'ORG_PERMISSION',
   function ($rootScope, $scope, $stateParams, profile, profileService,
-            orgProfileService, modalService, Paginator, ORG_PERMISSION) {
+            libraryService, orgProfileService, modalService, Paginator,
+            ORG_PERMISSION) {
     var organization = profile.organization;
     var libraryLazyLoader = new Paginator(librarySource);
     var newLibraryIds = {};
@@ -96,10 +98,12 @@ angular.module('kifi')
       });
     };
 
+    $scope.hasPersonalLibraries = null;
+
     $scope.canCreateLibraries = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.ADD_LIBRARIES) !== -1);
 
     $scope.shouldShowMoveCard = function () {
-      return $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();
+      return $scope.hasPersonalLibraries && $scope.canCreateLibraries && ($scope.libraries && $scope.libraries.length < 10) && libraryLazyLoader.hasLoaded();
     };
 
     $scope.openMoveLibraryHelp = function () {
@@ -116,6 +120,17 @@ angular.module('kifi')
     if ($stateParams.openCreateLibrary) {
       $scope.openCreateLibrary();
     }
+
+    libraryService
+    .fetchLibraryInfos()
+    .then(function (infos) {
+      for (var i = 0; i < infos.length; i++) {
+        if (!infos[i].org && infos[i].kind === 'user_created') {
+          $scope.hasPersonalLibraries = true;
+          break;
+        }
+      }
+    });
 
     resetAndFetchLibraries();
   }
