@@ -128,7 +128,7 @@ angular.module('kifi', [
 .factory('errorResponseReporter', [
   '$q', '$exceptionHandler',
   function($q, $exceptionHandler) {
-    var ignoredStatuses = [ 0, 403 ];
+    var ignoredStatuses = [ -1, 0, 403 ];
 
     var errorResponseReporter = {
       responseError: function (response) {
