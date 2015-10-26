@@ -126,7 +126,7 @@ PageData.prototype = {
         'discoverable': 'public'
       };
       var maxVisibilityIndex = -1;
-      keeps.filter(isMine).forEach(function (item) {
+      keeps.forEach(function (item) {
         maxVisibilityIndex = Math.max(maxVisibilityIndex, visibilityOptions.indexOf(item.visibility));
       });
       return maxVisibilityIndex >= 0 ? visibilityMap[visibilityOptions[maxVisibilityIndex]] : 'other';
