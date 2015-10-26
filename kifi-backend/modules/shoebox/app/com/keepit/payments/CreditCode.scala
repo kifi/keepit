@@ -4,6 +4,7 @@ import java.net.URLEncoder
 
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
+import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.model.{ Organization, User }
@@ -13,7 +14,7 @@ import play.api.http.Status._
 import play.api.mvc.Results.Status
 
 case class CreditCode(value: String) {
-  require(value == value.toLowerCase.trim, "CreditCode is not normalized!")
+  AirbrakeNotifierStatic.verify(value == value.toLowerCase.trim, s"CreditCode $value is not normalized")
   def urlEncoded: String = URLEncoder.encode(value, UTF8)
 }
 

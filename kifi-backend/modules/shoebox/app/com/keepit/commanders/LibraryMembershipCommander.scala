@@ -20,6 +20,7 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.typeahead.KifiUserTypeahead
 import org.joda.time.DateTime
+import play.api.Mode.Mode
 import play.api.http.Status._
 import com.keepit.common.core._
 import play.api.libs.json.Json
@@ -73,8 +74,8 @@ class LibraryMembershipCommanderImpl @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     libraryImageCommander: LibraryImageCommander, // Only used by notifyOwnerOfNewFollowerOrCollaborator
     s3ImageStore: S3ImageStore, // Only used by notifyOwnerOfNewFollowerOrCollaborator
-    kifiInstallationCommander: KifiInstallationCommander // Only used by notifyOwnerOfNewFollowerOrCollaborator
-    ) extends LibraryMembershipCommander with Logging {
+    kifiInstallationCommander: KifiInstallationCommander, // Only used by notifyOwnerOfNewFollowerOrCollaborator
+    mode: Mode) extends LibraryMembershipCommander with Logging {
 
   def updateMembership(requestorId: Id[User], request: ModifyLibraryMembershipRequest): Either[LibraryFail, LibraryMembership] = {
     val (requestorMembership, targetMembershipOpt) = db.readOnlyMaster { implicit s =>
@@ -397,18 +398,21 @@ class LibraryMembershipCommanderImpl @Inject() (
     }
   }
 
-  def followDefaultLibraries(userId: Id[User]): Future[Map[Id[Library], LibraryMembership]] = SafeFuture {
-    println(s"signing $userId up for ${LibraryMembershipCommander.defaultLibraries}")
-    implicit val context = HeimdalContext.empty
-    LibraryMembershipCommander.defaultLibraries.map { libId =>
-      val membership = joinLibrary(userId, libId) match {
-        case Left(fail) =>
-          println("failed!: " + fail)
-          throw fail
-        case Right((_, mem)) => mem
-      }
-      libId -> membership
-    }.toMap
+  def followDefaultLibraries(userId: Id[User]): Future[Map[Id[Library], LibraryMembership]] = {
+    if (mode != play.api.Mode.Prod) Future.successful(Map.empty)
+    else SafeFuture {
+      println(s"signing $userId up for ${LibraryMembershipCommander.defaultLibraries}")
+      implicit val context = HeimdalContext.empty
+      LibraryMembershipCommander.defaultLibraries.map { libId =>
+        val membership = joinLibrary(userId, libId) match {
+          case Left(fail) =>
+            println("failed!: " + fail)
+            throw fail
+          case Right((_, mem)) => mem
+        }
+        libId -> membership
+      }.toMap
+    }
   }
 
   def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo = {

@@ -107,7 +107,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           // org3 accepts from org1
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code1, org3.ownerId, Some(org3.id.get))) must beSuccessfulTry
           // so they can't accept from anyone else (or double-accept from org1)
-          val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.NewOrganization(org3.id.get))
+          val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.WasReferred(org3.id.get))
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code1, org3.ownerId, Some(org3.id.get))) must beFailedTry(expectedFailure)
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code2, org3.ownerId, Some(org3.id.get))) must beFailedTry(expectedFailure)
 
@@ -238,7 +238,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(promos.head.code, org3.ownerId, Some(org3.id.get))) must beSuccessfulTry
 
           for (org <- Seq(org2, org3)) {
-            val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.NewOrganization(org.id.get))
+            val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.WasReferred(org.id.get))
             creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(referralCode, org.ownerId, Some(org.id.get))) must beFailedTry(expectedFailure)
             for (promo <- promos) {
               creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(promo.code, org.ownerId, Some(org.id.get))) must beFailedTry(expectedFailure)

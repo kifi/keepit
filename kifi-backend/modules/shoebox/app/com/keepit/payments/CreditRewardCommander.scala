@@ -92,7 +92,7 @@ class CreditRewardCommanderImpl @Inject() (
             credit = creditCodeInfo.credit,
             applied = None,
             reward = targetReward,
-            unrepeatable = Some(UnrepeatableRewardKey.NewOrganization(orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.WasReferred(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield CreditCodeRewards(target = targetCreditReward, referrer = None)
@@ -106,7 +106,7 @@ class CreditRewardCommanderImpl @Inject() (
             credit = creditCodeInfo.credit,
             applied = None,
             reward = targetReward,
-            unrepeatable = Some(UnrepeatableRewardKey.NewOrganization(orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.WasReferred(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
 
@@ -115,7 +115,7 @@ class CreditRewardCommanderImpl @Inject() (
             credit = orgReferrerCredit,
             applied = None,
             reward = referrerReward,
-            unrepeatable = Some(UnrepeatableRewardKey.Referral(from = creditCodeInfo.referrer.get.organizationId.get, to = orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.ReferrerFor(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield CreditCodeRewards(target = targetCreditReward, referrer = Some(referrerCreditReward))

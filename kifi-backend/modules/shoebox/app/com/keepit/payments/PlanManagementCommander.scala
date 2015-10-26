@@ -164,7 +164,7 @@ class PlanManagementCommanderImpl @Inject() (
               credit = orgCreationCredit,
               applied = None,
               reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
-              unrepeatable = None,
+              unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
               code = None
             ), userAttribution = creator).get._2.get
             registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
