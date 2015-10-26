@@ -54,6 +54,8 @@ object PaymentStatus {
   def apply(value: String): PaymentStatus = all.find(_.value == value) getOrElse {
     throw new IllegalArgumentException(s"Unknown PaymentStatus: $value")
   }
+
+  implicit val writes = Writes[PaymentStatus](status => JsString(status.value))
 }
 
 case class FrozenAccountException(orgId: Id[Organization]) extends Exception(s"Organization $orgId's account is frozen!")

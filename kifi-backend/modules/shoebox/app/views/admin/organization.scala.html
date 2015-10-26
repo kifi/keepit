@@ -54,7 +54,7 @@ orgStats: OrganizationStatistics
             }
         </td>
     </tr>
-    <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>)</td></tr>
+    <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>) Payment - @{orgStats.paymentStatus.value}</td></tr>
     <tr><td>Extra credit</td><td>
         Amount (cents)? <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
         Memo: <input id="extra-credit-memo" type="text" placeholder="optional"></input>
