@@ -13,7 +13,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
-import com.keepit.payments.{ DollarAmount, PlanManagementCommander, PaidPlan }
+import com.keepit.payments.{ PaymentStatus, DollarAmount, PlanManagementCommander, PaidPlan }
 import com.keepit.model._
 import com.keepit.common.time._
 import org.joda.time.DateTime
@@ -100,6 +100,7 @@ case class OrganizationStatistics(
   allMemberChatStats: Seq[SummaryByYearWeek],
   credit: DollarAmount,
   stripeToken: String,
+  paymentStatus: PaymentStatus,
   planRenewal: DateTime,
   plan: PaidPlan,
   accountFrozen: Boolean)
@@ -274,6 +275,7 @@ class UserStatisticsCommander @Inject() (
     val plan = planManagementCommander.currentPlan(orgId)
     val planRenewal = planManagementCommander.getPlanRenewal(orgId)
     val accountFrozen = planManagementCommander.isFrozen(orgId)
+    val paymentStatus = planManagementCommander.getPaymentStatus(orgId)
 
     for {
       membersStats <- membersStatsFut
@@ -300,6 +302,7 @@ class UserStatisticsCommander @Inject() (
       allMemberChatStats = allMemberChatStats,
       credit = credit,
       stripeToken = stripeToken,
+      paymentStatus = paymentStatus,
       planRenewal = planRenewal,
       plan = plan,
       accountFrozen = accountFrozen

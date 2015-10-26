@@ -26,7 +26,8 @@ case class AccountStateResponse(
   balance: DollarAmount,
   charge: DollarAmount,
   plan: PaidPlanInfo,
-  card: Option[CardInfo])
+  card: Option[CardInfo],
+  payment: PaymentStatus)
 object AccountStateResponse {
   implicit val writes = (
     (__ \ 'users).write[Int] and
@@ -34,7 +35,8 @@ object AccountStateResponse {
     (__ \ 'balance).write(DollarAmount.formatAsCents) and
     (__ \ 'charge).write(DollarAmount.formatAsCents) and
     (__ \ 'plan).write[PaidPlanInfo] and
-    (__ \ 'card).writeNullable[CardInfo]
+    (__ \ 'card).writeNullable[CardInfo] and
+    (__ \ 'payment).write[PaymentStatus]
   )(unlift(AccountStateResponse.unapply))
 }
 

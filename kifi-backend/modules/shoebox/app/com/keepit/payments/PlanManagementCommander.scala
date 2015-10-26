@@ -65,6 +65,7 @@ trait PlanManagementCommander {
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
   def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[AccountEvent]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
+  def getPaymentStatus(orgId: Id[Organization]): PaymentStatus
 
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
@@ -393,7 +394,8 @@ class PlanManagementCommanderImpl @Inject() (
         balance = account.credit,
         charge = plan.pricePerCyclePerUser * account.activeUsers,
         plan.asInfo,
-        card
+        card,
+        account.paymentStatus
       )
     }
   }
@@ -538,6 +540,10 @@ class PlanManagementCommanderImpl @Inject() (
 
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod] = {
     getActivePaymentMethods(orgId).find(_.default)
+  }
+
+  def getPaymentStatus(orgId: Id[Organization]): PaymentStatus = db.readOnlyMaster { implicit session =>
+    paidAccountRepo.getByOrgId(orgId).paymentStatus
   }
 
   def isFrozen(orgId: Id[Organization]): Boolean = db.readOnlyMaster { implicit session =>
