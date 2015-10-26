@@ -70,24 +70,24 @@ class SocialWanderingCommander @Inject() (
     val relatedEmailAccounts = ListBuffer[(Id[EmailAccountInfo], Double)]()
     val relatedOrganizations = ListBuffer[(Id[Organization], Double)]()
 
-    @inline def normalizedScore(score: Int) = score.toDouble / journal.getCompletedSteps()
+    val allRelatedEntities = Seq(relatedUsers, relatedFacebookAccounts, relatedLinkedInAccounts, relatedEmailAccounts, relatedOrganizations)
 
     journal.getVisited().foreach {
       case (id, score) if id.kind == UserReader =>
         val userId = VertexDataId.toUserId(id.asId[UserReader])
-        relatedUsers += userId -> normalizedScore(score)
+        relatedUsers += userId -> score
       case (id, score) if id.kind == FacebookAccountReader =>
         val socialUserId = VertexDataId.fromFacebookAccountIdtoSocialUserId(id.asId[FacebookAccountReader])
-        relatedFacebookAccounts += socialUserId -> normalizedScore(score)
+        relatedFacebookAccounts += socialUserId -> score
       case (id, score) if id.kind == LinkedInAccountReader =>
         val socialUserId = VertexDataId.fromLinkedInAccountIdtoSocialUserId(id.asId[LinkedInAccountReader])
-        relatedLinkedInAccounts += socialUserId -> normalizedScore(score)
+        relatedLinkedInAccounts += socialUserId -> score
       case (id, score) if id.kind == EmailAccountReader =>
         val emailAccountId = VertexDataId.toEmailAccountId(id.asId[EmailAccountReader])
-        relatedEmailAccounts += emailAccountId -> normalizedScore(score)
+        relatedEmailAccounts += emailAccountId -> score
       case (id, score) if id.kind == OrganizationReader =>
         val organizationId = VertexDataId.toOrganizationId(id.asId[OrganizationReader])
-        relatedOrganizations += organizationId -> normalizedScore(score)
+        relatedOrganizations += organizationId -> score
       case _ => // ignore
     }
 
@@ -96,29 +96,31 @@ class SocialWanderingCommander @Inject() (
       facebookAccounts = RelatedEntities.top(userId, relatedFacebookAccounts, limit),
       linkedInAccounts = RelatedEntities.top(userId, relatedLinkedInAccounts, limit),
       emailAccounts = RelatedEntities.top(userId, relatedEmailAccounts, limit),
-      organizations = RelatedEntities.top(userId, relatedOrganizations, limit)
+      organizations = RelatedEntities.top(userId, relatedOrganizations, limit),
+      normalizingConstant = allRelatedEntities.map(_.map(_._2).sum).sum
+
     )
   }
 
   private def buildSociallyRelatedPeopleForOrg(orgId: Id[Organization], journal: TeleportationJournal, limit: Int) = {
     val relatedUsers = ListBuffer[(Id[User], Double)]()
     val relatedEmailAccounts = ListBuffer[(Id[EmailAccountInfo], Double)]()
-
-    @inline def normalizedScore(score: Int) = score.toDouble / journal.getCompletedSteps()
+    val allRelated = Seq(relatedUsers, relatedEmailAccounts)
 
     journal.getVisited().foreach {
       case (id, score) if id.kind == UserReader =>
         val userId = VertexDataId.toUserId(id.asId[UserReader])
-        relatedUsers += userId -> normalizedScore(score)
+        relatedUsers += userId -> score
       case (id, score) if id.kind == EmailAccountReader =>
         val emailAccountId = VertexDataId.toEmailAccountId(id.asId[EmailAccountReader])
-        relatedEmailAccounts += emailAccountId -> normalizedScore(score)
+        relatedEmailAccounts += emailAccountId -> score
       case _ => // ignore
     }
 
     SociallyRelatedEntitiesForOrg(
       users = RelatedEntities.top(orgId, relatedUsers, limit),
-      emailAccounts = RelatedEntities.top(orgId, relatedEmailAccounts, limit)
+      emailAccounts = RelatedEntities.top(orgId, relatedEmailAccounts, limit),
+      allRelated.map(_.map(_._2).sum).sum
     )
   }
 

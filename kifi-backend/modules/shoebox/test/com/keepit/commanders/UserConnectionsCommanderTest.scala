@@ -37,8 +37,8 @@ class UserConnectionsCommanderTest extends Specification with ShoeboxTestInjecto
           abook.addFriendRecommendationsExpectations(userId, Seq(users(1).id.get, users(2).id.get, users(3).id.get))
 
           val relatedEntities = {
-            val relatedUsers = RelatedEntities[User, User](userId, Seq(users(2).id.get -> 10d, users(1).id.get -> 5d))
-            SociallyRelatedEntitiesForUser(relatedUsers, RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId))
+            val relatedUsers = RelatedEntities[User, User](userId, Seq(users(2).id.get -> 10d, users(1).id.get -> 5d), normalizingConstant = 15)
+            SociallyRelatedEntitiesForUser(relatedUsers, RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), RelatedEntities.empty(userId), normalizingConstant = 15)
           }
           inject[GraphServiceClient].asInstanceOf[FakeGraphServiceClientImpl].setSociallyRelatedEntitiesForUser(userId, relatedEntities)
 

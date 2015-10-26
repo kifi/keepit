@@ -10,7 +10,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time._
 import com.keepit.graph.GraphServiceClient
-import com.keepit.graph.model.SociallyRelatedEntitiesForOrg
+import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntitiesForOrg }
 import com.keepit.model.{ OrganizationInviteView, User, Organization }
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
@@ -104,7 +104,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
         members <- fOrgMembers
         fakeUsers <- fFakeUsers
       } yield {
-        val recommendations = relatedUsers.related.map { case (userId, score) => OrganizationInviteRecommendation(Left(userId), None, score) }
+        val recommendations = relatedUsers.related.map { case (userId, score) => OrganizationInviteRecommendation(Left(userId), None, score / relatedUsers.normalizingConstant) }
         val irrelevantRecommendations = members ++ fakeUsers ++ rejectedRecommendations
         Some(recommendations.toStream.filter(reco => !irrelevantRecommendations.contains(reco.identifier.left.get)))
       }
@@ -113,32 +113,33 @@ class AbookOrganizationRecommendationCommander @Inject() (
 
   private def generateFutureEmailRecommendations(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], fRelatedEntities: Future[Option[SociallyRelatedEntitiesForOrg]]): Future[Stream[OrganizationInviteRecommendation]] = {
     val fNormalizedUsernames = abookRecommendationHelper.getNormalizedUsernames(Right(orgId))
-    fRelatedEntities.flatMap { relatedEntities =>
-      val relatedEmailAccounts = relatedEntities.map(_.emailAccounts.related) getOrElse Seq.empty
-      if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
-      else {
-        val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => orgMembershipRecommendationRepo.getIrrelevantRecommendations(orgId) }.collect {
-          case Right(emailAccountId) => emailAccountId
-        }
-        val allContacts = db.readOnlyMaster { implicit session =>
-          viewerIdOpt match {
-            case Some(viewerId) => contactRepo.getByUserId(viewerId)
-            case None =>
-              val relevantEmailAccountIds = relatedEmailAccounts.map { case (id, score) => EmailAccount.fromEmailAccountInfoId(id) }.toSet
-              contactRepo.getByEmailAccountIds(relevantEmailAccountIds)
+    fRelatedEntities.flatMap { relatedEntitiesOpt =>
+      relatedEntitiesOpt.map(_.emailAccounts) match {
+        case None => Future.successful(Stream.empty)
+        case Some(relatedEmailAccounts) => {
+          val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => orgMembershipRecommendationRepo.getIrrelevantRecommendations(orgId) }.collect {
+            case Right(emailAccountId) => emailAccountId
           }
-        }
-        for {
-          normalizedUserNames <- fNormalizedUsernames
-        } yield {
-          generateEmailInviteRecommendations(relatedEmailAccounts.toStream, rejectedEmailInviteRecommendations, allContacts, normalizedUserNames)
+          val allContacts = db.readOnlyMaster { implicit session =>
+            viewerIdOpt match {
+              case Some(viewerId) => contactRepo.getByUserId(viewerId)
+              case None =>
+                val relevantEmailAccountIds = relatedEmailAccounts.related.map { case (id, score) => EmailAccount.fromEmailAccountInfoId(id) }.toSet
+                contactRepo.getByEmailAccountIds(relevantEmailAccountIds)
+            }
+          }
+          for {
+            normalizedUserNames <- fNormalizedUsernames
+          } yield {
+            generateEmailInviteRecommendations(relatedEmailAccounts, rejectedEmailInviteRecommendations, allContacts, normalizedUserNames)
+          }
         }
       }
     }
   }
 
   private def generateEmailInviteRecommendations(
-    relatedEmailAccounts: Stream[(Id[EmailAccountInfo], Double)],
+    relatedEmailAccounts: RelatedEntities[Organization, EmailAccountInfo],
     rejectedRecommendations: Set[Id[EmailAccount]],
     allContacts: Set[EContact],
     normalizedUserNames: Set[String]): Stream[OrganizationInviteRecommendation] = {
@@ -155,13 +156,13 @@ class AbookOrganizationRecommendationCommander @Inject() (
 
     @inline def isValidName(name: String, address: EmailAddress) = name.nonEmpty && !name.equalsIgnoreCase(address.address)
 
-    val recommendations = relatedEmailAccounts.collect {
+    val recommendations = relatedEmailAccounts.related.toStream.collect {
       case (emailAccountId, score) if isRelevant(emailAccountId) =>
         val preferredContact = relevantEmailAccounts(emailAccountId).maxBy { emailAccount =>
           emailAccount.name.collect { case name if isValidName(name, emailAccount.email) => name.length } getOrElse 0 // pick by longest name different from the email address
         }
         val validName = preferredContact.name.filter(isValidName(_, preferredContact.email))
-        OrganizationInviteRecommendation(Right(preferredContact.email), validName, score)
+        OrganizationInviteRecommendation(Right(preferredContact.email), validName, score / relatedEmailAccounts.normalizingConstant)
     }
     recommendations.take(relevantEmailAccounts.size)
   }
