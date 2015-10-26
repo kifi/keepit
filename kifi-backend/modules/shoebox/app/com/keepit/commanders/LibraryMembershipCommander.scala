@@ -401,13 +401,10 @@ class LibraryMembershipCommanderImpl @Inject() (
   def followDefaultLibraries(userId: Id[User]): Future[Map[Id[Library], LibraryMembership]] = {
     if (mode != play.api.Mode.Prod) Future.successful(Map.empty)
     else SafeFuture {
-      println(s"signing $userId up for ${LibraryMembershipCommander.defaultLibraries}")
       implicit val context = HeimdalContext.empty
       LibraryMembershipCommander.defaultLibraries.map { libId =>
         val membership = joinLibrary(userId, libId) match {
-          case Left(fail) =>
-            println("failed!: " + fail)
-            throw fail
+          case Left(fail) => throw fail
           case Right((_, mem)) => mem
         }
         libId -> membership

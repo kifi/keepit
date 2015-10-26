@@ -129,10 +129,10 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getCreditCode(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getReferralCode(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE) { request =>
     Ok(Json.obj("code" -> creditRewardCommander.getOrCreateReferralCode(request.orgId)))
   }
-  def redeemCreditCode(pubId: PublicId[Organization], code: String) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def redeemCreditCode(pubId: PublicId[Organization], code: String) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE) { request =>
     creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(CreditCode(code), request.request.userId, Some(request.orgId))).map { rewards =>
       Ok(Json.obj("value" -> rewards.target.credit))
     }.recover {
