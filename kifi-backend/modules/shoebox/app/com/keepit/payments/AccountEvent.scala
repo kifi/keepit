@@ -66,6 +66,7 @@ object AccountEventKind {
     PaymentMethodAdded,
     PlanBilling,
     PlanChanged,
+    RewardCredit,
     SpecialCredit,
     UserAdded,
     UserRemoved
