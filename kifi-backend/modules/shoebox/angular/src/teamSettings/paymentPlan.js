@@ -317,7 +317,7 @@ angular.module('kifi')
           handler.close();
         }
 
-        if (!$scope.planSelectsForm.$pristine) {
+        if (!$scope.planSelectsForm.$pristine || $scope.upgrade) {
           var confirmText = (
             'Are you sure you want to leave?' +
             ' You haven\'t saved your payment information.' +
