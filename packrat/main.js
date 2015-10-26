@@ -2762,6 +2762,9 @@ function lightFlush() {
   urlPatterns = null;
   guideData = null;
 
+  unstore('libraries');
+  unstore('libraries_loaded_at');
+
   authenticate(function () {
     getLatestThreads();
     getUrlPatterns(getPrefs.bind(null, loadLibraries.bind(null, api.noop)));
