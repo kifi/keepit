@@ -588,7 +588,6 @@ GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeri
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
 
-GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
@@ -651,8 +650,6 @@ GET     /admin/data/remigrate                                                  @
 POST    /admin/data/clearRestriction                                           @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 POST    /admin/data/flagAsAdult                                                @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
 GET     /admin/data/cleanKeepsByUri                                            @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
-
-GET     /admin/data/depornify        @com.keepit.controllers.admin.AdminPornDetectorController.massMarkAsAdult()
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -813,10 +810,6 @@ POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.
 POST    /admin/libraries/forceModify                    @com.keepit.controllers.admin.AdminLibraryController.unsafeModifyLibrary
 POST    /admin/libraries/removeLibrariesWithInactiveOwner       @com.keepit.controllers.admin.AdminLibraryController.removeLibrariesWithInactiveOwner
 POST    /admin/libraries/getLibrariesWithInactiveOwner          @com.keepit.controllers.admin.AdminLibraryController.getLibrariesWithInactiveOwner
-
-GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
-POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
-POST    /admin/personas/:id         @com.keepit.controllers.admin.AdminPersonaController.editPersona(id: Id[Persona])
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
