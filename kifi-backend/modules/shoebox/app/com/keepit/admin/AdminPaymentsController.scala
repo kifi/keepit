@@ -200,12 +200,15 @@ class AdminPaymentsController @Inject() (
     Ok
   }
 
-  def paymentsDashboard(page: Int) = AdminUserPage { implicit request =>
+  def paymentsDashboard(page: Int, kind: Option[String]) = AdminUserPage { implicit request =>
+    val pg = Paginator(num = page, size = 100)
+    val kindFilterOpt = kind.flatMap(AccountEventKind.get)
+
     val dashboard = db.readOnlyMaster { implicit session =>
       val frozenAccounts = paidAccountRepo.all.filter(_.frozen).take(100) // God help us if we have more than 100 frozen accounts
-      val eventCount = accountEventRepo.activeCount
-      val pg = Paginator(num = page, size = 100)
-      val recentEvents = accountEventRepo.adminGetRecentEvents(pg).map(createAdminAccountEventView)
+      val kinds = kindFilterOpt.map(Set(_)).getOrElse(AccountEventKind.all)
+      val eventCount = accountEventRepo.adminCountByKind(kinds)
+      val recentEvents = accountEventRepo.adminGetByKind(kinds, pg).map(createAdminAccountEventView)
       val paginationHelper = PaginationHelper(page = pg.num, itemCount = eventCount, pageSize = pg.size, otherPagesRoute = { p: Int =>
         asPlayHtml(com.keepit.controllers.admin.routes.AdminPaymentsController.paymentsDashboard(p))
       })
