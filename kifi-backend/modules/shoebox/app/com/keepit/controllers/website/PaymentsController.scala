@@ -65,6 +65,7 @@ class PaymentsController @Inject() (
               case Success((_, lastPaymentFailed)) =>
                 val futureCharge = if (lastPaymentFailed) paymentCommander.processAccount(request.orgId).imap { case (_, event) => event.paymentCharge } else Future.successful(None)
                 futureCharge.imap { charge =>
+                  implicit val chargeFormat = DollarAmount.formatAsCents
                   Ok(Json.obj(
                     "card" -> cardInfo,
                     "charge" -> charge
