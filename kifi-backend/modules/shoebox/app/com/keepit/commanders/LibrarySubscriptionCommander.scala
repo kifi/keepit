@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.net.URLEncoder
+
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ State, Id }
@@ -56,8 +58,10 @@ class LibrarySubscriptionCommanderImpl @Inject() (
 
   def slackMessageForNewKeep(user: User, keep: Keep, library: Library, channel: String): BasicSlackMessage = {
     val keepTitle = if (keep.title.exists(_.nonEmpty)) { keep.title.get } else { "a keep" }
-    val userLink = Path(s"/redir?data=${Json.obj("t" -> "us", "uid" -> user.externalId).toString()}&kma=1").absolute
-    val libLink = Path(s"/redir?data=${Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id).toString()}&kma=1").absolute
+    val userRedir = URLEncoder.encode(Json.obj("t" -> "us", "uid" -> user.externalId).toString(), "ascii")
+    val libRedir = URLEncoder.encode(Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id).toString(), "ascii")
+    val userLink = Path(s"redir?data=$userRedir&kma=1").absolute
+    val libLink = Path(s"redir?data=$libRedir&kma=1").absolute
     val text = s"<$userLink|${user.fullName}> just added <${keep.url}|$keepTitle> to the <$libLink|${library.name}> library."
     val attachments: Seq[SlackAttachment] = keep.note.toSeq.collect { case content if content.nonEmpty => SlackAttachment(fallback = "Check out this keep", text = s"${content} - ${user.firstName}") }
     BasicSlackMessage(text = text, channel = Some(channel), attachments = attachments)
