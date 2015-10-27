@@ -95,7 +95,7 @@ class PaymentsController @Inject() (
         orgCommander.setAccountFeatureSettings(settingsRequest) match {
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
-            val config = orgCommander.getExternalOrgConfiguration(request.orgId)
+            val config = db.readOnlyMaster { implicit session => orgCommander.getExternalOrgConfigurationHelper(request.orgId) } // avoiding using replica
             Ok(Json.toJson(config))
         }
     }
