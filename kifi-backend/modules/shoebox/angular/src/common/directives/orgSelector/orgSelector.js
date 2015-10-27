@@ -26,7 +26,7 @@ angular.module('kifi')
           if (!$scope.library.id || // we're creating a new library
               $scope.hasPermission(LIB_PERMISSION.MOVE_LIBRARY)) { // or we have permission to move the existing library
             $scope.libraryProps.selectedOrgId = undefined;
-            $scope.space.destination = $scope.library.owner;
+            $scope.space.destination = $scope.library.owner || $scope.me;
           }
         };
 
@@ -72,7 +72,7 @@ angular.module('kifi')
                 privacyToken.org = '';
               }
             } else {
-              if (privacyToken.org === 'organization') {
+              if (privacyToken.org === 'organization' || $scope.library.visibility === 'published') {
                 $scope.library.visibility = 'organization';
               }
             }
