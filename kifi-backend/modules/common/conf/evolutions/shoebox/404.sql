@@ -13,6 +13,7 @@ CREATE TABLE credit_code_info (
 	status VARCHAR(32) NOT NULL,
 	referrer_user_id BIGINT(20) DEFAULT NULL,
 	referrer_organization_id BIGINT(20) DEFAULT NULL,
+	referrer_credit INT(10) DEFAULT NULL,
 
 	PRIMARY KEY(id),
 	UNIQUE KEY credit_code_info_u_code (code),

@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model.{ User, OrganizationRepo, Organization }
-import com.keepit.payments.CreditRewardFail.{ CreditCodeAlreadyBurnedException, CreditCodeAbuseException, NoPaidAccountException, CreditCodeNotFoundException }
+import com.keepit.payments.CreditRewardFail._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.JsNull
 
@@ -46,7 +46,7 @@ class CreditRewardCommanderImpl @Inject() (
           kind = kind,
           credit = newOrgReferralCredit,
           status = CreditCodeStatus.Open,
-          referrer = Some(CreditCodeReferrer.fromOrg(org))
+          referrer = Some(CreditCodeReferrer(org.ownerId, Some(orgId), orgReferrerCredit))
         )
         creditCodeInfoRepo.save(creditCodeInfo)
       }
@@ -85,7 +85,7 @@ class CreditRewardCommanderImpl @Inject() (
         }
 
       case CreditCodeKind.Promotion =>
-        val targetReward = Reward(RewardKind.Promotion)(RewardKind.Promotion.Used)(None)
+        val targetReward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId.get)
         for {
           targetCreditReward <- creditRewardRepo.create(CreditReward(
             accountId = accountId,
@@ -110,9 +110,11 @@ class CreditRewardCommanderImpl @Inject() (
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
 
+          referrer <- creditCodeInfo.referrer.map(Success(_)).getOrElse(Failure(NoReferrerException(creditCodeInfo)))
+          referrerAccount <- referrer.organizationId.map(accountRepo.getAccountId(_)).map(Success(_)).getOrElse(Failure(NoPaidAccountException(referrer.userId, referrer.organizationId)))
           referrerCreditReward <- creditRewardRepo.create(CreditReward(
-            accountId = accountId,
-            credit = orgReferrerCredit,
+            accountId = referrerAccount,
+            credit = referrer.credit,
             applied = None,
             reward = referrerReward,
             unrepeatable = Some(UnrepeatableRewardKey.ReferrerFor(orgId.get)),

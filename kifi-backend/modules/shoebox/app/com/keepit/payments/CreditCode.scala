@@ -47,10 +47,7 @@ object CreditCodeKind {
   }
 }
 
-case class CreditCodeReferrer(userId: Id[User], organizationId: Option[Id[Organization]])
-object CreditCodeReferrer {
-  def fromOrg(org: Organization): CreditCodeReferrer = CreditCodeReferrer(org.ownerId, Some(org.id.get))
-}
+case class CreditCodeReferrer(userId: Id[User], organizationId: Option[Id[Organization]], credit: DollarAmount)
 
 sealed abstract class CreditCodeStatus(val value: String)
 object CreditCodeStatus {
@@ -98,5 +95,6 @@ object CreditRewardFail {
   case class CreditCodeAbuseException(req: CreditCodeApplyRequest) extends CreditRewardFail(BAD_REQUEST, s"Credit code ${req.code} cannot be applied by user ${req.applierId} in org ${req.orgId}", "code_invalid")
   case class CreditCodeAlreadyBurnedException(code: CreditCode) extends CreditRewardFail(BAD_REQUEST, s"Credit code $code has already been used", "code_already_used")
   case class NoPaidAccountException(userId: Id[User], orgIdOpt: Option[Id[Organization]]) extends CreditRewardFail(BAD_REQUEST, s"User $userId in org $orgIdOpt has no paid account", "no_paid_account")
+  case class NoReferrerException(creditCodeInfo: CreditCodeInfo) extends CreditRewardFail(BAD_REQUEST, s"Credit code ${creditCodeInfo.code} has kind ${creditCodeInfo.kind} but no referrer", "no_referrer")
   case class UnrepeatableRewardKeyCollisionException(key: UnrepeatableRewardKey) extends CreditRewardFail(BAD_REQUEST, s"A reward with unrepeatable key $key (${key.toKey}) already exists", "unrepeatable_reward")
 }

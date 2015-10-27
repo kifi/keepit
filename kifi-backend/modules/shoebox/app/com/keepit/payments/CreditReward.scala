@@ -105,12 +105,6 @@ object RewardKind {
     val applicable: Used.type = Used
   }
 
-  case object Promotion extends RewardKind("promotion") with RewardStatus.WithEmptyInfo {
-    case object Used extends Status("used")
-    protected val allStatus: Set[S] = Set(Used)
-    val applicable: Used.type = Used
-  }
-
   case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
@@ -126,7 +120,7 @@ object RewardKind {
     val applicable: Upgraded.type = Upgraded
   }
 
-  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral, Promotion)
+  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral)
 
   def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
     case Some(validKind) => validKind
@@ -150,17 +144,17 @@ sealed trait UnrepeatableRewardKey {
 
 object UnrepeatableRewardKey {
   // only one account can reap the reward for referring an org
-  case class ReferrerFor(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"referrerFor|org_$orgId" }
+  case class ReferrerFor(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"referrerFor_org|$orgId" }
   // an account can only reap a single referral bonus when signing up (promo or referral)
-  case class WasReferred(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasReferred|org_$orgId" }
-  case class WasCreated(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasCreated|org_$orgId" }
+  case class WasReferred(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasReferred_org|$orgId" }
+  case class WasCreated(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasCreated_org|$orgId" }
 
   private object ValidLong {
     def unapply(id: String): Option[Long] = Try(id.toLong).toOption
   }
-  private val referrerFor = """^referrerFor\|org_(\d+)$""".r
-  private val wasReferred = """^wasReferred\|org_(\d+)$""".r
-  private val wasCreated = """^wasCreated\|org_(\d+)$""".r
+  private val referrerFor = """^referrer_org\|(\d+)$""".r
+  private val wasReferred = """^referred_org\|(\d+)$""".r
+  private val wasCreated = """^created_org\|(\d+)$""".r
   def fromKey(key: String): UnrepeatableRewardKey = key match {
     case referrerFor(ValidLong(orgId)) => ReferrerFor(Id(orgId))
     case wasReferred(ValidLong(orgId)) => WasReferred(Id(orgId))
