@@ -34,7 +34,7 @@ class ShoeboxTasksPlugin @Inject() (
       twitterSyncCommander.syncAll()
     }
 
-    scheduleTaskOnLeader(system, 30 minute, 4 hours, paymentsProcessing) {
+    scheduleTaskOnLeader(system, 30 minutes, 30 minutes, paymentsProcessing) {
       planRenewalCommander.processDueRenewals()
       paymentProcessingCommander.processDuePayments()
     }
