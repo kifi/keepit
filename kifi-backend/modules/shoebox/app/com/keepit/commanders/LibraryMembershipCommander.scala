@@ -156,13 +156,12 @@ class LibraryMembershipCommanderImpl @Inject() (
         }
         (inviteList.map(_.access).toSet ++ orgMemberAccess).maxOpt.getOrElse(LibraryAccess.READ_ONLY)
       }
-      val (updatedLib, updatedMem) = db.readWrite(attempts = 3) { implicit s =>
+      val (updatedLib, updatedMem, invitesToAlert) = db.readWrite(attempts = 3) { implicit s =>
         val updatedMem = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None) match {
           case None =>
             val subscribedToUpdates = subscribed.getOrElse(maxAccess == LibraryAccess.READ_WRITE)
             log.info(s"[joinLibrary] New membership for $userId. New access: $maxAccess. $inviteList")
             val mem = libraryMembershipRepo.save(LibraryMembership(libraryId = libraryId, userId = userId, access = maxAccess, lastJoinedAt = Some(clock.now), subscribedToUpdates = subscribedToUpdates))
-            notifyOwnerOfNewFollowerOrCollaborator(userId, lib, maxAccess) // todo, bad, this is in a db transaction and side effects
             mem
           case Some(mem) =>
             val maxWithExisting = if (mem.state == LibraryMembershipStates.ACTIVE) Seq(maxAccess, mem.access).max else maxAccess
@@ -179,15 +178,16 @@ class LibraryMembershipCommanderImpl @Inject() (
         }
 
         val invitesToAlert = inviteList.filterNot(_.inviterId == lib.ownerId)
-        if (invitesToAlert.nonEmpty) {
-          val invitee = userRepo.get(userId)
-          val owner = basicUserRepo.load(lib.ownerId)
-          libraryInviteCommander.notifyInviterOnLibraryInvitationAcceptance(invitesToAlert, invitee, lib, owner) // todo, bad, this is in a db transaction and side effects
-        }
 
         val updatedLib = libraryRepo.save(lib.copy(memberCount = libraryMembershipRepo.countWithLibraryId(libraryId)))
-        (updatedLib, updatedMem)
+        (updatedLib, updatedMem, invitesToAlert)
       }
+
+      if (lib.kind != LibraryKind.SYSTEM_ORG_GENERAL) {
+        notifyOwnerOfNewFollowerOrCollaborator(userId, lib, maxAccess)
+        if (invitesToAlert.nonEmpty) libraryInviteCommander.notifyInviterOnLibraryInvitationAcceptance(invitesToAlert, userId, lib)
+      }
+
       updateLibraryJoin(userId, lib, updatedMem, eventContext)
       Right((updatedLib, updatedMem))
     }
@@ -294,19 +294,16 @@ class LibraryMembershipCommanderImpl @Inject() (
   }
 
   private def notifyOwnerOfNewFollowerOrCollaborator(newFollowerId: Id[User], lib: Library, access: LibraryAccess): Unit = SafeFuture {
-    val (follower, owner, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
+    val (follower, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
       val follower = userRepo.get(newFollowerId)
-      val owner = basicUserRepo.load(lib.ownerId)
       val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 2
-      (follower, owner, lotsOfFollowers)
+      (follower, lotsOfFollowers)
     }
-    val (title, category, message) = if (access == LibraryAccess.READ_WRITE) {
-      // This should be changed to library_collaborated but right now iOS skips categories it doesn't know.
-      ("New Library Collaborator", NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
+    val (category, message) = if (access == LibraryAccess.READ_WRITE) {
+      (NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now collaborating on your Library ${lib.name}")
     } else {
-      ("New Library Follower", NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
+      (NotificationCategory.User.LIBRARY_FOLLOWED, s"${follower.firstName} ${follower.lastName} is now following your Library ${lib.name}")
     }
-    val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
     if (!lotsOfFollowers) {
       val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(lib.ownerId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
       if (canSendPush) {
