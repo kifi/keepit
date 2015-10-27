@@ -371,7 +371,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val response = controller.redeemCreditCode(publicId)(request)
 
           status(response) === OK
-          (contentAsJson(response) \ "value").as[DollarAmount] === DollarAmount.dollars(100)
+          (contentAsJson(response) \ "value").as[DollarAmount](DollarAmount.formatAsCents) === DollarAmount.dollars(100)
         }
       }
     }
