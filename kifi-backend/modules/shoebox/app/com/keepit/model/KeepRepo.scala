@@ -2,7 +2,7 @@ package com.keepit.model
 
 import scala.collection.mutable
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ KeepVisibilityCount, LibraryMetadataCache, LibraryMetadataKey, WhoKeptMyKeeps }
+import com.keepit.commanders.{ KeepVisibilityCount, LibraryMetadataCache, LibraryMetadataKey }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -44,7 +44,6 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def delete(id: Id[Keep])(implicit session: RWSession): Unit
   def exists(uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
   def getSourcesByUser()(implicit session: RSession): Map[Id[User], Seq[KeepSource]]
-  def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps]
   def getLatestKeepsURIByUser(userId: Id[User], limit: Int, includePrivate: Boolean = false)(implicit session: RSession): Seq[Id[NormalizedURI]]
   def getKeepExports(userId: Id[User])(implicit session: RSession): Seq[KeepExport]
   def latestManualKeepTime(userId: Id[User])(implicit session: RSession): Option[DateTime]
@@ -322,24 +321,6 @@ class KeepRepoImpl @Inject() (
                order by bm.kept_at desc, bm.id desc limit $count;"""
     }
     interpolated.as[Keep].list
-  }
-
-  def whoKeptMyKeeps(userId: Id[User], since: DateTime, maxKeepers: Int)(implicit session: RSession): Seq[WhoKeptMyKeeps] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val interpolated = sql"""
-          SELECT b.c user_count, b.t last_keep_time, b.uri_id, b.users FROM (
-            SELECT count(ab.id) c, max(ab.kept_at) t, ab.uri_id, group_concat(ab.user_id ORDER BY ab.kept_at DESC) users FROM (
-              SELECT uri_id FROM bookmark
-              WHERE user_id = ${userId}
-            ) ub, bookmark ab
-            WHERE ub.uri_id = ab.uri_id AND ab.visibility = 'published' AND ab.user_id != ${userId}
-            GROUP BY ab.uri_id
-          ) b
-          WHERE b.t > ${since} AND b.c BETWEEN 1 AND ${maxKeepers}
-          ORDER BY b.t DESC;"""
-    interpolated.as[(Int, DateTime, Id[NormalizedURI], String)].list map { row =>
-      WhoKeptMyKeeps(row._1, row._2, row._3, row._4.split(',').map(_.toInt).map(Id[User](_)))
-    }
   }
 
   def bulkGetByUserAndUriIds(userId: Id[User], uriIds: Set[Id[NormalizedURI]])(implicit session: RSession): Map[Id[NormalizedURI], Keep] = {
