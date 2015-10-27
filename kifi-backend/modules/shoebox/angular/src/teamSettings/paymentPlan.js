@@ -12,7 +12,7 @@ angular.module('kifi')
             profileService, StripeCheckout, messageTicker, paymentPlans) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
-    $scope.upgrade = !!$state.params.upgrade;
+    $scope.disableSaveButton = false;
 
     var PREDEFINED_CYCLE_PERIOD = {
       1: 'Monthly',
@@ -110,21 +110,11 @@ angular.module('kifi')
       };
     });
 
-
-    if ($scope.upgrade) {
-      var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
-      $scope.plan = {
-        name: standardTierPlans[1].name,
-        cycle: standardTierPlans[1].cycle,
-        newCard: null
-      };
-    } else {
-      $scope.plan = {
-        name: $scope.currentPlan.name,
-        cycle: $scope.currentPlan.cycle, //months
-        newCard: null
-      };
-    }
+    $scope.plan = {
+      name: $scope.currentPlan.name,
+      cycle: $scope.currentPlan.cycle, //months
+      newCard: null
+    };
 
     $scope.isNoPlanName = function (planName) {
       return !planName;
@@ -177,6 +167,8 @@ angular.module('kifi')
       if (!initializing && !$scope.plan.newCard && (newPlan.name === $scope.currentPlan.name && newPlan.cycle === $scope.currentPlan.cycle)) {
         resetForm();
       }
+
+      $scope.disableSaveButton = false;
     }, true);
 
     function getCyclesByTier(tier) {
@@ -244,8 +236,11 @@ angular.module('kifi')
     $scope.save = function () {
       var saveSeriesDeferred = $q.defer();
       var saveSeriesPromise = saveSeriesDeferred.promise;
-
       var selectedPlan = $scope.getSelectedPlan();
+
+      $scope.disableSaveButton = true;
+      $window.addEventListener('beforeunload', onBeforeUnload);
+
       // If nothing changed, pretend we saved it.
       if (!$scope.plan.newCard && ($scope.currentPlan.id === selectedPlan.id) && $scope.planSelectsForm.$pristine) {
         messageTicker({
@@ -255,45 +250,58 @@ angular.module('kifi')
         return;
       }
 
-      saveSeriesPromise.then(function () {
-        $window.addEventListener('beforeunload', onBeforeUnload);
-      });
-
       if ($scope.plan.newCard) {
-        saveSeriesPromise
-        .then(function () {
-          return billingService
-          .setBillingCCToken($scope.profile.id, $scope.plan.newCard.id);
-        });
+        saveSeriesPromise = (
+          saveSeriesPromise
+          .then(function () {
+            return billingService
+            .setBillingCCToken($scope.profile.id, $scope.plan.newCard.id);
+          })
+          .then(function (setCardData) {
+            $scope.card = setCardData.card;
+            $scope.plan.newCard = null;
+          })
+        );
       }
 
       if (selectedPlan && selectedPlan.id !== $scope.currentPlan.id) {
-        saveSeriesPromise.then(function () {
-          return billingService
-          .setBillingPlan($scope.profile.id, selectedPlan.id);
-        })
-        .then(function () {
-          var successMessage;
+        saveSeriesPromise = (
+          saveSeriesPromise
+          .then(function () {
+            return billingService
+            .setBillingPlan($scope.profile.id, selectedPlan.id);
+          })
+          .then(function () {
+            var successMessage;
 
-          if ($scope.isPaidPlanName(selectedPlan.name)) {
-            successMessage = 'You successfully upgraded your team\'s plan.';
-          } else {
-            successMessage = 'You downgraded your team\'s plan';
+            if ($scope.isPaidPlanName(selectedPlan.name)) {
+              successMessage = 'You successfully upgraded your team\'s plan.';
+            } else {
+              successMessage = 'You downgraded your team\'s plan';
+            }
+            messageTicker({
+              text: successMessage,
+              type: 'green'
+            });
+            resetForm();
+            $state.reload('orgProfile.settings');
+          })
+        );
+      }
+
+      saveSeriesPromise = (
+        saveSeriesPromise
+        ['catch'](function (error) {
+          switch (error) {
+            default:
+              modalService.openGenericErrorModal();
           }
-          messageTicker({
-            text: successMessage,
-            type: 'green'
-          });
-          resetForm();
-          $timeout(function () {
-            $state.reload('orgProfile');
-          }, 10);
+          $scope.disableSaveButton = false;
         })
-        ['catch'](modalService.genericErrorModal)
         ['finally'](function () {
           $window.removeEventListener('beforeunload', onBeforeUnload);
-        });
-      }
+        })
+      );
 
       // Start the promise chain
       saveSeriesDeferred.resolve();
@@ -317,7 +325,7 @@ angular.module('kifi')
           handler.close();
         }
 
-        if (!$scope.planSelectsForm.$pristine || $scope.upgrade) {
+        if (!$scope.planSelectsForm.$pristine || $scope.plan.newCard) {
           var confirmText = (
             'Are you sure you want to leave?' +
             ' You haven\'t saved your payment information.' +
@@ -334,7 +342,11 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $timeout(function () {
+    $scope.$evalAsync(function () {
+      if ($state.params.upgrade) {
+        $scope.changePlanToStandard();
+      }
+
       $analytics.eventTrack('user_viewed_page', {
         type: 'paymentPlan'
       });

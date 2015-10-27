@@ -197,7 +197,7 @@ tooltip-arrow-right()
       position: absolute
       width: 160px
       top: -15px
-      bottom: 0
+      bottom: calc(100% - 5px)
       left: calc(50% - 77px)
 
     &[data-kf-tooltip-position="right"]:after
@@ -208,7 +208,7 @@ tooltip-arrow-right()
       height: 60px
 
     &[data-kf-tooltip-position="bottom"]:after
-      top: 100%
+      top: calc(100% - 5px)
       bottom: -15px
 
     &[data-kf-tooltip-position="left"]:after

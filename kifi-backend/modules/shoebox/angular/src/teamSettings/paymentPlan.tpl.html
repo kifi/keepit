@@ -85,7 +85,9 @@
             'kf-button-error': cardError
           }"
           ng-click="openStripeCheckout()"
-          ng-bind="(card ? 'Change' : 'Add') + ' credit card'"
+          ng-disabled="plan.newCard"
+          ng-bind="plan.newCard ? 'Card Added' :
+            ((card ? 'Change' : 'Add') + ' credit card')"
         ></button>
         <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">That worked! Click below to save and update your plan.</span>
       </div>
@@ -104,6 +106,7 @@
     <button
       class="kf-button kf-button-large kf-payment-plan-save"
       ng-click="warningModalOrSave()"
+      ng-disabled="disableSaveButton"
     >Save my plan preferences</button>
   </div>
 </div>

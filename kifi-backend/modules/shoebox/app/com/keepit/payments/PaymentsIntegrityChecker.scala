@@ -19,6 +19,8 @@ sealed abstract class PaymentsIntegrityError(val value: String) {
   def dump: JsValue
 }
 object PaymentsIntegrityError {
+  private implicit val dollarFormat = DollarAmount.formatAsCents
+
   private val accountLockError = "could_not_get_account_lock"
   private val accountBalanceError = "inconsistent_account_balance"
   private val missingOrgMemberError = "missing_organization_member"

@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.net.URLEncoder
+
 import com.google.inject.Injector
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.model._
@@ -97,8 +99,11 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
             (user, lib, keep)
           }
           val message = libSubCommander.slackMessageForNewKeep(user, keep, lib, "testChannel")
-          message.text must contain(s"""/redir?data={"t":"us","uid":"${user.externalId.id}"}""")
-          message.text must contain(s"""/redir?data={"t":"lv","lid":"${Library.publicId(lib.id.get).id}"}""")
+
+          val userRedir = URLEncoder.encode(s"""{"t":"us","uid":"${user.externalId.id}"}""", "ascii")
+          val libRedir = URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib.id.get).id}"}""", "ascii")
+          message.text must contain(s"/redir?data=$userRedir")
+          message.text must contain(s"/redir?data=$libRedir")
         }
       }
     }

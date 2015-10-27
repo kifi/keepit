@@ -40,7 +40,8 @@ class CreditCodeInfoRepoImpl @Inject() (
     def status = column[CreditCodeStatus]("status", O.NotNull)
     def referrerUserId = column[Option[Id[User]]]("referrer_user_id", O.Nullable)
     def referrerOrganizationId = column[Option[Id[Organization]]]("referrer_organization_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, code, kind, credit, status, referrerUserId, referrerOrganizationId) <> ((CreditCodeInfoRepo.applyFromDbRow _).tupled, CreditCodeInfoRepo.unapplyToDbRow)
+    def referrerCredit = column[Option[DollarAmount]]("referrer_credit", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, code, kind, credit, status, referrerUserId, referrerOrganizationId, referrerCredit) <> ((CreditCodeInfoRepo.applyFromDbRow _).tupled, CreditCodeInfoRepo.unapplyToDbRow)
   }
 
   def table(tag: Tag) = new CreditCodeInfoTable(tag)
@@ -71,8 +72,13 @@ object CreditCodeInfoRepo {
     credit: DollarAmount,
     status: CreditCodeStatus,
     referrerUserId: Option[Id[User]],
-    referrerOrganizationId: Option[Id[Organization]]) = {
-    val referrer = referrerUserId.map(CreditCodeReferrer(_, referrerOrganizationId))
+    referrerOrganizationId: Option[Id[Organization]],
+    referrerCredit: Option[DollarAmount]) = {
+    val referrer = (referrerUserId, referrerCredit) match {
+      case (Some(refUserId), Some(refCredit)) => Some(CreditCodeReferrer(refUserId, referrerOrganizationId, refCredit))
+      case (None, None) => None
+      case _ => throw new Exception(s"DB row for credit code info $id is in a super broken state")
+    }
     CreditCodeInfo(id, createdAt, updatedAt, state, code, kind, credit, status, referrer)
   }
 
@@ -86,6 +92,7 @@ object CreditCodeInfoRepo {
     info.credit,
     info.status,
     info.referrer.map(_.userId),
-    info.referrer.flatMap(_.organizationId)
+    info.referrer.flatMap(_.organizationId),
+    info.referrer.map(_.credit)
   ))
 }
