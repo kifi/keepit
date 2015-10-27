@@ -7,6 +7,7 @@ import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.model._
 import com.keepit.commanders.{ PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
+import com.keepit.common.core._
 
 import play.api.libs.json.{ Json, JsSuccess, JsError }
 
@@ -23,6 +24,7 @@ class PaymentsController @Inject() (
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     planCommander: PlanManagementCommander,
+    paymentCommander: PaymentProcessingCommander,
     activityLogCommander: ActivityLogCommander,
     creditRewardCommander: CreditRewardCommander,
     stripeClient: StripeClient,
@@ -56,11 +58,22 @@ class PaymentsController @Inject() (
       case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
       case Some(token) =>
         stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").flatMap { realToken =>
-          stripeClient.getCardInfo(realToken).map { cardInfo =>
+          stripeClient.getCardInfo(realToken).flatMap { cardInfo =>
             val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
             val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, cardInfo.lastFour)
-            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, cardInfo.lastFour)
-            Ok(Json.toJson(cardInfo))
+            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, cardInfo.lastFour) match {
+              case Success((_, lastPaymentFailed)) =>
+                val futureCharge = if (lastPaymentFailed) paymentCommander.processAccount(request.orgId).imap { case (_, event) => event.paymentCharge } else Future.successful(None)
+                futureCharge.imap { charge =>
+                  implicit val chargeFormat = DollarAmount.formatAsCents
+                  Ok(Json.obj(
+                    "card" -> cardInfo,
+                    "charge" -> charge
+                  ))
+                }
+              case Failure(InvalidChange(msg)) => Future.successful(BadRequest(Json.obj("error" -> msg)))
+              case Failure(ex) => Future.failed(ex)
+            }
           }
         }
     }

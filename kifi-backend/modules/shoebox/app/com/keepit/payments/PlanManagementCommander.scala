@@ -63,7 +63,7 @@ trait PlanManagementCommander {
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[AccountEvent]
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[(AccountEvent, Boolean)]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
   def getPaymentStatus(orgId: Id[Organization]): PaymentStatus
 
@@ -525,28 +525,36 @@ class PlanManagementCommanderImpl @Inject() (
     newPaymentMethod
   }
 
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, newLastFour: String): Try[AccountEvent] = db.readWrite { implicit session =>
-    val accountId = orgId2AccountId(orgId)
-    val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
-    if (!oldDefaultOpt.flatMap(_.id).contains(newDefaultId)) {
-      val newDefault = paymentMethodRepo.get(newDefaultId)
-      if (newDefault.state == PaymentMethodStates.ACTIVE) {
-        oldDefaultOpt.map { oldDefault =>
-          paymentMethodRepo.save(oldDefault.copy(default = false))
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, newLastFour: String): Try[(AccountEvent, Boolean)] = {
+    accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val accountId = account.id.get
+      val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
+      if (!oldDefaultOpt.flatMap(_.id).contains(newDefaultId)) {
+        val newDefault = paymentMethodRepo.get(newDefaultId)
+        if (newDefault.state == PaymentMethodStates.ACTIVE) {
+          oldDefaultOpt.map { oldDefault =>
+            paymentMethodRepo.save(oldDefault.copy(default = false))
+          }
+          paymentMethodRepo.save(newDefault.copy(default = true))
+          val lastPaymentFailed = account.paymentStatus == PaymentStatus.Failed
+          if (lastPaymentFailed) {
+            paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Ok))
+          }
+          val event = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+            eventTime = clock.now,
+            accountId = accountId,
+            attribution = attribution,
+            action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
+          ))
+          Success((event, lastPaymentFailed))
+        } else {
+          Failure(new InvalidChange("payment_method_not_available"))
         }
-        paymentMethodRepo.save(newDefault.copy(default = true))
-        Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-          eventTime = clock.now,
-          accountId = accountId,
-          attribution = attribution,
-          action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
-        )))
       } else {
-        Failure(new InvalidChange("payment_method_not_available"))
+        Failure(new InvalidChange("payment_method_already_selected"))
       }
-    } else {
-      Failure(new InvalidChange("payment_method_already_selected"))
-    }
+    } getOrElse Failure(LockedAccountException(orgId))
   }
 
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod] = {
