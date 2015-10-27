@@ -107,13 +107,21 @@ class KifiSiteRouter @Inject() (
     }
   }
 
+  def serveWebAppToUserOrSignup = WebAppPage { implicit request =>
+    request match {
+      case ur: UserRequest[_] =>
+        userIpAddressCommander.logUserByRequest(ur)
+        AngularApp.app()
+      case r: NonUserRequest[_] => redirectToSignup(r.uri, r)
+    }
+  }
+
   def serveWebAppToUser = WebAppPage(implicit request => serveWebAppToUser2)
 
   private def serveWebAppToUser2(implicit request: MaybeUserRequest[_]): Result = request match {
-    case ur: UserRequest[_] => {
+    case ur: UserRequest[_] =>
       userIpAddressCommander.logUserByRequest(ur)
       AngularApp.app()
-    }
     case r: NonUserRequest[_] => redirectToLogin(r.uri, r)
   }
 
@@ -237,6 +245,10 @@ class KifiSiteRouter @Inject() (
 
   private def redirectToLogin(url: String, request: NonUserRequest[_]): Result = {
     Redirect("/login").withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
+  }
+
+  private def redirectToSignup(url: String, request: NonUserRequest[_]): Result = {
+    Redirect("/signup").withSession(request.session + (SecureSocial.OriginalUrlKey -> url))
   }
 
   private def notFound(request: MaybeUserRequest[_]): Result = {
