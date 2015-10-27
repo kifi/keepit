@@ -26,10 +26,12 @@ angular.module('kifi')
               $scope.$error = {};
               $scope.showCredit = true;
               $scope.creditRedeemed = response.data.value;
-              $timeout(function () { $scope.showCredit = false }, 3000);
+              $timeout(function () {
+                $scope.showCredit = false;
+              }, 3000);
             })
-            ['catch'](function (error) {
-              var error = error.data && error.data.error;
+            ['catch'](function (response) {
+              var error = response.data && response.data.error;
               switch (error) {
                 case 'code_nonexistent':
                   $scope.$error.general = 'Referral code doesn\'t exist';

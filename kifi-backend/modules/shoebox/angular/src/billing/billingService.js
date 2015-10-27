@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('billingService', [
-  '$analytics', 'net', 'orgProfileService', '$timeout',
-  function ($analytics, net, orgProfileService, $timeout) {
+  '$analytics', 'net', 'orgProfileService',
+  function ($analytics, net, orgProfileService) {
     function getResponseData(response) {
       return response.data;
     }
@@ -37,7 +37,7 @@ angular.module('kifi')
         .setBillingCCToken(pubId, { token: token })
         .then(function (response) {
           invalidateCache();
-          return response;
+          return getResponseData(response);
         });
       },
       getBillingContacts: function (pubId) {
@@ -50,7 +50,7 @@ angular.module('kifi')
         .setBillingContacts(pubId, contacts)
         .then(function (response) {
           invalidateCache();
-          return response;
+          return getResponseData(response);
         });
       },
       getBillingEvents: function (pubId, limit, fromId) {
