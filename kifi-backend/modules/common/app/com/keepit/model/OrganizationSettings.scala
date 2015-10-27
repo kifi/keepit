@@ -4,8 +4,6 @@ import com.keepit.common.json.TraversableFormat
 import com.keepit.model.Feature.InvalidSettingForFeatureException
 import play.api.libs.json._
 
-import scala.util.{ Failure, Success, Try }
-
 case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
   def features: Set[Feature] = kvs.keySet
   def settingFor(f: Feature): Option[FeatureSetting] = kvs.get(f)
@@ -28,8 +26,8 @@ case class OrganizationSettings(kvs: Map[Feature, FeatureSetting]) {
 object OrganizationSettings {
   val empty = OrganizationSettings(Map.empty)
 
-  private implicit def settingReadsByFeature(f: Feature): Reads[FeatureSetting] = f.settingReads
-  private val featureMapReads: Reads[Map[Feature, FeatureSetting]] = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSetting]
+  private def settingReadsByFeature(f: Feature): Reads[FeatureSetting] = f.settingReads
+  private val featureMapReads: Reads[Map[Feature, FeatureSetting]] = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSetting](Feature.reads, settingReadsByFeature)
   val dbFormat: Format[OrganizationSettings] = Format(
     Reads { jsv => jsv.validate[Map[Feature, FeatureSetting]](featureMapReads).map(OrganizationSettings(_)) },
     Writes { os => Json.toJson(os.kvs.map { case (f, s) => f.value -> s.value }) }
@@ -95,10 +93,14 @@ object Feature {
   )
   def apply(str: String): Feature = ALL.find(_.value == str).getOrElse(throw new FeatureNotFoundException(str))
 
-  implicit val format: Format[Feature] = Format(
+  val format: Format[Feature] = Format(
     __.read[String].map(Feature(_)),
     Writes { x => JsString(x.value) }
   )
+
+  implicit val writes = Writes(format.writes)
+  val reads = Reads(format.reads)
+  implicit val safeSetReads = TraversableFormat.safeSetReads[Feature](reads)
 
   import FeatureSetting._
   case object PublishLibraries extends Feature with FeatureWithPermissions {

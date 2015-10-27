@@ -63,8 +63,9 @@ trait PlanManagementCommander {
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[AccountEvent]
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[(AccountEvent, Boolean)]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
+  def getPaymentStatus(orgId: Id[Organization]): PaymentStatus
 
   private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
   private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
@@ -90,6 +91,7 @@ class PlanManagementCommanderImpl @Inject() (
   userRepo: UserRepo,
   accountLockHelper: AccountLockHelper,
   eventTrackingCommander: AccountEventTrackingCommander,
+  creditRewardCommander: CreditRewardCommander,
   permissionCommander: PermissionCommander,
   stripe: StripeClient,
   implicit val defaultContext: ExecutionContext,
@@ -97,12 +99,19 @@ class PlanManagementCommanderImpl @Inject() (
     extends PlanManagementCommander with Logging {
 
   private val MATH_CONTEXT = new MathContext(34, RoundingMode.HALF_DOWN)
+  private val orgCreationCredit = DollarAmount.dollars(50)
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def newPlansStartDate(now: DateTime): DateTime = (now plusDays 1).withTimeAtStartOfDay()
+  def newPlansStartDate(now: DateTime): DateTime = {
+    // changing this might mess up book keeping for teams that are waiting for a *new* plan to start, i.e. teams that have just been created / just changed their plan
+    val thatTimeInHours = 20 // 8PM UTC = 1PM PST
+    val thatTimeToday = now.withTimeAtStartOfDay() plusHours thatTimeInHours // Today 8PM UTC = 1PM PST
+    val thatTimeTomorrow = (now plusDays 1).withTimeAtStartOfDay() plusHours thatTimeInHours // Tomorrow 8PM UTC = 1PM PST
+    if (now isBefore thatTimeToday) thatTimeToday else thatTimeTomorrow
+  }
 
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
   def remainingBillingCycleCost(account: PaidAccount, from: DateTime)(implicit session: RSession): DollarAmount = {
@@ -127,12 +136,12 @@ class PlanManagementCommanderImpl @Inject() (
         if (plan.state != PaidPlanStates.ACTIVE) {
           Failure(new InvalidChange("plan_not_active"))
         } else {
-          val maybeAccount = paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
+          paidAccountRepo.maybeGetByOrgId(orgId, Set()) match {
             case Some(pa) if pa.state == PaidAccountStates.ACTIVE =>
               log.info(s"[PAC] $orgId: Account already exists.")
               Failure(new InvalidChange("account_exists"))
             case inactiveAccountMaybe =>
-              log.info(s"[PAC] $orgId: Creating Account")
+              log.info(s"[PAC] $orgId: Creating Account...")
               val account = paidAccountRepo.save(PaidAccount(
                 id = inactiveAccountMaybe.flatMap(_.id),
                 orgId = orgId,
@@ -143,32 +152,37 @@ class PlanManagementCommanderImpl @Inject() (
                 emailContacts = Seq.empty,
                 activeUsers = 0
               ))
-              if (accountLockHelper.acquireAccountLockForSession(orgId, session)) {
-                Success(account)
-              } else {
-                Failure(new Exception("failed_getting_account_lock")) //super safeguard, this should not be possible at this stage
+
+              val attribution = ActionAttribution(user = Some(creator), admin = None)
+
+              val creationEvent = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+                eventTime = clock.now,
+                accountId = account.id.get,
+                attribution = attribution,
+                action = AccountEventAction.OrganizationCreated(planId, Some(account.planRenewal))
+              ))
+
+              accountLockHelper.maybeWithAccountLock(orgId) {
+                log.info(s"[PAC] $orgId: Granting creation reward...")
+                creditRewardCommander.createCreditReward(CreditReward(
+                  accountId = account.id.get,
+                  credit = orgCreationCredit,
+                  applied = None,
+                  reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+                  unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
+                  code = None
+                ), userAttribution = creator).get._2.get
+
+                log.info(s"[PAC] $orgId: Registering owner...")
+                registerNewUserHelper(orgId, creator, attribution)
+                registerNewAdminHelper(orgId, creator, attribution)
+                addUserAccountContactHelper(orgId, creator, attribution)
+
+                log.info(s"[PAC] $orgId: Account successfully created!")
+                Success(creationEvent)
+              } getOrElse {
+                throw LockedAccountException(orgId)
               }
-          }
-          maybeAccount.map { account =>
-            log.info(s"[PAC] $orgId: Registering First User")
-            val createdEvent = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-              eventTime = clock.now,
-              accountId = account.id.get,
-              attribution = ActionAttribution(user = Some(creator), admin = None),
-              action = AccountEventAction.OrganizationCreated(planId, Some(account.planRenewal))
-            ))
-            grantSpecialCreditHelper(orgId, DollarAmount.dollars(50), None, None, Some("Welcome to Kifi!"))
-            registerNewUserHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
-            log.info(s"[PAC] $orgId: Registering First Admin")
-            eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-              eventTime = clock.now,
-              accountId = account.id.get,
-              attribution = ActionAttribution(user = Some(creator), admin = None),
-              action = AccountEventAction.AdminAdded(creator)
-            ))
-            addUserAccountContactHelper(orgId, creator, ActionAttribution(user = Some(creator), admin = None))
-            accountLockHelper.releaseAccountLockForSession(orgId, session)
-            createdEvent
           }
         }
       case Failure(ex) =>
@@ -393,7 +407,8 @@ class PlanManagementCommanderImpl @Inject() (
         balance = account.credit,
         charge = plan.pricePerCyclePerUser * account.activeUsers,
         plan.asInfo,
-        card
+        card,
+        account.paymentStatus
       )
     }
   }
@@ -516,28 +531,44 @@ class PlanManagementCommanderImpl @Inject() (
     newPaymentMethod
   }
 
-  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, newLastFour: String): Try[AccountEvent] = db.readWrite { implicit session =>
-    val accountId = orgId2AccountId(orgId)
-    val newDefault = paymentMethodRepo.get(newDefaultId)
-    val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
-    if (newDefault.state != PaymentMethodStates.ACTIVE) {
-      Failure(new InvalidChange("payment_method_not_available"))
-    } else {
-      oldDefaultOpt.map { oldDefault =>
-        paymentMethodRepo.save(oldDefault.copy(default = false))
+  def changeDefaultPaymentMethod(orgId: Id[Organization], newDefaultId: Id[PaymentMethod], attribution: ActionAttribution, newLastFour: String): Try[(AccountEvent, Boolean)] = {
+    accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 2) { implicit session =>
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val accountId = account.id.get
+      val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
+      if (!oldDefaultOpt.flatMap(_.id).contains(newDefaultId)) {
+        val newDefault = paymentMethodRepo.get(newDefaultId)
+        if (newDefault.state == PaymentMethodStates.ACTIVE) {
+          oldDefaultOpt.map { oldDefault =>
+            paymentMethodRepo.save(oldDefault.copy(default = false))
+          }
+          paymentMethodRepo.save(newDefault.copy(default = true))
+          val lastPaymentFailed = account.paymentStatus == PaymentStatus.Failed
+          if (lastPaymentFailed) {
+            paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Ok))
+          }
+          val event = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+            eventTime = clock.now,
+            accountId = accountId,
+            attribution = attribution,
+            action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
+          ))
+          Success((event, lastPaymentFailed))
+        } else {
+          Failure(new InvalidChange("payment_method_not_available"))
+        }
+      } else {
+        Failure(new InvalidChange("payment_method_already_selected"))
       }
-      paymentMethodRepo.save(newDefault.copy(default = true))
-      Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-        eventTime = clock.now,
-        accountId = accountId,
-        attribution = attribution,
-        action = AccountEventAction.DefaultPaymentMethodChanged(oldDefaultOpt.map(_.id.get), newDefault.id.get, newLastFour)
-      )))
-    }
+    } getOrElse Failure(LockedAccountException(orgId))
   }
 
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod] = {
     getActivePaymentMethods(orgId).find(_.default)
+  }
+
+  def getPaymentStatus(orgId: Id[Organization]): PaymentStatus = db.readOnlyMaster { implicit session =>
+    paidAccountRepo.getByOrgId(orgId).paymentStatus
   }
 
   def isFrozen(orgId: Id[Organization]): Boolean = db.readOnlyMaster { implicit session =>

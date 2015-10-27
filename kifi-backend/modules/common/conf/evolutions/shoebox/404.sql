@@ -35,11 +35,13 @@ CREATE TABLE credit_reward (
 	unrepeatable VARCHAR(64) DEFAULT NULL,
 	code VARCHAR(128) DEFAULT NULL,
 	single_use TINYINT(1) DEFAULT NULL,
+	used_by BIGINT(20) DEFAULT NULL,
 
 	PRIMARY KEY(id),
 	UNIQUE KEY credit_reward_u_code_single_use (code, single_use),
 	UNIQUE KEY credit_reward_u_unrepeatable (unrepeatable),
 	CONSTRAINT credit_reward_f_code FOREIGN KEY (code) REFERENCES credit_code_info(code),
+	CONSTRAINT credit_reward_f_used_by FOREIGN KEY (used_by) REFERENCES user(id),
 	CONSTRAINT credit_reward_f_account_id FOREIGN KEY (account_id) REFERENCES paid_account(id),
 	CONSTRAINT credit_reward_f_account_id_applied_credit FOREIGN KEY (account_id, applied, credit) REFERENCES account_event(account_id, id, credit_change)
 );

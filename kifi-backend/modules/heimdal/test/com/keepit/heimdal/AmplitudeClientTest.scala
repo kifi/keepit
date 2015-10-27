@@ -60,6 +60,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
 
       val visitorViewedPane1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("login")), UserEventTypes.VIEWED_PANE, now)
       val visitorViewedPage1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("signupLibrary")), UserEventTypes.VIEWED_PAGE, now)
+      val visitorViewedPage2 = new VisitorEvent(heimdalContext("type" -> ContextStringData("install")), UserEventTypes.VIEWED_PAGE, now)
 
       val userWasNotified1 = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("spamreport")), UserEventTypes.WAS_NOTIFIED, now)
       val userWasNotified2 = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("deferred")), UserEventTypes.WAS_NOTIFIED, now)
@@ -125,6 +126,12 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
             dat.eventData \ "event_type" === JsString("visitor_viewed_page")
             dat.eventData \\ "page_type" === Seq(JsString("modal"))
             dat.eventData \\ "type" === Seq(JsString("signupLibrary"))
+        },
+        amplitude.track(visitorViewedPage2) map {
+          case dat: AmplitudeEventSent =>
+            dat.eventData \ "event_type" === JsString("visitor_viewed_page")
+            dat.eventData \\ "page_type" === Seq(JsString("page"))
+            dat.eventData \\ "type" === Seq(JsString("install"))
         },
         amplitude.track(userViewedPage1) map { case _: AmplitudeEventSkipped => () },
         amplitude.track(userViewedPage2) map { case _: AmplitudeEventSent => () },

@@ -8,6 +8,7 @@
     flex-direction: row
     align-items: center
     height: 48px
+    cursor: pointer
 
     &:hover:not(.disabled):not(.selected)
       background-color: #EEEEEE
@@ -16,6 +17,8 @@
         background-color: #DEDEDE
 
     &.disabled:not(.selected)
+      cursor: no-drop
+
       h1
         color: #aaa
 
@@ -34,4 +37,3 @@
       line-height: 15px
       text-align: center
       margin-right: 5px
-

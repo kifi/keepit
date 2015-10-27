@@ -12,7 +12,6 @@ angular.module('kifi')
             profileService, StripeCheckout, messageTicker, paymentPlans) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
-    $scope.upgrade = !!$state.params.upgrade;
 
     var PREDEFINED_CYCLE_PERIOD = {
       1: 'Monthly',
@@ -110,21 +109,11 @@ angular.module('kifi')
       };
     });
 
-
-    if ($scope.upgrade) {
-      var standardTierPlans = plansByTier[Object.keys(plansByTier)[1]];
-      $scope.plan = {
-        name: standardTierPlans[1].name,
-        cycle: standardTierPlans[1].cycle,
-        newCard: null
-      };
-    } else {
-      $scope.plan = {
-        name: $scope.currentPlan.name,
-        cycle: $scope.currentPlan.cycle, //months
-        newCard: null
-      };
-    }
+    $scope.plan = {
+      name: $scope.currentPlan.name,
+      cycle: $scope.currentPlan.cycle, //months
+      newCard: null
+    };
 
     $scope.isNoPlanName = function (planName) {
       return !planName;
@@ -317,7 +306,7 @@ angular.module('kifi')
           handler.close();
         }
 
-        if (!$scope.planSelectsForm.$pristine) {
+        if (!$scope.planSelectsForm.$pristine || $scope.plan.newCard) {
           var confirmText = (
             'Are you sure you want to leave?' +
             ' You haven\'t saved your payment information.' +
@@ -334,7 +323,11 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $timeout(function () {
+    $scope.$evalAsync(function () {
+      if ($state.params.upgrade) {
+        $scope.changePlanToStandard();
+      }
+
       $analytics.eventTrack('user_viewed_page', {
         type: 'paymentPlan'
       });

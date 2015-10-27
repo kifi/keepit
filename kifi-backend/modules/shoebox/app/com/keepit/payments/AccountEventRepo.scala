@@ -4,6 +4,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time._
+import com.keepit.common.util.Paginator
 import com.keepit.model.{ SortDirection, Offset, Limit, User }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
@@ -20,7 +21,9 @@ trait AccountEventRepo extends Repo[AccountEvent] {
   def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
-  def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent]
+
+  def adminCountByKind(kinds: Set[AccountEventKind])(implicit session: RSession): Int
+  def adminGetByKind(kinds: Set[AccountEventKind], pg: Paginator)(implicit session: RSession): Seq[AccountEvent]
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
 }
@@ -55,6 +58,7 @@ class AccountEventRepoImpl @Inject() (
     def * = (id.?, createdAt, updatedAt, state, eventTime, accountId, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
 
+  private def activeRows = rows.filter(row => row.state === AccountEventStates.ACTIVE)
   def age(ae: AccountEventTable) = (ae.eventTime desc, ae.id desc)
 
   def table(tag: Tag) = new AccountEventTable(tag)
@@ -63,7 +67,7 @@ class AccountEventRepoImpl @Inject() (
   override def invalidateCache(accountEvent: AccountEvent)(implicit session: RSession): Unit = {}
 
   private def getByAccountHelper(accountId: Id[PaidAccount], excludeStateOpt: Option[State[AccountEvent]])(implicit session: RSession) =
-    rows.filter(ae => ae.accountId === accountId && ae.state =!= excludeStateOpt.orNull)
+    activeRows.filter(ae => ae.accountId === accountId && ae.state =!= excludeStateOpt.orNull)
   private def getByAccountAndKindsHelper(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], excludeStateOpt: Option[State[AccountEvent]])(implicit session: RSession) =
     getByAccountHelper(accountId, excludeStateOpt).filter(ae => ae.eventType.inSet(kinds))
 
@@ -98,8 +102,15 @@ class AccountEventRepoImpl @Inject() (
     val (userAdded, userRemoved): (AccountEventKind, AccountEventKind) = (AccountEventKind.UserAdded, AccountEventKind.UserRemoved)
     (for (row <- rows if row.accountId === accountId && (row.eventType === userAdded || row.eventType === userRemoved)) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
-  def adminGetRecentEvents(limit: Limit)(implicit session: RSession): Seq[AccountEvent] = {
-    rows.filter(row => row.state === AccountEventStates.ACTIVE).sortBy(age).take(limit.value).list
+
+  private def adminGetByKindHelper(kinds: Set[AccountEventKind])(implicit session: RSession) = {
+    activeRows.filter(row => row.eventType.inSet(kinds))
+  }
+  def adminCountByKind(kinds: Set[AccountEventKind])(implicit session: RSession): Int = {
+    adminGetByKindHelper(kinds).length.run
+  }
+  def adminGetByKind(kinds: Set[AccountEventKind], pg: Paginator)(implicit session: RSession): Seq[AccountEvent] = {
+    adminGetByKindHelper(kinds).sortBy(age).drop(pg.offset).take(pg.limit).list
   }
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
     (for (row <- rows if row.accountId === accountId) yield (row.state, row.updatedAt)).update((AccountEventStates.INACTIVE, clock.now))

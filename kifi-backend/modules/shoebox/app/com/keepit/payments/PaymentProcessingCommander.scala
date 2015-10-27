@@ -25,6 +25,7 @@ object PaymentCycle {
 @ImplementedBy(classOf[PaymentProcessingCommanderImpl])
 trait PaymentProcessingCommander {
   def processDuePayments(): Future[Unit]
+  def processAccount(orgId: Id[Organization]): Future[(PaidAccount, AccountEvent)]
   def processAccount(account: PaidAccount): Future[(PaidAccount, AccountEvent)]
   def forceChargeAccount(orgId: Id[Organization], amount: DollarAmount): Future[(PaidAccount, AccountEvent)]
 
@@ -77,6 +78,11 @@ class PaymentProcessingCommanderImpl @Inject() (
         eventCommander.reportToSlack(s"Processed $processed/${relevantAccounts.length} due payments.")
       }
     } else Future.successful(())
+  }
+
+  def processAccount(orgId: Id[Organization]): Future[(PaidAccount, AccountEvent)] = {
+    val account = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(orgId) }
+    processAccount(account)
   }
 
   def processAccount(account: PaidAccount): Future[(PaidAccount, AccountEvent)] = {

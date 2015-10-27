@@ -7,6 +7,7 @@ import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.model._
 import com.keepit.commanders.{ PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
+import com.keepit.common.core._
 
 import play.api.libs.json.{ Json, JsSuccess, JsError }
 
@@ -22,10 +23,10 @@ class PaymentsController @Inject() (
     orgCommander: OrganizationCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
-    paidPlanRepo: PaidPlanRepo,
-    paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
+    paymentCommander: PaymentProcessingCommander,
     activityLogCommander: ActivityLogCommander,
+    creditRewardCommander: CreditRewardCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -57,11 +58,22 @@ class PaymentsController @Inject() (
       case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
       case Some(token) =>
         stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").flatMap { realToken =>
-          stripeClient.getCardInfo(realToken).map { cardInfo =>
+          stripeClient.getCardInfo(realToken).flatMap { cardInfo =>
             val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
             val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, cardInfo.lastFour)
-            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, cardInfo.lastFour)
-            Ok(Json.toJson(cardInfo))
+            planCommander.changeDefaultPaymentMethod(request.orgId, pm.id.get, attribution, cardInfo.lastFour) match {
+              case Success((_, lastPaymentFailed)) =>
+                val futureCharge = if (lastPaymentFailed) paymentCommander.processAccount(request.orgId).imap { case (_, event) => event.paymentCharge } else Future.successful(None)
+                futureCharge.imap { charge =>
+                  implicit val chargeFormat = DollarAmount.formatAsCents
+                  Ok(Json.obj(
+                    "card" -> cardInfo,
+                    "charge" -> charge
+                  ))
+                }
+              case Failure(InvalidChange(msg)) => Future.successful(BadRequest(Json.obj("error" -> msg)))
+              case Failure(ex) => Future.failed(ex)
+            }
           }
         }
     }
@@ -96,9 +108,8 @@ class PaymentsController @Inject() (
         orgCommander.setAccountFeatureSettings(settingsRequest) match {
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
-            val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
-            val result = ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures))
-            Ok(Json.toJson(result))
+            val config = db.readOnlyMaster { implicit session => orgCommander.getExternalOrgConfigurationHelper(request.orgId) } // avoiding using replica
+            Ok(Json.toJson(config))
         }
     }
   }
@@ -125,6 +136,22 @@ class PaymentsController @Inject() (
         val infos = activityLogCommander.getAccountEvents(request.orgId, fromIdOpt, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_event_id"))
+    }
+  }
+
+  def getReferralCode(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE) { request =>
+    Ok(Json.obj("code" -> creditRewardCommander.getOrCreateReferralCode(request.orgId)))
+  }
+  def redeemCreditCode(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE)(parse.tolerantJson) { request =>
+    val codeOpt = (request.body \ "code").asOpt[String].map(CreditCode(_))
+    codeOpt match {
+      case None => BadRequest(Json.obj("error" -> "missing_credit_code"))
+      case Some(code) =>
+        creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, request.request.userId, Some(request.orgId))).map { rewards =>
+          Ok(Json.obj("value" -> DollarAmount.formatAsCents.writes(rewards.target.credit)))
+        }.recover {
+          case f: CreditRewardFail => f.asErrorResponse
+        }.get
     }
   }
 }

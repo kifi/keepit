@@ -18,6 +18,7 @@ import scala.util.{ Success, Failure, Try }
 trait CreditRewardCommander {
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards]
+  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[(CreditReward, Option[AccountEvent])]
 }
 
 @Singleton
@@ -62,6 +63,10 @@ class CreditRewardCommanderImpl @Inject() (
     } yield rewards
   }
 
+  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[(CreditReward, Option[AccountEvent])] = {
+    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, userAttribution) }
+  }
+
   private def createRewardsFromCreditCode(creditCodeInfo: CreditCodeInfo, accountId: Id[PaidAccount], userId: Id[User], orgId: Option[Id[Organization]])(implicit session: RWSession): Try[CreditCodeRewards] = {
     val unfinalizedRewardsTry = creditCodeInfo.kind match {
       case CreditCodeKind.Coupon =>
@@ -87,7 +92,7 @@ class CreditRewardCommanderImpl @Inject() (
             credit = creditCodeInfo.credit,
             applied = None,
             reward = targetReward,
-            unrepeatable = Some(UnrepeatableRewardKey.NewOrganization(orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.WasReferred(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield CreditCodeRewards(target = targetCreditReward, referrer = None)
@@ -101,7 +106,7 @@ class CreditRewardCommanderImpl @Inject() (
             credit = creditCodeInfo.credit,
             applied = None,
             reward = targetReward,
-            unrepeatable = Some(UnrepeatableRewardKey.NewOrganization(orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.WasReferred(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
 
@@ -110,23 +115,23 @@ class CreditRewardCommanderImpl @Inject() (
             credit = orgReferrerCredit,
             applied = None,
             reward = referrerReward,
-            unrepeatable = Some(UnrepeatableRewardKey.Referral(from = creditCodeInfo.referrer.get.organizationId.get, to = orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.ReferrerFor(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield CreditCodeRewards(target = targetCreditReward, referrer = Some(referrerCreditReward))
     }
     unfinalizedRewardsTry.map { rewards =>
       CreditCodeRewards(
-        target = finalizeCreditReward(rewards.target, userId),
-        referrer = rewards.referrer.map(finalizeCreditReward(_, userId))
+        target = finalizeCreditReward(rewards.target, userId)._1,
+        referrer = rewards.referrer.map(finalizeCreditReward(_, userId)._1)
       )
     }
   }
 
-  private def finalizeCreditReward(creditReward: CreditReward, userAttribution: Id[User])(implicit session: RWSession): CreditReward = {
+  private def finalizeCreditReward(creditReward: CreditReward, userAttribution: Id[User])(implicit session: RWSession): (CreditReward, Option[AccountEvent]) = {
     require(creditReward.id.nonEmpty)
     val rewardNeedsToBeApplied = creditReward.reward.status == creditReward.reward.kind.applicable
-    if (!rewardNeedsToBeApplied) creditReward
+    if (!rewardNeedsToBeApplied) (creditReward, None)
     else {
       val account = accountRepo.get(creditReward.accountId)
       accountRepo.save(account.withIncreasedCredit(creditReward.credit))
@@ -143,7 +148,7 @@ class CreditRewardCommanderImpl @Inject() (
         memo = None,
         chargeId = None
       ))
-      creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent))
+      (creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent)), Some(rewardCreditEvent))
     }
   }
 }
