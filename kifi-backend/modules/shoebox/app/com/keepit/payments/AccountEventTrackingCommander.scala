@@ -3,6 +3,7 @@ package com.keepit.payments
 import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.commanders.{ BasicSlackMessage, PathCommander }
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -45,7 +46,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def report(event: AccountEvent): Future[Unit] = if (mode == play.api.Mode.Prod) {
+  private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
+  private def report(event: AccountEvent): Future[Unit] = if (mode == play.api.Mode.Prod) reportingLock.withLockFuture {
     val (a, o, m): (PaidAccount, Organization, Option[PaymentMethod]) = db.readOnlyMaster { implicit session =>
       val a = accountRepo.get(event.accountId)
       val o = orgRepo.get(a.orgId)
@@ -58,11 +60,11 @@ class AccountEventTrackingCommanderImpl @Inject() (
     implicit val paymentMethod = m
 
     Future.sequence(Seq(notifyOfCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
-  } else Future.successful(())
+  }
+  else Future.successful(())
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
-
   def reportToSlack(msg: String, channel: String): Future[Unit] = SafeFuture {
     if (msg.nonEmpty && mode == play.api.Mode.Prod) {
       val fullMsg = BasicSlackMessage(
