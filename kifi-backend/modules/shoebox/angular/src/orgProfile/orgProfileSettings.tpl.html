@@ -68,6 +68,12 @@
               ng-click="onClickTrack($event, 'clickExportKeeps')"
             >Export Keeps</a>
           </li>
+          <li ng-if="isAdminExperiment && canRedeemCredit" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'earn-credit' }">
+            <a
+              class="kf-link"
+              ui-sref="orgProfile.settings.credits"
+            >Earn Credits</a>
+          </li>
           <!-- <li><a class="kf-link" href="#credit-card">Credit Card</a></li>
           <li><a class="kf-link" href="#history">History</a></li> -->
         </ul>

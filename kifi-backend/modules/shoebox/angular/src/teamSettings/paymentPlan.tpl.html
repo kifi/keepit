@@ -63,6 +63,13 @@
             ng-options="cycle.value as cycle.label for cycle in availableCycles"
           ></select>
         </div>
+      </div>
+    </form>
+    <div class="kf-container-section">
+      <div kf-redeem-credits profile="profile" standalone="false"></div>
+    </div>
+    <div class="kf-container-section" ng-show="isPaidPlanName(plan.name)">
+      <form name="creditCardForm">
       <h2 class="kf-heading">Manage your Credit Card Information</h2>
       <p>
         <span ng-if="!card">You haven't added a card yet, and you'll need to add a card to upgrade your plan.</span>
