@@ -105,7 +105,12 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def newPlansStartDate(now: DateTime): DateTime = (now plusDays 1).withTimeAtStartOfDay()
+  def newPlansStartDate(now: DateTime): DateTime = {
+    val thatTimeInHours = 20 // 8PM UTC = 1PM PST
+    val thatTimeToday = now.withTimeAtStartOfDay() plusHours thatTimeInHours // Today 8PM UTC = 1PM PST
+    val thatTimeTomorrow = (now plusDays 1).withTimeAtStartOfDay() plusHours thatTimeInHours // Tomorrow 8PM UTC = 1PM PST
+    if (now isBefore thatTimeToday) thatTimeToday else thatTimeTomorrow
+  }
 
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
   def remainingBillingCycleCost(account: PaidAccount, from: DateTime)(implicit session: RSession): DollarAmount = {
