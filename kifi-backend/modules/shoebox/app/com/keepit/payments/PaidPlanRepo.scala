@@ -29,7 +29,7 @@ class PaidPlanRepoImpl @Inject() (
   implicit val kindColumnType = MappedColumnType.base[PaidPlan.Kind, String](_.name, PaidPlan.Kind(_))
   implicit val featureSetTypeMapper = MappedColumnType.base[Set[Feature], String](
     { obj => Json.stringify(Json.toJson(obj)) },
-    { str => Json.parse(str).as[Set[Feature]](TraversableFormat.safeSetReads[Feature]) }
+    { str => Json.parse(str).as[Set[Feature]] }
   )
 
   type RepoImpl = PaidPlanTable
