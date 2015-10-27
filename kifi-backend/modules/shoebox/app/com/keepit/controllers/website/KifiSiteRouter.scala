@@ -82,11 +82,11 @@ class KifiSiteRouter @Inject() (
   def generalRedirect(dataStr: String) = MaybeUserAction { implicit request =>
     def parseDataString(in: String): Option[JsObject] = { // We're very permissive here.
       Try {
-        Json.parse(dataStr).as[JsObject]
+        Json.parse(in).as[JsObject]
       }.orElse {
-        Try(Json.parse(dataStr.replaceAllLiterally("&quot;", "\"")).as[JsObject])
+        Try(Json.parse(in.replaceAllLiterally("&quot;", "\"")).as[JsObject])
       }.orElse {
-        Try(Json.parse(new String(CryptoSupport.fromBase64(dataStr)).trim).as[JsObject])
+        Try(Json.parse(new String(CryptoSupport.fromBase64(in)).trim).as[JsObject])
       }.toOption
     }
 
