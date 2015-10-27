@@ -28,7 +28,7 @@ class UserMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostP
   extends JsonCacheImpl[UserMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class OrgMetadataKey(id: Id[Organization]) extends Key[String] {
-  override val version = 1
+  override val version = 2
   val namespace = "org_metadata_by_id"
   def toKey(): String = s"${id.id.toString}"
 }
