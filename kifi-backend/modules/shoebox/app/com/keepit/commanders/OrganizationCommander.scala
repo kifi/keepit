@@ -9,7 +9,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ HttpClient, NonOKResponseException, DirectUrl, URI }
+import com.keepit.common.net.URI
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize }
@@ -83,7 +83,6 @@ class OrganizationCommanderImpl @Inject() (
     planManagementCommander: PlanManagementCommander,
     basicOrganizationIdCache: BasicOrganizationIdCache,
     eliza: ElizaServiceClient,
-    httpClient: HttpClient,
     implicit val executionContext: ExecutionContext) extends OrganizationCommander with Logging {
 
   private val httpLock = new ReactiveLock(5)
@@ -315,7 +314,6 @@ class OrganizationCommanderImpl @Inject() (
           val orgTemplate = organizationWithModifications(orgSkeleton, request.initialValues.asOrganizationModifications)
           val savedOrg = orgRepo.save(orgTemplate)
           val org = handleCommander.autoSetOrganizationHandle(savedOrg) getOrElse (throw OrganizationFail.HANDLE_UNAVAILABLE)
-          maybeNotifySlackOfNewOrganization(org.id.get, request.requesterId)
 
           val plan = if (Play.maybeApplication.exists(Play.isProd(_))) paidPlanRepo.get(PaidPlan.DEFAULT) else paidPlanRepo.get(Id[PaidPlan](1L))
           orgConfigRepo.save(OrganizationConfiguration(organizationId = org.id.get, settings = plan.defaultSettings))
@@ -327,27 +325,6 @@ class OrganizationCommanderImpl @Inject() (
 
           val orgView = getOrganizationViewHelper(org.id.get, Some(request.requesterId), None)
           Right(OrganizationCreateResponse(request, org, orgGeneralLibrary, orgView))
-      }
-    }
-  }
-
-  private def maybeNotifySlackOfNewOrganization(orgId: Id[Organization], userId: Id[User])(implicit session: RSession): Unit = {
-    val isUserReal = !userExperimentRepo.hasExperiment(userId, UserExperimentType.FAKE)
-    if (isUserReal) {
-      val org = orgRepo.get(orgId)
-      val user = userRepo.get(userId)
-
-      val channel = "#org-members"
-      val webhookUrl = "https://hooks.slack.com/services/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"
-
-      val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName}> just created <http://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>."
-      val message = BasicSlackMessage(text = text, channel = Some(channel))
-
-      val response = httpLock.withLockFuture(httpClient.postFuture(DirectUrl(webhookUrl), Json.toJson(message)))
-
-      response.onComplete {
-        case Failure(t: NonOKResponseException) => airbrake.notify(s"[notifySlackOfNewOrg] $t")
-        case _ => airbrake.notify(s"[notifySlackOfNewOrg] Slack message request for $orgId created by $userId failed.")
       }
     }
   }
