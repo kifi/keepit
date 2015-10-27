@@ -22,8 +22,6 @@ class PaymentsController @Inject() (
     orgCommander: OrganizationCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
-    paidPlanRepo: PaidPlanRepo,
-    paidAccountRepo: PaidAccountRepo,
     planCommander: PlanManagementCommander,
     activityLogCommander: ActivityLogCommander,
     creditRewardCommander: CreditRewardCommander,
@@ -97,9 +95,8 @@ class PaymentsController @Inject() (
         orgCommander.setAccountFeatureSettings(settingsRequest) match {
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
-            val plan = db.readOnlyMaster { implicit session => paidPlanRepo.get(paidAccountRepo.getByOrgId(request.orgId).planId) }
-            val result = ExternalOrganizationConfiguration(plan.showUpsells, OrganizationSettingsWithEditability(response.config.settings, plan.editableFeatures))
-            Ok(Json.toJson(result))
+            val config = orgCommander.getExternalOrgConfiguration(request.orgId)
+            Ok(Json.toJson(config))
         }
     }
   }
