@@ -95,13 +95,13 @@ class AccountEventTrackingCommanderImpl @Inject() (
     lastFourFuture.map { lastFour =>
       val subject = s"We've charged you card for your Kifi Organization ${org.name}"
       val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
-      |For more details please consult your account history at <a href="${pathCommander.pathForOrganization(org).absolute}/settings">www.kifi.com/${handle.value}/settings<a>.</p>
+      |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history<a>.</p>
       |
       |<p>Thanks,
       |The Kifi Team</p>
       """.stripMargin
       val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
-      |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings.
+      |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings/activity.
       |
       |Thanks, <br/>
       |The Kifi Team

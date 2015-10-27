@@ -24,7 +24,6 @@
       <span
         ng-if="spaceIsOrg(space) && space.config && !(space.membership.role === 'member' && space.config.settings.publish_libraries.setting === ORG_SETTING_VALUE.MEMBER)"
         kf-upsell
-        position="right"
         on-click="onClickUpsellPublic()"
         on-hover="onHoverUpsellPublic()"
       >

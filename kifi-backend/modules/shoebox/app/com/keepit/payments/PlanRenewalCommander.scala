@@ -1,20 +1,17 @@
 package com.keepit.payments
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.model.Organization
-import org.joda.time.DateTime
 import play.api.libs.json.JsNull
 
 import scala.concurrent.{ ExecutionContext }
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.time._
 
-case class UnexpectedPlanRenewalException(orgId: Id[Organization], renewsAt: DateTime) extends Exception(s"Organization $orgId's plan should not renew before $renewsAt.")
+case class UnnecessaryPlanRenewalException(account: PaidAccount) extends Exception(s"Organization ${account.orgId}'s plan should not renew before ${account.planRenewal}.")
 
 @ImplementedBy(classOf[PlanRenewalCommanderImpl])
 trait PlanRenewalCommander {
@@ -52,13 +49,11 @@ class PlanRenewalCommanderImpl @Inject() (
       accountLockHelper.maybeSessionWithAccountLock(account.orgId) { implicit session =>
         val now = clock.now()
         val plan = paidPlanRepo.get(account.planId)
-        val renewsAt = account.billingCycleStart plusMonths plan.billingCycle.month
-        if (renewsAt isBefore now) {
-          val newBillingCycleStart = account.billingCycleStart.plusMonths(plan.billingCycle.month)
+        if (account.planRenewal isBefore now) {
+          val nextPlanRenewal = account.planRenewal plusMonths plan.billingCycle.months
           val fullCyclePrice = plan.pricePerCyclePerUser * account.activeUsers
-          val paymentDueAt = if (fullCyclePrice > DollarAmount.ZERO) Some(now) else account.paymentDueAt
           val renewedAccount = paidAccountRepo.save(
-            account.withReducedCredit(fullCyclePrice).withCycleStart(newBillingCycleStart).withPaymentDueAt(paymentDueAt)
+            account.withReducedCredit(fullCyclePrice).withPlanRenewal(nextPlanRenewal).withPaymentDueAt(Some(now))
           )
           val billingEvent = eventCommander.track(AccountEvent(
             eventTime = clock.now(),
@@ -66,7 +61,7 @@ class PlanRenewalCommanderImpl @Inject() (
             whoDunnit = None,
             whoDunnitExtra = JsNull,
             kifiAdminInvolved = None,
-            action = AccountEventAction.PlanBilling.from(plan, account),
+            action = AccountEventAction.PlanRenewal.from(plan, account),
             creditChange = renewedAccount.credit - account.credit,
             paymentMethod = None,
             paymentCharge = None,
@@ -74,7 +69,7 @@ class PlanRenewalCommanderImpl @Inject() (
             chargeId = None
           ))
           Success(billingEvent)
-        } else Failure(UnexpectedPlanRenewalException(account.orgId, renewsAt))
+        } else Failure(UnnecessaryPlanRenewalException(account))
       } getOrElse Failure(LockedAccountException(account.orgId))
     } else Failure(FrozenAccountException(account.orgId))
   }

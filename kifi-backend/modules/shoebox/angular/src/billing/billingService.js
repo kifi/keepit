@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('billingService', [
-  '$analytics', 'net', '$timeout',
-  function ($analytics, net, $timeout) {
+  '$analytics', 'net', 'orgProfileService', '$timeout',
+  function ($analytics, net, orgProfileService, $timeout) {
     function getResponseData(response) {
       return response.data;
     }
@@ -14,7 +14,6 @@ angular.module('kifi')
         net.getBillingState,
         net.getBillingContacts,
         net.getBillingEvents,
-        net.getBillingEventsBefore,
         net.getBillingPlans,
         net.getReferralCode
       ].forEach(function (endpoint) {
@@ -54,14 +53,9 @@ angular.module('kifi')
           return response;
         });
       },
-      getBillingEvents: function (pubId, limit) {
+      getBillingEvents: function (pubId, limit, fromId) {
         return net
-        .getBillingEvents(pubId, limit)
-        .then(getResponseData);
-      },
-      getBillingEventsBefore: function (pubId, limit, beforeTime, beforeId) {
-        return net
-        .getBillingEventsBefore(pubId, limit, beforeTime, beforeId)
+        .getBillingEvents(pubId, limit, fromId)
         .then(getResponseData);
       },
       getBillingPlans: function (pubId) {
@@ -74,6 +68,7 @@ angular.module('kifi')
         .setBillingPlan(pubId, planId)
         .then(function (response) {
           invalidateCache();
+          orgProfileService.invalidateOrgProfileCache();
           return response;
         });
       },

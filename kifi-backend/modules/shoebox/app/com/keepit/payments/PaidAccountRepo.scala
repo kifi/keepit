@@ -43,6 +43,7 @@ class PaidAccountRepoImpl @Inject() (
     def orgId = column[Id[Organization]]("org_id", O.NotNull)
     def planId = column[Id[PaidPlan]]("plan_id", O.NotNull)
     def credit = column[DollarAmount]("credit", O.NotNull)
+    def planRenewal = column[DateTime]("plan_renewal", O.NotNull)
     def paymentDueAt = column[Option[DateTime]]("payment_due_at", O.Nullable)
     def paymentStatus = column[PaymentStatus]("payment_status", O.NotNull)
     def userContacts = column[Seq[Id[User]]]("user_contacts", O.NotNull)
@@ -50,8 +51,7 @@ class PaidAccountRepoImpl @Inject() (
     def lockedForProcessing = column[Boolean]("locked_for_processing", O.NotNull)
     def frozen = column[Boolean]("frozen", O.NotNull)
     def activeUsers = column[Int]("active_users", O.NotNull)
-    def billingCycleStart = column[DateTime]("billing_cycle_start", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, paymentDueAt, paymentStatus, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers, billingCycleStart) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, orgId, planId, credit, planRenewal, paymentDueAt, paymentStatus, userContacts, emailContacts, lockedForProcessing, frozen, activeUsers) <> ((PaidAccount.apply _).tupled, PaidAccount.unapply _)
   }
 
   def table(tag: Tag) = new PaidAccountTable(tag)
@@ -90,21 +90,11 @@ class PaidAccountRepoImpl @Inject() (
   }
 
   def getRenewable()(implicit session: RSession): Seq[PaidAccount] = {
-    val now = clock.now()
-    val plans = planRepo.all().collect { case plan if plan.state == PaidPlanStates.ACTIVE => plan.id.get -> plan }.toMap
-    val maxCycleStart = now minusMonths plans.values.map(_.billingCycle.month).minOpt.getOrElse(0) // necessary condition (optimization)
-
-    val maybeRenewableAccounts = (for {
-      account <- rows if account.state === PaidAccountStates.ACTIVE && !account.frozen && account.billingCycleStart < maxCycleStart
-    } yield account).sortBy(account => (account.billingCycleStart, account.id)).list
-
-    def billingCycleEnd(account: PaidAccount) = account.billingCycleStart plusMonths plans(account.planId).billingCycle.month
-
-    maybeRenewableAccounts.filter(billingCycleEnd(_) < now)
+    (for (row <- rows if row.state === PaidAccountStates.ACTIVE && !row.frozen && row.planRenewal < clock.now()) yield row).sortBy(_.planRenewal).list
   }
 
   def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount] = {
-    (for (row <- rows if !row.frozen && (row.paymentStatus === (PaymentStatus.Ok: PaymentStatus) || row.credit < -maxBalance || row.paymentDueAt < clock.now())) yield row).sortBy(_.paymentDueAt).list
+    (for (row <- rows if row.state === PaidAccountStates.ACTIVE && !row.frozen && row.paymentStatus === (PaymentStatus.Ok: PaymentStatus) && (row.credit < -maxBalance || row.paymentDueAt < clock.now())) yield row).sortBy(_.paymentDueAt).list
   }
 
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {

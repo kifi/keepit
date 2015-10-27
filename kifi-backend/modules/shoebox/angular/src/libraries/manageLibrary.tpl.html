@@ -56,7 +56,7 @@
 
           <div ng-if="modifyingExistingLibrary" class="manage-lib-input-wrapper kf-color">
             <h3 class="manage-lib-heading">Color</h3>
-            <div class="manage-lib-input-area">
+            <div class="manage-lib-input-area manage-lib-colors">
               <label ng-repeat="hex in colors" class="manage-lib-color" style="background-color:{{hex}}">
                 <input type="radio" class="manage-lib-color-radio" value="{{hex}}" ng-model="library.color">
                 <span class="svg-checkmark-thin"></span>
@@ -80,7 +80,6 @@
               <span
                 ng-if="showIntegrationsUpsell()"
                 kf-upsell
-                position="right"
                 on-click="onClickUpsellIntegration()"
                 on-hover="onHoverUpsellIntegration()"
               >

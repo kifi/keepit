@@ -79,6 +79,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getLibrariesWithInactiveOwner()(implicit session: RSession): Seq[Id[Library]]
 
   def deactivate(model: Library)(implicit session: RWSession): Unit
+  def countPublishedNonEmptyOrgLibraries(orgId: Id[Organization], minKeepCount: Int = 2)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -327,7 +328,7 @@ class LibraryRepoImpl @Inject() (
     val query =
       sql"""select lib.* from library_membership lm, library lib
            where lm.library_id = lib.id and lm.user_id = $userId
-           and (lm.access='owner' or lm.access='read_write')
+           and (lm.access='owner' or lm.access='read_write') and lib.organization_id is null
            and lib.state = 'active' and lm.state = 'active' and (lib.keep_count > 0
            and lm.listed and lib.visibility = 'published')
            order by #${getOrderBySql("lib", "lm", ordering, direction, orderedByPriority)} limit ${page.itemsToDrop}, ${page.size}"""
@@ -339,7 +340,7 @@ class LibraryRepoImpl @Inject() (
     val query =
       sql"""select lib.* from library_membership lm, library lib
            where lm.library_id = lib.id and lm.user_id = $userId
-           and (lm.access='owner' or lm.access='read_write') and lib.state = 'active'
+           and (lm.access='owner' or lm.access='read_write') and lib.organization_id is null and lib.state = 'active'
            and lm.state = 'active' and ((lib.keep_count > 0 and lm.listed
            and lib.visibility = 'published') or
            (lib.id in (select lm.library_id from library_membership lm where lm.user_id = $friendId and lm.state = 'active')))
@@ -358,7 +359,7 @@ class LibraryRepoImpl @Inject() (
     val query = sql"""select lib.* from library lib
                   inner join library_membership lm on lm.user_id = $userId
                   and lib.id = lm.library_id and lib.state='active' and lm.state='active'
-                  and (lm.access='owner' or lm.access='read_write')
+                  and (lm.access='owner' or lm.access='read_write') and lib.organization_id is null
                   order by case lib.kind when 'system_main' then 1 when 'system_secret' then 2 else 3 end,
                   #${getOrderBySql("lib", "lm", ordering, direction, orderedByPriority)} limit #${page.itemsToDrop}, #${page.size}"""
     query.as[Library].list
@@ -493,6 +494,10 @@ class LibraryRepoImpl @Inject() (
 
   def getNewPublishedLibraries(size: Int = 20)(implicit session: RSession): Seq[Library] = {
     (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE) yield r).sortBy(_.id.desc).take(size).list
+  }
+
+  def countPublishedNonEmptyOrgLibraries(orgId: Id[Organization], minKeepCount: Int = 2)(implicit session: RSession): Int = {
+    (for (r <- rows if r.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) && r.state === LibraryStates.ACTIVE && r.orgId === orgId && r.keepCount >= minKeepCount) yield r.id).length.run
   }
 
   def pagePublished(page: Paginator = Paginator.fromStart(20))(implicit session: RSession): Seq[Library] = {

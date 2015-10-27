@@ -269,7 +269,13 @@ angular.module('kifi')
         };
 
         scope.hasPermission = function (permission) {
-          return scope.library.permissions.indexOf(permission) !== -1;
+          var libraryIsNew = !scope.modalData.library;
+
+          if (libraryIsNew) {
+            return true;
+          } else {
+            return scope.library.permissions.indexOf(permission) !== -1;
+          }
         };
 
         scope.showIntegrations = function () {

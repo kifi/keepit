@@ -209,7 +209,7 @@ angular.module('kifi')
                 var result = scope.results[resultIndex];
 
                 if (result.id) {
-                  scope.shareLibraryKifiFriend(result);
+                  shareLibraryKifiFriend(result);
                 } else if (result.email) {
                   scope.shareLibraryExistingEmail(result);
                 } else if (result.custom === 'email') {
@@ -231,7 +231,7 @@ angular.module('kifi')
           kfModalCtrl.close();
         };
 
-        function  shareLibraryKifiFriend(result) {
+        function shareLibraryKifiFriend(result) {
           trackShareEvent('user_clicked_page', { action: 'clickedContact', subAction: 'kifiFriend' });
 
           return shareLibrary({

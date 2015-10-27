@@ -52,8 +52,6 @@ class GratificationEmailActor @Inject() (
   val testDestinationEmail = EmailAddress("cam@kifi.com") // while in QA, send all emails to Cam
 
   def receive = {
-    case SendEmails => emailCommander.batchSendEmails(filter = Function.const(true))
-    case SendOddEmails => emailCommander.batchSendEmails(filter = { id => id.id % 2 == 1 })
-    case SendEvenEmails => emailCommander.batchSendEmails(filter = { id => id.id % 2 == 0 })
+    case SendEmails => emailCommander.batchSendEmails()
   }
 }

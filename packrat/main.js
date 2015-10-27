@@ -50,15 +50,20 @@ function clearDataCache() {
 (function (ab) {
   ab.setProject('95815', '603568fe4a88c488b6e2d47edca59fc1');
   ab.addReporter(function airbrake(notice, opts) {
+    var msg = notice.errors && notice.errors[0] && notice.errors[0].message && notice.errors[0].message;
+    var noReport = ['disconnected port object', 'Cannot access a chrome-extension', 'executeScript failed'];
+    var validError = noReport.every(function (i) { return msg.indexOf(i) === -1; });
     log.apply(null, ['#c00', '[airbrake]'].concat(notice.errors));
-    notice.params = breakLoops(notice.params);
-    notice.context.environment = api.isPackaged() && !api.mode.isDev() ? 'production' : 'development';
-    notice.context.version = api.version;
-    notice.context.userAgent = api.browser.userAgent;
-    notice.context.userId = me && me.id;
-    sendXhr('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, {}, function (o) {
-      log('[airbrake]', o.url);
-    });
+    if (validError) {
+      notice.params = breakLoops(notice.params);
+      notice.context.environment = api.isPackaged() && !api.mode.isDev() ? 'production' : 'development';
+      notice.context.version = api.version;
+      notice.context.userAgent = api.browser.userAgent;
+      notice.context.userId = me && me.id;
+      sendXhr('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, {}, function (o) {
+        log('[airbrake]', o.url);
+      });
+    }
   });
   api.timers.setTimeout(api.errors.init.bind(null, ab), 0);
 
@@ -121,7 +126,7 @@ PageData.prototype = {
         'discoverable': 'public'
       };
       var maxVisibilityIndex = -1;
-      keeps.filter(isMine).forEach(function (item) {
+      keeps.forEach(function (item) {
         maxVisibilityIndex = Math.max(maxVisibilityIndex, visibilityOptions.indexOf(item.visibility));
       });
       return maxVisibilityIndex >= 0 ? visibilityMap[visibilityOptions[maxVisibilityIndex]] : 'other';
@@ -1322,21 +1327,31 @@ api.port.on({
     api.tabs.close(tab.id);
   },
   open_deep_link: function(link, _, tab) {
+    var tabIdWithLink;
     if (link.inThisTab || tab.nUri === link.nUri) {
+      tabIdWithLink = tab.id;
       awaitDeepLink(link, tab.id);
+      trackClick();
     } else {
       var tabs = tabsByUrl[link.nUri];
-      if ((tab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri))) {  // page's normalized URI may have changed
-        awaitDeepLink(link, tab.id);
-        api.tabs.select(tab.id);
+      var existingTab = tabs ? tabs[0] : api.tabs.anyAt(link.nUri);
+      if (existingTab && existingTab.id) {  // page's normalized URI may have changed
+        tabIdWithLink = existingTab.id;
+        awaitDeepLink(link, existingTab.id);
+        api.tabs.select(existingTab.id);
+        trackClick();
       } else {
         api.tabs.open(link.nUri, function (tabId) {
+          tabIdWithLink = tabId;
           awaitDeepLink(link, tabId);
+          trackClick();
         });
       }
     }
-    if (link.from === 'notice') {
-      tracker.track('user_clicked_pane', {type: trackingLocatorFor(tab.id), action: 'view', category: 'message'});
+    function trackClick() {
+      if (link.from === 'notice' && tabIdWithLink) {
+        tracker.track('user_clicked_pane', {type: trackingLocatorFor(tabIdWithLink), action: 'view', category: 'message'});
+      }
     }
   },
   open_support_chat: function (_, __, tab) {
@@ -2746,6 +2761,9 @@ function lightFlush() {
   contactSearchCache = null;
   urlPatterns = null;
   guideData = null;
+
+  unstore('libraries');
+  unstore('libraries_loaded_at');
 
   authenticate(function () {
     getLatestThreads();

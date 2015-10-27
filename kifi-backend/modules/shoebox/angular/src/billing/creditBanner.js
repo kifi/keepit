@@ -8,7 +8,9 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'billing/creditBanner.tpl.html',
       scope: {
-        getCredit: '&credit'
+        getCredit: '&credit',
+        onEarnMore: '&',
+        onUseIt: '&'
       }
     };
   }

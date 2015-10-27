@@ -177,6 +177,16 @@
       content: 'Keep it';
     }
   }
+  &.kifi-other {
+    color: #333 !important;
+    &::before {
+      @url: %(@svgKeepDataUrl, #464646);
+      background-image: url(@url);
+    }
+    &::after {
+      content: 'Keep it';
+    }
+  }
   &.kifi-public {
     color: #4daf7c !important;
     &::before {

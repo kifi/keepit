@@ -28,7 +28,7 @@ object AccountEventKind {
   case object LowBalanceIgnored extends AccountEventKind("low_balance_ignored")
   case object MissingPaymentMethod extends AccountEventKind("missing_payment_method")
   case object OrganizationCreated extends AccountEventKind("organization_created")
-  case object PlanBilling extends AccountEventKind("plan_billing")
+  case object PlanRenewal extends AccountEventKind("plan_renewal")
   case object PlanChanged extends AccountEventKind("plan_changed")
   case object PaymentMethodAdded extends AccountEventKind("payment_method_added")
   case object SpecialCredit extends AccountEventKind("special_credit")
@@ -49,8 +49,9 @@ object AccountEventKind {
     MissingPaymentMethod,
     OrganizationCreated,
     PaymentMethodAdded,
-    PlanBilling,
+    PlanRenewal,
     PlanChanged,
+    RewardCredit,
     SpecialCredit,
     UserAdded,
     UserRemoved
@@ -63,8 +64,9 @@ object AccountEventKind {
     ChargeFailure,
     DefaultPaymentMethodChanged,
     PaymentMethodAdded,
-    PlanBilling,
+    PlanRenewal,
     PlanChanged,
+    RewardCredit,
     SpecialCredit,
     UserAdded,
     UserRemoved
@@ -79,7 +81,7 @@ object AccountEventKind {
     LowBalanceIgnored,
     MissingPaymentMethod,
     PaymentMethodAdded,
-    PlanBilling,
+    PlanRenewal,
     PlanChanged,
     SpecialCredit,
     UserAdded,
@@ -109,15 +111,15 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   }
 
   @json
-  case class PlanBilling(plan: Id[PaidPlan], cycle: BillingCycle, price: DollarAmount, activeUsers: Int, startDate: DateTime) extends AccountEventAction {
-    def eventType = AccountEventKind.PlanBilling
+  case class PlanRenewal(plan: Id[PaidPlan], cycle: BillingCycle, price: DollarAmount, activeUsers: Int, renewalDate: DateTime) extends AccountEventAction {
+    def eventType = AccountEventKind.PlanRenewal
     def toDbRow = eventType -> Json.toJson(this)
   }
 
-  object PlanBilling {
-    def from(plan: PaidPlan, account: PaidAccount): PlanBilling = {
+  object PlanRenewal {
+    def from(plan: PaidPlan, account: PaidAccount): PlanRenewal = {
       if (plan.id.get != account.planId) throw new InvalidArgumentException(s"Account ${account.id.get} is on plan ${account.planId}, not on plan ${plan.id.get}")
-      PlanBilling(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, account.activeUsers, account.billingCycleStart)
+      PlanRenewal(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, account.activeUsers, account.planRenewal)
     }
   }
 
@@ -169,8 +171,8 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
-  @json
-  case class PlanChanged(oldPlan: Id[PaidPlan], newPlan: Id[PaidPlan]) extends AccountEventAction {
+  @json // todo(Léo): remove Option when old events have been cleared
+  case class PlanChanged(oldPlan: Id[PaidPlan], newPlan: Id[PaidPlan], startDate: Option[DateTime]) extends AccountEventAction {
     def eventType = AccountEventKind.PlanChanged
     def toDbRow = eventType -> Json.toJson(this)
   }
@@ -193,8 +195,8 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def toDbRow = eventType -> Json.toJson(this)
   }
 
-  @json
-  case class OrganizationCreated(initialPlan: Id[PaidPlan]) extends AccountEventAction {
+  @json // todo(Léo): remove Option when old events have been cleared
+  case class OrganizationCreated(initialPlan: Id[PaidPlan], planStartDate: Option[DateTime]) extends AccountEventAction {
     def eventType = AccountEventKind.OrganizationCreated
     def toDbRow = eventType -> Json.toJson(this)
   }
@@ -208,7 +210,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   def fromDb(eventType: AccountEventKind, extras: JsValue): AccountEventAction = eventType match {
     case AccountEventKind.SpecialCredit => SpecialCredit()
     case AccountEventKind.RewardCredit => extras.as[RewardCredit]
-    case AccountEventKind.PlanBilling => extras.as[PlanBilling]
+    case AccountEventKind.PlanRenewal => extras.as[PlanRenewal]
     case AccountEventKind.LowBalanceIgnored => extras.as[LowBalanceIgnored]
     case AccountEventKind.Charge => Charge()
     case AccountEventKind.ChargeBack => ChargeBack()

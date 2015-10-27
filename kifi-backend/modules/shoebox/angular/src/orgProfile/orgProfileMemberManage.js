@@ -245,6 +245,7 @@ angular.module('kifi')
         modalData: {
           organization: organization,
           inviteType: inviteType,
+          addMany: $stateParams.addMany,
           currentPageOrigin: 'organizationPage',
           returnAction: function (inviteData) {
             var invitees = inviteData.invitees || [];

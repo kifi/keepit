@@ -14,15 +14,16 @@ import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model._
-import com.keepit.payments.{ ActionAttribution, PaidAccountRepo, BillingCycle, PaidPlanInfo, PaidPlanRepo, DollarAmount, PlanManagementCommander, PaidPlan, FakeStripeClientModule }
+import com.keepit.payments._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.matcher.{ Expectable, Matcher, Delta }
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ Json, JsObject }
+import play.api.libs.json.{ JsValue, Json, JsObject }
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import com.keepit.common.time._
 
 class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -102,7 +103,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
 
           val plansByName = contentAsJson(response)
           (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
         }
       }
@@ -131,7 +132,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           // don't get any custom plans
           val plansByName = contentAsJson(response)
           (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
           (plansByName \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === None
 
@@ -143,45 +144,10 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           // don't get any custom plans
           val plansByNameWithCustom = contentAsJson(response2)
           (plansByNameWithCustom \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
-          (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
+          (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.months))
         }
-      }
-    }
-
-    "change paid plans" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (org, owner, _, _) = setup()
-
-        val (restrictedPlan, currentConfig) = db.readWrite { implicit session =>
-          val restrictedPlan = PaidPlanFactory.paidPlan().withEditableFeatures(Set(Feature.EditOrganization)).saved
-          val currentConfig = orgConfigRepo.getByOrgId(org.id.get)
-          (restrictedPlan, currentConfig)
-        }
-
-        val featureSettingsToReset: Map[Feature, FeatureSetting] = Map( // random features with hopefully altered settings
-          Feature.PublishLibraries -> FeatureSetting.DISABLED,
-          Feature.InviteMembers -> FeatureSetting.ADMINS,
-          Feature.ForceEditLibraries -> FeatureSetting.ADMINS
-        )
-        val featureSettingsToMaintain = Map(Feature.EditOrganization -> FeatureSetting.DISABLED)
-        val alteredSettings = currentConfig.settings.setAll(featureSettingsToReset ++ featureSettingsToMaintain)
-        currentConfig.settings !== alteredSettings // assert settings will actually change from old default
-        restrictedPlan.defaultSettings !== alteredSettings // assert settings will actually change to new default
-
-        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, alteredSettings))
-
-        // upgrade plans, will reset org config to restrictedPlan.defaultSettings
-        planManagementCommander.changePlan(org.id.get, restrictedPlan.id.get, ActionAttribution(None, None))
-        val newConfig = db.readWrite { implicit session => orgConfigRepo.getByOrgId(org.id.get) }
-        featureSettingsToReset.keys.map { feature =>
-          newConfig.settings.settingFor(feature) === restrictedPlan.defaultSettings.settingFor(feature)
-        }
-        featureSettingsToMaintain.keys.map { feature =>
-          newConfig.settings.settingFor(feature) === featureSettingsToMaintain.get(feature)
-        }
-        1 === 1
       }
     }
 
@@ -205,7 +171,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
           (planJson \ "name").as[String] must beEqualTo(plan.displayName)
           (planJson \ "pricePerUser").as[JsObject] === Json.obj("cents" -> plan.pricePerCyclePerUser.toCents)
-          (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.month)
+          (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.months)
           (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
         }
       }
@@ -234,7 +200,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val setResponse = controller.updatePlan(orgId, newPlanId)(setRequest)
           status(setResponse) === OK
           val finalBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
-          finalBalance must beLessThan(initialBalance) // simple sanity check, actual logic should be tested in the commander
 
           val response2 = controller.getAccountState(orgId)(route.getAccountState(orgId))
           status(response2) === OK
@@ -251,6 +216,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             val owner = UserFactory.user().saved
             val rando = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(owner).withPlan(plan.id.get.id).saved
+            paidAccountRepo.save(paidAccountRepo.getByOrgId(org.id.get).withPlanRenewal(currentDateTime plusDays 15)) // set future renewal date to test partial refunds / costs
             (org, owner, rando, plan)
           }
           val orgId = Organization.publicId(org.id.get)
@@ -325,6 +291,87 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             status(getResponse) === FORBIDDEN
           }
           1 === 1
+        }
+      }
+    }
+
+    "serve up the activity log" in {
+      "page through events correctly" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, rando) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner, rando)
+          }
+          val publicId = Organization.publicId(org.id.get)
+          // Populate the activity log with a ton of dumb events
+          val n = 5
+          (1 to n).foreach { _ =>
+            orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get, adminIdOpt = None))
+            orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(org.id.get, owner.id.get, rando.id.get))
+          }
+
+          val pageSize = 3
+          val expectedPages = db.readOnlyMaster { implicit session =>
+            inject[AccountEventRepo].count must beGreaterThanOrEqualTo(3 * pageSize)
+            val allEvents = inject[AccountEventRepo].all.filter(e => AccountEventKind.activityLog.contains(e.action.eventType))
+            val orderedEvents = allEvents.sortBy(ae => (ae.eventTime.getMillis, ae.id.get.id)).reverse
+            orderedEvents.map(e => e.id.get).grouped(pageSize).toList
+          }
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val actualPages = Iterator.iterate(Seq.empty[Id[AccountEvent]]) { prevPage =>
+            val bookendOpt = prevPage.lastOption.map(AccountEvent.publicId(_).id)
+            val request = route.getEvents(publicId, pageSize, bookendOpt)
+            val response = controller.getEvents(publicId, pageSize, bookendOpt)(request)
+            val events = (contentAsJson(response) \ "events").as[Seq[JsValue]]
+            events.map { j => AccountEvent.decodePublicId((j \ "id").as[PublicId[AccountEvent]]).get }
+          }.toStream.tail.takeWhile(_.nonEmpty).toList
+
+          actualPages.length === expectedPages.length
+          (actualPages zip expectedPages) foreach {
+            case (actual, expected) => actual === expected
+          }
+          1 === 1
+        }
+      }
+    }
+    "handle credit codes" in {
+      "give an org its referral code" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getReferralCode(publicId)
+          val response = controller.getReferralCode(publicId)(request)
+          status(response) === OK
+          (contentAsJson(response) \ "code").as[String] === creditRewardCommander.getOrCreateReferralCode(org.id.get).value
+        }
+      }
+      "let an org redeem a credit code" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org1, org2, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org1 = OrganizationFactory.organization().withOwner(owner).saved
+            val org2 = OrganizationFactory.organization().withOwner(owner).saved
+            (org1, org2, owner)
+          }
+          val publicId = Organization.publicId(org2.id.get)
+          val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val payload = Json.obj("code" -> code.value)
+          val request = route.redeemCreditCode(publicId).withBody(payload)
+          val response = controller.redeemCreditCode(publicId)(request)
+
+          status(response) === OK
+          (contentAsJson(response) \ "value").as[DollarAmount] === DollarAmount.dollars(100)
         }
       }
     }
