@@ -150,9 +150,14 @@ class KifiSiteRouter @Inject() (
           }
           Redirect(s"/${foundHandle.urlEncoded}${dropPathSegment(request.uri)}", status)
         } getOrElse {
-          AngularApp.app()
+          AngularApp.app(() => metadata(handleOwner))
         }
     } getOrElse notFound(request)
+  }
+
+  def metadata(handle: Either[Organization, User]): Future[String] = handle match {
+    case Left(org) => orgMetadata(org)
+    case Right(user) => userMetadata(user, UserProfileTab.Libraries)
   }
 
   def serveWebAppIfUserIsSelf(username: Username) = WebAppPage { implicit request =>
@@ -280,7 +285,7 @@ class KifiSiteRouter @Inject() (
     }
   } catch {
     case e: Throwable =>
-      airbrake.notify(s"on getting library metadata for $org", e)
+      airbrake.notify(s"on getting organization metadata for $org", e)
       Future.successful("")
   }
 
@@ -290,7 +295,7 @@ class KifiSiteRouter @Inject() (
     }
   } catch {
     case e: Throwable =>
-      airbrake.notify(s"on getting library metadata for $user", e)
+      airbrake.notify(s"on getting user metadata for $user", e)
       Future.successful("")
   }
 
