@@ -144,19 +144,19 @@ sealed trait UnrepeatableRewardKey {
 
 object UnrepeatableRewardKey {
   // only one account can reap the reward for referring an org
-  case class ReferrerFor(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"referrerFor_org|$orgId" }
+  case class Referred(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"referred-org|$orgId" }
   // an account can only reap a single referral bonus when signing up (promo or referral)
-  case class WasReferred(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasReferred_org|$orgId" }
-  case class WasCreated(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasCreated_org|$orgId" }
+  case class WasReferred(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasReferred-org|$orgId" }
+  case class WasCreated(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasCreated-org|$orgId" }
 
   private object ValidLong {
     def unapply(id: String): Option[Long] = Try(id.toLong).toOption
   }
-  private val referrerFor = """^referrer_org\|(\d+)$""".r
-  private val wasReferred = """^referred_org\|(\d+)$""".r
-  private val wasCreated = """^created_org\|(\d+)$""".r
+  private val referred = """^referred-org\|(\d+)$""".r
+  private val wasReferred = """^wasReferred-org\|(\d+)$""".r
+  private val wasCreated = """^wasCreated-org\|(\d+)$""".r
   def fromKey(key: String): UnrepeatableRewardKey = key match {
-    case referrerFor(ValidLong(orgId)) => ReferrerFor(Id(orgId))
+    case referred(ValidLong(orgId)) => Referred(Id(orgId))
     case wasReferred(ValidLong(orgId)) => WasReferred(Id(orgId))
     case wasCreated(ValidLong(orgId)) => WasCreated(Id(orgId))
     case _ => throw new IllegalArgumentException(s"Invalid reward key: $key")

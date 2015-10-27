@@ -117,7 +117,7 @@ class CreditRewardCommanderImpl @Inject() (
             credit = referrer.credit,
             applied = None,
             reward = referrerReward,
-            unrepeatable = Some(UnrepeatableRewardKey.ReferrerFor(orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.Referred(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield CreditCodeRewards(target = targetCreditReward, referrer = Some(referrerCreditReward))
