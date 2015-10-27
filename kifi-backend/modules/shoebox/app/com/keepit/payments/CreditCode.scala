@@ -89,14 +89,14 @@ case class CreditCodeApplyRequest(
   applierId: Id[User],
   orgId: Option[Id[Organization]])
 
-sealed abstract class CreditRewardFail(val status: Int, val message: String) extends Exception(message) {
-  def asErrorResponse = Status(status)(Json.obj("error" -> message))
+sealed abstract class CreditRewardFail(val status: Int, val message: String, val response: String) extends Exception(message) {
+  def asErrorResponse = Status(status)(Json.obj("error" -> response))
 }
 object CreditRewardFail {
-  case class UnavailableCreditCodeException(code: CreditCode) extends CreditRewardFail(CONFLICT, s"Credit code $code is unavailable")
-  case class CreditCodeNotFoundException(code: CreditCode) extends CreditRewardFail(BAD_REQUEST, s"Credit code $code does not exist")
-  case class CreditCodeAbuseException(req: CreditCodeApplyRequest) extends CreditRewardFail(BAD_REQUEST, s"Credit code ${req.code} cannot be applied by user ${req.applierId} in org ${req.orgId}")
-  case class CreditCodeAlreadyBurnedException(code: CreditCode) extends CreditRewardFail(BAD_REQUEST, s"Credit code $code has already been used")
-  case class NoPaidAccountException(userId: Id[User], orgIdOpt: Option[Id[Organization]]) extends CreditRewardFail(BAD_REQUEST, s"User $userId in org $orgIdOpt has no paid account")
-  case class UnrepeatableRewardKeyCollisionException(key: UnrepeatableRewardKey) extends CreditRewardFail(BAD_REQUEST, s"A reward with unrepeatable key $key (${key.toKey}) already exists")
+  case class UnavailableCreditCodeException(code: CreditCode) extends CreditRewardFail(CONFLICT, s"Credit code $code is unavailable", "code_unavailable")
+  case class CreditCodeNotFoundException(code: CreditCode) extends CreditRewardFail(BAD_REQUEST, s"Credit code $code does not exist", "code_nonexistent")
+  case class CreditCodeAbuseException(req: CreditCodeApplyRequest) extends CreditRewardFail(BAD_REQUEST, s"Credit code ${req.code} cannot be applied by user ${req.applierId} in org ${req.orgId}", "code_invalid")
+  case class CreditCodeAlreadyBurnedException(code: CreditCode) extends CreditRewardFail(BAD_REQUEST, s"Credit code $code has already been used", "code_already_used")
+  case class NoPaidAccountException(userId: Id[User], orgIdOpt: Option[Id[Organization]]) extends CreditRewardFail(BAD_REQUEST, s"User $userId in org $orgIdOpt has no paid account", "no_paid_account")
+  case class UnrepeatableRewardKeyCollisionException(key: UnrepeatableRewardKey) extends CreditRewardFail(BAD_REQUEST, s"A reward with unrepeatable key $key (${key.toKey}) already exists", "unrepeatable_reward")
 }
