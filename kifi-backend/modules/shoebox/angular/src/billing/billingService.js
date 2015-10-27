@@ -36,7 +36,7 @@ angular.module('kifi')
         .setBillingCCToken(pubId, { token: token })
         .then(function (response) {
           invalidateCache();
-          return response;
+          return getResponseData(response);
         });
       },
       getBillingContacts: function (pubId) {
@@ -49,7 +49,7 @@ angular.module('kifi')
         .setBillingContacts(pubId, contacts)
         .then(function (response) {
           invalidateCache();
-          return response;
+          return getResponseData(response);
         });
       },
       getBillingEvents: function (pubId, limit, fromId) {
