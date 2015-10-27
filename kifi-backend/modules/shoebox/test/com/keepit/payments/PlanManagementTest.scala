@@ -49,10 +49,10 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
 
   "PlanManagementCommander" should {
 
-    "start new plans first thing tomorrow" in {
+    "start new plans at 8PM UTC - 1PM PST" in {
       withDb(modules: _*) { implicit injector =>
-        commander().newPlansStartDate(currentDateTime) === (currentDateTime plusDays 1).withTimeAtStartOfDay()
-        commander().newPlansStartDate(parseStandardTime("2015-10-23 18:56:21.000 -0000")) === parseStandardTime("2015-10-24 00:00:00.000 -0000")
+        commander().newPlansStartDate(parseStandardTime("2015-10-23 18:56:21.000 -0000")) === parseStandardTime("2015-10-23 20:00:00.000 -0000")
+        commander().newPlansStartDate(parseStandardTime("2015-10-23 21:00:00.000 -0000")) === parseStandardTime("2015-10-24 20:00:00.000 -0000")
       }
     }
 

@@ -96,6 +96,8 @@ sealed trait AccountEventAction {
 
 object AccountEventAction { //There is probably a deeper type hierarchy that can be used here...
 
+  private implicit val dollarFormat = DollarAmount.formatAsCents
+
   trait Payloadless { self: AccountEventAction =>
     def toDbRow: (AccountEventKind, JsValue) = (eventType, JsNull)
   }

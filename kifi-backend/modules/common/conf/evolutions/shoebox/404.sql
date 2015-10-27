@@ -13,6 +13,7 @@ CREATE TABLE credit_code_info (
 	status VARCHAR(32) NOT NULL,
 	referrer_user_id BIGINT(20) DEFAULT NULL,
 	referrer_organization_id BIGINT(20) DEFAULT NULL,
+	referrer_credit INT(10) DEFAULT NULL,
 
 	PRIMARY KEY(id),
 	UNIQUE KEY credit_code_info_u_code (code),
@@ -31,7 +32,7 @@ CREATE TABLE credit_reward (
 	applied BIGINT(20) DEFAULT NULL,
 	kind VARCHAR(32) NOT NULL,
 	status VARCHAR(32) NOT NULL,
-	info VARCHAR(256) NOT NULL,
+	info VARCHAR(256) DEFAULT NULL,
 	unrepeatable VARCHAR(64) DEFAULT NULL,
 	code VARCHAR(128) DEFAULT NULL,
 	single_use TINYINT(1) DEFAULT NULL,

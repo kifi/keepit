@@ -66,29 +66,6 @@ class AdminBookmarksController @Inject() (
     Ok(s"disabling $url")
   }
 
-  def whoKeptMyKeeps = AdminUserPage { implicit request =>
-    val since = clock.now.minusDays(7)
-    val richWhoKeptMyKeeps = db.readOnlyReplica { implicit session =>
-      var maxUsers = 30
-      var whoKeptMyKeeps = keepRepo.whoKeptMyKeeps(request.userId, since, maxUsers)
-
-      while (whoKeptMyKeeps.size > 15) {
-        //trimming the last article and removing most popular articles
-        maxUsers = maxUsers - 2
-        whoKeptMyKeeps = whoKeptMyKeeps.filterNot(_.users.size > maxUsers)
-        if (whoKeptMyKeeps.size > 15) {
-          whoKeptMyKeeps = whoKeptMyKeeps.take(whoKeptMyKeeps.size - 2)
-        }
-      }
-      whoKeptMyKeeps map { whoKeptMyKeep =>
-        RichWhoKeptMyKeeps(whoKeptMyKeep.count, whoKeptMyKeep.latestKeep,
-          uriRepo.get(whoKeptMyKeep.uri), whoKeptMyKeep.users map userRepo.get)
-      }
-    }
-    val users: Set[User] = richWhoKeptMyKeeps.map(_.users).flatten.toSet
-    Ok(html.admin.whoKeptMyKeeps(richWhoKeptMyKeeps, since, users.size))
-  }
-
   def edit(id: Id[Keep]) = AdminUserPage.async { implicit request =>
     val bookmark = db.readOnlyReplica { implicit session =>
       keepRepo.get(id)
