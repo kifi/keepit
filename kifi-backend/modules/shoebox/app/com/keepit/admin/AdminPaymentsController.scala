@@ -210,7 +210,7 @@ class AdminPaymentsController @Inject() (
       val eventCount = accountEventRepo.adminCountByKind(kinds)
       val recentEvents = accountEventRepo.adminGetByKind(kinds, pg).map(createAdminAccountEventView)
       val paginationHelper = PaginationHelper(page = pg.num, itemCount = eventCount, pageSize = pg.size, otherPagesRoute = { p: Int =>
-        asPlayHtml(com.keepit.controllers.admin.routes.AdminPaymentsController.paymentsDashboard(p))
+        asPlayHtml(com.keepit.controllers.admin.routes.AdminPaymentsController.paymentsDashboard(p, kind))
       })
       val orgsByAccountId = {
         val accountIds = frozenAccounts.map(_.id.get).toSet ++ recentEvents.map(_.accountId).toSet
