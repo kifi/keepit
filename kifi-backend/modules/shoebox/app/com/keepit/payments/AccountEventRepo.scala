@@ -21,8 +21,9 @@ trait AccountEventRepo extends Repo[AccountEvent] {
   def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
-  def adminGetRecentEvents(pg: Paginator)(implicit session: RSession): Seq[AccountEvent]
-  def activeCount(implicit session: RSession): Int
+
+  def adminCountByKind(kinds: Set[AccountEventKind])(implicit session: RSession): Int
+  def adminGetByKind(kinds: Set[AccountEventKind], pg: Paginator)(implicit session: RSession): Seq[AccountEvent]
 
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int
 }
@@ -58,8 +59,6 @@ class AccountEventRepoImpl @Inject() (
   }
 
   private def activeRows = rows.filter(row => row.state === AccountEventStates.ACTIVE)
-  def activeCount(implicit session: RSession): Int = activeRows.length.run
-
   def age(ae: AccountEventTable) = (ae.eventTime desc, ae.id desc)
 
   def table(tag: Tag) = new AccountEventTable(tag)
@@ -103,8 +102,15 @@ class AccountEventRepoImpl @Inject() (
     val (userAdded, userRemoved): (AccountEventKind, AccountEventKind) = (AccountEventKind.UserAdded, AccountEventKind.UserRemoved)
     (for (row <- rows if row.accountId === accountId && (row.eventType === userAdded || row.eventType === userRemoved)) yield row).sortBy(r => (r.eventTime asc, r.id asc)).list
   }
-  def adminGetRecentEvents(pg: Paginator)(implicit session: RSession): Seq[AccountEvent] = {
-    activeRows.sortBy(age).drop(pg.offset).take(pg.limit).list
+
+  private def adminGetByKindHelper(kinds: Set[AccountEventKind])(implicit session: RSession) = {
+    activeRows.filter(row => row.eventType.inSet(kinds))
+  }
+  def adminCountByKind(kinds: Set[AccountEventKind])(implicit session: RSession): Int = {
+    adminGetByKindHelper(kinds).length.run
+  }
+  def adminGetByKind(kinds: Set[AccountEventKind], pg: Paginator)(implicit session: RSession): Seq[AccountEvent] = {
+    adminGetByKindHelper(kinds).sortBy(age).drop(pg.offset).take(pg.limit).list
   }
   def deactivateAll(accountId: Id[PaidAccount])(implicit session: RWSession): Int = {
     (for (row <- rows if row.accountId === accountId) yield (row.state, row.updatedAt)).update((AccountEventStates.INACTIVE, clock.now))
