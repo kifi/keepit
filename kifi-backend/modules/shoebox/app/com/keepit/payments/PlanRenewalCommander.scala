@@ -33,14 +33,14 @@ class PlanRenewalCommanderImpl @Inject() (
   def processDueRenewals(): Unit = synchronized {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRenewable() }
     if (relevantAccounts.length > 0) {
-      eventCommander.reportToSlack(s"Renewing plans for ${relevantAccounts.length} accounts.")
+      eventCommander.reportToSlack(s"Renewing plans for ${relevantAccounts.length} accounts.", "#billing-alerts")
       val renewed = relevantAccounts.count(renewPlan(_) match {
         case Success(_) => true
         case Failure(error) =>
           airbrake.notify(error)
           false
       })
-      eventCommander.reportToSlack(s"$renewed/${relevantAccounts.length} plans were successfully renewed.")
+      eventCommander.reportToSlack(s"$renewed/${relevantAccounts.length} plans were successfully renewed.", "#billing-alerts")
     }
   }
 

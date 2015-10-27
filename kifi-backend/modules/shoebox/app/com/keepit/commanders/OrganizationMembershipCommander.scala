@@ -11,7 +11,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.json
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.BasicContact
-import com.keepit.common.net.{ NonOKResponseException, DirectUrl, CallTimeouts, HttpClient }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.{ HeimdalContext, HeimdalContextBuilder }
@@ -78,7 +77,6 @@ class OrganizationMembershipCommanderImpl @Inject() (
     libraryMembershipCommander: LibraryMembershipCommander,
     basicUserRepo: BasicUserRepo,
     kifiUserTypeahead: KifiUserTypeahead,
-    httpClient: HttpClient,
     planCommander: PlanManagementCommander,
     mode: Mode,
     implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
@@ -236,7 +234,6 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
 
     // Fire off a few Futures to take care of low priority tasks
-    maybeNotifySlackOfNewMember(request.orgId, request.targetId)
     refreshOrganizationMembersTypeahead(request.orgId)
 
     val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
@@ -284,38 +281,6 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
     refreshOrganizationMembersTypeahead(request.orgId)
     OrganizationMembershipRemoveResponse(request)
-  }
-
-  private def maybeNotifySlackOfNewMember(orgId: Id[Organization], userId: Id[User]): Future[Unit] = {
-    if (mode != play.api.Mode.Prod) Future.successful(())
-    else {
-      db.readOnlyReplicaAsync { implicit session =>
-        val isOrgReal = !orgExperimentRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE)
-        val isUserReal = !userExperimentRepo.hasExperiment(userId, UserExperimentType.FAKE)
-        val shouldNotifySlack = isOrgReal && isUserReal
-        if (shouldNotifySlack) {
-          val org = orgRepo.get(orgId)
-          val user = userRepo.get(userId)
-
-          val channel = "#org-members"
-          val webhookUrl = "https://hooks.slack.com/services/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"
-
-          val text = s"<http://www.kifi.com/${user.username.value}?kma=1|${user.fullName}> just joined <http://www.kifi.com/${org.handle.value}?kma=1|${org.name}>."
-          val message = BasicSlackMessage(text = text, channel = Some(channel))
-
-          val response = httpLock.withLockFuture(httpClient.postFuture(DirectUrl(webhookUrl), Json.toJson(message)))
-
-          response.onComplete {
-            case Success(res) =>
-              log.info(s"[notifySlackOfNewMember] Slack message to $channel succeeded.")
-            case Failure(t: NonOKResponseException) =>
-              log.warn(s"[notifySlackOfNewMember] Slack info invalid for channel=$channel. Make sure the webhookUrl matches.")
-            case _ =>
-              log.error(s"[notifySlackOfNewMember] Slack message request failed.")
-          }
-        }
-      }
-    }
   }
 
   private def refreshOrganizationMembersTypeahead(orgId: Id[Organization]): Future[Unit] = {
