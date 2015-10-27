@@ -108,7 +108,7 @@ class AppBoy @Inject() (
           case UserPushNotificationCategory.UserConnectionAccepted => "us"
           case UserPushNotificationCategory.ContactJoined => "us"
           case UserPushNotificationCategory.NewLibraryFollower => "nf"
-          case UserPushNotificationCategory.NewLibraryCollaborator => "nf"
+          case UserPushNotificationCategory.NewLibraryCollaborator => "us"
           case UserPushNotificationCategory.LibraryInviteAccepted => "us"
           case UserPushNotificationCategory.NewOrganizationMember => "om"
           case _ => throw new Exception(s"unsupported user push notification category ${upn.category.name}")
