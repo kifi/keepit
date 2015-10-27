@@ -115,7 +115,7 @@ object DescriptionElements {
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
   implicit def fromCreditReward(cr: CreditReward): BasicElement = cr.credit.toDollarString
-  implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.absolute
+  implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName -> user.path.absolute
   implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.absolute
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> Path(s"${orgHandle.value}/settings/plan").absolute
