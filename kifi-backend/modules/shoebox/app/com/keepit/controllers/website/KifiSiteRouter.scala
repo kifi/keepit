@@ -5,7 +5,7 @@ import com.keepit.commanders._
 import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.controller._
 import com.keepit.common.core._
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.{ CryptoSupport, PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -22,6 +22,7 @@ import views.html
 import views.html.mobile.mobileAppRedirect
 
 import scala.concurrent.Future
+import scala.util.Try
 
 @Singleton // for performance
 class KifiSiteRouter @Inject() (
@@ -79,11 +80,21 @@ class KifiSiteRouter @Inject() (
   }
 
   def generalRedirect(dataStr: String) = MaybeUserAction { implicit request =>
-    Json.parse(dataStr).asOpt[JsObject].flatMap { data =>
+    def parseDataString(in: String): Option[JsObject] = { // We're very permissive here.
+      Try {
+        Json.parse(dataStr).as[JsObject]
+      }.orElse {
+        Try(Json.parse(dataStr.replaceAllLiterally("&quot;", "\"")).as[JsObject])
+      }.orElse {
+        Try(Json.parse(new String(CryptoSupport.fromBase64(dataStr)).trim).as[JsObject])
+      }.toOption
+    }
+
+    parseDataString(dataStr).flatMap { data =>
       val redir = deepLinkRouter.generateRedirect(data)
       redir.map(r => Ok(html.mobile.deepLinkRedirect(r, data)))
     }.getOrElse {
-      airbrake.notify(s"Could not figure out how to redirect deep-link: $dataStr")
+      println(s"[generalRedirect] Could not figure out how to redirect deep-link: $dataStr")
       Redirect("/get")
     }
   }

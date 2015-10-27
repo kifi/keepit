@@ -301,6 +301,16 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
 
         // ignoring mobile device without query param
         route(FakeRequest("GET", "/some/path").withHeaders("user-agent" -> "Mozilla/5.0 (iPhone)")) must be404
+
+
+        // Deep link v2 redirects
+        val lid = "l8rlPD6Bk7A9" // If public id config changes, this breaks. Need to hard code because the base64 encoding below.
+
+        status(route(FakeRequest("GET", s"""/redir?data=%7B"t":"lv","lid":"$lid"%7D&kma=1""")).get) === 200
+        contentAsString(route(FakeRequest("GET", s"/redir?data=%7B%22t%22%3A%22lv%22%2C%22lid%22%3A%22$lid%22%7D")).get) must contain("/abe.z1234/most-awesome-lib")
+        status(route(FakeRequest("GET", s"/redir?data=%7B%26quot;t%26quot;:%26quot;lv%26quot;,%26quot;lid%26quot;:%26quot;$lid%26quot;%7D&kma=1")).get) === 200
+        contentAsString(route(FakeRequest("GET", s"/redir?data=eyJ0IjoibHYiLCJsaWQiOiJsOHJsUEQ2Qms3QTkifQo%3D")).get) must contain("/abe.z1234/most-awesome-lib")
+
       }
     }
   }
