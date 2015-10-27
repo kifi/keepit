@@ -106,6 +106,7 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def newPlansStartDate(now: DateTime): DateTime = {
+    // changing this might mess up book keeping for teams that are waiting for a *new* plan to start, i.e. teams that have just been created / just changed their plan
     val thatTimeInHours = 20 // 8PM UTC = 1PM PST
     val thatTimeToday = now.withTimeAtStartOfDay() plusHours thatTimeInHours // Today 8PM UTC = 1PM PST
     val thatTimeTomorrow = (now plusDays 1).withTimeAtStartOfDay() plusHours thatTimeInHours // Tomorrow 8PM UTC = 1PM PST
