@@ -905,7 +905,7 @@ GET           /admin/payments/getAccountActivity           @com.keepit.controlle
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
 
-GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
+GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard(page: Int ?= 0)
 
 
 ##########################################
