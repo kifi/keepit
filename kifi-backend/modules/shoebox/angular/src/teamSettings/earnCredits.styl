@@ -40,15 +40,22 @@
   text-align: left
 
 .kf-referral-copy-msg
-  margin-left: 10px
+  margin-left: 20px
   display: inline-block
   color: libraryGreen
 
   &.ng-enter
-    transition: all linear .04s
+    transition: all .04s
     opacity: 0
 
   &.ng-enter-active
     opacity: 1
+
+  &.ng-leave
+    transition: all 3s
+    opacity: 1
+
+  &.ng-leave-active
+    opacity: 0
 
 

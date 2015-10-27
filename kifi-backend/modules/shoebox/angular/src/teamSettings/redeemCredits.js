@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfRedeemCredits', [ 'billingService', '$filter', '$log',
-  function (billingService, $filter, $log) {
+.directive('kfRedeemCredits', [ 'billingService', '$filter', '$timeout',
+  function (billingService, $filter, $timeout) {
 
 
     return {
@@ -14,34 +14,42 @@ angular.module('kifi')
         standalone: '='
       },
       link: function($scope) {
-//        $scope.$watch('creditRedeemed', function (oldCredit, newCredit) {
-//          $scope.newCredit = newCredit;
-//          $scope.creditRedeemed += newCredit;
-//        });
 
         $scope.$error = {};
         $scope.creditRedeemed = 0;
-        $scope.newCredit = 0;
-
-        var counter = 1;
 
         $scope.applyReferralCode = function (code) {
           $scope.creditRedeemed = 0;
           billingService
             .applyReferralCode($scope.profile.id, code)
             .then(function (response) {
-              $log.log(response);
-              if (counter < 3) {
-                $scope.creditRedeemed = response.creditAdded;
-              } else {
-                $scope.creditRedeemed = 0;
-                $scope.$error.invalid = true;
-              }
-              counter++;
+              $scope.$error = {};
+              $scope.showCredit = true;
+              $scope.creditRedeemed = response.data.value;
+              $timeout(function () { $scope.showCredit = false }, 3000);
             })
             ['catch'](function (error) {
-              $scope.$error.invalid = true;
-              $log.log('this');
+              var error = error.data && error.data.error;
+              switch (error) {
+                case 'code_nonexistent':
+                  $scope.$error.general = 'Referral code doesn\'t exist';
+                  break;
+                case 'code_invalid':
+                  $scope.$error.general = 'You can\'t redeem your own code';
+                  break;
+                case 'code_already_used':
+                  $scope.$error.general = 'Referral code has already been used';
+                  break;
+                case 'no_paid_account':
+                  $scope.$error.general = 'Account not found. Contact support@kifi.com.';
+                  break;
+                case 'unrepeatable_reward':
+                  $scope.$error.general = 'You\'ve already redeemed this reward';
+                  break;
+                default:
+                  $scope.$error.general = 'Please try again later.';
+                  break;
+              }
             });
         };
       }

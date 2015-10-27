@@ -190,8 +190,7 @@ angular.module('kifi')
       };
 
       scope.onCreditBannerEarnMore = function () {
-         // TODO(carlos): replace this with the actual route when it's created
-        // $state.go('orgProfile.settings.credit');
+        $state.go('orgProfile.settings.credits', { handle: scope.profile.handle });
       };
     }
   };

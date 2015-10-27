@@ -73,23 +73,17 @@ angular.module('kifi')
         });
       },
       getReferralCode: function (pubId) {
-        return pubId;
-//        return net
-//        .getReferralCode(pubId)
-//        .then(function (response) {
-//          return response;
-//        });
+        return net
+        .getReferralCode(pubId)
+        .then(getResponseData);
       },
       applyReferralCode: function(pubId, code) {
-        return $timeout(function() {
-          return { pubId: pubId, code: code, creditAdded: 500 };
+        return net
+        .applyReferralCode(pubId, { code: code })
+        .then(function (response) {
+          invalidateCache();
+          return response;
         });
-//        return net
-//        .applyReferralCode(pubId, code)
-//        .then(function (response) {
-//          invalidateCache();
-//          return response;
-//        });
       },
       invalidateCache: invalidateCache
     };

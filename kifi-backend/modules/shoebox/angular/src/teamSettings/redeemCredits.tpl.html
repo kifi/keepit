@@ -1,5 +1,5 @@
 <div class="kf-redeem-credits kf-earn-credits">
-  <section ng-class="{ 'kf-container' : standalone }">
+  <section ng-class="{ 'kf-container kf-redeem-credits-container' : standalone }">
     <div ng-class="{ 'kf-container-header': standalone, 'kf-heading': !standalone }">
       <h2>Redeem a Credit</h2>
     </div>
@@ -9,8 +9,8 @@
         <input class="kf-referral-code-txt" ng-model="redeemCode" placeholder="Enter code (ex: 'KIFI50')"></input>
         <input class="kf-referral-btn kf-referral-btn-enter" ng-disabled="!redeemCode" type="submit" value="Apply" ng-click="applyReferralCode(redeemCode)">
       </form>
-      <text class="kf-redeem-credits-confirm-txt" ng-if="creditRedeemed > 0">You earned {{ creditRedeemed | money }}!</text>
-      <text class="kf-redeem-credits-error-txt" ng-if="$error.invalid">Invalid referral code.</text>
+      <text class="kf-redeem-credits-confirm-txt" ng-if="showCredit">You earned {{ creditRedeemed | money }}!</text>
+      <text class="kf-redeem-credits-error-txt" ng-if="$error.general">{{ $error.general }}</text>
     </div>
   </section>
 </div>

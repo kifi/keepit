@@ -3,17 +3,15 @@
 angular.module('kifi')
 
 .controller('EarnCreditsCtrl', [
-  '$scope', 'billingService', '$log',
-  function ($scope, billingService, $log) {
-    $scope.referralCode = billingService.getReferralCode($scope.profile.id);
+  '$scope', 'billingService', '$timeout',
+  function ($scope, billingService, $timeout) {
+    billingService.getReferralCode($scope.profile.id).then(function(response) { $scope.referralCode = response.code; });
     $scope.redeemCode = '';
 
     $scope.copied = false;
     $scope.showCopied = function () {
       $scope.copied = true;
-    };
-    $scope.applyRedeemCode = function (code) {
-      billingService.applyReferralCode($scope.profile.id, code);
+      $timeout(function() { $scope.copied = false; }, 2000);
     };
   }
 ]);
