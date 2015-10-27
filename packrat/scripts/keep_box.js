@@ -570,6 +570,17 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
+  function toggleVisibilityItem($visibilityItem, value) {
+    value = !!value;
+    if (typeof $visibilityItem === 'string') {
+      $visibilityItem = $box.find('[name="kifi-visibility"][value="' + $visibilityItem + '"]');
+    }
+    $visibilityItem
+    .prop('disabled', value)
+    .closest('.kifi-keep-box-new-lib-visibility-item')
+    .toggleClass('kifi-keep-box-new-lib-visibility-item-disabled', value);
+  }
+
   function setLocation(e) {
     e.preventDefault();
     var newLocation = e.target.value;
@@ -587,27 +598,20 @@ k.keepBox = k.keepBox || (function () {
 
     if (isOrganization) {
       if (visibility === 'published' && !previousLocationIsOrg) {
-        $box.find('[name="kifi-visibility"][value="organization"]').prop('disabled', false).focus().click();
+        var $orgVisiblility = $box.find('[name="kifi-visibility"][value="organization"]');
+        toggleVisibilityItem($orgVisiblility, false);
+        $orgVisiblility.focus().click();
       }
       $box.find('.kifi-organization-name').html(matches[0].name);
     } else if ($box.find('[name="kifi-visibility"][value="organization"]:checked').length === 1) {
       $box.find('[name="kifi-visibility"][value="secret"]').focus().click();
     }
-
-    $box
-    .find('[name="kifi-visibility"][value="organization"]')
-    .prop('disabled', !isOrganization)
-    .closest('.kifi-keep-box-new-lib-visibility-item')
-    .toggleClass('kifi-keep-box-new-lib-visibility-item-disabled', !isOrganization);
+    toggleVisibilityItem('organization', !isOrganization);
 
     if (!canPublish && $box.find('[name="kifi-visibility"][value="published"]:checked').length === 1) {
       $box.find('[name="kifi-visibility"][value="organization"]').focus().click();
     }
-    $box
-    .find('[name="kifi-visibility"][value="published"]')
-    .prop('disabled', !canPublish)
-    .closest('.kifi-keep-box-new-lib-visibility-item')
-    .toggleClass('kifi-keep-box-new-lib-visibility-item-disabled', !canPublish);
+    toggleVisibilityItem('published', !canPublish);
 
     api.port.emit('track_pane_click', {
       type: 'createLibrary',
