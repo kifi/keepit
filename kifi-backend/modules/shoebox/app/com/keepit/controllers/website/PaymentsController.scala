@@ -148,7 +148,7 @@ class PaymentsController @Inject() (
       case None => BadRequest(Json.obj("error" -> "missing_credit_code"))
       case Some(code) =>
         creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, request.request.userId, Some(request.orgId))).map { rewards =>
-          Ok(Json.obj("value" -> rewards.target.credit))
+          Ok(Json.obj("value" -> DollarAmount.formatAsCents.writes(rewards.target.credit)))
         }.recover {
           case f: CreditRewardFail => f.asErrorResponse
         }.get

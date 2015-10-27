@@ -12,7 +12,6 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-@json
 case class DollarAmount(cents: Int) extends Ordered[DollarAmount] {
   def compare(that: DollarAmount) = cents compare that.cents
   def +(other: DollarAmount): DollarAmount = DollarAmount(cents + other.cents)
