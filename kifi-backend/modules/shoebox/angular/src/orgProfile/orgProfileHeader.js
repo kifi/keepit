@@ -190,7 +190,7 @@ angular.module('kifi')
       };
 
       scope.onCreditBannerEarnMore = function () {
-        $state.go('orgProfile.settings.credits', { handle: scope.profile.handle });
+        $state.go('orgProfile.settings.credits');
       };
     }
   };
