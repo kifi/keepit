@@ -9,7 +9,4 @@ class AdminEngineeringDashboardController @Inject() (
   def overview = AdminUserPage { implicit request =>
     Ok(html.admin.engineeringDashboard())
   }
-  def seyren = AdminUserPage { implicit request =>
-    Ok(html.admin.seyren())
-  }
 }

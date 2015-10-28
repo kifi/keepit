@@ -26,7 +26,7 @@ object PaidPlanFactory {
 
   def paidPlan(): PartialPaidPlan = {
     new PartialPaidPlan(PaidPlan(id = Some(Id[PaidPlan](idx.incrementAndGet())), kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("test"), displayName = "Free",
-      pricePerCyclePerUser = DollarAmount(10000), billingCycle = BillingCycle(month = 1), editableFeatures = testPlanEditableFeatures, defaultSettings = testPlanSettings))
+      pricePerCyclePerUser = DollarAmount(10000), billingCycle = BillingCycle(months = 1), editableFeatures = testPlanEditableFeatures, defaultSettings = testPlanSettings))
   }
 
   class PartialPaidPlan private[PaidPlanFactory] (plan: PaidPlan) {

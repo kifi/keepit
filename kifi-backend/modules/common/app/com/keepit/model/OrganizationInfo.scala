@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
+import com.keepit.common.json.TraversableFormat
 import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime

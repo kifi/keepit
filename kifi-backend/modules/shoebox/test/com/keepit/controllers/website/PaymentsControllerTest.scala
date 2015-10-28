@@ -23,6 +23,7 @@ import play.api.libs.json.{ JsValue, Json, JsObject }
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import com.keepit.common.time._
 
 class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
@@ -102,7 +103,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
 
           val plansByName = contentAsJson(response)
           (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
         }
       }
@@ -131,7 +132,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           // don't get any custom plans
           val plansByName = contentAsJson(response)
           (plansByName \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByName \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByName \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(currentPlan.id.get)
           (plansByName \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === None
 
@@ -143,9 +144,9 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           // don't get any custom plans
           val plansByNameWithCustom = contentAsJson(response2)
           (plansByNameWithCustom \ "plans" \ "Free").as[Seq[PaidPlanInfo]] === Seq(currentPlan.asInfo)
-          (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.month)
+          (plansByNameWithCustom \ "plans" \ "Standard").as[Seq[PaidPlanInfo]] === standardPlans.map(_.asInfo).sortBy(_.cycle.months)
           (plansByNameWithCustom \ "current").as[PublicId[PaidPlan]] === PaidPlan.publicId(customPlans.head.id.get)
-          (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.month))
+          (plansByNameWithCustom \ "plans" \ "Enterprise").asOpt[Seq[PaidPlanInfo]] === Some(customPlans.map(_.asInfo).sortBy(_.cycle.months))
         }
       }
     }
@@ -170,7 +171,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           (planJson \ "id").as[PublicId[PaidPlan]] must beEqualTo(PaidPlan.publicId(actualPlan.id.get))
           (planJson \ "name").as[String] must beEqualTo(plan.displayName)
           (planJson \ "pricePerUser").as[JsObject] === Json.obj("cents" -> plan.pricePerCyclePerUser.toCents)
-          (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.month)
+          (planJson \ "cycle").as[Int] must beEqualTo(plan.billingCycle.months)
           (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
         }
       }
@@ -199,7 +200,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val setResponse = controller.updatePlan(orgId, newPlanId)(setRequest)
           status(setResponse) === OK
           val finalBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
-          finalBalance must beLessThan(initialBalance) // simple sanity check, actual logic should be tested in the commander
 
           val response2 = controller.getAccountState(orgId)(route.getAccountState(orgId))
           status(response2) === OK
@@ -216,6 +216,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             val owner = UserFactory.user().saved
             val rando = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(owner).withPlan(plan.id.get.id).saved
+            paidAccountRepo.save(paidAccountRepo.getByOrgId(org.id.get).withPlanRenewal(currentDateTime plusDays 15)) // set future renewal date to test partial refunds / costs
             (org, owner, rando, plan)
           }
           val orgId = Organization.publicId(org.id.get)
@@ -333,6 +334,44 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             case (actual, expected) => actual === expected
           }
           1 === 1
+        }
+      }
+    }
+    "handle credit codes" in {
+      "give an org its referral code" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val publicId = Organization.publicId(org.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getReferralCode(publicId)
+          val response = controller.getReferralCode(publicId)(request)
+          status(response) === OK
+          (contentAsJson(response) \ "code").as[String] === creditRewardCommander.getOrCreateReferralCode(org.id.get).value
+        }
+      }
+      "let an org redeem a credit code" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org1, org2, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org1 = OrganizationFactory.organization().withOwner(owner).saved
+            val org2 = OrganizationFactory.organization().withOwner(owner).saved
+            (org1, org2, owner)
+          }
+          val publicId = Organization.publicId(org2.id.get)
+          val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val payload = Json.obj("code" -> code.value)
+          val request = route.redeemCreditCode(publicId).withBody(payload)
+          val response = controller.redeemCreditCode(publicId)(request)
+
+          status(response) === OK
+          (contentAsJson(response) \ "value").as[DollarAmount](DollarAmount.formatAsCents) === DollarAmount.dollars(100)
         }
       }
     }

@@ -326,22 +326,23 @@ GET     /about/mission              @com.keepit.controllers.website.HomeControll
 GET     /about/mission.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about")
 GET     /about/culture              @com.keepit.controllers.website.HomeController.moved(uri = "/about")
 GET     /about/investors            @com.keepit.controllers.website.HomeController.moved(uri = "/about")
-GET     /about/team                 @com.keepit.controllers.website.HomeController.route(path = "about/team")
-GET     /about/team.html            @com.keepit.controllers.website.HomeController.moved(uri  = "about/team")
+GET     /about/team                 @com.keepit.controllers.website.HomeController.moved(uri = "/")
+GET     /about/team.html            @com.keepit.controllers.website.HomeController.moved(uri = "/")
 GET     /about/join_us              @com.keepit.controllers.website.HomeController.route(path = "about/join_us")
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
+GET     /imports/evernote           @com.keepit.controllers.website.HomeController.route(path = "imports/evernote")
+GET     /imports/diigo              @com.keepit.controllers.website.HomeController.route(path = "imports/diigo")
+GET     /imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
 GET     /imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
 GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
 GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
-GET     /contact                    @com.keepit.controllers.website.HomeController.route(path = "contact")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
-GET     /home                       @com.keepit.controllers.website.HomeController.route(path = "home")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
 GET     /unsupported                @com.keepit.controllers.website.HomeController.unsupported
 GET     /libraries/featured         @com.keepit.controllers.website.HomeController.route(path = "libraries/featured")
@@ -527,11 +528,14 @@ POST          /site/organizations/:id/members/invites/decline   @com.keepit.cont
 POST          /site/organizations/:id/members/invites/link      @com.keepit.controllers.website.OrganizationInviteController.createAnonymousInviteToOrganization(id: PublicId[Organization])
 POST          /site/organizations/:id/members/modify            @com.keepit.controllers.website.OrganizationMembershipController.modifyMember(id: PublicId[Organization])
 POST          /site/organizations/:id/members/remove            @com.keepit.controllers.website.OrganizationMembershipController.removeMember(id: PublicId[Organization])
-GET           /site/organizations/:id/members/suggest            @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
+GET           /site/organizations/:id/members/suggest           @com.keepit.controllers.website.OrganizationInviteController.suggestMembers(id: PublicId[Organization], query: Option[String], limit: Int)
 GET           /site/organizations/:id/libraries                 @com.keepit.controllers.website.OrganizationController.getOrganizationLibraries(id: PublicId[Organization], offset: Int ?= 0, limit: Int ?= 20)
 POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
 GET           /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(id: PublicId[Organization])
 POST          /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(id: PublicId[Organization])
+
+GET           /site/organizations/:id/referralCode              @com.keepit.controllers.website.PaymentsController.getReferralCode(id: PublicId[Organization])
+POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
@@ -579,12 +583,10 @@ GET     /test/me                    @com.keepit.controllers.testing.ForTestingOn
 GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
-GET     /admin/engineering/seyren   @com.keepit.controllers.admin.AdminEngineeringDashboardController.seyren
 
 GET     /admin/abooks               @com.keepit.controllers.admin.ABookAdminController.allABooksView
 GET     /admin/abooks/page/:page    @com.keepit.controllers.admin.ABookAdminController.abooksView(page:Int)
 
-GET     /admin/whoKeptMyKeep        @com.keepit.controllers.admin.AdminBookmarksController.whoKeptMyKeeps()
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Keep])
 GET     /admin/bookmarks/editWithUri @com.keepit.controllers.admin.AdminBookmarksController.editFirstBookmarkForUri(id: Id[NormalizedURI])
@@ -647,8 +649,6 @@ GET     /admin/data/remigrate                                                  @
 POST    /admin/data/clearRestriction                                           @com.keepit.controllers.admin.UrlController.clearRestriction(uriId: Id[NormalizedURI])
 POST    /admin/data/flagAsAdult                                                @com.keepit.controllers.admin.UrlController.flagAsAdult(uriId: Id[NormalizedURI])
 GET     /admin/data/cleanKeepsByUri                                            @com.keepit.controllers.admin.UrlController.cleanKeepsByUri(firstPage: Int ?= 0, pageSize: Int ?= 100)
-
-GET     /admin/data/depornify        @com.keepit.controllers.admin.AdminPornDetectorController.massMarkAsAdult()
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
@@ -810,10 +810,6 @@ POST    /admin/libraries/forceModify                    @com.keepit.controllers.
 POST    /admin/libraries/removeLibrariesWithInactiveOwner       @com.keepit.controllers.admin.AdminLibraryController.removeLibrariesWithInactiveOwner
 POST    /admin/libraries/getLibrariesWithInactiveOwner          @com.keepit.controllers.admin.AdminLibraryController.getLibrariesWithInactiveOwner
 
-GET     /admin/personas             @com.keepit.controllers.admin.AdminPersonaController.getAllPersonas()
-POST    /admin/personas/add         @com.keepit.controllers.admin.AdminPersonaController.createPersona()
-POST    /admin/personas/:id         @com.keepit.controllers.admin.AdminPersonaController.editPersona(id: Id[Persona])
-
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
 GET     /admin/typeahead/socialSearch       @com.keepit.controllers.admin.TypeaheadAdminController.socialSearch(userId:Id[User], query:String ?= "")
@@ -903,7 +899,7 @@ GET           /admin/payments/getAccountActivity           @com.keepit.controlle
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
 
-GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
+GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard(page: Int ?= 0, kind: Option[String] ?= None)
 
 
 ##########################################
@@ -1062,13 +1058,12 @@ GET     /me/libraries/following    @com.keepit.controllers.website.KifiSiteRoute
 GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
 GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/settings")
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
-GET     /teams                     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
-GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
+GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUserOrSignup
 GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectFromPricing
 GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
-GET     /redir                    @com.keepit.controllers.website.KifiSiteRouter.generalRedirect(data: String)
+GET     /redir                     @com.keepit.controllers.website.KifiSiteRouter.generalRedirect(data: String)
 
 # Note: If you add any routes below this /:handle they aren't going to get matched, since :handle will wildcard match anything
 GET     /:handle                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)

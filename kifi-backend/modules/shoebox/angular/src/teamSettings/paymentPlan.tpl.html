@@ -9,11 +9,11 @@
         <div class="kf-payment-plan-card-cost">0</div>
         <div class="kf-payment-plan-card-bottom">
           <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-          <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(plan.name)">Currently selected</p>
+          <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(currentPlan.name)">Currently selected</p>
           <button
             class="kf-payment-plan-card-cta"
-            ng-if="!isFreePlanName(plan.name)"
-            ng-bind="isNoPlanName(plan.name) ? 'Choose plan' : 'Downgrade'"
+            ng-if="!isFreePlanName(currentPlan.name)"
+            ng-bind="isNoPlanName(currentPlan.name) ? 'Choose plan' : 'Downgrade'"
             ng-click="changePlanToFree()"
           ></button>
         </div>
@@ -25,13 +25,13 @@
         <p class="kf-payment-plan-card-description">$8 billed monthly</p>
         <div class="kf-payment-plan-card-bottom">
           <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-          <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(plan.name)">Currently selected</p>
+          <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(currentPlan.name)">Currently selected</p>
           <button
             class="kf-payment-plan-card-cta"
-            ng-if="!isPaidPlanName(plan.name)"
+            ng-if="!isPaidPlanName(currentPlan.name)"
             ng-click="changePlanToStandard()"
-            ng-bind="(isFreePlanName(plan.name) ? 'Upgrade now' :
-              (isNoPlanName(plan.name) ? 'Choose Plan' : 'Downgrade'))"
+            ng-bind="(isFreePlanName(currentPlan.name) ? 'Upgrade now' :
+              (isNoPlanName(currentPlan.name) ? 'Choose Plan' : 'Downgrade'))"
           ></button>
         </div>
       </div>
@@ -44,7 +44,7 @@
         </div>
       </div>
     </div>
-    <form class="kf-container-section" name="planSelectsForm">
+    <form class="kf-container-section kf-payment-plan-form" name="planSelectsForm">
       <p>Select your team's plan. Get details on the plans we offer on the <a class="kf-link" href="/pricing" target="_self">pricing page</a></p>
       <div class="custom-select kf-button">
         <select
@@ -78,7 +78,9 @@
             'kf-button-error': cardError
           }"
           ng-click="openStripeCheckout()"
-          ng-bind="(card ? 'Change' : 'Add') + ' credit card'"
+          ng-disabled="plan.newCard"
+          ng-bind="plan.newCard ? 'Card Added' :
+            ((card ? 'Change' : 'Add') + ' credit card')"
         ></button>
         <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">That worked! Click below to save and update your plan.</span>
       </div>
@@ -97,6 +99,7 @@
     <button
       class="kf-button kf-button-large kf-payment-plan-save"
       ng-click="warningModalOrSave()"
+      ng-disabled="disableSaveButton"
     >Save my plan preferences</button>
   </div>
 </div>

@@ -12,7 +12,6 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-@json
 case class DollarAmount(cents: Int) extends Ordered[DollarAmount] {
   def compare(that: DollarAmount) = cents compare that.cents
   def +(other: DollarAmount): DollarAmount = DollarAmount(cents + other.cents)
@@ -54,7 +53,12 @@ object PaymentStatus {
   def apply(value: String): PaymentStatus = all.find(_.value == value) getOrElse {
     throw new IllegalArgumentException(s"Unknown PaymentStatus: $value")
   }
+
+  implicit val writes = Writes[PaymentStatus](status => JsString(status.value))
 }
+
+case class FrozenAccountException(orgId: Id[Organization]) extends Exception(s"Organization $orgId's account is frozen!")
+case class InvalidPaymentStatusException(orgId: Id[Organization], status: PaymentStatus) extends Exception(s"Invalid payment status for organization $orgId: ${status.value}")
 
 case class PaidAccount(
     id: Option[Id[PaidAccount]] = None,

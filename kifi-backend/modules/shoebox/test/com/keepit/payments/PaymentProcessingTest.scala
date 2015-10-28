@@ -2,19 +2,13 @@ package com.keepit.payments
 
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.model.{ PaidPlanFactory, Organization, User, PaidAccountFactory, OrganizationFactory, UserFactory }
-import com.keepit.common.db.Id
+import com.keepit.model.{ PaidPlanFactory, OrganizationFactory, UserFactory }
 import com.keepit.common.time._
 import com.keepit.model.PaidPlanFactoryHelper.PaidPlanPersister
-import com.keepit.model.PaidAccountFactoryHelper.PaidAccountPersister
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 
 import org.specs2.mutable.SpecificationLike
-
-import org.joda.time.{ DateTime, Days }
-
-import java.math.{ BigDecimal, MathContext, RoundingMode }
 
 import scala.concurrent.Await
 
@@ -39,13 +33,10 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          PaidAccountFactory.paidAccount()
-            .withOrganizationId(org.id.get)
-            .withPlan(plan.id.get)
-            .withFrozen(true)
-            .withCredit(initialCredit)
-            .withPaymentDueAt(currentDateTime)
-            .saved
+          paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get)
+              .copy(credit = initialCredit).withPaymentDueAt(Some(currentDateTime)).freeze
+          )
         }
         Await.result(commander.processAccount(accountPre), Duration.Inf) should throwA(FrozenAccountException(accountPre.orgId))
 
@@ -67,9 +58,10 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
             val user = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(user).saved
             val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-            val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
-              .withCredit(initialCredit).withPaymentDueAt(currentDateTime).withPaymentStatus(paymentStatus)
-              .saved
+            val account = paidAccountRepo.save(
+              paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get)
+                .copy(credit = initialCredit).withPaymentDueAt(Some(currentDateTime)).withPaymentStatus(paymentStatus)
+            )
             (account, plan)
           }
           accountPre.owed should beLessThan(commander.MIN_BALANCE)
@@ -99,9 +91,9 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
-            .withCredit(initialCredit).withPaymentDueAt(currentDateTime).withPaymentStatus(PaymentStatus.Ok)
-            .saved
+          val account = paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get).withPaymentDueAt(Some(currentDateTime)).withPaymentStatus(PaymentStatus.Ok).copy(credit = initialCredit)
+          )
           inject[PaymentMethodRepo].save(PaymentMethod(
             accountId = account.id.get,
             default = true,
@@ -136,9 +128,10 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
             val user = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(user).saved
             val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-            val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
-              .withCredit(initialCredit).withPaymentDueAt(currentDateTime).withPaymentStatus(paymentStatus)
-              .saved
+            val account = paidAccountRepo.save(
+              paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get)
+                .copy(credit = initialCredit).withPaymentDueAt(Some(currentDateTime)).withPaymentStatus(paymentStatus)
+            )
             (account, plan)
           }
           accountPre.owed should beGreaterThan(commander.MIN_BALANCE)
@@ -162,10 +155,10 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
-            .withCredit(initialCredit).withPaymentDueAt(currentDateTime)
-            .saved
-
+          val account = paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get)
+              .copy(credit = initialCredit).withPaymentDueAt(Some(currentDateTime))
+          )
           val paymentMethodRepo = inject[PaymentMethodRepo]
           paymentMethodRepo.getByAccountId(account.id.get).foreach { paymentMethod =>
             paymentMethodRepo.save(paymentMethod.withState(PaymentMethodStates.INACTIVE))
@@ -201,9 +194,10 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
-            .withCredit(initialCredit).withPaymentDueAt(currentDateTime).withPaymentStatus(PaymentStatus.Ok)
-            .saved
+          val account = paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get)
+              .copy(credit = initialCredit).withPaymentDueAt(Some(currentDateTime)).withPaymentStatus(PaymentStatus.Ok)
+          )
           inject[PaymentMethodRepo].save(PaymentMethod(
             accountId = account.id.get,
             default = true,
@@ -240,9 +234,10 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
-          val account = PaidAccountFactory.paidAccount().withPlan(plan.id.get).withOrganizationId(org.id.get)
-            .withCredit(initialCredit).withPaymentDueAt(currentDateTime).withPaymentStatus(PaymentStatus.Ok)
-            .saved
+          val account = paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get)
+              .copy(credit = initialCredit).withPaymentDueAt(Some(currentDateTime)).withPaymentStatus(PaymentStatus.Ok)
+          )
           inject[PaymentMethodRepo].save(PaymentMethod(
             accountId = account.id.get,
             default = true,

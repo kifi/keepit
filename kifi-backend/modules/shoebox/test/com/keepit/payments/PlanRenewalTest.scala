@@ -2,9 +2,8 @@ package com.keepit.payments
 
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
-import com.keepit.model.{ PaidAccountFactory, PaidPlanFactory, OrganizationFactory, UserFactory }
+import com.keepit.model.{ PaidPlanFactory, OrganizationFactory, UserFactory }
 import com.keepit.model.PaidPlanFactoryHelper.PaidPlanPersister
-import com.keepit.model.PaidAccountFactoryHelper.PaidAccountPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.test.ShoeboxTestInjector
@@ -27,12 +26,18 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
           val monthlyPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle(1)).saved
           val (kifiId, kifiAccount) = {
             val kifiOrg = OrganizationFactory.organization().withOwner(user).withName("Kifi").saved
-            (kifiOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(kifiOrg).withPlan(monthlyPlan.id.get).withPlanRenewal(now plusMonths 1).saved)
+            val kifiAccount = paidAccountRepo.save(
+              paidAccountRepo.getByOrgId(kifiOrg.id.get).withNewPlan(monthlyPlan.id.get).withPlanRenewal(now plusMonths 1)
+            )
+            (kifiOrg.id.get, kifiAccount)
           }
 
           val (googleId, googleAccount) = {
             val googleOrg = OrganizationFactory.organization().withOwner(user).withName("Google").saved
-            (googleOrg.id.get, PaidAccountFactory.paidAccount().withOrganization(googleOrg).withPlan(monthlyPlan.id.get).withPlanRenewal(now plusMonths 1).saved)
+            val googleAccount = paidAccountRepo.save(
+              paidAccountRepo.getByOrgId(googleOrg.id.get).withNewPlan(monthlyPlan.id.get).withPlanRenewal(now plusMonths 1)
+            )
+            (googleOrg.id.get, googleAccount)
           }
 
           accountRepo.getRenewable() === Seq()
@@ -57,13 +62,9 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(DollarAmount.dollars(10)).withBillingCycle(BillingCycle(1)).saved
-          PaidAccountFactory.paidAccount()
-            .withOrganizationId(org.id.get)
-            .withPlan(plan.id.get)
-            .withFrozen(true)
-            .withCredit(DollarAmount.ZERO)
-            .withPlanRenewal(currentDateTime minusDays 7)
-            .saved
+          paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get).withPlanRenewal(currentDateTime minusDays 7).copy(credit = DollarAmount.ZERO).freeze
+          )
         }
         commander.renewPlan(accountPre) should beAFailedTry(FrozenAccountException(accountPre.orgId))
 
@@ -82,12 +83,9 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(DollarAmount.dollars(10)).withBillingCycle(billingCycle).saved
-          PaidAccountFactory.paidAccount()
-            .withOrganizationId(org.id.get)
-            .withPlan(plan.id.get)
-            .withCredit(DollarAmount.ZERO)
-            .withPlanRenewal(currentDateTime plusDays 7)
-            .saved
+          paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get).withPlanRenewal(currentDateTime plusDays 7).copy(credit = DollarAmount.ZERO)
+          )
         }
 
         commander.renewPlan(accountPre) should beAFailedTry(UnnecessaryPlanRenewalException(accountPre))
@@ -110,13 +108,9 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
           val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(billingCycle).saved
-          val account = PaidAccountFactory.paidAccount()
-            .withOrganizationId(org.id.get)
-            .withPlan(plan.id.get)
-            .withCredit(DollarAmount.ZERO)
-            .withPlanRenewal(currentDateTime minusDays 7)
-            .withActiveUsers(activeUsers)
-            .saved
+          val account = paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get).withPlanRenewal(now minusDays 7).copy(credit = DollarAmount.ZERO, activeUsers = activeUsers)
+          )
           (account, plan)
         }
 
@@ -131,50 +125,10 @@ class PlanRenewalTest extends SpecificationLike with ShoeboxTestInjector {
 
         db.readOnlyMaster { implicit session =>
           val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
-          updatedAccount.planRenewal === (accountPre.planRenewal plusMonths billingCycle.month)
+          updatedAccount.planRenewal === (accountPre.planRenewal plusMonths billingCycle.months)
           updatedAccount.credit === (accountPre.credit - renewalCost)
           updatedAccount.paymentDueAt should beSome
           updatedAccount.paymentDueAt.get should beLessThan(currentDateTime)
-        }
-      }
-    }
-
-    "do not update paymentDueAt when renewing a free plan" in {
-      withDb(modules: _*) { implicit injector =>
-        val commander = inject[PlanRenewalCommanderImpl]
-        val billingCycle = BillingCycle(1)
-        val price = DollarAmount.ZERO // free plan
-        val activeUsers = 5
-        val paymentDueAt = currentDateTime plusDays 10 // arbitrary
-        val (accountPre, plan) = db.readWrite { implicit session =>
-          val user = UserFactory.user().saved
-          val org = OrganizationFactory.organization().withOwner(user).saved
-          val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(billingCycle).saved
-          val account = PaidAccountFactory.paidAccount()
-            .withOrganizationId(org.id.get)
-            .withPlan(plan.id.get)
-            .withCredit(DollarAmount.ZERO)
-            .withActiveUsers(activeUsers)
-            .withPlanRenewal(currentDateTime minusDays 7)
-            .withPaymentDueAt(paymentDueAt)
-            .saved
-          (account, plan)
-        }
-
-        val renewalCost = plan.pricePerCyclePerUser * accountPre.activeUsers
-        renewalCost === DollarAmount.ZERO
-
-        val renewal = commander.renewPlan(accountPre)
-        renewal should beASuccessfulTry
-
-        renewal.get.action === AccountEventAction.PlanRenewal(plan.id.get, plan.billingCycle, plan.pricePerCyclePerUser, accountPre.activeUsers, accountPre.planRenewal)
-        renewal.get.creditChange === -renewalCost
-
-        db.readOnlyMaster { implicit session =>
-          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
-          updatedAccount.planRenewal === (accountPre.planRenewal plusMonths billingCycle.month)
-          updatedAccount.credit === (accountPre.credit - renewalCost)
-          updatedAccount.paymentDueAt === accountPre.paymentDueAt
         }
       }
     }

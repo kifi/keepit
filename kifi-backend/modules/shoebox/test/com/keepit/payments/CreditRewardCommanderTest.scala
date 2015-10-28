@@ -81,10 +81,10 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           finalCredit - initialCredit === rewards.target.credit
 
           db.readOnlyMaster { implicit session =>
-            creditRewardRepo.all === Seq(rewards.target, rewards.referrer.get)
+            creditRewardRepo.all must containAllOf(Seq(rewards.target, rewards.referrer.get))
             val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
-            rewardCreditEvents must haveSize(1)
-            rewardCreditEvents.head.creditChange === rewards.target.credit
+            rewardCreditEvents.size must beGreaterThanOrEqualTo(1)
+            rewardCreditEvents.map(_.creditChange) must contain(rewards.target.credit)
           }
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
@@ -107,13 +107,48 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           // org3 accepts from org1
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code1, org3.ownerId, Some(org3.id.get))) must beSuccessfulTry
           // so they can't accept from anyone else (or double-accept from org1)
-          val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.NewOrganization(org3.id.get))
+          val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.WasReferred(org3.id.get))
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code1, org3.ownerId, Some(org3.id.get))) must beFailedTry(expectedFailure)
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code2, org3.ownerId, Some(org3.id.get))) must beFailedTry(expectedFailure)
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
           paymentsChecker.checkAccount(org2.id.get) must beEmpty
           paymentsChecker.checkAccount(org3.id.get) must beEmpty
+        }
+      }
+      "apply rewards to the referrer once the referred org upgrades" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org1, org2) = db.readWrite { implicit session =>
+            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            (org1, org2)
+          }
+
+          // org1 refers org2
+          val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+          val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, org2.ownerId, Some(org2.id.get))).get
+
+          // org1 has a Reward now, but it has not been applied because org2 has not upgraded
+          val expectedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(org2.id.get)
+          rewards.referrer.get.reward === expectedReward
+
+          db.readOnlyMaster { implicit session =>
+            val cr = creditRewardRepo.getByReward(expectedReward)
+            cr must haveSize(1)
+            cr.head.applied must beNone
+          }
+
+          // when org2 upgrades, org1 gets some credit
+          val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org1.id.get).credit }
+          val upgradeRewards = db.readWrite { implicit session => creditRewardCommander.registerUpgradedAccount(org2.id.get) }
+          val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org1.id.get).credit }
+          finalCredit - initialCredit === rewards.referrer.get.credit
+
+          upgradeRewards must haveSize(1)
+          upgradeRewards.head.applied must beSome
+
+          paymentsChecker.checkAccount(org1.id.get) must beEmpty
+          paymentsChecker.checkAccount(org2.id.get) must beEmpty
         }
       }
     }
@@ -139,10 +174,10 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           finalCredit - initialCredit === rewards.target.credit
 
           db.readOnlyMaster { implicit session =>
-            creditRewardRepo.all === Seq(rewards.target)
+            creditRewardRepo.all must containAllOf(Seq(rewards.target))
             val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
-            rewardCreditEvents must haveSize(1)
-            rewardCreditEvents.head.creditChange === rewards.target.credit
+            rewardCreditEvents.size must beGreaterThanOrEqualTo(1)
+            rewardCreditEvents.map(_.creditChange) must contain(rewards.target.credit)
           }
 
           paymentsChecker.checkAccount(org.id.get) must beEmpty
@@ -169,9 +204,10 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org2.id.get))) must beFailedTry(CreditCodeAlreadyBurnedException(coupon.code))
 
           db.readOnlyMaster { implicit session =>
-            creditRewardRepo.count === 1
+            creditRewardRepo.count must beGreaterThanOrEqualTo(1)
             val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
-            rewardCreditEvents must haveSize(1)
+            rewardCreditEvents.length must beGreaterThanOrEqualTo(1)
+            rewardCreditEvents.map(_.creditChange) must contain(coupon.credit)
           }
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
@@ -203,10 +239,10 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           }
 
           db.readOnlyMaster { implicit session =>
-            creditRewardRepo.count === 2
+            creditRewardRepo.count must beGreaterThanOrEqualTo(2)
             val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
-            rewardCreditEvents must haveSize(2)
-            rewardCreditEvents.map(e => paidAccountRepo.get(e.accountId).orgId) === Seq(org1.id.get, org2.id.get)
+            rewardCreditEvents.size must beGreaterThanOrEqualTo(2)
+            rewardCreditEvents.map(e => paidAccountRepo.get(e.accountId).orgId) must containAllOf(Seq(org1.id.get, org2.id.get))
           }
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
@@ -237,7 +273,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(promos.head.code, org3.ownerId, Some(org3.id.get))) must beSuccessfulTry
 
           for (org <- Seq(org2, org3)) {
-            val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.NewOrganization(org.id.get))
+            val expectedFailure = UnrepeatableRewardKeyCollisionException(UnrepeatableRewardKey.WasReferred(org.id.get))
             creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(referralCode, org.ownerId, Some(org.id.get))) must beFailedTry(expectedFailure)
             for (promo <- promos) {
               creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(promo.code, org.ownerId, Some(org.id.get))) must beFailedTry(expectedFailure)

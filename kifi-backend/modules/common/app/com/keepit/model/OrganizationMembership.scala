@@ -64,6 +64,8 @@ object OrganizationRole {
       def writes(o: OrganizationRole) = JsString(o.value)
     })
 
+  val reads = Reads(format.reads)
+
   def apply(str: String): OrganizationRole = {
     str match {
       case ADMIN.value => ADMIN
