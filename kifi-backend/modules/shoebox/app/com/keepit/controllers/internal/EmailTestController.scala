@@ -53,7 +53,6 @@ class EmailTestController @Inject() (
     def verificationCode = request.getQueryString("code") getOrElse s"fake_verification_code_${currentDateTime.getMillis}"
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
-      case "gratification" => emailSenderProvider.gratification(userId, Some(sendTo)).map(_.getOrElse(???))
       case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
       case "welcome" => emailSenderProvider.welcome.sendToUser(userId)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)
