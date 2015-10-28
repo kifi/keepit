@@ -1075,6 +1075,7 @@ GET     /:handle/settings/plan     @com.keepit.controllers.website.KifiSiteRoute
 GET     /:handle/settings/contacts @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/settings/export   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/settings/activity @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/credits  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
