@@ -462,7 +462,7 @@ class LibraryCommanderImpl @Inject() (
     libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, lib.ownerId).foreach { oldOwnerMembership =>
       libraryMembershipRepo.save(oldOwnerMembership.withAccess(LibraryAccess.READ_WRITE))
     }
-    val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, newOwner)
+    val existingMembershipOpt = libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, newOwner, excludeState = None)
     val newMembershipTemplate = LibraryMembership(libraryId = libraryId, userId = newOwner, access = LibraryAccess.OWNER)
     libraryMembershipRepo.save(newMembershipTemplate.copy(id = existingMembershipOpt.map(_.id.get)))
     libraryRepo.save(lib.withOwner(newOwner))
