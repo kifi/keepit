@@ -47,15 +47,18 @@ class CreditRewardCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val creditCodeInfo = creditCodeInfoRepo.getByOrg(orgId).getOrElse {
-        val kind = CreditCodeKind.OrganizationReferral
-        val creditCodeInfo = CreditCodeInfo(
-          code = CreditCode.normalize(RandomStringUtils.randomAlphanumeric(20)),
-          kind = kind,
-          credit = newOrgReferralCredit,
-          status = CreditCodeStatus.Open,
-          referrer = Some(CreditCodeReferrer(org.ownerId, Some(orgId), orgReferrerCredit))
-        )
-        creditCodeInfoRepo.save(creditCodeInfo)
+        // Try to create a referral code, starting with the raw normalized handle, and successively adding
+        // random digits to the end. Just for safety, don't let this loop infinitely
+        val suffixes = "" +: Iterator.continually(RandomStringUtils.randomAlphabetic(2)).take(9).toStream
+        suffixes.map { suf =>
+          creditCodeInfoRepo.create(CreditCodeInfo(
+            code = CreditCode.normalize(org.primaryHandle.get.normalized.value + suf),
+            kind = CreditCodeKind.OrganizationReferral,
+            credit = newOrgReferralCredit,
+            status = CreditCodeStatus.Open,
+            referrer = Some(CreditCodeReferrer(org.ownerId, Some(orgId), orgReferrerCredit))
+          ))
+        }.dropWhile(_.isFailure).head.get
       }
       creditCodeInfo.code
     }
@@ -88,6 +91,7 @@ class CreditRewardCommanderImpl @Inject() (
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield {
+          creditCodeInfoRepo.close(creditCodeInfo)
           CreditCodeRewards(target = targetCreditReward, referrer = None)
         }
 
