@@ -1,0 +1,29 @@
+.kf-redeem-credits-form
+  display: inline
+
+.kf-redeem-credits-confirm-txt
+.kf-redeem-credits-error-txt
+  margin-left: 20px
+  font-size: 15px
+
+.kf-redeem-credits-confirm-txt
+  color: libraryGreen
+
+  &.ng-enter
+    transition: all .3s
+    transform: translate(150px, 0)
+    opacity: 0
+
+  &.ng-enter-active
+    opacity: 1
+    transform: translate(0px, 0)
+
+  &.ng-leave
+    transition: all 3s
+    opacity: 1
+
+  &.ng-leave-active
+    opacity: 0
+
+.kf-redeem-credits-error-txt
+  color: errorRed
