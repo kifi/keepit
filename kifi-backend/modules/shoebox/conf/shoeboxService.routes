@@ -903,6 +903,7 @@ POST          /admin/payments/backfillBillingContacts      @com.keepit.controlle
 
 GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
 GET           /admin/payments/activity   @com.keepit.controllers.admin.AdminPaymentsController.activityOverview(page: Int ?= 0, kind: Option[String] ?= None)
+POST          /admin/payments/createCode @com.keepit.controllers.admin.AdminPaymentsController.createCode()
 
 
 ##########################################
