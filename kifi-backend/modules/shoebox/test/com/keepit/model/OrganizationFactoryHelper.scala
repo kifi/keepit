@@ -36,12 +36,12 @@ object OrganizationFactoryHelper {
       orgMemRepo.save(OrganizationMembership(organizationId = org.id.get, userId = org.ownerId, role = OrganizationRole.ADMIN))
       for (admin <- partialOrganization.admins) {
         orgMemRepo.save(OrganizationMembership(organizationId = org.id.get, userId = admin.id.get, role = OrganizationRole.ADMIN))
-        injector.getInstance(classOf[PlanManagementCommanderImpl]).registerNewAdminHelper(org.id.get, admin.id.get, ActionAttribution(Some(org.ownerId), None))
+        injector.getInstance(classOf[PlanManagementCommanderImpl]).registerNewUser(org.id.get, admin.id.get, OrganizationRole.ADMIN, ActionAttribution(Some(org.ownerId), None))
       }
 
       for (member <- partialOrganization.members) {
         orgMemRepo.save(OrganizationMembership(organizationId = org.id.get, userId = member.id.get, role = OrganizationRole.MEMBER))
-        injector.getInstance(classOf[PlanManagementCommanderImpl]).registerNewUserHelper(org.id.get, member.id.get, ActionAttribution(Some(org.ownerId), None))
+        injector.getInstance(classOf[PlanManagementCommanderImpl]).registerNewUser(org.id.get, member.id.get, OrganizationRole.MEMBER, ActionAttribution(Some(org.ownerId), None))
       }
       val libraryRepo = injector.getInstance(classOf[LibraryRepo])
       val libraryMembershipRepo = injector.getInstance(classOf[LibraryMembershipRepo])

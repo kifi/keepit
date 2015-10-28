@@ -224,12 +224,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
   private def unsafeAddMembership(request: OrganizationMembershipAddRequest): OrganizationMembershipAddResponse = {
     val newMembership = db.readWrite { implicit session =>
       orgMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId).foreach(orgMembershipCandidateRepo.deactivate)
-      if (request.newRole == OrganizationRole.ADMIN) {
-        planCommander.registerNewAdmin(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = request.adminIdOpt))
-      }
       val inactiveMembershipOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
       assert(inactiveMembershipOpt.forall(_.isInactive))
       val membership = OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole)
+      planCommander.registerNewUser(request.orgId, request.targetId, request.newRole, ActionAttribution(user = Some(request.requesterId), admin = request.adminIdOpt))
       orgMembershipRepo.save(membership.copy(id = inactiveMembershipOpt.map(_.id.get)))
     }
 
@@ -241,7 +239,6 @@ class OrganizationMembershipCommanderImpl @Inject() (
       implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
       libraryMembershipCommander.joinLibrary(request.targetId, lib.id.get)
     }
-    planCommander.registerNewUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = request.adminIdOpt))
     elizaServiceClient.flush(request.targetId)
 
     OrganizationMembershipAddResponse(request, newMembership)
@@ -256,24 +253,18 @@ class OrganizationMembershipCommanderImpl @Inject() (
         else {
           val org = orgRepo.get(request.orgId)
           val newMembership = orgMembershipRepo.save(membership.withRole(request.newRole))
-          (membership.role, newMembership.role) match {
-            case (OrganizationRole.MEMBER, OrganizationRole.ADMIN) => planCommander.registerNewAdmin(org.id.get, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
-            case (OrganizationRole.ADMIN, OrganizationRole.MEMBER) => planCommander.registerRemovedAdmin(org.id.get, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
-            case _ =>
-          }
+          planCommander.registerRoleChanged(org.id.get, request.targetId, from = membership.role, to = request.newRole, ActionAttribution(user = Some(request.requesterId), admin = None))
           Right(OrganizationMembershipModifyResponse(request, newMembership))
         }
     }
   }
 
   private def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest): OrganizationMembershipRemoveResponse = {
-    val oldRole = db.readWrite { implicit session =>
+    db.readWrite { implicit session =>
       val membership = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
+      planCommander.registerRemovedUser(request.orgId, request.targetId, membership.role, ActionAttribution(user = Some(request.requesterId), admin = None))
       orgMembershipRepo.deactivate(membership)
-      membership.role
     }
-    planCommander.registerRemovedUser(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
-    if (oldRole == OrganizationRole.ADMIN) planCommander.registerRemovedAdmin(request.orgId, request.targetId, ActionAttribution(user = Some(request.requesterId), admin = None))
     val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
     orgGeneralLibrary.foreach { lib =>
       implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful

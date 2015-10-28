@@ -58,17 +58,22 @@ class ActivityLogCommanderImpl @Inject() (
         case PlanRenewal(planId, _, _, _, _) => Elements("Your", paidPlanRepo.get(planId), "plan was renewed")
         case Charge() =>
           val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
-          Elements("Your card was charged", event.creditChange, s"for your current balance. [$invoiceText]")
+          Elements("Your card was charged", event.creditChange, s"for your balance. [$invoiceText]")
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
         case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information"
-        case MissingPaymentMethod() => s"We failed to process your balance, please register a default payment method."
-        case UserAdded(who) => Elements(basicUserRepo.load(who), "was added to your team", maybeUser.map(Elements("by", _)))
-        case UserRemoved(who) => maybeUser match {
-          case Some(`who`) => Elements(basicUserRepo.load(who), "left your team")
-          case _ => Elements(basicUserRepo.load(who), "was removed from your team", maybeUser.map(Elements("by", _)))
+        case MissingPaymentMethod() => s"We failed to process your payment, please register a default payment method."
+        case UserJoinedOrganization(who, role) => maybeUser match {
+          case Some(`who`) => Elements(basicUserRepo.load(who), "joined your team", Some(role).collect { case OrganizationRole.ADMIN => "and is now admin" })
+          case _ => Elements(basicUserRepo.load(who), "was added to your team", maybeUser.map(Elements("by", _)), Some(role).collect { case OrganizationRole.ADMIN => "and is now admin" })
         }
-        case AdminAdded(who) => Elements(basicUserRepo.load(who), "was made an admin", maybeUser.map(Elements("by", _)))
-        case AdminRemoved(who) => Elements(basicUserRepo.load(who), "(admin) was made a member by", maybeUser.map(Elements("by", _)))
+        case UserLeftOrganization(who, oldRole) => maybeUser match {
+          case Some(`who`) => Elements(basicUserRepo.load(who), "left your team", Some(oldRole).collect { case OrganizationRole.ADMIN => "and is no longer admin" })
+          case _ => Elements(basicUserRepo.load(who), "was removed from your team", maybeUser.map(Elements("by", _)), Some(oldRole).collect { case OrganizationRole.ADMIN => "and is no longer admin" })
+        }
+        case OrganizationRoleChanged(who, oldRole, newRole) => maybeUser match {
+          case Some(`who`) => Elements(basicUserRepo.load(who), "'s role changed from", oldRole, "to", newRole)
+          case _ => Elements(basicUserRepo.load(who), "'s role was changed from", oldRole, "to", newRole, maybeUser.map(Elements("by", _)))
+        }
         case PlanChanged(oldPlanId, newPlanId, _) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
         case PaymentMethodAdded(_, lastFour) => Elements(s"A credit card ending in $lastFour was added", maybeUser.map(Elements("by", _)))
         case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your payment method was changed to the card ending in $lastFour", maybeUser.map(Elements("by", _)))
@@ -121,6 +126,7 @@ object DescriptionElements {
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
   implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> Path(s"${orgHandle.value}/settings/plan").absolute
+  implicit def fromRole(role: OrganizationRole): BasicElement = role.value
 
   implicit val flatWrites = {
     implicit val basicWrites = Json.writes[BasicElement]

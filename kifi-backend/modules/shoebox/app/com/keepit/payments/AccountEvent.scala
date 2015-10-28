@@ -7,7 +7,7 @@ import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion 
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
-import com.keepit.model.User
+import com.keepit.model.{ OrganizationRole, User }
 import com.keepit.common.mail.EmailAddress
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -18,8 +18,6 @@ case class ActionAttribution(user: Option[Id[User]], admin: Option[Id[User]])
 sealed abstract class AccountEventKind(val value: String)
 object AccountEventKind {
   case object AccountContactsChanged extends AccountEventKind("account_contacts_changed")
-  case object AdminAdded extends AccountEventKind("admin_added")
-  case object AdminRemoved extends AccountEventKind("admin_removed")
   case object Charge extends AccountEventKind("charge")
   case object ChargeBack extends AccountEventKind("charge_back")
   case object ChargeFailure extends AccountEventKind("charge_failure")
@@ -33,13 +31,12 @@ object AccountEventKind {
   case object PaymentMethodAdded extends AccountEventKind("payment_method_added")
   case object SpecialCredit extends AccountEventKind("special_credit")
   case object RewardCredit extends AccountEventKind("reward_credit")
-  case object UserAdded extends AccountEventKind("user_added")
-  case object UserRemoved extends AccountEventKind("user_removed")
+  case object UserJoinedOrganization extends AccountEventKind("user_joined_organization")
+  case object UserLeftOrganization extends AccountEventKind("user_left_organization")
+  case object OrganizationRoleChanged extends AccountEventKind("organization_role_changed")
 
   val all: Set[AccountEventKind] = Set(
     AccountContactsChanged,
-    AdminAdded,
-    AdminRemoved,
     Charge,
     ChargeBack,
     ChargeFailure,
@@ -53,8 +50,9 @@ object AccountEventKind {
     PlanChanged,
     RewardCredit,
     SpecialCredit,
-    UserAdded,
-    UserRemoved
+    UserJoinedOrganization,
+    UserLeftOrganization,
+    OrganizationRoleChanged
   )
   def get(str: String): Option[AccountEventKind] = all.find(_.value == str)
 
@@ -68,10 +66,9 @@ object AccountEventKind {
     PlanChanged,
     RewardCredit,
     SpecialCredit,
-    UserAdded,
-    UserRemoved,
-    AdminAdded,
-    AdminRemoved
+    UserJoinedOrganization,
+    UserLeftOrganization,
+    OrganizationRoleChanged
   )
 
   val billing: Set[AccountEventKind] = Set(
@@ -86,8 +83,8 @@ object AccountEventKind {
     PlanRenewal,
     PlanChanged,
     SpecialCredit,
-    UserAdded,
-    UserRemoved
+    UserJoinedOrganization,
+    UserLeftOrganization
   )
 }
 
@@ -152,26 +149,20 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   }
 
   @json
-  case class UserAdded(who: Id[User]) extends AccountEventAction {
-    def eventType = AccountEventKind.UserAdded
+  case class UserJoinedOrganization(who: Id[User], role: OrganizationRole) extends AccountEventAction {
+    def eventType = AccountEventKind.UserJoinedOrganization
     def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
-  case class UserRemoved(who: Id[User]) extends AccountEventAction {
-    def eventType = AccountEventKind.UserRemoved
+  case class UserLeftOrganization(who: Id[User], role: OrganizationRole) extends AccountEventAction {
+    def eventType = AccountEventKind.UserLeftOrganization
     def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
-  case class AdminAdded(who: Id[User]) extends AccountEventAction {
-    def eventType = AccountEventKind.AdminAdded
-    def toDbRow = eventType -> Json.toJson(this)
-  }
-
-  @json
-  case class AdminRemoved(who: Id[User]) extends AccountEventAction {
-    def eventType = AccountEventKind.AdminRemoved
+  case class OrganizationRoleChanged(who: Id[User], from: OrganizationRole, to: OrganizationRole) extends AccountEventAction {
+    def eventType = AccountEventKind.OrganizationRoleChanged
     def toDbRow = eventType -> Json.toJson(this)
   }
 
@@ -221,10 +212,9 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case AccountEventKind.ChargeFailure => extras.as[ChargeFailure]
     case AccountEventKind.IntegrityError => extras.as[IntegrityError]
     case AccountEventKind.MissingPaymentMethod => MissingPaymentMethod()
-    case AccountEventKind.UserAdded => extras.as[UserAdded]
-    case AccountEventKind.UserRemoved => extras.as[UserRemoved]
-    case AccountEventKind.AdminAdded => extras.as[AdminAdded]
-    case AccountEventKind.AdminRemoved => extras.as[AdminRemoved]
+    case AccountEventKind.UserJoinedOrganization => extras.as[UserJoinedOrganization]
+    case AccountEventKind.UserLeftOrganization => extras.as[UserLeftOrganization]
+    case AccountEventKind.OrganizationRoleChanged => extras.as[OrganizationRoleChanged]
     case AccountEventKind.PlanChanged => extras.as[PlanChanged]
     case AccountEventKind.PaymentMethodAdded => extras.as[PaymentMethodAdded]
     case AccountEventKind.DefaultPaymentMethodChanged => extras.as[DefaultPaymentMethodChanged]
