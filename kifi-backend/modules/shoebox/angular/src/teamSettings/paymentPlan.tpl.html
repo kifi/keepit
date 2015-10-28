@@ -10,7 +10,7 @@
           <div class="kf-payment-plan-card-cost">0</div>
           <div class="kf-payment-plan-card-bottom">
             <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-            <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(currentPlan.name)">Currently selected</p>
+            <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(currentPlan.name)">Your Current Plan</p>
             <button
               class="kf-payment-plan-card-cta"
               ng-if="!isFreePlanName(currentPlan.name)"
@@ -26,7 +26,7 @@
           <p class="kf-payment-plan-card-description">$8 billed monthly</p>
           <div class="kf-payment-plan-card-bottom">
             <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#">Details</a></p>
-            <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(currentPlan.name)">Currently selected</p>
+            <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(currentPlan.name)">Your Current Plan</p>
             <button
               class="kf-payment-plan-card-cta"
               ng-if="!isPaidPlanName(currentPlan.name)"
