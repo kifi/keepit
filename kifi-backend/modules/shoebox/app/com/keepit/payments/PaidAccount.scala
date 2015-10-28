@@ -106,6 +106,8 @@ case class PaidAccount(
   def withEmailContacts(newContacts: Seq[EmailAddress]): PaidAccount = this.copy(emailContacts = newContacts)
 
   def withNewPlan(newPlanId: Id[PaidPlan]): PaidAccount = this.copy(planId = newPlanId)
+
+  def isActive: Boolean = state == PaidAccountStates.ACTIVE
 }
 
 object PaidAccountStates extends States[PaidAccount]

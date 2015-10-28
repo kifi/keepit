@@ -23,7 +23,10 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def releaseAccountLock(orgId: Id[Organization])(implicit session: RWSession): Boolean
   def getRenewable()(implicit session: RSession): Seq[PaidAccount]
   def getPayable(maxBalance: DollarAmount)(implicit session: RSession): Seq[PaidAccount]
+
+  // admin/integrity methods
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
+  def getCountsByPlan(implicit session: RSession): Map[Id[PaidPlan], (Int, Int)] // planId -> (numAccounts, numUsers)
 }
 
 @Singleton
@@ -58,8 +61,8 @@ class PaidAccountRepoImpl @Inject() (
   initTable()
 
   override def deleteCache(paidAccount: PaidAccount)(implicit session: RSession): Unit = {}
-
   override def invalidateCache(paidAccount: PaidAccount)(implicit session: RSession): Unit = {}
+  private def activeRows = rows.filter(row => row.state === PaidAccountStates.ACTIVE)
 
   def getActiveByIds(ids: Set[Id[PaidAccount]])(implicit session: RSession): Map[Id[PaidAccount], PaidAccount] = {
     rows.filter(row => row.id.inSet(ids) && row.state === PaidAccountStates.ACTIVE).list.map { acc => acc.id.get -> acc }.toMap
@@ -100,5 +103,10 @@ class PaidAccountRepoImpl @Inject() (
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select org_id from paid_account where state='active' and frozen = false and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
+  }
+  def getCountsByPlan(implicit session: RSession): Map[Id[PaidPlan], (Int, Int)] = {
+    activeRows.groupBy(_.planId).map { case (planId, accounts) => planId -> (accounts.length, accounts.map(_.activeUsers).sum) }.list.map {
+      case (planId, (numAccounts, numUsers)) => planId -> (numAccounts, numUsers.getOrElse(0))
+    }.toMap
   }
 }
