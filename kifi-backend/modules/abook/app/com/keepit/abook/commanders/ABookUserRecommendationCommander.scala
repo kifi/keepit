@@ -16,7 +16,7 @@ import com.keepit.common.time._
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.logging.Logging
 import java.text.Normalizer
-import com.keepit.graph.model.SociallyRelatedEntitiesForUser
+import com.keepit.graph.model.{ RelatedEntities, SociallyRelatedEntitiesForUser }
 import com.keepit.common.service.RequestConsolidator
 import scala.concurrent.duration._
 
@@ -77,7 +77,7 @@ class ABookUserRecommendationCommander @Inject() (
     }
     futureRecommendations.onSuccess {
       case recommendations =>
-        log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+        log.info(s"Computed ${recommendations.length}/$limit (skipped $offset) invite recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
     }
     futureRecommendations
   }
@@ -95,7 +95,7 @@ class ABookUserRecommendationCommander @Inject() (
     }
     fRecommendations.onSuccess {
       case recommendations =>
-        log.info(s"Computed ${recommendations.length}/${limit} (skipped $offset) organization recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
+        log.info(s"Computed ${recommendations.length}/$limit (skipped $offset) organization recommendations for user $userId in ${clock.now().getMillis - start.getMillis}ms.")
     }
     fRecommendations
   }
@@ -150,7 +150,10 @@ class ABookUserRecommendationCommander @Inject() (
         fakeUsers <- futureFakeUsers
       } yield {
         val irrelevantRecommendations = rejectedRecommendations ++ friends ++ friendRequests ++ fakeUsers + userId
-        Some(relatedUsers.related.toStream.filter { case (friendId, _) => !irrelevantRecommendations.contains(friendId) })
+        Some(relatedUsers.related.toStream.collect {
+          case (friendId, score) if !irrelevantRecommendations.contains(friendId) =>
+            friendId -> (score / relatedUsers.totalSteps)
+        })
       }
     }
   }
@@ -196,27 +199,39 @@ class ABookUserRecommendationCommander @Inject() (
       else generateFutureLinkedInInviteRecommendations(userId, futureExistingSocialInvites, futureRelevantSocialFriends)
     }
 
+    val sociallyRelatedEntitiesFut = getSociallyRelatedEntities(userId)
+
     for {
       facebookInviteRecommendations <- futureFacebookInviteRecommendations
       linkedInInviteRecommendations <- futureLinkedInInviteRecommendations
       emailInviteRecommendations <- futureEmailInviteRecommendations
+      sociallyRelatedEntitiesOpt <- sociallyRelatedEntitiesFut
     } yield {
-      // Relying on aggregateBy stability, breaks ties by picking Facebook over LinkedIn, and LinkedIn over Email
-      CollectionHelpers.interleaveBy(facebookInviteRecommendations, linkedInInviteRecommendations, emailInviteRecommendations)(_.score)
+      sociallyRelatedEntitiesOpt.map { relatedEntities =>
+        val totalSteps = relatedEntities.facebookAccounts.totalSteps + relatedEntities.linkedInAccounts.totalSteps + relatedEntities.emailAccounts.totalSteps
+
+        // Relying on aggregateBy stability, breaks ties by picking Facebook over LinkedIn, and LinkedIn over Email
+        CollectionHelpers.interleaveBy(
+          facebookInviteRecommendations.map(reco => reco.copy(score = reco.score * relatedEntities.facebookAccounts.totalSteps / totalSteps)),
+          linkedInInviteRecommendations.map(reco => reco.copy(score = reco.score * relatedEntities.linkedInAccounts.totalSteps / totalSteps)),
+          emailInviteRecommendations.map(reco => reco.copy(score = reco.score * relatedEntities.emailAccounts.totalSteps / totalSteps))
+        )(_.score)
+      }.getOrElse(Stream.empty)
     }
   }
 
   private def generateFutureFacebookInviteRecommendations(userId: Id[User], futureExistingSocialInvites: Future[Map[Id[SocialUserInfo], Invitation]], futureRelevantSocialFriends: Future[Map[Id[SocialUserInfo], SocialUserBasicInfo]]): Future[Stream[UserInviteRecommendation]] = {
     getSociallyRelatedEntities(userId).flatMap { relatedEntities =>
-      val relatedFacebookAccounts = relatedEntities.map(_.facebookAccounts.related) getOrElse Seq.empty
-      if (relatedFacebookAccounts.isEmpty) Future.successful(Stream.empty)
-      else {
-        val rejectedFacebookInviteRecommendations = db.readOnlyReplica { implicit session => facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
-        for {
-          existingSocialInvites <- futureExistingSocialInvites
-          relevantSocialFriends <- futureRelevantSocialFriends
-        } yield {
-          generateSocialInviteRecommendations(relatedFacebookAccounts.toStream, rejectedFacebookInviteRecommendations, relevantSocialFriends, existingSocialInvites)
+      relatedEntities.map(_.facebookAccounts) match {
+        case None => Future.successful(Stream.empty)
+        case Some(relatedFacebookAccounts) => {
+          val rejectedFacebookInviteRecommendations = db.readOnlyReplica { implicit session => facebookInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
+          for {
+            existingSocialInvites <- futureExistingSocialInvites
+            relevantSocialFriends <- futureRelevantSocialFriends
+          } yield {
+            generateSocialInviteRecommendations(relatedFacebookAccounts, rejectedFacebookInviteRecommendations, relevantSocialFriends, existingSocialInvites)
+          }
         }
       }
     }
@@ -224,15 +239,16 @@ class ABookUserRecommendationCommander @Inject() (
 
   private def generateFutureLinkedInInviteRecommendations(userId: Id[User], futureExistingSocialInvites: Future[Map[Id[SocialUserInfo], Invitation]], futureRelevantSocialFriends: Future[Map[Id[SocialUserInfo], SocialUserBasicInfo]]): Future[Stream[UserInviteRecommendation]] = {
     getSociallyRelatedEntities(userId).flatMap { relatedEntities =>
-      val relatedLinkedInAccounts = relatedEntities.map(_.linkedInAccounts.related) getOrElse Seq.empty
-      if (relatedLinkedInAccounts.isEmpty) Future.successful(Stream.empty)
-      else {
-        val rejectedLinkedInInviteRecommendations = db.readOnlyReplica { implicit session => linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
-        for {
-          existingSocialInvites <- futureExistingSocialInvites
-          relevantSocialFriends <- futureRelevantSocialFriends
-        } yield {
-          generateSocialInviteRecommendations(relatedLinkedInAccounts.toStream, rejectedLinkedInInviteRecommendations, relevantSocialFriends, existingSocialInvites)
+      relatedEntities.map(_.linkedInAccounts) match {
+        case None => Future.successful(Stream.empty)
+        case Some(relatedLinkedInAccounts) => {
+          val rejectedLinkedInInviteRecommendations = db.readOnlyReplica { implicit session => linkedInInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
+          for {
+            existingSocialInvites <- futureExistingSocialInvites
+            relevantSocialFriends <- futureRelevantSocialFriends
+          } yield {
+            generateSocialInviteRecommendations(relatedLinkedInAccounts, rejectedLinkedInInviteRecommendations, relevantSocialFriends, existingSocialInvites)
+          }
         }
       }
     }
@@ -240,16 +256,17 @@ class ABookUserRecommendationCommander @Inject() (
 
   private def generateFutureEmailInviteRecommendations(userId: Id[User], futureExistingInvites: Future[Seq[Invitation]], futureNormalizedUserNames: Future[Set[String]]): Future[Stream[UserInviteRecommendation]] = {
     getSociallyRelatedEntities(userId).flatMap { relatedEntities =>
-      val relatedEmailAccounts = relatedEntities.map(_.emailAccounts.related) getOrElse Seq.empty
-      if (relatedEmailAccounts.isEmpty) Future.successful(Stream.empty)
-      else {
-        val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => userEmailInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
-        val allContacts = db.readOnlyMaster { implicit session => contactRepo.getByUserId(userId) }
-        for {
-          existingInvites <- futureExistingInvites
-          normalizedUserNames <- futureNormalizedUserNames
-        } yield {
-          generateEmailInviteRecommendations(relatedEmailAccounts.toStream, rejectedEmailInviteRecommendations, allContacts, normalizedUserNames, existingInvites)
+      relatedEntities.map(_.emailAccounts) match {
+        case None => Future.successful(Stream.empty)
+        case Some(relatedEmails) => {
+          val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => userEmailInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
+          val allContacts = db.readOnlyMaster { implicit session => contactRepo.getByUserId(userId) }
+          for {
+            existingInvites <- futureExistingInvites
+            normalizedUserNames <- futureNormalizedUserNames
+          } yield {
+            generateEmailInviteRecommendations(relatedEmails, rejectedEmailInviteRecommendations, allContacts, normalizedUserNames, existingInvites)
+          }
         }
       }
     }
@@ -257,20 +274,21 @@ class ABookUserRecommendationCommander @Inject() (
 
   private def generateFutureOrgRecommendations(userId: Id[User]): Future[Stream[OrganizationUserMayKnow]] = {
     getSociallyRelatedEntities(userId).map { relatedEntities =>
-      val relatedOrganizations = relatedEntities.map(_.organizations.related) getOrElse Seq.empty
-      if (relatedOrganizations.isEmpty) Stream.empty
-      else {
-        val rejectedOrganizationRecommendations = db.readOnlyReplica { implicit session => organizationRecommendationForUserRepo.getIrrelevantRecommendations(userId) }
-        relatedOrganizations.toStream.collect {
-          case (orgId, score) if !rejectedOrganizationRecommendations.contains(orgId) =>
-            OrganizationUserMayKnow(orgId, score)
+      relatedEntities.map(_.organizations) match {
+        case None => Stream.empty
+        case Some(relatedOrganizations) => {
+          val rejectedOrganizationRecommendations = db.readOnlyReplica { implicit session => organizationRecommendationForUserRepo.getIrrelevantRecommendations(userId) }
+          relatedOrganizations.related.toStream.collect {
+            case (orgId, score) if !rejectedOrganizationRecommendations.contains(orgId) =>
+              OrganizationUserMayKnow(orgId, score / relatedOrganizations.totalSteps)
+          }
         }
       }
     }
   }
 
   private def generateSocialInviteRecommendations(
-    relatedSocialUsers: Stream[(Id[SocialUserInfo], Double)],
+    relatedSocialUsers: RelatedEntities[User, SocialUserInfo],
     rejectedRecommendations: Set[Id[SocialUserInfo]],
     relevantSocialFriends: Map[Id[SocialUserInfo], SocialUserBasicInfo],
     existingSocialInvites: Map[Id[SocialUserInfo], Invitation]): Stream[UserInviteRecommendation] = {
@@ -281,17 +299,17 @@ class ABookUserRecommendationCommander @Inject() (
         (existingSocialInvites.get(socialUserId).map(canBeRecommendedAgain) getOrElse true)
     }
 
-    val recommendations = relatedSocialUsers.collect {
+    val recommendations = relatedSocialUsers.related.toStream.collect {
       case (socialUserId, score) if isRelevant(socialUserId) =>
         val friend = relevantSocialFriends(socialUserId)
         val lastInvitedAt = existingSocialInvites.get(socialUserId).flatMap(_.lastSentAt)
-        UserInviteRecommendation(friend.networkType, Right(friend.socialId), Some(friend.fullName), friend.getPictureUrl(80, 80), lastInvitedAt, score)
+        UserInviteRecommendation(friend.networkType, Right(friend.socialId), Some(friend.fullName), friend.getPictureUrl(80, 80), lastInvitedAt, score / relatedSocialUsers.totalSteps)
     }
     recommendations.take(relevantSocialFriends.size)
   }
 
   private def generateEmailInviteRecommendations(
-    relatedEmailAccounts: Stream[(Id[EmailAccountInfo], Double)],
+    relatedEmailAccounts: RelatedEntities[User, EmailAccountInfo],
     rejectedRecommendations: Set[Id[EmailAccount]],
     allContacts: Set[EContact],
     normalizedUserNames: Set[String],
@@ -322,14 +340,14 @@ class ABookUserRecommendationCommander @Inject() (
 
     @inline def isValidName(name: String, address: EmailAddress) = name.nonEmpty && !name.equalsIgnoreCase(address.address)
 
-    val recommendations = relatedEmailAccounts.collect {
+    val recommendations = relatedEmailAccounts.related.toStream.collect {
       case (emailAccountId, score) if isRelevant(emailAccountId) =>
         val lastInvitedAt = relevantEmailInvites.get(emailAccountId).flatMap(_.lastSentAt)
         val preferredContact = relevantEmailAccounts(emailAccountId).maxBy { emailAccount =>
           emailAccount.name.collect { case name if isValidName(name, emailAccount.email) => name.length } getOrElse 0 // pick by longest name different from the email address
         }
         val validName = preferredContact.name.filter(isValidName(_, preferredContact.email))
-        UserInviteRecommendation(SocialNetworks.EMAIL, Left(preferredContact.email), validName, None, lastInvitedAt, score)
+        UserInviteRecommendation(SocialNetworks.EMAIL, Left(preferredContact.email), validName, None, lastInvitedAt, score / relatedEmailAccounts.totalSteps)
     }
     recommendations.take(relevantEmailAccounts.size)
   }
