@@ -16,9 +16,15 @@ import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[CreditRewardCommanderImpl])
 trait CreditRewardCommander {
+  // Generic API for creating a credit reward (use for one-off rewards, like the org creation bonus)
+  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward]
+
+  // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards]
-  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[(CreditReward, Option[AccountEvent])]
+
+  // In-place evolutions of existing rewards
+  def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward]
 }
 
 @Singleton
@@ -63,8 +69,8 @@ class CreditRewardCommanderImpl @Inject() (
     } yield rewards
   }
 
-  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[(CreditReward, Option[AccountEvent])] = {
-    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, userAttribution) }
+  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward] = {
+    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, Some(userAttribution)) }
   }
 
   private def createRewardsFromCreditCode(creditCodeInfo: CreditCodeInfo, accountId: Id[PaidAccount], userId: Id[User], orgId: Option[Id[Organization]])(implicit session: RWSession): Try[CreditCodeRewards] = {
@@ -124,23 +130,34 @@ class CreditRewardCommanderImpl @Inject() (
     }
     unfinalizedRewardsTry.map { rewards =>
       CreditCodeRewards(
-        target = finalizeCreditReward(rewards.target, userId)._1,
-        referrer = rewards.referrer.map(finalizeCreditReward(_, userId)._1)
+        target = finalizeCreditReward(rewards.target, Some(userId)),
+        referrer = rewards.referrer.map(finalizeCreditReward(_, Some(userId)))
       )
     }
   }
 
-  private def finalizeCreditReward(creditReward: CreditReward, userAttribution: Id[User])(implicit session: RWSession): (CreditReward, Option[AccountEvent]) = {
-    require(creditReward.id.nonEmpty)
+  def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
+    val currentReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(orgId)
+    val evolvedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(orgId)
+    val crs = creditRewardRepo.getByReward(currentReward)
+    assert(crs.size <= 1, "Somehow there are multiple referral rewards for $orgId! $crs")
+    crs.map { crToEvolve =>
+      finalizeCreditReward(crToEvolve.withReward(evolvedReward), None)
+    }
+  }
+
+  private def finalizeCreditReward(creditReward: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): CreditReward = {
+    require(creditReward.id.nonEmpty, s"$creditReward has not been persisted to the db")
+    require(creditReward.applied.isEmpty, s"$creditReward has already been applied")
     val rewardNeedsToBeApplied = creditReward.reward.status == creditReward.reward.kind.applicable
-    if (!rewardNeedsToBeApplied) (creditReward, None)
+    if (!rewardNeedsToBeApplied) creditReward
     else {
       val account = accountRepo.get(creditReward.accountId)
       accountRepo.save(account.withIncreasedCredit(creditReward.credit))
       val rewardCreditEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
-        whoDunnit = Some(userAttribution),
+        whoDunnit = userAttribution,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,
         action = AccountEventAction.RewardCredit(creditReward.id.get),
@@ -150,7 +167,8 @@ class CreditRewardCommanderImpl @Inject() (
         memo = None,
         chargeId = None
       ))
-      (creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent)), Some(rewardCreditEvent))
+      creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent))
     }
   }
+
 }

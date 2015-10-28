@@ -46,6 +46,19 @@ angular.module('kifi')
   };
 })
 
+.filter('searchTerm', function () {
+  return function (term) {
+    var q;
+    if (_.startsWith(term, '#')) {
+      term = term.slice(1);
+      q = 'tag:' + encodeURIComponent(term.indexOf(' ') >= 0 ? '"' + term + '"' : term);
+    } else {
+      q = encodeURIComponent(term);
+    }
+    return '/find?q=' + q;
+  };
+})
+
 .filter('profileUrl', function () {
   return function (userOrOrg, sub) {
     if (userOrOrg) {

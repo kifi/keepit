@@ -116,6 +116,41 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           paymentsChecker.checkAccount(org3.id.get) must beEmpty
         }
       }
+      "apply rewards to the referrer once the referred org upgrades" in {
+        withDb(modules: _*) { implicit injector =>
+          val (org1, org2) = db.readWrite { implicit session =>
+            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            (org1, org2)
+          }
+
+          // org1 refers org2
+          val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+          val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, org2.ownerId, Some(org2.id.get))).get
+
+          // org1 has a Reward now, but it has not been applied because org2 has not upgraded
+          val expectedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(org2.id.get)
+          rewards.referrer.get.reward === expectedReward
+
+          db.readOnlyMaster { implicit session =>
+            val cr = creditRewardRepo.getByReward(expectedReward)
+            cr must haveSize(1)
+            cr.head.applied must beNone
+          }
+
+          // when org2 upgrades, org1 gets some credit
+          val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org1.id.get).credit }
+          val upgradeRewards = db.readWrite { implicit session => creditRewardCommander.registerUpgradedAccount(org2.id.get) }
+          val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org1.id.get).credit }
+          finalCredit - initialCredit === rewards.referrer.get.credit
+
+          upgradeRewards must haveSize(1)
+          upgradeRewards.head.applied must beSome
+
+          paymentsChecker.checkAccount(org1.id.get) must beEmpty
+          paymentsChecker.checkAccount(org2.id.get) must beEmpty
+        }
+      }
     }
 
     "apply coupon codes" in {

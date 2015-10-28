@@ -46,8 +46,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
-  private def report(event: AccountEvent): Future[Unit] = if (mode == play.api.Mode.Prod) reportingLock.withLockFuture {
+  private def report(event: AccountEvent): Future[Unit] = if (mode == play.api.Mode.Prod) {
     val (a, o, m): (PaidAccount, Organization, Option[PaymentMethod]) = db.readOnlyMaster { implicit session =>
       val a = accountRepo.get(event.accountId)
       val o = orgRepo.get(a.orgId)
@@ -60,21 +59,23 @@ class AccountEventTrackingCommanderImpl @Inject() (
     implicit val paymentMethod = m
 
     Future.sequence(Seq(notifyOfCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
-  }
-  else Future.successful(())
+  } else Future.successful(())
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
-  def reportToSlack(msg: String, channel: String): Future[Unit] = SafeFuture {
-    if (msg.nonEmpty && mode == play.api.Mode.Prod) {
-      val fullMsg = BasicSlackMessage(
-        text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
-        username = "Activity",
-        channel = Some(channel)
-      )
-      httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
-    } else {
-      Future.successful(())
+  private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
+  def reportToSlack(msg: String, channel: String): Future[Unit] = reportingLock.withLockFuture {
+    SafeFuture {
+      if (msg.nonEmpty && mode == play.api.Mode.Prod) {
+        val fullMsg = BasicSlackMessage(
+          text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
+          username = "Activity",
+          channel = Some(channel)
+        )
+        httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
+      } else {
+        Future.successful(())
+      }
     }
   }
 

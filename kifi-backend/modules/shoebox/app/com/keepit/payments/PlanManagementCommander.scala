@@ -171,7 +171,7 @@ class PlanManagementCommanderImpl @Inject() (
                   reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
                   unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
                   code = None
-                ), userAttribution = creator).get._2.get
+                ), userAttribution = creator).get
 
                 log.info(s"[PAC] $orgId: Registering owner...")
                 registerNewUserHelper(orgId, creator, attribution)
@@ -485,6 +485,8 @@ class PlanManagementCommanderImpl @Inject() (
           val newSettings = oldConfig.settings.setAll(restrictedSettings)
           orgConfigRepo.save(oldConfig.withSettings(newSettings))
         }
+
+        creditRewardCommander.registerUpgradedAccount(orgId)
 
         val now = clock.now()
         val newPlanStartDate = newPlansStartDate(now)

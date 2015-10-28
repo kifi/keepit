@@ -1,0 +1,16 @@
+<div class="kf-redeem-credits kf-earn-credits">
+  <section ng-class="{ 'kf-container kf-redeem-credits-container' : standalone }">
+    <div ng-class="{ 'kf-container-header': standalone }">
+      <h2 class="kf-heading-pull">Redeem a Credit</h2>
+    </div>
+    <div class="kf-main-pane-earn-credits">
+      <p>Enter a referral code after you’ve received one from another team or press article.  The referrer will be notified that you used their code.</p>
+      <form class="kf-redeem-credits-form">
+        <input class="kf-referral-code-txt" ng-model="redeemCode" placeholder="Enter code (ex: 'KIFI50')"></input>
+        <input class="kf-referral-btn kf-referral-btn-enter" ng-disabled="!redeemCode" type="submit" value="Apply" ng-click="applyReferralCode(redeemCode)">
+      </form>
+      <text class="kf-redeem-credits-confirm-txt" ng-if="showCredit">You earned {{ creditRedeemed | money }}!</text>
+      <text class="kf-redeem-credits-error-txt" ng-if="$error.general">{{ $error.general }}</text>
+    </div>
+  </section>
+</div>
