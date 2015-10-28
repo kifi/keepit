@@ -58,7 +58,7 @@ class ActivityLogCommanderImpl @Inject() (
           val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
           s"Your card was charged ${event.creditChange.toDollarString} for your current balance. [$invoiceText]"
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
-        case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information."
+        case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information"
         case MissingPaymentMethod() => s"We failed to process your balance, please register a default payment method."
         case UserAdded(who) => Elements(basicUserRepo.load(who), "was added to your team", maybeUser.map(Elements("by", _)))
         case UserRemoved(who) => maybeUser match {
@@ -69,7 +69,7 @@ class ActivityLogCommanderImpl @Inject() (
         case AdminRemoved(who) => Elements(basicUserRepo.load(who), "(admin) was made a member by", maybeUser.map(Elements("by", _)))
         case PlanChanged(oldPlanId, newPlanId, _) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
         case PaymentMethodAdded(_, lastFour) => Elements(s"A credit card ending in $lastFour was added", maybeUser.map(Elements("by", _)))
-        case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your team's default payment method was changed to the card ending in $lastFour", maybeUser.map(Elements("by", _)))
+        case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your payment method was changed to the card ending in $lastFour", maybeUser.map(Elements("by", _)))
         case AccountContactsChanged(userAdded: Option[Id[User]], userRemoved: Option[Id[User]], emailAdded: Option[EmailAddress], emailRemoved: Option[EmailAddress]) => {
           val singleContactChangedIn: Option[(Elements, Elements)] = (userAdded, userRemoved, emailAdded, emailRemoved) match {
             case (Some(addedUserId), None, None, None) => Some((basicUserRepo.load(addedUserId), "added to"))
