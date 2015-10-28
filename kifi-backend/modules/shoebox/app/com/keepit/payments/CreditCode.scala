@@ -14,12 +14,12 @@ import play.api.http.Status._
 import play.api.mvc.Results.Status
 
 case class CreditCode(value: String) {
-  AirbrakeNotifierStatic.verify(value == value.toLowerCase.trim, s"CreditCode $value is not normalized")
+  AirbrakeNotifierStatic.verify(value == value.toUpperCase.trim, s"CreditCode $value is not normalized")
   def urlEncoded: String = URLEncoder.encode(value, UTF8)
 }
 
 object CreditCode {
-  def normalize(rawCode: String): CreditCode = CreditCode(rawCode.toLowerCase.trim)
+  def normalize(rawCode: String): CreditCode = CreditCode(rawCode.toUpperCase.trim)
   implicit val format: Format[CreditCode] = Format(Reads.of[String].map(normalize(_)), Writes[CreditCode](code => JsString(code.value)))
   def columnType(db: DataBaseComponent) = {
     import db.Driver.simple._
