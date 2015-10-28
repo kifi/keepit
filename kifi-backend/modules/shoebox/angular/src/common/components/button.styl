@@ -58,3 +58,26 @@
 .kf-button-error
   color: errorRed
   box-shadow: 0 0 2px 0 #f00
+
+.kf-button-cta-blue
+  background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
+  color: #fff
+
+  &:not([disabled]):not(.disabled)
+    &:hover:not(:active)
+      background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
+
+    &:active
+      background: darken(linkBlueColor, 20%)
+
+
+.kf-button-cta-green
+  background: linear-gradient(accentGreen, darken(accentGreen, 20%))
+  color: #fff
+
+  &:not([disabled]):not(.disabled)
+    &:hover:not(:active)
+      background: linear-gradient(accentGreen, darken(accentGreen, 20%))
+
+    &:active
+      background: darken(accentGreen, 20%)
