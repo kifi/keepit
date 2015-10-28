@@ -51,7 +51,11 @@ class ActivityLogCommanderImpl @Inject() (
       event.action match {
         case RewardCredit(id) =>
           val creditReward = creditRewardRepo.get(id)
-          Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("when", basicUserRepo.load(code.usedBy), "redeemed", code.code.value)))
+          creditReward.reward.kind match {
+            case RewardKind.Coupon => Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("when", basicUserRepo.load(code.usedBy), "redeemed", code.code.value)))
+            case RewardKind.OrganizationCreation => Elements("You earned", creditReward.credit, "because you're awesome! Welcome to Kifi")
+            case RewardKind.OrganizationReferral => Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("an organization you referred just upgraded")))
+          }
         case IntegrityError(err) => Elements("Found and corrected an error in the account") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
         case ChargeBack() => Elements("A", event.creditChange, "refund was issued to your card")
