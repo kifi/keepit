@@ -27,7 +27,7 @@ trait Reward {
 sealed abstract class RewardKind(val kind: String) {
   type S <: RewardStatus
   protected val allStatus: Set[S]
-  val applicable: S
+  def applicable: S
   def writeStatus(status: S): String = status.status
   def readStatus(status: String): S = allStatus.find(_.status equalsIgnoreCase status) match {
     case Some(validStatus) => validStatus

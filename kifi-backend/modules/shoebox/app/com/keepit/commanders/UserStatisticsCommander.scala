@@ -239,7 +239,7 @@ class UserStatisticsCommander @Inject() (
         val (user, emailAddress) = db.readOnlyMaster { implicit session =>
           (userRepo.get(userId), Try(emailRepo.getByUser(userId)).toOption)
         }
-        OrganizationMemberRecommendationInfo(user, emailAddress, math.floor(score * 10000) / 10000  )
+        OrganizationMemberRecommendationInfo(user, emailAddress, math.floor(score * 10000) / 10000)
     })
 
     val allUsers = members.map(_.userId) | candidates.map(_.userId)
