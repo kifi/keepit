@@ -33,14 +33,14 @@ class PlanRenewalCommanderImpl @Inject() (
   def processDueRenewals(): Unit = synchronized {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRenewable() }
     if (relevantAccounts.length > 0) {
-      eventCommander.reportToSlack(s"Renewing plans for ${relevantAccounts.length} accounts.")
+      eventCommander.reportToSlack(s"Renewing plans for ${relevantAccounts.length} accounts.", "#billing-alerts")
       val renewed = relevantAccounts.count(renewPlan(_) match {
         case Success(_) => true
         case Failure(error) =>
           airbrake.notify(error)
           false
       })
-      eventCommander.reportToSlack(s"$renewed/${relevantAccounts.length} plans were successfully renewed.")
+      eventCommander.reportToSlack(s"$renewed/${relevantAccounts.length} plans were successfully renewed.", "#billing-alerts")
     }
   }
 
@@ -50,11 +50,10 @@ class PlanRenewalCommanderImpl @Inject() (
         val now = clock.now()
         val plan = paidPlanRepo.get(account.planId)
         if (account.planRenewal isBefore now) {
-          val nextPlanRenewal = account.planRenewal plusMonths plan.billingCycle.month
+          val nextPlanRenewal = account.planRenewal plusMonths plan.billingCycle.months
           val fullCyclePrice = plan.pricePerCyclePerUser * account.activeUsers
-          val paymentDueAt = if (fullCyclePrice > DollarAmount.ZERO) Some(now) else account.paymentDueAt
           val renewedAccount = paidAccountRepo.save(
-            account.withReducedCredit(fullCyclePrice).withPlanRenewal(nextPlanRenewal).withPaymentDueAt(paymentDueAt)
+            account.withReducedCredit(fullCyclePrice).withPlanRenewal(nextPlanRenewal).withPaymentDueAt(Some(now))
           )
           val billingEvent = eventCommander.track(AccountEvent(
             eventTime = clock.now(),

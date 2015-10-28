@@ -35,9 +35,10 @@ sealed abstract class RewardKind(val kind: String) {
   }
 }
 
-sealed abstract class RewardStatus(val status: String) {
+sealed abstract class RewardStatus {
   type I
   def infoFormat: Format[I]
+  def status: String
 }
 
 object Reward {
@@ -80,9 +81,10 @@ object RewardStatus {
   trait WithIndependentInfo[F] { self: RewardKind =>
     def infoFormat: Format[F]
 
-    sealed abstract class Status(status: String) extends RewardStatus(status) {
+    sealed abstract class Status(value: String) extends RewardStatus {
       type I = F
       def infoFormat = self.infoFormat
+      def status = value
     }
     type S = Status
   }
@@ -105,12 +107,6 @@ object RewardKind {
     val applicable: Used.type = Used
   }
 
-  case object Promotion extends RewardKind("promotion") with RewardStatus.WithEmptyInfo {
-    case object Used extends Status("used")
-    protected val allStatus: Set[S] = Set(Used)
-    val applicable: Used.type = Used
-  }
-
   case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
@@ -126,7 +122,7 @@ object RewardKind {
     val applicable: Upgraded.type = Upgraded
   }
 
-  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral, Promotion)
+  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral)
 
   def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
     case Some(validKind) => validKind
@@ -149,17 +145,22 @@ sealed trait UnrepeatableRewardKey {
 }
 
 object UnrepeatableRewardKey {
-  case class Referral(from: Id[Organization], to: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"refer|$from-$to" }
-  case class NewOrganization(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"newOrg|$orgId" }
+  // only one account can reap the reward for referring an org
+  case class Referred(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"referred-org|$orgId" }
+  // an account can only reap a single referral bonus when signing up (promo or referral)
+  case class WasReferred(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasReferred-org|$orgId" }
+  case class WasCreated(orgId: Id[Organization]) extends UnrepeatableRewardKey { def toKey = s"wasCreated-org|$orgId" }
 
   private object ValidLong {
     def unapply(id: String): Option[Long] = Try(id.toLong).toOption
   }
-  private val newOrg = """^newOrg\|(\d+)$""".r
-  private val referral = """^refer\|(\d+)-(\d+)$""".r
+  private val referred = """^referred-org\|(\d+)$""".r
+  private val wasReferred = """^wasReferred-org\|(\d+)$""".r
+  private val wasCreated = """^wasCreated-org\|(\d+)$""".r
   def fromKey(key: String): UnrepeatableRewardKey = key match {
-    case newOrg(ValidLong(orgId)) => NewOrganization(Id(orgId))
-    case referral(ValidLong(from), ValidLong(to)) => Referral(from = Id(from), to = Id(to))
+    case referred(ValidLong(orgId)) => Referred(Id(orgId))
+    case wasReferred(ValidLong(orgId)) => WasReferred(Id(orgId))
+    case wasCreated(ValidLong(orgId)) => WasCreated(Id(orgId))
     case _ => throw new IllegalArgumentException(s"Invalid reward key: $key")
   }
 }
@@ -180,4 +181,5 @@ case class CreditReward(
   def withId(id: Id[CreditReward]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAppliedEvent(event: AccountEvent) = this.copy(applied = Some(event.id.get))
+  def withReward(newReward: Reward) = this.copy(reward = newReward)
 }

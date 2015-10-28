@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model.{ User, OrganizationRepo, Organization }
-import com.keepit.payments.CreditRewardFail.{ CreditCodeAlreadyBurnedException, CreditCodeAbuseException, NoPaidAccountException, CreditCodeNotFoundException }
+import com.keepit.payments.CreditRewardFail._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.JsNull
 
@@ -16,8 +16,15 @@ import scala.util.{ Success, Failure, Try }
 
 @ImplementedBy(classOf[CreditRewardCommanderImpl])
 trait CreditRewardCommander {
+  // Generic API for creating a credit reward (use for one-off rewards, like the org creation bonus)
+  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward]
+
+  // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards]
+
+  // In-place evolutions of existing rewards
+  def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward]
 }
 
 @Singleton
@@ -45,7 +52,7 @@ class CreditRewardCommanderImpl @Inject() (
           kind = kind,
           credit = newOrgReferralCredit,
           status = CreditCodeStatus.Open,
-          referrer = Some(CreditCodeReferrer.fromOrg(org))
+          referrer = Some(CreditCodeReferrer(org.ownerId, Some(orgId), orgReferrerCredit))
         )
         creditCodeInfoRepo.save(creditCodeInfo)
       }
@@ -60,6 +67,10 @@ class CreditRewardCommanderImpl @Inject() (
       _ <- if (creditCodeInfo.isSingleUse && creditRewardRepo.getByCreditCode(creditCodeInfo.code).nonEmpty) Failure(CreditCodeAlreadyBurnedException(req.code)) else Success(true)
       rewards <- createRewardsFromCreditCode(creditCodeInfo, accountId, req.applierId, req.orgId)
     } yield rewards
+  }
+
+  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward] = {
+    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, Some(userAttribution)) }
   }
 
   private def createRewardsFromCreditCode(creditCodeInfo: CreditCodeInfo, accountId: Id[PaidAccount], userId: Id[User], orgId: Option[Id[Organization]])(implicit session: RWSession): Try[CreditCodeRewards] = {
@@ -80,14 +91,14 @@ class CreditRewardCommanderImpl @Inject() (
         }
 
       case CreditCodeKind.Promotion =>
-        val targetReward = Reward(RewardKind.Promotion)(RewardKind.Promotion.Used)(None)
+        val targetReward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId.get)
         for {
           targetCreditReward <- creditRewardRepo.create(CreditReward(
             accountId = accountId,
             credit = creditCodeInfo.credit,
             applied = None,
             reward = targetReward,
-            unrepeatable = Some(UnrepeatableRewardKey.NewOrganization(orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.WasReferred(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield CreditCodeRewards(target = targetCreditReward, referrer = None)
@@ -101,30 +112,43 @@ class CreditRewardCommanderImpl @Inject() (
             credit = creditCodeInfo.credit,
             applied = None,
             reward = targetReward,
-            unrepeatable = Some(UnrepeatableRewardKey.NewOrganization(orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.WasReferred(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
 
+          referrer <- creditCodeInfo.referrer.map(Success(_)).getOrElse(Failure(NoReferrerException(creditCodeInfo)))
+          referrerAccount <- referrer.organizationId.map(accountRepo.getAccountId(_)).map(Success(_)).getOrElse(Failure(NoPaidAccountException(referrer.userId, referrer.organizationId)))
           referrerCreditReward <- creditRewardRepo.create(CreditReward(
-            accountId = accountId,
-            credit = orgReferrerCredit,
+            accountId = referrerAccount,
+            credit = referrer.credit,
             applied = None,
             reward = referrerReward,
-            unrepeatable = Some(UnrepeatableRewardKey.Referral(from = creditCodeInfo.referrer.get.organizationId.get, to = orgId.get)),
+            unrepeatable = Some(UnrepeatableRewardKey.Referred(orgId.get)),
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield CreditCodeRewards(target = targetCreditReward, referrer = Some(referrerCreditReward))
     }
     unfinalizedRewardsTry.map { rewards =>
       CreditCodeRewards(
-        target = finalizeCreditReward(rewards.target, userId),
-        referrer = rewards.referrer.map(finalizeCreditReward(_, userId))
+        target = finalizeCreditReward(rewards.target, Some(userId)),
+        referrer = rewards.referrer.map(finalizeCreditReward(_, Some(userId)))
       )
     }
   }
 
-  private def finalizeCreditReward(creditReward: CreditReward, userAttribution: Id[User])(implicit session: RWSession): CreditReward = {
-    require(creditReward.id.nonEmpty)
+  def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
+    val currentReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(orgId)
+    val evolvedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(orgId)
+    val crs = creditRewardRepo.getByReward(currentReward)
+    assert(crs.size <= 1, "Somehow there are multiple referral rewards for $orgId! $crs")
+    crs.map { crToEvolve =>
+      finalizeCreditReward(crToEvolve.withReward(evolvedReward), None)
+    }
+  }
+
+  private def finalizeCreditReward(creditReward: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): CreditReward = {
+    require(creditReward.id.nonEmpty, s"$creditReward has not been persisted to the db")
+    require(creditReward.applied.isEmpty, s"$creditReward has already been applied")
     val rewardNeedsToBeApplied = creditReward.reward.status == creditReward.reward.kind.applicable
     if (!rewardNeedsToBeApplied) creditReward
     else {
@@ -133,7 +157,7 @@ class CreditRewardCommanderImpl @Inject() (
       val rewardCreditEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
-        whoDunnit = Some(userAttribution),
+        whoDunnit = userAttribution,
         whoDunnitExtra = JsNull,
         kifiAdminInvolved = None,
         action = AccountEventAction.RewardCredit(creditReward.id.get),
@@ -146,4 +170,5 @@ class CreditRewardCommanderImpl @Inject() (
       creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent))
     }
   }
+
 }

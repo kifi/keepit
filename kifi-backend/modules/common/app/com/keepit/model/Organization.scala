@@ -69,9 +69,6 @@ object Organization extends ModelWithPublicIdCompanion[Organization] {
   protected val publicIdPrefix = "o"
   protected val publicIdIvSpec = new IvParameterSpec(Array(62, 91, 74, 34, 82, -77, 19, -35, -118, 3, 112, -59, -70, 94, 101, -115))
 
-  val totallyInvisiblePermissions: BasePermissions =
-    BasePermissions(OrganizationRole.allOpts.map(_ -> Set.empty[OrganizationPermission]).toMap)
-
   implicit val format: Format[Organization] = (
     (__ \ 'id).formatNullable[Id[Organization]] and
     (__ \ 'createdAt).format[DateTime] and

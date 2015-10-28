@@ -11,6 +11,7 @@ angular.module('kifi')
     $scope.settings = $scope.settings.settings;
     $scope.canExportKeeps = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) !== -1);
     $scope.canManagePlan = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1);
+    $scope.canRedeemCredit = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.REDEEM_CREDIT_CODE) !== -1);
     $scope.isAdminExperiment = (profileService.me.experiments.indexOf('admin') !== -1);
     function onHashChange() {
       var anchor = angular.element($window.location.hash.slice(0, -1))[0];

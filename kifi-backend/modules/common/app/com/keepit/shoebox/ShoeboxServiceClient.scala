@@ -1,46 +1,37 @@
 package com.keepit.shoebox
 
-import com.keepit.classify.{ NormalizedHostname, DomainInfo, Domain }
+import com.google.inject.Inject
+import com.keepit.classify.{ DomainInfo, NormalizedHostname }
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
+import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.core._
+import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json.TupleFormat
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
+import com.keepit.common.net.{ CallTimeouts, HttpClient }
+import com.keepit.common.routes.Shoebox
+import com.keepit.common.service.{ RequestConsolidator, ServiceClient, ServiceType }
 import com.keepit.common.store.ImageSize
-import com.keepit.model.cache.{ UserSessionViewExternalIdKey, UserSessionViewExternalIdCache }
-import com.keepit.notify.info._
-import com.keepit.rover.model.BasicImages
-import com.keepit.shoebox.model.{ KeepImagesKey, KeepImagesCache }
-import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.common.usersegment.{ UserSegment, UserSegmentCache, UserSegmentFactory, UserSegmentKey }
+import com.keepit.common.zookeeper._
+import com.keepit.model._
+import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewExternalIdKey }
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
+import com.keepit.rover.model.BasicImages
+import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
+import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
+import com.keepit.social.{ BasicUserUserIdKey, _ }
+import org.joda.time.DateTime
+import play.api.libs.json.Json._
+import play.api.libs.json._
 import securesocial.core.IdentityId
 
-import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
 import scala.concurrent.duration._
-import com.google.inject.Inject
-import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
-import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ EmailAddress, ElectronicMail }
-import com.keepit.common.net.{ URI, CallTimeouts, HttpClient }
-import com.keepit.common.routes.Shoebox
-import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.service.{ ServiceClient, ServiceType }
-import com.keepit.common.zookeeper._
-import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
-import com.keepit.social._
-import com.keepit.common.healthcheck.{ StackTrace, AirbrakeNotifier }
-import com.keepit.common.usersegment.UserSegment
-import com.keepit.common.usersegment.UserSegmentFactory
-import com.keepit.common.usersegment.UserSegmentCache
-import com.keepit.common.concurrent.ExecutionContext
-import play.api.libs.json.Json._
-import org.joda.time.DateTime
-import com.keepit.common.time.internalTime.DateTimeJsonLongFormat
-import com.keepit.model._
-import com.keepit.social.BasicUserUserIdKey
-import play.api.libs.json._
-import com.keepit.common.usersegment.UserSegmentKey
-import com.keepit.common.json.TupleFormat
-import com.keepit.common.core._
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import com.keepit.shoebox.model.IngestableUserIpAddress
-import com.keepit.common.json.EitherFormat
+import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX

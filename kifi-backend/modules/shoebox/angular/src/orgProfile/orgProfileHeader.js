@@ -4,11 +4,11 @@ angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
   '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService',
-  '$timeout', 'profileService', 'signupService', 'messageTicker', 'ORG_PERMISSION',
-  'ORG_SETTING_VALUE',
+  '$timeout', 'profileService', 'signupService', 'billingService', 'messageTicker',
+  'ORG_PERMISSION', 'ORG_SETTING_VALUE',
   function ($state, $http, $analytics, $location, modalService, orgProfileService,
-            $timeout, profileService, signupService, messageTicker, ORG_PERMISSION,
-            ORG_SETTING_VALUE) {
+            $timeout, profileService, signupService, billingService, messageTicker,
+            ORG_PERMISSION, ORG_SETTING_VALUE) {
 
   return {
     restrict: 'A',
@@ -22,6 +22,15 @@ angular.module('kifi')
       scope.ORG_PERMISSION = ORG_PERMISSION;
       scope.ORG_SETTING_VALUE = ORG_SETTING_VALUE;
       scope.state = $state;
+
+      scope.billingState = null;
+      if (scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1) {
+        billingService
+        .getBillingState(scope.profile.id)
+        .then(function (billingState) {
+          scope.billingState = billingState;
+        });
+      }
 
       var lastSavedInfo = {};
 
@@ -168,6 +177,20 @@ angular.module('kifi')
 
       scope.onHoverUpsellInvite = function () {
         orgProfileService.trackEvent('user_viewed_page', scope.profile, { action: 'viewInviteUpsell' });
+      };
+
+      scope.onCreditBannerUseIt = function () {
+        if (scope.viewer.membership.role === 'admin') {
+          $state.go('orgProfile.settings.plan', { upgrade: true });
+        } else {
+          modalService.open({
+            template: 'billing/creditContactAdminsModal.tpl.html'
+          });
+        }
+      };
+
+      scope.onCreditBannerEarnMore = function () {
+        $state.go('orgProfile.settings.credits');
       };
     }
   };

@@ -194,6 +194,13 @@ angular.module('kifi')
         activetab: 'settings',
         activenav: 'activity-log'
       })
+      .state('orgProfile.settings.credits', {
+        url: '/credits',
+        controller: 'EarnCreditsCtrl',
+        templateUrl: 'teamSettings/earnCredits.tpl.html',
+        activetab: 'settings',
+        activenav: 'earn-credits'
+      })
       .state('teams', {
         url: '/teams',
         'abstract': true,

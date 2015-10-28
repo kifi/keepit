@@ -49,17 +49,18 @@ class ActivityLogCommanderImpl @Inject() (
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
-        case RewardCredit(id) => Elements("You earned", creditRewardRepo.get(id))
+        case RewardCredit(id) =>
+          val creditReward = creditRewardRepo.get(id)
+          Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("when", basicUserRepo.load(code.usedBy), "redeemed", code.code.value)))
         case IntegrityError(err) => Elements("Found and corrected an error in the account") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
-        case ChargeBack() => s"A ${event.creditChange.toDollarString} refund was issued to your card"
-        case PlanBilling(planId, _, _, _, _) => s"Your ${paidPlanRepo.get(planId)} plan was renewed."
-        case PlanRenewal(planId, _, _, _, _) => s"Your ${paidPlanRepo.get(planId)} plan was renewed."
+        case ChargeBack() => Elements("A", event.creditChange, "refund was issued to your card")
+        case PlanRenewal(planId, _, _, _, _) => Elements("Your", paidPlanRepo.get(planId), "plan was renewed")
         case Charge() =>
           val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
-          s"Your card was charged ${event.creditChange.toDollarString} for your current balance. [$invoiceText]"
+          Elements("Your card was charged", event.creditChange, s"for your current balance. [$invoiceText]")
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
-        case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information."
+        case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information"
         case MissingPaymentMethod() => s"We failed to process your balance, please register a default payment method."
         case UserAdded(who) => Elements(basicUserRepo.load(who), "was added to your team", maybeUser.map(Elements("by", _)))
         case UserRemoved(who) => maybeUser match {
@@ -68,9 +69,9 @@ class ActivityLogCommanderImpl @Inject() (
         }
         case AdminAdded(who) => Elements(basicUserRepo.load(who), "was made an admin", maybeUser.map(Elements("by", _)))
         case AdminRemoved(who) => Elements(basicUserRepo.load(who), "(admin) was made a member by", maybeUser.map(Elements("by", _)))
-        case PlanChanged(oldPlanId, newPlanId) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
+        case PlanChanged(oldPlanId, newPlanId, _) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
         case PaymentMethodAdded(_, lastFour) => Elements(s"A credit card ending in $lastFour was added", maybeUser.map(Elements("by", _)))
-        case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your team's default payment method was changed to the card ending in $lastFour", maybeUser.map(Elements("by", _)))
+        case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your payment method was changed to the card ending in $lastFour", maybeUser.map(Elements("by", _)))
         case AccountContactsChanged(userAdded: Option[Id[User]], userRemoved: Option[Id[User]], emailAdded: Option[EmailAddress], emailRemoved: Option[EmailAddress]) => {
           val singleContactChangedIn: Option[(Elements, Elements)] = (userAdded, userRemoved, emailAdded, emailRemoved) match {
             case (Some(addedUserId), None, None, None) => Some((basicUserRepo.load(addedUserId), "added to"))
@@ -84,7 +85,7 @@ class ActivityLogCommanderImpl @Inject() (
             case None => Elements("Your billing contacts were updated", maybeUser.map(Elements("by", _)))
           }
         }
-        case OrganizationCreated(initialPlanId) => Elements("The", org, "team was created by", maybeUser.get, "and enrolled in", paidPlanRepo.get(initialPlanId))
+        case OrganizationCreated(initialPlanId, _) => Elements("The", org, "team was created by", maybeUser.get, "and enrolled in the", paidPlanRepo.get(initialPlanId), "plan")
       }
     }
     SimpleAccountEventInfo(
@@ -98,11 +99,16 @@ class ActivityLogCommanderImpl @Inject() (
   }
 }
 
-sealed trait DescriptionElements
+sealed trait DescriptionElements {
+  def flatten: Seq[BasicElement]
+}
+case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
+  def flatten = elements.map(_.flatten).flatten
+}
+case class BasicElement(text: String, url: Option[String]) extends DescriptionElements {
+  def flatten = Seq(this)
+}
 object DescriptionElements {
-  case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements
-  case class BasicElement(text: String, url: Option[String]) extends DescriptionElements
-
   def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
 
   implicit def fromText(text: String): BasicElement = BasicElement(text, None)
@@ -110,19 +116,15 @@ object DescriptionElements {
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
-  implicit def fromCreditReward(cr: CreditReward): BasicElement = cr.credit.toDollarString
-  implicit def fromBasicUser(user: BasicUser): BasicElement = user.fullName -> user.path.relative
-  implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.relative
+  implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName -> user.path.absolute
+  implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.absolute
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
-  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> s"/${orgHandle.value}/settings/plan"
+  implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
+  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> Path(s"${orgHandle.value}/settings/plan").absolute
 
-  private def flatten(description: DescriptionElements): Seq[BasicElement] = description match {
-    case SequenceOfElements(elements) => elements.map(flatten).flatten
-    case element: DescriptionElements.BasicElement => Seq(element)
-  }
   implicit val flatWrites = {
     implicit val basicWrites = Json.writes[BasicElement]
-    Writes[DescriptionElements] { description => Json.toJson(flatten(description)) }
+    Writes[DescriptionElements] { description => Json.toJson(description.flatten) }
   }
 }
 

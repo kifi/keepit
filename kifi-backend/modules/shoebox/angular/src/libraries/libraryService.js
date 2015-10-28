@@ -100,6 +100,7 @@ angular.module('kifi')
         }
         return net.getLibraryInfos().then(function (res) {
           infos = res.data.libraries.map(augment);
+          return infos;
         });
       },
 

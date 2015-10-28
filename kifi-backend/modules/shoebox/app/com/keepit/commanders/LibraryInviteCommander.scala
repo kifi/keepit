@@ -31,7 +31,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 trait LibraryInviteCommander {
   // todo: For each method here, remove if no one's calling it externally, and set as private in the implementation
   def declineLibrary(userId: Id[User], libraryId: Id[Library])
-  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], invitee: User, lib: Library, owner: BasicUser): Unit
+  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], inviteeId: Id[User], lib: Library): Unit
   def inviteAnonymousToLibrary(libraryId: Id[Library], inviterId: Id[User], access: LibraryAccess, message: Option[String])(implicit context: HeimdalContext): Either[LibraryFail, (LibraryInvite, Library)]
   def inviteToLibrary(libraryId: Id[Library], inviterId: Id[User], inviteList: Seq[(Either[Id[User], EmailAddress], LibraryAccess, Option[String])])(implicit eventContext: HeimdalContext): Future[Either[LibraryFail, Seq[(Either[BasicUser, RichContact], LibraryAccess)]]]
   def improperInvite(library: Library, inviterMembership: Option[LibraryMembership], access: LibraryAccess): Option[LibraryFail]
@@ -71,9 +71,8 @@ class LibraryInviteCommanderImpl @Inject() (
     }
   }
 
-  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], invitee: User, lib: Library, owner: BasicUser): Unit = {
-    val inviteeImage = s3ImageStore.avatarUrlByUser(invitee)
-    val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
+  def notifyInviterOnLibraryInvitationAcceptance(invitesToAlert: Seq[LibraryInvite], inviteeId: Id[User], lib: Library): Unit = {
+    val invitee = db.readOnlyReplica(implicit session => userRepo.get(inviteeId))
     invitesToAlert foreach { invite =>
       val title = if (invite.access == LibraryAccess.READ_WRITE) {
         s"${invitee.firstName} is now collaborating on ${lib.name}"

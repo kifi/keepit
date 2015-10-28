@@ -82,13 +82,6 @@ trait HeimdalServiceClient extends ServiceClient with KeepDiscoveryRepoAccess wi
   def processSearchHitAttribution(hit: SearchHitReport): Future[Unit]
 
   def processKeepAttribution(userId: Id[User], newKeeps: Seq[Keep]): Future[Unit]
-
-  def getEligibleGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]]
-
-  def getGratData(userId: Id[User]): Future[GratificationData]
-
-  def getGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]]
-
 }
 
 private[heimdal] object HeimdalBatchingConfiguration extends BatchingActorConfiguration[HeimdalClientActor] {
@@ -320,29 +313,6 @@ class HeimdalServiceClientImpl @Inject() (
         count += batch.size
         log.info(s"[processKeepAttribution(userId=$userId)] processed $count keeps")
       }
-    }
-  }
-
-  def getEligibleGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
-    val payload = Json.toJson(userIds)
-    call(Heimdal.internal.getEligibleGratDatas, payload, callTimeouts = CallTimeouts(responseTimeout = Some(120000), maxJsonParseTime = Some(120000), maxWaitTime = Some(120000)), routingStrategy = offlinePriority).map { response =>
-      log.info(s"[GratData] Eligible Grat Datas received. Body: ${response.json}")
-      (response.json \ "gratDatas").as[Seq[GratificationData]]
-    }
-  }
-
-  def getGratData(userId: Id[User]): Future[GratificationData] = {
-    call(Heimdal.internal.getGratData(userId)).map { response =>
-      log.info(s"[GratData] Grat Data received. Body: ${response.json}")
-      (response.json \ "gratData").as[GratificationData]
-    }
-  }
-
-  def getGratDatas(userIds: Seq[Id[User]]): Future[Seq[GratificationData]] = {
-    val payload = Json.toJson(userIds)
-    call(Heimdal.internal.getGratDatas, payload).map { response =>
-      log.info(s"[GratData] Grat Datas received. Body: ${response.json}")
-      (response.json \ "gratDatas").as[Seq[GratificationData]]
     }
   }
 }
