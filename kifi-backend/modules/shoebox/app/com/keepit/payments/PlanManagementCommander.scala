@@ -29,8 +29,8 @@ trait PlanManagementCommander {
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent]
   def deactivatePaidAccountForOrganization(orgId: Id[Organization], session: RWSession): Try[Unit]
 
-  def registerNewUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
-  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
+  def registerNewUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution, overrideLock: Boolean = false)(implicit session: RWSession): AccountEvent
+  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution, overrideLock: Boolean = false)(implicit session: RWSession): AccountEvent
   def registerRoleChanged(orgId: Id[Organization], userId: Id[User], from: OrganizationRole, to: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
 
   def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent]
@@ -203,8 +203,8 @@ class PlanManagementCommanderImpl @Inject() (
 
   }
 
-  def registerNewUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
-    accountLockHelper.maybeWithAccountLock(orgId, attempts = 3) {
+  def registerNewUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution, overrideLock: Boolean = false)(implicit session: RWSession): AccountEvent = {
+    def doRegisterNewUser = {
       val account = paidAccountRepo.getByOrgId(orgId)
       val now = clock.now()
       val price: DollarAmount = remainingBillingCycleCost(account, from = now)
@@ -218,11 +218,18 @@ class PlanManagementCommanderImpl @Inject() (
         action = AccountEventAction.UserJoinedOrganization(userId, role),
         creditChange = -price
       ))
-    } getOrElse { throw new LockedAccountException(orgId) }
+    }
+
+    if (overrideLock) { doRegisterNewUser }
+    else accountLockHelper.maybeWithAccountLock(orgId) {
+      doRegisterNewUser
+    } getOrElse {
+      throw new LockedAccountException(orgId)
+    }
   }
 
-  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
-    accountLockHelper.maybeWithAccountLock(orgId, attempts = 3) {
+  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution, overrideLock: Boolean = false)(implicit session: RWSession): AccountEvent = {
+    def doRegisterRemovedUser = {
       val account = paidAccountRepo.getByOrgId(orgId)
       val now = clock.now()
       val price: DollarAmount = remainingBillingCycleCost(account, from = now)
@@ -236,7 +243,13 @@ class PlanManagementCommanderImpl @Inject() (
         action = AccountEventAction.UserLeftOrganization(userId, role),
         creditChange = price
       ))
-    } getOrElse { throw new LockedAccountException(orgId) }
+    }
+    if (overrideLock) { doRegisterRemovedUser }
+    else accountLockHelper.maybeWithAccountLock(orgId) {
+      doRegisterRemovedUser
+    } getOrElse {
+      throw new LockedAccountException(orgId)
+    }
   }
 
   def registerRoleChanged(orgId: Id[Organization], userId: Id[User], from: OrganizationRole, to: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
