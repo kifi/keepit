@@ -570,6 +570,17 @@ k.keepBox = k.keepBox || (function () {
     });
   }
 
+  function toggleVisibilityItem($visibilityItem, value) {
+    value = !!value;
+    if (typeof $visibilityItem === 'string') {
+      $visibilityItem = $box.find('[name="kifi-visibility"][value="' + $visibilityItem + '"]');
+    }
+    $visibilityItem
+    .prop('disabled', value)
+    .closest('.kifi-keep-box-new-lib-visibility-item')
+    .toggleClass('kifi-keep-box-new-lib-visibility-item-disabled', value);
+  }
+
   function setLocation(e) {
     e.preventDefault();
     var newLocation = e.target.value;
@@ -578,28 +589,29 @@ k.keepBox = k.keepBox || (function () {
     var isOrganization = (matches.length !== 0);
     var canPublish = !isOrganization || matches[0].viewer.permissions.indexOf('publish_libraries') !== -1;
 
+    var visibility = $box.find('[name="kifi-visibility"]:checked').val();
+    var previousLocationId = $box.find('.kifi-selected [name="kifi-location"]').val();
+    var previousLocationIsOrg = !!organizations.filter(idIs(previousLocationId)).length;
+
     var el = $(this).closest('.kifi-keep-box-new-lib-location-item')[0];
     selectItem(el, '.kifi-keep-box-new-lib-locations');
 
     if (isOrganization) {
+      if (visibility === 'published' && !previousLocationIsOrg) {
+        var $orgVisiblility = $box.find('[name="kifi-visibility"][value="organization"]');
+        toggleVisibilityItem($orgVisiblility, false);
+        $orgVisiblility.focus().click();
+      }
       $box.find('.kifi-organization-name').html(matches[0].name);
     } else if ($box.find('[name="kifi-visibility"][value="organization"]:checked').length === 1) {
       $box.find('[name="kifi-visibility"][value="secret"]').focus().click();
     }
-    $box
-    .find('[name="kifi-visibility"][value="organization"]')
-    .prop('disabled', !isOrganization)
-    .closest('.kifi-keep-box-new-lib-visibility-item')
-    .toggleClass('kifi-keep-box-new-lib-visibility-item-disabled', !isOrganization);
+    toggleVisibilityItem('organization', !isOrganization);
 
     if (!canPublish && $box.find('[name="kifi-visibility"][value="published"]:checked').length === 1) {
       $box.find('[name="kifi-visibility"][value="organization"]').focus().click();
     }
-    $box
-    .find('[name="kifi-visibility"][value="published"]')
-    .prop('disabled', !canPublish)
-    .closest('.kifi-keep-box-new-lib-visibility-item')
-    .toggleClass('kifi-keep-box-new-lib-visibility-item-disabled', !canPublish);
+    toggleVisibilityItem('published', !canPublish);
 
     api.port.emit('track_pane_click', {
       type: 'createLibrary',

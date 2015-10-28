@@ -35,9 +35,10 @@ sealed abstract class RewardKind(val kind: String) {
   }
 }
 
-sealed abstract class RewardStatus(val status: String) {
+sealed abstract class RewardStatus {
   type I
   def infoFormat: Format[I]
+  def status: String
 }
 
 object Reward {
@@ -80,9 +81,10 @@ object RewardStatus {
   trait WithIndependentInfo[F] { self: RewardKind =>
     def infoFormat: Format[F]
 
-    sealed abstract class Status(status: String) extends RewardStatus(status) {
+    sealed abstract class Status(value: String) extends RewardStatus {
       type I = F
       def infoFormat = self.infoFormat
+      def status = value
     }
     type S = Status
   }
@@ -179,4 +181,5 @@ case class CreditReward(
   def withId(id: Id[CreditReward]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAppliedEvent(event: AccountEvent) = this.copy(applied = Some(event.id.get))
+  def withReward(newReward: Reward) = this.copy(reward = newReward)
 }
