@@ -23,7 +23,7 @@
            </span>
           </td>
           <td
-            ng-bind="b.creditChange | money"
+            ng-bind="b.creditChange | moneyDelta"
             ng-class="{
               'kf-team-activity-debit': (b.creditChange | isNegativeMoney),
               'kf-team-activity-credit': (b.creditChange | isPositiveMoney),
