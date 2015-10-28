@@ -28,6 +28,7 @@
             ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
             ng-options="option.value as option.label for option in field.selectOptions"
             ng-change="updateSettings()"
+            ng-click="onClickedSettingsDropdown(field.trackingValue)"
           ></select>
           </div>
           <div class="kf-tooltip-body" ng-mouseenter="onHoverUpsellPrivileges()" ng-if="!settings[field.fieldKey].editable && viewer.membership.role === 'admin' && billingState.plan.name.toLowerCase() === 'free'">You can edit this setting by <a class="kf-link" ng-click="onClickUpsellPrivileges()" ui-sref="orgProfile.settings.plan({ handle: profile.handle, upgrade: true })">upgrading your plan</a>.</div>

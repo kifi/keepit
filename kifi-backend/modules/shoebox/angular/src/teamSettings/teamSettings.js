@@ -9,6 +9,7 @@ angular.module('kifi')
   function ($window, $rootScope, $scope, $state, $sce, $analytics, $timeout, billingState,
             orgProfileService, profileService, billingService, messageTicker,
             ORG_PERMISSION, ORG_SETTING_VALUE) {
+
     $scope.ORG_PERMISSION = ORG_PERMISSION;
     $scope.settingsSectionTemplateData = [
       {
@@ -20,7 +21,8 @@ angular.module('kifi')
               'Select who is able to edit your team name, logo, description, and URL.'
             ),
             fieldKey: 'edit_organization',
-            selectOptions: getOptions(ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN)
+            selectOptions: getOptions(ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ADMIN),
+            trackingValue: 'team_info_dropdown'
           }
         ]
       },
@@ -35,7 +37,8 @@ angular.module('kifi')
               ' like Google.'
             ),
             fieldKey: 'publish_libraries',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
+            trackingValue: 'create_public_libraries_dropdown'
           },
           {
             title: 'Can admins edit libraries within the team?',
@@ -46,7 +49,8 @@ angular.module('kifi')
             selectOptions: getOptions(
               { label: 'No', value: ORG_SETTING_VALUE.DISABLED },
               { label: 'Yes', value: ORG_SETTING_VALUE.ADMIN }
-            )
+            ),
+            trackingValue: 'admins_edit_libraries_dropdown'
           },
           {
             title: 'Who can move libraries out of the team?',
@@ -58,7 +62,8 @@ angular.module('kifi')
             selectOptions: getOptions(
               ORG_SETTING_VALUE.ADMIN,
               { label: 'Admins & library owners', value: ORG_SETTING_VALUE.MEMBER }
-            )
+            ),
+            trackingValue: 'move_libraries_dropdown'
           }
         ]
       },
@@ -73,7 +78,8 @@ angular.module('kifi')
               ' search engines like Google.'
             ),
             fieldKey: 'view_members',
-            selectOptions: getOptions(ORG_SETTING_VALUE.ANYONE, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.ANYONE, ORG_SETTING_VALUE.MEMBER),
+            trackingValue: 'view_members_dropdown'
           },
           {
             title: 'Who can invite members to the team?',
@@ -81,7 +87,8 @@ angular.module('kifi')
               'Select who is able to invite members to your team.'
             ),
             fieldKey: 'invite_members',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
+            trackingValue: 'invite_members_dropdown'
           },
           {
             title: 'Who can message everyone in the team?',
@@ -89,7 +96,8 @@ angular.module('kifi')
               'Select who can send a message to everyone in the team.'
             ),
             fieldKey: 'group_messaging',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
+            trackingValue: 'message_everyone_dropdown'
           },
           {
             title: 'Who can see the settings page?',
@@ -97,7 +105,8 @@ angular.module('kifi')
               'Select who is able to view the settings for this team. This does not allow them to edit the settings.'
             ),
             fieldKey: 'view_settings',
-            selectOptions: getOptions(ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
+            trackingValue: 'view_settings_dropdown'
           }
         ]
       },
@@ -116,7 +125,8 @@ angular.module('kifi')
               ' a particular library to a Slack channel.'
             ),
             fieldKey: 'create_slack_integration',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
+            trackingValue: 'slack_integration_dropdown'
           },
           {
             title: 'Who can export this team\'s keeps?',
@@ -124,7 +134,8 @@ angular.module('kifi')
               'Select who is able to export keeps from public and team visible libraries.'
             ),
             fieldKey: 'export_keeps',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN)
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN),
+            trackingValue: 'export_keeps_dropdown'
           }
         ]
       }
@@ -192,6 +203,10 @@ angular.module('kifi')
         }
       }).filter(Boolean);
     }
+
+    $scope.onClickedSettingsDropdown = function(trackingValue) {
+      orgProfileService.trackEvent('user_clicked_page', $scope.profile, { type: 'org_settings', action: trackingValue });
+    };
 
     // Transform
     //   nestedSettings = { 'example_setting_key': { setting: 'value', enabled: '' }, /* ... */ }
