@@ -49,7 +49,7 @@ class CreditRewardCommanderImpl @Inject() (
       val creditCodeInfo = creditCodeInfoRepo.getByOrg(orgId).getOrElse {
         // Try to create a referral code, starting with the raw normalized handle, and successively adding
         // random digits to the end. Just for safety, don't let this loop infinitely
-        val suffixes = "" +: Iterator.continually(RandomStringUtils.randomAlphabetic(2)).take(9).toStream
+        val suffixes = "" +: Iterator.continually("-" + RandomStringUtils.randomNumeric(2)).take(9).toStream
         suffixes.map { suf =>
           creditCodeInfoRepo.create(CreditCodeInfo(
             code = CreditCode.normalize(org.primaryHandle.get.normalized.value + suf),
