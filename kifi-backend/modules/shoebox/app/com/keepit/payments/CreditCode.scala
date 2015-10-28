@@ -75,6 +75,7 @@ case class CreditCodeInfo(
     referrer: Option[CreditCodeReferrer]) extends ModelWithState[CreditCodeInfo] {
   def withId(id: Id[CreditCodeInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def withStatus(newStatus: CreditCodeStatus) = this.copy(status = newStatus)
 
   def isSingleUse: Boolean = CreditCodeKind.isSingleUse(kind)
 }

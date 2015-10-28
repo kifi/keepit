@@ -17,6 +17,8 @@ trait CreditCodeInfoRepo extends Repo[CreditCodeInfo] {
   def getByOrg(orgId: Id[Organization], excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo]
   def getByCode(code: CreditCode, excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo]
   def create(info: CreditCodeInfo)(implicit session: RWSession): Try[CreditCodeInfo]
+
+  def close(info: CreditCodeInfo)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -58,6 +60,9 @@ class CreditCodeInfoRepoImpl @Inject() (
   def create(info: CreditCodeInfo)(implicit session: RWSession): Try[CreditCodeInfo] = {
     if (rows.filter(row => row.code === info.code).exists.run) Failure(UnavailableCreditCodeException(info.code))
     else Success(save(info))
+  }
+  def close(info: CreditCodeInfo)(implicit session: RWSession): Unit = {
+    save(info.withStatus(CreditCodeStatus.Closed))
   }
 }
 
