@@ -200,8 +200,8 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
 
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org1.id.get))) must beSuccessfulTry
 
-          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org1.id.get))) must beFailedTry(CreditCodeAlreadyBurnedException(coupon.code))
-          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org2.id.get))) must beFailedTry(CreditCodeAlreadyBurnedException(coupon.code))
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org1.id.get))) must beFailedTry
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org2.id.get))) must beFailedTry
 
           db.readOnlyMaster { implicit session =>
             creditRewardRepo.count must beGreaterThanOrEqualTo(1)

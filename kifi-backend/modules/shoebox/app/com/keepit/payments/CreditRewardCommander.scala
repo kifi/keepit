@@ -91,7 +91,6 @@ class CreditRewardCommanderImpl @Inject() (
             code = Some(UsedCreditCode(creditCodeInfo, userId))
           ))
         } yield {
-          creditCodeInfoRepo.close(creditCodeInfo)
           CreditCodeRewards(target = targetCreditReward, referrer = None)
         }
 
@@ -134,6 +133,7 @@ class CreditRewardCommanderImpl @Inject() (
         } yield CreditCodeRewards(target = targetCreditReward, referrer = Some(referrerCreditReward))
     }
     unfinalizedRewardsTry.map { rewards =>
+      if (creditCodeInfo.isSingleUse) creditCodeInfoRepo.close(creditCodeInfo)
       CreditCodeRewards(
         target = finalizeCreditReward(rewards.target, Some(userId)),
         referrer = rewards.referrer.map(finalizeCreditReward(_, Some(userId)))

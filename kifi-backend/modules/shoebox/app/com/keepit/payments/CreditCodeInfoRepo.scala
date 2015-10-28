@@ -15,7 +15,7 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[CreditCodeInfoRepoImpl])
 trait CreditCodeInfoRepo extends Repo[CreditCodeInfo] {
   def getByOrg(orgId: Id[Organization], excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo]
-  def getByCode(code: CreditCode, excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo]
+  def getByCode(code: CreditCode, excludeStatus: Option[CreditCodeStatus] = Some(CreditCodeStatus.Closed), excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo]
   def create(info: CreditCodeInfo)(implicit session: RWSession): Try[CreditCodeInfo]
 
   def close(info: CreditCodeInfo)(implicit session: RWSession): Unit
@@ -55,8 +55,9 @@ class CreditCodeInfoRepoImpl @Inject() (
   def getByOrg(orgId: Id[Organization], excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo] = {
     rows.filter(row => row.referrerOrganizationId === orgId && row.state =!= excludeStateOpt.orNull).firstOption
   }
-  def getByCode(code: CreditCode, excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo] =
-    rows.filter(row => row.code === code && row.state =!= excludeStateOpt.orNull).firstOption
+  def getByCode(code: CreditCode, excludeStatus: Option[CreditCodeStatus] = Some(CreditCodeStatus.Closed), excludeStateOpt: Option[State[CreditCodeInfo]] = Some(CreditCodeInfoStates.INACTIVE))(implicit session: RSession): Option[CreditCodeInfo] = {
+    rows.filter(row => row.code === code && row.status =!= excludeStatus.orNull && row.state =!= excludeStateOpt.orNull).firstOption
+  }
   def create(info: CreditCodeInfo)(implicit session: RWSession): Try[CreditCodeInfo] = {
     if (rows.filter(row => row.code === info.code).exists.run) Failure(UnavailableCreditCodeException(info.code))
     else Success(save(info))
