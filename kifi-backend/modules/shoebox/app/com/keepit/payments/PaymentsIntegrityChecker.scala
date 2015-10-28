@@ -117,12 +117,12 @@ class PaymentsIntegrityChecker @Inject() (
 
     val extraMemberErrors: Seq[PaymentsIntegrityError] = perceivedActiveButActuallyInactive.map { userId =>
       log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
-      planManagementCommander.registerRemovedUser(orgId, userId, memberships(userId).role, ActionAttribution(None, None))
+      planManagementCommander.registerRemovedUser(orgId, userId, memberships(userId).role, ActionAttribution(None, None), overrideLock = true) // lock already acquired globally
       PaymentsIntegrityError.ExtraOrganizationMember(userId)
     }.toSeq
     val missingMemberErrors: Seq[PaymentsIntegrityError] = perceivedInactiveButActuallyActive.map { userId =>
       log.info(s"[AEIC] Events show user $userId as an inactive member of $orgId, which is not correct. Creating new UserAdded event.")
-      planManagementCommander.registerNewUser(orgId, userId, memberships(userId).role, ActionAttribution(None, None))
+      planManagementCommander.registerNewUser(orgId, userId, memberships(userId).role, ActionAttribution(None, None), overrideLock = true) // lock already acquired globally
       PaymentsIntegrityError.MissingOrganizationMember(userId)
     }.toSeq
     if (account.activeUsers != memberIds.size) {
