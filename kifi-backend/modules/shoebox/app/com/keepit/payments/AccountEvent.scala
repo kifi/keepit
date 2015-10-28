@@ -59,17 +59,19 @@ object AccountEventKind {
   def get(str: String): Option[AccountEventKind] = all.find(_.value == str)
 
   val activityLog: Set[AccountEventKind] = Set(
+    OrganizationCreated,
     Charge,
     ChargeBack,
     ChargeFailure,
     DefaultPaymentMethodChanged,
-    PaymentMethodAdded,
     PlanRenewal,
     PlanChanged,
     RewardCredit,
     SpecialCredit,
     UserAdded,
-    UserRemoved
+    UserRemoved,
+    AdminAdded,
+    AdminRemoved
   )
 
   val billing: Set[AccountEventKind] = Set(
