@@ -9,10 +9,12 @@ import com.keepit.model._
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
+import com.kifi.macros.json
 import org.joda.time.DateTime
 
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
-import play.api.libs.json.{ Json, JsArray }
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import play.twirl.api.HtmlFormat
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -32,6 +34,7 @@ class AdminPaymentsController @Inject() (
     userRepo: UserRepo,
     planCommander: PlanManagementCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
+    creditCodeInfoRepo: CreditCodeInfoRepo,
     stripeClient: StripeClient,
     clock: Clock,
     db: Database) extends AdminUserActions {
@@ -248,6 +251,33 @@ class AdminPaymentsController @Inject() (
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))
   }
+
+  def createCode() = AdminUserAction(parse.tolerantJson) { implicit request =>
+    val req = request.body.as[CreditCodeAdminCreateRequest]
+    db.readWrite { implicit session =>
+      creditCodeInfoRepo.create(CreditCodeInfo(
+        code = req.code,
+        kind = req.kind,
+        credit = req.credit,
+        status = CreditCodeStatus.Open,
+        referrer = None
+      )).get
+    }
+    NoContent
+  }
+}
+
+case class CreditCodeAdminCreateRequest(
+  kind: CreditCodeKind,
+  code: CreditCode,
+  credit: DollarAmount)
+
+object CreditCodeAdminCreateRequest {
+  implicit val reads: Reads[CreditCodeAdminCreateRequest] = (
+    (__ \ 'kind).read[String].map(CreditCodeKind(_)) and
+    (__ \ 'code).read[CreditCode] and
+    (__ \ 'credit).read[DollarAmount](DollarAmount.formatAsCents)
+  )(CreditCodeAdminCreateRequest.apply _)
 }
 
 case class AdminAccountEventView(
