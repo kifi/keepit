@@ -109,8 +109,8 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
 
         val expectedCost = computePartialCost(currentDateTime, account.planRenewal, plan.billingCycle, plan.pricePerCyclePerUser)
         expectedCost should beGreaterThan(DollarAmount.ZERO)
-        val added = commander.registerNewUser(org.id.get, userId, noAttribution)
-        added.action === AccountEventAction.UserAdded(userId)
+        val added = db.readWrite { implicit session => commander.registerNewUser(org.id.get, userId, OrganizationRole.MEMBER, noAttribution) }
+        added.action === AccountEventAction.UserJoinedOrganization(userId, OrganizationRole.MEMBER)
         added.creditChange === -expectedCost
 
         val accountWithTwoUsers = db.readOnlyMaster { implicit session =>
@@ -122,8 +122,8 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
 
         val expectedRefund = computePartialCost(currentDateTime, account.planRenewal, plan.billingCycle, plan.pricePerCyclePerUser)
         expectedRefund should beGreaterThan(DollarAmount.ZERO)
-        val removed = commander.registerRemovedUser(org.id.get, userId, noAttribution)
-        removed.action === AccountEventAction.UserRemoved(userId)
+        val removed = db.readWrite { implicit session => commander.registerRemovedUser(org.id.get, userId, OrganizationRole.MEMBER, noAttribution) }
+        removed.action === AccountEventAction.UserLeftOrganization(userId, OrganizationRole.MEMBER)
         removed.creditChange === expectedRefund
 
         db.readOnlyMaster { implicit session =>
@@ -142,7 +142,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
         val (account, paidPlan, freePlan) = db.readWrite { implicit session =>
           // test with two users and "fast forward" to test proration of plan change cost
           val userId = UserFactory.user().saved.id.get
-          commander.registerNewUserHelper(org.id.get, userId, noAttribution)
+          commander.registerNewUser(org.id.get, userId, OrganizationRole.MEMBER, noAttribution)
           val account = paidAccountRepo.save(paidAccountRepo.getByOrgId(org.id.get).withPlanRenewal(currentDateTime plusDays 15))
 
           val paidPlan = paidPlanRepo.get(account.planId)

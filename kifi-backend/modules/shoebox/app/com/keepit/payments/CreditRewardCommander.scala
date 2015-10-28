@@ -36,6 +36,7 @@ class CreditRewardCommanderImpl @Inject() (
   accountRepo: PaidAccountRepo,
   clock: Clock,
   eventCommander: AccountEventTrackingCommander,
+  accountLockHelper: AccountLockHelper,
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
 
@@ -140,7 +141,7 @@ class CreditRewardCommanderImpl @Inject() (
     val currentReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(orgId)
     val evolvedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(orgId)
     val crs = creditRewardRepo.getByReward(currentReward)
-    assert(crs.size <= 1, "Somehow there are multiple referral rewards for $orgId! $crs")
+    assert(crs.size <= 1, s"Somehow there are multiple referral rewards for $orgId! $crs")
     crs.map { crToEvolve =>
       finalizeCreditReward(crToEvolve.withReward(evolvedReward), None)
     }
@@ -152,22 +153,26 @@ class CreditRewardCommanderImpl @Inject() (
     val rewardNeedsToBeApplied = creditReward.reward.status == creditReward.reward.kind.applicable
     if (!rewardNeedsToBeApplied) creditReward
     else {
-      val account = accountRepo.get(creditReward.accountId)
-      accountRepo.save(account.withIncreasedCredit(creditReward.credit))
-      val rewardCreditEvent = eventCommander.track(AccountEvent(
-        eventTime = clock.now(),
-        accountId = account.id.get,
-        whoDunnit = userAttribution,
-        whoDunnitExtra = JsNull,
-        kifiAdminInvolved = None,
-        action = AccountEventAction.RewardCredit(creditReward.id.get),
-        creditChange = creditReward.credit,
-        paymentMethod = None,
-        paymentCharge = None,
-        memo = None,
-        chargeId = None
-      ))
-      creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent))
+      val orgId = accountRepo.get(creditReward.accountId).orgId // todo(Léo): we should be able to lock using the account id directly
+      accountLockHelper.maybeWithAccountLock(orgId, attempts = 3) {
+        require(creditRewardRepo.get(creditReward.id.get).applied.isEmpty, s"$creditReward has already been applied") // check after locking
+        val account = accountRepo.get(creditReward.accountId)
+        accountRepo.save(account.withIncreasedCredit(creditReward.credit))
+        val rewardCreditEvent = eventCommander.track(AccountEvent(
+          eventTime = clock.now(),
+          accountId = account.id.get,
+          whoDunnit = userAttribution,
+          whoDunnitExtra = JsNull,
+          kifiAdminInvolved = None,
+          action = AccountEventAction.RewardCredit(creditReward.id.get),
+          creditChange = creditReward.credit,
+          paymentMethod = None,
+          paymentCharge = None,
+          memo = None,
+          chargeId = None
+        ))
+        creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent))
+      } getOrElse { throw new LockedAccountException(orgId) }
     }
   }
 

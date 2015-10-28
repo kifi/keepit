@@ -29,10 +29,9 @@ trait PlanManagementCommander {
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent]
   def deactivatePaidAccountForOrganization(orgId: Id[Organization], session: RWSession): Try[Unit]
 
-  def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
-  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
-  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
-  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent
+  def registerNewUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
+  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
+  def registerRoleChanged(orgId: Id[Organization], userId: Id[User], from: OrganizationRole, to: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
 
   def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent]
   def removeEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Option[AccountEvent]
@@ -66,9 +65,6 @@ trait PlanManagementCommander {
   def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[(AccountEvent, Boolean)]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
   def getPaymentStatus(orgId: Id[Organization]): PaymentStatus
-
-  private[payments] def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
-  private[payments] def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent
 
   //ADMIN ONLY
   def isFrozen(orgId: Id[Organization]): Boolean
@@ -162,27 +158,23 @@ class PlanManagementCommanderImpl @Inject() (
                 action = AccountEventAction.OrganizationCreated(planId, Some(account.planRenewal))
               ))
 
-              accountLockHelper.maybeWithAccountLock(orgId) {
-                log.info(s"[PAC] $orgId: Granting creation reward...")
-                creditRewardCommander.createCreditReward(CreditReward(
-                  accountId = account.id.get,
-                  credit = orgCreationCredit,
-                  applied = None,
-                  reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
-                  unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
-                  code = None
-                ), userAttribution = creator).get
+              log.info(s"[PAC] $orgId: Granting creation reward...")
+              creditRewardCommander.createCreditReward(CreditReward(
+                accountId = account.id.get,
+                credit = orgCreationCredit,
+                applied = None,
+                reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+                unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
+                code = None
+              ), userAttribution = creator).get
 
-                log.info(s"[PAC] $orgId: Registering owner...")
-                registerNewUserHelper(orgId, creator, attribution)
-                registerNewAdminHelper(orgId, creator, attribution)
-                addUserAccountContactHelper(orgId, creator, attribution)
+              log.info(s"[PAC] $orgId: Registering owner...")
+              registerNewUser(orgId, creator, OrganizationRole.ADMIN, attribution)
+              addUserAccountContactHelper(orgId, creator, attribution)
 
-                log.info(s"[PAC] $orgId: Account successfully created!")
-                Success(creationEvent)
-              } getOrElse {
-                throw LockedAccountException(orgId)
-              }
+              log.info(s"[PAC] $orgId: Account successfully created!")
+              Success(creationEvent)
+
           }
         }
       case Failure(ex) =>
@@ -211,69 +203,48 @@ class PlanManagementCommanderImpl @Inject() (
 
   }
 
-  def registerNewUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession) = {
-    val account = paidAccountRepo.getByOrgId(orgId)
-    val now = clock.now()
-    val price: DollarAmount = remainingBillingCycleCost(account, from = now)
-    paidAccountRepo.save(
-      account.withReducedCredit(price).withMoreActiveUsers(1)
-    )
-    eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-      eventTime = now,
-      accountId = account.id.get,
-      attribution = attribution,
-      action = AccountEventAction.UserAdded(userId),
-      creditChange = -price
-    ))
+  def registerNewUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
+    accountLockHelper.maybeWithAccountLock(orgId, attempts = 3) {
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val now = clock.now()
+      val price: DollarAmount = remainingBillingCycleCost(account, from = now)
+      paidAccountRepo.save(
+        account.withReducedCredit(price).withMoreActiveUsers(1)
+      )
+      eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+        eventTime = now,
+        accountId = account.id.get,
+        attribution = attribution,
+        action = AccountEventAction.UserJoinedOrganization(userId, role),
+        creditChange = -price
+      ))
+    } getOrElse { throw new LockedAccountException(orgId) }
   }
 
-  def registerNewUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
-    registerNewUserHelper(orgId, userId, attribution)
-  }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
+  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
+    accountLockHelper.maybeWithAccountLock(orgId, attempts = 3) {
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val now = clock.now()
+      val price: DollarAmount = remainingBillingCycleCost(account, from = now)
+      val newAccount = account.withIncreasedCredit(price).withFewerActiveUsers(1).withUserContacts(account.userContacts.diff(Seq(userId)))
 
-  def registerRemovedUserHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
-    val account = paidAccountRepo.getByOrgId(orgId)
-    val now = clock.now()
-    val price: DollarAmount = remainingBillingCycleCost(account, from = now)
-    val newAccount = account.withIncreasedCredit(price).withFewerActiveUsers(1).withUserContacts(account.userContacts.diff(Seq(userId)))
-
-    paidAccountRepo.save(newAccount)
-    eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-      eventTime = now,
-      accountId = orgId2AccountId(orgId),
-      attribution = attribution,
-      action = AccountEventAction.UserRemoved(userId),
-      creditChange = price
-    ))
+      paidAccountRepo.save(newAccount)
+      eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+        eventTime = now,
+        accountId = orgId2AccountId(orgId),
+        attribution = attribution,
+        action = AccountEventAction.UserLeftOrganization(userId, role),
+        creditChange = price
+      ))
+    } getOrElse { throw new LockedAccountException(orgId) }
   }
 
-  def registerRemovedUser(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
-    registerRemovedUserHelper(orgId, userId, attribution)
-  }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
-
-  def registerNewAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
-    registerNewAdminHelper(orgId, userId, attribution)
-  }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
-
-  def registerNewAdminHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
+  def registerRoleChanged(orgId: Id[Organization], userId: Id[User], from: OrganizationRole, to: OrganizationRole, attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
     eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
       eventTime = clock.now,
       accountId = orgId2AccountId(orgId),
       attribution = attribution,
-      action = AccountEventAction.AdminAdded(userId)
-    ))
-  }
-
-  def registerRemovedAdmin(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): AccountEvent = accountLockHelper.maybeSessionWithAccountLock(orgId, attempts = 3) { implicit session =>
-    registerRemovedAdminHelper(orgId, userId, attribution)
-  }.get //if this fails we have failed to get the account lock despite repeated tries, indicating something serious is wrong, and we are going to bail hard
-
-  def registerRemovedAdminHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): AccountEvent = {
-    eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-      eventTime = clock.now,
-      accountId = orgId2AccountId(orgId),
-      attribution = attribution,
-      action = AccountEventAction.AdminRemoved(userId)
+      action = AccountEventAction.OrganizationRoleChanged(userId, from = from, to = to)
     ))
   }
 

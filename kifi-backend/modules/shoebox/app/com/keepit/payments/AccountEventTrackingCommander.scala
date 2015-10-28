@@ -100,7 +100,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     import AccountEventKind._
     eventType match {
       case kind if billing.contains(kind) => Seq("#billing-alerts")
-      case OrganizationCreated | UserAdded | UserRemoved | AdminAdded | AdminRemoved => Seq("#org-members")
+      case OrganizationCreated | UserJoinedOrganization | UserLeftOrganization | OrganizationRoleChanged => Seq("#org-members")
     }
   }
 
