@@ -1,13 +1,19 @@
 .kf-redeem-credits-form
-  display: inline
+  display: flex
+  align-items: center
+
+  > * + *
+    margin-left: 10px
 
 .kf-redeem-credits-confirm-txt
 .kf-redeem-credits-error-txt
-  margin-left: 20px
   font-size: 15px
 
+.kf-textbox.kf-redeem-credits-box
+  width: auto
+
 .kf-redeem-credits-confirm-txt
-  color: libraryGreen
+  color: accentGreen
 
   &.ng-enter
     transition: all .3s
