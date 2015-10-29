@@ -28,5 +28,5 @@ object CortexURI {
   implicit def fromURIState(state: State[NormalizedURI]): State[CortexURI] = State[CortexURI](state.value)
   implicit def fromURISeq(seq: SequenceNumber[NormalizedURI]): SequenceNumber[CortexURI] = SequenceNumber[CortexURI](seq.value)
 
-  def fromURI(uri: NormalizedURI): CortexURI = CortexURI(uriId = uri.id.get, state = uri.state, seq = uri.seq, shouldHaveContent = uri.shouldHaveContent)
+  def fromURI(uri: IndexableUri): CortexURI = CortexURI(uriId = uri.id.get, state = uri.state, seq = uri.seq, shouldHaveContent = uri.shouldHaveContent)
 }
