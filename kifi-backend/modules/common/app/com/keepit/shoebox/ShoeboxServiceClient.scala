@@ -47,7 +47,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
   def getEmailAddressForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
-  def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def getNormalizedURIByURL(url: String): Future[Option[NormalizedURI]]
   def getNormalizedUriByUrlOrPrenormalize(url: String): Future[Either[NormalizedURI, String]]
   def internNormalizedURI(url: String, contentWanted: Boolean = false): Future[NormalizedURI]
@@ -355,14 +354,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI] = {
     cacheProvider.uriIdCache.getOrElseFuture(NormalizedURIKey(uriId)) {
       call(Shoebox.internal.getNormalizedURI(uriId)).map(r => Json.fromJson[NormalizedURI](r.json).get)
-    }
-  }
-
-  def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
-    redundantDBConnectionCheck(uriIds)
-    val query = uriIds.mkString(",")
-    call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
-      r.json.as[Seq[NormalizedURI]]
     }
   }
 
