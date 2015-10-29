@@ -242,6 +242,7 @@ class AdminPaymentsController @Inject() (
   def paymentsDashboard() = AdminUserAction { implicit request =>
     val dashboard = db.readOnlyMaster { implicit session =>
       val frozenAccounts = paidAccountRepo.all.filter(a => a.isActive && a.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
+      val failedAccounts = paidAccountRepo.all.filter(a => a.isActive && a.paymentStatus == PaymentStatus.Failed).take(100).map(createAdminAccountView) // God help us if we have more than 100 failed accounts
       val planEnrollment = {
         val planEnrollmentById = paidAccountRepo.getCountsByPlan
         planEnrollmentById.map { case (planId, x) => paidPlanRepo.get(planId) -> x }
@@ -253,7 +254,12 @@ class AdminPaymentsController @Inject() (
         }.sum
         DollarAmount.cents(income)
       }
-      AdminPaymentsDashboard(totalAmortizedIncomePerMonth, planEnrollment, frozenAccounts)
+      AdminPaymentsDashboard(
+        totalAmortizedIncomePerMonth = totalAmortizedIncomePerMonth,
+        planEnrollment = planEnrollment,
+        failedAccounts = failedAccounts,
+        frozenAccounts = frozenAccounts
+      )
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))
   }
@@ -407,4 +413,5 @@ case class AdminPaymentsActivityOverview(
 case class AdminPaymentsDashboard(
   totalAmortizedIncomePerMonth: DollarAmount,
   planEnrollment: Map[PaidPlan, (Int, Int)],
-  frozenAccounts: Seq[AdminAccountView])
+  frozenAccounts: Seq[AdminAccountView],
+  failedAccounts: Seq[AdminAccountView])
