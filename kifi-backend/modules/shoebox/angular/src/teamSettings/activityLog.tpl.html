@@ -19,7 +19,7 @@
               <!-- Use comments to eliminate whitespace before  -->
               <span ng-if="!descriptionSegment.url" ng-bind="descriptionSegment.text"></span><!--
              --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text"></a><!--
-             --><span ng-bind="$last ? '.' : ' '"></span>
+             --><span ng-if="!$last" ng-bind="' '"></span>
            </span>
           </td>
           <td
