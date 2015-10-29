@@ -307,7 +307,7 @@ class AdminPaymentsController @Inject() (
 
       // Deactivate all existing rewards
       rewardRepo.getByAccount(account.id.get).foreach { reward =>
-        rewardRepo.save(reward.copy(state = CreditRewardStates.INACTIVE))
+        rewardRepo.save(reward.copy(state = CreditRewardStates.INACTIVE, unrepeatable = None, code = None))
       }
 
       // Prepare
