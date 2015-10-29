@@ -131,7 +131,7 @@ private class CortexDataIngestionUpdater @Inject() (
   def updateURIRepo(fetchSize: Int): Future[Int] = {
     val seq = db.readOnlyReplica { implicit s => uriRepo.getMaxSeq }
 
-    shoebox.getIndexable(seq, fetchSize).map { uris =>
+    shoebox.getIndexableUris(seq, fetchSize).map { uris =>
       uris.map { CortexURI.fromURI } grouped (DB_BATCH_SIZE) foreach { uris =>
         db.readWrite { implicit s =>
           uris foreach { uri =>

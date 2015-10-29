@@ -18,6 +18,7 @@ trait CreditRewardRepo extends Repo[CreditReward] {
   def create(model: CreditReward)(implicit session: RWSession): Try[CreditReward]
   def getByReward(reward: Reward)(implicit session: RSession): Set[CreditReward]
   def getByCreditCode(code: CreditCode)(implicit session: RSession): Set[CreditReward]
+  def getByAccount(accountId: Id[PaidAccount])(implicit session: RSession): Set[CreditReward]
 }
 
 // Unique index on (code, singleUse) - single-use codes can only be used once overall
@@ -73,8 +74,13 @@ class CreditRewardRepoImpl @Inject() (
     val info = reward.status.infoFormat.writes(reward.info)
     activeRows.filter(row => row.kind === kind && row.status === status && row.info === info).list.toSet
   }
+
   def getByCreditCode(code: CreditCode)(implicit session: RSession): Set[CreditReward] = {
     activeRows.filter(row => row.code === code).list.toSet
+  }
+
+  def getByAccount(accountId: Id[PaidAccount])(implicit session: RSession): Set[CreditReward] = {
+    activeRows.filter(row => row.accountId === accountId).list.toSet
   }
 }
 
