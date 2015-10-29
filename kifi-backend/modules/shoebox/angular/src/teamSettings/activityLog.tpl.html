@@ -16,11 +16,9 @@
           <td ng-bind="b.eventTime | amDateFormat:'YYYY-MM-DD'"></td>
           <td class="kf-team-activity-entry">
             <span ng-repeat="descriptionSegment in b.description">
-              <!-- Use comments to eliminate whitespace before  -->
               <span ng-if="!descriptionSegment.url" ng-bind="descriptionSegment.text"></span><!--
-             --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text"></a><!--
-             --><span ng-bind="$last ? '.' : ' '"></span>
-           </span>
+           --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text"></a>
+            </span>
           </td>
           <td
             ng-bind="b.creditChange | money"
