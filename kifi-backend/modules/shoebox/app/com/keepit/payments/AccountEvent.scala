@@ -42,7 +42,6 @@ object AccountEventKind {
     ChargeFailure,
     DefaultPaymentMethodChanged,
     IntegrityError,
-    LowBalanceIgnored,
     MissingPaymentMethod,
     OrganizationCreated,
     PaymentMethodAdded,
