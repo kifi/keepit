@@ -68,7 +68,7 @@
         </div>
       </div>
     </form>
-    <div class="kf-container-section">
+    <div ng-if="isKifiAdmin" class="kf-container-section">
       <div kf-redeem-credits profile="profile" standalone="false"></div>
     </div>
     <div class="kf-container-section" ng-show="isPaidPlanName(plan.name)">

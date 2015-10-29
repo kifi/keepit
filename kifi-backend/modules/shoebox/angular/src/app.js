@@ -60,7 +60,7 @@ angular.module('kifi', [
       .logging(false);
 
     StripeCheckoutProvider.defaults({
-      key: 'pk_test_hR2uwSNwa3miJ0ccr9qFEkBN'
+      key: 'pk_live_xMqAibAbZzNiiZvzPJ2s21e4'
     });
   }
 ])

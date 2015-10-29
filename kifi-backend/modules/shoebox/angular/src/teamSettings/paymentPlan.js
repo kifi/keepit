@@ -13,6 +13,7 @@ angular.module('kifi')
     $scope.billingState = billingState;
     $scope.card = billingState.card;
     $scope.disableSaveButton = false;
+    $scope.isKifiAdmin = profileService.me.experiments.indexOf('admin') !== -1;
 
     var PREDEFINED_CYCLE_PERIOD = {
       1: 'Monthly',
