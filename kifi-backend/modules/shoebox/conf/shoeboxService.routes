@@ -332,6 +332,8 @@ GET     /about/join_us              @com.keepit.controllers.website.HomeControll
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
+GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
+GET     /imports/instapaper         @com.keepit.controllers.website.HomeController.route(path = "imports/instapaper")
 GET     /imports/evernote           @com.keepit.controllers.website.HomeController.route(path = "imports/evernote")
 GET     /imports/diigo              @com.keepit.controllers.website.HomeController.route(path = "imports/diigo")
 GET     /imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
@@ -900,9 +902,10 @@ POST          /admin/payments/unfreezeAccount              @com.keepit.controlle
 POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
 
 GET           /admin/payments/resetAccount                 @com.keepit.controllers.admin.AdminPaymentsController.resetAccount(orgId: Id[Organization], doIt: Boolean ?= false)
-GET           /admin/payments/resetAllAccounts                 @com.keepit.controllers.admin.AdminPaymentsController.resetAllAccounts(doIt: Boolean ?= false)
-
-GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard(page: Int ?= 0, kind: Option[String] ?= None)
+GET           /admin/payments/resetAllAccounts             @com.keepit.controllers.admin.AdminPaymentsController.resetAllAccounts(doIt: Boolean ?= false)
+GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
+GET           /admin/payments/activity   @com.keepit.controllers.admin.AdminPaymentsController.activityOverview(page: Int ?= 0, kind: Option[String] ?= None)
+POST          /admin/payments/createCode @com.keepit.controllers.admin.AdminPaymentsController.createCode()
 
 
 ##########################################
@@ -1078,6 +1081,7 @@ GET     /:handle/settings/plan     @com.keepit.controllers.website.KifiSiteRoute
 GET     /:handle/settings/contacts @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/settings/export   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/settings/activity @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/credits  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
 GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)

@@ -12,6 +12,9 @@ enterprisePlanColor = #f69256
 .kf-payment-plan-top-header
   margin-bottom: 10px
 
+.kf-payment-plan-cards-container
+  padding-bottom: 10px
+
 .kf-payment-plan-cards
   justify-content: space-around
 
@@ -157,18 +160,10 @@ enterprisePlanColor = #f69256
     &:before
       transform: scale(1)
 
-.kf-button.kf-button-large.kf-payment-plan-save
+.kf-payment-plan-save
   display: block
   margin: 0 auto
-  background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
-  color: #fff
   transition: opacity .5s
-
-  &:hover:not(:active)
-    background: linear-gradient(linkBlueColor, darken(linkBlueColor, 20%))
-
-  &:active
-    background: darken(linkBlueColor, 20%)
 
 .kf-payment-plan-save-container
   transition: .33s

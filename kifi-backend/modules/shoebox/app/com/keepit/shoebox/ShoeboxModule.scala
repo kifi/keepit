@@ -7,7 +7,7 @@ import com.keepit.controllers.internal.DataPipelineExecutorModule
 import com.keepit.reports._
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.rover.RoverServiceClientModule
-import com.keepit.shoebox.cron.{ GratificationEmailCronModule, ActivityPushCronModule, ActivityEmailCronModule }
+import com.keepit.shoebox.cron.{ ActivityPushCronModule, ActivityEmailCronModule }
 import com.keepit.social.SecureSocialModule
 import com.keepit.common.mail.MailModule
 import com.keepit.common.analytics.AnalyticsModule
@@ -80,8 +80,6 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
 
   val activityEmailCronModule = ActivityEmailCronModule()
   val activityPushCronModule = ActivityPushCronModule()
-
-  val gratificationEmailCronModule = GratificationEmailCronModule()
 
   val shoeboxTasksModule: ShoeboxTasksPluginModule = ShoeboxTasksPluginModule()
 }

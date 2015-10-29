@@ -55,7 +55,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
 
           val badRequestsAndTheirFailures = Seq(
             CreditCodeApplyRequest(code, org1.ownerId, None) -> CreditRewardFail.NoPaidAccountException(org1.ownerId, None),
-            CreditCodeApplyRequest(CreditCode("garbagecode"), org2.ownerId, Some(org2.id.get)) -> CreditRewardFail.CreditCodeNotFoundException(CreditCode("garbagecode")),
+            CreditCodeApplyRequest(CreditCode("GARBAGE-CODE"), org2.ownerId, Some(org2.id.get)) -> CreditRewardFail.CreditCodeNotFoundException(CreditCode("GARBAGE-CODE")),
             CreditCodeApplyRequest(code, org1.ownerId, Some(org1.id.get)) -> CreditRewardFail.CreditCodeAbuseException(CreditCodeApplyRequest(code, org1.ownerId, Some(org1.id.get)))
           )
           for ((badRequest, fail) <- badRequestsAndTheirFailures) {
@@ -200,8 +200,8 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
 
           creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org1.id.get))) must beSuccessfulTry
 
-          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org1.id.get))) must beFailedTry(CreditCodeAlreadyBurnedException(coupon.code))
-          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org2.id.get))) must beFailedTry(CreditCodeAlreadyBurnedException(coupon.code))
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org1.id.get))) must beFailedTry
+          creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(coupon.code, owner.id.get, Some(org2.id.get))) must beFailedTry
 
           db.readOnlyMaster { implicit session =>
             creditRewardRepo.count must beGreaterThanOrEqualTo(1)
