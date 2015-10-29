@@ -101,14 +101,6 @@ class PlanManagementCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def newPlansStartDate(now: DateTime): DateTime = {
-    // changing this might mess up book keeping for teams that are waiting for a *new* plan to start, i.e. teams that have just been created / just changed their plan
-    val thatTimeInHours = 20 // 8PM UTC = 1PM PST
-    val thatTimeToday = now.withTimeAtStartOfDay() plusHours thatTimeInHours // Today 8PM UTC = 1PM PST
-    val thatTimeTomorrow = (now plusDays 1).withTimeAtStartOfDay() plusHours thatTimeInHours // Tomorrow 8PM UTC = 1PM PST
-    if (now isBefore thatTimeToday) thatTimeToday else thatTimeTomorrow
-  }
-
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
   def remainingBillingCycleCost(account: PaidAccount, from: DateTime)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
@@ -142,9 +134,9 @@ class PlanManagementCommanderImpl @Inject() (
                 id = inactiveAccountMaybe.flatMap(_.id),
                 orgId = orgId,
                 planId = planId,
-                credit = DollarAmount(0),
-                planRenewal = newPlansStartDate(clock.now()),
-                userContacts = Seq.empty,
+                credit = DollarAmount.ZERO,
+                planRenewal = PlanRenewalPolicy.newPlansStartDate(clock.now()),
+                userContacts = Seq(creator),
                 emailContacts = Seq.empty,
                 activeUsers = 0
               ))
@@ -170,7 +162,6 @@ class PlanManagementCommanderImpl @Inject() (
 
               log.info(s"[PAC] $orgId: Registering owner...")
               registerNewUser(orgId, creator, OrganizationRole.ADMIN, attribution)
-              addUserAccountContactHelper(orgId, creator, attribution)
 
               log.info(s"[PAC] $orgId: Account successfully created!")
               Success(creationEvent)
@@ -262,32 +253,36 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def removeUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent] = db.readWrite { implicit session =>
-    val account = paidAccountRepo.getByOrgId(orgId)
-    val org = orgRepo.get(orgId)
-    if (account.userContacts.contains(userId) && userId != org.ownerId) {
-      val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId))
-      paidAccountRepo.save(updatedAccount)
-      Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-        eventTime = clock.now,
-        accountId = updatedAccount.id.get,
-        attribution = attribution,
-        action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = Some(userId), emailAdded = None, emailRemoved = None)
-      )))
-    } else None
+    accountLockHelper.maybeWithAccountLock(orgId) {
+      val account = paidAccountRepo.getByOrgId(orgId)
+      val org = orgRepo.get(orgId)
+      if (account.userContacts.contains(userId) && userId != org.ownerId) {
+        val updatedAccount = account.copy(userContacts = account.userContacts.filter(_ != userId))
+        paidAccountRepo.save(updatedAccount)
+        Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+          eventTime = clock.now,
+          accountId = updatedAccount.id.get,
+          attribution = attribution,
+          action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = Some(userId), emailAdded = None, emailRemoved = None)
+        )))
+      } else None
+    } getOrElse { throw new LockedAccountException(orgId) }
   }
 
   def removeEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Option[AccountEvent] = db.readWrite { implicit session =>
-    val account = paidAccountRepo.getByOrgId(orgId)
-    if (account.emailContacts.contains(emailAddress)) {
-      val updatedAccount = account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress))
-      paidAccountRepo.save(updatedAccount)
-      Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-        eventTime = clock.now,
-        accountId = updatedAccount.id.get,
-        attribution = attribution,
-        action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = None, emailAdded = None, emailRemoved = Some(emailAddress))
-      )))
-    } else None
+    accountLockHelper.maybeWithAccountLock(orgId) {
+      val account = paidAccountRepo.getByOrgId(orgId)
+      if (account.emailContacts.contains(emailAddress)) {
+        val updatedAccount = account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress))
+        paidAccountRepo.save(updatedAccount)
+        Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+          eventTime = clock.now,
+          accountId = updatedAccount.id.get,
+          attribution = attribution,
+          action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = None, emailAdded = None, emailRemoved = Some(emailAddress))
+        )))
+      } else None
+    } getOrElse { throw new LockedAccountException(orgId) }
   }
 
   def addUserAccountContact(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution): Option[AccountEvent] = db.readWrite { implicit session =>
@@ -295,31 +290,35 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   def addUserAccountContactHelper(orgId: Id[Organization], userId: Id[User], attribution: ActionAttribution)(implicit session: RWSession): Option[AccountEvent] = {
-    val account = paidAccountRepo.getByOrgId(orgId)
-    if (!account.userContacts.contains(userId)) {
-      val updatedAccount = account.copy(userContacts = account.userContacts :+ userId)
-      paidAccountRepo.save(updatedAccount)
-      Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-        eventTime = clock.now,
-        accountId = updatedAccount.id.get,
-        attribution = attribution,
-        action = AccountEventAction.AccountContactsChanged(userAdded = Some(userId), userRemoved = None, emailAdded = None, emailRemoved = None)
-      )))
-    } else None
+    accountLockHelper.maybeWithAccountLock(orgId) {
+      val account = paidAccountRepo.getByOrgId(orgId)
+      if (!account.userContacts.contains(userId)) {
+        val updatedAccount = account.copy(userContacts = account.userContacts :+ userId)
+        paidAccountRepo.save(updatedAccount)
+        Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+          eventTime = clock.now,
+          accountId = updatedAccount.id.get,
+          attribution = attribution,
+          action = AccountEventAction.AccountContactsChanged(userAdded = Some(userId), userRemoved = None, emailAdded = None, emailRemoved = None)
+        )))
+      } else None
+    } getOrElse { throw new LockedAccountException(orgId) }
   }
 
   def addEmailAccountContact(orgId: Id[Organization], emailAddress: EmailAddress, attribution: ActionAttribution): Option[AccountEvent] = db.readWrite { implicit session =>
-    val account = paidAccountRepo.getByOrgId(orgId)
-    if (!account.emailContacts.contains(emailAddress)) {
-      val updatedAccount = account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress) :+ emailAddress)
-      paidAccountRepo.save(updatedAccount)
-      Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
-        eventTime = clock.now,
-        accountId = updatedAccount.id.get,
-        attribution = attribution,
-        action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = None, emailAdded = Some(emailAddress), emailRemoved = None)
-      )))
-    } else None
+    accountLockHelper.maybeWithAccountLock(orgId) {
+      val account = paidAccountRepo.getByOrgId(orgId)
+      if (!account.emailContacts.contains(emailAddress)) {
+        val updatedAccount = account.copy(emailContacts = account.emailContacts.filter(_ != emailAddress) :+ emailAddress)
+        paidAccountRepo.save(updatedAccount)
+        Some(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+          eventTime = clock.now,
+          accountId = updatedAccount.id.get,
+          attribution = attribution,
+          action = AccountEventAction.AccountContactsChanged(userAdded = None, userRemoved = None, emailAdded = Some(emailAddress), emailRemoved = None)
+        )))
+      } else None
+    } getOrElse { throw new LockedAccountException(orgId) }
   }
 
   def getAccountContacts(orgId: Id[Organization]): (Seq[Id[User]], Seq[EmailAddress]) = db.readOnlyMaster { implicit session =>
@@ -473,7 +472,7 @@ class PlanManagementCommanderImpl @Inject() (
         creditRewardCommander.registerUpgradedAccount(orgId)
 
         val now = clock.now()
-        val newPlanStartDate = newPlansStartDate(now)
+        val newPlanStartDate = PlanRenewalPolicy.newPlansStartDate(now)
         val refund = remainingBillingCycleCost(account, from = newPlanStartDate) * account.activeUsers
         val updatedAccount = paidAccountRepo.save(account.withNewPlan(newPlanId).withIncreasedCredit(refund).withPlanRenewal(newPlanStartDate))
         Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(

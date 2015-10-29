@@ -899,6 +899,9 @@ GET           /admin/payments/getAccountActivity           @com.keepit.controlle
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
 
+GET           /admin/payments/resetAccount                 @com.keepit.controllers.admin.AdminPaymentsController.resetAccount(orgId: Id[Organization], doIt: Boolean ?= false)
+GET           /admin/payments/resetAllAccounts                 @com.keepit.controllers.admin.AdminPaymentsController.resetAllAccounts(doIt: Boolean ?= false)
+
 GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard(page: Int ?= 0, kind: Option[String] ?= None)
 
 

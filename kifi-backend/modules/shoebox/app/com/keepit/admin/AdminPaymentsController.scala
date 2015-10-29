@@ -2,12 +2,14 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.time.Clock
 import com.keepit.common.util.{ PaginationHelper, Paginator }
 import com.keepit.model._
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
 import org.joda.time.DateTime
+import com.keepit.common.time._
 
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.{ Json, JsArray }
@@ -31,6 +33,12 @@ class AdminPaymentsController @Inject() (
     planCommander: PlanManagementCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     stripeClient: StripeClient,
+    activityLogCommander: ActivityLogCommander,
+    eventTrackingCommander: AccountEventTrackingCommander,
+    creditRewardCommander: CreditRewardCommander,
+    rewardRepo: CreditRewardRepo,
+    accountLockHelper: AccountLockHelper,
+    clock: Clock,
     db: Database) extends AdminUserActions {
 
   val EXTRA_SPECIAL_ADMINS: Set[Id[User]] = Set(1, 3, 61, 134).map(Id[User](_))
@@ -222,6 +230,92 @@ class AdminPaymentsController @Inject() (
       AdminPaymentsDashboard(frozenAccounts, recentEvents, orgsByAccountId, paginationHelper)
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))
+  }
+
+  // todo(Léo): REMOVE THIS IS EVIL
+  def resetAllAccounts(doIt: Boolean) = AdminUserAction { implicit request =>
+    if (doIt) {
+      SafeFuture {
+        val activeOrgIds = db.readOnlyMaster { implicit session =>
+          organizationRepo.allActive.map(_.id.get)
+        }
+        activeOrgIds.map(doResetAccount)
+      }
+      Ok("Hold your breath.")
+    } else {
+      BadRequest("You don't want to do this.")
+    }
+  }
+
+  def resetAccount(orgId: Id[Organization], doIt: Boolean) = AdminUserAction.async { implicit request =>
+    if (doIt) SafeFuture {
+      val events = doResetAccount(orgId).map(activityLogCommander.buildSimpleEventInfo)
+      Ok(Json.toJson(events))
+    }
+    else {
+      Future.successful(BadRequest("You don't want to do this."))
+    }
+  }
+
+  private def doResetAccount(orgId: Id[Organization]): Seq[AccountEvent] = {
+    db.readWrite { implicit session =>
+
+      // Reset account consistently with PlanManagementCommander.createAndInitializePaidAccountForOrganization
+      val organization = organizationRepo.get(orgId)
+      val account = accountLockHelper.maybeWithAccountLock(orgId) {
+        val account = paidAccountRepo.getByOrgId(orgId)
+        paidAccountRepo.save(account.copy(
+          credit = DollarAmount.ZERO,
+          planRenewal = PlanRenewalPolicy.newPlansStartDate(clock.now()),
+          userContacts = Seq(organization.ownerId),
+          emailContacts = Seq.empty,
+          activeUsers = 0
+        ))
+      } getOrElse {
+        throw new LockedAccountException(orgId)
+      }
+
+      // Deactivate all existing events
+      accountEventRepo.getAllByAccount(account.id.get).foreach { event =>
+        accountEventRepo.save(event.withState(AccountEventStates.INACTIVE))
+      }
+
+      // Deactivate all existing rewards
+      rewardRepo.getByAccount(account.id.get).foreach { reward =>
+        rewardRepo.save(reward.copy(state = CreditRewardStates.INACTIVE))
+      }
+
+      // Prepare
+
+      val memberships = orgMembershipRepo.getAllByOrgId(orgId)
+
+      // Generate CreateOrganization Event
+      val creationEvent = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+        eventTime = memberships.map(_.createdAt).min,
+        accountId = account.id.get,
+        attribution = ActionAttribution(Some(organization.ownerId), None),
+        action = AccountEventAction.OrganizationCreated(account.planId, Some(account.planRenewal))
+      ))
+
+      // Grant new welcome reward
+      val eventId = creditRewardCommander.createCreditReward(CreditReward(
+        accountId = account.id.get,
+        credit = DollarAmount.dollars(50),
+        applied = None,
+        reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+        unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
+        code = None
+      ), userAttribution = organization.ownerId).get.applied.get
+      accountEventRepo.save(accountEventRepo.get(eventId).copy(eventTime = creationEvent.eventTime))
+
+      // Register all members
+      memberships.toSeq.sortBy(_.createdAt).foreach { membership =>
+        val event = planCommander.registerNewUser(orgId, membership.userId, membership.role, ActionAttribution(Some(organization.ownerId), None))
+        accountEventRepo.save(event.copy(eventTime = membership.createdAt))
+      }
+
+      accountEventRepo.getAllByAccount(account.id.get)
+    }
   }
 }
 
