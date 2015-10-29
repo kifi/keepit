@@ -32,4 +32,15 @@
         }
     </ul>
     }
+
+    @if(dash.failedAccounts.nonEmpty) {
+    <h2>Some accounts have failed their most recent payment</h2>
+    <ul>
+        @for(account <- dash.failedAccounts) {
+            <li>
+                @adminHelper.orgDisplay(account.organization)
+            </li>
+        }
+    </ul>
+    }
 }
