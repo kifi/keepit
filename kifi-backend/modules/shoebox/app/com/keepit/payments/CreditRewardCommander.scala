@@ -52,7 +52,7 @@ class CreditRewardCommanderImpl @Inject() (
         val suffixes = "" +: Iterator.continually("-" + RandomStringUtils.randomNumeric(2)).take(9).toStream
         suffixes.map { suf =>
           creditCodeInfoRepo.create(CreditCodeInfo(
-            code = CreditCode.normalize(org.primaryHandle.get.normalized.value + suf),
+            code = CreditCode.normalize(org.primaryHandle.get.normalized.value + suf + "-" + newOrgReferralCredit.toCents / 100),
             kind = CreditCodeKind.OrganizationReferral,
             credit = newOrgReferralCredit,
             status = CreditCodeStatus.Open,
