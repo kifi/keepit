@@ -94,7 +94,7 @@ class ActivityLogCommanderImpl @Inject() (
             case None => Elements("Your billing contacts were updated", maybeUser.map(Elements("by", _)))
           }
         }
-        case OrganizationCreated(initialPlanId, _) => Elements("The", org, "team was created by", maybeUser.get, "and enrolled in the", paidPlanRepo.get(initialPlanId), "plan")
+        case OrganizationCreated(initialPlanId, _) => Elements("The", org, "team was created", maybeUser.map(Elements("by", _)), "and enrolled in the", paidPlanRepo.get(initialPlanId), "plan")
       }
     }
     SimpleAccountEventInfo(
