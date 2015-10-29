@@ -67,16 +67,16 @@ class ActivityLogCommanderImpl @Inject() (
         case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information"
         case MissingPaymentMethod() => s"We failed to process your payment, please register a default payment method."
         case UserJoinedOrganization(who, role) => maybeUser match {
-          case Some(`who`) => Elements(basicUserRepo.load(who), "joined your team", Some(role).collect { case OrganizationRole.ADMIN => "and is now admin" })
-          case _ => Elements(basicUserRepo.load(who), "was added to your team", maybeUser.map(Elements("by", _)), Some(role).collect { case OrganizationRole.ADMIN => "and is now admin" })
+          case Some(user) if user != who => Elements(basicUserRepo.load(who), "was added to your team by", user, Some(role).collect { case OrganizationRole.ADMIN => "and is now admin" })
+          case _ => Elements(basicUserRepo.load(who), "joined your team", Some(role).collect { case OrganizationRole.ADMIN => "and is now admin" })
         }
         case UserLeftOrganization(who, oldRole) => maybeUser match {
-          case Some(`who`) => Elements(basicUserRepo.load(who), "left your team", Some(oldRole).collect { case OrganizationRole.ADMIN => "and is no longer admin" })
-          case _ => Elements(basicUserRepo.load(who), "was removed from your team", maybeUser.map(Elements("by", _)), Some(oldRole).collect { case OrganizationRole.ADMIN => "and is no longer admin" })
+          case Some(user) if user != who => Elements(basicUserRepo.load(who), "was removed from your team by", user, Some(oldRole).collect { case OrganizationRole.ADMIN => "and is no longer admin" })
+          case _ => Elements(basicUserRepo.load(who), "left your team", Some(oldRole).collect { case OrganizationRole.ADMIN => "and is no longer admin" })
         }
         case OrganizationRoleChanged(who, oldRole, newRole) => maybeUser match {
-          case Some(`who`) => Elements(basicUserRepo.load(who), "'s role changed from", oldRole, "to", newRole)
-          case _ => Elements(basicUserRepo.load(who), "'s role was changed from", oldRole, "to", newRole, maybeUser.map(Elements("by", _)))
+          case Some(user) if user != who => Elements(basicUserRepo.load(who), "'s role was changed from", oldRole, "to", newRole, "by", user)
+          case _ => Elements(basicUserRepo.load(who), "'s role changed from", oldRole, "to", newRole)
         }
         case PlanChanged(oldPlanId, newPlanId, _) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
         case PaymentMethodAdded(_, lastFour) => Elements(s"A credit card ending in $lastFour was added", maybeUser.map(Elements("by", _)))
