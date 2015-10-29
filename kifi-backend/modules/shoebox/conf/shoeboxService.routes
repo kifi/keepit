@@ -748,11 +748,6 @@ GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUse
 GET     /admin/usersPotentialOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.usersPotentialOrgsView(page: Int)
 GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.linkedInUsersWithoutOrgsView(page: Int)
 
-# TEMPORARY ROUTE - remove when activity email is live
-POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
-
-GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
-
 POST    /admin/social_users/migrateHashColumn               @com.keepit.controllers.admin.AdminSocialUserController.migrateHashColumn(page: Int, iters: Int)
 POST    /admin/social_users/smoothLastGraphRefreshTimes     @com.keepit.controllers.admin.AdminSocialUserController.smoothLastGraphRefreshTimes(minutesFromNow: Int)
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
@@ -901,6 +896,7 @@ GET           /admin/payments/getAccountActivity           @com.keepit.controlle
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
 
+GET           /admin/payments/checkIntegrity               @com.keepit.controllers.admin.AdminPaymentsController.checkIntegrity(orgId: Id[Organization], doIt: Boolean ?= false)
 GET           /admin/payments/resetAccount                 @com.keepit.controllers.admin.AdminPaymentsController.resetAccount(orgId: Id[Organization], doIt: Boolean ?= false)
 GET           /admin/payments/resetAllAccounts             @com.keepit.controllers.admin.AdminPaymentsController.resetAllAccounts(doIt: Boolean ?= false)
 GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard

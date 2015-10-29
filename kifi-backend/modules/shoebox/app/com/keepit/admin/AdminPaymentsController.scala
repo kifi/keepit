@@ -36,6 +36,7 @@ class AdminPaymentsController @Inject() (
     paymentProcessingCommander: PaymentProcessingCommander,
     creditCodeInfoRepo: CreditCodeInfoRepo,
     stripeClient: StripeClient,
+    integrityChecker: PaymentsIntegrityChecker,
     activityLogCommander: ActivityLogCommander,
     eventTrackingCommander: AccountEventTrackingCommander,
     creditRewardCommander: CreditRewardCommander,
@@ -255,6 +256,18 @@ class AdminPaymentsController @Inject() (
       AdminPaymentsDashboard(totalAmortizedIncomePerMonth, planEnrollment, frozenAccounts)
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))
+  }
+
+  def checkIntegrity(orgId: Id[Organization], doIt: Boolean) = AdminUserAction.async { implicit request =>
+    if (doIt) {
+      SafeFuture {
+        val errors = integrityChecker.checkAccount(orgId)
+        val result = Json.toJson(errors)
+        Ok(result)
+      }
+    } else {
+      Future.successful(BadRequest("You don't want to do this."))
+    }
   }
 
   // todo(Léo): REMOVE THIS IS EVIL

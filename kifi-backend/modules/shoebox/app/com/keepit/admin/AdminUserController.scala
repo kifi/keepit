@@ -916,17 +916,6 @@ class AdminUserController @Inject() (
     handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
   }
 
-  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction { request =>
-    log.info(s"About to deactivate UserEmailAddress $id")
-    val inactiveEmail = db.readWrite { implicit session =>
-      val userEmail = emailRepo.get(id)
-      userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
-      userEmailAddressCommander.deactivate(userEmail).get
-    }
-    log.info(s"Deactivated UserEmailAddress $inactiveEmail")
-    Ok(JsString(inactiveEmail.toString))
-  }
-
   def setUsername(userId: Id[User]) = AdminUserPage { request =>
     val username: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("username").flatMap(_.headOption)).filter(_.length > 0)
     username.map { newUsername =>
