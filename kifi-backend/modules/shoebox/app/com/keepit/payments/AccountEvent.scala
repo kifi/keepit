@@ -5,7 +5,6 @@ import javax.crypto.spec.IvParameterSpec
 import com.amazonaws.services.cloudfront.model.InvalidArgumentException
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
-import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
 import com.keepit.model.{ OrganizationRole, User }
 import com.keepit.common.mail.EmailAddress
@@ -19,7 +18,7 @@ sealed abstract class AccountEventKind(val value: String)
 object AccountEventKind {
   case object AccountContactsChanged extends AccountEventKind("account_contacts_changed")
   case object Charge extends AccountEventKind("charge")
-  case object ChargeBack extends AccountEventKind("charge_back")
+  case object Refund extends AccountEventKind("refund")
   case object ChargeFailure extends AccountEventKind("charge_failure")
   case object DefaultPaymentMethodChanged extends AccountEventKind("default_payment_method_changed")
   case object IntegrityError extends AccountEventKind("integrity_error")
@@ -38,11 +37,10 @@ object AccountEventKind {
   val all: Set[AccountEventKind] = Set(
     AccountContactsChanged,
     Charge,
-    ChargeBack,
+    Refund,
     ChargeFailure,
     DefaultPaymentMethodChanged,
     IntegrityError,
-    LowBalanceIgnored,
     MissingPaymentMethod,
     OrganizationCreated,
     PaymentMethodAdded,
@@ -59,7 +57,7 @@ object AccountEventKind {
   val activityLog: Set[AccountEventKind] = Set(
     OrganizationCreated,
     Charge,
-    ChargeBack,
+    Refund,
     ChargeFailure,
     DefaultPaymentMethodChanged,
     PlanRenewal,
@@ -73,7 +71,7 @@ object AccountEventKind {
 
   val billing: Set[AccountEventKind] = Set(
     Charge,
-    ChargeBack,
+    Refund,
     ChargeFailure,
     DefaultPaymentMethodChanged,
     IntegrityError,
@@ -134,8 +132,8 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def eventType = AccountEventKind.Charge
   }
 
-  case class ChargeBack() extends AccountEventAction with Payloadless {
-    def eventType = AccountEventKind.ChargeBack
+  case class Refund() extends AccountEventAction with Payloadless {
+    def eventType = AccountEventKind.Refund
   }
 
   @json
@@ -208,7 +206,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case AccountEventKind.PlanRenewal => extras.as[PlanRenewal]
     case AccountEventKind.LowBalanceIgnored => extras.as[LowBalanceIgnored]
     case AccountEventKind.Charge => Charge()
-    case AccountEventKind.ChargeBack => ChargeBack()
+    case AccountEventKind.Refund => Refund()
     case AccountEventKind.ChargeFailure => extras.as[ChargeFailure]
     case AccountEventKind.IntegrityError => extras.as[IntegrityError]
     case AccountEventKind.MissingPaymentMethod => MissingPaymentMethod()
