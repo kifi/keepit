@@ -557,8 +557,8 @@ class AdminUserController @Inject() (
     }
   }
 
-  def addExperimentForUsers(experiment: String, userIdsString: String) = AdminUserAction { request =>
-    val userIds = userIdsString.split(",").map(id => Id[User](id.trim.toLong))
+  def addExperimentForUsers(experiment: String) = AdminUserAction { request =>
+    val userIds = request.body.asText.get.split(",").map(id => Id[User](id.trim.toLong))
     val successIds = userIds map { userId =>
       addExperiment(requesterUserId = request.userId, userId, experiment) match {
         case Right(expType) => Some(userId)
