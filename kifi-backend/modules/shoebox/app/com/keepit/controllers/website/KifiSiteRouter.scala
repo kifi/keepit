@@ -70,12 +70,12 @@ class KifiSiteRouter @Inject() (
 
   def redirectFromPricing = WebAppPage { implicit request =>
     request match {
-      case r: NonUserRequest[_] => redirectToLogin("/pricing", r)
+      case r: NonUserRequest[_] => Redirect("/about/pricing")
       case u: UserRequest[_] =>
         val orgToUpgrade = db.readOnlyReplica { implicit session =>
           orgMembershipRepo.getAllByUserId(u.userId).sortBy(_.role).map(_.organizationId).headOption.map(orgRepo.get)
         }
-        orgToUpgrade.map { org => Redirect(s"/${org.handle.urlEncoded}/settings/plan") } getOrElse Redirect("/teams/new")
+        orgToUpgrade.map { org => Redirect(s"/${org.handle.urlEncoded}/settings/plan") } getOrElse Redirect("/about/pricing")
     }
   }
 
