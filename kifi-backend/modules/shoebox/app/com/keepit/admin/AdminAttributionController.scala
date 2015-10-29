@@ -121,18 +121,6 @@ class AdminAttributionController @Inject() (
     }
   }
 
-  def myReKeeps() = AdminUserPage.async { implicit request =>
-    getReKeepInfos(request.userId) map {
-      case (u, n, rekeeps, users, counts) =>
-        Ok(html.admin.myReKeeps(u, n, users map { case (keep, users) => (keep, users(1).size, users.flatten.length - 1, users) }))
-    }
-  }
-
-  def myKeepInfos() = AdminUserPage { implicit request =>
-    val (u, clicks, rekeeps, rekepts) = getKeepInfos(request.userId)
-    Ok(html.admin.myKeepInfos(u, clicks, rekeeps, rekepts))
-  }
-
   val topReKeepsReqConsolidator = new RequestConsolidator[Int, Seq[(NormalizedURI, Seq[(Keep, Seq[Seq[User]])])]](ttl = 5 seconds)
   def getTopReKeeps(degree: Int) = topReKeepsReqConsolidator(degree) { degree =>
     val rkMap = Map.empty[Id[Keep], Int] // rekeepRepo.getAllDirectReKeepCountsByKeep()
