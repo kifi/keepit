@@ -87,7 +87,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def triggerSocialGraphFetch(id: Id[SocialUserInfo]): Future[Unit]
   def getUserConnectionsChanged(seqNum: SequenceNumber[UserConnection], fetchSize: Int): Future[Seq[UserConnection]]
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]]
-  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
   def getUserImageUrl(userId: Id[User], width: Int): Future[String]
   def getUnsubscribeUrlForEmail(email: EmailAddress): Future[String]
   def getIndexableSocialConnections(seqNum: SequenceNumber[SocialConnection], fetchSize: Int): Future[Seq[IndexableSocialConnection]]
@@ -591,12 +590,6 @@ class ShoeboxServiceClientImpl @Inject() (
   def getSearchFriendsChanged(seqNum: SequenceNumber[SearchFriend], fetchSize: Int): Future[Seq[SearchFriend]] = {
     call(Shoebox.internal.getSearchFriendsChanged(seqNum, fetchSize), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
       Json.fromJson[Seq[SearchFriend]](r.json).get
-    }
-  }
-
-  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    call(Shoebox.internal.getCandidateURIs(), body = Json.toJson(uris), callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { r =>
-      r.json.as[Seq[Boolean]]
     }
   }
 

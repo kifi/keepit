@@ -536,11 +536,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(if (fetchSize < 0) changed else changed.take(fetchSize))
   }
 
-  def getCandidateURIs(uris: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]] = {
-    callsGetToCandidateURIs += uris
-    Future.successful(Seq.fill(uris.size)(true))
-  }
-
   def getUserImageUrl(userId: Id[User], width: Int): Future[String] = synchronized {
     Future.successful(allUserImageUrls.getOrElse(userId, "https://www.kifi.com/assets/img/ghost.200.png"))
   }
