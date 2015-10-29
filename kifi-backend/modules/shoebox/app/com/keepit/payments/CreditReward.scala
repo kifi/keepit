@@ -90,7 +90,7 @@ object RewardStatus {
   }
 
   trait WithEmptyInfo extends WithIndependentInfo[None.type] { self: RewardKind =>
-    val infoFormat: Format[None.type] = Format(
+    lazy val infoFormat: Format[None.type] = Format(
       Reads {
         case JsNull => JsSuccess(None)
         case unknown => JsError(s"Unknown RewardStatus info: $unknown")
