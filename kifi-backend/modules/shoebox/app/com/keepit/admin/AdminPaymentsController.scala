@@ -272,7 +272,7 @@ class AdminPaymentsController @Inject() (
 
   // todo(Léo): REMOVE THIS IS EVIL
   def resetAllAccounts(doIt: Boolean) = AdminUserAction { implicit request =>
-    if (doIt) {
+    if (request.userId.id == 134 && doIt) {
       SafeFuture {
         val activeOrgIds = db.readOnlyMaster { implicit session =>
           orgRepo.allActive.map(_.id.get)
