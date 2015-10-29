@@ -343,7 +343,6 @@ GET     /teams-confirmation         @com.keepit.controllers.website.HomeControll
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
-GET     /pricing                    @com.keepit.controllers.website.HomeController.route(path = "pricing")
 GET     /about/pricing              @com.keepit.controllers.website.HomeController.route(path = "pricing")
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
