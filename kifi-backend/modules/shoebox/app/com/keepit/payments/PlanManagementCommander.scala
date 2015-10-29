@@ -158,7 +158,7 @@ class PlanManagementCommanderImpl @Inject() (
                 reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
                 unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
                 code = None
-              ), userAttribution = creator).get
+              ), userAttribution = Some(creator)).get
 
               log.info(s"[PAC] $orgId: Registering owner...")
               registerNewUser(orgId, creator, OrganizationRole.ADMIN, attribution)

@@ -17,7 +17,7 @@ import scala.util.{ Success, Failure, Try }
 @ImplementedBy(classOf[CreditRewardCommanderImpl])
 trait CreditRewardCommander {
   // Generic API for creating a credit reward (use for one-off rewards, like the org creation bonus)
-  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward]
+  def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward]
 
   // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
@@ -73,8 +73,8 @@ class CreditRewardCommanderImpl @Inject() (
     } yield rewards
   }
 
-  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward] = {
-    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, Some(userAttribution)) }
+  def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward] = {
+    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, userAttribution) }
   }
 
   private def createRewardsFromCreditCode(creditCodeInfo: CreditCodeInfo, accountId: Id[PaidAccount], userId: Id[User], orgId: Option[Id[Organization]])(implicit session: RWSession): Try[CreditCodeRewards] = {

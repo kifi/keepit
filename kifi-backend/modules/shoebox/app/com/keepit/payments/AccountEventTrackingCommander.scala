@@ -72,7 +72,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
           username = "Activity",
           channel = Some(channel)
         )
-        httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
+        // httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg)) // todo(Léo): REACTIVATE
+        Future.successful(())
       } else {
         Future.successful(())
       }
