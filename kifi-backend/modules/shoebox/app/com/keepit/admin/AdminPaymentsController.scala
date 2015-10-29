@@ -313,12 +313,13 @@ class AdminPaymentsController @Inject() (
       // Prepare
 
       val memberships = orgMembershipRepo.getAllByOrgId(orgId)
+      val noAttribution = ActionAttribution(None, None)
 
       // Generate CreateOrganization Event
       val creationEvent = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
         eventTime = memberships.map(_.createdAt).min,
         accountId = account.id.get,
-        attribution = ActionAttribution(Some(organization.ownerId), None),
+        attribution = noAttribution,
         action = AccountEventAction.OrganizationCreated(account.planId, Some(account.planRenewal))
       ))
 
@@ -330,12 +331,12 @@ class AdminPaymentsController @Inject() (
         reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
         unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
         code = None
-      ), userAttribution = organization.ownerId).get.applied.get
+      ), userAttribution = None).get.applied.get
       accountEventRepo.save(accountEventRepo.get(eventId).copy(eventTime = creationEvent.eventTime))
 
       // Register all members
       memberships.toSeq.sortBy(_.createdAt).foreach { membership =>
-        val event = planCommander.registerNewUser(orgId, membership.userId, membership.role, ActionAttribution(Some(organization.ownerId), None))
+        val event = planCommander.registerNewUser(orgId, membership.userId, membership.role, noAttribution)
         accountEventRepo.save(event.copy(eventTime = membership.createdAt))
       }
 
