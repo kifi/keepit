@@ -240,7 +240,7 @@ class KifiSiteRouter @Inject() (
   }
 
   private def lookupByHandle(handle: Handle): Option[(Either[Organization, User], Option[Int])] = {
-    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
+    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle).filterNot(_ == Right(Id(97543))) }
     handleOwnerOpt.map {
       case (handleOwner, isPrimary) =>
         val foundHandle = handleOwner match {

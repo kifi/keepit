@@ -11,12 +11,19 @@ angular.module('kifi')
       templateUrl: 'teamSettings/redeemCredits.tpl.html',
       scope: {
         profile: '=',
-        standalone: '='
+        standalone: '=',
+        autofocus: '='
       },
-      link: function($scope) {
+      link: function($scope, $element) {
 
         $scope.$error = {};
         $scope.creditRedeemed = 0;
+
+        if ($scope.autofocus) {
+          $timeout(function() {
+              $element.find('.kf-redeem-credits-box').focus();
+          });
+        }
 
         $scope.applyReferralCode = function (code) {
           $scope.creditRedeemed = 0;
