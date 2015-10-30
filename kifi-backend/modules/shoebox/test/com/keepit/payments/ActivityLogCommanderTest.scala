@@ -25,7 +25,8 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
     "display events in a sane way" in {
       def setup()(implicit injector: Injector): Seq[AccountEvent] = db.readWrite { implicit session =>
         val owner = UserFactory.user().withName("Owner", "OwnerLN").saved
-        val org = OrganizationFactory.organization().withName("Org").withOwner(owner).saved
+        val member = UserFactory.user().withName("Member", "MemberLN").saved
+        val org = OrganizationFactory.organization().withName("Org").withOwner(owner).withMembers(Seq(member)).saved
         val account = paidAccountRepo.getByOrgId(org.id.get)
         val plan = paidPlanRepo.get(account.planId)
 
@@ -56,10 +57,11 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
           event(Some(owner), AccountEventAction.PlanChanged(plan.id.get, plan.id.get, None)),
           event(Some(owner), AccountEventAction.RewardCredit(createReward.id.get)),
           event(Some(owner), AccountEventAction.SpecialCredit()),
-          event(Some(owner), AccountEventAction.UserJoinedOrganization(owner.id.get, OrganizationRole.ADMIN)),
-          event(Some(owner), AccountEventAction.UserLeftOrganization(owner.id.get, OrganizationRole.ADMIN)),
+          event(Some(owner), AccountEventAction.UserJoinedOrganization(member.id.get, OrganizationRole.MEMBER)),
+          event(Some(owner), AccountEventAction.UserJoinedOrganization(member.id.get, OrganizationRole.ADMIN)),
+          event(Some(owner), AccountEventAction.UserLeftOrganization(member.id.get, OrganizationRole.ADMIN)),
           event(None, AccountEventAction.UserLeftOrganization(owner.id.get, OrganizationRole.ADMIN)),
-          event(Some(owner), AccountEventAction.OrganizationRoleChanged(owner.id.get, OrganizationRole.MEMBER, OrganizationRole.ADMIN))
+          event(Some(owner), AccountEventAction.OrganizationRoleChanged(member.id.get, OrganizationRole.MEMBER, OrganizationRole.ADMIN))
         )
       }
 
@@ -78,10 +80,11 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         display(e.next()) === "Your plan was changed from Free to Free by Owner."
         display(e.next()) === "You earned $42.00 because you're awesome!" // if this test breaks, yell at Ryan
         display(e.next()) === "Special credit was granted to your team by Kifi Support thanks to Owner."
-        display(e.next()) === "Owner was added to your team by Owner and is now an admin."
-        display(e.next()) === "Owner was removed from your team by Owner and is no longer an admin."
+        display(e.next()) === "Member was added to your team by Owner."
+        display(e.next()) === "Member was added to your team by Owner and is now an admin."
+        display(e.next()) === "Member was removed from your team by Owner and is no longer an admin."
         display(e.next()) === "Owner left your team and is no longer an admin."
-        display(e.next()) === "Owner's role was changed from member to admin by Owner."
+        display(e.next()) === "Member's role was changed from member to admin by Owner."
         e.hasNext === false
 
         1 === 1
