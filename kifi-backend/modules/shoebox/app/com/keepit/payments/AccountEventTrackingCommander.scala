@@ -86,7 +86,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
         val description = info.description.flatten.map {
           case BasicElement(text, None) => text
           case BasicElement(text, Some(url)) => s"<$url|$text>"
-        } mkString ("")
+        } mkString
         val orgHeader = s"<https://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>"
         s"[$orgHeader] $description | ${info.creditChange}"
       }
