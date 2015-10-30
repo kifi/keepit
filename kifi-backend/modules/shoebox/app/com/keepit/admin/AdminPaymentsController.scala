@@ -302,7 +302,7 @@ class AdminPaymentsController @Inject() (
   }
 
   private def doResetAccount(orgId: Id[Organization]): Seq[AccountEvent] = {
-    planCommander.changePlan(orgId, Id[PaidPlan](3), ActionAttribution(None, None)).get // move to Free plan
+    planCommander.changePlan(orgId, Id[PaidPlan](3), ActionAttribution(None, None)).recover { case ex: InvalidChange => () }.get // move to Free plan
     db.readWrite { implicit session =>
 
       // Reset account consistently with PlanManagementCommander.createAndInitializePaidAccountForOrganization
