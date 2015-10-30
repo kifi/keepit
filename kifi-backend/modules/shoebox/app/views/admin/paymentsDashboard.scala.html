@@ -5,18 +5,18 @@
 
 @views.html.admin.admin("Payments Dashboard", stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
 
-    <h1>We are making @{dash.totalAmortizedIncomePerMonth.toDollarString} a month</h1>
+    <h1>We are making @{dash.totalAmortizedIncomePerMonth.cur.toDollarString} a month (from @{dash.totalAmortizedIncomePerMonth.old.toDollarString})</h1>
 
     <table class="table table-condensed table-striped">
         <thead>
         <th>Plan</th><th>Number of Accounts</th><th>Number of Active Users</th>
         </thead>
         <tbody>
-        @for((plan, (numAccounts, numUsers)) <- dash.planEnrollment) {
+        @for((plan, enrollmentHistory) <- dash.planEnrollment) {
         <tr>
             <td>@{plan.displayName}</td>
-            <td>@numAccounts</td>
-            <td>@numUsers</td>
+            <td>@{enrollmentHistory.cur.numAccounts} (from @{enrollmentHistory.old.numAccounts})</td>
+            <td>@{enrollmentHistory.cur.numActiveUsers} (from @{enrollmentHistory.old.numActiveUsers})</td>
         </tr>
         }
         </tbody>
