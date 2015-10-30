@@ -1,41 +1,46 @@
 @import com.keepit.controllers.admin.AdminPaymentsDashboard
 @import com.keepit.common.controller.PaginatedRequest
 
-@(dashboard: AdminPaymentsDashboard)(implicit request: com.keepit.common.controller.UserRequest[_])
+@(dash: AdminPaymentsDashboard)(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @views.html.admin.admin("Payments Dashboard", stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
-    @if(dashboard.frozenAccounts.nonEmpty) {
+
+    <h1>We are making @{dash.totalAmortizedIncomePerMonth.toDollarString} a month</h1>
+
+    <table class="table table-condensed table-striped">
+        <thead>
+        <th>Plan</th><th>Number of Accounts</th><th>Number of Active Users</th>
+        </thead>
+        <tbody>
+        @for((plan, (numAccounts, numUsers)) <- dash.planEnrollment) {
+        <tr>
+            <td>@{plan.displayName}</td>
+            <td>@numAccounts</td>
+            <td>@numUsers</td>
+        </tr>
+        }
+        </tbody>
+    </table>
+
+    @if(dash.frozenAccounts.nonEmpty) {
     <h2>Frozen Accounts!</h2>
     <ul>
-        @for(account <- dashboard.frozenAccounts) {
+        @for(account <- dash.frozenAccounts) {
             <li>
-                @adminHelper.orgDisplay(dashboard.orgsByAccountId(account.id.get))
+                @adminHelper.orgDisplay(account.organization)
             </li>
         }
     </ul>
     }
 
-    @views.html.admin.adminHelper.pagination(dashboard.paginationHelper.page, dashboard.paginationHelper.itemCount, dashboard.paginationHelper.pageSize, dashboard.paginationHelper.otherPagesRoute) {
-        <table class="table table-condensed table-striped">
-            <thead>
-            <th>Id</th><th>Organization</th><th>Action</th><th>Event Time</th><th>Who Done It?</th><th>Admin?</th><th>Credit Change</th><th>Payment Charge</th><th>Memo</th><th>Extra</th>
-            </thead>
-            <tbody>
-            @for(event <- dashboard.recentEvents) {
-            <tr>
-                <td>@{event.id}</td>
-                <td>@adminHelper.orgDisplay(dashboard.orgsByAccountId(event.accountId))</td>
-                <td>@{event.action.eventType}</td>
-                <td>@adminHelper.dateTimeDisplay(event.eventTime)</td>
-                <td>@event.whoDunnit.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
-                <td>@event.adminInvolved.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
-                <td>@{event.creditChange.toDollarString}</td>
-                <td>@{event.paymentCharge.map(_.toDollarString)}</td>
-                <td>@{event.memo.getOrElse("")}</td>
-                <td>@{event.action.toDbRow}</td>
-            </tr>
-            }
-            </tbody>
-        </table>
+    @if(dash.failedAccounts.nonEmpty) {
+    <h2>Some accounts have failed their most recent payment</h2>
+    <ul>
+        @for(account <- dash.failedAccounts) {
+            <li>
+                @adminHelper.orgDisplay(account.organization)
+            </li>
+        }
+    </ul>
     }
 }

@@ -332,6 +332,8 @@ GET     /about/join_us              @com.keepit.controllers.website.HomeControll
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
+GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
+GET     /imports/instapaper         @com.keepit.controllers.website.HomeController.route(path = "imports/instapaper")
 GET     /imports/evernote           @com.keepit.controllers.website.HomeController.route(path = "imports/evernote")
 GET     /imports/diigo              @com.keepit.controllers.website.HomeController.route(path = "imports/diigo")
 GET     /imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
@@ -341,6 +343,7 @@ GET     /teams-confirmation         @com.keepit.controllers.website.HomeControll
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
+GET     /about/pricing              @com.keepit.controllers.website.HomeController.route(path = "pricing")
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect
@@ -597,7 +600,7 @@ GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmar
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 POST    /admin/bookmarks/populateNotes @com.keepit.controllers.admin.AdminBookmarksController.populateKeepNotesWithTag(page: Int ?= 0, size: Int ?= 500, grouping: Int ?= 500)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
-GET    /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.controllers.admin.AdminBookmarksController.checkLibraryKeepVisibility(libId: Id[Library])
+GET     /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.controllers.admin.AdminBookmarksController.checkLibraryKeepVisibility(libId: Id[Library])
 
 GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
@@ -616,8 +619,6 @@ POST    /admin/domains/overrides       @com.keepit.controllers.admin.UrlControll
 GET     /admin/keepDiscoveries/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/keepClicks/page/:page @com.keepit.controllers.admin.AdminAttributionController.keepDiscoveriesView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
 GET     /admin/rekeeps/page/:page    @com.keepit.controllers.admin.AdminAttributionController.rekeepsView(page:Int, size:Int ?= 50, showImage:Boolean ?= false)
-GET     /admin/myKeepInfos           @com.keepit.controllers.admin.AdminAttributionController.myKeepInfos()
-GET     /admin/myReKeeps             @com.keepit.controllers.admin.AdminAttributionController.myReKeeps()
 GET     /admin/keepInfos/:id         @com.keepit.controllers.admin.AdminAttributionController.keepInfos(id:Id[User])
 GET     /admin/reKeeps/:id           @com.keepit.controllers.admin.AdminAttributionController.reKeepInfos(id:Id[User])
 GET     /admin/topReKeeps            @com.keepit.controllers.admin.AdminAttributionController.topReKeeps(degree:Int ?= 3)
@@ -705,7 +706,7 @@ GET    /admin/users/mixpanel/delete          @com.keepit.controllers.admin.Admin
 POST    /admin/user/:id/emails/:code/send    @com.keepit.controllers.admin.AdminUserController.sendEmail(id: Id[User], code: String)
 POST    /admin/user/:id/ignorePotentialOrgs      @com.keepit.controllers.admin.AdminUserController.setIgnoreForPotentialOrganizations(id: Id[User])
 POST    /admin/user/:userId/hideOrganizationRecommendation @com.keepit.controllers.admin.AdminUserController.hideOrganizationRecoForUser(userId: Id[User], orgId: Id[Organization])
-POST    /admin/experiment/:exp/add  @com.keepit.controllers.admin.AdminUserController.addExperimentForUsers(exp: String, userIds: String)
+POST    /admin/experiment/:exp/add  @com.keepit.controllers.admin.AdminUserController.addExperimentForUsers(exp: String)
 
 
 GET     /admin/organization/:id                              @com.keepit.controllers.admin.AdminOrganizationController.organizationViewByEitherId(id: String, numMemberRecos: Int ?= 60)
@@ -745,11 +746,6 @@ GET     /admin/usersPotentialOrgs       @com.keepit.controllers.admin.AdminUserC
 GET     /admin/linkedInUsersWithoutOrgs   @com.keepit.controllers.admin.AdminUserController.allLinkedInUsersWithoutOrgsView
 GET     /admin/usersPotentialOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.usersPotentialOrgsView(page: Int)
 GET     /admin/linkedInUsersWithoutOrgs/page/:page @com.keepit.controllers.admin.AdminUserController.linkedInUsersWithoutOrgsView(page: Int)
-
-# TEMPORARY ROUTE - remove when activity email is live
-POST    /admin/sendActivityEmailToAll    @com.keepit.controllers.admin.AdminUserController.sendActivityEmailToAll()
-
-GET     /admin/deactivateEmailAddress/:id     @com.keepit.controllers.admin.AdminUserController.deactivateUserEmailAddress(id: Id[UserEmailAddress])
 
 POST    /admin/social_users/migrateHashColumn               @com.keepit.controllers.admin.AdminSocialUserController.migrateHashColumn(page: Int, iters: Int)
 POST    /admin/social_users/smoothLastGraphRefreshTimes     @com.keepit.controllers.admin.AdminSocialUserController.smoothLastGraphRefreshTimes(minutesFromNow: Int)
@@ -899,7 +895,12 @@ GET           /admin/payments/getAccountActivity           @com.keepit.controlle
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
 
-GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard(page: Int ?= 0, kind: Option[String] ?= None)
+GET           /admin/payments/checkIntegrity               @com.keepit.controllers.admin.AdminPaymentsController.checkIntegrity(orgId: Id[Organization], doIt: Boolean ?= false)
+GET           /admin/payments/resetAccount                 @com.keepit.controllers.admin.AdminPaymentsController.resetAccount(orgId: Id[Organization], doIt: Boolean ?= false)
+GET           /admin/payments/resetAllAccounts             @com.keepit.controllers.admin.AdminPaymentsController.resetAllAccounts(doIt: Boolean ?= false)
+GET           /admin/payments/dashboard  @com.keepit.controllers.admin.AdminPaymentsController.paymentsDashboard
+GET           /admin/payments/activity   @com.keepit.controllers.admin.AdminPaymentsController.activityOverview(page: Int ?= 0, kind: Option[String] ?= None)
+POST          /admin/payments/createCode @com.keepit.controllers.admin.AdminPaymentsController.createCode()
 
 
 ##########################################
@@ -924,7 +925,6 @@ GET     /internal/version                             @com.keepit.controllers.we
 GET     /internal/shoebox/auth/getUserIdentity                         @com.keepit.controllers.internal.ShoeboxController.getUserIdentity(providerId: String, id: String)
 GET     /internal/shoebox/auth/getUserIdentityByUserId                 @com.keepit.controllers.internal.ShoeboxController.getUserIdentityByUserId(userId: Id[User])
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.internal.ShoeboxController.getNormalizedURI(id: Id[NormalizedURI])
-GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIs(ids: String)
 POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keepit.controllers.internal.ShoeboxController.getNormalizedURIByURL()
 POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keepit.controllers.internal.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
 POST    /internal/shoebox/database/internNormalizedURI                 @com.keepit.controllers.internal.ShoeboxController.internNormalizedURI()
@@ -945,7 +945,6 @@ GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.in
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.internal.ShoeboxController.sendMail
 POST    /internal/shoebox/database/processAndSendMail @com.keepit.controllers.internal.ShoeboxController.processAndSendMail
 GET     /internal/shoebox/database/getPhrasesChanged  @com.keepit.controllers.internal.ShoeboxDataPipeController.getPhrasesChanged(seqNum: SequenceNumber[Phrase], fetchSize: Int)
-GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUris   @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getIndexableUrisWithContent     @com.keepit.controllers.internal.ShoeboxDataPipeController.getIndexableUrisWithContent(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int)
 GET     /internal/shoebox/database/getHighestUriSeq   @com.keepit.controllers.internal.ShoeboxDataPipeController.getHighestUriSeq()
@@ -1018,7 +1017,6 @@ POST     /internal/shoebox/database/getLibraryCardInfos      @com.keepit.control
 POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
 POST     /internal/shoebox/database/getKeepImages   @com.keepit.controllers.internal.ShoeboxController.getKeepImages()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
-POST      /internal/shoebox/database/getCandidateURIs   @com.keepit.controllers.internal.NormalizedURIController.getCandidateURIs()
 GET      /internal/shoebox/database/getLibraryMembershipView    @com.keepit.controllers.internal.ShoeboxController.getLibraryMembershipView(libraryId: Id[Library], userId: Id[User])
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)

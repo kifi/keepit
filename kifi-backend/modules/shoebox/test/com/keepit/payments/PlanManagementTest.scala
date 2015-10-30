@@ -51,8 +51,8 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
 
     "start new plans at 8PM UTC - 1PM PST" in {
       withDb(modules: _*) { implicit injector =>
-        commander().newPlansStartDate(parseStandardTime("2015-10-23 18:56:21.000 -0000")) === parseStandardTime("2015-10-23 20:00:00.000 -0000")
-        commander().newPlansStartDate(parseStandardTime("2015-10-23 21:00:00.000 -0000")) === parseStandardTime("2015-10-24 20:00:00.000 -0000")
+        PlanRenewalPolicy.newPlansStartDate(parseStandardTime("2015-10-23 18:56:21.000 -0000")) === parseStandardTime("2015-10-23 20:00:00.000 -0000")
+        PlanRenewalPolicy.newPlansStartDate(parseStandardTime("2015-10-23 21:00:00.000 -0000")) === parseStandardTime("2015-10-24 20:00:00.000 -0000")
       }
     }
 
@@ -71,7 +71,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
         account.userContacts === Seq(org.ownerId)
         account.credit === DollarAmount.dollars(50)
         account.lockedForProcessing === false
-        account.planRenewal === commander.newPlansStartDate(currentDateTime)
+        account.planRenewal === PlanRenewalPolicy.newPlansStartDate(currentDateTime)
       }
     }
 
@@ -109,8 +109,8 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
 
         val expectedCost = computePartialCost(currentDateTime, account.planRenewal, plan.billingCycle, plan.pricePerCyclePerUser)
         expectedCost should beGreaterThan(DollarAmount.ZERO)
-        val added = commander.registerNewUser(org.id.get, userId, noAttribution)
-        added.action === AccountEventAction.UserAdded(userId)
+        val added = db.readWrite { implicit session => commander.registerNewUser(org.id.get, userId, OrganizationRole.MEMBER, noAttribution) }
+        added.action === AccountEventAction.UserJoinedOrganization(userId, OrganizationRole.MEMBER)
         added.creditChange === -expectedCost
 
         val accountWithTwoUsers = db.readOnlyMaster { implicit session =>
@@ -122,8 +122,8 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
 
         val expectedRefund = computePartialCost(currentDateTime, account.planRenewal, plan.billingCycle, plan.pricePerCyclePerUser)
         expectedRefund should beGreaterThan(DollarAmount.ZERO)
-        val removed = commander.registerRemovedUser(org.id.get, userId, noAttribution)
-        removed.action === AccountEventAction.UserRemoved(userId)
+        val removed = db.readWrite { implicit session => commander.registerRemovedUser(org.id.get, userId, OrganizationRole.MEMBER, noAttribution) }
+        removed.action === AccountEventAction.UserLeftOrganization(userId, OrganizationRole.MEMBER)
         removed.creditChange === expectedRefund
 
         db.readOnlyMaster { implicit session =>
@@ -142,7 +142,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
         val (account, paidPlan, freePlan) = db.readWrite { implicit session =>
           // test with two users and "fast forward" to test proration of plan change cost
           val userId = UserFactory.user().saved.id.get
-          commander.registerNewUserHelper(org.id.get, userId, noAttribution)
+          commander.registerNewUser(org.id.get, userId, OrganizationRole.MEMBER, noAttribution)
           val account = paidAccountRepo.save(paidAccountRepo.getByOrgId(org.id.get).withPlanRenewal(currentDateTime plusDays 15))
 
           val paidPlan = paidPlanRepo.get(account.planId)
@@ -157,7 +157,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
         commander.changePlan(org.id.get, paidPlan.id.get, noAttribution) should beAFailedTry(InvalidChange("plan_already_selected"))
 
         // Correctly change to free plan with proper refund
-        val expectedFreePlanStartDate = commander.newPlansStartDate(currentDateTime)
+        val expectedFreePlanStartDate = PlanRenewalPolicy.newPlansStartDate(currentDateTime)
         val expectedRefund = computePartialCost(expectedFreePlanStartDate, account.planRenewal, paidPlan.billingCycle, paidPlan.pricePerCyclePerUser) * 2
         expectedRefund should beGreaterThan(DollarAmount.ZERO)
 
@@ -174,7 +174,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
         }
 
         // Changing back and forth does not trigger repeated refunds
-        computePartialCost(commander.newPlansStartDate(currentDateTime), accountOnFreePlan.planRenewal, freePlan.billingCycle, freePlan.pricePerCyclePerUser) * 1 === DollarAmount.ZERO
+        computePartialCost(PlanRenewalPolicy.newPlansStartDate(currentDateTime), accountOnFreePlan.planRenewal, freePlan.billingCycle, freePlan.pricePerCyclePerUser) * 1 === DollarAmount.ZERO
         commander.changePlan(org.id.get, paidPlan.id.get, noAttribution).map(_.creditChange) should beASuccessfulTry(DollarAmount.ZERO) // this could be because the plan is free
 
         val accountOnPaidPlanAgain = db.readOnlyMaster { implicit session =>
@@ -185,7 +185,7 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount
         }
 
-        computePartialCost(commander.newPlansStartDate(currentDateTime), accountOnPaidPlanAgain.planRenewal, paidPlan.billingCycle, paidPlan.pricePerCyclePerUser) * 1 === DollarAmount.ZERO
+        computePartialCost(PlanRenewalPolicy.newPlansStartDate(currentDateTime), accountOnPaidPlanAgain.planRenewal, paidPlan.billingCycle, paidPlan.pricePerCyclePerUser) * 1 === DollarAmount.ZERO
         commander.changePlan(org.id.get, freePlan.id.get, noAttribution).map(_.creditChange) should beASuccessfulTry(DollarAmount.ZERO) // this is because new plans does not renew before the next day
 
         db.readOnlyMaster { implicit session =>

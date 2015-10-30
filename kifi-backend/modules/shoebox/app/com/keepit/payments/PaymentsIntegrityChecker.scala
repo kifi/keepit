@@ -83,8 +83,8 @@ class PaymentsIntegrityChecker @Inject() (
     val accountId = account.id.get
     val eventsByUser: Map[Id[User], Seq[AccountEvent]] = accountEventRepo.getMembershipEventsInOrder(accountId).groupBy { event =>
       event.action match {
-        case AccountEventAction.UserAdded(userId) => userId
-        case AccountEventAction.UserRemoved(userId) => userId
+        case AccountEventAction.UserJoinedOrganization(userId, _) => userId
+        case AccountEventAction.UserLeftOrganization(userId, _) => userId
         case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
       }
     }
@@ -94,16 +94,16 @@ class PaymentsIntegrityChecker @Inject() (
         log.info(s"[AEIC] Processing ${events.length} events for $userId on $orgId.")
         val initialEvent: AccountEvent = events.head
         initialEvent.action match {
-          case AccountEventAction.UserAdded(_) =>
+          case AccountEventAction.UserJoinedOrganization(_, _) =>
           case _ => throw new Exception(s"""First user event for $userId on org $orgId was not an "added" event. This should never happen.""")
         }
         userId -> events.tail.foldLeft(true) {
           case (isMember, event) =>
             event.action match {
-              case AccountEventAction.UserAdded(`userId`) if isMember => throw new Exception(s"""Consecutive "added" events for $userId on org $orgId. This should never happen.""")
-              case AccountEventAction.UserAdded(`userId`) => true
-              case AccountEventAction.UserRemoved(`userId`) if !isMember => throw new Exception(s"""Consecutive "removed" events for $userId on org $orgId. This should never happen.""")
-              case AccountEventAction.UserRemoved(`userId`) => false
+              case AccountEventAction.UserJoinedOrganization(`userId`, _) if isMember => throw new Exception(s"""Consecutive "added" events for $userId on org $orgId. This should never happen.""")
+              case AccountEventAction.UserJoinedOrganization(`userId`, _) => true
+              case AccountEventAction.UserLeftOrganization(`userId`, _) if !isMember => throw new Exception(s"""Consecutive "removed" events for $userId on org $orgId. This should never happen.""")
+              case AccountEventAction.UserLeftOrganization(`userId`, _) => false
               case _ => throw new Exception("Bad Database query includes things it shouldn't. This should never happen.")
             }
         }
@@ -117,12 +117,12 @@ class PaymentsIntegrityChecker @Inject() (
 
     val extraMemberErrors: Seq[PaymentsIntegrityError] = perceivedActiveButActuallyInactive.map { userId =>
       log.info(s"[AEIC] Events show user $userId as an active member of $orgId, which is not correct. Creating new UserRemoved event.")
-      planManagementCommander.registerRemovedUserHelper(orgId, userId, ActionAttribution(None, None))
+      planManagementCommander.registerRemovedUser(orgId, userId, memberships(userId).role, ActionAttribution(None, None), overrideLock = true) // lock already acquired globally
       PaymentsIntegrityError.ExtraOrganizationMember(userId)
     }.toSeq
     val missingMemberErrors: Seq[PaymentsIntegrityError] = perceivedInactiveButActuallyActive.map { userId =>
       log.info(s"[AEIC] Events show user $userId as an inactive member of $orgId, which is not correct. Creating new UserAdded event.")
-      planManagementCommander.registerNewUserHelper(orgId, userId, ActionAttribution(None, None))
+      planManagementCommander.registerNewUser(orgId, userId, memberships(userId).role, ActionAttribution(None, None), overrideLock = true) // lock already acquired globally
       PaymentsIntegrityError.MissingOrganizationMember(userId)
     }.toSeq
     if (account.activeUsers != memberIds.size) {

@@ -86,7 +86,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
         val description = info.description.flatten.map {
           case BasicElement(text, None) => text
           case BasicElement(text, Some(url)) => s"<$url|$text>"
-        } mkString (" ")
+        } mkString ("")
         val orgHeader = s"<https://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>"
         s"[$orgHeader] $description | ${info.creditChange}"
       }
@@ -100,7 +100,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     import AccountEventKind._
     eventType match {
       case kind if billing.contains(kind) => Seq("#billing-alerts")
-      case OrganizationCreated | UserAdded | UserRemoved | AdminAdded | AdminRemoved => Seq("#org-members")
+      case OrganizationCreated | UserJoinedOrganization | UserLeftOrganization | OrganizationRoleChanged => Seq("#org-members")
     }
   }
 

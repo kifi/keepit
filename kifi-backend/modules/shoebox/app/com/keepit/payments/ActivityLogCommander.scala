@@ -51,27 +51,36 @@ class ActivityLogCommanderImpl @Inject() (
       event.action match {
         case RewardCredit(id) =>
           val creditReward = creditRewardRepo.get(id)
-          Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("when", basicUserRepo.load(code.usedBy), "redeemed", code.code.value)))
-        case IntegrityError(err) => Elements("Found and corrected an error in the account") // this is intentionally vague to avoid sending dangerous information to clients
-        case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)))
-        case ChargeBack() => Elements("A", event.creditChange, "refund was issued to your card")
-        case PlanRenewal(planId, _, _, _, _) => Elements("Your", paidPlanRepo.get(planId), "plan was renewed")
+          creditReward.reward.kind match {
+            case RewardKind.Coupon => Elements("You earned ", creditReward.credit, creditReward.code.map(code => Elements(" when ", basicUserRepo.load(code.usedBy), " redeemed ", code.code.value)), ".")
+            case RewardKind.OrganizationCreation => Elements("You earned ", creditReward.credit, " because you're awesome!")
+            case RewardKind.OrganizationReferral => Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("an organization you referred just upgraded")), ".")
+          }
+        case IntegrityError(err) => Elements("Found and corrected an error in the account.") // this is intentionally vague to avoid sending dangerous information to clients
+        case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements(" thanks to ", _)), ".")
+        case Refund() => Elements("A ", event.creditChange, " refund was issued to your card.")
+        case PlanRenewal(planId, _, _, _, _) => Elements("Your ", paidPlanRepo.get(planId), " plan was renewed.")
         case Charge() =>
           val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
-          Elements("Your card was charged", event.creditChange, s"for your current balance. [$invoiceText]")
+          Elements("Your card was charged ", event.creditChange, s" for your balance. [$invoiceText]")
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
-        case ChargeFailure(amount, code, message) => s"We failed to process your balance, please update your payment information"
-        case MissingPaymentMethod() => s"We failed to process your balance, please register a default payment method."
-        case UserAdded(who) => Elements(basicUserRepo.load(who), "was added to your team", maybeUser.map(Elements("by", _)))
-        case UserRemoved(who) => maybeUser match {
-          case Some(`who`) => Elements(basicUserRepo.load(who), "left your team")
-          case _ => Elements(basicUserRepo.load(who), "was removed from your team", maybeUser.map(Elements("by", _)))
+        case ChargeFailure(amount, code, message) => s"We failed to process your payment, please update your payment information."
+        case MissingPaymentMethod() => s"We failed to process your payment, please register a payment method."
+        case UserJoinedOrganization(who, role) => event.whoDunnit match {
+          case Some(userId) if userId != who => Elements(basicUserRepo.load(who), " was added to your team by ", maybeUser.get, Some(role).collect { case OrganizationRole.ADMIN => " and is now an admin" }, ".")
+          case _ => Elements(basicUserRepo.load(who), " joined your team", Some(role).collect { case OrganizationRole.ADMIN => " and is now an admin" }, ".")
         }
-        case AdminAdded(who) => Elements(basicUserRepo.load(who), "was made an admin", maybeUser.map(Elements("by", _)))
-        case AdminRemoved(who) => Elements(basicUserRepo.load(who), "(admin) was made a member by", maybeUser.map(Elements("by", _)))
-        case PlanChanged(oldPlanId, newPlanId, _) => Elements("Your plan was changed from", paidPlanRepo.get(oldPlanId), "to", paidPlanRepo.get(newPlanId), maybeUser.map(Elements("by", _)))
-        case PaymentMethodAdded(_, lastFour) => Elements(s"A credit card ending in $lastFour was added", maybeUser.map(Elements("by", _)))
-        case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your payment method was changed to the card ending in $lastFour", maybeUser.map(Elements("by", _)))
+        case UserLeftOrganization(who, oldRole) => event.whoDunnit match {
+          case Some(userId) if userId != who => Elements(basicUserRepo.load(who), " was removed from your team by ", maybeUser.get, Some(oldRole).collect { case OrganizationRole.ADMIN => " and is no longer an admin" }, ".")
+          case _ => Elements(basicUserRepo.load(who), " left your team", Some(oldRole).collect { case OrganizationRole.ADMIN => " and is no longer an admin" }, ".")
+        }
+        case OrganizationRoleChanged(who, oldRole, newRole) => event.whoDunnit match {
+          case Some(userId) if userId != who => Elements(basicUserRepo.load(who), "'s role was changed from ", oldRole, " to ", newRole, " by ", maybeUser.get, ".")
+          case _ => Elements(basicUserRepo.load(who), "'s role changed from ", oldRole, " to ", newRole, ".")
+        }
+        case PlanChanged(oldPlanId, newPlanId, _) => Elements("Your plan was changed from ", paidPlanRepo.get(oldPlanId), " to ", paidPlanRepo.get(newPlanId), maybeUser.map(Elements(" by ", _)), ".")
+        case PaymentMethodAdded(_, lastFour) => Elements(s"A credit card ending in $lastFour was added ", maybeUser.map(Elements(" by ", _)), ".")
+        case DefaultPaymentMethodChanged(_, _, lastFour) => Elements(s"Your payment method was changed to the card ending in $lastFour", maybeUser.map(Elements(" by ", _)), ".")
         case AccountContactsChanged(userAdded: Option[Id[User]], userRemoved: Option[Id[User]], emailAdded: Option[EmailAddress], emailRemoved: Option[EmailAddress]) => {
           val singleContactChangedIn: Option[(Elements, Elements)] = (userAdded, userRemoved, emailAdded, emailRemoved) match {
             case (Some(addedUserId), None, None, None) => Some((basicUserRepo.load(addedUserId), "added to"))
@@ -81,11 +90,11 @@ class ActivityLogCommanderImpl @Inject() (
             case _ => None
           }
           singleContactChangedIn match {
-            case Some((contact, changedIn)) => Elements(contact, "was", changedIn, "your billing contacts", maybeUser.map(Elements("by", _)))
-            case None => Elements("Your billing contacts were updated", maybeUser.map(Elements("by", _)))
+            case Some((contact, changedIn)) => Elements(contact, "was ", changedIn, " your billing contacts", maybeUser.map(Elements(" by ", _)), ".")
+            case None => Elements("Your billing contacts were updated", maybeUser.map(Elements(" by ", _)), ".")
           }
         }
-        case OrganizationCreated(initialPlanId, _) => Elements("The", org, "team was created by", maybeUser.get, "and enrolled in the", paidPlanRepo.get(initialPlanId), "plan")
+        case OrganizationCreated(initialPlanId, _) => Elements("The ", org, " team was created", maybeUser.map(Elements(" by ", _)), " and enrolled in the ", paidPlanRepo.get(initialPlanId), " plan.")
       }
     }
     SimpleAccountEventInfo(
@@ -121,6 +130,7 @@ object DescriptionElements {
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
   implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> Path(s"${orgHandle.value}/settings/plan").absolute
+  implicit def fromRole(role: OrganizationRole): BasicElement = role.value
 
   implicit val flatWrites = {
     implicit val basicWrites = Json.writes[BasicElement]

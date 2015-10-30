@@ -269,13 +269,13 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         // for pricing page:
         // non-users get redirected to login
         actionsHelper.unsetUser()
-        route(FakeRequest("GET", "/pricing")) must beLoginRedirect("/pricing")
+        route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/about/pricing")
         // for someone in an org, it redirects them to that org's plan page
         actionsHelper.setUser(user1)
         route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/kifiorghandle/settings/plan")
         // for someone without an org, it redirects to org creation
         actionsHelper.setUser(user2)
-        route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/teams/new")
+        route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/about/pricing")
 
         // catching mobile
         {

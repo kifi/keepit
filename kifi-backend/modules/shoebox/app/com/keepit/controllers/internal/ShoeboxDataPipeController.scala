@@ -42,15 +42,6 @@ class ShoeboxDataPipeController @Inject() (
 
   implicit val context = executor.context
 
-  def getIndexable(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action.async { request =>
-    SafeFuture {
-      val uris = db.readOnlyReplica { implicit s =>
-        normUriRepo.getIndexable(seqNum, fetchSize)
-      }
-      Ok(Json.toJson(uris))
-    }
-  }
-
   private[this] val consolidateGetIndexableUrisReq = new RequestConsolidator[(SequenceNumber[NormalizedURI], Int), Seq[IndexableUri]](ttl = 60 seconds)
 
   def getIndexableUris(seqNum: SequenceNumber[NormalizedURI], fetchSize: Int) = Action.async { request =>

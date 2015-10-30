@@ -557,8 +557,8 @@ class AdminUserController @Inject() (
     }
   }
 
-  def addExperimentForUsers(experiment: String, userIdsString: String) = AdminUserAction { request =>
-    val userIds = userIdsString.split(",").map(id => Id[User](id.trim.toLong))
+  def addExperimentForUsers(experiment: String) = AdminUserAction { request =>
+    val userIds = request.body.asText.get.split(",").map(id => Id[User](id.trim.toLong))
     val successIds = userIds map { userId =>
       addExperiment(requesterUserId = request.userId, userId, experiment) match {
         case Right(expType) => Some(userId)
@@ -914,17 +914,6 @@ class AdminUserController @Inject() (
 
     userRepo.save(user.withState(UserStates.INACTIVE).copy(primaryUsername = None)) // User
     handleCommander.reclaimAll(userId, overrideProtection = true, overrideLock = true)
-  }
-
-  def deactivateUserEmailAddress(id: Id[UserEmailAddress]) = AdminUserAction { request =>
-    log.info(s"About to deactivate UserEmailAddress $id")
-    val inactiveEmail = db.readWrite { implicit session =>
-      val userEmail = emailRepo.get(id)
-      userRepo.save(userRepo.get(userEmail.userId)) // bump up sequence number for reindexing
-      userEmailAddressCommander.deactivate(userEmail).get
-    }
-    log.info(s"Deactivated UserEmailAddress $inactiveEmail")
-    Ok(JsString(inactiveEmail.toString))
   }
 
   def setUsername(userId: Id[User]) = AdminUserPage { request =>

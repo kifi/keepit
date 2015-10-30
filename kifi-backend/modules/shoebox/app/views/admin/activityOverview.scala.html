@@ -1,0 +1,30 @@
+@import com.keepit.controllers.admin.AdminPaymentsActivityOverview
+@import com.keepit.common.controller.PaginatedRequest
+
+@(log: AdminPaymentsActivityOverview)(implicit request: com.keepit.common.controller.UserRequest[_])
+
+@views.html.admin.admin("Payments Dashboard", stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
+    @views.html.admin.adminHelper.pagination(log.pgHelper.page, log.pgHelper.itemCount, log.pgHelper.pageSize, log.pgHelper.otherPagesRoute) {
+        <table class="table table-condensed table-striped">
+            <thead>
+            <th>Id</th><th>Organization</th><th>Action</th><th>Event Time</th><th>Who Done It?</th><th>Admin?</th><th>Credit Change</th><th>Payment Charge</th><th>Memo</th><th>Extra</th>
+            </thead>
+            <tbody>
+            @for(event <- log.events) {
+            <tr>
+                <td>@{event.id}</td>
+                <td>@adminHelper.orgDisplay(log.orgsByAccountId(event.accountId))</td>
+                <td><a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.activityOverview(0, Some(event.action.eventType.value))">@{event.action.eventType}</a></td>
+                <td>@adminHelper.dateTimeDisplay(event.eventTime)</td>
+                <td>@event.whoDunnit.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
+                <td>@event.adminInvolved.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
+                <td>@{event.creditChange.toDollarString}</td>
+                <td>@{event.paymentCharge.map(_.toDollarString)}</td>
+                <td>@{event.memo.getOrElse("")}</td>
+                <td>@{event.action.toDbRow}</td>
+            </tr>
+            }
+            </tbody>
+        </table>
+    }
+}

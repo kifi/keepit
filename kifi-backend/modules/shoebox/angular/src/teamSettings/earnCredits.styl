@@ -1,9 +1,15 @@
+.kf-earn-credits
+  font-size: 14px
+
 .kf-earn-credits-top-header
   margin-bottom: 15px
   margin-left: 15px
 
 .kf-earn-credits-refer
   margin-bottom: 20px
+
+.kf-earn-credits-referral
+  cursor: pointer
 
 .kf-referral-code-txt
   color: black
@@ -15,21 +21,12 @@
   margin-right: 20px
   width: 180px
 
-.kf-referral-btn
-  border-radius: 8px
-  border-color: white
-  border-style: none
-  width: 80px
-  color: white
-  padding: 9px 10px 10px
-  background-color: alpha(libraryGreen, .9)
+.kf-main-pane-earn-credits-inputs
+  display: flex
+  align-items: center
 
-  &:disabled
-    background-color: lightGrey
-
-  &:hover:not(:active):not(:disabled)
-    background-color: libraryGreen
-
+  > * + *
+    margin-left: 10px
 
 .kf-earn-credits-activity
   text-align: center
@@ -42,7 +39,6 @@
   text-align: left
 
 .kf-referral-copy-msg
-  margin-left: 20px
   display: inline-block
   color: libraryGreen
 
@@ -59,5 +55,3 @@
 
   &.ng-leave-active
     opacity: 0
-
-

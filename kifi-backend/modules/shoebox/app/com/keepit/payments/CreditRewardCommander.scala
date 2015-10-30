@@ -17,7 +17,7 @@ import scala.util.{ Success, Failure, Try }
 @ImplementedBy(classOf[CreditRewardCommanderImpl])
 trait CreditRewardCommander {
   // Generic API for creating a credit reward (use for one-off rewards, like the org creation bonus)
-  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward]
+  def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward]
 
   // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
@@ -36,6 +36,7 @@ class CreditRewardCommanderImpl @Inject() (
   accountRepo: PaidAccountRepo,
   clock: Clock,
   eventCommander: AccountEventTrackingCommander,
+  accountLockHelper: AccountLockHelper,
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
 
@@ -46,15 +47,20 @@ class CreditRewardCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val creditCodeInfo = creditCodeInfoRepo.getByOrg(orgId).getOrElse {
-        val kind = CreditCodeKind.OrganizationReferral
-        val creditCodeInfo = CreditCodeInfo(
-          code = CreditCode.normalize(RandomStringUtils.randomAlphanumeric(20)),
-          kind = kind,
-          credit = newOrgReferralCredit,
-          status = CreditCodeStatus.Open,
-          referrer = Some(CreditCodeReferrer(org.ownerId, Some(orgId), orgReferrerCredit))
-        )
-        creditCodeInfoRepo.save(creditCodeInfo)
+        // Try to create a referral code, starting with the raw normalized
+        // handle (abbreviated maybe), and successively adding random digits
+        // to the end until it works.
+        val base = org.primaryHandle.get.normalized.value.take(20)
+        val suffixes = "" +: Iterator.continually("-" + RandomStringUtils.randomNumeric(2)).take(9).toStream
+        suffixes.map { suf =>
+          creditCodeInfoRepo.create(CreditCodeInfo(
+            code = CreditCode.normalize(base + suf + "-" + newOrgReferralCredit.toCents / 100),
+            kind = CreditCodeKind.OrganizationReferral,
+            credit = newOrgReferralCredit,
+            status = CreditCodeStatus.Open,
+            referrer = Some(CreditCodeReferrer(org.ownerId, Some(orgId), orgReferrerCredit))
+          ))
+        }.dropWhile(_.isFailure).head.get
       }
       creditCodeInfo.code
     }
@@ -69,8 +75,8 @@ class CreditRewardCommanderImpl @Inject() (
     } yield rewards
   }
 
-  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward] = {
-    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, Some(userAttribution)) }
+  def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward] = {
+    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, userAttribution) }
   }
 
   private def createRewardsFromCreditCode(creditCodeInfo: CreditCodeInfo, accountId: Id[PaidAccount], userId: Id[User], orgId: Option[Id[Organization]])(implicit session: RWSession): Try[CreditCodeRewards] = {
@@ -129,6 +135,7 @@ class CreditRewardCommanderImpl @Inject() (
         } yield CreditCodeRewards(target = targetCreditReward, referrer = Some(referrerCreditReward))
     }
     unfinalizedRewardsTry.map { rewards =>
+      if (creditCodeInfo.isSingleUse) creditCodeInfoRepo.close(creditCodeInfo)
       CreditCodeRewards(
         target = finalizeCreditReward(rewards.target, Some(userId)),
         referrer = rewards.referrer.map(finalizeCreditReward(_, Some(userId)))
@@ -140,7 +147,7 @@ class CreditRewardCommanderImpl @Inject() (
     val currentReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(orgId)
     val evolvedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(orgId)
     val crs = creditRewardRepo.getByReward(currentReward)
-    assert(crs.size <= 1, "Somehow there are multiple referral rewards for $orgId! $crs")
+    assert(crs.size <= 1, s"Somehow there are multiple referral rewards for $orgId! $crs")
     crs.map { crToEvolve =>
       finalizeCreditReward(crToEvolve.withReward(evolvedReward), None)
     }
@@ -152,22 +159,26 @@ class CreditRewardCommanderImpl @Inject() (
     val rewardNeedsToBeApplied = creditReward.reward.status == creditReward.reward.kind.applicable
     if (!rewardNeedsToBeApplied) creditReward
     else {
-      val account = accountRepo.get(creditReward.accountId)
-      accountRepo.save(account.withIncreasedCredit(creditReward.credit))
-      val rewardCreditEvent = eventCommander.track(AccountEvent(
-        eventTime = clock.now(),
-        accountId = account.id.get,
-        whoDunnit = userAttribution,
-        whoDunnitExtra = JsNull,
-        kifiAdminInvolved = None,
-        action = AccountEventAction.RewardCredit(creditReward.id.get),
-        creditChange = creditReward.credit,
-        paymentMethod = None,
-        paymentCharge = None,
-        memo = None,
-        chargeId = None
-      ))
-      creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent))
+      val orgId = accountRepo.get(creditReward.accountId).orgId // todo(Léo): we should be able to lock using the account id directly
+      accountLockHelper.maybeWithAccountLock(orgId, attempts = 3) {
+        require(creditRewardRepo.get(creditReward.id.get).applied.isEmpty, s"$creditReward has already been applied") // check after locking
+        val account = accountRepo.get(creditReward.accountId)
+        accountRepo.save(account.withIncreasedCredit(creditReward.credit))
+        val rewardCreditEvent = eventCommander.track(AccountEvent(
+          eventTime = clock.now(),
+          accountId = account.id.get,
+          whoDunnit = userAttribution,
+          whoDunnitExtra = JsNull,
+          kifiAdminInvolved = None,
+          action = AccountEventAction.RewardCredit(creditReward.id.get),
+          creditChange = creditReward.credit,
+          paymentMethod = None,
+          paymentCharge = None,
+          memo = None,
+          chargeId = None
+        ))
+        creditRewardRepo.save(creditReward.withAppliedEvent(rewardCreditEvent))
+      } getOrElse { throw new LockedAccountException(orgId) }
     }
   }
 

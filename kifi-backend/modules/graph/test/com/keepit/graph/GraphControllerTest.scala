@@ -58,12 +58,17 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
           val content = contentAsString(result)
           content !== null
 
-          val jsResult = Json.fromJson[SociallyRelatedEntitiesForUser](Json.parse(content))
-          jsResult.get.facebookAccounts.id == u42
-          jsResult.get.linkedInAccounts.id == u42
-          jsResult.get.emailAccounts.id == u42
-          jsResult.get.users.id == u42
-          jsResult.get.users.related.size === 5
+          val sociallyRelatedEntities = Json.fromJson[SociallyRelatedEntitiesForUser](Json.parse(content)).get
+          sociallyRelatedEntities.facebookAccounts.id === u42
+          sociallyRelatedEntities.facebookAccounts.totalSteps === 0.0
+          sociallyRelatedEntities.linkedInAccounts.id === u42
+          sociallyRelatedEntities.linkedInAccounts.totalSteps === 0.0
+          sociallyRelatedEntities.emailAccounts.id === u42
+          sociallyRelatedEntities.emailAccounts.totalSteps === sociallyRelatedEntities.emailAccounts.related.map(_._2).sum
+          sociallyRelatedEntities.users.id === u42
+          sociallyRelatedEntities.users.related.size === 5
+          sociallyRelatedEntities.users.totalSteps === sociallyRelatedEntities.users.related.map(_._2).sum
+          sociallyRelatedEntities.totalSteps === 100000
         }
       }
 
@@ -79,11 +84,14 @@ class GraphControllerTest extends Specification with GraphTestInjector with Grap
           val content = contentAsString(result)
           content !== null
 
-          val jsResult = Json.fromJson[SociallyRelatedEntitiesForOrg](Json.parse(content))
-          jsResult.get.emailAccounts.id == orgId1
-          jsResult.get.emailAccounts.related.size === 2
-          jsResult.get.users.id == orgId1
-          jsResult.get.users.related.size === 5
+          val sociallyRelatedEntities = Json.fromJson[SociallyRelatedEntitiesForOrg](Json.parse(content)).get
+          sociallyRelatedEntities.emailAccounts.id === orgId1
+          sociallyRelatedEntities.emailAccounts.related.size === 2
+          sociallyRelatedEntities.emailAccounts.related.map(_._2).sum === sociallyRelatedEntities.emailAccounts.totalSteps
+          sociallyRelatedEntities.users.id === orgId1
+          sociallyRelatedEntities.users.related.size === 5
+          sociallyRelatedEntities.users.totalSteps === sociallyRelatedEntities.users.related.map(_._2).sum
+          sociallyRelatedEntities.totalSteps === 100000
         }
       }
     }
