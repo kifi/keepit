@@ -39,10 +39,8 @@ angular.module('kifi')
         var smallWindow = $window.innerWidth <= smallWindowLimit;
 
 
-        if (!profileService.userLoggedIn()) {
-          if (scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
-            signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
-          }
+        if (!profileService.userLoggedIn() && scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
+          signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
         }
 
         //
