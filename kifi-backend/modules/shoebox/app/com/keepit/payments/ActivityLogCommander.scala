@@ -152,6 +152,13 @@ object DescriptionElements {
     }.map(BasicElement(_, None))
     intersperse(els.toList, interpolatedPunctuation).filter(_.text.nonEmpty)
   }
+  def formatForSlack(description: DescriptionElements): String = {
+    interpolatePunctuation(description.flatten).map {
+      case BasicElement(text, None) => text
+      case BasicElement(text, Some(url)) => s"<$url|$text>"
+    } mkString
+  }
+
   implicit val flatWrites = {
     implicit val basicWrites = Json.writes[BasicElement]
     Writes[DescriptionElements] { description => Json.toJson(interpolatePunctuation(description.flatten)) }
