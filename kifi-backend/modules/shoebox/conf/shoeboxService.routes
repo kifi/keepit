@@ -298,7 +298,7 @@ GET     /m/1/inviteInfo                     @com.keepit.controllers.website.Invi
 GET     /m/1/user/:id/organizations                      @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationsForUser(id: ExternalId[User])
 GET     /m/1/organizations/invites                       @com.keepit.controllers.mobile.MobileOrganizationInviteController.getPendingOrganizationsForUser()
 POST    /m/1/organizations/create                        @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
-GET     /m/1/organizations/sendCreateTeamEmail           @com.keepit.controllers.mobile.MobileOrganizationController.sendCreateTeamEmail()
+GET     /m/1/organizations/sendCreateTeamEmail           @com.keepit.controllers.mobile.MobileOrganizationController.sendCreateTeamEmail(email: String)
 GET     /m/1/organizations/:id                           @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
 POST    /m/1/organizations/:id/modify                    @com.keepit.controllers.mobile.MobileOrganizationController.modifyOrganization(id: PublicId[Organization])
 DELETE  /m/1/organizations/:id/delete                    @com.keepit.controllers.mobile.MobileOrganizationController.deleteOrganization(id: PublicId[Organization])

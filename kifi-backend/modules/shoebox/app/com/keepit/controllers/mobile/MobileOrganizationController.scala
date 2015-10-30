@@ -6,6 +6,7 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
@@ -13,6 +14,7 @@ import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
+import scala.util.{ Success, Failure }
 
 @Singleton
 class MobileOrganizationController @Inject() (
@@ -89,8 +91,12 @@ class MobileOrganizationController @Inject() (
     Ok(Json.obj("organizations" -> orgViews))
   }
 
-  def sendCreateTeamEmail() = UserAction { request =>
-    userCommander.sendCreateTeamEmail(request.userId)
-    Ok
+  def sendCreateTeamEmail(email: String) = UserAction { request =>
+    EmailAddress.validate(email) match {
+      case Failure(err) => BadRequest(Json.obj("error" -> "invalid_email"))
+      case Success(email) =>
+        userCommander.sendCreateTeamEmail(request.userId, email)
+        Ok
+    }
   }
 }
