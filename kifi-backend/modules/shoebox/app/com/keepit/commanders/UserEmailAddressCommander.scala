@@ -22,6 +22,7 @@ class PrimaryEmailAddressException(email: UserEmailAddress) extends Exception(s"
 @ImplementedBy(classOf[UserEmailAddressCommanderImpl])
 trait UserEmailAddressCommander {
   def sendVerificationEmail(emailAddress: UserEmailAddress): Future[Unit]
+  def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit]
   def verifyEmailAddress(verificationCode: String)(implicit session: RWSession): Option[(UserEmailAddress, Boolean)]
   def intern(userId: Id[User], address: EmailAddress, verified: Boolean = false)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)]
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress
@@ -47,18 +48,22 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     clock: Clock,
     implicit val executionContext: ExecutionContext) extends UserEmailAddressCommander with Logging {
 
-  def sendVerificationEmail(emailAddress: UserEmailAddress): Future[Unit] = {
-    val withCode = db.readWrite { implicit session =>
-      userEmailAddressRepo.save(emailAddress.withVerificationCode(clock.now()))
-    }
-    emailConfirmationSender(withCode).imap(_ => ()) recoverWith {
-      case error => {
-        db.readWrite { implicit session =>
-          userEmailAddressRepo.save(withCode.clearVerificationCode)
+  def sendVerificationEmail(emailAddress: UserEmailAddress): Future[Unit] = db.readWrite { implicit session =>
+    sendVerificationEmailHelper(emailAddress)
+  }
+
+  def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit] = {
+    val emailWithCode = userEmailAddressRepo.save(emailAddress.withVerificationCode(clock.now()))
+    session.onTransactionSuccess {
+      emailConfirmationSender(emailWithCode) recoverWith {
+        case error => {
+          db.readWrite { implicit session => userEmailAddressRepo.save(emailWithCode.clearVerificationCode) }
+          Future.failed(error)
         }
-        Future.failed(error)
       }
+      Future.successful(())
     }
+    Future.successful(())
   }
 
   def verifyEmailAddress(verificationCode: String)(implicit session: RWSession): Option[(UserEmailAddress, Boolean)] = { // returns Option(verifiedEmail, isVerifiedForTheFirstTime)
