@@ -17,6 +17,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.twirl.api.HtmlFormat
 
+import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure }
 
@@ -40,6 +41,7 @@ class AdminPaymentsController @Inject() (
     activityLogCommander: ActivityLogCommander,
     eventTrackingCommander: AccountEventTrackingCommander,
     creditRewardCommander: CreditRewardCommander,
+    dashboardCommander: PaymentsDashboardCommander,
     rewardRepo: CreditRewardRepo,
     accountLockHelper: AccountLockHelper,
     clock: Clock,
@@ -162,12 +164,6 @@ class AdminPaymentsController @Inject() (
     }
   }
 
-  private def createAdminAccountView(account: PaidAccount)(implicit session: RSession): AdminAccountView = {
-    AdminAccountView(
-      organization = orgRepo.get(account.orgId)
-    )
-  }
-
   private def createAdminAccountEventView(accountEvent: AccountEvent)(implicit session: RSession): AdminAccountEventView = {
     val (userWhoDunnit, adminInvolved) = {
       (accountEvent.whoDunnit.map(userRepo.get), accountEvent.kifiAdminInvolved.map(userRepo.get))
@@ -240,28 +236,7 @@ class AdminPaymentsController @Inject() (
   }
 
   def paymentsDashboard() = AdminUserAction { implicit request =>
-    val dashboard = db.readOnlyMaster { implicit session =>
-      val frozenAccounts = paidAccountRepo.all.filter(a => a.isActive && a.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
-      val failedAccounts = paidAccountRepo.all.filter(a => a.isActive && a.paymentStatus == PaymentStatus.Failed).take(100).map(createAdminAccountView) // God help us if we have more than 100 failed accounts
-      val planEnrollment = {
-        val planEnrollmentById = paidAccountRepo.getCountsByPlan
-        planEnrollmentById.map { case (planId, x) => paidPlanRepo.get(planId) -> x }
-      }
-      val totalAmortizedIncomePerMonth = {
-        val income = planEnrollment.keys.map { plan =>
-          val usersOnPlan = planEnrollment(plan)._2
-          plan.pricePerCyclePerUser.toCents * usersOnPlan / plan.billingCycle.months
-        }.sum
-        DollarAmount.cents(income)
-      }
-      AdminPaymentsDashboard(
-        totalAmortizedIncomePerMonth = totalAmortizedIncomePerMonth,
-        planEnrollment = planEnrollment,
-        failedAccounts = failedAccounts,
-        frozenAccounts = frozenAccounts
-      )
-    }
-    Ok(views.html.admin.paymentsDashboard(dashboard))
+    Ok(views.html.admin.paymentsDashboard(dashboardCommander.generateDashboard()))
   }
 
   def checkIntegrity(orgId: Id[Organization], doIt: Boolean) = AdminUserAction.async { implicit request =>
@@ -411,8 +386,10 @@ case class AdminPaymentsActivityOverview(
   orgsByAccountId: Map[Id[PaidAccount], Organization],
   pgHelper: PaginationHelper)
 
+case class IncomeHistory(cur: DollarAmount, old: DollarAmount)
+case class PlanEnrollmentHistory(cur: PlanEnrollment, old: PlanEnrollment)
 case class AdminPaymentsDashboard(
-  totalAmortizedIncomePerMonth: DollarAmount,
-  planEnrollment: Map[PaidPlan, (Int, Int)],
+  totalAmortizedIncomePerMonth: IncomeHistory,
+  planEnrollment: Map[PaidPlan, PlanEnrollmentHistory],
   frozenAccounts: Seq[AdminAccountView],
   failedAccounts: Seq[AdminAccountView])
