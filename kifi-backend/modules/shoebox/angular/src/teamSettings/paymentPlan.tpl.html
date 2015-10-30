@@ -68,7 +68,7 @@
         </div>
       </div>
     </form>
-    <div class="kf-container-section" ng-if="canRedeemCredit">
+    <div class="kf-container-section" ng-if="canRedeemCredit" ng-show="isPaidPlanName(plan.name)">
       <div kf-redeem-credits profile="profile" standalone="false"></div>
     </div>
     <div class="kf-container-section" ng-show="isPaidPlanName(plan.name)">
