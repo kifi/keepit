@@ -3,10 +3,9 @@
 angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
-  '$window', '$rootScope', '$scope', '$state', '$filter', '$q',
-  '$timeout', '$analytics',
-  'billingState', 'billingService', 'modalService', 'profileService',
-  'StripeCheckout', 'messageTicker', 'paymentPlans',
+  '$window', '$rootScope', '$scope', '$state', '$filter', '$q', '$timeout',
+  '$analytics', 'billingState', 'billingService', 'modalService',
+  'profileService', 'StripeCheckout', 'messageTicker', 'paymentPlans',
   function ($window, $rootScope, $scope, $state, $filter, $q, $timeout,
             $analytics, billingState, billingService, modalService,
             profileService, StripeCheckout, messageTicker, paymentPlans) {
@@ -343,7 +342,7 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.$evalAsync(function () {
+    $timeout(function () {
       if ($state.params.upgrade) {
         $scope.changePlanToStandard();
       }
