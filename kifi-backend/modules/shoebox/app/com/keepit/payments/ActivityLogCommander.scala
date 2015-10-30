@@ -67,13 +67,13 @@ class ActivityLogCommanderImpl @Inject() (
         case ChargeFailure(amount, code, message) => s"We failed to process your payment, please update your payment information."
         case MissingPaymentMethod() => s"We failed to process your payment, please register a payment method."
         case UserJoinedOrganization(who, role) => maybeUser match {
-          case Some(user) if user != who => Elements(basicUserRepo.load(who), " was added to your team by ", user, Some(role).collect { case OrganizationRole.ADMIN => " and is now an admin" },".")
+          case Some(user) if user != who => Elements(basicUserRepo.load(who), " was added to your team by ", user, Some(role).collect { case OrganizationRole.ADMIN => " and is now an admin" }, ".")
 
-          case _ => Elements(basicUserRepo.load(who), " joined your team", Some(role).collect { case OrganizationRole.ADMIN => " and is now an admin" },".")
+          case _ => Elements(basicUserRepo.load(who), " joined your team", Some(role).collect { case OrganizationRole.ADMIN => " and is now an admin" }, ".")
         }
         case UserLeftOrganization(who, oldRole) => maybeUser match {
-          case Some(user) if user != who => Elements(basicUserRepo.load(who), " was removed from your team by ", user, Some(oldRole).collect { case OrganizationRole.ADMIN => " and is no longer an admin" },".")
-          case _ => Elements(basicUserRepo.load(who), " left your team", Some(oldRole).collect { case OrganizationRole.ADMIN => " and is no longer an admin" },".")
+          case Some(user) if user != who => Elements(basicUserRepo.load(who), " was removed from your team by ", user, Some(oldRole).collect { case OrganizationRole.ADMIN => " and is no longer an admin" }, ".")
+          case _ => Elements(basicUserRepo.load(who), " left your team", Some(oldRole).collect { case OrganizationRole.ADMIN => " and is no longer an admin" }, ".")
         }
         case OrganizationRoleChanged(who, oldRole, newRole) => maybeUser match {
           case Some(user) if user != who => Elements(basicUserRepo.load(who), "'s role was changed from ", oldRole, " to ", newRole, " by ", user, ".")
