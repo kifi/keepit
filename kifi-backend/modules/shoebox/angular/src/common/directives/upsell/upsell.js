@@ -2,9 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfUpsell', [
-  'profileService',
-  function (profileService) {
+.directive('kfUpsell',
+  function () {
     return {
       restrict: 'A',
       transclude: true,
@@ -15,12 +14,7 @@ angular.module('kifi')
         icon: '@',
         onHover: '&',
         onClick: '&'
-      },
-      link: function ($scope, element) {
-        if (profileService.me.experiments.indexOf('admin') === -1) {
-          element.remove();
-        }
       }
     };
   }
-]);
+);
