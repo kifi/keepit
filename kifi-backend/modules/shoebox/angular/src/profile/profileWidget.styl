@@ -29,19 +29,18 @@
       &:hover
         text-decoration: underline
 
-  h1
+  .kf-pw-title-link
     heading_lg()
     font-weight: bold
     margin-bottom: 5px
+    color: textBlackColor
 
-    a
-      color: textBlackColor
+    &:hover
+      color: accentGreen
+      text-decoration: underline
 
-      &:hover
-        color: accentGreen
-        text-decoration: underline
-
-  h2
+  .kf-pw-stat-name
+    display: block
     heading_xs()
     text-transform: uppercase
     font-weight: bold
@@ -49,15 +48,17 @@
     color: accentGreen
     margin-bottom: 5px
 
-  h3
+  .kf-pw-stat-value
     heading_lg()
+    display: block
     font-weight: bold
     color: textBlackColor
     text-align: center
     position: relative
     margin-bottom: 5px
 
-    span
+    .kf-pw-stat-notification
+      display: block
       heading_xs()
       font-weight: bold
       color: white
@@ -72,18 +73,18 @@
       position: absolute
       top: -5px
 
-  .stats
+  .kf-pw-stats
     display: flex
     width: 100%
     margin-top: 15px
     justify-content: center
 
-    .stats-row
+    .kf-pw-stats-row
       &:hover
         .stat-title
           text-decoration: underline
 
-    .stat
+    .kf-pw-stat
       width: 33%
 
   .kf-pw-org
@@ -124,6 +125,8 @@
 
     .kf-pw-org-bio
       width: calc(100% - 80px)
+      overflow: hidden
+      text-overflow: ellipsis
 
     .stats
       margin-top: 0px
@@ -147,7 +150,7 @@
             a
               color: accentGreen
               text-transform: uppercase
-              font-weight: bol
+              font-weight: bold
 
     .org-inv-btn
       font-size: 11px
@@ -223,8 +226,4 @@
 
   .kf-pw-create-org-label
     display: inline-block
-
-    h1
-      margin: 0
-      vertical-align: middle
-      font-weight: normal
+    heading_lg()
