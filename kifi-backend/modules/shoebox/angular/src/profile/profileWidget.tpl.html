@@ -5,36 +5,38 @@
       <img ng-src="{{ me | pic:100 }}" />
     </a>
     <aside>
-      <a class="kf-pw-title-link" ng-href="{{ me | profileUrl }}" ng-click="registerEvent('Name')">
-        {{ me.firstName }} {{ me.lastName }}
-      </a>
+      <a
+        class="kf-pw-title-link"
+        ng-href="{{ me | profileUrl }}"
+        ng-click="registerEvent('Name')"
+        ng-bind="me.firstname + ' ' + me.lastName"
+      ></a>
       <p>
         <a
           ng-class="me.biography ? '' : 'no-bio'"
           ng-click="bioClick()"
           kf-ellipsis
           full-text="me.biography || 'Add a Bio'"
-          max-num-lines="2">
-        </a>
+          max-num-lines="2"
+        ></a>
       </p>
     </aside>
   </div>
 
   <div class="kf-pw-stats">
     <a ng-href="{{ me | profileUrl }}" ng-click="registerEvent('Libraries')" class="kf-link-parent kf-pw-stat">
-      <span class="kf-pw-stat-name kf-link">Libraries</span>
-      <span class="kf-pw-stat-value">{{ me.numLibraries }}</span>
+      <span class="kf-pw-stat-label kf-link">Libraries</span>
+      <span class="kf-pw-stat-value" ng-bind="me.numLibraries"></span>
     </a>
     <a ng-href="{{ me | profileUrl:'connections' }}" ng-click="registerEvent('Connections')" class="kf-link-parent kf-pw-stat">
-      <span class="kf-pw-stat-name kf-link">Connections</span>
-      <span class="kf-pw-stat-value">
-        {{ me.numConnections }}
-        <span class="kf-pw-stat-notification" ng-if="me.pendingFriendRequests > 0" >+{{ me.pendingFriendRequests }}</span>
+      <span class="kf-pw-stat-label kf-link">Connections</span>
+      <span class="kf-pw-stat-value" ng-bind="me.numConnections">
+        <span class="kf-pw-stat-notification" ng-if="me.pendingFriendRequests > 0" ng-bind="'+' + me.pendingFriendRequests"></span>
       </span>
     </a>
     <a ng-href="{{ me | profileUrl:'followers'}}" ng-click="registerEvent('Followers')" class="kf-link-parent kf-pw-stat">
-      <span class="kf-pw-stat-name kf-link">Followers</span>
-      <span class="kf-pw-stat-value">{{ me.numFollowers }}</span>
+      <span class="kf-pw-stat-label kf-link">Followers</span>
+      <span class="kf-pw-stat-value" ng-bind="me.numFollowers"></span>
     </a>
   </div>
 
@@ -49,36 +51,53 @@
           class="kf-pw-title-link"
           ng-href="{{ org.handle }}"
           ng-click="registerEvent('clickedOrgFromProfile')"
-        >{{ org.name }}</a>
-        <table class="stats">
-          <tr class="kf-pw-stats-row">
-            <td class="stat-number">
-              <a ng-href="{{ org | profileUrl }}" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')">
-                {{ org.numLibraries }}
-              </a>
+          ng-bind="org.name"
+        ></a>
+        <table class="kf-pw-org-stats">
+          <tr>
+            <td>
+              <a
+                class="kf-pw-org-stat-value"
+                ng-href="{{ org | profileUrl }}"
+                ng-click="registerEvent('clickedOrgLibrariesProfileWidget')"
+                ng-bind="org.numLibraries"
+              ></a>
             </td>
             <td>
-              <a ng-href="{{ org | profileUrl }}" class="stat-title kf-link" ng-click="registerEvent('clickedOrgLibrariesProfileWidget')"
-                 ng-pluralize count="org.numLibraries" when="{'1': 'Library', 'other': 'Libraries'}">
-              </a>
+              <a
+                class="kf-link kf-pw-org-stat-label"
+                ng-href="{{ org | profileUrl }}"
+                ng-click="registerEvent('clickedOrgLibrariesProfileWidget')"
+                ng-pluralize
+                count="org.numLibraries"
+                when="{'1': 'Library', 'other': 'Libraries'}"
+              ></a>
             </td>
           </tr>
-          <tr class="kf-pw-stats-row">
+          <tr>
             <td>
-              <a ng-href="{{ org | profileUrl:'members' }}" class="stat-number" ng-click="registerEvent('clickedOrgMembersProfileWidget')">
-                {{ org.numMembers }}
-              </a>
+              <a
+                class="kf-pw-org-stat-value"
+                ng-href="{{ org | profileUrl:'members' }}"
+                ng-click="registerEvent('clickedOrgMembersProfileWidget')"
+                ng-bind="org.numMembers"
+              ></a>
             </td>
             <td>
-              <a ng-href="{{ org | profileUrl:'members' }}" class="stat-title kf-link" ng-click="registerEvent('clickedOrgMembersProfileWidget')"
-                 ng-pluralize count="org.numMembers" when="{'1': 'Member', 'other': 'Members'}">
-              </a>
+              <a
+                class="kf-link kf-pw-org-stat-label"
+                ng-href="{{ org | profileUrl:'members' }}"
+                ng-click="registerEvent('clickedOrgMembersProfileWidget')"
+                ng-pluralize
+                count="org.numMembers"
+                when="{'1': 'Member', 'other': 'Members'}"
+              ></a>
             </td>
           </tr>
         </table>
       </div>
-      <button class="org-inv-btn org-inv-btn-accept" ng-if="org.pending && org.notDeclined" ng-click="acceptInvite(org)">Accept</button>
-      <button class="org-inv-btn org-inv-btn-decline" ng-if="org.pending && org.notDeclined" ng-click="declineInvite(org)">Decline</button>
+      <button class="kf-pw-org-inv-btn kf-pw-org-inv-btn-accept" ng-if="org.pending && org.notDeclined" ng-click="acceptInvite(org)">Accept</button>
+      <button class="kf-pw-org-inv-btn kf-pw-org-inv-btn-decline" ng-if="org.pending && org.notDeclined" ng-click="declineInvite(org)">Decline</button>
     </div>
   </div>
   <div ng-if="::shouldShowCreateTeam()" class="kf-pw-create-org kf-link-parent" ng-click="createTeam()">
