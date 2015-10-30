@@ -117,7 +117,13 @@ angular.module('kifi')
             var flattenedInvitees = invitees.map(function(invitee) {
                 return invitee.id || invitee.email;
              });
-            orgProfileService.trackEvent('user_clicked_page', organization, { type: 'orgLibraries' , action: 'clickedInvite', orgInvitees: flattenedInvitees });
+            orgProfileService.trackEvent('user_clicked_page', organization,
+              {
+                type: 'org_profile:libraries' ,
+                action: 'clickedInvite',
+                orgInvitees: flattenedInvitees
+              }
+            );
           }
         }
       });
@@ -136,7 +142,7 @@ angular.module('kifi')
         }
       });
     };
-    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgLibraries'});
+    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:libraries'});
 
     if ($stateParams.openCreateLibrary) {
       $scope.openCreateLibrary();

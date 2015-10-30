@@ -11,14 +11,20 @@ angular.module('kifi')
       templateUrl: 'teamSettings/redeemCredits.tpl.html',
       scope: {
         profile: '=',
-        standalone: '='
+        standalone: '=',
+        parentTrackingType: '='
       },
       link: function($scope) {
 
         $scope.$error = {};
         $scope.creditRedeemed = 0;
 
+        function trackApplyClick() {
+          $scope.$emit('trackOrgProfileEvent', 'click', { type: $scope.parentTrackingType, action: 'redeem_credit:apply_referral_code' });
+        }
+
         $scope.applyReferralCode = function (code) {
+          trackApplyClick();
           $scope.creditRedeemed = 0;
           billingService
             .applyReferralCode($scope.profile.id, code)

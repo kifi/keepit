@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('feedService', [
-  '$http', '$rootScope', 'profileService', 'routeService', '$q', '$analytics', 'net', 'ml',
-  function ($http, $rootScope, profileService, routeService, $q, $analytics, net, ml) {
+  '$http', '$rootScope', 'profileService', 'routeService', '$q', 'net', 'ml',
+  function ($http, $rootScope, profileService, routeService, $q, net, ml) {
 
     function invalidateFeedCache() {
       [

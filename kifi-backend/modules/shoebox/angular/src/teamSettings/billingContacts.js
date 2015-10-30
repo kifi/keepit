@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .controller('BillingContactsCtrl', [
-  '$window', '$scope', '$q', '$timeout', '$analytics',
+  '$window', '$scope', '$q', '$timeout',
   'orgProfileService', 'billingService', 'modalService', 'messageTicker',
-  function ($window, $scope, $q, $timeout, $analytics,
+  function ($window, $scope, $q, $timeout,
     orgProfileService, billingService, modalService, messageTicker) {
 
     $scope.billingContactModel = {};
@@ -68,8 +68,8 @@ angular.module('kifi')
     }
 
     $timeout(function () {
-      $analytics.eventTrack('user_viewed_page', {
-        type: 'billingContacts'
+      $scope.$emit('trackOrgProfileEvent', 'view', {
+        type: 'org_profile:settings:billing_contacts'
       });
     });
   }

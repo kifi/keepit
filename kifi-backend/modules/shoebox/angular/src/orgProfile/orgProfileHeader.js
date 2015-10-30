@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfOrgProfileHeader', [
-  '$state', '$http', '$analytics', '$location', 'modalService', 'orgProfileService',
+  '$state', '$http', '$location', 'modalService', 'orgProfileService',
   '$timeout', 'profileService', 'signupService', 'billingService', 'messageTicker',
   'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function ($state, $http, $analytics, $location, modalService, orgProfileService,
+  function ($state, $http, $location, modalService, orgProfileService,
             $timeout, profileService, signupService, billingService, messageTicker,
             ORG_PERMISSION, ORG_SETTING_VALUE) {
 
@@ -47,6 +47,7 @@ angular.module('kifi')
       }
 
       scope.goToMemberInvite = function () {
+        orgProfileService.trackEvent('user_clicked_page', scope.profile, { type: 'org_profile', action: 'invite' });
         scope.$emit('parentOpenInviteModal');
       };
 
@@ -69,7 +70,8 @@ angular.module('kifi')
         return orgProfileService
           .updateOrgProfile(scope.profile.id, data)
           .then(function (res) {
-            $analytics.eventTrack('user_clicked_page', {
+            scope.$emit('trackOrgProfileEvent', 'click', {
+              'type': 'orgProfile',
               'action': 'updateOrgProfile',
               'path': $location.path()
             });

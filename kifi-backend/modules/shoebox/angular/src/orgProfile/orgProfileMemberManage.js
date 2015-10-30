@@ -7,7 +7,7 @@ angular.module('kifi')
   'orgProfileService', 'modalService', 'Paginator', 'net', 'ORG_PERMISSION',
   function($rootScope, $scope, $state, $stateParams, profile, profileService,
            orgProfileService, modalService, Paginator, net, ORG_PERMISSION) {
-    function memberPageAnalytics(args) {
+    function trackMembersClick(args) {
       args = _.extend(args, { type: 'orgMembers' });
       orgProfileService.trackEvent('user_clicked_page', organization, args);
     }
@@ -59,7 +59,7 @@ angular.module('kifi')
       .removeOrgMember(organization.id, { userId: member.id })
       .then(function success() {
         var action = (profileService.me.id === member.id ? 'clickedLeaveOrg' : 'clickedRemoveOrg');
-        memberPageAnalytics({ action: action, orgMember: member.username });
+        trackMembersClick({ action: action, orgMember: member.username });
         removeMemberFromPage(member);
         orgProfileService.invalidateOrgProfileCache();
         $state.go('orgProfile.libraries', { reload: true });
@@ -76,7 +76,7 @@ angular.module('kifi')
         }]
       })
       .then(function success() {
-        memberPageAnalytics({ action: 'clickedCancelInvite', orgMember: member.username });
+        trackMembersClick({ action: 'clickedCancelInvite', orgMember: member.username });
         orgProfileService.invalidateOrgProfileCache();
         removeMemberFromPage(member);
       })
@@ -127,7 +127,7 @@ angular.module('kifi')
     // Let the other member lines know to close
     $scope.$on('toggledMember', function (e, member, isOpen) {
       var action = (isOpen ? 'clickedMemberToggleOpen' : 'clickedMemberToggleClosed');
-      memberPageAnalytics({ action: action, orgMember: member.username });
+      trackMembersClick({ action: action, orgMember: member.username });
 
       if (isOpen) {
         $scope.$broadcast('memberOpened', member);
@@ -156,7 +156,7 @@ angular.module('kifi')
         }]
       })
       .then(function () {
-        memberPageAnalytics({ action: 'clickedInvite', orgMember: member.username });
+        trackMembersClick({ action: 'clickedInvite', orgMember: member.username });
         orgProfileService.invalidateOrgProfileCache();
       })
       ['catch'](handleErrorResponse);
@@ -179,26 +179,26 @@ angular.module('kifi')
     $scope.$on('makeOwner', function(e, member) {
       modifyMemberRole(member, 'owner')
       .then(function() {
-        memberPageAnalytics({ action: 'clickedMakeOwner', orgMember: member.username });
+        trackMembersClick({ action: 'clickedMakeOwner', orgMember: member.username });
       });
     });
 
     $scope.$on('promoteMember', function (e, member) {
       modifyMemberRole(member, 'admin')
       .then(function () {
-        memberPageAnalytics({ action: 'clickedMakeAdmin', orgMember: member.username });
+        trackMembersClick({ action: 'clickedMakeAdmin', orgMember: member.username });
       });
     });
 
     $scope.$on('demoteMember', function (e, member) {
       modifyMemberRole(member, 'member')
       .then(function () {
-        memberPageAnalytics({ action: 'clickedDemote', orgMember: member.username });
+        trackMembersClick({ action: 'clickedDemote', orgMember: member.username });
       });
     });
 
     $scope.$on('clickedAvatar', function (e, member) {
-      memberPageAnalytics({ action: 'clickedMemberName', orgMember: member.username });
+      trackMembersClick({ action: 'clickedMemberName', orgMember: member.username });
     });
 
     function modifyMemberRole(member, role) {
@@ -238,7 +238,9 @@ angular.module('kifi')
         return;
       }
 
-      memberPageAnalytics({ action: 'clickedInviteBegin' });
+      $scope.addMany = $scope.addMany || $stateParams.addMany;
+
+      $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:invite' + ($scope.addMany ? ':paste' : ':WTI') });
 
       modalService.open({
         template: 'orgProfile/orgProfileInviteSearchModal.tpl.html',
@@ -271,14 +273,14 @@ angular.module('kifi')
             var flattenedInvitees = invitees.map(function(invitee) {
                 return invitee.id || invitee.email;
              });
-            memberPageAnalytics({ action: 'clickedInvite', orgInvitees: flattenedInvitees });
+            trackMembersClick({ action: 'clickedInvite', orgInvitees: flattenedInvitees });
           }
         }
       });
     };
 
 
-    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'orgMembers' });
+    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:members' });
 
     if ($stateParams.openInviteModal) {
       $scope.openInviteModal();

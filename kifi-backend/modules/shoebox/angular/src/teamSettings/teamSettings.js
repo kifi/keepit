@@ -114,11 +114,7 @@ angular.module('kifi')
         heading: 'Integrations',
         fields: [
           {
-            title: $sce.trustAsHtml(
-              'Who can' +
-              ' <a class="kf-link" href="http://blog.kifi.com/slack-library-subscriptions/" target="_blank">create a Slack integration</a>' +
-              ' with Kifi?'
-            ),
+            title: 'Who can create a Slack integration with Kifi?',
             description: (
               'Select who is able to create a Slack integration with Kifi.' +
               ' Integrating with Slack will automatically send all keeps from' +
@@ -204,7 +200,7 @@ angular.module('kifi')
       }).filter(Boolean);
     }
 
-    $scope.onClickedSettingsDropdown = function(trackingValue) {
+    $scope.onClickTrack = function(trackingValue) {
       orgProfileService.trackEvent('user_clicked_page', $scope.profile, { type: 'org_settings', action: trackingValue });
     };
 
@@ -233,8 +229,8 @@ angular.module('kifi')
     $scope.kifiAdmin = (profileService.me.experiments.indexOf('admin') !== -1);
 
     $timeout(function () {
-      $analytics.eventTrack('user_viewed_page', {
-        type: 'memberPrivileges'
+      $scope.$emit('trackOrgProfileEvent', 'view', {
+        type: 'org_profile:settings'
       });
     });
   }
