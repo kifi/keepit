@@ -29,19 +29,18 @@
       &:hover
         text-decoration: underline
 
-  h1
+  .kf-pw-title-link
     heading_lg()
     font-weight: bold
     margin-bottom: 5px
+    color: textBlackColor
 
-    a
-      color: textBlackColor
+    &:hover
+      color: accentGreen
+      text-decoration: underline
 
-      &:hover
-        color: accentGreen
-        text-decoration: underline
-
-  h2
+  .kf-pw-stat-label
+    display: block
     heading_xs()
     text-transform: uppercase
     font-weight: bold
@@ -49,41 +48,38 @@
     color: accentGreen
     margin-bottom: 5px
 
-  h3
+  .kf-pw-stat-value
     heading_lg()
+    display: block
     font-weight: bold
     color: textBlackColor
     text-align: center
     position: relative
     margin-bottom: 5px
 
-    span
-      heading_xs()
-      font-weight: bold
-      color: white
-      background: libraryRed
-      border-radius: 7px
-      min-width: 12px
-      display: inline-block
-      line-height: 13px
-      text-align: center
-      padding: 0px 3px
-      margin-bottom: 0
-      position: absolute
-      top: -5px
+  .kf-pw-stat-notification
+    display: block
+    heading_xs()
+    font-weight: bold
+    color: white
+    background: libraryRed
+    border-radius: 7px
+    min-width: 12px
+    display: inline-block
+    line-height: 13px
+    text-align: center
+    padding: 0px 3px
+    margin-bottom: 0
+    position: absolute
+    top: -5px
 
-  .stats
+  .kf-pw-stats
     display: flex
     width: 100%
     margin-top: 15px
     justify-content: center
 
-    .stats-row
-      &:hover
-        .stat-title
-          text-decoration: underline
-
-    .stat
+    .kf-pw-stat
       width: 33%
 
   .kf-pw-org
@@ -115,48 +111,35 @@
       overflow: hidden
       display: block
 
-    .kf-pw-org-link
-
-      &:hover
-        h1
-          text-decoration: underline
-          color: accentGreen
-
     .kf-pw-org-bio
       width: calc(100% - 80px)
+      overflow: hidden
+      text-overflow: ellipsis
 
-    .stats
-      margin-top: 0px
-      margin-bottom: 0
+    .kf-pw-org-stats
       display: block
+      margin-top: 0
+      margin-bottom: 0
+      line-height: 16px
+      font-weight: bold
 
-      tr
-        td
-          font-size: 10px
-          line-height: 16px
+    .kf-pw-org-stat-value
+      padding-right: 3px
+      color: textBlackColor
 
-          &:first-child
-            padding-right: 3px
-            font-weight: bold
-            font-size: 16px
+    .kf-pw-org-stat-label
+      color: accentGreens
+      text-transform: uppercase
+      font-size: 10px
 
-            a
-              color: textBlackColor
-
-          &:last-child
-            a
-              color: accentGreen
-              text-transform: uppercase
-              font-weight: bol
-
-    .org-inv-btn
+    .kf-pw-org-inv-btn
       font-size: 11px
       border: 1px solid white
       border-radius: 6px
       width: 90px
       margin-top: 10px
 
-      &.org-inv-btn-decline
+      &.kf-pw-org-inv-btn-decline
         margin-right: auto
         margin-left: auto
         color: white
@@ -165,7 +148,7 @@
         &:hover:not(:active)
           background-color: gray
 
-      &.org-inv-btn-accept
+      &.kf-pw-org-inv-btn-accept
         margin-right: auto
         margin-left: 6px
         background-color: alpha(libraryGreen, .9)
@@ -223,8 +206,4 @@
 
   .kf-pw-create-org-label
     display: inline-block
-
-    h1
-      margin: 0
-      vertical-align: middle
-      font-weight: normal
+    heading_lg()
