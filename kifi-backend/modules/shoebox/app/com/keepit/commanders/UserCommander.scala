@@ -391,6 +391,26 @@ class UserCommander @Inject() (
     }
   }
 
+  def sendCreateTeamEmail(userId: Id[User]): ElectronicMail = {
+    db.readWrite { implicit s =>
+      val bestEmail = emailRepo.getByUser(userId)
+      postOffice.sendMail(ElectronicMail(
+        fromName = Some("Kifi Support"),
+        from = SystemEmailAddress.NOTIFICATIONS,
+        to = Seq(bestEmail),
+        subject = "Create a Kifi team from your desktop",
+        htmlBody =
+          s"""
+              Per your request, you can now <a href="http://www.kifi.com/teams/new">create a team</a> on Kifi from
+              your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+
+              Get started by visiting the page to <a href="http://www.kifi.com/teams/new">create a team</a>.
+          """,
+        category = NotificationCategory.User.CREATE_TEAM
+      ))
+    }
+  }
+
   def delay(f: => Unit) = {
     import scala.concurrent.duration._
     scheduler.scheduleOnce(5 minutes) {

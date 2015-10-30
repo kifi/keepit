@@ -88,4 +88,9 @@ class MobileOrganizationController @Inject() (
 
     Ok(Json.obj("organizations" -> orgViews))
   }
+
+  def sendCreateTeamEmail() = UserAction { request =>
+    userCommander.sendCreateTeamEmail(request.userId)
+    Ok
+  }
 }
