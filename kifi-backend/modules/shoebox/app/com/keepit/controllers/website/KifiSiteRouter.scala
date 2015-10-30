@@ -68,14 +68,14 @@ class KifiSiteRouter @Inject() (
     redirectUserToProfileToConnect(friend, request) getOrElse redirUserToOwnProfile("/connections", request)
   }
 
-  def redirectFromPricing = WebAppPage { implicit request =>
+  def redirectUserToOwnOrg(subpath: String, fallback: String) = WebAppPage { implicit request =>
     request match {
-      case r: NonUserRequest[_] => Redirect("/about/pricing")
+      case r: NonUserRequest[_] => Redirect(fallback)
       case u: UserRequest[_] =>
         val orgToUpgrade = db.readOnlyReplica { implicit session =>
           orgMembershipRepo.getAllByUserId(u.userId).sortBy(_.role).map(_.organizationId).headOption.map(orgRepo.get)
         }
-        orgToUpgrade.map { org => Redirect(s"/${org.handle.urlEncoded}/settings/plan") } getOrElse Redirect("/about/pricing")
+        orgToUpgrade.map { org => Redirect(s"/${org.handle.value}$subpath") } getOrElse Redirect(fallback)
     }
   }
 
