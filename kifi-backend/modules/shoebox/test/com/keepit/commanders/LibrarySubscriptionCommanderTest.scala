@@ -37,7 +37,7 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
     "save subscription given a subscription key" in {
       withDb() { implicit injector =>
         val (user, library) = setup()
-        val subKey = LibrarySubscriptionKey("competitors", SlackInfo("http://www.fakewebhook.com"))
+        val subKey = LibrarySubscriptionKey("competitors", SlackInfo("http://www.fakewebhook.com"), disabled = false)
 
         val newSub = db.readWrite { implicit session =>
           libSubCommander.saveSubByLibIdAndKey(library.id.get, subKey)
@@ -56,8 +56,8 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
           librarySubscriptionRepo.save(LibrarySubscription(libraryId = library.id.get, name = "competitors2", trigger = SubscriptionTrigger.NEW_KEEP, info = SlackInfo("http://www.fakewebhook2.com/")))
         }
 
-        val subKeys = Seq(LibrarySubscriptionKey("competitors1", SlackInfo("http://www.fakewebhook.com")),
-          LibrarySubscriptionKey("competitors3", SlackInfo("http://www.fakewebhook3.com")))
+        val subKeys = Seq(LibrarySubscriptionKey("competitors1", SlackInfo("http://www.fakewebhook.com"), disabled = false),
+          LibrarySubscriptionKey("competitors3", SlackInfo("http://www.fakewebhook3.com"), disabled = false))
 
         val (newSubs, didSubsChange) = db.readWrite { implicit s =>
           val oldSubs = librarySubscriptionRepo.getByLibraryId(library.id.get)

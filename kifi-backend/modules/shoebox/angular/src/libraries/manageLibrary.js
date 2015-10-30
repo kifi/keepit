@@ -112,28 +112,7 @@ angular.module('kifi')
 
           scope.$error = {};
 
-          scope.library.subscriptions.forEach(function(sub) {
-
-            if (sub.name === '' && sub.info.url === '') {
-              return;
-            }
-
-            if (sub.name) { // slack channels can't have uppercase letters
-              sub.name = sub.name.toLowerCase();
-            }
-
-            if (!sub.name || sub.name.indexOf(' ') > -1) {
-              sub.$error = sub.$error || {};
-              sub.$error.name = true;
-              scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
-            }
-
-            if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i) == null) {
-              sub.$error = sub.$error || {};
-              sub.$error.url = true;
-              scope.$error.general = 'Please enter a valid webhook URL for each subscription.';
-            }
-          });
+          validateSubscriptions();
 
           if (scope.$error.general) {
             return;
@@ -222,6 +201,31 @@ angular.module('kifi')
             }
           });
         };
+
+        function validateSubscriptions() {
+          scope.library.subscriptions.forEach(function(sub) {
+
+            if (sub.name === '' && sub.info.url === '') {
+              return;
+            }
+
+            if (sub.name) { // slack channels can't have uppercase letters
+              sub.name = sub.name.toLowerCase();
+            }
+
+            sub.$error = sub.$error || {};
+            if (!sub.name || sub.name.indexOf(' ') > -1) {
+              sub.$error.name = true;
+              scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
+            } else if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*/i) == null) {
+              sub.$error.url = true;
+              scope.$error.general = 'Please enter a valid webhook URL for each subscription.';
+            } else if (sub.disabled) {
+              sub.$error.disabled = true;
+              scope.$error.general = 'This library has subscriptions with invalid info. Please edit or delete those subscriptions.";
+            }
+          });
+        }
 
         scope.openDeleteLibraryModal = function () {
           modalService.open({

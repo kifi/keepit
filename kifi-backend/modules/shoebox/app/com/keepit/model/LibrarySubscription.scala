@@ -35,7 +35,7 @@ object LibrarySubscription {
   )(LibrarySubscription.apply, unlift(LibrarySubscription.unapply))
 
   def toSubKey(sub: LibrarySubscription): LibrarySubscriptionKey = {
-    LibrarySubscriptionKey(name = sub.name, info = sub.info)
+    LibrarySubscriptionKey(name = sub.name, info = sub.info, sub.state == LibrarySubscriptionStates.DISABLED)
   }
 }
 

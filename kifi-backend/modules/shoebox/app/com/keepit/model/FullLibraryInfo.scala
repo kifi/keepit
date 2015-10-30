@@ -30,7 +30,7 @@ object LibraryError {
 case class LibraryFail(status: Int, message: String) extends Exception(message)
 
 @json
-case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo)
+case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo, disabled: Boolean)
 
 case class ExternalLibraryInitialValues(
   name: String,

@@ -243,7 +243,8 @@ class LibraryCommanderImpl @Inject() (
 
     def validateIntegration(newSubscriptions: Option[Seq[LibrarySubscriptionKey]], oldSpace: LibrarySpace, newSpace: LibrarySpace): Option[LibraryFail] = {
       val areSubKeysValidOpt = newSubscriptions.map(subs => subs.forall {
-        case LibrarySubscriptionKey(name, info: SlackInfo) => name.length < 33 && "^https://hooks.slack.com/services/.*/.*/?$".r.findFirstIn(info.url).isDefined
+        case LibrarySubscriptionKey(name, info: SlackInfo, false) => name.length < 33 && "^https://hooks.slack.com/services/.*/.*/?$".r.findFirstIn(info.url).isDefined
+        case LibrarySubscriptionKey(_, _, true) => false // broken subscription wasn't fixed
         case _ => false // unsupported type
       })
 
