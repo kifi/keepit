@@ -150,7 +150,7 @@ object DescriptionElements {
       case (l, r) if l.endsWith("'") || r.startsWith(".") || r.startsWith("'") => ""
       case _ => " "
     }.map(BasicElement(_, None))
-    intersperse(els.toList, interpolatedPunctuation)
+    intersperse(els.toList, interpolatedPunctuation).filter(_.text.nonEmpty)
   }
   implicit val flatWrites = {
     implicit val basicWrites = Json.writes[BasicElement]
