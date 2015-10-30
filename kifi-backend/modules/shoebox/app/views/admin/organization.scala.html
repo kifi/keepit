@@ -42,7 +42,7 @@ orgStats: OrganizationStatistics
         </form>
         </td></tr>
     <tr><td>Owner</td><td>@adminHelper.userDisplay(orgStats.owner)</td></tr>
-    <tr><td>Plan</td><td>@{orgStats.plan.id} ($/User/Cycle: @{orgStats.plan.pricePerCyclePerUser}, Cycle Length: @{orgStats.plan.billingCycle.months} months)<button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
+    <tr><td><a href="https://docs.google.com/document/d/1CBScReiMB7snaZ3yBLjM1v7RtkMq6UrmBIy6mntA0aw/edit">Plan</a></td><td>@{orgStats.plan.id} ($/User/Cycle: @{orgStats.plan.pricePerCyclePerUser}, Cycle Length: @{orgStats.plan.billingCycle.months} months) <button id="edit-plan" class="btn btn-default btn-xs">Edit Plan</button></td></tr>
     <tr><td>Plan Renewal</td><td>@adminHelper.dateTimeDisplay(orgStats.planRenewal)</td></tr>
     <tr><td>Credit</td><td>@orgStats.credit<button id="process-billing-now" class="btn btn-default btn-xs">Process Payments Now</button></td></tr>
     <tr>
@@ -56,7 +56,7 @@ orgStats: OrganizationStatistics
     </tr>
     <tr><td>Credit Card</td><td>@orgStats.stripeToken (<a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.addCreditCardView(orgStats.orgId)">Add/Change</a>) - Payment @{orgStats.paymentStatus.value}</td></tr>
     <tr><td>Extra credit</td><td>
-        Amount (cents)? <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
+        Amount - dollars, no cents <input id="extra-credit-amount" type="number" min="0" max="10000"></input>
         Memo: <input id="extra-credit-memo" type="text" placeholder="optional"></input>
         Attributed to: <input id="extra-credit-member" type="number" placeholder="optional userId"></input>
         <button id="extra-credit-submit" class="btn btn-default btn-xs">Do it!</button>
@@ -317,7 +317,7 @@ orgStats: OrganizationStatistics
     };
 
     $("#extra-credit-submit").click(function () {
-        var amount = $("#extra-credit-amount").val();
+        var amount = Math.round($("#extra-credit-amount").val() * 100);
         var memo = $("#extra-credit-memo").val();
         var member = $("#extra-credit-member").val();
         var payload = { "amount": amount, "memo": memo, "member": member };

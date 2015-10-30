@@ -5,14 +5,15 @@ angular.module('kifi')
 .controller('PaymentPlanCtrl', [
   '$window', '$rootScope', '$scope', '$state', '$filter', '$q', '$timeout',
   'billingState', 'billingService', 'modalService', 'profileService',
-  'StripeCheckout', 'messageTicker', 'paymentPlans', '$log',
+   'StripeCheckout', 'messageTicker', 'paymentPlans',
   function ($window, $rootScope, $scope, $state, $filter, $q, $timeout,
             billingState, billingService, modalService, profileService,
-            StripeCheckout, messageTicker, paymentPlans, $log) {
+            StripeCheckout, messageTicker, paymentPlans) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
     $scope.disableSaveButton = false;
     $scope.trackingType = 'org_settings:payment_plan';
+    $scope.isKifiAdmin = profileService.me.experiments.indexOf('admin') !== -1;
 
     var PREDEFINED_CYCLE_PERIOD = {
       1: 'Monthly',
@@ -240,7 +241,6 @@ angular.module('kifi')
     }
 
     $scope.save = function () {
-      $log.log('this');
       var saveSeriesDeferred = $q.defer();
       var saveSeriesPromise = saveSeriesDeferred.promise;
       var selectedPlan = $scope.getSelectedPlan();
@@ -306,7 +306,6 @@ angular.module('kifi')
           $scope.disableSaveButton = false;
         })
         ['finally'](function () {
-          $log.log('this');
           $window.removeEventListener('beforeunload', onBeforeUnload);
         })
       );
@@ -354,7 +353,7 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.$evalAsync(function () {
+    $timeout(function () {
       if ($state.params.upgrade) {
         $scope.changePlanToStandard();
       }

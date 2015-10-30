@@ -10,7 +10,7 @@
           <div class="kf-payment-plan-card-cost">0</div>
           <div class="kf-payment-plan-card-bottom">
             <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#" ng-click="trackClick('free_card:details')">Details</a></p>
-            <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(currentPlan.name)">Currently selected</p>
+            <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(currentPlan.name)">Your current plan</p>
             <button
               class="kf-payment-plan-card-cta"
               ng-if="!isFreePlanName(currentPlan.name)"
@@ -26,7 +26,7 @@
           <p class="kf-payment-plan-card-description">$8 billed monthly</p>
           <div class="kf-payment-plan-card-bottom">
             <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="#" ng-click="trackClick('standard_card:details')">Details</a></p>
-            <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(currentPlan.name)">Currently selected</p>
+            <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(currentPlan.name)">Your current plan</p>
             <button
               class="kf-payment-plan-card-cta"
               ng-if="!isPaidPlanName(currentPlan.name)"
@@ -109,7 +109,7 @@
   </form>
   <div class="kf-container-section kf-payment-plan-save-container" ng-if="currentPlan.id != getSelectedPlan().id || plan.newCard">
     <button
-      class="kf-button kf-button-large kf-payment-plan-save"
+      class="kf-button kf-button-large kf-button-cta-blue kf-payment-plan-save"
       ng-click="warningModalOrSave()"
       ng-disabled="disableSaveButton"
     >Save my plan preferences</button>

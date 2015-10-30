@@ -27,7 +27,7 @@ trait Reward {
 sealed abstract class RewardKind(val kind: String) {
   type S <: RewardStatus
   protected val allStatus: Set[S]
-  val applicable: S
+  def applicable: S
   def writeStatus(status: S): String = status.status
   def readStatus(status: String): S = allStatus.find(_.status equalsIgnoreCase status) match {
     case Some(validStatus) => validStatus
@@ -90,14 +90,16 @@ object RewardStatus {
   }
 
   trait WithEmptyInfo extends WithIndependentInfo[None.type] { self: RewardKind =>
-    val infoFormat: Format[None.type] = Format(
-      Reads {
-        case JsNull => JsSuccess(None)
-        case unknown => JsError(s"Unknown RewardStatus info: $unknown")
-      },
-      Writes(None => JsNull)
-    )
+    def infoFormat: Format[None.type] = noneInfoFormat
   }
+
+  private val noneInfoFormat: Format[None.type] = Format(
+    Reads {
+      case JsNull => JsSuccess(None)
+      case unknown => JsError(s"Unknown RewardStatus info: $unknown")
+    },
+    Writes(None => JsNull)
+  )
 }
 
 object RewardKind {

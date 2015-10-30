@@ -35,7 +35,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
   val lock = new ReactiveLock(2)
 
   Stripe.apiKey = if (mode == Mode.Prod) {
-    "sk_test_ljj7nL3XLgIlwxefGVRrRpqg" //"sk_live_ZHRnZXBRKuRqupqRme17ZSry" //this is the live token that will cause stripe to actually process charges
+    "sk_live_ZHRnZXBRKuRqupqRme17ZSry" //this is the live token that will cause stripe to actually process charges
   } else {
     "sk_test_ljj7nL3XLgIlwxefGVRrRpqg" //this is the stripe test token, which lets us make call to them without actually charging anyone.
   }

@@ -17,7 +17,7 @@ import scala.util.{ Success, Failure, Try }
 @ImplementedBy(classOf[CreditRewardCommanderImpl])
 trait CreditRewardCommander {
   // Generic API for creating a credit reward (use for one-off rewards, like the org creation bonus)
-  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward]
+  def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward]
 
   // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
@@ -47,12 +47,14 @@ class CreditRewardCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
       val creditCodeInfo = creditCodeInfoRepo.getByOrg(orgId).getOrElse {
-        // Try to create a referral code, starting with the raw normalized handle, and successively adding
-        // random digits to the end. Just for safety, don't let this loop infinitely
-        val suffixes = "" +: Iterator.continually(RandomStringUtils.randomAlphabetic(2)).take(9).toStream
+        // Try to create a referral code, starting with the raw normalized
+        // handle (abbreviated maybe), and successively adding random digits
+        // to the end until it works.
+        val base = org.primaryHandle.get.normalized.value.take(20)
+        val suffixes = "" +: Iterator.continually("-" + RandomStringUtils.randomNumeric(2)).take(9).toStream
         suffixes.map { suf =>
           creditCodeInfoRepo.create(CreditCodeInfo(
-            code = CreditCode.normalize(org.primaryHandle.get.normalized.value + suf),
+            code = CreditCode.normalize(base + suf + "-" + newOrgReferralCredit.toCents / 100),
             kind = CreditCodeKind.OrganizationReferral,
             credit = newOrgReferralCredit,
             status = CreditCodeStatus.Open,
@@ -73,8 +75,8 @@ class CreditRewardCommanderImpl @Inject() (
     } yield rewards
   }
 
-  def createCreditReward(cr: CreditReward, userAttribution: Id[User])(implicit session: RWSession): Try[CreditReward] = {
-    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, Some(userAttribution)) }
+  def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward] = {
+    creditRewardRepo.create(cr).map { creditReward => finalizeCreditReward(creditReward, userAttribution) }
   }
 
   private def createRewardsFromCreditCode(creditCodeInfo: CreditCodeInfo, accountId: Id[PaidAccount], userId: Id[User], orgId: Option[Id[Organization]])(implicit session: RWSession): Try[CreditCodeRewards] = {

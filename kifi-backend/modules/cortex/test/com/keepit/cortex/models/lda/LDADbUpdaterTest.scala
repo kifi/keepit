@@ -5,12 +5,10 @@ import com.keepit.cortex.nlp.Stopwords
 import org.specs2.mutable.Specification
 import com.keepit.cortex.core._
 import com.keepit.common.db.SequenceNumber
-import com.keepit.model.NormalizedURI
+import com.keepit.model.{ IndexableUri, NormalizedURI, UrlHash, NormalizedURIStates }
 import com.keepit.common.db.Id
-import com.keepit.model.UrlHash
 import com.keepit.cortex.CortexTestInjector
 import com.keepit.cortex.dbmodel._
-import com.keepit.model.NormalizedURIStates
 import com.keepit.common.db.State
 import com.keepit.search.Lang
 
@@ -154,7 +152,7 @@ trait LDADbTestHelper {
   val uriReps = MultiVersionedLDAURIRepresenter(uriRep)
 
   def makeURI(idx: Int, seq: Option[SequenceNumber[NormalizedURI]] = None, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE) = {
-    NormalizedURI(id = Some(Id[NormalizedURI](idx)), url = s"http://page${idx}.com", urlHash = UrlHash(s"page${idx}"), seq = seq.getOrElse(SequenceNumber[NormalizedURI](idx)), state = state, shouldHaveContent = true)
+    IndexableUri(id = Some(Id[NormalizedURI](idx)), url = s"http://page${idx}.com", seq = seq.getOrElse(SequenceNumber[NormalizedURI](idx)), state = state, shouldHaveContent = true)
   }
 
   // 5 * word_i + 4* word_(i+1) + ... + 1 * word_(i+5)

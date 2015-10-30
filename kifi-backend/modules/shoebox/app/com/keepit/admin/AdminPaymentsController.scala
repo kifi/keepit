@@ -9,8 +9,8 @@ import com.keepit.model._
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.Id
-import com.kifi.macros.json
 import org.joda.time.DateTime
+import com.keepit.common.time._
 
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json._
@@ -36,6 +36,12 @@ class AdminPaymentsController @Inject() (
     paymentProcessingCommander: PaymentProcessingCommander,
     creditCodeInfoRepo: CreditCodeInfoRepo,
     stripeClient: StripeClient,
+    integrityChecker: PaymentsIntegrityChecker,
+    activityLogCommander: ActivityLogCommander,
+    eventTrackingCommander: AccountEventTrackingCommander,
+    creditRewardCommander: CreditRewardCommander,
+    rewardRepo: CreditRewardRepo,
+    accountLockHelper: AccountLockHelper,
     clock: Clock,
     db: Database) extends AdminUserActions {
 
@@ -161,6 +167,7 @@ class AdminPaymentsController @Inject() (
       organization = orgRepo.get(account.orgId)
     )
   }
+
   private def createAdminAccountEventView(accountEvent: AccountEvent)(implicit session: RSession): AdminAccountEventView = {
     val (userWhoDunnit, adminInvolved) = {
       (accountEvent.whoDunnit.map(userRepo.get), accountEvent.kifiAdminInvolved.map(userRepo.get))
@@ -191,8 +198,7 @@ class AdminPaymentsController @Inject() (
     Ok(views.html.admin.accountActivity(
       orgId,
       pagedEvents,
-      s"Account Activity for ${org.name}",
-      { page: Int => com.keepit.controllers.admin.routes.AdminPaymentsController.getAccountActivity(orgId, page) }.andThen(asPlayHtml),
+      s"Account Activity for ${org.name}", { page: Int => com.keepit.controllers.admin.routes.AdminPaymentsController.getAccountActivity(orgId, page) }.andThen(asPlayHtml),
       page,
       allEvents.length,
       PAGE_SIZE))
@@ -235,7 +241,8 @@ class AdminPaymentsController @Inject() (
 
   def paymentsDashboard() = AdminUserAction { implicit request =>
     val dashboard = db.readOnlyMaster { implicit session =>
-      val frozenAccounts = paidAccountRepo.all.filter(_.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
+      val frozenAccounts = paidAccountRepo.all.filter(a => a.isActive && a.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
+      val failedAccounts = paidAccountRepo.all.filter(a => a.isActive && a.paymentStatus == PaymentStatus.Failed).take(100).map(createAdminAccountView) // God help us if we have more than 100 failed accounts
       val planEnrollment = {
         val planEnrollmentById = paidAccountRepo.getCountsByPlan
         planEnrollmentById.map { case (planId, x) => paidPlanRepo.get(planId) -> x }
@@ -247,9 +254,113 @@ class AdminPaymentsController @Inject() (
         }.sum
         DollarAmount.cents(income)
       }
-      AdminPaymentsDashboard(totalAmortizedIncomePerMonth, planEnrollment, frozenAccounts)
+      AdminPaymentsDashboard(
+        totalAmortizedIncomePerMonth = totalAmortizedIncomePerMonth,
+        planEnrollment = planEnrollment,
+        failedAccounts = failedAccounts,
+        frozenAccounts = frozenAccounts
+      )
     }
     Ok(views.html.admin.paymentsDashboard(dashboard))
+  }
+
+  def checkIntegrity(orgId: Id[Organization], doIt: Boolean) = AdminUserAction.async { implicit request =>
+    if (doIt) {
+      SafeFuture {
+        val errors = integrityChecker.checkAccount(orgId)
+        val result = Json.toJson(errors)
+        Ok(result)
+      }
+    } else {
+      Future.successful(BadRequest("You don't want to do this."))
+    }
+  }
+
+  // todo(Léo): REMOVE THIS IS EVIL
+  def resetAllAccounts(doIt: Boolean) = AdminUserAction { implicit request =>
+    if (request.userId.id == 134 && doIt) {
+      SafeFuture {
+        val activeOrgIds = db.readOnlyMaster { implicit session =>
+          orgRepo.allActive.map(_.id.get)
+        }
+        activeOrgIds.map(doResetAccount)
+      }
+      Ok("Hold your breath.")
+    } else {
+      BadRequest("You don't want to do this.")
+    }
+  }
+
+  def resetAccount(orgId: Id[Organization], doIt: Boolean) = AdminUserAction.async { implicit request =>
+    if (doIt) SafeFuture {
+      val events = doResetAccount(orgId).map(activityLogCommander.buildSimpleEventInfo)
+      Ok(Json.toJson(events))
+    }
+    else {
+      Future.successful(BadRequest("You don't want to do this."))
+    }
+  }
+
+  private def doResetAccount(orgId: Id[Organization]): Seq[AccountEvent] = {
+    db.readWrite { implicit session =>
+
+      // Reset account consistently with PlanManagementCommander.createAndInitializePaidAccountForOrganization
+      val organization = orgRepo.get(orgId)
+      val account = accountLockHelper.maybeWithAccountLock(orgId) {
+        val account = paidAccountRepo.getByOrgId(orgId)
+        paidAccountRepo.save(account.copy(
+          credit = DollarAmount.ZERO,
+          planRenewal = PlanRenewalPolicy.newPlansStartDate(clock.now()),
+          userContacts = Seq(organization.ownerId),
+          emailContacts = Seq.empty,
+          activeUsers = 0
+        ))
+      } getOrElse {
+        throw new LockedAccountException(orgId)
+      }
+
+      // Deactivate all existing events
+      accountEventRepo.getAllByAccount(account.id.get).foreach { event =>
+        accountEventRepo.save(event.withState(AccountEventStates.INACTIVE))
+      }
+
+      // Deactivate all existing rewards
+      rewardRepo.getByAccount(account.id.get).foreach { reward =>
+        rewardRepo.save(reward.copy(state = CreditRewardStates.INACTIVE, unrepeatable = None, code = None))
+      }
+
+      // Prepare
+
+      val memberships = orgMembershipRepo.getAllByOrgId(orgId)
+      val noAttribution = ActionAttribution(None, None)
+
+      // Generate CreateOrganization Event
+      val creationEvent = eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
+        eventTime = memberships.map(_.createdAt).min,
+        accountId = account.id.get,
+        attribution = noAttribution,
+        action = AccountEventAction.OrganizationCreated(account.planId, Some(account.planRenewal))
+      ))
+
+      // Grant new welcome reward
+      val eventId = creditRewardCommander.createCreditReward(CreditReward(
+        accountId = account.id.get,
+        credit = DollarAmount.dollars(50),
+        applied = None,
+        reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+        unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
+        code = None
+      ), userAttribution = None).get.applied.get
+      accountEventRepo.save(accountEventRepo.get(eventId).copy(eventTime = creationEvent.eventTime))
+
+      // Register all members
+      memberships.toSeq.sortBy(_.createdAt).foreach { membership =>
+        val event = planCommander.registerNewUser(orgId, membership.userId, membership.role, noAttribution)
+        accountEventRepo.save(event.copy(eventTime = membership.createdAt))
+      }
+
+      accountEventRepo.getAllByAccount(account.id.get)
+    }
   }
 
   def createCode() = AdminUserAction(parse.tolerantJson) { implicit request =>
@@ -302,4 +413,5 @@ case class AdminPaymentsActivityOverview(
 case class AdminPaymentsDashboard(
   totalAmortizedIncomePerMonth: DollarAmount,
   planEnrollment: Map[PaidPlan, (Int, Int)],
-  frozenAccounts: Seq[AdminAccountView])
+  frozenAccounts: Seq[AdminAccountView],
+  failedAccounts: Seq[AdminAccountView])

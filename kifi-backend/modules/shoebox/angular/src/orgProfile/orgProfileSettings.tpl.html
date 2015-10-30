@@ -39,21 +39,21 @@
             >Integrations</a>
           </li>
           <!-- -->
-          <li ng-if="isAdminExperiment && canManagePlan" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'payment-plan' }">
+          <li ng-if="canManagePlan" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'payment-plan' }">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.plan"
               ng-click="onClickTrack($event, 'clickPaymentPlan')"
             >Payment Plan</a>
           </li>
-          <li ng-if="isAdminExperiment && canManagePlan" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'activity-log' }">
+          <li ng-if="canManagePlan" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'activity-log' }">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.activity"
               ng-click="onClickTrack($event, 'clickActivityLog')"
             >Activity Log</a>
           </li>
-          <li ng-if="isAdminExperiment && canManagePlan" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
+          <li ng-if="canManagePlan" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'billing-contacts' }">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.contacts"
@@ -68,7 +68,7 @@
               ng-click="onClickTrack($event, 'clickExportKeeps')"
             >Export Keeps</a>
           </li>
-          <li ng-if="isAdminExperiment && canRedeemCredit" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'earn-credit' }">
+          <li ng-if="isAdminExperiment && canRedeemCredit" class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'earn-credits' }">
             <a
               class="kf-link"
               ui-sref="orgProfile.settings.credits"
