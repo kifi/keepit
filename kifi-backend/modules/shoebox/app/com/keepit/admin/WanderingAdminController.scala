@@ -105,38 +105,4 @@ class WanderingAdminController @Inject() (
       }
     }
   }
-
-  def fromParisWithLove() = AdminUserPage.async { implicit request =>
-    val start = clock.now()
-    val promisedResult = Promise[Result]()
-
-    doWander(Wanderlust.discovery(request.userId)).onComplete {
-      case Failure(ex) =>
-        val view = Ok(views.html.admin.graph.fromParisWithLove(request.user, Failure[Long](ex), Seq.empty))
-        promisedResult.success(view)
-      case Success((_, _, _, sortedUris, _)) =>
-        val end = clock.now()
-        val timing = end.getMillis - start.getMillis
-        val view = Ok(views.html.admin.graph.fromParisWithLove(request.user, Success(timing), sortedUris))
-        promisedResult.success(view)
-    }
-
-    promisedResult.future
-  }
-
-  def uriWandering(steps: Int) = AdminUserPage.async { implicit request =>
-    val userId = request.userId
-    val start = clock.now()
-
-    graphClient.uriWander(userId, steps).map { uriScores =>
-      val end = clock.now()
-      val timing = end.getMillis - start.getMillis
-
-      val sortedUris = db.readOnlyReplica { implicit session =>
-        uriScores.map { case (uriId, count) => uriRepo.get(uriId) -> count }
-      }.filter(_._1.restriction.isEmpty).toSeq.sortBy(-_._2)
-
-      Ok(views.html.admin.graph.fromParisWithLove(request.user, Success(timing), sortedUris))
-    }
-  }
 }

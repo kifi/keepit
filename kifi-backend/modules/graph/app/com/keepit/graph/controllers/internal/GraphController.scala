@@ -27,7 +27,6 @@ class GraphController @Inject() (
     wanderingCommander: WanderingCommander,
     socialWanderingCommander: SocialWanderingCommander,
     feedExplanationCommander: FeedExplanationCommander,
-    uriWanderingCommander: URIWanderingCommander,
     graphCommander: GraphCommander) extends GraphServiceController with Logging {
 
   def wander() = Action.async(parse.json) { request =>
@@ -128,12 +127,6 @@ class GraphController @Inject() (
     val uriIds = (js \ "uris").as[Seq[Id[NormalizedURI]]]
     feedExplanationCommander.explain(userId, uriIds).map { explain =>
       Ok(Json.toJson(explain))
-    }
-  }
-
-  def uriWandering(userId: Id[User], steps: Int) = Action.async { request =>
-    uriWanderingCommander.wander(userId, steps).map { res =>
-      Ok(Json.toJson(res))
     }
   }
 }
