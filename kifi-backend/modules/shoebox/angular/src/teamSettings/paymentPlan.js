@@ -6,13 +6,15 @@ angular.module('kifi')
   '$window', '$rootScope', '$scope', '$state', '$filter', '$q', '$timeout',
   '$analytics', 'billingState', 'billingService', 'modalService',
   'profileService', 'StripeCheckout', 'messageTicker', 'paymentPlans',
+  'ORG_PERMISSION',
   function ($window, $rootScope, $scope, $state, $filter, $q, $timeout,
             $analytics, billingState, billingService, modalService,
-            profileService, StripeCheckout, messageTicker, paymentPlans) {
+            profileService, StripeCheckout, messageTicker, paymentPlans,
+            ORG_PERMISSION) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
     $scope.disableSaveButton = false;
-    $scope.isKifiAdmin = profileService.me.experiments.indexOf('admin') !== -1;
+    $scope.canRedeemCredit = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.REDEEM_CREDIT_CODE) !== -1);
 
     var PREDEFINED_CYCLE_PERIOD = {
       1: 'Monthly',
