@@ -193,7 +193,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
       postOffice.sendMail(ElectronicMail(
         from = SystemEmailAddress.BILLING,
         fromName = Some("Kifi Billing"),
-        to = Seq(EmailAddress("billingalerts@kifi.com@kifi.com")),
+        to = Seq(EmailAddress("billingalerts@kifi.com")),
         subject = subject,
         htmlBody = htmlBody,
         textBody = Some(textBody),
