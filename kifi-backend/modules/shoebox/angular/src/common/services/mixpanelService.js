@@ -99,7 +99,7 @@
         userStatus: getUserStatus(),
         experiments: getExperiments()
       });
-      $log.log('mixpanelService.eventTrack(' + action + ')', props);
+      //$log.log('mixpanelService.eventTrack(' + action + ')', props);
       if (profileService.me && profileService.me.id) {
         trackEventThroughProxy(action, props);
       } else {
@@ -171,7 +171,7 @@
       try {
         origin = origin || $window.location.origin;
         setUserId(userId);
-        $log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
+        //$log.log('mixpanelService.pageTrackForUser(' + path + '):' + origin);
 
         attributes = _.extend({
           type: attributes.type || getLocation(path),
@@ -211,7 +211,7 @@
   }
 
   function pageTrackForVisitor(path, origin, attributes) {
-    $log.log('mixpanelService.pageTrackForVisitor(' + path + '):' + origin);
+    //$log.log('mixpanelService.pageTrackForVisitor(' + path + '):' + origin);
 
     attributes = _.extend({
       type: attributes.type || getLocation(path),
