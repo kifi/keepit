@@ -7,7 +7,7 @@
       <p>Enter a referral code after you’ve received one from another team or press article.  The referrer will be notified that you used their code.</p>
       <form class="kf-redeem-credits-form">
         <input class="kf-textbox kf-redeem-credits-box" ng-model="redeemCode" placeholder="Enter code (ex: 'KIFI50')"></input>
-        <input class="kf-button kf-button-large kf-button-cta-green" ng-disabled="!redeemCode" type="submit" value="Apply" ng-click="applyReferralCode(redeemCode)">
+        <input class="kf-button kf-button-large kf-button-cta-green" ng-disabled="!redeemCode" type="submit" value="Apply Code" ng-click="applyReferralCode(redeemCode)">
         <span class="kf-redeem-credits-confirm-txt" ng-if="showCredit">You earned {{ creditRedeemed | money }}!</span>
         <span class="kf-redeem-credits-error-txt" ng-if="$error.general">{{ $error.general }}</span>
       </form>
