@@ -37,11 +37,13 @@
 
 .kf-container-section
   padding-top: defaultPadding
-  padding-bottom: defaultPadding
   border-top: 1px solid textLightGrey
 
   > :first-child
     margin-top: 0
+
+  &:not(:last-child)
+    padding-bottom: defaultPadding
 
 .kf-container-footer
   margin-top: defaultPadding

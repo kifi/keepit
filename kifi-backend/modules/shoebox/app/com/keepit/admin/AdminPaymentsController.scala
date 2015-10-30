@@ -281,7 +281,7 @@ class AdminPaymentsController @Inject() (
     if (request.userId.id == 134 && doIt) {
       SafeFuture {
         val activeOrgIds = db.readOnlyMaster { implicit session =>
-          orgRepo.allActive.map(_.id.get)
+          orgRepo.allActive.map(_.id.get).toSet - Id[Organization](2941)
         }
         activeOrgIds.map(doResetAccount)
       }
@@ -302,6 +302,7 @@ class AdminPaymentsController @Inject() (
   }
 
   private def doResetAccount(orgId: Id[Organization]): Seq[AccountEvent] = {
+    planCommander.changePlan(orgId, Id[PaidPlan](3), ActionAttribution(None, None)).recover { case ex: InvalidChange => () }.get // move to Free plan
     db.readWrite { implicit session =>
 
       // Reset account consistently with PlanManagementCommander.createAndInitializePaidAccountForOrganization
