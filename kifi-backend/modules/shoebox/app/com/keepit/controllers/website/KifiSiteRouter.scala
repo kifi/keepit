@@ -241,18 +241,25 @@ class KifiSiteRouter @Inject() (
 
   private def lookupByHandle(handle: Handle): Option[(Either[Organization, User], Option[Int])] = {
     val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle) }
-    handleOwnerOpt.map {
+    handleOwnerOpt.flatMap {
       case (handleOwner, isPrimary) =>
         val foundHandle = handleOwner match {
           case Left(org) => Handle.fromOrganizationHandle(org.handle)
           case Right(user) => Handle.fromUsername(user.username)
         }
 
-        if (foundHandle != handle) {
+        val result = if (foundHandle != handle) {
           // owner moved or handle normalization
           (handleOwner, Some(if (!isPrimary) MOVED_PERMANENTLY else SEE_OTHER))
         } else {
           (handleOwner, None)
+        }
+
+        if (result._1.left.exists(_.ownerId == Id[User](97543))) {
+          // Owner is Fake User, https://admin.kifi.com/admin/user/97543
+          None
+        } else {
+          Some(result)
         }
     }
   }
