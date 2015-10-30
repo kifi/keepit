@@ -7,7 +7,7 @@ angular.module('kifi')
 
 .directive('kfSymbolSprite', [function () {
   return {
-    restrict :'A',
+    restrict: 'A',
     compile: function () {
       return function (scope, element, attrs) {
         var paths = angular.element('symbol#' + attrs.icon);
