@@ -83,12 +83,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
     checkingParameters(event) {
       lazy val msg = {
         val info = activityCommander.buildSimpleEventInfo(event)
-        val description = info.description.flatten.map {
-          case BasicElement(text, None) => text
-          case BasicElement(text, Some(url)) => s"<$url|$text>"
-        } mkString
         val orgHeader = s"<https://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>"
-        s"[$orgHeader] $description | ${info.creditChange}"
+        s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
       }
       Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
         reportToSlack(msg, channel).imap(_ => channel)
