@@ -26,7 +26,7 @@ trait Reward {
 
 sealed abstract class RewardKind(val kind: String) {
   type S <: RewardStatus
-  protected val allStatus: Set[S]
+  protected def allStatus: Set[S]
   def applicable: S
   def writeStatus(status: S): String = status.status
   def readStatus(status: String): S = allStatus.find(_.status equalsIgnoreCase status) match {
@@ -35,7 +35,7 @@ sealed abstract class RewardKind(val kind: String) {
   }
 }
 
-sealed abstract class RewardStatus {
+sealed trait RewardStatus {
   type I
   def infoFormat: Format[I]
   def status: String
@@ -105,23 +105,23 @@ object RewardStatus {
 object RewardKind {
   case object Coupon extends RewardKind("coupon") with RewardStatus.WithEmptyInfo {
     case object Used extends Status("used")
-    protected val allStatus: Set[S] = Set(Used)
-    val applicable: Used.type = Used
+    protected lazy val allStatus: Set[S] = Set(Used)
+    lazy val applicable: Used.type = Used
   }
 
   case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
-    val infoFormat = Id.format[Organization]
+    lazy val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
-    protected val allStatus: Set[S] = Set(Created)
-    val applicable: Created.type = Created
+    protected lazy val allStatus: Set[S] = Set(Created)
+    lazy val applicable: Created.type = Created
   }
 
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
-    val infoFormat = Id.format[Organization]
+    lazy val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
     case object Upgraded extends Status("upgraded")
-    protected val allStatus: Set[S] = Set(Created, Upgraded)
-    val applicable: Upgraded.type = Upgraded
+    protected lazy val allStatus: Set[S] = Set(Created, Upgraded)
+    lazy val applicable: Upgraded.type = Upgraded
   }
 
   private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral)
