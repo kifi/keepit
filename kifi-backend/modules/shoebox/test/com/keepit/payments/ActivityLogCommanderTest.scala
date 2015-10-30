@@ -69,7 +69,7 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         val events = setup()
         events.map(_.action.eventType).toSet === AccountEventKind.activityLog
 
-        events.foreach(display _ andThen println)
+        // events.foreach(display _ andThen println)
         val e = events.toIterator
         display(e.next()) === "The Org team was created by Owner and enrolled in the Free plan."
         display(e.next()) === "Your card was charged $0.00 for your balance. [Invoice not found, please contact billing@kifi.com]"
