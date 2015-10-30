@@ -862,8 +862,6 @@ POST    /admin/cortex/lda/persona/train                    @com.keepit.controlle
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
-GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
-GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
 
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)

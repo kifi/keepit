@@ -26,7 +26,6 @@ class FakeGraphServiceClientImpl(
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceInfo, PrettyGraphState]] = Future.successful(Map.empty)
   def getGraphKinds(): Future[GraphKinds] = Future.successful(GraphKinds.empty)
   def wander(wanderlust: Wanderlust): Future[Collisions] = Future.successful(Collisions.empty)
-  def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]] = Future.successful(uriAndScores)
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUriScore]] = Future.successful(Seq.empty)
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnection: Boolean): Future[Seq[ConnectedUserScore]] =
     Future.successful(connectedUserScoresExpectations.getOrElse(userId, Seq.empty))
