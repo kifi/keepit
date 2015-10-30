@@ -39,11 +39,7 @@ angular.module('kifi')
         var smallWindow = $window.innerWidth <= smallWindowLimit;
 
 
-        if (profileService.userLoggedIn()) {
-          if (platformService.isSupportedMobilePlatform()) {
-            modalService.open({template: 'signup/getTheAppModal.tpl.html'});
-          }
-        } else {
+        if (!profileService.userLoggedIn()) {
           if (scope.library && scope.library.invite && scope.library.invite.access==='read_write') {
             signupService.register({libraryId: scope.library.id, intent: 'follow', libAuthToken: authToken, invite: scope.library.invite});
           }
