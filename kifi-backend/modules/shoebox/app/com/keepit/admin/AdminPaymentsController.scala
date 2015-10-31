@@ -386,10 +386,3 @@ case class AdminPaymentsActivityOverview(
   orgsByAccountId: Map[Id[PaidAccount], Organization],
   pgHelper: PaginationHelper)
 
-case class IncomeHistory(cur: DollarAmount, old: DollarAmount)
-case class PlanEnrollmentHistory(cur: PlanEnrollment, old: PlanEnrollment)
-case class AdminPaymentsDashboard(
-  totalAmortizedIncomePerMonth: IncomeHistory,
-  planEnrollment: Map[PaidPlan, PlanEnrollmentHistory],
-  frozenAccounts: Seq[AdminAccountView],
-  failedAccounts: Seq[AdminAccountView])
