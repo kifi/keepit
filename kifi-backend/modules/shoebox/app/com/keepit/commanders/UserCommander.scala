@@ -127,7 +127,7 @@ trait UserCommander {
   def changePassword(userId: Id[User], newPassword: String, oldPassword: Option[String]): Try[Unit]
   def resetPassword(code: String, ip: IpAddress, password: String): Either[String, Id[User]]
   def sendCloseAccountEmail(userId: Id[User], comment: String): ElectronicMail
-  def sendCreateTeamEmail(userId: Id[User], emailAddress: EmailAddress): ElectronicMail
+  def sendCreateTeamEmail(userId: Id[User], emailAddress: EmailAddress): Either[String, ElectronicMail]
   def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[JsObject]
   def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]): Unit
   def setLastUserActive(userId: Id[User]): Unit
@@ -425,30 +425,37 @@ class UserCommanderImpl @Inject() (
     }
   }
 
-  def sendCreateTeamEmail(userId: Id[User], emailAddress: EmailAddress): ElectronicMail = {
+  def sendCreateTeamEmail(userId: Id[User], emailAddress: EmailAddress): Either[String, ElectronicMail] = {
     db.readWrite { implicit s =>
-      val userEmail = emailRepo.getByAddressAndUser(userId, emailAddress, excludeState = None) match {
+      val userEmailTry = emailRepo.getByAddress(emailAddress, excludeState = None) match {
         case None =>
-          emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, hash = EmailAddressHash.hashEmailAddress(emailAddress))).tap {
+          Success(emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, hash = EmailAddressHash.hashEmailAddress(emailAddress))).tap {
             newEmail => userEmailAddressCommander.sendVerificationEmailHelper(newEmail)
-          }
-        case Some(email) if email.state == UserEmailAddressStates.INACTIVE => emailRepo.save(email.withState(UserEmailAddressStates.ACTIVE))
-        case Some(email) => email
+          })
+        case Some(email) if email.userId != userId => Failure(new Exception("email_taken"))
+        case Some(email) if email.state == UserEmailAddressStates.INACTIVE => Success(emailRepo.save(email.withState(UserEmailAddressStates.ACTIVE)))
+        case Some(email) => Success(email)
       }
-      postOffice.sendMail(ElectronicMail(
-        fromName = Some("Kifi Support"),
-        from = SystemEmailAddress.NOTIFICATIONS,
-        to = Seq(userEmail.address),
-        subject = "Create a Kifi team from your desktop",
-        htmlBody =
-          s"""
-              Per your request, you can now <a href="http://www.kifi.com/teams/new">create a team</a> on Kifi from
-              your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+      userEmailTry match {
+        case Success(userEmail) => {
+          val mail = postOffice.sendMail(ElectronicMail(
+            fromName = Some("Kifi Support"),
+            from = SystemEmailAddress.NOTIFICATIONS,
+            to = Seq(userEmail.address),
+            subject = "Create a Kifi team from your desktop",
+            htmlBody =
+              s"""
+                  Per your request, you can now <a href="http://www.kifi.com/teams/new">create a team</a> on Kifi from
+                  your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
 
-              Get started by visiting the page to <a href="http://www.kifi.com/teams/new">create a team</a>.
-          """,
-        category = NotificationCategory.User.CREATE_TEAM
-      ))
+                  Get started by visiting the page to <a href="http://www.kifi.com/teams/new">create a team</a>.
+              """,
+            category = NotificationCategory.User.CREATE_TEAM
+          ))
+          Right(mail)
+        }
+        case Failure(err) => Left("email_taken")
+      }
     }
   }
 
