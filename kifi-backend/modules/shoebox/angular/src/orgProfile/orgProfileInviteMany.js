@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgInviteMany', [
-  'util', 'orgProfileService',
-  function (util, orgProfileService) {
+  'util', 'orgProfileService', '$timeout',
+  function (util, orgProfileService, $timeout) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -52,6 +52,10 @@ angular.module('kifi')
           })
           .then(scope.modalData.returnAction);
         };
+
+        $timeout(function () {
+          element.find('textarea').focus();
+        });
       }
     };
   }
