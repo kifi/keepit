@@ -4,16 +4,17 @@ angular.module('kifi')
 
 .controller('PaymentPlanCtrl', [
   '$window', '$rootScope', '$scope', '$state', '$filter', '$q', '$timeout',
-  '$analytics', 'billingState', 'billingService', 'modalService',
+  'billingState', 'billingService', 'modalService',
   'profileService', 'StripeCheckout', 'messageTicker', 'paymentPlans',
   'ORG_PERMISSION',
   function ($window, $rootScope, $scope, $state, $filter, $q, $timeout,
-            $analytics, billingState, billingService, modalService,
+            billingState, billingService, modalService,
             profileService, StripeCheckout, messageTicker, paymentPlans,
             ORG_PERMISSION) {
     $scope.billingState = billingState;
     $scope.card = billingState.card;
     $scope.disableSaveButton = false;
+    $scope.trackingType = 'org_settings:payment_plan';
     $scope.canRedeemCredit = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.REDEEM_CREDIT_CODE) !== -1);
 
     var PREDEFINED_CYCLE_PERIOD = {
@@ -35,6 +36,7 @@ angular.module('kifi')
     });
 
     $scope.openStripeCheckout = function () {
+      $scope.trackClick('credit_card:add_card');
       var me = profileService.me;
       var emailObject = (me.primaryEmail || me.emails[0] || {}); // extra defensive
       var emailAddress = emailObject.address;
@@ -56,6 +58,7 @@ angular.module('kifi')
     };
 
     $scope.warningModalOrSave = function () {
+      $scope.trackClick('save');
       if (!$scope.isFreePlanName($scope.currentPlan.name) && $scope.isFreePlanName($scope.plan.name)) {
         openDowngradeModal();
       } else if ($scope.isPaidPlanName($scope.plan.name) && !($scope.card && $scope.card.lastFour) && !$scope.plan.newCard) {
@@ -68,12 +71,14 @@ angular.module('kifi')
 
     function openDowngradeModal () {
       modalService.open({
-        template: 'teamSettings/downgradeConfirmModal.tpl.html',
+        template: 'teamSettings/planDowngradeConfirmModal.tpl.html',
         modalData: {
           save: function () {
+            $scope.trackClick('downgrade_modal:downgrade');
             $scope.save();
           },
           close: function () {
+            $scope.trackClick('downgrade_modal:cancel');
             modalService.close();
           }
         }
@@ -86,6 +91,7 @@ angular.module('kifi')
       $scope.plan.name = firstFreeTierPlan.name;
       $scope.plan.cycle = firstFreeTierPlan.cycle;
       $scope.planSelectsForm.$setDirty();
+      $scope.trackClick('free_card:downgrade');
     };
 
     $scope.changePlanToStandard = function () {
@@ -93,6 +99,7 @@ angular.module('kifi')
       var firstStandardTierPlan = standardTierPlans[0];
       $scope.plan.name = firstStandardTierPlan.name;
       $scope.planSelectsForm.$setDirty();
+      $scope.trackClick('standard_card:upgrade');
     };
 
     var plansByTier = paymentPlans.plans;
@@ -286,7 +293,7 @@ angular.module('kifi')
               type: 'green'
             });
             resetForm();
-            $state.reload('orgProfile.settings');
+            $state.reload('orgProfile');
           })
         );
       }
@@ -307,6 +314,14 @@ angular.module('kifi')
 
       // Start the promise chain
       saveSeriesDeferred.resolve();
+    };
+
+    $scope.trackClick = function(action) {
+      $scope.$emit('trackOrgProfileEvent', 'click', { type: $scope.trackingType, action: action });
+    };
+
+    $scope.trackApplyCodeClick = function () {
+      $scope.$emit('trackOrgProfileEvent', 'click', { type: 'org_profile:settings:earn_credits', action: 'redeem_credit:apply_referral_code' });
     };
 
     function onBeforeUnload(e) {
@@ -349,8 +364,8 @@ angular.module('kifi')
         $scope.changePlanToStandard();
       }
 
-      $analytics.eventTrack('user_viewed_page', {
-        type: 'paymentPlan'
+      $scope.$emit('trackOrgProfileEvent', 'view', {
+          type: 'org_profile:settings:payment_plan'
       });
     });
   }

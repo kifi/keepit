@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('ExportKeepsCtrl', [
-  '$scope', '$sce', '$analytics', '$timeout', 'routeService', 'ORG_PERMISSION',
-  function ($scope, $sce, $analytics, $timeout, routeService, ORG_PERMISSION) {
+  '$scope', '$sce', '$timeout', 'routeService', 'ORG_PERMISSION',
+  function ($scope, $sce, $timeout, routeService, ORG_PERMISSION) {
     $scope.exportState = {
       format: 'html'
     };
@@ -17,8 +17,8 @@ angular.module('kifi')
     };
 
     $timeout(function () {
-      $analytics.eventTrack('user_viewed_page', {
-        type: 'exportKeeps'
+      $scope.$emit('trackOrgProfileEvent', 'view', {
+        type: 'org_profile:settings:export_keeps'
       });
     });
   }

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .factory('billingService', [
-  '$analytics', 'net', 'orgProfileService',
-  function ($analytics, net, orgProfileService) {
+  'net', 'orgProfileService',
+  function (net, orgProfileService) {
     function getResponseData(response) {
       return response.data;
     }

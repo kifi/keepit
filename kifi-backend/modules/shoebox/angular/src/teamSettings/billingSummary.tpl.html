@@ -4,7 +4,7 @@
     <li>
       <p>
         <span>You currently have</span>
-        <a class="kf-link kf-link-black kf-link-underline" ui-sref="orgProfile.members">
+        <a class="kf-link kf-link-black kf-link-underline" ui-sref="orgProfile.members" ng-click="trackOverviewClick('overview:team_members')">
           <span ng-bind="billingState.users"></span>
           team
           <span
@@ -20,6 +20,7 @@
         <a
           class="kf-link kf-link-black kf-link-underline"
           ui-sref="orgProfile.settings.plan"
+          ng-click="trackOverviewClick('overview:plan')"
         >
           <span ng-bind="billingState.plan.fullName"></span> plan
         </a>.
@@ -45,6 +46,7 @@
         <a
           class="kf-link kf-link-black kf-link-underline"
           ui-sref="orgProfile.settings.plan"
+          ng-click="trackOverviewClick('overview:credits')"
         >
           credit of
           <span ng-bind="!(billingState.balance | isPositiveMoney) ? (0 | money) : (billingState.balance | money)"></span>
@@ -55,6 +57,7 @@
           <a
             class="kf-link kf-link-black kf-link-underline"
             ui-sref="orgProfile.settings.plan"
+            ng-click="trackOverviewClick('overview:card_ending')"
           >
             credit card ending in
             <b ng-bind="'' + billingState.card.lastFour"></b>
