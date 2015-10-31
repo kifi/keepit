@@ -11,7 +11,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 import com.stripe.Stripe
-import com.stripe.model.{ Charge, Customer, Card }
+import com.stripe.model.{ Charge, Refund, Customer, Card }
 import com.stripe.exception.CardException
 
 @json
@@ -27,6 +27,7 @@ case class StripeChargeFailure(code: String, message: String) extends StripeChar
 
 trait StripeClient {
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult]
+  def refundCharge(chargeId: StripeChargeId, reason: String): Future[StripeChargeResult]
   def getPermanentToken(token: String, description: String): Future[StripeToken]
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken]
 
@@ -56,6 +57,21 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     try {
       val charge = Charge.create(chargeParams.asJava)
       StripeChargeSuccess(DollarAmount(charge.getAmount()), StripeChargeId(charge.getId()))
+    } catch {
+      case ex: CardException => {
+        StripeChargeFailure(ex.getCode(), ex.getMessage())
+      }
+    }
+  }
+
+  def refundCharge(chargeId: StripeChargeId, reason: String): Future[StripeChargeResult] = lock.withLock {
+    val chargeParams: Map[String, java.lang.Object] = Map(
+      "charge" -> chargeId.id,
+      "reason" -> reason
+    )
+    try {
+      val refund = Refund.create(chargeParams.asJava)
+      StripeChargeSuccess(-DollarAmount(refund.getAmount()), StripeChargeId(refund.getId()))
     } catch {
       case ex: CardException => {
         StripeChargeFailure(ex.getCode(), ex.getMessage())
