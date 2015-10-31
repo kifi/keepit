@@ -237,7 +237,7 @@ case class AccountEvent(
     paymentMethod: Option[Id[PaymentMethod]],
     paymentCharge: Option[DollarAmount],
     memo: Option[String],
-    chargeId: Option[String]) extends ModelWithPublicId[AccountEvent] with ModelWithState[AccountEvent] {
+    chargeId: Option[StripeChargeId]) extends ModelWithPublicId[AccountEvent] with ModelWithState[AccountEvent] {
 
   def withId(id: Id[AccountEvent]): AccountEvent = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): AccountEvent = this.copy(updatedAt = now)
@@ -265,7 +265,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     paymentMethod: Option[Id[PaymentMethod]],
     paymentCharge: Option[DollarAmount],
     memo: Option[String],
-    chargeId: Option[String]): AccountEvent = {
+    chargeId: Option[StripeChargeId]): AccountEvent = {
     AccountEvent(
       id,
       createdAt,

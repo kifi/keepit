@@ -142,7 +142,7 @@ class PaymentProcessingCommanderImpl @Inject() (
             val pendingChargeAccount = db.readWrite { implicit session =>
               paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Pending))
             }
-            if (isFakeAccount) Future.successful(endWithChargeSuccess(pendingChargeAccount, pm.id.get, StripeChargeSuccess(pendingChargeAccount.owed, "FAKE_CHARGE")))
+            if (isFakeAccount) Future.successful(endWithChargeSuccess(pendingChargeAccount, pm.id.get, StripeChargeSuccess(pendingChargeAccount.owed, StripeChargeId("ch_fake"))))
             else stripeClient.processCharge(amount, pm.stripeToken, s"Charging organization ${account.orgId} owing ${account.owed}") andThen {
               case Failure(ex) =>
                 log.error(s"[PPC][${account.orgId}] Unexpected exception while processing charge via Stripe.", ex)

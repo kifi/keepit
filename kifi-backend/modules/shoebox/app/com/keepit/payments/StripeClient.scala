@@ -2,6 +2,7 @@ package com.keepit.payments
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.concurrent.ReactiveLock
+import com.kifi.macros.json
 
 import play.api.Mode
 import play.api.Mode.Mode
@@ -13,11 +14,14 @@ import com.stripe.Stripe
 import com.stripe.model.{ Charge, Customer, Card }
 import com.stripe.exception.CardException
 
+@json
+case class StripeChargeId(id: String) // abusive naming, this might also be a refund id
+
 case class CardDetails(number: String, expMonth: Int, expYear: Int, cvc: String, cardholderName: String)
 
 sealed trait StripeChargeResult
 
-case class StripeChargeSuccess(amount: DollarAmount, chargeId: String) extends StripeChargeResult
+case class StripeChargeSuccess(amount: DollarAmount, chargeId: StripeChargeId) extends StripeChargeResult
 
 case class StripeChargeFailure(code: String, message: String) extends StripeChargeResult
 
@@ -51,7 +55,7 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     )
     try {
       val charge = Charge.create(chargeParams.asJava)
-      StripeChargeSuccess(DollarAmount(charge.getAmount()), charge.getId())
+      StripeChargeSuccess(DollarAmount(charge.getAmount()), StripeChargeId(charge.getId()))
     } catch {
       case ex: CardException => {
         StripeChargeFailure(ex.getCode(), ex.getMessage())

@@ -33,7 +33,7 @@ class FakeStripeClientImpl extends StripeClient {
       val num = chargeCounter.getAndIncrement()
       val trans = FakeTransaction(s"faketransaction_$num", amount, token, description)
       transactions(token).append(trans)
-      Future.successful(StripeChargeSuccess(amount, trans.id))
+      Future.successful(StripeChargeSuccess(amount, StripeChargeId(trans.id)))
     }
   }
 

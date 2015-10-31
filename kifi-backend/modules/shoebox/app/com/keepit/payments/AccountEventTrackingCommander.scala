@@ -15,7 +15,7 @@ import play.api.Mode
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Try }
 import com.keepit.common.core._
 
 @ImplementedBy(classOf[AccountEventTrackingCommanderImpl])
@@ -119,7 +119,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Future[Unit] = {
+  private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: StripeChargeId): Future[Unit] = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
     val (userContacts, org) = db.readOnlyReplica { implicit session =>
       val userContacts = account.userContacts.flatMap { userId =>
@@ -131,13 +131,13 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
     lastFourFuture.map { lastFour =>
       val subject = s"We've charged you card for your Kifi Organization ${org.name}"
-      val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
+      val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).<br/>
       |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history<a>.</p>
       |
       |<p>Thanks,
       |The Kifi Team</p>
       """.stripMargin
-      val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
+      val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).
       |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings/activity.
       |
       |Thanks, <br/>
