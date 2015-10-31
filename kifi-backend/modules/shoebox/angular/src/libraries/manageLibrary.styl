@@ -597,8 +597,13 @@ textarea.manage-lib-sub-input
   vertical-align: top
   placeholder secondaryTextGray
 
-  &:focus
+  &:focus:not(.ng-invalid)
     border: 1px solid blueColor
+
+  &.ng-invalid
+    border: 1px solid redColor
+    color: redColor
+    placeholder: redColor
 
 //
 // Delete library confirm modal
