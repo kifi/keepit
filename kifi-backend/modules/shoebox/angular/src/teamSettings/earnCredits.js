@@ -24,6 +24,10 @@ angular.module('kifi')
       $scope.$emit('trackOrgProfileEvent', 'click', { type: $scope.trackingType, action: 'copy_referral_code' });
     }
 
+    $scope.trackApplyCodeClick = function () {
+      $scope.$emit('trackOrgProfileEvent', 'click', { type: 'org_profile:settings:earn_credits', action: 'redeem_credit:apply_referral_code' });
+    };
+
     $scope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:settings:earn_credits' });
   }
 ]);

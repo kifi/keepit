@@ -71,7 +71,7 @@
       </div>
     </form>
     <div ng-if="canRedeemCredit" class="kf-container-section">
-      <div kf-redeem-credits profile="profile" standalone="false" parent-tracking-type="trackingType"></div>
+      <div kf-redeem-credits profile="profile" standalone="false" on-apply="trackApplyCodeClick"></div>
     </div>
     <div class="kf-container-section" ng-show="isPaidPlanName(plan.name)">
       <form name="creditCardForm">

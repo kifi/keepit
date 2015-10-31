@@ -320,6 +320,10 @@ angular.module('kifi')
       $scope.$emit('trackOrgProfileEvent', 'click', { type: $scope.trackingType, action: action });
     };
 
+    $scope.trackApplyCodeClick = function () {
+      $scope.$emit('trackOrgProfileEvent', 'click', { type: 'org_profile:settings:earn_credits', action: 'redeem_credit:apply_referral_code' });
+    };
+
     function onBeforeUnload(e) {
       var message = 'We\'re still saving your settings. Are you sure you wish to leave this page?';
       (e || $window.event).returnValue = message; // for Firefox

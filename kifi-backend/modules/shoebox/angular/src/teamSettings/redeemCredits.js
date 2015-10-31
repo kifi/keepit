@@ -12,19 +12,15 @@ angular.module('kifi')
       scope: {
         profile: '=',
         standalone: '=',
-        parentTrackingType: '='
+        onApply: '='
       },
       link: function($scope) {
 
         $scope.$error = {};
         $scope.creditRedeemed = 0;
 
-        function trackApplyClick() {
-          $scope.$emit('trackOrgProfileEvent', 'click', { type: $scope.parentTrackingType, action: 'redeem_credit:apply_referral_code' });
-        }
-
         $scope.applyReferralCode = function (code) {
-          trackApplyClick();
+          $scope.onApply();
           $scope.creditRedeemed = 0;
           billingService
             .applyReferralCode($scope.profile.id, code)
