@@ -12,12 +12,19 @@ angular.module('kifi')
       scope: {
         profile: '=',
         standalone: '=',
-        onApply: '='
+        onApply: '=',
+        autofocus: '='
       },
-      link: function($scope) {
+      link: function($scope, $element) {
 
         $scope.$error = {};
         $scope.creditRedeemed = 0;
+
+        if ($scope.autofocus) {
+          $timeout(function() {
+              $element.find('.kf-redeem-credits-box').focus();
+          });
+        }
 
         $scope.applyReferralCode = function (code) {
           $scope.onApply();

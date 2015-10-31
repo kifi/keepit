@@ -84,4 +84,5 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def creditCodeInfoRepo(implicit injector: Injector) = inject[CreditCodeInfoRepo]
   def creditRewardRepo(implicit injector: Injector) = inject[CreditRewardRepo]
   def creditRewardCommander(implicit injector: Injector) = inject[CreditRewardCommander]
+  def activityLogCommander(implicit injector: Injector) = inject[ActivityLogCommander]
 }

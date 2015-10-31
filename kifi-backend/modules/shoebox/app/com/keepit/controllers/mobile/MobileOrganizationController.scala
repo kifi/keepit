@@ -6,6 +6,7 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
@@ -13,6 +14,7 @@ import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
+import scala.util.{ Success, Failure }
 
 @Singleton
 class MobileOrganizationController @Inject() (
@@ -77,7 +79,6 @@ class MobileOrganizationController @Inject() (
     Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
   }
 
-  // TODO(ryan): when organizations are no longer hidden behind an experiment, change this to a MaybeUserAction
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalId(extId)
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
@@ -87,5 +88,16 @@ class MobileOrganizationController @Inject() (
     val orgViews = visibleOrgs.map(org => orgViewsMap(org))
 
     Ok(Json.obj("organizations" -> orgViews))
+  }
+
+  def sendCreateTeamEmail(email: String) = UserAction { request =>
+    EmailAddress.validate(email) match {
+      case Failure(err) => BadRequest(Json.obj("error" -> "invalid_email"))
+      case Success(validEmail) =>
+        userCommander.sendCreateTeamEmail(request.userId, validEmail) match {
+          case Left(err) => Forbidden(err)
+          case _ => Ok
+        }
+    }
   }
 }

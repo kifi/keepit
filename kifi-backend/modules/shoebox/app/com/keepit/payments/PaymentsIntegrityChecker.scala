@@ -139,7 +139,7 @@ class PaymentsIntegrityChecker @Inject() (
     val accountEvents = accountEventRepo.getAllByAccount(accountId)
 
     val creditChanges = accountEvents.map(_.creditChange)
-    val computedCredit = creditChanges.fold(DollarAmount.ZERO)(_ + _)
+    val computedCredit = creditChanges.sum
     if (computedCredit == account.credit) Seq.empty
     else {
       log.error(s"[AEIC] Computed credit for $orgId = $computedCredit but the account shows a credit of ${account.credit}")

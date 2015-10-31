@@ -11,8 +11,6 @@ import org.specs2.mutable.SpecificationLike
 
 import scala.util.Random
 
-//things to test: add_user, remvove_user, change plan free to paid, all paths through charge processing
-
 class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInjector {
   val modules = Seq(
     FakeExecutionContextModule(),

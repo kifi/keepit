@@ -1,7 +1,7 @@
 package com.keepit.commanders
 
 import akka.actor.Scheduler
-import com.google.inject.{ Singleton, Provider, Inject }
+import com.google.inject.{ ImplementedBy, Singleton, Provider, Inject }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender }
@@ -108,8 +108,42 @@ object UserProfileStats {
 
 case class UserNotFoundException(username: Username) extends Exception(username.toString)
 
+@ImplementedBy(classOf[UserCommanderImpl])
+trait UserCommander {
+  def userFromUsername(username: Username): Option[User]
+  def profile(username: Username, viewer: Option[User]): Option[UserProfile]
+  def setSettings(userId: Id[User], newSettings: Map[UserValueName, JsValue])
+  def updateUserBiography(userId: Id[User], biography: String): Unit
+  def updateUserInfo(userId: Id[User], userData: UpdatableUserInfo): Unit
+  def updateName(userId: Id[User], newFirstName: Option[String], newLastName: Option[String]): User
+  def socialNetworkInfo(userId: Id[User]): Seq[BasicSocialUser]
+  def getGmailABookInfos(userId: Id[User]): Future[Seq[ABookInfo]]
+  def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[Try[ABookInfo]]
+  def getUserInfo(user: User): BasicUserInfo
+  def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
+  def getUserSegment(userId: Id[User]): UserSegment
+  def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]]
+  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit]
+  def changePassword(userId: Id[User], newPassword: String, oldPassword: Option[String]): Try[Unit]
+  def resetPassword(code: String, ip: IpAddress, password: String): Either[String, Id[User]]
+  def sendCloseAccountEmail(userId: Id[User], comment: String): ElectronicMail
+  def sendCreateTeamEmail(userId: Id[User], emailAddress: EmailAddress): Either[String, ElectronicMail]
+  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[JsObject]
+  def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]): Unit
+  def setLastUserActive(userId: Id[User]): Unit
+  def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]]
+  def cancelDelightedSurvey(userId: Id[User]): Future[Boolean]
+  def setUsername(userId: Id[User], username: Username, overrideValidityCheck: Boolean = false, overrideProtection: Boolean = false): Either[String, Username]
+  def getFriendRecommendations(userId: Id[User], offset: Int, limit: Int): Future[Option[FriendRecommendations]]
+  def loadBasicUsersAndConnectionCounts(idsForUsers: Set[Id[User]], idsForCounts: Set[Id[User]]): (Map[Id[User], BasicUser], Map[Id[User], Int])
+  def reNormalizedUsername(readOnly: Boolean, max: Int): Int
+  def getByExternalIds(externalIds: Seq[ExternalId[User]]): Map[ExternalId[User], User]
+  def getByExternalId(externalId: ExternalId[User]): User
+  def getAllFakeUsers(): Set[Id[User]]
+}
+
 @Singleton
-class UserCommander @Inject() (
+class UserCommanderImpl @Inject() (
     db: Database,
     userRepo: UserRepo,
     handleCommander: HandleCommander,
@@ -150,7 +184,7 @@ class UserCommander @Inject() (
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val executionContext: ExecutionContext,
     experimentRepo: UserExperimentRepo,
-    airbrake: AirbrakeNotifier) extends Logging { self =>
+    airbrake: AirbrakeNotifier) extends UserCommander with Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
     userRepo.getByUsername(username) //cached
@@ -207,7 +241,7 @@ class UserCommander @Inject() (
     }
   }
 
-  def updateUserNames(user: User, newFirstName: String, newLastName: String): User = {
+  private def updateUserNames(user: User, newFirstName: String, newLastName: String): User = {
     db.readWrite { implicit session =>
       userRepo.save(user.copy(firstName = newFirstName, lastName = newLastName))
     }
@@ -220,11 +254,11 @@ class UserCommander @Inject() (
     }
   }
 
-  def socialNetworkInfo(userId: Id[User]) = db.readOnlyMaster { implicit s =>
+  def socialNetworkInfo(userId: Id[User]): Seq[BasicSocialUser] = db.readOnlyMaster { implicit s =>
     socialUserInfoRepo.getByUser(userId).map(BasicSocialUser.from)
   }
 
-  def getGmailABookInfos(userId: Id[User]) = abookServiceClient.getABookInfos(userId).map(_.filter(_.origin == ABookOrigins.GMAIL))
+  def getGmailABookInfos(userId: Id[User]): Future[Seq[ABookInfo]] = abookServiceClient.getABookInfos(userId).map(_.filter(_.origin == ABookOrigins.GMAIL))
 
   def uploadContactsProxy(userId: Id[User], origin: ABookOriginType, payload: JsValue): Future[Try[ABookInfo]] = {
     abookServiceClient.uploadContacts(userId, origin, payload)
@@ -391,10 +425,37 @@ class UserCommander @Inject() (
     }
   }
 
-  def delay(f: => Unit) = {
-    import scala.concurrent.duration._
-    scheduler.scheduleOnce(5 minutes) {
-      f
+  def sendCreateTeamEmail(userId: Id[User], emailAddress: EmailAddress): Either[String, ElectronicMail] = {
+    db.readWrite { implicit s =>
+      val userEmailTry = emailRepo.getByAddress(emailAddress, excludeState = None) match {
+        case None =>
+          Success(emailRepo.save(UserEmailAddress(userId = userId, address = emailAddress, hash = EmailAddressHash.hashEmailAddress(emailAddress))).tap {
+            newEmail => userEmailAddressCommander.sendVerificationEmailHelper(newEmail)
+          })
+        case Some(email) if email.userId != userId => Failure(new Exception("email_taken"))
+        case Some(email) if email.state == UserEmailAddressStates.INACTIVE => Success(emailRepo.save(email.withState(UserEmailAddressStates.ACTIVE)))
+        case Some(email) => Success(email)
+      }
+      userEmailTry match {
+        case Success(userEmail) => {
+          val mail = postOffice.sendMail(ElectronicMail(
+            fromName = Some("Kifi Support"),
+            from = SystemEmailAddress.NOTIFICATIONS,
+            to = Seq(userEmail.address),
+            subject = "Create a Kifi team from your desktop",
+            htmlBody =
+              s"""
+                  Per your request, you can now <a href="http://www.kifi.com/teams/new">create a team</a> on Kifi from
+                  your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+
+                  Get started by visiting the page to <a href="http://www.kifi.com/teams/new">create a team</a>.
+              """,
+            category = NotificationCategory.User.CREATE_TEAM
+          ))
+          Right(mail)
+        }
+        case Failure(err) => Left("email_taken")
+      }
     }
   }
 
@@ -450,7 +511,7 @@ class UserCommander @Inject() (
     }
   }
 
-  def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]) = {
+  def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]): Unit = {
     db.readWrite(attempts = 3) { implicit s =>
       o.map {
         case (name, JsNull) => userValueRepo.clearValue(userId, name)
@@ -459,6 +520,7 @@ class UserCommander @Inject() (
         case (name, value) => userValueRepo.setValue(userId, name, value.toString)
       }
     }
+    ()
   }
 
   val DELIGHTED_MIN_INTERVAL = 60 // days
@@ -574,15 +636,6 @@ class UserCommander @Inject() (
       }
     }
     counter
-  }
-
-  def getUserByUsername(username: Username): Option[(User, Boolean)] = {
-    db.readOnlyMaster { implicit session =>
-      handleCommander.getByHandle(username).collect {
-        case (Right(user), isPrimary) if user.state == UserStates.ACTIVE =>
-          (user, isPrimary)
-      }
-    }
   }
 
   def getByExternalIds(externalIds: Seq[ExternalId[User]]): Map[ExternalId[User], User] = {

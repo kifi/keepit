@@ -25,6 +25,9 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import com.keepit.common.time._
 
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
 class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)
   implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
@@ -175,7 +178,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           (planJson \ "features").as[Set[Feature]] must beEqualTo(PaidPlanFactory.testPlanEditableFeatures)
         }
       }
-      "when changing plans" in {
+      "when changing plans if a payment method is set up" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner, curPlan, newPlan) = db.readWrite { implicit session =>
             val curPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle.months(1)).withPricePerCyclePerUser(DollarAmount.ZERO).saved
@@ -197,8 +200,22 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           (result1 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === initialBalance
 
           val setRequest = route.updatePlan(orgId, newPlanId)
-          val setResponse = controller.updatePlan(orgId, newPlanId)(setRequest)
-          status(setResponse) === OK
+
+          val failedSetResponse = controller.updatePlan(orgId, newPlanId)(setRequest)
+          status(failedSetResponse) === BAD_REQUEST
+          (contentAsJson(failedSetResponse) \ "error").as[String] === "no_payment_method"
+
+          db.readWrite { implicit session =>
+            inject[PaymentMethodRepo].save(PaymentMethod(
+              accountId = paidAccountRepo.getByOrgId(org.id.get).id.get,
+              default = true,
+              stripeToken = Await.result(inject[StripeClient].getPermanentToken("fake_temporary_token", ""), Duration.Inf)
+            ))
+          }
+
+          val validSetResponse = controller.updatePlan(orgId, newPlanId)(setRequest)
+          status(validSetResponse) === OK
+
           val finalBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
 
           val response2 = controller.getAccountState(orgId)(route.getAccountState(orgId))

@@ -66,6 +66,8 @@ case class PaidPlan(
   def withUpdateTime(now: DateTime): PaidPlan = this.copy(updatedAt = now)
   def withState(state: State[PaidPlan]): PaidPlan = this.copy(state = state)
 
+  def isActive: Boolean = state == PaidPlanStates.ACTIVE
+
   def asInfo(implicit config: PublicIdConfiguration): PaidPlanInfo = PaidPlanInfo(
     id = PaidPlan.publicId(id.get),
     name = displayName,
@@ -110,3 +112,7 @@ object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
 
 object PaidPlanStates extends States[PaidPlan]
 
+case class PlanEnrollment(numAccounts: Int, numActiveUsers: Int)
+object PlanEnrollment {
+  val empty = PlanEnrollment(0, 0)
+}

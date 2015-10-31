@@ -4,10 +4,11 @@ import com.google.inject.{ Singleton, ImplementedBy, Inject }
 import com.keepit.commanders.{ BasicSlackMessage, PathCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail }
+import com.keepit.common.mail.{ EmailAddress, LocalPostOffice, SystemEmailAddress, ElectronicMail }
 import com.keepit.common.net.{ HttpClient, DirectUrl }
 import com.keepit.model.{ Organization, OrganizationRepo, UserEmailAddressRepo, NotificationCategory }
 import play.api.Mode
@@ -58,7 +59,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     implicit val org = o
     implicit val paymentMethod = m
 
-    Future.sequence(Seq(notifyOfCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
+    Future.sequence(Seq(notifyOfCharge(event).imap(_ => ()), notifyOfFailedCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
   } else Future.successful(())
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
@@ -83,12 +84,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
     checkingParameters(event) {
       lazy val msg = {
         val info = activityCommander.buildSimpleEventInfo(event)
-        val description = info.description.flatten.map {
-          case BasicElement(text, None) => text
-          case BasicElement(text, Some(url)) => s"<$url|$text>"
-        } mkString ("")
         val orgHeader = s"<https://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>"
-        s"[$orgHeader] $description | ${info.creditChange}"
+        s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
       }
       Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
         reportToSlack(msg, channel).imap(_ => channel)
@@ -157,6 +154,51 @@ class AccountEventTrackingCommanderImpl @Inject() (
           category = NotificationCategory.NonUser.BILLING
         ))
       }
+    }
+  }
+
+  private def notifyOfFailedCharge(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {
+    checkingParameters(event) {
+      event.action match {
+        case AccountEventAction.ChargeFailure(_, _, _) | AccountEventAction.MissingPaymentMethod() =>
+          doNotifyOfFailedCharge(event.id.get, event.action); Future.successful(true)
+        case _ => Future.successful(false)
+      }
+    }
+  }
+
+  private def doNotifyOfFailedCharge(eventId: Id[AccountEvent], reason: AccountEventAction)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Unit = {
+    val subject = s"We failed to charge the card of team ${org.name}"
+    val htmlBody = s"""|<p>We failed to charge <a href="https://admin.kifi.com/admin/organization/${org.id.get}">${org.name}<a> for their ${account.owed.toDollarString} outstanding balance.
+    |${paymentMethod.map(p => s"We tried their payment method with id ${p.id.get}.") getOrElse "We couldn't find their payment method."}
+    |This ended up in a $reason event with id $eventId.
+    ||For more details please consult <a href="https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}">their account history<a>.</p>
+    |
+    |<p>Whoever your are, MAKE THEM PAY!</p>
+    |
+    |<p>Thanks,
+    |The Kifi Team</p>
+    """.stripMargin
+    val textBody = s"""|We failed to charge ${org.name} for their ${account.owed.toDollarString} outstanding balance.
+    |${paymentMethod.map(p => s"We tried their payment method with id ${p.id.get}.") getOrElse "We couldn't find their payment method."}
+    |This ended up in a $reason event with id $eventId.
+    ||For more details please consult their account history: https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}
+    |
+    |Whoever your are, MAKE THEM PAY!
+    |
+    |Thanks,
+    |The Kifi Team
+    """.stripMargin
+    db.readWrite { implicit session =>
+      postOffice.sendMail(ElectronicMail(
+        from = SystemEmailAddress.BILLING,
+        fromName = Some("Kifi Billing"),
+        to = Seq(EmailAddress("billingalerts@kifi.com")),
+        subject = subject,
+        htmlBody = htmlBody,
+        textBody = Some(textBody),
+        category = NotificationCategory.NonUser.BILLING
+      ))
     }
   }
 

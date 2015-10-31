@@ -298,6 +298,7 @@ GET     /m/1/inviteInfo                     @com.keepit.controllers.website.Invi
 GET     /m/1/user/:id/organizations                      @com.keepit.controllers.mobile.MobileOrganizationController.getOrganizationsForUser(id: ExternalId[User])
 GET     /m/1/organizations/invites                       @com.keepit.controllers.mobile.MobileOrganizationInviteController.getPendingOrganizationsForUser()
 POST    /m/1/organizations/create                        @com.keepit.controllers.mobile.MobileOrganizationController.createOrganization()
+GET     /m/1/organizations/sendCreateTeamEmail           @com.keepit.controllers.mobile.MobileOrganizationController.sendCreateTeamEmail(email: String)
 GET     /m/1/organizations/:id                           @com.keepit.controllers.mobile.MobileOrganizationController.getOrganization(id: PublicId[Organization])
 POST    /m/1/organizations/:id/modify                    @com.keepit.controllers.mobile.MobileOrganizationController.modifyOrganization(id: PublicId[Organization])
 DELETE  /m/1/organizations/:id/delete                    @com.keepit.controllers.mobile.MobileOrganizationController.deleteOrganization(id: PublicId[Organization])
@@ -332,6 +333,7 @@ GET     /about/join_us              @com.keepit.controllers.website.HomeControll
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
+GET     /imports/pinboard           @com.keepit.controllers.website.HomeController.route(path = "imports/pinboard")
 GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
 GET     /imports/instapaper         @com.keepit.controllers.website.HomeController.route(path = "imports/instapaper")
 GET     /imports/evernote           @com.keepit.controllers.website.HomeController.route(path = "imports/evernote")
@@ -861,8 +863,6 @@ POST    /admin/cortex/lda/persona/train                    @com.keepit.controlle
 GET     /admin/graph/statistics                            @com.keepit.controllers.admin.GraphAdminController.statistics
 GET     /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
 POST    /admin/graph/wander                                @com.keepit.controllers.admin.WanderingAdminController.wander()
-GET     /admin/graph/discover                              @com.keepit.controllers.admin.WanderingAdminController.fromParisWithLove()
-GET     /admin/graph/uriWandering                          @com.keepit.controllers.admin.WanderingAdminController.uriWandering(steps: Int ?= 20000)
 
 GET     /admin/twitter                                     @com.keepit.controllers.admin.AdminTwitterWaitlistController.getWaitlist()
 GET     /admin/twitter/accept                              @com.keepit.controllers.admin.AdminTwitterWaitlistController.acceptUser(userId: Id[User], handle: String)
@@ -880,7 +880,6 @@ POST          /admin/rover/urlRules/create                                      
 GET           /admin/goodies/testRegex                                               @com.keepit.controllers.admin.AdminGoodiesController.testRegex
 GET           /admin/goodies/testRegexFilled                                         @com.keepit.controllers.admin.AdminGoodiesController.testRegexFilled(regex: String, test: Option[String])
 POST          /admin/goodies/performRegexTest                                        @com.keepit.controllers.admin.AdminGoodiesController.performRegexTest
-GET           /admin/goodies/ids/all                                             @com.keepit.controllers.admin.AdminGoodiesController.listAllExternalIds
 GET           /admin/goodies/externalIdById                                          @com.keepit.controllers.admin.AdminGoodiesController.externalIdById(name: String, id: Long)
 GET           /admin/goodies/externalIdsByPublicId                                   @com.keepit.controllers.admin.AdminGoodiesController.externalIdByPublicId(name: String, id: String)
 
@@ -1057,7 +1056,8 @@ GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRoute
 GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/settings")
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUserOrSignup
-GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectFromPricing
+GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", fallback = "/about/pricing")
+GET     /credits                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", fallback = "/about/pricing#referral")
 GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser

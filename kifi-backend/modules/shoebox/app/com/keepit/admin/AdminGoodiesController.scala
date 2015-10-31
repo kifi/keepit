@@ -43,10 +43,6 @@ class AdminGoodiesController @Inject() (
     Organization.publicId(Id(1))
   }
 
-  def listAllExternalIds = AdminUserPage { implicit request =>
-    Ok(registry.mkString("\n"))
-  }
-
   def externalIdById(name: String, id: Long) = AdminUserPage { implicit request =>
     val pubIds = PublicIdRegistry.registry.filter(_._1.toLowerCase.contains(name.toLowerCase)).map {
       case (clazz, accessor) =>

@@ -38,6 +38,19 @@ object DollarAmount {
     MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.cents)
   }
   val formatAsCents: Format[DollarAmount] = (__ \ 'cents).format[Int].inmap(DollarAmount.cents, _.toCents)
+
+  implicit object DollarAmountIsNumeric extends Numeric[DollarAmount] {
+    def plus(x: DollarAmount, y: DollarAmount): DollarAmount = x + y
+    def minus(x: DollarAmount, y: DollarAmount): DollarAmount = x - y
+    def times(x: DollarAmount, y: DollarAmount): DollarAmount = x * y
+    def negate(x: DollarAmount): DollarAmount = -x
+    def fromInt(x: Int): DollarAmount = cents(x)
+    def toInt(x: DollarAmount): Int = x.toCents
+    def compare(x: DollarAmount, y: DollarAmount): Int = x.compareTo(y)
+    def toDouble(x: DollarAmount): Double = ???
+    def toFloat(x: DollarAmount): Float = ???
+    def toLong(x: DollarAmount): Long = ???
+  }
 }
 
 @json

@@ -4,7 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.model.{ Organization }
+import com.keepit.model.{ OrganizationExperimentType, OrganizationExperimentRepo, Organization }
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._
@@ -46,6 +46,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   stripeClient: StripeClient,
   airbrake: AirbrakeNotifier,
   eventCommander: AccountEventTrackingCommander,
+  orgExperimentRepo: OrganizationExperimentRepo,
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
@@ -131,6 +132,8 @@ class PaymentProcessingCommanderImpl @Inject() (
 
   private val chargeLock = new ReactiveLock(1)
   private def chargeAccount(account: PaidAccount, amount: DollarAmount): Future[(PaidAccount, AccountEvent)] = chargeLock.withLockFuture {
+    lazy val isFakeAccount = db.readOnlyMaster { implicit session => orgExperimentRepo.hasExperiment(account.orgId, OrganizationExperimentType.FAKE) }
+
     account.paymentStatus match {
       case PaymentStatus.Ok => {
 
@@ -139,8 +142,8 @@ class PaymentProcessingCommanderImpl @Inject() (
             val pendingChargeAccount = db.readWrite { implicit session =>
               paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Pending))
             }
-
-            stripeClient.processCharge(amount, pm.stripeToken, s"Charging organization ${account.orgId} owing ${account.owed}") andThen {
+            if (isFakeAccount) Future.successful(endWithChargeSuccess(pendingChargeAccount, pm.id.get, StripeChargeSuccess(pendingChargeAccount.owed, "FAKE_CHARGE")))
+            else stripeClient.processCharge(amount, pm.stripeToken, s"Charging organization ${account.orgId} owing ${account.owed}") andThen {
               case Failure(ex) =>
                 log.error(s"[PPC][${account.orgId}] Unexpected exception while processing charge via Stripe.", ex)
                 db.readWrite(attempts = 3) { implicit session =>

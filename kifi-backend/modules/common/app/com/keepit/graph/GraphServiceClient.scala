@@ -32,7 +32,6 @@ trait GraphServiceClient extends ServiceClient {
   def getGraphUpdaterStates(): Future[Map[AmazonInstanceInfo, PrettyGraphState]]
   def getGraphKinds(): Future[GraphKinds]
   def wander(wanderlust: Wanderlust): Future[Collisions]
-  def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]]
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]]
   def getConnectedUserScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUserScore]]
   def getSociallyRelatedEntitiesForUser(userId: Id[User]): Future[Option[SociallyRelatedEntitiesForUser]]
@@ -78,10 +77,6 @@ class GraphServiceClientImpl(
   def wander(wanderlust: Wanderlust): Future[Collisions] = {
     val payload = Json.toJson(wanderlust)
     call(Graph.internal.wander(), payload, callTimeouts = longTimeout).map { response => response.json.as[Collisions] }
-  }
-
-  def uriWander(userId: Id[User], steps: Int): Future[Map[Id[NormalizedURI], Int]] = {
-    call(Graph.internal.uriWandering(userId, steps), callTimeouts = longTimeout).map { r => (r.json).as[Map[Id[NormalizedURI], Int]] }
   }
 
   def getConnectedUriScores(userId: Id[User], avoidFirstDegreeConnections: Boolean): Future[Seq[ConnectedUriScore]] = {

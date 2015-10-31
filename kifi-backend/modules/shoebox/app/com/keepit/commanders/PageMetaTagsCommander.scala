@@ -40,7 +40,7 @@ object UserProfileTab {
 class PageMetaTagsCommander @Inject() (
     db: Database,
     libraryImageCommander: LibraryImageCommander,
-    libPathCommander: PathCommander,
+    pathCommander: PathCommander,
     keepImageCommander: KeepImageCommander,
     relatedLibraryCommander: RelatedLibraryCommander,
     basicUserRepo: BasicUserRepo,
@@ -63,7 +63,7 @@ class PageMetaTagsCommander @Inject() (
     val libs = relatedLibs.filterNot(_.kind == RelatedLibraryKind.POPULAR).take(6).map(_.library)
     val users = db.readOnlyMaster { implicit s => basicUserRepo.loadAll(libs.map(_.ownerId).toSet) }
     libs.map { related =>
-      val urlPathOnly = libPathCommander.getPathForLibrary(related)
+      val urlPathOnly = pathCommander.getPathForLibrary(related)
       val url = {
         val fullUrl = s"${applicationConfig.applicationBaseUrl}$urlPathOnly"
         if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
@@ -116,7 +116,7 @@ class PageMetaTagsCommander @Inject() (
   def libraryMetaTags(library: Library): Future[PublicPageMetaTags] = {
     val (owner, urlPathOnly) = db.readOnlyMaster { implicit s =>
       val owner = basicUserRepo.load(library.ownerId)
-      val urlPathOnly = libPathCommander.getPathForLibrary(library)
+      val urlPathOnly = pathCommander.getPathForLibrary(library)
       (owner, urlPathOnly)
     }
     val altDescF: Future[Option[String]] = if (library.description.exists(_.size > 10)) {

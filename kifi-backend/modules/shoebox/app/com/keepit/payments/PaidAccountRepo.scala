@@ -26,7 +26,7 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
 
   // admin/integrity methods
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
-  def getCountsByPlan(implicit session: RSession): Map[Id[PaidPlan], (Int, Int)] // planId -> (numAccounts, numUsers)
+  def getPlanEnrollments(implicit session: RSession): Map[Id[PaidPlan], PlanEnrollment]
 }
 
 @Singleton
@@ -104,9 +104,9 @@ class PaidAccountRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     sql"""select org_id from paid_account where state='active' and frozen = false and MOD(id, $modulus)=$partition""".as[Id[Organization]].list.toSet
   }
-  def getCountsByPlan(implicit session: RSession): Map[Id[PaidPlan], (Int, Int)] = {
+  def getPlanEnrollments(implicit session: RSession): Map[Id[PaidPlan], PlanEnrollment] = {
     activeRows.groupBy(_.planId).map { case (planId, accounts) => planId -> (accounts.length, accounts.map(_.activeUsers).sum) }.list.map {
-      case (planId, (numAccounts, numUsers)) => planId -> (numAccounts, numUsers.getOrElse(0))
+      case (planId, (numAccounts, numUsers)) => planId -> PlanEnrollment(numAccounts = numAccounts, numActiveUsers = numUsers.getOrElse(0))
     }.toMap
   }
 }
