@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
-/*eslint-env node */
+/* eslint-env node, amd */
+
+/*
+ * usage examples:
+ *    USE_FAKE_API=1 LOGGER_LEVEL=warn ./amplitude_import.js exports/mixpanel-20150707-20150707.txt
+ *    ./amplitude_import.js exports/mixpanel-20150707-20150707.txt
+ */
 
 var _ = require('lodash');
 var async = require('async');
@@ -13,7 +19,7 @@ var Promise = require('bluebird');
 var querystring = require('querystring');
 var winston = require('winston');
 
-var USE_FAKE_API = false;
+var USE_FAKE_API = !!_.get(process.env, 'USE_FAKE_API', false);
 var AMPLITUDE_API_KEY = '5a7a940f68887487129b20a4cbf0622d';
 
 var filename = process.argv[2];
@@ -26,7 +32,7 @@ if (!_.isString(filename) || !fs.statSync(filename).isFile()) {
 var logfile = 'logs/' + path.basename(filename, '.txt') + '.log';
 var logger = new (winston.Logger)({
   transports: [
-    new (winston.transports.Console)({ level: 'debug' }),
+    new (winston.transports.Console)({ level: _.get(process.env, 'LOGGER_LEVEL', 'debug') }),
     new (winston.transports.File)({ filename: logfile, level: 'info' })
   ]
 });
@@ -94,6 +100,20 @@ var defaultUserProperties = {
 
 // for user_was_notified events, these 'action' properties should be user_clicked_notification events
 var userWasNotifiedClickActions = ['open', 'click', 'spamreport', 'cleared', 'marked_read', 'marked_unread'];
+
+// many property values will be automatically convereted from camelCase to snake_case,
+// but the following fields should not be changed
+var fieldsToNotChangeValuesToSnakeCase = [
+  'library_owner_user_name', '$email',
+  function(field) {
+    return _.startsWith(field, 'kcid') ||
+      _.startsWith(field, 'utm_') ||
+      _.endsWith(field, '_id');
+  }
+];
+
+// do not convert these values from snakeCase to camel_case
+var valuesThatAreOkayAsSnakeCase = ['iPad', 'iPhone'];
 
 // function(url) - https GET request that return a promise
 var httpsGet = Promise.method(function(url) {
@@ -254,6 +274,29 @@ function renameProperty(key) {
 var unsupportedPropertyKeys = {};
 var defaultUserPropertyKeys = _.keys(defaultUserProperties);
 
+function isSimpleMatch(value) {
+  return function(pattern) {
+    if (_.isRegExp(pattern)) {
+      return pattern.test(value);
+    } else if (_.isFunction(pattern)) {
+      return pattern(value);
+    }
+    return pattern === value;
+  };
+}
+
+var isSnakeCaseRegExp = /^[a-z]+[a-z0-9]*[A-Z][A-Za-z0-9]*$/;
+
+function isSnakeCase(value) {
+ return isSnakeCaseRegExp.test(value);
+}
+
+function shouldConvertValueToSnakeCase(field, value) {
+  return !_.some(valuesThatAreOkayAsSnakeCase, isSimpleMatch(value)) &&
+      !_.some(fieldsToNotChangeValuesToSnakeCase, isSimpleMatch(field)) &&
+      isSnakeCase(value);
+}
+
 function getUserAndEventProperties(mixpanelEvent) {
   var userProperties = {}, eventProperties = {};
 
@@ -267,10 +310,10 @@ function getUserAndEventProperties(mixpanelEvent) {
     }
 
     var newKey = renameProperty(key);
-    if (isUserProperty(key, value)) {
-      userProperties[newKey] = value;
-    } else {
-      eventProperties[newKey] = value;
+    var propertiesObj = isUserProperty(key, value) ? userProperties : eventProperties;
+
+    if (shouldConvertValueToSnakeCase(newKey, value)) {
+      propertiesObj[newKey] = _.snakeCase(value);
     }
   });
 
