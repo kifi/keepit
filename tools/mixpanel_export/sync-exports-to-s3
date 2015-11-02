@@ -1,0 +1,14 @@
+#!/bin/bash
+
+cd exports
+
+for file in $(ls *.txt); do
+  zip="${file}.bz2"
+  if [ ! -f $zip ]; then
+    echo "compressing $file => $zip"
+    bzip2 $file
+  fi
+done
+
+echo "uploading to s3"
+aws --profile kifi s3 sync ./ s3://fortytwo-mixpanel-exports

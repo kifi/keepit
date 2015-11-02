@@ -20,7 +20,9 @@ var querystring = require('querystring');
 var winston = require('winston');
 
 var USE_FAKE_API = !!_.get(process.env, 'USE_FAKE_API', false);
-var AMPLITUDE_API_KEY = '5a7a940f68887487129b20a4cbf0622d';
+
+// var AMPLITUDE_API_KEY = '5a7a940f68887487129b20a4cbf0622d'; // Test
+var AMPLITUDE_API_KEY = 'ca7e6c5bdd95ed9e43ffb7c106479e17'; // Test 2
 
 var filename = process.argv[2];
 if (!_.isString(filename) || !fs.statSync(filename).isFile()) {
@@ -57,7 +59,7 @@ var skippedEvents = ['user_old_slider_sliderShown', 'user_expanded_keeper', 'use
   function(mpEvent) {
     var typeProperty = mpEvent.properties.type;
     // skip {user,visitor}_viewed_page events where the "type" property starts with a "/", with a few exceptions
-    return _.endsWith(mpEvent.event, '_viewed_page') && typeProperty.charAt(0) === '/' &&
+    return _.endsWith(mpEvent.event, '_viewed_page') && _.isString(typeProperty) && typeProperty.charAt(0) === '/' &&
       typeProperty !== '/settings' && typeProperty !== '/tags/manage' && !_.startsWith(typeProperty, '/?m=0');
   },
   function(mpEvent) {
@@ -385,7 +387,7 @@ function hashString(str) {
   return hash.digest('hex');
 }
 
-// have no more than 50 requests in flight at a time
+// have no more than 100 requests in flight at a time
 var amplitudeApiQueue = async.queue(USE_FAKE_API ? fakeApiWorker : apiWorker, 100);
 var successCounter = 0;
 var skipCounter = 0;
@@ -397,6 +399,18 @@ function printQueueState() {
   logger.info("[api queue] success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
     successCounter, failedEvents.length, amplitudeApiQueue.length(), amplitudeApiQueue.running(), skipCounter, retryCount);
   logger.info("[summary]", eventsByTypeCounter);
+}
+
+if (_.endsWith(filename, 'bz2')) {
+  logger.info('running bunzip2 on %s', filename);
+  var bunzipProcess = require('child_process').spawnSync('bunzip2', [filename], {stdio: 'inherit'});
+
+  if (bunzipProcess.status !== 0) {
+    logger.error('bunzip error', bunzipProcess);
+    process.exit(bunzipProcess.status);
+  }
+
+  filename = filename.substring(0, filename.length - 4);
 }
 
 setInterval(printQueueState, 2000);
