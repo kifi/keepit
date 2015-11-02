@@ -97,8 +97,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
   private def toSlackChannels(eventType: AccountEventKind): Seq[String] = {
     import AccountEventKind._
     var channels = Seq.empty[String]
-    if (billing.contains(eventType)) channels += "#billing-alerts"
-    if (orgGrowth.contains(eventType)) channels += "org-members"
+    if (billing.contains(eventType)) channels +:= "#billing-alerts"
+    if (orgGrowth.contains(eventType)) channels +:= "org-members"
     channels
   }
 
