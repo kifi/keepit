@@ -133,7 +133,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     lastFourFuture.map { lastFour =>
       val subject = s"We've charged you card for your Kifi Organization ${org.name}"
       val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).<br/>
-      |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history<a>.</p>
+      |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history</a>.</p>
       |
       |<p>Thanks,
       |The Kifi Team</p>
@@ -170,22 +170,22 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   private def doNotifyOfFailedCharge(eventId: Id[AccountEvent], reason: AccountEventAction)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Unit = {
     val subject = s"We failed to charge the card of team ${org.name}"
-    val htmlBody = s"""|<p>We failed to charge <a href="https://admin.kifi.com/admin/organization/${org.id.get}">${org.name}<a> for their ${account.owed.toDollarString} outstanding balance.
+    val htmlBody = s"""|<p>We failed to charge <a href="https://admin.kifi.com/admin/organization/${org.id.get}">${org.name}</a> for their ${account.owed.toDollarString} outstanding balance.
     |${paymentMethod.map(p => s"We tried their payment method with id ${p.id.get}.") getOrElse "We couldn't find their payment method."}
-    |This ended up in a $reason event with id $eventId.
-    ||For more details please consult <a href="https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}">their account history<a>.</p>
+    |This ended up with a $reason event with id $eventId.
+    |For more details please consult <a href="https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}">their account history</a>.</p>
     |
-    |<p>Whoever your are, MAKE THEM PAY!</p>
+    |<p>And to whom it may concern, make them pay.</p>
     |
     |<p>Thanks,
     |The Kifi Team</p>
     """.stripMargin
     val textBody = s"""|We failed to charge ${org.name} for their ${account.owed.toDollarString} outstanding balance.
     |${paymentMethod.map(p => s"We tried their payment method with id ${p.id.get}.") getOrElse "We couldn't find their payment method."}
-    |This ended up in a $reason event with id $eventId.
-    ||For more details please consult their account history: https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}
+    |This ended up with a $reason event with id $eventId.
+    |For more details please consult their account history: https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}
     |
-    |Whoever your are, MAKE THEM PAY!
+    |And to whom it may concern, make them pay.
     |
     |Thanks,
     |The Kifi Team
