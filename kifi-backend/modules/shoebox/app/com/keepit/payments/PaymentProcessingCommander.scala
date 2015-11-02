@@ -136,7 +136,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
-  private def withPendingStatus[T <: StripeChargeResult](account: PaidAccount)(stripeCall: => Future[T]): Future[(PaidAccount, StripeChargeResult)] = {
+  private def withPendingStatus[T <: StripeTransactionResult](account: PaidAccount)(stripeCall: => Future[T]): Future[(PaidAccount, T)] = {
     val pendingAccount = db.readWrite { implicit session =>
       paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Pending))
     }
@@ -256,16 +256,16 @@ class PaymentProcessingCommanderImpl @Inject() (
         withPendingStatus(account) {
           stripeClient.refundCharge(chargeId, s"Refund granted by ${admin.firstName}.")
         } map {
-          case (pendingAccount, success: StripeChargeSuccess) => endWithRefundSuccess(pendingAccount, paymentMethod, eventId, chargeId, grantedByAdmin, success)
-          case (pendingAccount, failure: StripeChargeFailure) => endWithRefundFailure(pendingAccount, paymentMethod, eventId, chargeId, grantedByAdmin, failure)
+          case (pendingAccount, success: StripeRefundSuccess) => endWithRefundSuccess(pendingAccount, paymentMethod, eventId, chargeId, grantedByAdmin, success)
+          case (pendingAccount, failure: StripeRefundFailure) => endWithRefundFailure(pendingAccount, paymentMethod, eventId, chargeId, grantedByAdmin, failure)
         }
       case _ => Future.failed(new IllegalArgumentException(s"Invalid event $eventId, unable to refund charge: $event"))
     }
   }
 
-  private def endWithRefundSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, grantedByAdmin: Id[User], success: StripeChargeSuccess): (PaidAccount, AccountEvent) = {
+  private def endWithRefundSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, grantedByAdmin: Id[User], success: StripeRefundSuccess): (PaidAccount, AccountEvent) = {
     db.readWrite(attempts = 3) { implicit session =>
-      val refundedAccount = paidAccountRepo.save(account.withIncreasedCredit(success.amount).withPaymentStatus(PaymentStatus.Ok)) // success.amount is negative
+      val refundedAccount = paidAccountRepo.save(account.withReducedCredit(success.amount).withPaymentStatus(PaymentStatus.Ok))
       val refundEvent = eventCommander.track(AccountEvent(
         eventTime = clock.now(),
         accountId = account.id.get,
@@ -275,16 +275,16 @@ class PaymentProcessingCommanderImpl @Inject() (
         action = AccountEventAction.Refund(originalChargeEvent, originalCharge),
         creditChange = refundedAccount.credit - account.credit,
         paymentMethod = Some(paymentMethodId),
-        paymentCharge = Some(success.amount),
+        paymentCharge = Some(-success.amount), // a refund is just treated as a negative charge
         memo = None,
-        chargeId = Some(success.chargeId)
+        chargeId = Some(success.refundId)
       ))
       log.info(s"[PPC][${account.orgId}] Refunded ${success.amount} via Stripe")
       (refundedAccount, refundEvent)
     }
   }
 
-  private def endWithRefundFailure(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, grantedByAdmin: Id[User], failure: StripeChargeFailure): (PaidAccount, AccountEvent) = {
+  private def endWithRefundFailure(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, grantedByAdmin: Id[User], failure: StripeRefundFailure): (PaidAccount, AccountEvent) = {
       db.readWrite(attempts = 3) { implicit session =>
         val refundFailedAccount: PaidAccount = paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Failed))
         val refundFailureEvent = eventCommander.track(AccountEvent(

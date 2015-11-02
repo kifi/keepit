@@ -38,17 +38,17 @@ class FakeStripeClientImpl extends StripeClient {
     }
   }
 
-  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeChargeResult] = {
+  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeRefundResult] = {
     if (stripeDownMode) Future.failed(new APIConnectionException("Stripe is down!"))
     else if (cardFailureMode) {
-      Future.successful(StripeChargeFailure("boom", "boom"))
+      Future.successful(StripeRefundFailure("boom", "boom"))
     } else {
       transactions.valuesIterator.flatten.filter(_.id == chargeId).toSeq match {
         case Seq(charge) =>
           val num = chargeCounter.getAndIncrement()
           val trans = FakeTransaction(StripeTransactionId(s"re_$num"), -charge.amount, charge.token, reason)
           transactions(charge.token).append(trans)
-          Future.successful(StripeChargeSuccess(-charge.amount, trans.id))
+          Future.successful(StripeRefundSuccess(charge.amount, trans.id))
         case _ => Future.failed(new APIConnectionException(s"Charge ${chargeId.id} not found!"))
       }
     }

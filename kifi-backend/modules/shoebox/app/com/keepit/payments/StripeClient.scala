@@ -19,15 +19,19 @@ case class StripeTransactionId(id: String)
 
 case class CardDetails(number: String, expMonth: Int, expYear: Int, cvc: String, cardholderName: String)
 
-sealed trait StripeChargeResult
+sealed trait StripeTransactionResult
 
+sealed trait StripeChargeResult extends StripeTransactionResult
 case class StripeChargeSuccess(amount: DollarAmount, chargeId: StripeTransactionId) extends StripeChargeResult
-
 case class StripeChargeFailure(code: String, message: String) extends StripeChargeResult
+
+sealed trait StripeRefundResult extends StripeTransactionResult
+case class StripeRefundSuccess(amount: DollarAmount, refundId: StripeTransactionId) extends StripeRefundResult
+case class StripeRefundFailure(code: String, message: String) extends StripeRefundResult
 
 trait StripeClient {
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult]
-  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeChargeResult]
+  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeRefundResult]
   def getPermanentToken(token: String, description: String): Future[StripeToken]
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken]
 
@@ -64,17 +68,17 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     }
   }
 
-  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeChargeResult] = lock.withLock {
+  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeRefundResult] = lock.withLock {
     val chargeParams: Map[String, java.lang.Object] = Map(
       "charge" -> chargeId.id,
       "reason" -> reason
     )
     try {
       val refund = Refund.create(chargeParams.asJava)
-      StripeChargeSuccess(-DollarAmount(refund.getAmount()), StripeTransactionId(refund.getId()))
+      StripeRefundSuccess(DollarAmount(refund.getAmount()), StripeTransactionId(refund.getId()))
     } catch {
       case ex: CardException => {
-        StripeChargeFailure(ex.getCode(), ex.getMessage())
+        StripeRefundFailure(ex.getCode(), ex.getMessage())
       }
     }
   }
