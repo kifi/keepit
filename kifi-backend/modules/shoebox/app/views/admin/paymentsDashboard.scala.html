@@ -75,4 +75,26 @@
     </ul>
     }
 
+    <p>
+      <input id="coupon-code" type="text" rows="1" cols="60" placeholder="code"></textarea>
+      <input id="coupon-value" type="number" rows="1" cols="40" placeholder="value (in cents)"></textarea>
+      <button id="create-coupon-button" class="btn btn-default btn-xs">Create Coupon</button>
+    </p>
+
+
+<script type="text/javascript">
+$(function() {
+  $('#create-coupon-button').on('click', function() {
+        createCoupon( $('#coupon-code').val(),
+                      parseInt($('#coupon-value').val(), 10) )
+  });
+});
+function createCoupon(code, value) {
+ $.post(
+    "@com.keepit.controllers.admin.routes.AdminPaymentsController.createCode()",
+    JSON.stringify({ "kind": "coupon", "code": code, "credit": {"cents":value} })
+  )
+  .always(function(data) { alert(JSON.stringify(data)); });
+};
+</script>
 }
