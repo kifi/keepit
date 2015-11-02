@@ -81,8 +81,14 @@ object AccountEventKind {
     PlanRenewal,
     PlanChanged,
     SpecialCredit,
+    RewardCredit,
+  )
+  
+  val orgGrowth: Set[AccountEventKind] = Set(
+    OrganizationCreated,
     UserJoinedOrganization,
-    UserLeftOrganization
+    UserLeftOrganization,
+    OrganizationRoleChanged
   )
 }
 

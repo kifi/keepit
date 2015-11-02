@@ -83,8 +83,9 @@ class AccountEventTrackingCommanderImpl @Inject() (
   private def reportToSlack(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[String]] = {
     checkingParameters(event) {
       lazy val msg = {
+        import com.keepit.common.strings._
         val info = activityCommander.buildSimpleEventInfo(event)
-        val orgHeader = s"<https://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>"
+        val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${org.name.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;")}>"
         s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
       }
       Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
@@ -95,10 +96,10 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   private def toSlackChannels(eventType: AccountEventKind): Seq[String] = {
     import AccountEventKind._
-    eventType match {
-      case kind if billing.contains(kind) => Seq("#billing-alerts")
-      case OrganizationCreated | UserJoinedOrganization | UserLeftOrganization | OrganizationRoleChanged => Seq("#org-members")
-    }
+    var channels = Seq.empty[String]
+    if (billing.contains(eventType)) channels += "#billing-alerts"
+    if (orgGrowth.contains(eventType)) channels += "org-members"
+    channels
   }
 
   private def notifyOfError(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {
