@@ -110,9 +110,9 @@ class OrganizationMembershipRepoTest extends Specification with ShoeboxTestInjec
     "get members by role" in {
       withDb() { implicit injector =>
         val (org, owner, adminsExpected, membersExpected) = db.readWrite { implicit session =>
-          val owner = user().withName("Zyxwv", "Utsr").saved
-          val admins = Seq(user().withName("Aaron", "Aaronson"), user().withName("Barry", "Barnes")).map(_.saved)
-          val members = Seq(user().withName("Carl", "Carson"), user().withName("Carl", "Junior")).map(_.saved)
+          val owner = user().saved
+          val admins = users(3).saved
+          val members = users(3).saved
           val org = organization().withOwner(owner).withAdmins(admins).withMembers(members).saved
           (org, owner, admins, members)
         }

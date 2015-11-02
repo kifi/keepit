@@ -107,12 +107,12 @@ class CreditRewardCommanderImpl @Inject() (
     val htmlBody =
       s"""
          |Your <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a> team's referral code was used by <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>. If they upgrade to a standard plan on Kifi,
-         |you'll earn a $$100 credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+         |you'll earn a ${orgReferrerCredit.toDollarString} credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
        """.stripMargin
     val textBody =
       s"""
          |Your ${referrerOrg.name} team's referral code was used by ${referredOrg.name}. If they upgrade to a standard plan on Kifi,
-         |you'll earn a $$100 credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+         |you'll earn a ${orgReferrerCredit.toDollarString} credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
        """.stripMargin
     postOffice.sendMail(ElectronicMail(
       from = SystemEmailAddress.NOTIFICATIONS,
@@ -213,10 +213,10 @@ class CreditRewardCommanderImpl @Inject() (
     val referredOrg = orgRepo.get(referredOrgId)
     val referrerOrg = orgRepo.get(referrerOrgId)
     val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
-    val subject = s"You earned a $$100 credit for ${referrerOrg.name} on Kifi"
+    val subject = s"You earned a ${orgReferrerCredit.toDollarString} credit for ${referrerOrg.name} on Kifi"
     val htmlBody =
       s"""
-         |Your team, <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a>, earned a $$100 credit from ${referredOrg.name}.
+         |Your team, <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a>, earned a ${orgReferrerCredit.toDollarString} credit from <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>.
          |We've added it to your <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/plan">team balance</a>. Thank you so much for spreading the word
          |about Kifi with great teams like ${referredOrg.name}!
        """.stripMargin
