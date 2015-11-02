@@ -96,10 +96,10 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   private def toSlackChannels(eventType: AccountEventKind): Seq[String] = {
     import AccountEventKind._
-    var channels = Seq.empty[String]
-    if (billing.contains(eventType)) channels +:= "#billing-alerts"
-    if (orgGrowth.contains(eventType)) channels +:= "org-members"
-    channels
+    Seq(
+      billing.contains(eventType) -> "#billing-alerts",
+      orgGrowth.contains(eventType) -> "#org-members"
+    ).collect { case (true, ch) => ch }
   }
 
   private def notifyOfError(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {
