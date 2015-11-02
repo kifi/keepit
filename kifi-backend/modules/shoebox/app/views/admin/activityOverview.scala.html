@@ -20,7 +20,7 @@
                 <td>@event.whoDunnit.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
                 <td>@event.adminInvolved.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
                 <td>@{event.creditChange.toDollarString}</td>
-                <td>@{event.paymentCharge.map(_.toDollarString)} @{event.paymentCharge.collect { case charge if charge > DollarAmount.ZERO => <a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.refund(event.id.get)">- Refund Now</a> }} </td>
+                <td>@{event.paymentCharge.map(_.toDollarString)} @if(event.paymentCharge.exists(_ > DollarAmount.ZERO)) { <a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.refundCharge(event.id)">[Refund Now]</a>} </td>
                 <td>@{event.memo.getOrElse("")}</td>
                 <td>@{event.action.toDbRow}</td>
             </tr>
