@@ -1,6 +1,6 @@
 <div class="kf-team-activity-log">
   <h1 class="kf-team-activity-top-header">Activity Log</h1>
-  <div kf-billing-summary billing-state="billingState"></div>
+  <div kf-billing-summary billing-state="billingState" parent-tracking-type="trackingType"></div>
   <div class="kf-container">
     <div class="kf-container-header"><span>Activity</span></div>
     <table class="kf-team-activity-table" smart-scroll scroll-distance="'100%'" scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()">
@@ -17,7 +17,7 @@
           <td class="kf-team-activity-entry">
             <span ng-repeat="descriptionSegment in b.description">
               <span ng-if="!descriptionSegment.url" ng-bind="descriptionSegment.text"></span><!--
-           --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text"></a>
+             --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text" ng-click="trackActivityClick(descriptionSegment.url)"></a>
             </span>
           </td>
           <td

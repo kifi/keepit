@@ -52,7 +52,7 @@ class BookmarkImporter @Inject() (
     implicit val executionContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging {
 
-  def importFileToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.maxLength(1024 * 1024 * 12, parse.temporaryFile)) { request =>
+  def importFileToLibrary(pubId: PublicId[Library]) = UserAction.async(parse.maxLength(1024 * 1024 * 50, parse.temporaryFile)) { request =>
     val startMillis = clock.getMillis()
     val id = humanFriendlyToken(8)
     log.info(s"[bmFileImport:$id] Processing bookmark file import for ${request.userId}")
@@ -296,7 +296,7 @@ class NetscapeBookmarkParser @Inject() () extends ImportParser with ZipParser {
 @Singleton
 class EvernoteParser @Inject() () extends ImportParser {
   def canProbablyParse(file: TemporaryFile): Boolean = {
-    file.file.length < 1024 * 1024 * 20 &&
+    file.file.length < 1024 * 1024 * 50 &&
       Try(Source.fromFile(file.file, 255).getLines().take(2).toList.mkString("").contains("xml.evernote.com")).getOrElse(false)
   }
 

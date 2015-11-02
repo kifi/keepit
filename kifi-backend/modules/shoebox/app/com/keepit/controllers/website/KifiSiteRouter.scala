@@ -68,14 +68,14 @@ class KifiSiteRouter @Inject() (
     redirectUserToProfileToConnect(friend, request) getOrElse redirUserToOwnProfile("/connections", request)
   }
 
-  def redirectUserToOwnOrg(subpath: String, fallback: String) = WebAppPage { implicit request =>
+  def redirectUserToOwnOrg(subpath: String, noTeam: String, fallback: String) = WebAppPage { implicit request =>
     request match {
       case r: NonUserRequest[_] => Redirect(fallback)
       case u: UserRequest[_] =>
         val orgToUpgrade = db.readOnlyReplica { implicit session =>
           orgMembershipRepo.getAllByUserId(u.userId).sortBy(_.role).map(_.organizationId).headOption.map(orgRepo.get)
         }
-        orgToUpgrade.map { org => Redirect(s"/${org.handle.value}$subpath") } getOrElse Redirect(fallback)
+        orgToUpgrade.map { org => Redirect(s"/${org.handle.value}$subpath") } getOrElse Redirect(noTeam)
     }
   }
 
@@ -239,8 +239,14 @@ class KifiSiteRouter @Inject() (
     }
   }
 
+  private def hideHandleOwner(owner: Either[Organization, User]): Boolean = {
+    val kifiSupport = Id[User](97543)
+    val invisibleUsers = Set(kifiSupport)
+    val invisibleOrgs = Set.empty[Id[Organization]]
+    owner.left.exists(org => invisibleOrgs.contains(org.id.get)) || owner.right.exists(user => invisibleUsers.contains(user.id.get))
+  }
   private def lookupByHandle(handle: Handle): Option[(Either[Organization, User], Option[Int])] = {
-    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle).filterNot(_ == Right(Id(97543))) }
+    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle).filterNot(x => hideHandleOwner(x._1)) }
     handleOwnerOpt.map {
       case (handleOwner, isPrimary) =>
         val foundHandle = handleOwner match {

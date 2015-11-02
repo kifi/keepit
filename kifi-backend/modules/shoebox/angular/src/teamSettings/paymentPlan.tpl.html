@@ -1,6 +1,6 @@
 <div class="kf-payment-plan">
   <h1 class="kf-payment-plan-top-header">Payment Plan</h1>
-  <div kf-billing-summary billing-state="billingState"></div>
+  <div kf-billing-summary billing-state="billingState" parent-tracking-type="trackingType"></div>
   <div class="kf-container">
     <div class="kf-container-header"><h3>Select your plan</h3></div>
     <div class="kf-payment-plan-cards-container">
@@ -9,7 +9,7 @@
           <div class="kf-payment-plan-card-title">Free</div>
           <div class="kf-payment-plan-card-cost">0</div>
           <div class="kf-payment-plan-card-bottom">
-            <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="/about/pricing" target="_self">Details</a></p>
+            <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="/about/pricing" target="_self" ng-click="trackClick('free_card:details')">Details</a></p>
             <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(currentPlan.name)">Your Current Plan</p>
             <button
               class="kf-payment-plan-card-cta"
@@ -25,7 +25,7 @@
           <p class="kf-payment-plan-card-description">per user per month when billed annually</p>
           <p class="kf-payment-plan-card-description">$8 billed monthly</p>
           <div class="kf-payment-plan-card-bottom">
-            <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="/about/pricing" target="_self">Details</a></p>
+            <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="/about/pricing" target="_self" ng-click="trackClick('standard_card:details')">Details</a></p>
             <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(currentPlan.name)">Your Current Plan</p>
             <button
               class="kf-payment-plan-card-cta"
@@ -40,7 +40,7 @@
           <div class="kf-payment-plan-card-title">Enterprise</div>
           <p class="kf-payment-plan-card-soon">Coming Soon</p>
           <div class="kf-payment-plan-card-bottom">
-            <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="/about/pricing" target="_self">Details</a></p>
+            <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="/about/pricing" target="_self" ng-click="trackClick('enterprise_card:details')">Details</a></p>
             <a class="kf-payment-plan-card-cta kf-link kf-link-white" href="mailto:enterprise@kifi.com">Contact us</a>
           </div>
         </div>
@@ -48,12 +48,13 @@
     </div>
     <form class="kf-container-section kf-payment-plan-form" name="planSelectsForm">
       <h2 class="kf-heading-pull">Choose your Plan</h2>
-      <p>Get details on the plans we offer on the <a class="kf-link" href="/about/pricing" target="_self">pricing page</a></p>
+      <p>Get details on the plans we offer on the <a class="kf-link" href="/about/pricing" target="_self" ng-click="trackClick('choose_plan:pricing_page')">pricing page</a></p>
       <div class="custom-select kf-button">
         <select
           class="kf-payment-plan-select"
           ng-model="plan.name"
           ng-options="tier.value as tier.label for tier in availableTiers"
+          ng-click="trackClick('choose_plan:dropdown')"
         ></select>
       </div>
       <div ng-show="isPaidPlanName(plan.name)">
@@ -64,12 +65,13 @@
             class="kf-payment-plan-select"
             ng-model="plan.cycle"
             ng-options="cycle.value as cycle.label for cycle in availableCycles"
+            ng-click="trackClick('payment_frequency:dropdown')"
           ></select>
         </div>
       </div>
     </form>
     <div class="kf-container-section" ng-if="canRedeemCredit && isPaidPlanName(plan.name)">
-      <div kf-redeem-credits profile="profile" standalone="false"></div>
+      <div kf-redeem-credits profile="profile" standalone="false" on-apply="trackApplyCodeClick"></div>
     </div>
     <div class="kf-container-section" ng-if="isPaidPlanName(plan.name)">
       <form name="creditCardForm">

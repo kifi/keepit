@@ -3,9 +3,10 @@
 angular.module('kifi')
 
 .controller('ActivityLogCtrl', [
-  '$scope', '$analytics', '$timeout', 'billingService', 'profile', 'billingState', 'modalService', 'Paginator',
-  function ($scope, $analytics, $timeout, billingService, profile, billingState, modalService, Paginator) {
+  '$scope', '$timeout', 'billingService', 'profile', 'billingState', 'modalService', 'Paginator',
+  function ($scope, $timeout, billingService, profile, billingState, modalService, Paginator) {
     $scope.billingState = billingState;
+    $scope.trackingType = 'org_settings:activity_log';
 
     var activityLogPaginator = new Paginator(activitySource);
 
@@ -42,9 +43,18 @@ angular.module('kifi')
 
     $scope.fetch();
 
+    $scope.trackActivityClick = function(url) {
+      $scope.$emit('trackOrgProfileEvent', 'click',
+        {
+          type: $scope.trackingType,
+          action: url.toLowerCase().indexOf('plan') !== -1 ? 'activity_log:plan' : 'link'
+        }
+      );
+    };
+
     $timeout(function () {
-      $analytics.eventTrack('user_viewed_page', {
-        type: 'activityLog'
+      $scope.$emit('trackOrgProfileEvent', 'view', {
+        type: 'org_profile:settings:activity_log'
       });
     });
   }

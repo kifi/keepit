@@ -49,50 +49,6 @@ class AdminPaymentsController @Inject() (
 
   val EXTRA_SPECIAL_ADMINS: Set[Id[User]] = Set(1, 3, 61, 134).map(Id[User](_))
 
-  def backfillPaidAccounts = AdminUserAction { request =>
-    def printStackTraceToChannel(t: Throwable, channel: Concurrent.Channel[String]) = {
-      val stackTrace = t.getStackTrace().toSeq
-      stackTrace.foreach { ste =>
-        channel.push(s">> ${ste.toString}\n")
-      }
-    }
-
-    def processAndReport(channel: Concurrent.Channel[String]) = {
-      val orgs = db.readOnlyMaster { implicit session =>
-        orgRepo.all()
-      }.filter(_.state == OrganizationStates.ACTIVE)
-      channel.push(s"All ${orgs.size} organizations loaded\n")
-      orgs.foreach { org =>
-        channel.push("----------------------------------------\n")
-        channel.push(s"Processing org ${org.id.get}: ${org.name}\n")
-        db.readWrite { implicit session =>
-          paidAccountRepo.maybeGetByOrgId(org.id.get) match {
-            case Some(_) =>
-              channel.push(s"Paid account already exists. Doing nothing.\n")
-            case None =>
-              planCommander.createAndInitializePaidAccountForOrganization(org.id.get, PaidPlan.DEFAULT, request.userId, session) match {
-                case Success(event) =>
-                  channel.push(s"Successfully created paid account for org ${org.id.get}\n")
-                  channel.push(event.toString + "\n")
-                case Failure(ex) =>
-                  channel.push(s"Failed creating paid account for org ${org.id.get}: ${ex.getMessage}\n")
-                  printStackTraceToChannel(ex, channel)
-              }
-          }
-        }
-        Thread.sleep(200)
-      }
-    }
-
-    val enum: Enumerator[String] = Concurrent.unicast(onStart = (channel: Concurrent.Channel[String]) =>
-      SafeFuture("Paid Account Backfill") {
-        processAndReport(channel)
-        channel.eofAndEnd()
-      }
-    )
-    Ok.chunked(enum)
-  }
-
   def grantExtraCredit(orgId: Id[Organization]) = AdminUserAction { request =>
     val amount = request.body.asFormUrlEncoded.get.apply("amount").head.trim.toInt
     val memo = request.body.asFormUrlEncoded.get.apply("memo").filterNot(_ == "").headOption.map(_.trim)
@@ -202,15 +158,6 @@ class AdminPaymentsController @Inject() (
 
   def unfreezeAccount(orgId: Id[Organization]) = AdminUserAction { implicit request =>
     Ok(planCommander.unfreeze(orgId).toString)
-  }
-
-  def addOrgOwnersAsBillingContacts() = AdminUserAction { implicit request =>
-    db.readWrite { implicit session =>
-      orgRepo.allActive.foreach { org =>
-        planCommander.addUserAccountContactHelper(org.id.get, org.ownerId, ActionAttribution(user = None, admin = request.adminUserId))
-      }
-    }
-    Ok
   }
 
   def activityOverview(page: Int, kind: Option[String]) = AdminUserPage { implicit request =>
@@ -386,10 +333,3 @@ case class AdminPaymentsActivityOverview(
   orgsByAccountId: Map[Id[PaidAccount], Organization],
   pgHelper: PaginationHelper)
 
-case class IncomeHistory(cur: DollarAmount, old: DollarAmount)
-case class PlanEnrollmentHistory(cur: PlanEnrollment, old: PlanEnrollment)
-case class AdminPaymentsDashboard(
-  totalAmortizedIncomePerMonth: IncomeHistory,
-  planEnrollment: Map[PaidPlan, PlanEnrollmentHistory],
-  frozenAccounts: Seq[AdminAccountView],
-  failedAccounts: Seq[AdminAccountView])

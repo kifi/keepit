@@ -4,8 +4,9 @@ import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
-import com.keepit.controllers.admin.{ AdminAccountView, PlanEnrollmentHistory, IncomeHistory, AdminPaymentsDashboard }
+import com.keepit.controllers.admin.AdminAccountView
 import com.keepit.model.OrganizationRepo
+import org.joda.time.Period
 
 import scala.collection.mutable
 
@@ -21,7 +22,9 @@ class PaymentsDashboardCommanderImpl @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
+    creditRewardRepo: CreditRewardRepo,
     clock: Clock) extends PaymentsDashboardCommander {
+
   private def createAdminAccountView(account: PaidAccount)(implicit session: RSession): AdminAccountView = {
     AdminAccountView(
       organization = orgRepo.get(account.orgId)
@@ -30,8 +33,30 @@ class PaymentsDashboardCommanderImpl @Inject() (
 
   def generateDashboard(): AdminPaymentsDashboard = db.readOnlyMaster { implicit session =>
     val now = clock.now
+    val reverseChronologicalEvents = accountEventRepo.adminGetByKindAndDate(AccountEventKind.all, start = now.minusWeeks(1), end = now).toList.sortBy(e => (e.eventTime.getMillis, e.id.get.id)).reverse
+
     val frozenAccounts = paidAccountRepo.all.filter(a => a.isActive && a.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
     val failedAccounts = paidAccountRepo.all.filter(a => a.isActive && a.paymentStatus == PaymentStatus.Failed).take(100).map(createAdminAccountView) // God help us if we have more than 100 failed accounts
+
+    val (creditChanges, chargesMade, rewardsGranted) = {
+      val reallyOldEvents = accountEventRepo.adminGetByKindAndDate(AccountEventKind.all, start = now.minusWeeks(2), end = now.minusWeeks(1)).toList.sortBy(e => (e.eventTime.getMillis, e.id.get.id)).reverse
+      def applyFn[T](fn: Seq[AccountEvent] => T): History[T] = History(old = fn(reallyOldEvents), cur = fn(reverseChronologicalEvents))
+
+      def creditChangesFn(events: Seq[AccountEvent]): DollarAmount = events.collect { case e if e.creditChange < DollarAmount.ZERO => e.creditChange }.sum
+      def chargesMadeFn(events: Seq[AccountEvent]): DollarAmount = events.flatMap(_.paymentCharge).sum
+      def rewardsGrantedFn(events: Seq[AccountEvent]): Map[String, DollarAmount] = {
+        val rewardKindsAndValues = events.flatMap { e =>
+          e.action match {
+            case AccountEventAction.RewardCredit(id) => Some(creditRewardRepo.get(id).reward.kind.kind -> e.creditChange)
+            case _ => None
+          }
+        }
+        rewardKindsAndValues.groupBy(_._1).map { case (kind, kindAndValues) => kind -> kindAndValues.map(_._2).sum }.withDefaultValue(DollarAmount.ZERO)
+      }
+
+      (applyFn(creditChangesFn), applyFn(chargesMadeFn), applyFn(rewardsGrantedFn))
+    }
+
     val plans = paidPlanRepo.all.filter(_.isActive)
     val curPlanEnrollments = {
       val planEnrollmentById = paidAccountRepo.getPlanEnrollments
@@ -41,7 +66,8 @@ class PaymentsDashboardCommanderImpl @Inject() (
       // mutable map logic ahoy
       val m_planByAccount = mutable.Map(paidAccountRepo.all.map(a => a.id.get -> Option(a.planId)): _*)
       val m_usersByAccount = mutable.Map(paidAccountRepo.all.map(a => a.id.get -> a.activeUsers): _*)
-      accountEventRepo.adminGetByKindSince(AccountEventKind.all, now.minusWeeks(1)).map(e => (e.accountId, e.action)).foreach {
+
+      reverseChronologicalEvents.map(e => (e.accountId, e.action)).collect {
         case (accountId, AccountEventAction.OrganizationCreated(initialPlan, _)) =>
           m_planByAccount(accountId) = None
         case (accountId, AccountEventAction.PlanChanged(oldPlan, newPlan, _)) =>
@@ -59,19 +85,38 @@ class PaymentsDashboardCommanderImpl @Inject() (
         )
       }.toMap
     }
-    val planEnrollments = plans.map { p => p -> PlanEnrollmentHistory(cur = curPlanEnrollments(p), old = oldPlanEnrollments(p)) }.toMap
+    val planEnrollments = History(cur = curPlanEnrollments, old = oldPlanEnrollments)
     val totalIncome = {
       val (old, cur) = plans.map { plan =>
         val amortizedIncomePerUser = DollarAmount.cents(plan.pricePerCyclePerUser.toCents / plan.billingCycle.months)
-        (amortizedIncomePerUser * planEnrollments(plan).old.numActiveUsers, amortizedIncomePerUser * planEnrollments(plan).cur.numActiveUsers)
+        (amortizedIncomePerUser * planEnrollments.old(plan).numActiveUsers, amortizedIncomePerUser * planEnrollments.cur(plan).numActiveUsers)
       }.unzip
-      IncomeHistory(old.reduce(_ + _), cur.reduce(_ + _))
+      History(old = old.sum, cur = cur.sum)
     }
     AdminPaymentsDashboard(
+      plans = plans,
+      diffPeriod = Period.weeks(1),
       totalAmortizedIncomePerMonth = totalIncome,
+      creditChanges = creditChanges,
+      chargesMade = chargesMade,
+      rewardsGranted = rewardsGranted,
       planEnrollment = planEnrollments,
       failedAccounts = failedAccounts,
       frozenAccounts = frozenAccounts
     )
   }
 }
+
+case class History[T](cur: T, old: T) {
+  def map[B](f: (T => B)) = History(cur = f(cur), old = f(old))
+}
+case class AdminPaymentsDashboard(
+  plans: Seq[PaidPlan],
+  diffPeriod: Period,
+  totalAmortizedIncomePerMonth: History[DollarAmount],
+  creditChanges: History[DollarAmount],
+  chargesMade: History[DollarAmount],
+  rewardsGranted: History[Map[String, DollarAmount]], // this is a string because RewardKind is being obnoxious
+  planEnrollment: History[Map[PaidPlan, PlanEnrollment]],
+  frozenAccounts: Seq[AdminAccountView],
+  failedAccounts: Seq[AdminAccountView])

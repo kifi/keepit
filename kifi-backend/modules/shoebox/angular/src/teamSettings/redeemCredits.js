@@ -12,6 +12,7 @@ angular.module('kifi')
       scope: {
         profile: '=',
         standalone: '=',
+        onApply: '=',
         autofocus: '='
       },
       link: function($scope, $element) {
@@ -26,6 +27,7 @@ angular.module('kifi')
         }
 
         $scope.applyReferralCode = function (code) {
+          $scope.onApply();
           $scope.creditRedeemed = 0;
           billingService
             .applyReferralCode($scope.profile.id, code)

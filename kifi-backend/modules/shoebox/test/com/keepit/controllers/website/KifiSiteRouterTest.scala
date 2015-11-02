@@ -275,7 +275,7 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/kifiorghandle/settings/plan")
         // for someone without an org, it redirects to org creation
         actionsHelper.setUser(user2)
-        route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/about/pricing")
+        route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/teams/new")
 
         // catching mobile
         {

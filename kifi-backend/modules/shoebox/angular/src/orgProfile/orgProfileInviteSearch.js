@@ -40,7 +40,7 @@ angular.module('kifi')
         }
 
         function trackInviteEvent(eventName, attr) {
-          var type = 'orgMembers';
+          var type = 'org_profile:invite:WTI';
           var attributes = _.extend({ type: type }, attr || {});
           orgProfileService.trackEvent(eventName, scope.organization, attributes);
         }
@@ -284,12 +284,18 @@ angular.module('kifi')
           socialService.importGmail();
         };
 
+        scope.clickAddMany = function() {
+          scope.modalData.addMany = true;
+          trackInviteEvent('user_clicked_page', { action: 'paste' });
+        };
+
         //
         // Initialize.
         //
         $timeout(function () {
           searchInput.focus();
           populateDropDown();
+          scope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:invite:WTI' });
         }, 0);
       }
     };

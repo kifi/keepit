@@ -11,11 +11,16 @@ angular.module('kifi')
       replace: true,
       templateUrl: 'teamSettings/billingSummary.tpl.html',
       scope: {
-        billingState: '='
+        billingState: '=',
+        parentTrackingType: '='
       },
       link: function ($scope) {
         $scope.isPaidPlan = function () {
           return !isZeroMoneyFilter($scope.billingState.plan.pricePerUser); // TODO(carlos): switch to server-side isPaid flag
+        };
+
+        $scope.trackOverviewClick = function (action) {
+          $scope.$emit('trackOrgProfileEvent', 'click', { type: $scope.parentTrackingType, action: action });
         };
       }
     };

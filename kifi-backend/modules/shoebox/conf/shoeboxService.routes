@@ -884,7 +884,6 @@ GET           /admin/goodies/externalIdById                                     
 GET           /admin/goodies/externalIdsByPublicId                                   @com.keepit.controllers.admin.AdminGoodiesController.externalIdByPublicId(name: String, id: String)
 
 
-GET           /admin/payments/backfillAccounts             @com.keepit.controllers.admin.AdminPaymentsController.backfillPaidAccounts()
 POST          /admin/payments/grantExtraCredit             @com.keepit.controllers.admin.AdminPaymentsController.grantExtraCredit(orgId: Id[Organization])
 POST          /admin/payments/processOrgNow                @com.keepit.controllers.admin.AdminPaymentsController.processOrgNow(orgId: Id[Organization])
 POST          /admin/payments/changePlanForOrg             @com.keepit.controllers.admin.AdminPaymentsController.changePlanForOrg(orgId: Id[Organization])
@@ -892,7 +891,6 @@ GET           /admin/payments/addCreditCard                @com.keepit.controlle
 POST          /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
 GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
-POST          /admin/payments/backfillBillingContacts      @com.keepit.controllers.admin.AdminPaymentsController.addOrgOwnersAsBillingContacts
 
 GET           /admin/payments/checkIntegrity               @com.keepit.controllers.admin.AdminPaymentsController.checkIntegrity(orgId: Id[Organization], doIt: Boolean ?= false)
 GET           /admin/payments/resetAccount                 @com.keepit.controllers.admin.AdminPaymentsController.resetAccount(orgId: Id[Organization], doIt: Boolean ?= false)
@@ -1056,8 +1054,8 @@ GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRoute
 GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/settings")
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUserOrSignup
-GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", fallback = "/about/pricing")
-GET     /credits                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", fallback = "/about/pricing#referral")
+GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", noTeam = "/teams/new", fallback = "/about/pricing")
+GET     /credits                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", noTeam = "/teams/new", fallback = "/about/pricing#referral")
 GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser

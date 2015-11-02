@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgInviteMany', [
-  'util', 'orgProfileService',
-  function (util, orgProfileService) {
+  'util', 'orgProfileService', '$timeout',
+  function (util, orgProfileService, $timeout) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -14,6 +14,7 @@ angular.module('kifi')
         scope.state = {
           emails: ''
         };
+        var trackingType = 'org_profile:invite:paste';
 
         scope.close = function () {
           kfModalCtrl.close();
@@ -52,6 +53,16 @@ angular.module('kifi')
           })
           .then(scope.modalData.returnAction);
         };
+
+        scope.clickWhoToInvite = function() {
+          scope.modalData.addMany = false;
+          orgProfileService.trackEvent('user_clicked_page', scope.organization, { type: trackingType, action: 'WTI' });
+        };
+
+        scope.$emit('trackOrgProfileEvent', 'view', { type: trackingType });
+        $timeout(function () {
+          element.find('textarea').focus();
+        });
       }
     };
   }

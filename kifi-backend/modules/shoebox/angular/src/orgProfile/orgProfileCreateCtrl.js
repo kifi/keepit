@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('OrgProfileCreateCtrl', [
-  '$scope', '$analytics', '$timeout', 'orgProfileService', '$state', 'profileService', 'modalService',
-  function($scope, $analytics, $timeout, orgProfileService, $state, profileService, modalService) {
+  '$scope', '$timeout', 'orgProfileService', '$state', 'profileService', 'modalService',
+  function($scope, $timeout, orgProfileService, $state, profileService, modalService) {
     $scope.orgSlug = ''; // Not yet implemented.
     $scope.disableCreate = false;
 
@@ -44,7 +44,7 @@ angular.module('kifi')
     };
 
     $timeout(function () {
-      $analytics.eventTrack('user_viewed_page', {
+      $scope.$emit('trackOrgProfileEvent', 'view', {
         type: 'createTeam'
       });
     });
