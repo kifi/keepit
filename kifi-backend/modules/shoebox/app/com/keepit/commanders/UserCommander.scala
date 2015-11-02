@@ -447,6 +447,13 @@ class UserCommanderImpl @Inject() (
 
               Get started by visiting the page to <a href="http://www.kifi.com/teams/new">create a team</a>.
           """,
+        textBody = Some(
+          s"""
+              Per your request, you can now create a team on Kifi from
+              your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+
+              Get started by visiting the page to create a team: http://www.kifi.com/teams/new.
+           """.stripMargin),
         category = NotificationCategory.User.CREATE_TEAM
       ))
     }

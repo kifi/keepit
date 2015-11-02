@@ -1,6 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress, ElectronicMailRepo }
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model.{ OrganizationFactory, UserFactory }
@@ -64,10 +65,12 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
       }
       "apply org referral credit codes on org creation" in {
         withDb(modules: _*) { implicit injector =>
-          val (org1, org2) = db.readWrite { implicit session =>
-            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+          val ownerEmail = "roger_rabbit@csi.gov"
+          val (org1, org2, owner1) = db.readWrite { implicit session =>
+            val owner1 = UserFactory.user().withEmailAddress(ownerEmail).saved
+            val org1 = OrganizationFactory.organization().withOwner(owner1).saved
             val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
-            (org1, org2)
+            (org1, org2, owner1)
           }
 
           val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
@@ -83,6 +86,9 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
             rewardCreditEvents.size must beGreaterThanOrEqualTo(1)
             rewardCreditEvents.map(_.creditChange) must contain(rewards.target.credit)
+            inject[ElectronicMailRepo].all().count(email =>
+              email.from === SystemEmailAddress.NOTIFICATIONS &&
+                email.subject == s"Your team's referral code was used by ${org2.name} on Kifi") must equalTo(1)
           }
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
@@ -116,10 +122,12 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
       }
       "apply rewards to the referrer once the referred org upgrades" in {
         withDb(modules: _*) { implicit injector =>
-          val (org1, org2) = db.readWrite { implicit session =>
-            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+          val owner1Email = "roger_rabbit@csi.gov"
+          val (org1, org2, owner1) = db.readWrite { implicit session =>
+            val owner1 = UserFactory.user().withEmailAddress(owner1Email).saved
+            val org1 = OrganizationFactory.organization().withOwner(owner1).saved
             val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
-            (org1, org2)
+            (org1, org2, owner1)
           }
 
           // org1 refers org2
@@ -144,6 +152,13 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
 
           upgradeRewards must haveSize(1)
           upgradeRewards.head.applied must beSome
+
+          db.readOnlyMaster { implicit session =>
+            inject[ElectronicMailRepo].all().count(email =>
+              email.from == SystemEmailAddress.NOTIFICATIONS &&
+                email.to.contains(EmailAddress(owner1Email)) &&
+                email.subject == s"You earned a $$100 credit for ${org1.name} on Kifi") must equalTo(1)
+          }
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
           paymentsChecker.checkAccount(org2.id.get) must beEmpty

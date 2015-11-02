@@ -83,9 +83,10 @@ class OrganizationMembershipRepoImpl @Inject() (
       member.role))
   }
 
+  implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
+
   type RepoImpl = OrganizationMembershipTable
   class OrganizationMembershipTable(tag: Tag) extends RepoTable[OrganizationMembership](db, tag, "organization_membership") with SeqNumberColumn[OrganizationMembership] with NamedColumns {
-    implicit val organizationRoleMapper = MappedColumnType.base[OrganizationRole, String](_.value, OrganizationRole(_))
 
     def organizationId = column[Id[Organization]]("organization_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.NotNull)
@@ -199,8 +200,8 @@ class OrganizationMembershipRepoImpl @Inject() (
 
   def getByRole(orgId: Id[Organization], role: OrganizationRole, excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[Id[User]] = {
     excludeState match {
-      case Some(exclude) => (for { row <- rows if row.organizationId === orgId && row.state =!= exclude && row.role == role } yield row.userId).list
-      case None => (for { row <- rows if row.organizationId === orgId && row.role == role } yield row.userId).list
+      case Some(exclude) => (for { row <- rows if row.organizationId === orgId && row.state =!= exclude && row.role === role } yield row.userId).list
+      case None => (for { row <- rows if row.organizationId === orgId && row.role === role } yield row.userId).list
     }
 
   }
