@@ -9,11 +9,12 @@
 
     <table class="table table-condensed table-striped">
         <thead>
-        <th>Credit Changes</th><th>Charges</th>
+        <th>Credit Changes</th><th>RewardsGranted</th><th>Charges</th>
         </thead>
         <tbody>
         <tr>
             <td>@{dash.creditChanges.cur} (from @{dash.creditChanges.old})</td>
+            <td>@{dash.rewardsGranted.cur.values.sum} (from @{dash.rewardsGranted.old.values.sum})</td>
             <td>@{dash.chargesMade.cur} (from @{dash.chargesMade.old})</td>
         </tr>
         </tbody>
@@ -24,11 +25,11 @@
         <th>Plan</th><th>Number of Accounts</th><th>Number of Active Users</th>
         </thead>
         <tbody>
-        @for((plan, enrollmentHistory) <- dash.planEnrollment) {
+        @for(plan <- dash.plans) {
         <tr>
             <td>@{plan.displayName}</td>
-            <td>@{enrollmentHistory.cur.numAccounts} (from @{enrollmentHistory.old.numAccounts})</td>
-            <td>@{enrollmentHistory.cur.numActiveUsers} (from @{enrollmentHistory.old.numActiveUsers})</td>
+            <td>@{dash.planEnrollment.cur(plan).numAccounts} (from @{dash.planEnrollment.old(plan).numAccounts})</td>
+            <td>@{dash.planEnrollment.cur(plan).numActiveUsers} (from @{dash.planEnrollment.old(plan).numActiveUsers})</td>
         </tr>
         }
         </tbody>
@@ -55,4 +56,16 @@
         }
     </ul>
     }
+
+    <h3>Rewards breakdown</h3>
+    <table class="table table-condensed table-striped">
+        <tbody>
+        @for(kind <- dash.rewardsGranted.cur.keySet) {
+        <tr>
+            <td>@kind</td>
+            <td>@{dash.rewardsGranted.cur(kind)} (from @{dash.rewardsGranted.old(kind)})</td>
+        </tr>
+        }
+        </tbody>
+    </table>
 }
