@@ -20,6 +20,7 @@ object AccountEventKind {
   case object Charge extends AccountEventKind("charge")
   case object Refund extends AccountEventKind("refund")
   case object ChargeFailure extends AccountEventKind("charge_failure")
+  case object RefundFailure extends AccountEventKind("refund_failure")
   case object DefaultPaymentMethodChanged extends AccountEventKind("default_payment_method_changed")
   case object IntegrityError extends AccountEventKind("integrity_error")
   case object LowBalanceIgnored extends AccountEventKind("low_balance_ignored")
@@ -39,6 +40,7 @@ object AccountEventKind {
     Charge,
     Refund,
     ChargeFailure,
+    RefundFailure,
     DefaultPaymentMethodChanged,
     IntegrityError,
     LowBalanceIgnored,
@@ -74,6 +76,7 @@ object AccountEventKind {
     Charge,
     Refund,
     ChargeFailure,
+    RefundFailure,
     DefaultPaymentMethodChanged,
     IntegrityError,
     MissingPaymentMethod,
@@ -81,9 +84,9 @@ object AccountEventKind {
     PlanRenewal,
     PlanChanged,
     SpecialCredit,
-    RewardCredit,
+    RewardCredit
   )
-  
+
   val orgGrowth: Set[AccountEventKind] = Set(
     OrganizationCreated,
     UserJoinedOrganization,
@@ -138,12 +141,20 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     def eventType = AccountEventKind.Charge
   }
 
-  case class Refund() extends AccountEventAction with Payloadless {
+  @json
+  case class Refund(originalChargeEvent: Id[AccountEvent], originalCharge: StripeChargeId) extends AccountEventAction {
     def eventType = AccountEventKind.Refund
+    def toDbRow = eventType -> Json.toJson(this)
   }
 
   @json
   case class ChargeFailure(amount: DollarAmount, code: String, message: String) extends AccountEventAction {
+    def eventType = AccountEventKind.ChargeFailure
+    def toDbRow = eventType -> Json.toJson(this)
+  }
+
+  @json
+  case class RefundFailure(originalChargeEvent: Id[AccountEvent], originalCharge: StripeChargeId, code: String, message: String) extends AccountEventAction {
     def eventType = AccountEventKind.ChargeFailure
     def toDbRow = eventType -> Json.toJson(this)
   }
@@ -212,8 +223,9 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
     case AccountEventKind.PlanRenewal => extras.as[PlanRenewal]
     case AccountEventKind.LowBalanceIgnored => extras.as[LowBalanceIgnored]
     case AccountEventKind.Charge => Charge()
-    case AccountEventKind.Refund => Refund()
+    case AccountEventKind.Refund => extras.as[Refund]
     case AccountEventKind.ChargeFailure => extras.as[ChargeFailure]
+    case AccountEventKind.RefundFailure => extras.as[RefundFailure]
     case AccountEventKind.IntegrityError => extras.as[IntegrityError]
     case AccountEventKind.MissingPaymentMethod => MissingPaymentMethod()
     case AccountEventKind.UserJoinedOrganization => extras.as[UserJoinedOrganization]
