@@ -1,17 +1,16 @@
-@import com.keepit.payments.AdminPaymentsDashboard
-@import com.keepit.payments.DollarAmount
-@import com.keepit.common.controller.PaginatedRequest
+@import com.keepit.payments.{ AdminPaymentsDashboard, DollarAmount, History }
 
 @(dash: AdminPaymentsDashboard)(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@formatDiff[T](cur: T, old: T)(implicit n: Numeric[T]) = {
-    @if(n.compare(cur, old) > 0)  { @cur (<span class="positive-diff">+@n.minus(cur, old)</span>) }
-    @if(n.compare(cur, old) < 0)  { @cur (<span class="negative-diff">@n.minus(cur, old)</span>) }
-    @if(n.compare(cur, old) == 0) { @cur }
+@formatDiff[A](h: History[A])(implicit n: Numeric[A]) = {
+    @if(n.compare(h.cur, h.old) > 0)  { @h.cur (<span class="positive-diff">+@n.minus(h.cur, h.old)</span>) }
+    @if(n.compare(h.cur, h.old) < 0)  { @h.cur (<span class="negative-diff">@n.minus(h.cur, h.old)</span>) }
+    @if(n.compare(h.cur, h.old) == 0) { @h.cur }
 }
 
+
 @views.html.admin.admin(s"Payments Dashboard (comparing to ${dash.diffPeriod} ago)", stylesheets = List("admin_user", "payments_dashboard"), scripts = List("typeahead.bundle.min")) {
-    <h1>We are making ~@formatDiff(dash.totalAmortizedIncomePerMonth.cur, dash.totalAmortizedIncomePerMonth.old) a month</h1>
+    <h1>We are making ~@formatDiff(dash.totalAmortizedIncomePerMonth) a month</h1>
 
     <table class="table table-condensed table-striped">
         <thead>
@@ -19,9 +18,9 @@
         </thead>
         <tbody>
         <tr>
-            <td>@formatDiff(dash.creditChanges.cur, dash.creditChanges.old)</td>
-            <td>@formatDiff(dash.rewardsGranted.cur.values.sum, dash.rewardsGranted.old.values.sum)</td>
-            <td>@formatDiff(dash.chargesMade.cur, dash.chargesMade.old)</td>
+            <td>@formatDiff(dash.creditChanges)</td>
+            <td>@formatDiff(dash.rewardsGranted.map(_.values.sum))</td>
+            <td>@formatDiff(dash.chargesMade)</td>
         </tr>
         </tbody>
     </table>
@@ -35,8 +34,8 @@
         @for(plan <- dash.plans) {
         <tr>
             <td>@{plan.fullName}</td>
-            <td>@formatDiff(dash.planEnrollment.cur(plan).numAccounts, dash.planEnrollment.old(plan).numAccounts)</td>
-            <td>@formatDiff(dash.planEnrollment.cur(plan).numActiveUsers, dash.planEnrollment.old(plan).numActiveUsers)</td>
+            <td>@formatDiff(dash.planEnrollment.map(_.apply(plan).numAccounts))</td>
+            <td>@formatDiff(dash.planEnrollment.map(_.apply(plan).numActiveUsers))</td>
         </tr>
         }
         </tbody>
@@ -48,7 +47,7 @@
         @for(kind <- dash.rewardsGranted.cur.keySet) {
         <tr>
             <td>@kind</td>
-            <td>@formatDiff(dash.rewardsGranted.cur(kind), dash.rewardsGranted.old(kind))</td>
+            <td>@formatDiff(dash.rewardsGranted.map(_.apply(kind)))</td>
         </tr>
         }
         </tbody>

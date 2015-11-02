@@ -107,7 +107,9 @@ class PaymentsDashboardCommanderImpl @Inject() (
   }
 }
 
-case class History[T](cur: T, old: T)
+case class History[T](cur: T, old: T) {
+  def map[B](f: (T => B)) = History(cur = f(cur), old = f(old))
+}
 case class AdminPaymentsDashboard(
   plans: Seq[PaidPlan],
   diffPeriod: Period,
