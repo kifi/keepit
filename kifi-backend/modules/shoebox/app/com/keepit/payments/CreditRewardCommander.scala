@@ -22,6 +22,7 @@ trait CreditRewardCommander {
   // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards]
+  def adminCreateCreditCode(codeTemplate: CreditCodeInfo): CreditCodeInfo
 
   // In-place evolutions of existing rewards
   def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward]
@@ -43,6 +44,14 @@ class CreditRewardCommanderImpl @Inject() (
   private val newOrgReferralCredit = DollarAmount.dollars(100)
   private val orgReferrerCredit = DollarAmount.dollars(100)
 
+  def adminCreateCreditCode(codeTemplate: CreditCodeInfo): CreditCodeInfo = db.readWrite { implicit session =>
+    val base = codeTemplate.code.value
+    val suffixes = "" +: Iterator.continually("-" + RandomStringUtils.randomNumeric(2)).take(9).toStream
+    suffixes.map { suf =>
+      creditCodeInfoRepo.create(codeTemplate.copy(code = CreditCode.normalize(base + suf + "-" + codeTemplate.credit.toCents / 100)))
+    }.dropWhile(_.isFailure)
+      .headOption.getOrElse(throw new Exception(s"Could not find an unused code for $base, even with random suffixes")).get
+  }
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode = {
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)

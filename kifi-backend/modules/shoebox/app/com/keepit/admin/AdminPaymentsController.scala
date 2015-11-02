@@ -288,16 +288,14 @@ class AdminPaymentsController @Inject() (
 
   def createCode() = AdminUserAction(parse.tolerantJson) { implicit request =>
     val req = request.body.as[CreditCodeAdminCreateRequest]
-    db.readWrite { implicit session =>
-      creditCodeInfoRepo.create(CreditCodeInfo(
-        code = req.code,
-        kind = req.kind,
-        credit = req.credit,
-        status = CreditCodeStatus.Open,
-        referrer = None
-      )).get
-    }
-    NoContent
+    val newCode = creditRewardCommander.adminCreateCreditCode(CreditCodeInfo(
+      code = req.code,
+      kind = req.kind,
+      credit = req.credit,
+      status = CreditCodeStatus.Open,
+      referrer = None
+    ))
+    Ok(Json.obj("created" -> Json.obj("code" -> newCode.code, "kind" -> newCode.kind.kind, "value" -> DollarAmount.formatAsCents.writes(newCode.credit))))
   }
 }
 
