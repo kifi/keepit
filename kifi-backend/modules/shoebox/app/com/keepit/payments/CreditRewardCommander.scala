@@ -97,7 +97,7 @@ class CreditRewardCommanderImpl @Inject() (
     val subject = s"Your team's referral code was used by ${referredOrg.name} on Kifi"
     val htmlBody =
       s"""
-         |Your <a href="http://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a> team's referral code was used by <a href="http://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>. If they upgrade to a standard plan on Kifi,
+         |Your <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a> team's referral code was used by <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>. If they upgrade to a standard plan on Kifi,
          |you'll earn a $$100 credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
        """.stripMargin
     val textBody =
@@ -207,8 +207,8 @@ class CreditRewardCommanderImpl @Inject() (
     val subject = s"You earned a $$100 credit for ${referrerOrg.name} on Kifi"
     val htmlBody =
       s"""
-         |Your team, <a href="http://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a>, earned a $$100 credit from ${referredOrg.name}.
-         |We've added it to your <a href="http://www.kifi.com/${referrerOrg.handle.value}/settings/plan">team balance</a>. Thank you so much for spreading the word
+         |Your team, <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a>, earned a $$100 credit from ${referredOrg.name}.
+         |We've added it to your <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/plan">team balance</a>. Thank you so much for spreading the word
          |about Kifi with great teams like ${referredOrg.name}!
        """.stripMargin
     val textBody =
