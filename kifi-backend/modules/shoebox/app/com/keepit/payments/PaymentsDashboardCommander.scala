@@ -5,7 +5,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.controllers.admin.AdminAccountView
-import com.keepit.model.OrganizationRepo
+import com.keepit.model.{ OrganizationExperimentType, OrganizationExperimentRepo, OrganizationRepo }
 import org.joda.time.Period
 
 import scala.collection.mutable
@@ -19,6 +19,7 @@ trait PaymentsDashboardCommander {
 class PaymentsDashboardCommanderImpl @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
+    orgExpRepo: OrganizationExperimentRepo,
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
@@ -32,14 +33,23 @@ class PaymentsDashboardCommanderImpl @Inject() (
   }
 
   def generateDashboard(): AdminPaymentsDashboard = db.readOnlyMaster { implicit session =>
+    val fakeAccountIds = {
+      val fakeOrgIds = orgExpRepo.getOrganizationsByExperiment(OrganizationExperimentType.FAKE).toSet
+      paidAccountRepo.getByOrgIds(fakeOrgIds).values.map(_.id.get).toSet
+    }
+
     val now = clock.now
-    val reverseChronologicalEvents = accountEventRepo.adminGetByKindAndDate(AccountEventKind.all, start = now.minusWeeks(1), end = now).toList.sortBy(e => (e.eventTime.getMillis, e.id.get.id)).reverse
+    val diffPeriod = Period.weeks(1)
+    val Seq(reverseChronologicalEvents, reallyOldEvents) = Seq(now, now.minus(diffPeriod)).map { end =>
+      accountEventRepo.adminGetByKindAndDate(AccountEventKind.all, start = end.minus(diffPeriod), end = end)
+        .filter(e => !fakeAccountIds.contains(e.accountId))
+        .toList.sortBy(e => (e.eventTime.getMillis, e.id.get.id)).reverse
+    }
 
     val frozenAccounts = paidAccountRepo.all.filter(a => a.isActive && a.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
     val failedAccounts = paidAccountRepo.all.filter(a => a.isActive && a.paymentStatus == PaymentStatus.Failed).take(100).map(createAdminAccountView) // God help us if we have more than 100 failed accounts
 
     val (creditChanges, chargesMade, rewardsGranted) = {
-      val reallyOldEvents = accountEventRepo.adminGetByKindAndDate(AccountEventKind.all, start = now.minusWeeks(2), end = now.minusWeeks(1)).toList.sortBy(e => (e.eventTime.getMillis, e.id.get.id)).reverse
       def applyFn[T](fn: Seq[AccountEvent] => T): History[T] = History(old = fn(reallyOldEvents), cur = fn(reverseChronologicalEvents))
 
       def creditChangesFn(events: Seq[AccountEvent]): DollarAmount = events.collect { case e if e.creditChange < DollarAmount.ZERO => e.creditChange }.sum
@@ -95,7 +105,7 @@ class PaymentsDashboardCommanderImpl @Inject() (
     }
     AdminPaymentsDashboard(
       plans = plans,
-      diffPeriod = Period.weeks(1),
+      diffPeriod = diffPeriod,
       totalAmortizedIncomePerMonth = totalIncome,
       creditChanges = creditChanges,
       chargesMade = chargesMade,
