@@ -44,9 +44,11 @@ class PaymentsDashboardCommanderImpl @Inject() (
       def creditChangesFn(events: Seq[AccountEvent]): DollarAmount = events.collect { case e if e.creditChange < DollarAmount.ZERO => e.creditChange }.sum
       def chargesMadeFn(events: Seq[AccountEvent]): DollarAmount = events.flatMap(_.paymentCharge).sum
       def rewardsGrantedFn(events: Seq[AccountEvent]): Map[String, DollarAmount] = {
-        val rewardKindsAndValues = events.collect {
-          case AccountEvent(_, _, _, _, _, _, _, _, _, AccountEventAction.RewardCredit(id), creditChange, _, _, _, _) =>
-            creditRewardRepo.get(id).reward.kind.kind -> creditChange
+        val rewardKindsAndValues = events.flatMap { e =>
+          e.action match {
+            case AccountEventAction.RewardCredit(id) => Some(creditRewardRepo.get(id).reward.kind.kind -> e.creditChange)
+            case _ => None
+          }
         }
         rewardKindsAndValues.groupBy(_._1).map { case (kind, kindAndValues) => kind -> kindAndValues.map(_._2).sum }.withDefaultValue(DollarAmount.ZERO)
       }
