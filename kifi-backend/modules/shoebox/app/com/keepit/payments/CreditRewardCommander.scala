@@ -2,11 +2,12 @@ package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.{ SystemEmailAddress, LocalPostOffice, ElectronicMail }
 import com.keepit.common.time._
-import com.keepit.model.{ User, OrganizationRepo, Organization }
+import com.keepit.model.{ OrganizationExperimentType, OrganizationExperiment, OrganizationExperimentRepo, NotificationCategory, UserEmailAddressRepo, OrganizationRole, OrganizationMembershipRepo, User, OrganizationRepo, Organization }
 import com.keepit.payments.CreditRewardFail._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.JsNull
@@ -35,9 +36,13 @@ class CreditRewardCommanderImpl @Inject() (
   creditCodeInfoRepo: CreditCodeInfoRepo,
   creditRewardRepo: CreditRewardRepo,
   accountRepo: PaidAccountRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
+  emailAddressRepo: UserEmailAddressRepo,
   clock: Clock,
   eventCommander: AccountEventTrackingCommander,
   accountLockHelper: AccountLockHelper,
+  postOffice: LocalPostOffice,
+  orgExpRepo: OrganizationExperimentRepo,
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
 
@@ -81,7 +86,42 @@ class CreditRewardCommanderImpl @Inject() (
       _ <- if (creditCodeInfo.referrer.exists(r => r.organizationId.isDefined && r.organizationId == req.orgId)) Failure(CreditCodeAbuseException(req)) else Success(true)
       _ <- if (creditCodeInfo.isSingleUse && creditRewardRepo.getByCreditCode(creditCodeInfo.code).nonEmpty) Failure(CreditCodeAlreadyBurnedException(req.code)) else Success(true)
       rewards <- createRewardsFromCreditCode(creditCodeInfo, accountId, req.applierId, req.orgId)
-    } yield rewards
+    } yield {
+      (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo.kind) match {
+        case (Some(referrerOrgId), Some(referredOrgId), CreditCodeKind.OrganizationReferral) =>
+          if (orgExpRepo.hasExperiment(referrerOrgId, OrganizationExperimentType.FAKE) && orgExpRepo.hasExperiment(referredOrgId, OrganizationExperimentType.FAKE)) {
+            sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId)
+          }
+        case _ =>
+      }
+
+      rewards
+    }
+  }
+
+  private def sendReferralCodeAppliedEmail(referrerOrgId: Id[Organization], referredOrgId: Id[Organization])(implicit session: RWSession): Unit = {
+    val referredOrg = orgRepo.get(referredOrgId)
+    val referrerOrg = orgRepo.get(referrerOrgId)
+    val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
+    val subject = s"Your team's referral code was used by ${referredOrg.name} on Kifi"
+    val htmlBody =
+      s"""
+         |Your <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a> team's referral code was used by <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>. If they upgrade to a standard plan on Kifi,
+         |you'll earn a $$100 credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+       """.stripMargin
+    val textBody =
+      s"""
+         |Your ${referrerOrg.name} team's referral code was used by ${referredOrg.name}. If they upgrade to a standard plan on Kifi,
+         |you'll earn a $$100 credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+       """.stripMargin
+    postOffice.sendMail(ElectronicMail(
+      from = SystemEmailAddress.NOTIFICATIONS,
+      to = adminEmails,
+      subject = subject,
+      htmlBody = htmlBody,
+      textBody = Some(textBody),
+      category = NotificationCategory.NonUser.BILLING
+    ))
   }
 
   def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward] = {
@@ -157,9 +197,42 @@ class CreditRewardCommanderImpl @Inject() (
     val evolvedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(orgId)
     val crs = creditRewardRepo.getByReward(currentReward)
     assert(crs.size <= 1, s"Somehow there are multiple referral rewards for $orgId! $crs")
-    crs.map { crToEvolve =>
+    val rewards = crs.map { crToEvolve =>
       finalizeCreditReward(crToEvolve.withReward(evolvedReward), None)
     }
+    crs.headOption.foreach { crToEvolve =>
+      val referrerOrgId = accountRepo.get(crToEvolve.accountId).orgId
+      if (orgExpRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE) && orgExpRepo.hasExperiment(referrerOrgId, OrganizationExperimentType.FAKE)) {
+        sendReferredAccountUpgradedEmail(orgId, referrerOrgId)
+      }
+    }
+    rewards
+  }
+
+  private def sendReferredAccountUpgradedEmail(referredOrgId: Id[Organization], referrerOrgId: Id[Organization])(implicit session: RWSession): ElectronicMail = {
+    val referredOrg = orgRepo.get(referredOrgId)
+    val referrerOrg = orgRepo.get(referrerOrgId)
+    val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
+    val subject = s"You earned a $$100 credit for ${referrerOrg.name} on Kifi"
+    val htmlBody =
+      s"""
+         |Your team, <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a>, earned a $$100 credit from ${referredOrg.name}.
+         |We've added it to your <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/plan">team balance</a>. Thank you so much for spreading the word
+         |about Kifi with great teams like ${referredOrg.name}!
+       """.stripMargin
+    val textBody =
+      s"""
+         |Your team, ${referrerOrg.name}, earned a $$100 credit from ${referredOrg.name}. We've added it to your team balance.
+         |Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+       """.stripMargin
+    postOffice.sendMail(ElectronicMail(
+      from = SystemEmailAddress.NOTIFICATIONS,
+      to = adminEmails,
+      subject = subject,
+      htmlBody = htmlBody,
+      textBody = Some(textBody),
+      category = NotificationCategory.NonUser.BILLING
+    ))
   }
 
   private def finalizeCreditReward(creditReward: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): CreditReward = {

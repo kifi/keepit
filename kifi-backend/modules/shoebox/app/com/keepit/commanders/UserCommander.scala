@@ -445,11 +445,18 @@ class UserCommanderImpl @Inject() (
             subject = "Create a Kifi team from your desktop",
             htmlBody =
               s"""
-                  Per your request, you can now <a href="http://www.kifi.com/teams/new">create a team</a> on Kifi from
-                  your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
-
-                  Get started by visiting the page to <a href="http://www.kifi.com/teams/new">create a team</a>.
+                  |Per your request, you can now <a href="https://www.kifi.com/teams/new">create a team</a> on Kifi from
+                  |your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+                  |
+                  |Get started by visiting the page to <a href="https://www.kifi.com/teams/new">create a team</a>.
               """,
+            textBody = Some(
+              s"""
+                  |Per your request, you can now create a team on Kifi from
+                  |your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+                  |
+                  |Get started by visiting the page to create a team: https://www.kifi.com/teams/new.
+               """.stripMargin),
             category = NotificationCategory.User.CREATE_TEAM
           ))
           Right(mail)
