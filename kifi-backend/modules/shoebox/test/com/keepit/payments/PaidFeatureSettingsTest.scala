@@ -289,16 +289,16 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val libraryCommander = inject[LibraryCommander]
         val libraryController = inject[LibraryController]
 
-        val ownerModifyRequest = LibraryModifications(subscriptions = Some(Seq(LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk"), disabled = false))))
+        val ownerModifyRequest = LibraryModifications(subscriptions = Some(Seq(LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk/kk"), disabled = false))))
 
         val adminModifyRequest = LibraryModifications(subscriptions = Some(Seq(
-          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk"), disabled = false),
-          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok"), disabled = false))))
+          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk/kk"), disabled = false),
+          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok/kk"), disabled = false))))
 
         val memberModifyRequest = LibraryModifications(subscriptions = Some(Seq(
-          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk"), disabled = false),
-          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok"), disabled = false),
-          LibrarySubscriptionKey("#product", SlackInfo("https://hooks.slack.com/services/ko/ko"), disabled = false))))
+          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk/kk"), disabled = false),
+          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok/kk"), disabled = false),
+          LibrarySubscriptionKey("#product", SlackInfo("https://hooks.slack.com/services/ko/ko/kk"), disabled = false))))
 
         libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
         libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
