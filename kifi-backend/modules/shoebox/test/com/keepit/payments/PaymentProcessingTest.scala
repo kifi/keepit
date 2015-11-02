@@ -1,5 +1,6 @@
 package com.keepit.payments
 
+import com.keepit.common.db.Id
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.model.{ PaidPlanFactory, OrganizationFactory, UserFactory }
@@ -255,6 +256,59 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
           updatedAccount.paymentStatus === accountPre.paymentStatus
           updatedAccount.credit === accountPre.credit
           updatedAccount.paymentDueAt === accountPre.paymentDueAt
+        }
+      }
+    }
+
+    "refund a valid charge" in {
+      withDb(modules: _*) { implicit injector =>
+        val commander = inject[PaymentProcessingCommander]
+        val price = DollarAmount(438)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
+        val (accountPre, _, léo) = db.readWrite { implicit session =>
+          val user = UserFactory.user().saved
+          val léo = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(user).saved
+          val plan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(price).withBillingCycle(BillingCycle(1)).saved
+          val account = paidAccountRepo.save(
+            paidAccountRepo.getByOrgId(org.id.get).withNewPlan(plan.id.get).withPaymentDueAt(Some(currentDateTime)).withPaymentStatus(PaymentStatus.Ok).copy(credit = initialCredit)
+          )
+          inject[PaymentMethodRepo].save(PaymentMethod(
+            accountId = account.id.get,
+            default = true,
+            stripeToken = Await.result(inject[StripeClient].getPermanentToken("fake_temporary_token", ""), Duration.Inf)
+          ))
+          (account, plan, léo)
+        }
+        accountPre.owed should beGreaterThan(commander.MIN_BALANCE)
+        accountPre.paymentStatus === PaymentStatus.Ok
+
+        // Charge the account
+        val (_, chargeEvent) = Await.result(commander.processAccount(accountPre), Duration.Inf)
+        chargeEvent.action === AccountEventAction.Charge()
+        chargeEvent.creditChange === accountPre.owed
+        chargeEvent.paymentCharge === Some(accountPre.owed)
+        chargeEvent.chargeId should beSome
+
+        db.readOnlyMaster { implicit session =>
+          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
+          updatedAccount.paymentStatus === PaymentStatus.Ok
+          updatedAccount.credit === DollarAmount.ZERO
+          updatedAccount.paymentDueAt === None
+        }
+
+        // Now try and refund this charge
+
+        val (_, refundEvent) = Await.result(commander.refundCharge(chargeEvent.id.get, léo.id.get), Duration.Inf)
+        refundEvent.action === AccountEventAction.Refund(chargeEvent.id.get, chargeEvent.chargeId.get)
+        refundEvent.creditChange === -chargeEvent.creditChange
+        refundEvent.paymentCharge === chargeEvent.paymentCharge.map(-_)
+        refundEvent.chargeId should beSome
+
+        db.readOnlyMaster { implicit session =>
+          val updatedAccount = inject[PaidAccountRepo].get(accountPre.id.get)
+          updatedAccount.paymentStatus === PaymentStatus.Ok
+          updatedAccount.credit === initialCredit
         }
       }
     }
