@@ -2,6 +2,7 @@ package com.keepit.payments
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.concurrent.ReactiveLock
+import com.kifi.macros.json
 
 import play.api.Mode
 import play.api.Mode.Mode
@@ -10,19 +11,27 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 import com.stripe.Stripe
-import com.stripe.model.{ Charge, Customer, Card }
+import com.stripe.model.{ Charge, Refund, Customer, Card }
 import com.stripe.exception.CardException
+
+@json
+case class StripeTransactionId(id: String)
 
 case class CardDetails(number: String, expMonth: Int, expYear: Int, cvc: String, cardholderName: String)
 
-sealed trait StripeChargeResult
+sealed trait StripeTransactionResult
 
-case class StripeChargeSuccess(amount: DollarAmount, chargeId: String) extends StripeChargeResult
-
+sealed trait StripeChargeResult extends StripeTransactionResult
+case class StripeChargeSuccess(amount: DollarAmount, chargeId: StripeTransactionId) extends StripeChargeResult
 case class StripeChargeFailure(code: String, message: String) extends StripeChargeResult
+
+sealed trait StripeRefundResult extends StripeTransactionResult
+case class StripeRefundSuccess(amount: DollarAmount, refundId: StripeTransactionId) extends StripeRefundResult
+case class StripeRefundFailure(code: String, message: String) extends StripeRefundResult
 
 trait StripeClient {
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult]
+  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeRefundResult]
   def getPermanentToken(token: String, description: String): Future[StripeToken]
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken]
 
@@ -51,10 +60,25 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     )
     try {
       val charge = Charge.create(chargeParams.asJava)
-      StripeChargeSuccess(DollarAmount(charge.getAmount()), charge.getId())
+      StripeChargeSuccess(DollarAmount(charge.getAmount()), StripeTransactionId(charge.getId()))
     } catch {
       case ex: CardException => {
         StripeChargeFailure(ex.getCode(), ex.getMessage())
+      }
+    }
+  }
+
+  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeRefundResult] = lock.withLock {
+    val chargeParams: Map[String, java.lang.Object] = Map(
+      "charge" -> chargeId.id,
+      "reason" -> reason
+    )
+    try {
+      val refund = Refund.create(chargeParams.asJava)
+      StripeRefundSuccess(DollarAmount(refund.getAmount()), StripeTransactionId(refund.getId()))
+    } catch {
+      case ex: CardException => {
+        StripeRefundFailure(ex.getCode(), ex.getMessage())
       }
     }
   }

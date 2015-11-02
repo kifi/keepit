@@ -50,8 +50,9 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         Seq(
           event(Some(owner), AccountEventAction.OrganizationCreated(account.planId, None)),
           event(Some(owner), AccountEventAction.Charge()),
-          event(Some(owner), AccountEventAction.Refund()),
+          event(Some(owner), AccountEventAction.Refund(Id(1), StripeTransactionId("ch_42"))),
           event(Some(owner), AccountEventAction.ChargeFailure(DollarAmount.dollars(1), ":(", "Failed")),
+          event(Some(owner), AccountEventAction.RefundFailure(Id(1), StripeTransactionId("ch_42"), ":(", "Failed")),
           event(Some(owner), AccountEventAction.DefaultPaymentMethodChanged(None, Id(1), "4242")),
           event(Some(owner), AccountEventAction.PlanRenewal.from(plan, account)),
           event(Some(owner), AccountEventAction.PlanChanged(plan.id.get, plan.id.get, None)),
@@ -75,6 +76,7 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         display(e.next()) === "Your card was charged $0.00 for your balance. [Invoice not found, please contact billing@kifi.com]"
         display(e.next()) === "A $0.00 refund was issued to your card."
         display(e.next()) === "We failed to process your payment, please update your payment information."
+        display(e.next()) === "We failed to refund your card."
         display(e.next()) === "Your payment method was changed to the card ending in 4242 by Owner."
         display(e.next()) === "Your Free plan was renewed."
         display(e.next()) === "Your plan was changed from Free to Free by Owner."

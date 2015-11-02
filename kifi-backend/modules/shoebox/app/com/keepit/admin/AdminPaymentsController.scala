@@ -156,6 +156,13 @@ class AdminPaymentsController @Inject() (
       PAGE_SIZE))
   }
 
+  def refundCharge(eventId: Id[AccountEvent]) = AdminUserAction.async { implicit request =>
+    paymentProcessingCommander.refundCharge(eventId, request.userId).map {
+      case (account, _) =>
+        Redirect(com.keepit.controllers.admin.routes.AdminPaymentsController.getAccountActivity(account.orgId, 0))
+    }
+  }
+
   def unfreezeAccount(orgId: Id[Organization]) = AdminUserAction { implicit request =>
     Ok(planCommander.unfreeze(orgId).toString)
   }

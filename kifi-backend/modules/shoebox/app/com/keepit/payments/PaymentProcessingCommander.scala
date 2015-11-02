@@ -4,7 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.model.{ OrganizationExperimentType, OrganizationExperimentRepo, Organization }
+import com.keepit.model._
 import com.keepit.common.concurrent.{ FutureHelpers, ReactiveLock }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._
@@ -15,7 +15,7 @@ import org.joda.time.DateTime
 import play.api.libs.json.{ JsNull }
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Failure
+import scala.util.{ Success, Failure }
 
 case class PaymentCycle(months: Int) extends AnyVal
 object PaymentCycle {
@@ -28,6 +28,7 @@ trait PaymentProcessingCommander {
   def processAccount(orgId: Id[Organization]): Future[(PaidAccount, AccountEvent)]
   def processAccount(account: PaidAccount): Future[(PaidAccount, AccountEvent)]
   def forceChargeAccount(orgId: Id[Organization], amount: DollarAmount): Future[(PaidAccount, AccountEvent)]
+  def refundCharge(eventId: Id[AccountEvent], grantedByAdmin: Id[User]): Future[(PaidAccount, AccountEvent)]
 
   private[payments] val MIN_BALANCE: DollarAmount
   private[payments] val MAX_BALANCE: DollarAmount
@@ -41,6 +42,8 @@ class PaymentProcessingCommanderImpl @Inject() (
   paymentMethodRepo: PaymentMethodRepo,
   paidAccountRepo: PaidAccountRepo,
   paidPlanRepo: PaidPlanRepo,
+  accountEventRepo: AccountEventRepo,
+  userRepo: UserRepo,
   clock: Clock,
   accountLockHelper: AccountLockHelper,
   stripeClient: StripeClient,
@@ -50,8 +53,10 @@ class PaymentProcessingCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends PaymentProcessingCommander with Logging {
 
-  private[payments] val MAX_BALANCE = DollarAmount.dollars(1000) //if you owe us more than $100 we will charge your card even if your billing cycle is not up
-  private[payments] val MIN_BALANCE = DollarAmount.dollars(1) //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
+  private[payments] val MAX_BALANCE = DollarAmount.dollars(1000)
+  //if you owe us more than $100 we will charge your card even if your billing cycle is not up
+  private[payments] val MIN_BALANCE = DollarAmount.dollars(1)
+  //if you are carrying a balance of less then one dollar you will not be charged (to much cost overhead)
   private[payments] val PAYMENT_CYCLE = PaymentCycle.months(1) //how often oustanding balances will be charged
 
   private def nextPaymentDueAt(account: PaidAccount): Option[DateTime] = {
@@ -61,6 +66,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   }
 
   private val processingLock = new ReactiveLock(1)
+
   def processDuePayments(): Future[Unit] = processingLock.withLockFuture {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getPayable(MAX_BALANCE) }
     if (relevantAccounts.length > 0) {
@@ -130,28 +136,35 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
-  private val chargeLock = new ReactiveLock(1)
-  private def chargeAccount(account: PaidAccount, amount: DollarAmount): Future[(PaidAccount, AccountEvent)] = chargeLock.withLockFuture {
+  private def withPendingStatus[T <: StripeTransactionResult](account: PaidAccount)(stripeCall: => Future[T]): Future[(PaidAccount, T)] = {
+    val pendingAccount = db.readWrite { implicit session =>
+      paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Pending))
+    }
+    stripeCall.imap((pendingAccount, _)) andThen {
+      case Failure(ex) =>
+        log.error(s"[PPC][${account.orgId}] Unexpected exception while calling Stripe.", ex)
+        db.readWrite(attempts = 3) {
+          implicit session =>
+            paidAccountRepo.save(pendingAccount.withPaymentStatus(account.paymentStatus))
+        }
+    }
+  }
+
+  private val stripeLock = new ReactiveLock(1)
+
+  private def chargeAccount(account: PaidAccount, amount: DollarAmount): Future[(PaidAccount, AccountEvent)] = stripeLock.withLockFuture {
     lazy val isFakeAccount = db.readOnlyMaster { implicit session => orgExperimentRepo.hasExperiment(account.orgId, OrganizationExperimentType.FAKE) }
 
     account.paymentStatus match {
       case PaymentStatus.Ok => {
-
         db.readOnlyMaster { implicit session => paymentMethodRepo.getDefault(account.id.get) } match {
           case Some(pm) => {
-            val pendingChargeAccount = db.readWrite { implicit session =>
-              paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Pending))
-            }
-            if (isFakeAccount) Future.successful(endWithChargeSuccess(pendingChargeAccount, pm.id.get, StripeChargeSuccess(pendingChargeAccount.owed, "FAKE_CHARGE")))
-            else stripeClient.processCharge(amount, pm.stripeToken, s"Charging organization ${account.orgId} owing ${account.owed}") andThen {
-              case Failure(ex) =>
-                log.error(s"[PPC][${account.orgId}] Unexpected exception while processing charge via Stripe.", ex)
-                db.readWrite(attempts = 3) { implicit session =>
-                  paidAccountRepo.save(pendingChargeAccount.withPaymentStatus(PaymentStatus.Ok))
-                }
+            withPendingStatus(account) {
+              if (isFakeAccount) Future.successful(StripeChargeSuccess(account.owed, StripeTransactionId("ch_fake")))
+              else stripeClient.processCharge(amount, pm.stripeToken, s"Charging organization ${account.orgId} owing ${account.owed}")
             } map {
-              case success: StripeChargeSuccess => endWithChargeSuccess(pendingChargeAccount, pm.id.get, success)
-              case failure: StripeChargeFailure => endWithChargeFailure(pendingChargeAccount, pm.id.get, amount, failure)
+              case (pendingAccount, success: StripeChargeSuccess) => endWithChargeSuccess(pendingAccount, pm.id.get, success)
+              case (pendingAccount, failure: StripeChargeFailure) => endWithChargeFailure(pendingAccount, pm.id.get, amount, failure)
             }
           }
           case None => Future.successful(endWithMissingPaymentMethod(account))
@@ -230,4 +243,65 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
+  def refundCharge(eventId: Id[AccountEvent], grantedByAdmin: Id[User]): Future[(PaidAccount, AccountEvent)] = stripeLock.withLockFuture {
+    val (event, account, admin) = db.readOnlyMaster { implicit session =>
+      val event = accountEventRepo.get(eventId)
+      val account = paidAccountRepo.get(event.accountId)
+      val admin = userRepo.get(grantedByAdmin)
+      (event, account, admin)
+    }
+
+    (event.chargeId, event.paymentCharge, event.paymentMethod) match {
+      case (Some(chargeId), Some(amount), Some(paymentMethod)) if amount > DollarAmount.ZERO =>
+        withPendingStatus(account) {
+          stripeClient.refundCharge(chargeId, s"Refund granted by ${admin.firstName}.")
+        } map {
+          case (pendingAccount, success: StripeRefundSuccess) => endWithRefundSuccess(pendingAccount, paymentMethod, eventId, chargeId, grantedByAdmin, success)
+          case (pendingAccount, failure: StripeRefundFailure) => endWithRefundFailure(pendingAccount, paymentMethod, eventId, chargeId, grantedByAdmin, failure)
+        }
+      case _ => Future.failed(new IllegalArgumentException(s"Invalid event $eventId, unable to refund charge: $event"))
+    }
+  }
+
+  private def endWithRefundSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, grantedByAdmin: Id[User], success: StripeRefundSuccess): (PaidAccount, AccountEvent) = {
+    db.readWrite(attempts = 3) { implicit session =>
+      val refundedAccount = paidAccountRepo.save(account.withReducedCredit(success.amount).withPaymentStatus(PaymentStatus.Ok))
+      val refundEvent = eventCommander.track(AccountEvent(
+        eventTime = clock.now(),
+        accountId = account.id.get,
+        whoDunnit = None,
+        whoDunnitExtra = JsNull,
+        kifiAdminInvolved = Some(grantedByAdmin),
+        action = AccountEventAction.Refund(originalChargeEvent, originalCharge),
+        creditChange = refundedAccount.credit - account.credit,
+        paymentMethod = Some(paymentMethodId),
+        paymentCharge = Some(-success.amount), // a refund is just treated as a negative charge
+        memo = None,
+        chargeId = Some(success.refundId)
+      ))
+      log.info(s"[PPC][${account.orgId}] Refunded ${success.amount} via Stripe")
+      (refundedAccount, refundEvent)
+    }
+  }
+
+  private def endWithRefundFailure(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, grantedByAdmin: Id[User], failure: StripeRefundFailure): (PaidAccount, AccountEvent) = {
+      db.readWrite(attempts = 3) { implicit session =>
+        val refundFailedAccount: PaidAccount = paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Failed))
+        val refundFailureEvent = eventCommander.track(AccountEvent(
+          eventTime = clock.now(),
+          accountId = account.id.get,
+          whoDunnit = None,
+          whoDunnitExtra = JsNull,
+          kifiAdminInvolved = Some(grantedByAdmin),
+          action = AccountEventAction.RefundFailure(originalChargeEvent, originalCharge, failure.code, failure.message),
+          creditChange = DollarAmount.ZERO,
+          paymentMethod = Some(paymentMethodId),
+          paymentCharge = None,
+          memo = None,
+          chargeId = None
+        ))
+        log.info(s"[PPC][${account.orgId}] Failed to refund charge via Stripe: ${failure.code}, ${failure.message}")
+        (refundFailedAccount, refundFailureEvent)
+      }
+    }
 }

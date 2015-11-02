@@ -62,10 +62,11 @@ class ActivityLogCommanderImpl @Inject() (
           }
         case IntegrityError(err) => Elements("Found and corrected an error in the account.") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)), ".")
-        case Refund() => Elements("A", event.creditChange, "refund was issued to your card.")
+        case Refund(_, _) => Elements("A", event.creditChange, "refund was issued to your card.")
+        case RefundFailure(_, _, _, _) => s"We failed to refund your card."
         case PlanRenewal(planId, _, _, _, _) => Elements("Your", paidPlanRepo.get(planId), "plan was renewed.")
         case Charge() =>
-          val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
+          val invoiceText = s"Invoice ${event.chargeId.map("#" + _.id).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
           Elements("Your card was charged", event.creditChange, s"for your balance. [$invoiceText]")
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
         case ChargeFailure(amount, code, message) => s"We failed to process your payment, please update your payment information."
