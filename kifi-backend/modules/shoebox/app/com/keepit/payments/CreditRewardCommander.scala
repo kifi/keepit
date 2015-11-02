@@ -7,7 +7,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, LocalPostOffice, ElectronicMail }
 import com.keepit.common.time._
-import com.keepit.model.{ NotificationCategory, UserEmailAddressRepo, OrganizationRole, OrganizationMembershipRepo, User, OrganizationRepo, Organization }
+import com.keepit.model.{ OrganizationExperimentType, OrganizationExperiment, OrganizationExperimentRepo, NotificationCategory, UserEmailAddressRepo, OrganizationRole, OrganizationMembershipRepo, User, OrganizationRepo, Organization }
 import com.keepit.payments.CreditRewardFail._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.JsNull
@@ -41,6 +41,7 @@ class CreditRewardCommanderImpl @Inject() (
   eventCommander: AccountEventTrackingCommander,
   accountLockHelper: AccountLockHelper,
   postOffice: LocalPostOffice,
+  orgExpRepo: OrganizationExperimentRepo,
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
 
@@ -79,7 +80,9 @@ class CreditRewardCommanderImpl @Inject() (
     } yield {
       (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo.kind) match {
         case (Some(referrerOrgId), Some(referredOrgId), CreditCodeKind.OrganizationReferral) =>
-          sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId)
+          if (orgExpRepo.hasExperiment(referrerOrgId, OrganizationExperimentType.FAKE) && orgExpRepo.hasExperiment(referredOrgId, OrganizationExperimentType.FAKE)) {
+            sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId)
+          }
         case _ =>
       }
 
@@ -87,7 +90,7 @@ class CreditRewardCommanderImpl @Inject() (
     }
   }
 
-  private def sendReferralCodeAppliedEmail(referrerOrgId: Id[Organization], referredOrgId: Id[Organization])(implicit session: RWSession): ElectronicMail = {
+  private def sendReferralCodeAppliedEmail(referrerOrgId: Id[Organization], referredOrgId: Id[Organization])(implicit session: RWSession): Unit = {
     val referredOrg = orgRepo.get(referredOrgId)
     val referrerOrg = orgRepo.get(referrerOrgId)
     val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
@@ -99,8 +102,8 @@ class CreditRewardCommanderImpl @Inject() (
        """.stripMargin
     val textBody =
       s"""
-         Your ${referrerOrg.name} team's referral code was used by ${referredOrg.name}. If they upgrade to a standard plan on Kifi,
-         you'll earn a $$100 credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+         |Your ${referrerOrg.name} team's referral code was used by ${referredOrg.name}. If they upgrade to a standard plan on Kifi,
+         |you'll earn a $$100 credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
        """.stripMargin
     postOffice.sendMail(ElectronicMail(
       from = SystemEmailAddress.NOTIFICATIONS,
@@ -188,7 +191,12 @@ class CreditRewardCommanderImpl @Inject() (
     val rewards = crs.map { crToEvolve =>
       finalizeCreditReward(crToEvolve.withReward(evolvedReward), None)
     }
-    crs.headOption.foreach(crToEvolve => sendReferredAccountUpgradedEmail(orgId, accountRepo.get(crToEvolve.accountId).orgId))
+    crs.headOption.foreach { crToEvolve =>
+      val referrerOrgId = accountRepo.get(crToEvolve.accountId).orgId
+      if (orgExpRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE) && orgExpRepo.hasExperiment(referrerOrgId, OrganizationExperimentType.FAKE)) {
+        sendReferredAccountUpgradedEmail(orgId, referrerOrgId)
+      }
+    }
     rewards
   }
 

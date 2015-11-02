@@ -86,9 +86,9 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             val rewardCreditEvents = accountEventRepo.all.filter(_.action.eventType == AccountEventKind.RewardCredit)
             rewardCreditEvents.size must beGreaterThanOrEqualTo(1)
             rewardCreditEvents.map(_.creditChange) must contain(rewards.target.credit)
-            inject[ElectronicMailRepo].all().count(email =>
-              email.from === SystemEmailAddress.NOTIFICATIONS &&
-                email.subject == s"Your team's referral code was used by ${org2.name} on Kifi") must equalTo(1)
+            //            inject[ElectronicMailRepo].all().count(email => // TODO(cam): uncomment when the FAKE exp guard is off
+            //              email.from === SystemEmailAddress.NOTIFICATIONS &&
+            //                email.subject == s"Your team's referral code was used by ${org2.name} on Kifi") must equalTo(1)
           }
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
@@ -153,12 +153,12 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           upgradeRewards must haveSize(1)
           upgradeRewards.head.applied must beSome
 
-          db.readOnlyMaster { implicit session =>
-            inject[ElectronicMailRepo].all().count(email =>
-              email.from == SystemEmailAddress.NOTIFICATIONS &&
-                email.to.contains(EmailAddress(owner1Email)) &&
-                email.subject == s"You earned a $$100 credit for ${org1.name} on Kifi") must equalTo(1)
-          }
+          //          db.readOnlyMaster { implicit session => // TODO(cam): uncomment when the FAKE exp guard is off
+          //            inject[ElectronicMailRepo].all().count(email =>
+          //              email.from == SystemEmailAddress.NOTIFICATIONS &&
+          //                email.to.contains(EmailAddress(owner1Email)) &&
+          //                email.subject == s"You earned a $$100 credit for ${org1.name} on Kifi") must equalTo(1)
+          //          }
 
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
           paymentsChecker.checkAccount(org2.id.get) must beEmpty
