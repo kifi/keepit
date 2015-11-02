@@ -1,11 +1,17 @@
 @import com.keepit.payments.AdminPaymentsDashboard
+@import com.keepit.payments.DollarAmount
 @import com.keepit.common.controller.PaginatedRequest
 
 @(dash: AdminPaymentsDashboard)(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@views.html.admin.admin("Payments Dashboard", stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
+@formatDiff[T](cur: T, old: T)(implicit n: Numeric[T]) = {
+    @if(n.compare(cur, old) > 0)  { @cur (<span class="positive-diff">+@n.minus(cur, old)</span>) }
+    @if(n.compare(cur, old) < 0)  { @cur (<span class="negative-diff">@n.minus(cur, old)</span>) }
+    @if(n.compare(cur, old) == 0) { @cur }
+}
 
-    <h1>We are making ~@{dash.totalAmortizedIncomePerMonth.cur.toDollarString} a month (from @{dash.totalAmortizedIncomePerMonth.old.toDollarString})</h1>
+@views.html.admin.admin(s"Payments Dashboard (comparing to ${dash.diffPeriod} ago)", stylesheets = List("admin_user", "payments_dashboard"), scripts = List("typeahead.bundle.min")) {
+    <h1>We are making ~@formatDiff(dash.totalAmortizedIncomePerMonth.cur, dash.totalAmortizedIncomePerMonth.old) a month</h1>
 
     <table class="table table-condensed table-striped">
         <thead>
@@ -13,13 +19,14 @@
         </thead>
         <tbody>
         <tr>
-            <td>@{dash.creditChanges.cur} (from @{dash.creditChanges.old})</td>
-            <td>@{dash.rewardsGranted.cur.values.sum} (from @{dash.rewardsGranted.old.values.sum})</td>
-            <td>@{dash.chargesMade.cur} (from @{dash.chargesMade.old})</td>
+            <td>@formatDiff(dash.creditChanges.cur, dash.creditChanges.old)</td>
+            <td>@formatDiff(dash.rewardsGranted.cur.values.sum, dash.rewardsGranted.old.values.sum)</td>
+            <td>@formatDiff(dash.chargesMade.cur, dash.chargesMade.old)</td>
         </tr>
         </tbody>
     </table>
 
+    <h3>Paid plans breakdown</h3>
     <table class="table table-condensed table-striped">
         <thead>
         <th>Plan</th><th>Number of Accounts</th><th>Number of Active Users</th>
@@ -27,9 +34,21 @@
         <tbody>
         @for(plan <- dash.plans) {
         <tr>
-            <td>@{plan.displayName}</td>
-            <td>@{dash.planEnrollment.cur(plan).numAccounts} (from @{dash.planEnrollment.old(plan).numAccounts})</td>
-            <td>@{dash.planEnrollment.cur(plan).numActiveUsers} (from @{dash.planEnrollment.old(plan).numActiveUsers})</td>
+            <td>@{plan.fullName}</td>
+            <td>@formatDiff(dash.planEnrollment.cur(plan).numAccounts, dash.planEnrollment.old(plan).numAccounts)</td>
+            <td>@formatDiff(dash.planEnrollment.cur(plan).numActiveUsers, dash.planEnrollment.old(plan).numActiveUsers)</td>
+        </tr>
+        }
+        </tbody>
+    </table>
+
+    <h3>Rewards breakdown</h3>
+    <table class="table table-condensed table-striped">
+        <tbody>
+        @for(kind <- dash.rewardsGranted.cur.keySet) {
+        <tr>
+            <td>@kind</td>
+            <td>@formatDiff(dash.rewardsGranted.cur(kind), dash.rewardsGranted.old(kind))</td>
         </tr>
         }
         </tbody>
@@ -57,15 +76,4 @@
     </ul>
     }
 
-    <h3>Rewards breakdown</h3>
-    <table class="table table-condensed table-striped">
-        <tbody>
-        @for(kind <- dash.rewardsGranted.cur.keySet) {
-        <tr>
-            <td>@kind</td>
-            <td>@{dash.rewardsGranted.cur(kind)} (from @{dash.rewardsGranted.old(kind)})</td>
-        </tr>
-        }
-        </tbody>
-    </table>
 }
