@@ -1056,8 +1056,8 @@ GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRoute
 GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/settings")
 GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
 GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUserOrSignup
-GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", fallback = "/about/pricing")
-GET     /credits                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", fallback = "/about/pricing#referral")
+GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", noTeam = "/teams/new", fallback = "/about/pricing")
+GET     /credits                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", noTeam = "/teams/new", fallback = "/about/pricing#referral")
 GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
 GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
 GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
