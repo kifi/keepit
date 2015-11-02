@@ -120,7 +120,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: StripeChargeId): Future[Unit] = {
+  private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: StripeTransactionId): Future[Unit] = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
     val (userContacts, org) = db.readOnlyReplica { implicit session =>
       val userContacts = account.userContacts.flatMap { userId =>

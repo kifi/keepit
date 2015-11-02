@@ -142,7 +142,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   }
 
   @json
-  case class Refund(originalChargeEvent: Id[AccountEvent], originalCharge: StripeChargeId) extends AccountEventAction {
+  case class Refund(originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId) extends AccountEventAction {
     def eventType = AccountEventKind.Refund
     def toDbRow = eventType -> Json.toJson(this)
   }
@@ -154,7 +154,7 @@ object AccountEventAction { //There is probably a deeper type hierarchy that can
   }
 
   @json
-  case class RefundFailure(originalChargeEvent: Id[AccountEvent], originalCharge: StripeChargeId, code: String, message: String) extends AccountEventAction {
+  case class RefundFailure(originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, code: String, message: String) extends AccountEventAction {
     def eventType = AccountEventKind.ChargeFailure
     def toDbRow = eventType -> Json.toJson(this)
   }
@@ -255,7 +255,7 @@ case class AccountEvent(
     paymentMethod: Option[Id[PaymentMethod]],
     paymentCharge: Option[DollarAmount],
     memo: Option[String],
-    chargeId: Option[StripeChargeId]) extends ModelWithPublicId[AccountEvent] with ModelWithState[AccountEvent] {
+    chargeId: Option[StripeTransactionId]) extends ModelWithPublicId[AccountEvent] with ModelWithState[AccountEvent] {
 
   def withId(id: Id[AccountEvent]): AccountEvent = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): AccountEvent = this.copy(updatedAt = now)
@@ -283,7 +283,7 @@ object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
     paymentMethod: Option[Id[PaymentMethod]],
     paymentCharge: Option[DollarAmount],
     memo: Option[String],
-    chargeId: Option[StripeChargeId]): AccountEvent = {
+    chargeId: Option[StripeTransactionId]): AccountEvent = {
     AccountEvent(
       id,
       createdAt,

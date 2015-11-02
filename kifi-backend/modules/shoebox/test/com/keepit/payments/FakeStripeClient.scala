@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.stripe.exception.APIConnectionException
 import com.stripe.exception.InvalidRequestException
 
-case class FakeTransaction(id: StripeChargeId, amount: DollarAmount, token: StripeToken, description: String)
+case class FakeTransaction(id: StripeTransactionId, amount: DollarAmount, token: StripeToken, description: String)
 
 class FakeStripeClientImpl extends StripeClient {
 
@@ -32,13 +32,13 @@ class FakeStripeClientImpl extends StripeClient {
       Future.successful(StripeChargeFailure("boom", "boom"))
     } else {
       val num = chargeCounter.getAndIncrement()
-      val trans = FakeTransaction(StripeChargeId(s"ch_$num"), amount, token, description)
+      val trans = FakeTransaction(StripeTransactionId(s"ch_$num"), amount, token, description)
       transactions(token).append(trans)
       Future.successful(StripeChargeSuccess(amount, trans.id))
     }
   }
 
-  def refundCharge(chargeId: StripeChargeId, reason: String): Future[StripeChargeResult] = {
+  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeChargeResult] = {
     if (stripeDownMode) Future.failed(new APIConnectionException("Stripe is down!"))
     else if (cardFailureMode) {
       Future.successful(StripeChargeFailure("boom", "boom"))
@@ -46,7 +46,7 @@ class FakeStripeClientImpl extends StripeClient {
       transactions.valuesIterator.flatten.filter(_.id == chargeId).toSeq match {
         case Seq(charge) =>
           val num = chargeCounter.getAndIncrement()
-          val trans = FakeTransaction(StripeChargeId(s"re_$num"), -charge.amount, charge.token, reason)
+          val trans = FakeTransaction(StripeTransactionId(s"re_$num"), -charge.amount, charge.token, reason)
           transactions(charge.token).append(trans)
           Future.successful(StripeChargeSuccess(-charge.amount, trans.id))
         case _ => Future.failed(new APIConnectionException(s"Charge ${chargeId.id} not found!"))

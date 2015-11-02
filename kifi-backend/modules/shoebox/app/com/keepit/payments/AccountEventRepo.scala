@@ -40,7 +40,7 @@ class AccountEventRepoImpl @Inject() (
   case class AccountEventKindNotFoundException(s: String) extends Exception(s"""AccountEventKind "$s" not found""")
   implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val accountEventKindMapper = MappedColumnType.base[AccountEventKind, String](_.value, s => AccountEventKind.get(s).getOrElse(throw new AccountEventKindNotFoundException(s))) // explicitly requires "good" data
-  implicit val chargeIdMapper = MappedColumnType.base[StripeChargeId, String](_.id, StripeChargeId(_))
+  implicit val chargeIdMapper = MappedColumnType.base[StripeTransactionId, String](_.id, StripeTransactionId(_))
 
   type RepoImpl = AccountEventTable
 
@@ -56,7 +56,7 @@ class AccountEventRepoImpl @Inject() (
     def paymentMethod = column[Option[Id[PaymentMethod]]]("payment_method", O.Nullable)
     def paymentCharge = column[Option[DollarAmount]]("payment_charge", O.Nullable)
     def memo = column[Option[String]]("memo", O.Nullable)
-    def chargeId = column[Option[StripeChargeId]]("charge_id", O.Nullable)
+    def chargeId = column[Option[StripeTransactionId]]("charge_id", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, eventTime, accountId, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
 

@@ -160,7 +160,7 @@ class PaymentProcessingCommanderImpl @Inject() (
         db.readOnlyMaster { implicit session => paymentMethodRepo.getDefault(account.id.get) } match {
           case Some(pm) => {
             withPendingStatus(account) {
-              if (isFakeAccount) Future.successful(StripeChargeSuccess(account.owed, StripeChargeId("ch_fake")))
+              if (isFakeAccount) Future.successful(StripeChargeSuccess(account.owed, StripeTransactionId("ch_fake")))
               else stripeClient.processCharge(amount, pm.stripeToken, s"Charging organization ${account.orgId} owing ${account.owed}")
             } map {
               case (pendingAccount, success: StripeChargeSuccess) => endWithChargeSuccess(pendingAccount, pm.id.get, success)
@@ -263,7 +263,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
-  private def endWithRefundSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeChargeId, grantedByAdmin: Id[User], success: StripeChargeSuccess): (PaidAccount, AccountEvent) = {
+  private def endWithRefundSuccess(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, grantedByAdmin: Id[User], success: StripeChargeSuccess): (PaidAccount, AccountEvent) = {
     db.readWrite(attempts = 3) { implicit session =>
       val refundedAccount = paidAccountRepo.save(account.withIncreasedCredit(success.amount).withPaymentStatus(PaymentStatus.Ok)) // success.amount is negative
       val refundEvent = eventCommander.track(AccountEvent(
@@ -284,7 +284,7 @@ class PaymentProcessingCommanderImpl @Inject() (
     }
   }
 
-  private def endWithRefundFailure(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeChargeId, grantedByAdmin: Id[User], failure: StripeChargeFailure): (PaidAccount, AccountEvent) = {
+  private def endWithRefundFailure(account: PaidAccount, paymentMethodId: Id[PaymentMethod], originalChargeEvent: Id[AccountEvent], originalCharge: StripeTransactionId, grantedByAdmin: Id[User], failure: StripeChargeFailure): (PaidAccount, AccountEvent) = {
       db.readWrite(attempts = 3) { implicit session =>
         val refundFailedAccount: PaidAccount = paidAccountRepo.save(account.withPaymentStatus(PaymentStatus.Failed))
         val refundFailureEvent = eventCommander.track(AccountEvent(
