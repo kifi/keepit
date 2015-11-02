@@ -1,6 +1,5 @@
 package com.keepit.payments
 
-import com.keepit.common.db.Id
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.model.{ PaidPlanFactory, OrganizationFactory, UserFactory }
