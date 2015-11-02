@@ -1,10 +1,13 @@
 <div class="kf-org-member-manage kf-container" smart-scroll scroll-distance="'100%'" scroll-disabled="members === null || !hasMoreMembers()" scroll-next="fetchMembers()">
   <header class="kf-container-header">
-    <ul class="kf-container-menu">
-      <li>
-        <h1>Members</h1>
-      </li>
-    </ul>
+    <h1>Members</h1>
+    <button ng-if="canInvite" class="kf-button" ng-click="openInviteModal()">
+      <svg
+        kf-symbol-sprite
+        icon="add-member"
+      ></svg>
+      <span>Invite new member</span>
+    </button>
   </header>
   <main class="kf-container-main">
     <ul class="kf-org-members">
