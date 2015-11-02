@@ -239,8 +239,14 @@ class KifiSiteRouter @Inject() (
     }
   }
 
+  private def hideHandleOwner(owner: Either[Organization, User]): Boolean = {
+    val kifiSupport = Id[User](97543)
+    val invisibleUsers = Set(kifiSupport)
+    val invisibleOrgs = Set.empty[Id[Organization]]
+    owner.left.exists(org => invisibleOrgs.contains(org.id.get)) || owner.right.exists(user => invisibleUsers.contains(user.id.get))
+  }
   private def lookupByHandle(handle: Handle): Option[(Either[Organization, User], Option[Int])] = {
-    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle).filterNot(_ == Right(Id(97543))) }
+    val handleOwnerOpt = db.readOnlyMaster { implicit session => handleCommander.getByHandle(handle).filterNot(x => hideHandleOwner(x._1)) }
     handleOwnerOpt.map {
       case (handleOwner, isPrimary) =>
         val foundHandle = handleOwner match {
