@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.controllers.admin.AdminAccountView
 import com.keepit.model.OrganizationRepo
+import org.joda.time.Period
 
 import scala.collection.mutable
 
@@ -94,6 +95,7 @@ class PaymentsDashboardCommanderImpl @Inject() (
     }
     AdminPaymentsDashboard(
       plans = plans,
+      diffPeriod = Period.weeks(1),
       totalAmortizedIncomePerMonth = totalIncome,
       creditChanges = creditChanges,
       chargesMade = chargesMade,
@@ -108,6 +110,7 @@ class PaymentsDashboardCommanderImpl @Inject() (
 case class History[T](cur: T, old: T)
 case class AdminPaymentsDashboard(
   plans: Seq[PaidPlan],
+  diffPeriod: Period,
   totalAmortizedIncomePerMonth: History[DollarAmount],
   creditChanges: History[DollarAmount],
   chargesMade: History[DollarAmount],
