@@ -154,7 +154,11 @@ angular.module('kifi')
           deferred.notify({'name': 'progress', 'event': e});
         });
         xhr.addEventListener('load', function () {
-          deferred.resolve($window.JSON.parse(xhr.responseText));
+          try {
+            deferred.resolve($window.JSON.parse(xhr.responseText));
+          } catch (ex) {
+            deferred.reject({'error': 'not_json', 'body': xhr.responseText});
+          }
         });
         xhr.addEventListener('error', function (e) {
           deferred.reject(e);
@@ -176,12 +180,6 @@ angular.module('kifi')
         var file = $file && $file[0] && $file[0].files && $file[0].files[0];
         if (file) {
           $scope.disableBookmarkImport = true;
-
-          // TODO(yiping): update this when we have the full tracking spec.
-          // $analytics.eventTrack('user_clicked_page', {
-          //   'type': '3rdPartyImport',
-          //   'action': '???'
-          // });
 
           var tooSlowTimer = $timeout(function () {
             $scope.importFileStatus = 'Uploading... Hang tight!';
