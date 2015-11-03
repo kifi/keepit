@@ -29,8 +29,8 @@ angular.module('kifi')
 })
 
 .factory('orgProfileService', [
-  '$window', '$http', '$rootScope', 'routeService', '$q', '$analytics', 'net',
-  function ($window, $http, $rootScope, routeService, $q, $analytics, net) {
+  '$analytics', 'net',
+  function ($analytics, net) {
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
