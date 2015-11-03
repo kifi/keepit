@@ -12,6 +12,7 @@
 @views.html.admin.admin(s"Payments Dashboard (comparing to ${dash.diffPeriod} ago)", stylesheets = List("admin_user", "payments_dashboard"), scripts = List("typeahead.bundle.min")) {
     <h1>We are making ~@formatDiff(dash.totalAmortizedIncomePerMonth) a month</h1>
 
+    <h3>Billing breakdown</h3>
     <table class="table table-condensed table-striped">
         <thead>
         <th>Credit Changes</th><th>RewardsGranted</th><th>Charges</th>
@@ -36,6 +37,23 @@
             <td>@{plan.fullName}</td>
             <td>@formatDiff(dash.planEnrollment.map(_.apply(plan).numAccounts))</td>
             <td>@formatDiff(dash.planEnrollment.map(_.apply(plan).numActiveUsers))</td>
+        </tr>
+        }
+        </tbody>
+    </table>
+
+    <h3>Billing history</h3>
+    <table class="table table-condensed table-striped">
+        <thead>
+        <th>Date</th><th>Credit Changes</th><th>RewardsGranted</th><th>Charges</th>
+        </thead>
+        <tbody>
+        @for( (start, (creditChanges, rewardsGranted, chargesMade)) <- dash.billingHistory.toList.sortBy(_._1.getMillis) ) {
+        <tr>
+            <td>@{start.toDate}</td>
+            <td>@creditChanges</td>
+            <td>@rewardsGranted</td>
+            <td>@chargesMade</td>
         </tr>
         }
         </tbody>
