@@ -66,9 +66,9 @@ class ActivityLogCommanderImpl @Inject() (
             case Reward(kind, _, _) if kind == RewardKind.Coupon =>
               Elements(getUser(creditReward.code.get.usedBy), "redeemed the coupon code", creditReward.code.get.code, ".")
             case Reward(kind, _, _) if kind == RewardKind.OrganizationCreation =>
-              Elements("you're awesome! Welcome to Kifi. :)")
+              Elements("you created a team on Kifi. Thanks for being awesome! :)")
             case Reward(kind, _, referredOrgId: Id[Organization] @unchecked) if kind == RewardKind.OrganizationReferral =>
-              Elements("you referred", getOrg(referredOrgId), "and they just upgraded to a pro account.")
+              Elements("you referred", getOrg(referredOrgId), ". Thank you!")
             case Reward(kind, _, _) if kind == RewardKind.ReferralApplied =>
               val referrerOpt = for {
                 codeInfo <- creditCodeInfoRepo.getByCode(creditReward.code.get.code)

@@ -80,7 +80,7 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         display(e.next()) === "Your payment method was changed to the card ending in 4242 by Owner."
         display(e.next()) === "Your Free plan was renewed."
         display(e.next()) === "Your plan was changed from Free to Free by Owner."
-        display(e.next()) === "You earned $42.00 because you're awesome! Welcome to Kifi. :)"
+        display(e.next()) === "You earned $42.00 because you created a team on Kifi. Thanks for being awesome! :)"
         display(e.next()) === "Special credit was granted to your team by Kifi Support thanks to Owner."
         display(e.next()) === "Member was added to your team by Owner."
         display(e.next()) === "Member was added to your team by Owner and is now an admin."
