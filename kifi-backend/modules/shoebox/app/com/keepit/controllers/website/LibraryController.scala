@@ -243,37 +243,16 @@ class LibraryController @Inject() (
 
   def getKeepableLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
     val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
-    val (basicUserById, orgAvatarsById) = {
-      val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
-      val orgIds = librariesWithMembershipAndCollaborators.map(_._1).flatMap(_.organizationId)
-      db.readOnlyMaster { implicit s =>
-        val basicUserById = basicUserRepo.loadAll(allUserIds)
-        val orgAvatarsById = orgAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
-        (basicUserById, orgAvatarsById)
-      }
-    }
+    val libraryCardInfos = db.readOnlyMaster(implicit s => libraryCardCommander.createLiteLibraryCardInfos(librariesWithMembershipAndCollaborators.map(_._1), request.userId))
 
-    val datas = librariesWithMembershipAndCollaborators map {
-      case (lib, membership, collaboratorsIds) =>
-        val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
-        val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
-        val membershipInfo = membership.map { mem =>
-          db.readOnlyReplica { implicit session => libraryMembershipCommander.createMembershipInfo(mem) }
-        }
-        LibraryData(
-          id = Library.publicId(lib.id.get),
-          name = lib.name,
-          color = lib.color,
-          visibility = lib.visibility,
-          path = libPathCommander.getPathForLibrary(lib),
-          hasCollaborators = collabs.nonEmpty,
-          subscribedToUpdates = membership.exists(_.subscribedToUpdates),
-          collaborators = collabs,
-          orgAvatar = lib.organizationId.map(orgId => orgAvatarsById(orgId).imagePath),
-          membership = membershipInfo
-        )
+    val objs = libraryCardInfos.map {
+      case (libCardInfo, mem, subscriptions) =>
+        val obj = Json.toJson(libCardInfo).as[JsObject] + ("subscriptions" -> Json.toJson(subscriptions))
+        if (mem.lastViewed.nonEmpty) {
+          obj + ("lastViewed" -> Json.toJson(mem.lastViewed))
+        } else obj
     }
-    Ok(Json.obj("libraries" -> datas))
+    Ok(Json.obj("libraries" -> objs.seq))
   }
 
   def getUserByIdOrEmail(json: JsValue): Either[String, Either[ExternalId[User], EmailAddress]] = {

@@ -155,7 +155,6 @@ angular.module('kifi')
             orgMemberAccess: scope.library.orgMemberAccess,
             space: owner
           }, true).then(function (resp) {
-            // libraryService.fetchLibraryInfos(true);
 
             var newLibrary = resp.data.library;
             newLibrary.listed = resp.data.listed || (resp.data.library.membership && resp.data.library.membership.listed) || true;
