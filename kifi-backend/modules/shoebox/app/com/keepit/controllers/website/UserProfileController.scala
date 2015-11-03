@@ -46,6 +46,8 @@ class UserProfileController @Inject() (
     basicUserRepo: BasicUserRepo,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
+  private val fakeOwnerId = Id[User](97543)
+
   def getProfile(username: Username) = MaybeUserAction { request =>
     val viewer = request.userOpt
     getProfileHelper(username, viewer) match {
@@ -63,7 +65,7 @@ class UserProfileController @Inject() (
         val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
         val numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get))
         val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
-        val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
+        val orgMemberships = if (profile.userId != fakeOwnerId) orgMembershipRepo.getAllByUserId(profile.userId) else Seq.empty[OrganizationMembership]
         val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
           organizationCommander.getOrganizationInfo(orgId, viewer.flatMap(_.id))
         }
