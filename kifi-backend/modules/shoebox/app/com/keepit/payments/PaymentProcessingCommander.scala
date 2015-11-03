@@ -43,7 +43,6 @@ class PaymentProcessingCommanderImpl @Inject() (
   paidAccountRepo: PaidAccountRepo,
   paidPlanRepo: PaidPlanRepo,
   accountEventRepo: AccountEventRepo,
-  userRepo: UserRepo,
   clock: Clock,
   accountLockHelper: AccountLockHelper,
   stripeClient: StripeClient,
@@ -244,17 +243,16 @@ class PaymentProcessingCommanderImpl @Inject() (
   }
 
   def refundCharge(eventId: Id[AccountEvent], grantedByAdmin: Id[User]): Future[(PaidAccount, AccountEvent)] = stripeLock.withLockFuture {
-    val (event, account, admin) = db.readOnlyMaster { implicit session =>
+    val (event, account) = db.readOnlyMaster { implicit session =>
       val event = accountEventRepo.get(eventId)
       val account = paidAccountRepo.get(event.accountId)
-      val admin = userRepo.get(grantedByAdmin)
-      (event, account, admin)
+      (event, account)
     }
 
     (event.chargeId, event.paymentCharge, event.paymentMethod) match {
       case (Some(chargeId), Some(amount), Some(paymentMethod)) if amount > DollarAmount.ZERO =>
         withPendingStatus(account) {
-          stripeClient.refundCharge(chargeId, s"Refund granted by ${admin.firstName}.")
+          stripeClient.refundCharge(chargeId)
         } map {
           case (pendingAccount, success: StripeRefundSuccess) => endWithRefundSuccess(pendingAccount, paymentMethod, eventId, chargeId, grantedByAdmin, success)
           case (pendingAccount, failure: StripeRefundFailure) => endWithRefundFailure(pendingAccount, paymentMethod, eventId, chargeId, grantedByAdmin, failure)

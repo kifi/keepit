@@ -31,7 +31,7 @@ case class StripeRefundFailure(code: String, message: String) extends StripeRefu
 
 trait StripeClient {
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult]
-  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeRefundResult]
+  def refundCharge(chargeId: StripeTransactionId): Future[StripeRefundResult]
   def getPermanentToken(token: String, description: String): Future[StripeToken]
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken]
 
@@ -68,10 +68,10 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     }
   }
 
-  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeRefundResult] = lock.withLock {
+  def refundCharge(chargeId: StripeTransactionId): Future[StripeRefundResult] = lock.withLock {
     val chargeParams: Map[String, java.lang.Object] = Map(
       "charge" -> chargeId.id,
-      "reason" -> reason
+      "reason" -> "requested_by_customer"
     )
     try {
       val refund = Refund.create(chargeParams.asJava)
