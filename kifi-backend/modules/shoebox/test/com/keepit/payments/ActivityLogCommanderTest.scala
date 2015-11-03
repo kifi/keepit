@@ -45,7 +45,7 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         ))
         val createReward = creditRewardCommander.createCreditReward(CreditReward(
           accountId = account.id.get, credit = DollarAmount.dollars(42), applied = None, unrepeatable = None, code = None,
-          reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(org.id.get)
+          reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None)
         ), Some(owner.id.get)).get
         Seq(
           event(Some(owner), AccountEventAction.OrganizationCreated(account.planId, None)),
@@ -80,7 +80,7 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         display(e.next()) === "Your payment method was changed to the card ending in 4242 by Owner."
         display(e.next()) === "Your Free plan was renewed."
         display(e.next()) === "Your plan was changed from Free to Free by Owner."
-        display(e.next()) === "You earned $42.00 because you're awesome!" // if this test breaks, yell at Ryan
+        display(e.next()) === "You earned $42.00 because you're awesome! Welcome to Kifi. :)"
         display(e.next()) === "Special credit was granted to your team by Kifi Support thanks to Owner."
         display(e.next()) === "Member was added to your team by Owner."
         display(e.next()) === "Member was added to your team by Owner and is now an admin."
