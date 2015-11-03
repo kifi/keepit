@@ -35,7 +35,8 @@ angular.module('kifi')
       [
         net.getOrgLibraries,
         net.getOrgMembers,
-        net.userOrOrg
+        net.userOrOrg,
+        net.getOrgSettings
       ].forEach(function (endpoint) {
         endpoint.clearCache();
       });
@@ -70,7 +71,12 @@ angular.module('kifi')
         return net.declineOrgMemberInvite(orgId);
       },
       removeOrgMember: function (orgId, removeFields) {
-        return net.removeOrgMember(orgId, removeFields);
+
+        return net
+        .removeOrgMember(orgId, removeFields)
+        .then(function () {
+          invalidateOrgProfileCache();
+        });
       },
       transferOrgMemberOwnership: function (orgId, newOwner) {
         return net.transferOrgMemberOwnership(orgId, newOwner);
@@ -152,7 +158,6 @@ angular.module('kifi')
         $analytics.eventTrack(eventName, attributes);
       },
       invalidateOrgProfileCache: invalidateOrgProfileCache
-
     };
 
     return api;

@@ -57,12 +57,18 @@ angular.module('kifi')
     function removeMember(member) {
       orgProfileService
       .removeOrgMember(organization.id, { userId: member.id })
-      .then(function success() {
-        var action = (profileService.me.id === member.id ? 'clickedLeaveOrg' : 'clickedRemoveOrg');
+      .then(function () {
+        var isMe = (profileService.me.id === member.id);
+        var action = (isMe ? 'clickedLeaveOrg' : 'clickedRemoveOrg');
+
         trackMembersClick({ action: action, orgMember: member.username });
+
         removeMemberFromPage(member);
-        orgProfileService.invalidateOrgProfileCache();
-        $state.go('orgProfile.libraries', { reload: true });
+        if (isMe) {
+          $state.go('orgProfile.libraries', { reload: true });
+        } else {
+          $state.reload('orgProfile');
+        }
       })
       ['catch'](handleErrorResponse);
     }
