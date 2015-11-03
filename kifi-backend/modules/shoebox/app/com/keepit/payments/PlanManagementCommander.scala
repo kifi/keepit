@@ -469,7 +469,7 @@ class PlanManagementCommanderImpl @Inject() (
           orgConfigRepo.save(oldConfig.withSettings(newSettings))
         }
 
-        creditRewardCommander.registerUpgradedAccount(orgId)
+        creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationUpgraded(orgId, newPlan))
 
         val now = clock.now()
         val newPlanStartDate = PlanRenewalPolicy.newPlansStartDate(now)

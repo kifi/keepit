@@ -4,6 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ SystemEmailAddress, LocalPostOffice, ElectronicMail }
 import com.keepit.common.time._
@@ -26,7 +27,7 @@ trait CreditRewardCommander {
   def adminCreateCreditCode(codeTemplate: CreditCodeInfo): CreditCodeInfo
 
   // In-place evolutions of existing rewards
-  def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward]
+  def registerRewardTrigger(trigger: RewardTrigger)(implicit session: RWSession): Set[CreditReward]
 }
 
 @Singleton
@@ -43,6 +44,7 @@ class CreditRewardCommanderImpl @Inject() (
   accountLockHelper: AccountLockHelper,
   postOffice: LocalPostOffice,
   orgExpRepo: OrganizationExperimentRepo,
+  airbrake: AirbrakeNotifier,
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
 
@@ -193,7 +195,19 @@ class CreditRewardCommanderImpl @Inject() (
     }
   }
 
-  def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
+  def registerRewardTrigger(trigger: RewardTrigger)(implicit session: RWSession): Set[CreditReward] = trigger match {
+    case RewardTrigger.OrganizationUpgraded(orgId, newPlan) if newPlan.pricePerCyclePerUser > DollarAmount.ZERO =>
+      registerUpgradedAccount(orgId)
+    case RewardTrigger.OrganizationDescriptionAdded(orgId, description) if description.nonEmpty =>
+      val currentReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Started)(orgId)
+      val evolvedReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Achieved)(orgId)
+      creditRewardRepo.getByReward(currentReward).map { cr => finalizeCreditReward(cr.withReward(evolvedReward), None) }
+    case _ =>
+      airbrake.notify(s"Tried to register an invalid reward trigger $trigger", new Exception())
+      Set.empty
+  }
+
+  private def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
     val currentReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(orgId)
     val evolvedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(orgId)
     val crs = creditRewardRepo.getByReward(currentReward)

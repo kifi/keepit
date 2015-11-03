@@ -114,6 +114,14 @@ object RewardKind {
     lazy val applicable: Created.type = Created
   }
 
+  case object OrganizationDescriptionAdded extends RewardKind("org_description_added") with RewardStatus.WithIndependentInfo[Id[Organization]] {
+    lazy val infoFormat = Id.format[Organization]
+    case object Started extends Status("started")
+    case object Achieved extends Status("achieved")
+    protected lazy val allStatus: Set[S] = Set(Started, Achieved)
+    lazy val applicable: Achieved.type = Achieved
+  }
+
   case object ReferralApplied extends RewardKind("referral_applied") with RewardStatus.WithIndependentInfo[CreditCode] {
     lazy val infoFormat = CreditCode.format
     case object Applied extends Status("applied")
@@ -129,12 +137,16 @@ object RewardKind {
     lazy val applicable: Upgraded.type = Upgraded
   }
 
-  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral, ReferralApplied)
+  private val all: Set[RewardKind] = Set(
+    Coupon,
+    OrganizationCreation,
+    OrganizationDescriptionAdded,
+    OrganizationReferral,
+    ReferralApplied
+  )
 
-  def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
-    case Some(validKind) => validKind
-    case None => throw new IllegalArgumentException(s"Unknown RewardKind: $kind")
-  }
+  def get(kind: String) = all.find(_.kind equalsIgnoreCase kind)
+  def apply(kind: String) = get(kind).getOrElse(throw new IllegalArgumentException(s"Unknown RewardKind: $kind"))
 }
 
 // subset of CreditCodeInfo
@@ -189,4 +201,11 @@ case class CreditReward(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAppliedEvent(event: AccountEvent) = this.copy(applied = Some(event.id.get))
   def withReward(newReward: Reward) = this.copy(reward = newReward)
+}
+
+
+sealed abstract class RewardTrigger(val value: String)
+object RewardTrigger {
+  case class OrganizationUpgraded(orgId: Id[Organization], newPlan: PaidPlan) extends RewardTrigger(s"$orgId upgraded to plan ${newPlan.id.get}")
+  case class OrganizationDescriptionAdded(orgId: Id[Organization], description: String) extends RewardTrigger(s"$orgId filled in their description")
 }
