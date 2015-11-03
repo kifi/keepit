@@ -38,7 +38,7 @@ class FakeStripeClientImpl extends StripeClient {
     }
   }
 
-  def refundCharge(chargeId: StripeTransactionId, reason: String): Future[StripeRefundResult] = {
+  def refundCharge(chargeId: StripeTransactionId): Future[StripeRefundResult] = {
     if (stripeDownMode) Future.failed(new APIConnectionException("Stripe is down!"))
     else if (cardFailureMode) {
       Future.successful(StripeRefundFailure("boom", "boom"))
@@ -46,7 +46,7 @@ class FakeStripeClientImpl extends StripeClient {
       transactions.valuesIterator.flatten.filter(_.id == chargeId).toSeq match {
         case Seq(charge) =>
           val num = chargeCounter.getAndIncrement()
-          val trans = FakeTransaction(StripeTransactionId(s"re_$num"), -charge.amount, charge.token, reason)
+          val trans = FakeTransaction(StripeTransactionId(s"re_$num"), -charge.amount, charge.token, "Refund")
           transactions(charge.token).append(trans)
           Future.successful(StripeRefundSuccess(charge.amount, trans.id))
         case _ => Future.failed(new APIConnectionException(s"Charge ${chargeId.id} not found!"))
