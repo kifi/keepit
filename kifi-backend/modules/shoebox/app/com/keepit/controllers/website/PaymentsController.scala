@@ -158,4 +158,8 @@ class PaymentsController @Inject() (
         }.get
     }
   }
+
+  def getRewards(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+    val creditRewards = creditRewardCommander.getRewardsByOrg(request.orgId)
+  }
 }
