@@ -27,6 +27,7 @@ class PaymentsController @Inject() (
     paymentCommander: PaymentProcessingCommander,
     activityLogCommander: ActivityLogCommander,
     creditRewardCommander: CreditRewardCommander,
+    creditRewardInfoCommander: CreditRewardInfoCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -157,5 +158,9 @@ class PaymentsController @Inject() (
           case f: CreditRewardFail => f.asErrorResponse
         }.get
     }
+  }
+
+  def getRewards(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+    Ok(Json.obj("rewards" -> creditRewardInfoCommander.getRewardsByOrg(request.orgId)))
   }
 }

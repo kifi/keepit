@@ -1,9 +1,11 @@
 package com.keepit.payments
 
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, ModelWithState, State, States}
 import com.keepit.common.time._
 import com.keepit.model.{Organization, User}
 import org.joda.time.DateTime
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.util.Try
@@ -208,4 +210,16 @@ sealed abstract class RewardTrigger(val value: String)
 object RewardTrigger {
   case class OrganizationUpgraded(orgId: Id[Organization], newPlan: PaidPlan) extends RewardTrigger(s"$orgId upgraded to plan ${newPlan.id.get}")
   case class OrganizationDescriptionAdded(orgId: Id[Organization], description: String) extends RewardTrigger(s"$orgId filled in their description")
+}
+
+case class ExternalCreditReward(
+  applied: Option[PublicId[AccountEvent]],
+  dummy: String = "dummy"
+)
+
+object ExternalCreditReward {
+  implicit val format: Format[ExternalCreditReward] = (
+    (__ \ 'applied).formatNullable[PublicId[AccountEvent]] and
+    (__ \ 'dummy).format[String]
+  )(ExternalCreditReward.apply, unlift(ExternalCreditReward.unapply))
 }

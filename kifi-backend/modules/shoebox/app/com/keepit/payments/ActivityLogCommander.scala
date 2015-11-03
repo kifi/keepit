@@ -30,6 +30,7 @@ class ActivityLogCommanderImpl @Inject() (
     accountEventRepo: AccountEventRepo,
     creditCodeInfoRepo: CreditCodeInfoRepo,
     creditRewardRepo: CreditRewardRepo,
+    creditRewardInfoCommander: CreditRewardInfoCommander,
     basicUserRepo: BasicUserRepo,
     organizationRepo: OrganizationRepo,
     organizationCommander: OrganizationCommander,
@@ -60,24 +61,7 @@ class ActivityLogCommanderImpl @Inject() (
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
-        case RewardCredit(id) =>
-          val creditReward = creditRewardRepo.get(id)
-          val reason = creditReward.reward match {
-            case Reward(kind, _, _) if kind == RewardKind.Coupon =>
-              Elements(getUser(creditReward.code.get.usedBy), "redeemed the coupon code", creditReward.code.get.code, ".")
-            case Reward(kind, _, _) if kind == RewardKind.OrganizationCreation =>
-              Elements("you created a team on Kifi. Thanks for being awesome! :)")
-            case Reward(kind, _, referredOrgId: Id[Organization] @unchecked) if kind == RewardKind.OrganizationReferral =>
-              Elements("you referred", getOrg(referredOrgId), ". Thank you!")
-            case Reward(kind, _, _) if kind == RewardKind.ReferralApplied =>
-              val referrerOpt = for {
-                codeInfo <- creditCodeInfoRepo.getByCode(creditReward.code.get.code)
-                referrer <- codeInfo.referrer
-                referrerOrg <- referrer.organizationId
-              } yield referrerOrg
-              Elements(getUser(creditReward.code.get.usedBy), "applied the code", creditReward.code.get.code, referrerOpt.map(r => Elements("from", getOrg(r))), ".")
-          }
-          Elements("You earned", creditReward.credit, "because", reason)
+        case RewardCredit(id) => creditRewardInfoCommander.getDescription(id)
         case IntegrityError(err) => Elements("Found and corrected an error in the account.") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)), ".")
         case Refund(_, _) => Elements("A", event.creditChange, "refund was issued to your card.")
@@ -127,68 +111,6 @@ class ActivityLogCommanderImpl @Inject() (
       paymentCharge = event.paymentCharge.map(_.toDollarString),
       memo = event.memo
     )
-  }
-}
-
-sealed trait DescriptionElements {
-  def flatten: Seq[BasicElement]
-}
-case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
-  def flatten = elements.flatMap(_.flatten)
-}
-case class BasicElement(text: String, url: Option[String]) extends DescriptionElements {
-  def flatten = Seq(this)
-  def withText(newText: String) = this.copy(text = newText)
-}
-object DescriptionElements {
-  def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
-
-  implicit def fromText(text: String): BasicElement = BasicElement(text, None)
-  implicit def fromTextAndUrl(textAndUrl: (String, String)): BasicElement = BasicElement(textAndUrl._1, Some(textAndUrl._2))
-  implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
-  implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
-
-  implicit def fromCreditCode(code: CreditCode): BasicElement = code.value
-  implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName -> user.path.absolute
-  implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.absolute
-  implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
-  implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
-  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> Path(s"${orgHandle.value}/settings/plan").absolute
-  implicit def fromRole(role: OrganizationRole): BasicElement = role.value
-
-  private def intersperse[T](xs: List[T], ins: List[T]): List[T] = {
-    (xs, ins) match {
-      case (x :: Nil, Nil) => x :: Nil
-      case (x :: xr, in :: inr) => x :: in :: intersperse(xr, inr)
-      case _ => throw new IllegalArgumentException(s"intersperse expects lists with length (n, n-1). it got (${xs.length}, ${ins.length})")
-    }
-  }
-  private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
-    val words = els.map(_.text).toList
-    val wordPairs = words.init zip words.tail
-    val interpolatedPunctuation = wordPairs.map {
-      case (l, r) if l.endsWith("'") || r.startsWith(".") || r.startsWith("'") => ""
-      case _ => " "
-    }.map(BasicElement(_, None))
-    intersperse(els.toList, interpolatedPunctuation).filter(_.text.nonEmpty)
-  }
-  def formatForSlack(description: DescriptionElements): String = {
-    interpolatePunctuation(description.flatten).map {
-      case BasicElement(text, None) => text
-      case BasicElement(text, Some(url)) => s"<$url|$text>"
-    } mkString
-  }
-
-  def formatAsHtml(description: DescriptionElements): Html = {
-    Html(interpolatePunctuation(description.flatten).map {
-      case BasicElement(text, None) => text
-      case BasicElement(text, Some(url)) => s"""<a href="$url">$text</a>"""
-    } mkString)
-  }
-
-  implicit val flatWrites = {
-    implicit val basicWrites = Json.writes[BasicElement]
-    Writes[DescriptionElements] { description => Json.toJson(interpolatePunctuation(description.flatten)) }
   }
 }
 

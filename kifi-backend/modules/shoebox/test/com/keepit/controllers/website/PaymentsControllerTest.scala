@@ -431,5 +431,22 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+    "serve up external credit rewards" in {
+      "work" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val publicId = Organization.publicId(org.id.get)
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getRewards(publicId)
+          val response = controller.getRewards(publicId)(request)
+          println(contentAsJson(response))
+          status(response) === OK
+        }
+      }
+    }
   }
 }
