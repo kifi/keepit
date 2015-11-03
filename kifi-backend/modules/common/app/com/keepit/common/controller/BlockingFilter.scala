@@ -12,7 +12,7 @@ object BlockingFilter extends Filter {
     val ip = IpAddress.fromRequest(requestHeader)
     if (blocked.exists(b => ip.ip.startsWith(b)) && !requestHeader.path.contains("logout") && requestHeader.session.get(KifiSession.FORTYTWO_USER_ID).isDefined) {
       Future.successful(Results.Redirect("/logout"))
-    } else if (tarpit.contains(ip)) {
+    } else if (tarpit.contains(ip.ip)) {
       throwThemInAPit(nextFilter(requestHeader))
     } else {
       nextFilter(requestHeader)
