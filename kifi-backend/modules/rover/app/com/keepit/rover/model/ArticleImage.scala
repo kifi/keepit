@@ -13,7 +13,7 @@ case class ArticleImage(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[ArticleImage] = ArticleImageStates.ACTIVE,
-    uriId: Id[NormalizedURI], // todo(Léo): make optional
+    uriId: Option[Id[NormalizedURI]],
     url: String,
     urlHash: UrlHash,
     kind: String,
@@ -27,7 +27,7 @@ case class ArticleImage(
 }
 
 object ArticleImage {
-  def apply[A <: Article](url: String, uriId: Id[NormalizedURI], kind: ArticleKind[A], version: ArticleVersion, imageUrl: String, imageHash: ImageHash): ArticleImage = {
+  def apply[A <: Article](url: String, uriId: Option[Id[NormalizedURI]], kind: ArticleKind[A], version: ArticleVersion, imageUrl: String, imageHash: ImageHash): ArticleImage = {
     val urlHash = UrlHash.hashUrl(url)
     ArticleImage(uriId = uriId, url = url, urlHash = urlHash, kind = kind.typeCode, version = version, fetchedAt = currentDateTime, imageUrl = imageUrl, imageHash = imageHash)
   }
@@ -37,7 +37,7 @@ object ArticleImage {
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[ArticleImage] = ArticleImageStates.ACTIVE,
-    uriId: Id[NormalizedURI],
+    uriId: Option[Id[NormalizedURI]],
     url: String,
     urlHash: UrlHash,
     kind: String,

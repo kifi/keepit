@@ -31,11 +31,11 @@ trait ArticleInfoRepo extends Repo[RoverArticleInfo] with SeqNumberFunction[Rove
   def getRipeForFetching(limit: Int, fetchingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def unmarkAsFetching(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
-  def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
+  def updateAfterFetch[A <: Article](url: String, kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit
   def getRipeForImageProcessing(limit: Int, requestedForMoreThan: Duration, imageProcessingForMoreThan: Duration)(implicit session: RSession): Seq[RoverArticleInfo]
   def markAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
   def unmarkAsImageProcessing(ids: Id[RoverArticleInfo]*)(implicit session: RWSession): Unit
-  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit
+  def updateAfterImageProcessing[A <: Article](url: String, kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -62,7 +62,7 @@ class ArticleInfoRepoImpl @Inject() (
   type RepoImpl = ArticleInfoTable
   class ArticleInfoTable(tag: Tag) extends RepoTable[RoverArticleInfo](db, tag, "article_info") with SeqNumberColumn[RoverArticleInfo] {
 
-    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def uriId = column[Option[Id[NormalizedURI]]]("uri_id", O.Nullable)
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
@@ -99,7 +99,7 @@ class ArticleInfoRepoImpl @Inject() (
       updatedAt = r.<<[DateTime],
       state = r.<<[State[RoverArticleInfo]],
       seq = r.<<[SequenceNumber[RoverArticleInfo]],
-      uriId = r.<<[Id[NormalizedURI]],
+      uriId = r.<<[Option[Id[NormalizedURI]]],
       url = r.<<[String],
       urlHash = r.<<[UrlHash],
       kind = r.<<[String],
@@ -122,9 +122,11 @@ class ArticleInfoRepoImpl @Inject() (
   initTable()
 
   override def deleteCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {
-    articleInfoCache.remove(ArticleInfoUriKey(model.uriId))
-    articleSummaryCache.remove(RoverArticleSummaryKey(model.uriId, model.articleKind))
-    uriSensitivityCache.remove(UriSensitivityKey(model.uriId))
+    model.uriId.foreach { uriId =>
+      articleInfoCache.remove(ArticleInfoUriKey(uriId))
+      articleSummaryCache.remove(RoverArticleSummaryKey(uriId, model.articleKind))
+      uriSensitivityCache.remove(UriSensitivityKey(uriId))
+    }
   }
 
   override def invalidateCache(model: RoverArticleInfo)(implicit session: RSession): Unit = {}
@@ -161,7 +163,7 @@ class ArticleInfoRepoImpl @Inject() (
   }
 
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[RoverArticleInfo]] = Some(ArticleInfoStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[RoverArticleInfo]] = {
-    val existingByUriId = (for (r <- rows if r.uriId.inSet(uriIds) && r.state =!= excludeState.orNull) yield r).list.toSet[RoverArticleInfo].groupBy(_.uriId)
+    val existingByUriId = (for (r <- rows if r.uriId.inSet(uriIds) && r.state =!= excludeState.orNull) yield r).list.toSet[RoverArticleInfo].groupBy(_.uriId.get)
     val missingUriIds = uriIds -- existingByUriId.keySet
     existingByUriId ++ missingUriIds.map(_ -> Set.empty[RoverArticleInfo])
   }
@@ -186,28 +188,28 @@ class ArticleInfoRepoImpl @Inject() (
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastFetchingAt).update(lastFetchingAt)
   }
 
-  def updateAfterFetch[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit = {
-    getByUriAndKind(uriId, kind).foreach { articleInfo =>
+  def updateAfterFetch[A <: Article](url: String, kind: ArticleKind[A], fetched: Try[Option[ArticleVersion]])(implicit session: RWSession): Unit = {
+    getByUrlAndKind(url, kind).foreach { articleInfo =>
       val withFetchComplete = articleInfo.withLatestFetchComplete
       fetched match {
         case Failure(error) => saveSilently(withFetchComplete.withFailure(error))
         case Success(None) => saveSilently(withFetchComplete.withoutChange)
         case Success(Some(articleVersion)) => {
           save(withFetchComplete.withLatestArticle(articleVersion))
-          onLatestArticle(uriId, kind)
+          onLatestArticle(url, kind)
         }
       }
     }
   }
 
-  private def onLatestArticle[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A])(implicit session: RWSession): Unit = {
+  private def onLatestArticle[A <: Article](url: String, kind: ArticleKind[A])(implicit session: RWSession): Unit = {
     if (kind != EmbedlyArticle) {
-      refresh(uriId, EmbedlyArticle, ifLastFetchOlderThan = FetchSchedulingPolicy.embedlyRefreshOnContentChangeIfOlderThan)
+      refresh(url, EmbedlyArticle, ifLastFetchOlderThan = FetchSchedulingPolicy.embedlyRefreshOnContentChangeIfOlderThan)
     }
   }
 
-  private def refresh[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], ifLastFetchOlderThan: Duration)(implicit session: RWSession): Unit = {
-    getByUriAndKind(uriId, kind).foreach { articleInfo =>
+  private def refresh[A <: Article](url: String, kind: ArticleKind[A], ifLastFetchOlderThan: Duration)(implicit session: RWSession): Unit = {
+    getByUrlAndKind(url, kind).foreach { articleInfo =>
       val now = clock.now()
       val fetchedRecencyLimit = now.minusSeconds(ifLastFetchOlderThan.toSeconds.toInt)
       val shouldRefreshNow = !(articleInfo.nextFetchAt.exists(_ isBefore now) || articleInfo.lastFetchedAt.exists(_ isAfter fetchedRecencyLimit))
@@ -245,8 +247,8 @@ class ArticleInfoRepoImpl @Inject() (
     (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastImageProcessingAt).update(lastImageProcessingAt)
   }
 
-  def updateAfterImageProcessing[A <: Article](uriId: Id[NormalizedURI], kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit = {
-    getByUriAndKind(uriId, kind).foreach { articleInfo =>
+  def updateAfterImageProcessing[A <: Article](url: String, kind: ArticleKind[A], version: Option[ArticleVersion])(implicit session: RWSession): Unit = {
+    getByUrlAndKind(url, kind).foreach { articleInfo =>
       saveSilently(articleInfo.withImageProcessingComplete(version))
     }
   }

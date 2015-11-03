@@ -122,7 +122,7 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def getOrElseFetchBestArticle[A <: Article](url: String, uriId: Id[NormalizedURI])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
+  def getOrElseFetchBestArticle[A <: Article](url: String, uriId: Option[Id[NormalizedURI]])(implicit kind: ArticleKind[A]): Future[Option[A]] = {
     val info = internArticleInfos(url, uriId, Set(kind))(kind)
     getOrElseFetchBestArticle(info).imap(_.map(_.asExpected[A]))
   }
@@ -137,7 +137,7 @@ class ArticleCommander @Inject() (
     }
   }
 
-  private def internArticleInfos(url: String, uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+  private def internArticleInfos(url: String, uriId: Option[Id[NormalizedURI]], kinds: Set[ArticleKind[_ <: Article]]): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     // natural race condition with the regular ingestion, hence the 3 attempts
     db.readWrite(attempts = 3) { implicit session =>
       articleInfoHelper.intern(url, uriId, kinds)
@@ -187,7 +187,7 @@ class ArticleCommander @Inject() (
     }
   }
 
-  def fetchAsap(url: String, uriId: Id[NormalizedURI], refresh: Boolean): Future[Unit] = {
+  def fetchAsap(url: String, uriId: Option[Id[NormalizedURI]], refresh: Boolean): Future[Unit] = {
     val toBeInternedByPolicy = articlePolicy.toBeInterned(url)
     val interned = internArticleInfos(url, uriId, toBeInternedByPolicy)
 
@@ -219,7 +219,7 @@ class ArticleCommander @Inject() (
         Future.successful(None)
       }
       case Some(article) => {
-        articleStore.add(articleInfo.urlHash, articleInfo.uriId, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
+        articleStore.add(articleInfo.urlHash, articleInfo.latestVersion, article)(articleInfo.articleKind).imap { key =>
           log.info(s"Persisted latest ${articleInfo.articleKind} with version ${key.version} for uri ${articleInfo.uriId}: ${articleInfo.url.take(80)}")
           Some((article, key.version))
         }
@@ -232,7 +232,7 @@ class ArticleCommander @Inject() (
             log.error(s"Failed to fetch ${articleInfo.articleKind} for uri ${articleInfo.uriId}: ${articleInfo.url}. ${error.getMessage}")
         }
         db.readWrite { implicit session =>
-          articleInfoRepo.updateAfterFetch(articleInfo.uriId, articleInfo.articleKind, fetched.map(_.map { case (_, version) => version }))
+          articleInfoRepo.updateAfterFetch(articleInfo.url, articleInfo.articleKind, fetched.map(_.map { case (_, version) => version }))
         }
     }
   } imap (_.map { case (article, _) => article })

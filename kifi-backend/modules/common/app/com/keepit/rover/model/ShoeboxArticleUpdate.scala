@@ -9,10 +9,10 @@ import play.api.libs.json.Json
 
 @json
 case class ShoeboxArticleUpdate(
-  uriId: Id[NormalizedURI],
   kind: String,
   url: String,
   destinationUrl: String,
+  uriId: Option[Id[NormalizedURI]],
   createdAt: DateTime,
   title: Option[String],
   sensitive: Boolean,

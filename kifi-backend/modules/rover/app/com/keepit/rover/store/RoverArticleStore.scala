@@ -33,9 +33,9 @@ class RoverArticleStore @Inject() (
   def get[A <: Article](keyOpt: Option[ArticleKey[A]]): Future[Option[A]] = keyOpt.map(get[A]) getOrElse Future.successful(None)
 
   // todo(Léo): just hash article.url ???
-  def add[A <: Article](urlHash: UrlHash, uriId: Id[NormalizedURI], previousVersion: Option[ArticleVersion], article: A)(implicit kind: ArticleKind[A]): Future[ArticleKey[A]] = {
+  def add[A <: Article](urlHash: UrlHash, previousVersion: Option[ArticleVersion], article: A)(implicit kind: ArticleKind[A]): Future[ArticleKey[A]] = {
     SafeFuture {
-      val key = ArticleKey(uriId, urlHash, kind, ArticleVersionProvider.next[A](previousVersion))
+      val key = ArticleKey(urlHash, kind, ArticleVersionProvider.next[A](previousVersion))
       val storeKey = ArticleStoreKey(key)
       underlying += (storeKey -> article)
       signatureCommander.computeArticleSignature(article)
