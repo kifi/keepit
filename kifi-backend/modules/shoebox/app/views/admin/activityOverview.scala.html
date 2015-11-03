@@ -3,7 +3,7 @@
 
 @(log: AdminPaymentsActivityOverview)(implicit request: com.keepit.common.controller.UserRequest[_])
 
-@views.html.admin.admin("Payments Dashboard", stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
+@views.html.admin.admin("Paid Account Activity Overview", stylesheets = List("admin_user"), scripts = List("typeahead.bundle.min")) {
     @views.html.admin.adminHelper.pagination(log.pgHelper.page, log.pgHelper.itemCount, log.pgHelper.pageSize, log.pgHelper.otherPagesRoute) {
         <table class="table table-condensed table-striped">
             <thead>

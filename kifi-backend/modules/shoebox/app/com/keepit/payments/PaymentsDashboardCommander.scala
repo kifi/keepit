@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.controllers.admin.AdminAccountView
 import com.keepit.model.{ OrganizationExperimentType, OrganizationExperimentRepo, OrganizationRepo }
-import org.joda.time.Period
+import org.joda.time.{ DateTime, Period }
 
 import scala.collection.mutable
 
@@ -32,6 +32,22 @@ class PaymentsDashboardCommanderImpl @Inject() (
     )
   }
 
+  private def creditChangesFn(events: Seq[AccountEvent])(implicit session: RSession): DollarAmount = {
+    events.collect { case e if e.creditChange < DollarAmount.ZERO => e.creditChange }.sum
+  }
+  private def chargesMadeFn(events: Seq[AccountEvent])(implicit session: RSession): DollarAmount = {
+    events.flatMap(_.paymentCharge).sum
+  }
+  private def rewardsGrantedFn(events: Seq[AccountEvent])(implicit session: RSession): Map[String, DollarAmount] = {
+    val rewardKindsAndValues = events.flatMap { e =>
+      e.action match {
+        case AccountEventAction.RewardCredit(id) => Some(creditRewardRepo.get(id).reward.kind.kind -> e.creditChange)
+        case _ => None
+      }
+    }
+    rewardKindsAndValues.groupBy(_._1).map { case (kind, kindAndValues) => kind -> kindAndValues.map(_._2).sum }.withDefaultValue(DollarAmount.ZERO)
+  }
+
   def generateDashboard(): AdminPaymentsDashboard = db.readOnlyMaster { implicit session =>
     val fakeAccountIds = {
       val fakeOrgIds = orgExpRepo.getOrganizationsByExperiment(OrganizationExperimentType.FAKE).toSet
@@ -40,6 +56,7 @@ class PaymentsDashboardCommanderImpl @Inject() (
 
     val now = clock.now
     val diffPeriod = Period.weeks(1)
+    val plans = paidPlanRepo.all.filter(_.isActive)
     val Seq(reverseChronologicalEvents, reallyOldEvents) = Seq(now, now.minus(diffPeriod)).map { end =>
       accountEventRepo.adminGetByKindAndDate(AccountEventKind.all, start = end.minus(diffPeriod), end = end)
         .filter(e => !fakeAccountIds.contains(e.accountId))
@@ -49,25 +66,21 @@ class PaymentsDashboardCommanderImpl @Inject() (
     val frozenAccounts = paidAccountRepo.all.filter(a => a.isActive && a.frozen).take(100).map(createAdminAccountView) // God help us if we have more than 100 frozen accounts
     val failedAccounts = paidAccountRepo.all.filter(a => a.isActive && a.paymentStatus == PaymentStatus.Failed).take(100).map(createAdminAccountView) // God help us if we have more than 100 failed accounts
 
+    val upgradedPlans = plans.filter(_.pricePerCyclePerUser > DollarAmount.ZERO).map(_.id.get).toSet
+    val upgradedAccounts = paidAccountRepo.all.filter(a => a.isActive && upgradedPlans.contains(a.planId)).sortBy(_.planRenewal.getMillis).reverse.map(createAdminAccountView)
+
     val (creditChanges, chargesMade, rewardsGranted) = {
       def applyFn[T](fn: Seq[AccountEvent] => T): History[T] = History(old = fn(reallyOldEvents), cur = fn(reverseChronologicalEvents))
-
-      def creditChangesFn(events: Seq[AccountEvent]): DollarAmount = events.collect { case e if e.creditChange < DollarAmount.ZERO => e.creditChange }.sum
-      def chargesMadeFn(events: Seq[AccountEvent]): DollarAmount = events.flatMap(_.paymentCharge).sum
-      def rewardsGrantedFn(events: Seq[AccountEvent]): Map[String, DollarAmount] = {
-        val rewardKindsAndValues = events.flatMap { e =>
-          e.action match {
-            case AccountEventAction.RewardCredit(id) => Some(creditRewardRepo.get(id).reward.kind.kind -> e.creditChange)
-            case _ => None
-          }
-        }
-        rewardKindsAndValues.groupBy(_._1).map { case (kind, kindAndValues) => kind -> kindAndValues.map(_._2).sum }.withDefaultValue(DollarAmount.ZERO)
-      }
-
       (applyFn(creditChangesFn), applyFn(chargesMadeFn), applyFn(rewardsGrantedFn))
     }
 
-    val plans = paidPlanRepo.all.filter(_.isActive)
+    val billingHistory = (1 to 7).toSet.map(now.minusDays).map { start =>
+      val events = accountEventRepo.adminGetByKindAndDate(AccountEventKind.all, start = start, end = start.plusDays(1))
+        .filter(e => !fakeAccountIds.contains(e.accountId))
+        .toList.sortBy(e => (e.eventTime.getMillis, e.id.get.id)).reverse
+      start -> (creditChangesFn(events), rewardsGrantedFn(events).values.sum, chargesMadeFn(events))
+    }.toMap
+
     val curPlanEnrollments = {
       val planEnrollmentById = paidAccountRepo.getPlanEnrollments
       plans.map { p => p -> planEnrollmentById.getOrElse(p.id.get, PlanEnrollment.empty) }
@@ -96,9 +109,9 @@ class PaymentsDashboardCommanderImpl @Inject() (
       }.toMap
     }
     val planEnrollments = History(cur = curPlanEnrollments, old = oldPlanEnrollments)
-    val totalIncome = {
+    val totalDailyIncome = {
       val (old, cur) = plans.map { plan =>
-        val amortizedIncomePerUser = DollarAmount.cents(plan.pricePerCyclePerUser.toCents / plan.billingCycle.months)
+        val amortizedIncomePerUser = DollarAmount.cents(plan.pricePerCyclePerUser.toCents / plan.billingCycle.months / now.dayOfMonth().withMaximumValue().getDayOfMonth)
         (amortizedIncomePerUser * planEnrollments.old(plan).numActiveUsers, amortizedIncomePerUser * planEnrollments.cur(plan).numActiveUsers)
       }.unzip
       History(old = old.sum, cur = cur.sum)
@@ -106,13 +119,15 @@ class PaymentsDashboardCommanderImpl @Inject() (
     AdminPaymentsDashboard(
       plans = plans,
       diffPeriod = diffPeriod,
-      totalAmortizedIncomePerMonth = totalIncome,
+      totalAmortizedDailyIncome = totalDailyIncome,
       creditChanges = creditChanges,
       chargesMade = chargesMade,
       rewardsGranted = rewardsGranted,
+      billingHistory = billingHistory,
       planEnrollment = planEnrollments,
       failedAccounts = failedAccounts,
-      frozenAccounts = frozenAccounts
+      frozenAccounts = frozenAccounts,
+      upgradedAccounts = upgradedAccounts
     )
   }
 }
@@ -123,10 +138,12 @@ case class History[T](cur: T, old: T) {
 case class AdminPaymentsDashboard(
   plans: Seq[PaidPlan],
   diffPeriod: Period,
-  totalAmortizedIncomePerMonth: History[DollarAmount],
+  totalAmortizedDailyIncome: History[DollarAmount],
   creditChanges: History[DollarAmount],
   chargesMade: History[DollarAmount],
+  billingHistory: Map[DateTime, (DollarAmount, DollarAmount, DollarAmount)],
   rewardsGranted: History[Map[String, DollarAmount]], // this is a string because RewardKind is being obnoxious
   planEnrollment: History[Map[PaidPlan, PlanEnrollment]],
   frozenAccounts: Seq[AdminAccountView],
-  failedAccounts: Seq[AdminAccountView])
+  failedAccounts: Seq[AdminAccountView],
+  upgradedAccounts: Seq[AdminAccountView])
