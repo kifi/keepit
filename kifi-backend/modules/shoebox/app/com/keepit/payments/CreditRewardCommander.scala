@@ -147,7 +147,7 @@ class CreditRewardCommanderImpl @Inject() (
         }
 
       case CreditCodeKind.Promotion =>
-        val targetReward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId.get)
+        val targetReward = Reward(RewardKind.ReferralApplied)(RewardKind.ReferralApplied.Applied)(creditCodeInfo.code)
         for {
           targetCreditReward <- creditRewardRepo.create(CreditReward(
             accountId = accountId,
@@ -160,7 +160,7 @@ class CreditRewardCommanderImpl @Inject() (
         } yield CreditCodeRewards(target = targetCreditReward, referrer = None)
 
       case CreditCodeKind.OrganizationReferral =>
-        val targetReward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId.get)
+        val targetReward = Reward(RewardKind.ReferralApplied)(RewardKind.ReferralApplied.Applied)(creditCodeInfo.code)
         val referrerReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(orgId.get)
         for {
           targetCreditReward <- creditRewardRepo.create(CreditReward(

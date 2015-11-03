@@ -109,11 +109,17 @@ object RewardKind {
     lazy val applicable: Used.type = Used
   }
 
-  case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
-    lazy val infoFormat = Id.format[Organization]
+  case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithEmptyInfo {
     case object Created extends Status("created")
     protected lazy val allStatus: Set[S] = Set(Created)
     lazy val applicable: Created.type = Created
+  }
+
+  case object ReferralApplied extends RewardKind("referral_applied") with RewardStatus.WithIndependentInfo[CreditCode] {
+    lazy val infoFormat = CreditCode.format
+    case object Applied extends Status("applied")
+    protected lazy val allStatus: Set[S] = Set(Applied)
+    lazy val applicable: Applied.type = Applied
   }
 
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
@@ -124,7 +130,7 @@ object RewardKind {
     lazy val applicable: Upgraded.type = Upgraded
   }
 
-  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral)
+  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral, ReferralApplied)
 
   def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
     case Some(validKind) => validKind

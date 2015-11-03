@@ -280,7 +280,7 @@ class AdminPaymentsController @Inject() (
         accountId = account.id.get,
         credit = DollarAmount.dollars(50),
         applied = None,
-        reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+        reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None),
         unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
         code = None
       ), userAttribution = None).get.applied.get
