@@ -3,7 +3,6 @@ package com.keepit.controllers.admin
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
-import com.keepit.abook.ABookServiceClient
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller._
@@ -53,7 +52,6 @@ class AdminOrganizationController @Inject() (
     handleCommander: HandleCommander,
     statsCommander: UserStatisticsCommander,
     orgExperimentRepo: OrganizationExperimentRepo,
-    abook: ABookServiceClient,
     implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions with PaginationActions {
 
   val fakeOwnerId = if (Play.maybeApplication.exists(_.mode == Mode.Prod)) AdminOrganizationController.fakeOwnerId else Id[User](1)
@@ -477,16 +475,5 @@ class AdminOrganizationController @Inject() (
       channel.eofAndEnd()
     })
     Ok.chunked(enum)
-  }
-
-  def getPYMNForOrgRecommendations() = AdminUserAction.async(parse.tolerantJson) { implicit request =>
-    val orgIds = (request.body \ "orgIds").as[Seq[Id[Organization]]]
-    val limit = (request.body \ "limit").as[Int]
-    val recosByOrgIdFut = Future.sequence(
-      orgIds.map { orgId =>
-        abook.getRecommendationsForOrg(orgId, viewerIdOpt = None, offset = 0, limit)
-          .map(recos => orgId -> recos)
-      }).map(_.toMap)
-    recosByOrgIdFut.map(recos => Ok(Json.toJson(recos)))
   }
 }
