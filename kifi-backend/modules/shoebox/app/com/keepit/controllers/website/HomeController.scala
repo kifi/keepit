@@ -49,6 +49,7 @@ class HomeController @Inject() (
   applicationConfig: FortyTwoConfig,
   keepsCommander: KeepCommander,
   smsCommander: SmsCommander,
+  kifiSiteRouter: KifiSiteRouter,
   clock: Clock)
     extends UserActions with ShoeboxServiceController with Logging {
 
@@ -61,10 +62,10 @@ class HomeController @Inject() (
     db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
   }
 
-  def home = MaybeUserAction { implicit request =>
+  def home = MaybeUserAction.async { implicit request =>
     request match {
-      case _: NonUserRequest[_] => MarketingSiteRouter.marketingSite()
-      case _: UserRequest[_] => AngularApp.app()
+      case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite())
+      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request)
     }
   }
 
