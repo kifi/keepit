@@ -42,6 +42,10 @@ angular.module('kifi')
       });
     }
 
+    function getResponseData(response) {
+      return response.data;
+    }
+
     var api = {
       createOrg: function(name) {
         return net
@@ -51,14 +55,14 @@ angular.module('kifi')
         });
       },
       sendOrgMemberInvite: function (orgId, inviteFields) {
-        return net.sendOrgMemberInvite(orgId, inviteFields)
-          .then(function (response) {
-            return response.data;
-          });
+        return net
+        .sendOrgMemberInvite(orgId, inviteFields)
+        .then(getResponseData);
       },
       acceptOrgMemberInvite: function (orgId, authToken) {
-        invalidateOrgProfileCache();
-        return net.acceptOrgMemberInvite(orgId, authToken);
+        return net
+        .acceptOrgMemberInvite(orgId, authToken)
+        .then(invalidateOrgProfileCache);
       },
       cancelOrgMemberInvite: function (orgId, cancelFields) {
         return net.cancelOrgMemberInvite(orgId, cancelFields);
@@ -78,12 +82,14 @@ angular.module('kifi')
         return net.transferOrgMemberOwnership(orgId, newOwner);
       },
       getOrgSettings: function(orgId) {
-        return net.getOrgSettings(orgId).then(function(response) {
-          return response.data;
-        });
+        return net
+        .getOrgSettings(orgId)
+        .then(getResponseData);
       },
       setOrgSettings: function(orgId, data) {
-        return net.setOrgSettings(orgId, data).then(function (response) {
+        return net
+        .setOrgSettings(orgId, data)
+        .then(function (response) {
           net.getOrgSettings.clearCache();
           invalidateOrgProfileCache();
 
@@ -94,17 +100,15 @@ angular.module('kifi')
         return net.getOrgLibraries(orgId, {
           offset: page,
           limit: size
-        }).then(function (response) {
-          return response.data;
-        });
+        })
+        .then(getResponseData);
       },
       getOrgMembers: function (orgId, offset, limit) {
         return net.getOrgMembers(orgId, {
           offset: offset,
           limit: limit
-        }).then(function (response) {
-          return response.data;
-        });
+        })
+        .then(getResponseData);
       },
       modifyOrgMember: function (orgId, memberFields) {
         return net.modifyOrgMember(orgId, memberFields);
@@ -114,7 +118,9 @@ angular.module('kifi')
           limit = 10;
         }
 
-        return net.suggestOrgMember(orgId, query, limit).then(function (response) {
+        return net
+        .suggestOrgMember(orgId, query, limit)
+        .then(function (response) {
           return response.data.members;
         });
       },
@@ -122,22 +128,22 @@ angular.module('kifi')
         return net.updateOrgProfile(orgId, modifiedFields);
       },
       userOrOrg: function (handle, authToken) {
-        return net.userOrOrg(handle, authToken).then(function (response) {
-          return response.data;
-        });
+        return net
+        .userOrOrg(handle, authToken)
+        .then(getResponseData);
       },
       uploadOrgAvatar: function (handle, x, y, sideLength, image) {
-        invalidateOrgProfileCache();
-
-        return net.uploadOrgAvatar(handle, x, y, sideLength, image).then(function (response) {
-          return response.data;
-        });
+        return net
+        .uploadOrgAvatar(handle, x, y, sideLength, image)
+        .then(invalidateOrgProfileCache);
       },
       exportOrgKeeps: function (format, orgIds) {
-        return net.exportOrgKeeps({ format: format, orgIds: orgIds })
-        .then(function (response) {
-          return response.data;
-        });
+        return net
+        .exportOrgKeeps({
+          format: format,
+          orgIds: orgIds
+        })
+        .then(getResponseData);
       },
 
       getCommonTrackingAttributes: function (organization) {
