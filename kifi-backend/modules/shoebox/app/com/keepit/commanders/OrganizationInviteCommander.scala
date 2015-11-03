@@ -374,7 +374,6 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]] = {
     val recoScoreThreshold = .01d
     val usersAndEmailsFut = query.map(_.trim).filter(_.nonEmpty) match {
