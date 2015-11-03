@@ -28,6 +28,7 @@ class ActivityLogCommanderImpl @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
+    creditCodeInfoRepo: CreditCodeInfoRepo,
     creditRewardRepo: CreditRewardRepo,
     basicUserRepo: BasicUserRepo,
     organizationRepo: OrganizationRepo,
@@ -61,11 +62,22 @@ class ActivityLogCommanderImpl @Inject() (
       event.action match {
         case RewardCredit(id) =>
           val creditReward = creditRewardRepo.get(id)
-          creditReward.reward match {
-            case Reward(kind, _, _) if kind == RewardKind.Coupon => Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("when", getUser(code.usedBy), "redeemed", code.code.value)), ".")
-            case Reward(kind, _, _) if kind == RewardKind.OrganizationCreation => Elements("You earned", creditReward.credit, "because you're awesome!")
-            case Reward(kind, _, _) if kind == RewardKind.OrganizationReferral => Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("an organization you referred just upgraded")), ".")
+          val reason = creditReward.reward match {
+            case Reward(kind, _, _) if kind == RewardKind.Coupon =>
+              Elements(getUser(creditReward.code.get.usedBy), "redeemed the coupon code", creditReward.code.get.code, ".")
+            case Reward(kind, _, _) if kind == RewardKind.OrganizationCreation =>
+              Elements("you're awesome! Welcome to Kifi. :)")
+            case Reward(kind, _, referredOrgId: Id[Organization] @unchecked) if kind == RewardKind.OrganizationReferral =>
+              Elements("you referred", getOrg(referredOrgId), "and they just upgraded to a pro account.")
+            case Reward(kind, _, _) if kind == RewardKind.ReferralApplied =>
+              val referrerOpt = for {
+                codeInfo <- creditCodeInfoRepo.getByCode(creditReward.code.get.code)
+                referrer <- codeInfo.referrer
+                referrerOrg <- referrer.organizationId
+              } yield referrerOrg
+              Elements(getUser(creditReward.code.get.usedBy), "applied the code", creditReward.code.get.code, referrerOpt.map(r => Elements("from", getOrg(r))), ".")
           }
+          Elements("You earned", creditReward.credit, "because", reason)
         case IntegrityError(err) => Elements("Found and corrected an error in the account.") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)), ".")
         case Refund(_, _) => Elements("A", event.creditChange, "refund was issued to your card.")
@@ -136,6 +148,7 @@ object DescriptionElements {
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
+  implicit def fromCreditCode(code: CreditCode): BasicElement = code.value
   implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName -> user.path.absolute
   implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.absolute
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address

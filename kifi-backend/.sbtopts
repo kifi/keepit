@@ -6,3 +6,4 @@
 -J-XX:+HeapDumpOnOutOfMemoryError
 -J-XX:+DoEscapeAnalysis
 -J-XX:+UseCodeCacheFlushing
+-J-XX:MaxMetaspaceSize=2g
