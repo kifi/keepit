@@ -29,8 +29,8 @@ angular.module('kifi')
 })
 
 .factory('orgProfileService', [
-  '$window', '$http', '$rootScope', 'routeService', '$q', '$analytics', 'net', 'ml',
-  function ($window, $http, $rootScope, routeService, $q, $analytics, net, ml) {
+  '$window', '$http', '$rootScope', 'routeService', '$q', '$analytics', 'net',
+  function ($window, $http, $rootScope, routeService, $q, $analytics, net) {
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
@@ -44,14 +44,10 @@ angular.module('kifi')
 
     var api = {
       createOrg: function(name) {
-        ml.specs.createOrg = new ml.Spec([
-          new ml.Expect('Org was assigned a handle', function(handle) { return (handle !== undefined); }),
-          new ml.Assert('Created org was returned in 3 seconds or less', 3000)
-        ]);
-        return net.createOrg({ name: name }).then(function(response) {
-          var handle = response.data.organization.handle;
-          ml.specs.createOrg.respond(handle);
-          return handle;
+        return net
+        .createOrg({ name: name })
+        .then(function(response) {
+          return response.data.organization.handle;
         });
       },
       sendOrgMemberInvite: function (orgId, inviteFields) {
