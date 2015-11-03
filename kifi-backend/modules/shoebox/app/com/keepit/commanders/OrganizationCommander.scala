@@ -18,7 +18,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
 import com.keepit.model._
 import com.keepit.social.BasicUser
-import com.keepit.payments.{ PaidPlanRepo, PlanManagementCommander, PaidPlan, ActionAttribution }
+import com.keepit.payments._
 import play.api.Play
 import play.api.libs.json.Json
 
@@ -72,6 +72,7 @@ class OrganizationCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     basicUserRepo: BasicUserRepo,
+    creditRewardCommander: CreditRewardCommander,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryCardCommander: LibraryCardCommander,
     libraryCommander: LibraryCommander,
@@ -334,6 +335,10 @@ class OrganizationCommanderImpl @Inject() (
       getValidationError(request) match {
         case None =>
           val org = orgRepo.get(request.orgId)
+
+          request.modifications.description.foreach { d =>
+            creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationDescriptionAdded(org.id.get, d))
+          }
 
           val modifiedOrg = organizationWithModifications(org, request.modifications)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)

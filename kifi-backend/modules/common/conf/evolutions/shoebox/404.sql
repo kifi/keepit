@@ -41,6 +41,7 @@ CREATE TABLE credit_reward (
 	PRIMARY KEY(id),
 	UNIQUE KEY credit_reward_u_code_single_use (code, single_use),
 	UNIQUE KEY credit_reward_u_unrepeatable (unrepeatable),
+	KEY credit_reward_i_kind_status_info (kind, status, info),
 	CONSTRAINT credit_reward_f_code FOREIGN KEY (code) REFERENCES credit_code_info(code),
 	CONSTRAINT credit_reward_f_used_by FOREIGN KEY (used_by) REFERENCES user(id),
 	CONSTRAINT credit_reward_f_account_id FOREIGN KEY (account_id) REFERENCES paid_account(id),
