@@ -16,14 +16,6 @@ private[store] object ArticleStoreKey {
   implicit def apply[A <: Article](key: ArticleKey[A]): ArticleStoreKey = new ArticleStoreKey(key)
 }
 
-private[store] class UriIdArticleStoreKey(key: ArticleKey[_]) extends ArticleStoreKey(key) {
-  override def toString = s"${key.uriId.id}/${key.kind.typeCode}/${key.version.major.value}.${key.version.minor.value}"
-}
-
-private[store] object UriIdArticleStoreKey {
-  def apply[A <: Article](key: ArticleKey[A]): UriIdArticleStoreKey = new UriIdArticleStoreKey(key)
-}
-
 private[store] trait RoverUnderlyingArticleStore extends ObjectStore[ArticleStoreKey, Article]
 
 private[store] class S3RoverUnderlyingArticleStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val accessLog: AccessLog)

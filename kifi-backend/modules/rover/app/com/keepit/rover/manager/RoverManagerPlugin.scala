@@ -19,7 +19,6 @@ class RoverManagerPluginImpl @Inject() (
     fetchingActor: ActorInstance[RoverArticleFetchingActor],
     imageSchedulingActor: ActorInstance[RoverArticleImageSchedulingActor],
     imageProcessingActor: ActorInstance[RoverArticleImageProcessingActor],
-    articleStoreMigrationActor: ActorInstance[RoverArticleStoreMigrationActor],
     implicit val executionContext: ExecutionContext,
     val scheduling: SchedulingProperties) extends RoverManagerPlugin with SchedulerPlugin {
 
@@ -33,7 +32,6 @@ class RoverManagerPluginImpl @Inject() (
     scheduleTaskOnAllMachines(fetchingActor.system, 250 seconds, 5 minute, fetchingActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnLeader(imageSchedulingActor.system, 300 seconds, 8 minute, imageSchedulingActor.ref, IfYouCouldJustGoAhead)
     scheduleTaskOnAllMachines(imageProcessingActor.system, 300 seconds, 5 minute, imageProcessingActor.ref, IfYouCouldJustGoAhead)
-    scheduleTaskOnOneMachine(articleStoreMigrationActor.system, 400 seconds, 10 minutes, articleStoreMigrationActor.ref, IfYouCouldJustGoAhead, "Article Store Cleanup")
   }
 
   override def onStop(): Unit = {
