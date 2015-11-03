@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.json.TraversableFormat
+import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.model.Feature.InvalidSettingForFeatureException
 import play.api.libs.json._
 
@@ -91,10 +91,11 @@ object Feature {
     ExportKeeps,
     ViewSettings
   )
-  def apply(str: String): Feature = ALL.find(_.value == str).getOrElse(throw new FeatureNotFoundException(str))
+  def get(str: String): Option[Feature] = ALL.find(_.value == str)
+  def apply(str: String): Feature = get(str).getOrElse(throw new FeatureNotFoundException(str))
 
   val format: Format[Feature] = Format(
-    __.read[String].map(Feature(_)),
+    EnumFormat.reads(get, ALL.map(_.value)),
     Writes { x => JsString(x.value) }
   )
 

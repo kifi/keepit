@@ -7,7 +7,15 @@ import play.api.data.validation.ValidationError
 import scala.util.{Success, Failure, Try}
 
 package object json {
-
+  object EnumFormat {
+    def reads[T](f: (String => Option[T]), domain: Set[String] = Set.empty): Reads[T] = Reads { j =>
+      def errMsg = if (domain.nonEmpty) s"$j is not one of these: $domain" else s"Could not recognize $j"
+      for {
+        str <- j.validate[String]
+        v <- f(str).map(JsSuccess(_)).getOrElse(JsError(ValidationError(errMsg)))
+      } yield v
+    }
+  }
   object KeyFormat {
     def key1Reads[A](strA: String)(implicit aReads: Reads[A]): Reads[A] = Reads[A] {
       case obj: JsObject => for {

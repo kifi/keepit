@@ -29,10 +29,9 @@ sealed abstract class RewardKind(val kind: String) {
   protected def allStatus: Set[S]
   def applicable: S
   def writeStatus(status: S): String = status.status
-  def readStatus(status: String): S = allStatus.find(_.status equalsIgnoreCase status) match {
-    case Some(validStatus) => validStatus
-    case None => throw new IllegalArgumentException(s"Invalid status for $this reward: $status")
-  }
+
+  private def get(str: String): Option[S] = allStatus.find(_.status equalsIgnoreCase str)
+  def readStatus(str: String): S = get(str).getOrElse(throw new IllegalArgumentException(s"Invalid status for $this reward: $str"))
 }
 
 sealed trait RewardStatus {

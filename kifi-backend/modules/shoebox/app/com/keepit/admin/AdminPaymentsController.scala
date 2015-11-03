@@ -316,7 +316,7 @@ case class CreditCodeAdminCreateRequest(
 
 object CreditCodeAdminCreateRequest {
   implicit val reads: Reads[CreditCodeAdminCreateRequest] = (
-    (__ \ 'kind).read[String].map(CreditCodeKind(_)) and
+    (__ \ 'kind).read[CreditCodeKind](CreditCodeKind.reads) and
     (__ \ 'code).read[CreditCode] and
     (__ \ 'credit).read[DollarAmount](DollarAmount.formatAsCents)
   )(CreditCodeAdminCreateRequest.apply _)
