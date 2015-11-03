@@ -89,7 +89,7 @@ class UserProfileController @Inject() (
     }
   }
 
-  def zipSubscriptionsWithLibInfos(libCardInfos: Seq[LibraryCardInfo]): Seq[JsObject] = {
+  private def zipSubscriptionsWithLibInfos(libCardInfos: Seq[LibraryCardInfo]): Seq[JsObject] = {
     libCardInfos.map { lib =>
       val libId = Library.decodePublicId(lib.id)
       val subscriptions = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libId.get).map { LibrarySubscription.toSubKey } }
