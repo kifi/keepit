@@ -18,7 +18,7 @@ trait ArticleImageRepo extends Repo[ArticleImage] {
   def getByUri(uriId: Id[NormalizedURI], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage]
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[ArticleImage]]
   def getByArticleInfo(articleInfo: ArticleInfo, excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Set[ArticleImage]
-  def intern[A <: Article](url: String, uriId: Id[NormalizedURI], kind: ArticleKind[A], imageHash: ImageHash, imageUrl: String, version: ArticleVersion)(implicit session: RWSession): ArticleImage
+  def intern[A <: Article](url: String, uriId: Option[Id[NormalizedURI]], kind: ArticleKind[A], imageHash: ImageHash, imageUrl: String, version: ArticleVersion)(implicit session: RWSession): ArticleImage
 }
 
 @Singleton
@@ -32,7 +32,7 @@ class ArticleImageRepoImpl @Inject() (
 
   type RepoImpl = ArticleImageTable
   class ArticleImageTable(tag: Tag) extends RepoTable[ArticleImage](db, tag, "article_image") {
-    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def uriId = column[Option[Id[NormalizedURI]]]("uri_id", O.Nullable)
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def kind = column[String]("kind", O.NotNull)
@@ -49,7 +49,7 @@ class ArticleImageRepoImpl @Inject() (
   initTable()
 
   override def deleteCache(model: ArticleImage)(implicit session: RSession): Unit = {
-    articleImagesCache.remove(RoverArticleImagesKey(model.uriId, model.articleKind))
+    model.uriId.foreach(uriId => articleImagesCache.remove(RoverArticleImagesKey(uriId, model.articleKind)))
   }
 
   override def invalidateCache(model: ArticleImage)(implicit session: RSession): Unit = {
@@ -70,7 +70,7 @@ class ArticleImageRepoImpl @Inject() (
   }
 
   def getByUris(uriIds: Set[Id[NormalizedURI]], excludeState: Option[State[ArticleImage]] = Some(ArticleImageStates.INACTIVE))(implicit session: RSession): Map[Id[NormalizedURI], Set[ArticleImage]] = {
-    val existingByUriId = (for (r <- rows if r.uriId.inSet(uriIds) && r.state =!= excludeState.orNull) yield r).list.toSet[ArticleImage].groupBy(_.uriId)
+    val existingByUriId = (for (r <- rows if r.uriId.inSet(uriIds) && r.state =!= excludeState.orNull) yield r).list.toSet[ArticleImage].groupBy(_.uriId.get)
     val missingUriIds = uriIds -- existingByUriId.keySet
     existingByUriId ++ missingUriIds.map(_ -> Set.empty[ArticleImage])
   }
@@ -85,7 +85,7 @@ class ArticleImageRepoImpl @Inject() (
     q.firstOption
   }
 
-  def intern[A <: Article](url: String, uriId: Id[NormalizedURI], kind: ArticleKind[A], imageHash: ImageHash, imageUrl: String, version: ArticleVersion)(implicit session: RWSession): ArticleImage = {
+  def intern[A <: Article](url: String, uriId: Option[Id[NormalizedURI]], kind: ArticleKind[A], imageHash: ImageHash, imageUrl: String, version: ArticleVersion)(implicit session: RWSession): ArticleImage = {
     getByUrlAndKindAndImageHash(url, kind, imageHash) match {
       case Some(existingImage) if existingImage.isActive => {
         val updatedImage = existingImage.copy(imageUrl = imageUrl, version = version, fetchedAt = currentDateTime)

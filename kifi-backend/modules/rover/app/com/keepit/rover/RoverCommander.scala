@@ -50,10 +50,10 @@ class RoverCommander @Inject() (
 
   private def toShoeboxArticleUpdate(articleInfo: ArticleInfo)(latestArticle: articleInfo.A) = {
     ShoeboxArticleUpdate(
-      articleInfo.uriId,
       articleInfo.kind,
-      latestArticle.url,
+      articleInfo.url,
       latestArticle.content.destinationUrl,
+      articleInfo.uriId,
       latestArticle.createdAt,
       latestArticle.content.title,
       sensitivityCommander.isSensitive(latestArticle),
@@ -84,7 +84,7 @@ class RoverCommander @Inject() (
       val key = RoverArticleSummaryKey(uriId, kind)
       articleSummaryCache.get(key) match {
         case Some(articleSummary) => Future.successful(Some(articleSummary))
-        case None => articleCommander.getOrElseFetchBestArticle[A](url, uriId).map { articleOption =>
+        case None => articleCommander.getOrElseFetchBestArticle[A](url, Some(uriId)).map { articleOption =>
           val fetchedSummaryOpt = articleOption.map(RoverArticleSummary.fromArticle)
           fetchedSummaryOpt tap (articleSummaryCache.set(key, _))
         }

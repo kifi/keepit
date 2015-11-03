@@ -9,22 +9,30 @@ import com.keepit.rover.article.{ Article, ArticleKind }
 
 @Singleton
 class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImageRepo: ArticleImageRepo, airbrake: AirbrakeNotifier) {
-  def intern(url: String, uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
+  def intern(url: String, uriId: Option[Id[NormalizedURI]], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     if (kinds.isEmpty) Map.empty[ArticleKind[_ <: Article], RoverArticleInfo]
     else {
       val existingByKind: Map[ArticleKind[_ <: Article], RoverArticleInfo] = articleInfoRepo.getByUrl(url, excludeState = None).map { info => (info.articleKind -> info) }.toMap
       kinds.map { kind =>
         val savedInfo = existingByKind.get(kind) match {
           case Some(articleInfo) if articleInfo.isActive => {
-            if (articleInfo.uriId == uriId) articleInfo else {
-              airbrake.notify(s"Found ArticleInfo $kind for url $url with inconsistent uriId: expected $uriId, found ${articleInfo.uriId}.")
+            if (uriId.exists(expectedUriId => !articleInfo.uriId.contains(expectedUriId))) {
+              articleInfo.uriId.foreach { invalidUriId =>
+                airbrake.notify(s"Fixing ArticleInfo $kind for url $url with inconsistent uriId: expected $uriId, found $invalidUriId.")
+              }
               articleInfoRepo.deleteCache(articleInfo)
-              articleImageRepo.getByArticleInfo(articleInfo, excludeState = None).foreach(articleImage => articleImageRepo.save(articleImage.copy(uriId = uriId)))
-              articleInfoRepo.save(articleInfo.copy(uriId = uriId))
+              articleImageRepo.getByArticleInfo(articleInfo, excludeState = None).foreach(articleImage => articleImageRepo.save(articleImage.copy(uriId = None))) // releasing referential integrity
+
+              val updatedArticleInfo = articleInfoRepo.save(articleInfo.copy(uriId = uriId))
+              articleImageRepo.getByArticleInfo(updatedArticleInfo, excludeState = None).foreach(articleImage => articleImageRepo.save(articleImage.copy(uriId = uriId)))
+
+              updatedArticleInfo
+            } else {
+              articleInfo
             }
           }
           case inactiveArticleInfoOpt => {
-            val newInfo = RoverArticleInfo.initialize(uriId, url, kind).copy(id = inactiveArticleInfoOpt.flatMap(_.id))
+            val newInfo = RoverArticleInfo.initialize(url, uriId, kind).copy(id = inactiveArticleInfoOpt.flatMap(_.id))
             articleInfoRepo.save(newInfo)
           }
         }
@@ -33,9 +41,9 @@ class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImag
     }
   }
 
-  def deactivate(uriId: Id[NormalizedURI], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit = {
+  def deactivate(url: String, kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Unit = {
     if (kinds.nonEmpty) {
-      articleInfoRepo.getByUri(uriId).foreach { info =>
+      articleInfoRepo.getByUrl(url).foreach { info =>
         if (kinds.contains(info.articleKind)) {
           articleInfoRepo.save(info.copy(state = ArticleInfoStates.INACTIVE))
           articleImageRepo.getByArticleInfo(info).foreach(articleImage => articleImageRepo.save(articleImage.copy(state = ArticleImageStates.INACTIVE)))
