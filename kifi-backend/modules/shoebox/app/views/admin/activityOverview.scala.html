@@ -1,4 +1,5 @@
 @import com.keepit.controllers.admin.AdminPaymentsActivityOverview
+@import com.keepit.payments.DescriptionElements
 @import com.keepit.common.controller.PaginatedRequest
 
 @(log: AdminPaymentsActivityOverview)(implicit request: com.keepit.common.controller.UserRequest[_])
@@ -21,7 +22,7 @@
                 <td>@{event.creditChange.toDollarString}</td>
                 <td>@{event.paymentCharge.map(_.toDollarString)}</td>
                 <td>@{event.memo.getOrElse("")}</td>
-                <td>@{event.action.toDbRow}</td>
+                <td>@{DescriptionElements.formatAsHtml(event.description)}</td>
             </tr>
             }
             </tbody>

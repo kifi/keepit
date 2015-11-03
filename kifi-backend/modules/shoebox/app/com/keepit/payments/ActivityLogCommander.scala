@@ -13,11 +13,13 @@ import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
+import play.twirl.api.Html
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
   def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent]
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
+  def buildSimpleEventInfoHelper(event: AccountEvent)(implicit session: RSession): SimpleAccountEventInfo
 }
 
 @Singleton
@@ -44,7 +46,11 @@ class ActivityLogCommanderImpl @Inject() (
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
   private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = organizationCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
 
-  def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
+  def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit s =>
+    buildSimpleEventInfoHelper(event)
+  }
+
+  def buildSimpleEventInfoHelper(event: AccountEvent)(implicit session: RSession): SimpleAccountEventInfo = {
     import AccountEventAction._
     val maybeUser = event.whoDunnit.map(getUser)
     val account = paidAccountRepo.get(event.accountId)
@@ -158,6 +164,13 @@ object DescriptionElements {
       case BasicElement(text, None) => text
       case BasicElement(text, Some(url)) => s"<$url|$text>"
     } mkString
+  }
+
+  def formatAsHtml(description: DescriptionElements): Html = {
+    Html(interpolatePunctuation(description.flatten).map {
+      case BasicElement(text, None) => text
+      case BasicElement(text, Some(url)) => s"""<a href="$url">$text</a>"""
+    } mkString)
   }
 
   implicit val flatWrites = {
