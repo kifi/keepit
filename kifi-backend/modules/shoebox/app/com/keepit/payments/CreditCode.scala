@@ -19,8 +19,8 @@ case class CreditCode(value: String) {
 }
 
 object CreditCode {
-  def normalize(rawCode: String): CreditCode = CreditCode(rawCode.toUpperCase.trim)
-  implicit val format: Format[CreditCode] = Format(Reads.of[String].map(normalize(_)), Writes[CreditCode](code => JsString(code.value)))
+  def normalize(rawCode: String): CreditCode = CreditCode(rawCode.toUpperCase.trim.replaceAllLiterally(" ", "_"))
+  implicit val format: Format[CreditCode] = Format(Reads.of[String].map(normalize), Writes[CreditCode](code => JsString(code.value)))
   def columnType(db: DataBaseComponent) = {
     import db.Driver.simple._
     MappedColumnType.base[CreditCode, String](_.value, CreditCode(_))

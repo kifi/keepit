@@ -50,6 +50,7 @@ class CreditRewardCommanderImpl @Inject() (
   private val orgReferrerCredit = DollarAmount.dollars(100)
 
   def adminCreateCreditCode(codeTemplate: CreditCodeInfo): CreditCodeInfo = db.readWrite { implicit session =>
+    require(codeTemplate.id.isEmpty)
     val base = codeTemplate.code.value
     val suffixes = "" +: Iterator.continually("-" + RandomStringUtils.randomNumeric(2)).take(9).toStream
     suffixes.map { suf =>
