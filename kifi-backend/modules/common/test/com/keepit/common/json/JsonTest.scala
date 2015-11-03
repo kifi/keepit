@@ -27,7 +27,7 @@ class JsonTest extends Specification {
     }
     "robustly deserialize enumerated items" in {
       "work" in {
-        val myReads = EnumFormat.reads(str => OrganizationRole.all.find(_.value == str), Some(OrganizationRole.all.map(_.value)))
+        val myReads = EnumFormat.reads(str => OrganizationRole.all.find(_.value == str), OrganizationRole.all.map(_.value))
         JsString("admin").as[OrganizationRole](myReads) === OrganizationRole.ADMIN
         JsString("asdf").as[OrganizationRole](myReads) must throwA[JsResultException]
 
