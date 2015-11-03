@@ -64,6 +64,7 @@ object OrganizationRole {
     EnumFormat.reads(get),
     Writes { or => JsString(or.value) }
   )
+  val reads = Reads(format.reads)
 
   def get(str: String): Option[OrganizationRole] = all.find(_.value == str)
   def apply(str: String): OrganizationRole = get(str).getOrElse(throw new OrganizationRoleNotFoundException(str))
