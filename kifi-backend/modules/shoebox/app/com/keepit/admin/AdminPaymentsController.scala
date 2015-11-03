@@ -133,7 +133,9 @@ class AdminPaymentsController @Inject() (
       adminInvolved = adminInvolved,
       creditChange = accountEvent.creditChange,
       paymentCharge = accountEvent.paymentCharge,
-      memo = accountEvent.memo)
+      memo = accountEvent.memo,
+      description = activityLogCommander.buildSimpleEventInfoHelper(accountEvent).description
+    )
   }
 
   private def asPlayHtml(obj: Any) = HtmlFormat.raw(obj.toString)
@@ -222,8 +224,9 @@ class AdminPaymentsController @Inject() (
 
   def resetAccount(orgId: Id[Organization], doIt: Boolean) = AdminUserAction.async { implicit request =>
     if (doIt) SafeFuture {
-      val events = doResetAccount(orgId).map(activityLogCommander.buildSimpleEventInfo)
-      Ok(Json.toJson(events))
+      val events = doResetAccount(orgId)
+      val simpleEvents = db.readOnlyMaster { implicit s => events.map(activityLogCommander.buildSimpleEventInfoHelper) }
+      Ok(Json.toJson(simpleEvents))
     }
     else {
       Future.successful(BadRequest("You don't want to do this."))
@@ -328,7 +331,8 @@ case class AdminAccountEventView(
   adminInvolved: Option[User],
   creditChange: DollarAmount,
   paymentCharge: Option[DollarAmount],
-  memo: Option[String])
+  memo: Option[String],
+  description: DescriptionElements)
 
 case class AdminAccountView(
   organization: Organization)
