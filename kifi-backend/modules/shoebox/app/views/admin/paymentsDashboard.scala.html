@@ -9,8 +9,15 @@
 }
 
 
-@views.html.admin.admin(s"Payments Dashboard (comparing to ${dash.diffPeriod} ago)", stylesheets = List("admin_user", "payments_dashboard"), scripts = List("typeahead.bundle.min")) {
-    <h1>We are making ~@formatDiff(dash.totalAmortizedIncomePerMonth) a month</h1>
+@views.html.admin.admin(s"Payments Dashboard (comparing last week to the week prior)", stylesheets = List("admin_user", "payments_dashboard"), scripts = List("typeahead.bundle.min")) {
+    <p>This is a live page, all data is up-to-the-minute.
+    <p>
+      <input id="coupon-code" type="text" rows="1" cols="60" placeholder="code"></textarea>
+      <input id="coupon-value" type="number" rows="1" cols="40" placeholder="value (in cents)"></textarea>
+      <button id="create-coupon-button" class="btn btn-default btn-xs">Create Coupon</button>
+    </p>
+
+    <h1>We are making ~@formatDiff(dash.totalAmortizedDailyIncome) a month</h1>
 
     <h3>Billing breakdown</h3>
     <table class="table table-condensed table-striped">
@@ -93,11 +100,14 @@
     </ul>
     }
 
-    <p>
-      <input id="coupon-code" type="text" rows="1" cols="60" placeholder="code"></textarea>
-      <input id="coupon-value" type="number" rows="1" cols="40" placeholder="value (in cents)"></textarea>
-      <button id="create-coupon-button" class="btn btn-default btn-xs">Create Coupon</button>
-    </p>
+    <h3>Pro Accounts</h2>
+    <ul>
+        @for(account <- dash.upgradedAccounts) {
+            <li>
+                @adminHelper.orgDisplay(account.organization)
+            </li>
+        }
+    </ul>
 
 
 <script type="text/javascript">
