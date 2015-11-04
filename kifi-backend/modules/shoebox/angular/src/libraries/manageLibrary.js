@@ -339,9 +339,7 @@ angular.module('kifi')
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
           scope.library.subscriptions = scope.library.subscriptions || [];
-          if (scope.library.subscriptions.length < 3) {
-            scope.library.subscriptions.push(scope.newBlankSub());
-          }
+          scope.library.subscriptions.push(scope.newBlankSub());
         } else {
           scope.library = {
             'name': '',
