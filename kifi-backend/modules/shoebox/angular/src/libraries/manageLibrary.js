@@ -41,7 +41,7 @@ angular.module('kifi')
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
         scope.showSubIntegrations = false;
-        scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
+        scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }, 'disabled': false }; };
         scope.showError = false;
         scope.me = profileService.me;
         scope.libraryProps = {
