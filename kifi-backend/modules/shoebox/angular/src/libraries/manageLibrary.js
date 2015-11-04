@@ -216,7 +216,7 @@ angular.module('kifi')
             if (!sub.name || sub.name.indexOf(' ') > -1) {
               sub.$error.name = true;
               scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
-            } else if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*\/.*/i) == null) {
+            } else if (sub.info.url === '' || sub.info.url.match(/^https:\/\/hooks.slack.com\/services\/.*\/.*\/.*[^\/]$/i) == null) {
               sub.$error.url = true;
               scope.$error.general = 'Please enter a valid webhook URL for each subscription.';
             }
