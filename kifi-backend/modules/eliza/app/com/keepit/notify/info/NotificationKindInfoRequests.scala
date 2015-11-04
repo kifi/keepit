@@ -258,6 +258,9 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
         body = s"Help ${invitedOrg.abbreviatedName} by sharing your knowledge with them.",
         linkText = "Visit organization",
+        extraJson = Some(Json.obj(
+          "organization" -> Json.toJson(invitedOrg)
+        )),
         category = NotificationCategory.User.ORGANIZATION_INVITATION
       )
     }
