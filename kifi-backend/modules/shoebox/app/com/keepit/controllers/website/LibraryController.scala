@@ -220,18 +220,18 @@ class LibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction.async { request =>
-    val libInfos: ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
+    val libInfos: ParSeq[(LibraryCardInfo, Option[MiniLibraryMembership], Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
       libraryCardCommander.createLiteLibraryCardInfos(libs, request.userId)
     }
     val objs = libInfos.map {
-      case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
+      case (info: LibraryCardInfo, memOpt: Option[MiniLibraryMembership], subs: Seq[LibrarySubscriptionKey]) =>
         val id = Library.decodePublicId(info.id).get
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
         val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
         val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) + ("subscriptions" -> Json.toJson(subs)) // TODO: stop adding "url" when web app uses "slug" instead
-        if (mem.lastViewed.nonEmpty) {
-          obj ++ Json.obj("lastViewed" -> mem.lastViewed)
+        if (memOpt.flatMap(_.lastViewed).nonEmpty) {
+          obj ++ Json.obj("lastViewed" -> memOpt.flatMap(_.lastViewed).get)
         } else {
           obj
         }
@@ -246,10 +246,10 @@ class LibraryController @Inject() (
     val libraryCardInfos = db.readOnlyMaster(implicit s => libraryCardCommander.createLiteLibraryCardInfos(librariesWithMembershipAndCollaborators.map(_._1), request.userId))
 
     val objs = libraryCardInfos.map {
-      case (libCardInfo, mem, subscriptions) =>
+      case (libCardInfo, memOpt, subscriptions) =>
         val obj = Json.toJson(libCardInfo).as[JsObject] + ("subscriptions" -> Json.toJson(subscriptions))
-        if (mem.lastViewed.nonEmpty) {
-          obj + ("lastViewed" -> Json.toJson(mem.lastViewed))
+        if (memOpt.flatMap(_.lastViewed).nonEmpty) {
+          obj + ("lastViewed" -> Json.toJson(memOpt.map(_.lastViewed)))
         } else obj
     }
     Ok(Json.obj("libraries" -> objs.seq))
