@@ -230,7 +230,7 @@ object RewardCategory {
   case object Referrals extends RewardCategory("referrals", 3)
   case object CreditCodes extends RewardCategory("credit_codes", 4)
 
-  val all: Set[RewardCategory] = Set(KeepsAndLibraries, OrganizationInformation, OrganizationMembership, Referrals)
+  val all: Set[RewardCategory] = Set(CreditCodes, KeepsAndLibraries, OrganizationInformation, OrganizationMembership, Referrals)
   def get(str: String): Option[RewardCategory] = all.find(_.value == str)
   implicit val writes: Writes[RewardCategory] = Writes { rc => JsString(rc.value) }
 }
