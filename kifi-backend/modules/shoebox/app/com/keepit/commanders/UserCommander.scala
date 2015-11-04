@@ -123,7 +123,7 @@ trait UserCommander {
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
   def getUserSegment(userId: Id[User]): UserSegment
   def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]]
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit]
+  def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit]
   def changePassword(userId: Id[User], newPassword: String, oldPassword: Option[String]): Try[Unit]
   def resetPassword(code: String, ip: IpAddress, password: String): Either[String, Id[User]]
   def sendCloseAccountEmail(userId: Id[User], comment: String): ElectronicMail
@@ -367,11 +367,11 @@ class UserCommanderImpl @Inject() (
     } else Option(Future.successful(Set.empty))
   }
 
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
-      val emailF = welcomeEmailSender.get.apply(newUser.id.get, targetEmailOpt, isPlainEmail)
+  def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(userId, UserValues.welcomeEmailSent) }) {
+      val emailF = welcomeEmailSender.get.apply(userId, targetEmailOpt, isPlainEmail)
       emailF.map { email =>
-        db.readWrite { implicit rw => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
+        db.readWrite { implicit rw => userValueRepo.setValue(userId, UserValues.welcomeEmailSent.name, true) }
         ()
       }
     } else Future.successful(())

@@ -500,7 +500,7 @@ class AuthHelper @Inject() (
     Authenticator.create(identity).fold(onError, onSuccess)
   }
 
-  def doVerifyEmail(code: String)(implicit request: MaybeUserRequest[_]): Result = {
+  def doVerifyEmail(code: EmailVerificationCode)(implicit request: MaybeUserRequest[_]): Result = {
     db.readWrite { implicit s =>
       userEmailAddressCommander.verifyEmailAddress(code) map {
         case (address, _) if userRepo.get(address.userId).state == UserStates.PENDING =>

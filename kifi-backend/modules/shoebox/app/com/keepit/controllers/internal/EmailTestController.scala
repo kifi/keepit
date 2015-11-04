@@ -9,7 +9,7 @@ import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.time._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ ElectronicMailRepo, ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
-import com.keepit.model.{ Invitation, LibraryAccess, LibraryInvite, UserEmailAddress, Library, NotificationCategory, User }
+import com.keepit.model._
 import com.keepit.social.SocialNetworks.FACEBOOK
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Action
@@ -50,7 +50,7 @@ class EmailTestController @Inject() (
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
     def msg = request.getQueryString("msg")
     def tip = request.getQueryString("tip")
-    def verificationCode = request.getQueryString("code") getOrElse s"fake_verification_code_${currentDateTime.getMillis}"
+    def verificationCode = EmailVerificationCode(request.getQueryString("code") getOrElse s"fake_verification_code_${currentDateTime.getMillis}")
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
