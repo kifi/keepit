@@ -8,11 +8,8 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.social.BasicUser
-
-import scala.concurrent.ExecutionContext
 
 @ImplementedBy(classOf[CreditRewardInfoCommanderImpl])
 trait CreditRewardInfoCommander {
@@ -23,15 +20,11 @@ trait CreditRewardInfoCommander {
 @Singleton
 class CreditRewardInfoCommanderImpl @Inject() (
   db: Database,
-  orgRepo: OrganizationRepo,
   creditCodeInfoRepo: CreditCodeInfoRepo,
   creditRewardRepo: CreditRewardRepo,
   accountRepo: PaidAccountRepo,
   basicUserRepo: BasicUserRepo,
   orgCommander: OrganizationCommander,
-  clock: Clock,
-  orgExpRepo: OrganizationExperimentRepo,
-  implicit val defaultContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends CreditRewardInfoCommander with Logging {
 

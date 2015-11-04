@@ -2,19 +2,19 @@ package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ SystemEmailAddress, LocalPostOffice, ElectronicMail }
+import com.keepit.common.mail.{ ElectronicMail, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.time._
-import com.keepit.model.{ OrganizationExperimentType, OrganizationExperiment, OrganizationExperimentRepo, NotificationCategory, UserEmailAddressRepo, OrganizationRole, OrganizationMembershipRepo, User, OrganizationRepo, Organization }
+import com.keepit.model.{ NotificationCategory, Organization, OrganizationMembershipRepo, OrganizationRepo, OrganizationRole, User, UserEmailAddressRepo }
 import com.keepit.payments.CreditRewardFail._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.JsNull
 
 import scala.concurrent.ExecutionContext
-import scala.util.{ Success, Failure, Try }
+import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[CreditRewardCommanderImpl])
 trait CreditRewardCommander {
@@ -43,7 +43,6 @@ class CreditRewardCommanderImpl @Inject() (
   eventCommander: AccountEventTrackingCommander,
   accountLockHelper: AccountLockHelper,
   postOffice: LocalPostOffice,
-  orgExpRepo: OrganizationExperimentRepo,
   airbrake: AirbrakeNotifier,
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
