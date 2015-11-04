@@ -34,6 +34,7 @@ sealed abstract class RewardKind(val kind: String) {
 
   private def get(str: String): Option[S] = allStatus.find(_.status equalsIgnoreCase str)
   def readStatus(str: String): S = get(str).getOrElse(throw new IllegalArgumentException(s"Invalid status for $this reward: $str"))
+  def category: RewardCategory
 }
 
 sealed trait RewardStatus {
@@ -108,12 +109,14 @@ object RewardKind {
     case object Used extends Status("used")
     protected lazy val allStatus: Set[S] = Set(Used)
     lazy val applicable: Used.type = Used
+    lazy val category = RewardCategory.CreditCodes
   }
 
   case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithEmptyInfo {
     case object Created extends Status("created")
     protected lazy val allStatus: Set[S] = Set(Created)
     lazy val applicable: Created.type = Created
+    lazy val category = RewardCategory.OrganizationInformation
   }
 
   case object OrganizationDescriptionAdded extends RewardKind("org_description_added") with RewardStatus.WithIndependentInfo[Id[Organization]] {
@@ -122,13 +125,7 @@ object RewardKind {
     case object Achieved extends Status("achieved")
     protected lazy val allStatus: Set[S] = Set(Started, Achieved)
     lazy val applicable: Achieved.type = Achieved
-  }
-
-  case object ReferralApplied extends RewardKind("referral_applied") with RewardStatus.WithIndependentInfo[CreditCode] {
-    lazy val infoFormat = CreditCode.format
-    case object Applied extends Status("applied")
-    protected lazy val allStatus: Set[S] = Set(Applied)
-    lazy val applicable: Applied.type = Applied
+    lazy val category = RewardCategory.OrganizationInformation
   }
 
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
@@ -137,7 +134,17 @@ object RewardKind {
     case object Upgraded extends Status("upgraded")
     protected lazy val allStatus: Set[S] = Set(Created, Upgraded)
     lazy val applicable: Upgraded.type = Upgraded
+    lazy val category = RewardCategory.Referrals
   }
+
+  case object ReferralApplied extends RewardKind("referral_applied") with RewardStatus.WithIndependentInfo[CreditCode] {
+    lazy val infoFormat = CreditCode.format
+    case object Applied extends Status("applied")
+    protected lazy val allStatus: Set[S] = Set(Applied)
+    lazy val applicable: Applied.type = Applied
+    lazy val category = RewardCategory.CreditCodes
+  }
+
 
   private val all: Set[RewardKind] = Set(
     Coupon,
@@ -212,14 +219,35 @@ object RewardTrigger {
   case class OrganizationDescriptionAdded(orgId: Id[Organization], description: String) extends RewardTrigger(s"$orgId filled in their description")
 }
 
-case class ExternalCreditReward(
-  applied: Option[PublicId[AccountEvent]],
-  dummy: String = "dummy"
-)
 
+sealed abstract class RewardCategory(val value: String, val priority: Int) extends Ordered[RewardCategory] {
+  def compare(that: RewardCategory) = this.priority compare that.priority
+}
+object RewardCategory {
+  case object KeepsAndLibraries extends RewardCategory("keeps_and_libraries", 0)
+  case object OrganizationInformation extends RewardCategory("org_information", 1)
+  case object OrganizationMembership extends RewardCategory("org_membership", 2)
+  case object Referrals extends RewardCategory("referrals", 3)
+  case object CreditCodes extends RewardCategory("credit_codes", 4)
+
+  val all: Set[RewardCategory] = Set(KeepsAndLibraries, OrganizationInformation, OrganizationMembership, Referrals)
+  def get(str: String): Option[RewardCategory] = all.find(_.value == str)
+  implicit val writes: Writes[RewardCategory] = Writes { rc => JsString(rc.value) }
+}
+case class ExternalCreditReward(
+  description: DescriptionElements,
+  applied: Option[PublicId[AccountEvent]]
+)
 object ExternalCreditReward {
-  implicit val format: Format[ExternalCreditReward] = (
-    (__ \ 'applied).formatNullable[PublicId[AccountEvent]] and
-    (__ \ 'dummy).format[String]
-  )(ExternalCreditReward.apply, unlift(ExternalCreditReward.unapply))
+  implicit val writes = Json.writes[ExternalCreditReward]
+}
+
+case class CreditRewardsView(rewards: Map[RewardCategory, Seq[ExternalCreditReward]])
+object CreditRewardsView {
+  private implicit val categorizedRewardsWrites: Writes[Map[RewardCategory, Seq[ExternalCreditReward]]] = Writes { m =>
+    JsArray(m.toSeq.sortBy(_._1).map {
+      case (category, rewards) => Json.obj("category" -> category, "items" -> rewards)
+    })
+  }
+  implicit val writes = Json.writes[CreditRewardsView]
 }
