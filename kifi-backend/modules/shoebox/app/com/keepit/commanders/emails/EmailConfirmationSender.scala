@@ -22,7 +22,7 @@ class EmailConfirmationSender @Inject() (
   def sendToUser(toUserId: Id[User], address: EmailAddress, verificationCode: EmailVerificationCode): Future[ElectronicMail] = {
 
     val siteUrl = fortytwoConfig.applicationBaseUrl
-    val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(verificationCode)}"
+    val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(verificationCode)}"
 
     val emailToSend = EmailToSend(
       fromName = None,

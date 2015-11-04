@@ -369,7 +369,14 @@ class UserCommanderImpl @Inject() (
 
   def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(userId, UserValues.welcomeEmailSent) }) {
-      val emailF = welcomeEmailSender.get.apply(userId, targetEmailOpt, isPlainEmail)
+      val verificationCode = db.readWrite { implicit session =>
+        for {
+          emailAddress <- targetEmailOpt if withVerification
+          emailRecord <- emailRepo.getByAddressAndUser(userId, emailAddress)
+          code <- emailRecord.verificationCode orElse emailRepo.save(emailRecord.withVerificationCode(clock.now())).verificationCode
+        } yield code
+      }
+      val emailF = welcomeEmailSender.get.apply(userId, targetEmailOpt, isPlainEmail, verificationCode)
       emailF.map { email =>
         db.readWrite { implicit rw => userValueRepo.setValue(userId, UserValues.welcomeEmailSent.name, true) }
         ()

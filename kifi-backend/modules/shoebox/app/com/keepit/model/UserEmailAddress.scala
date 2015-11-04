@@ -23,6 +23,9 @@ object EmailVerificationCode {
       }
     override def unbind(key: String, code: EmailVerificationCode): String = code.value
   }
+
+  def verifyPath(code: EmailVerificationCode): String = com.keepit.controllers.core.routes.AuthController.verifyEmail(code).url
+
 }
 
 case class UserEmailAddress(

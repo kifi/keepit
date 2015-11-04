@@ -234,24 +234,15 @@ class AuthHelper @Inject() (
     intent match {
       case JoinTwitterWaitlist => // Nothing for now
       case _ => // Anything BUT twitter waitlist
-        if (!emailConfirmedAlready) {
-          val unverifiedEmail = newIdentity.email.flatMap(EmailAddress.validate(_).toOption).getOrElse(emailAddress)
-          if (mode == Prod) {
-            // Do not sent the email in dev
-            SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = true, Some(unverifiedEmail)) }
-          }
-        } else {
-          db.readWrite { implicit session =>
-            emailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
-              userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
-            }
-          }
-          if (mode == Prod) {
-            // Do not sent the email in dev
-            SafeFuture { userCommander.sendWelcomeEmail(user, withVerification = false) }
+        db.readWrite { implicit session =>
+          emailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
+            userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
           }
         }
-
+        if (mode == Prod) {
+          // Do not sent the email in dev
+          SafeFuture { userCommander.sendWelcomeEmail(user.id.get, withVerification = !emailConfirmedAlready, Some(emailAddress)) }
+        }
         val completedSignupEvent = UserEvent(user.id.get, context, UserEventTypes.COMPLETED_SIGNUP)
         heimdal.trackEvent(completedSignupEvent)
     }
