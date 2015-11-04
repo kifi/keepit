@@ -34,7 +34,6 @@ sealed abstract class RewardKind(val kind: String) {
 
   private def get(str: String): Option[S] = allStatus.find(_.status equalsIgnoreCase str)
   def readStatus(str: String): S = get(str).getOrElse(throw new IllegalArgumentException(s"Invalid status for $this reward: $str"))
-  def category: RewardCategory
 }
 
 sealed trait RewardStatus {
@@ -109,14 +108,12 @@ object RewardKind {
     case object Used extends Status("used")
     protected lazy val allStatus: Set[S] = Set(Used)
     lazy val applicable: Used.type = Used
-    lazy val category = RewardCategory.CreditCodes
   }
 
   case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithEmptyInfo {
     case object Created extends Status("created")
     protected lazy val allStatus: Set[S] = Set(Created)
     lazy val applicable: Created.type = Created
-    lazy val category = RewardCategory.OrganizationInformation
   }
 
   case object OrganizationDescriptionAdded extends RewardKind("org_description_added") with RewardStatus.WithIndependentInfo[Id[Organization]] {
@@ -125,7 +122,6 @@ object RewardKind {
     case object Achieved extends Status("achieved")
     protected lazy val allStatus: Set[S] = Set(Started, Achieved)
     lazy val applicable: Achieved.type = Achieved
-    lazy val category = RewardCategory.OrganizationInformation
   }
 
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
@@ -134,7 +130,6 @@ object RewardKind {
     case object Upgraded extends Status("upgraded")
     protected lazy val allStatus: Set[S] = Set(Created, Upgraded)
     lazy val applicable: Upgraded.type = Upgraded
-    lazy val category = RewardCategory.Referrals
   }
 
   case object ReferralApplied extends RewardKind("referral_applied") with RewardStatus.WithIndependentInfo[CreditCode] {
@@ -142,7 +137,6 @@ object RewardKind {
     case object Applied extends Status("applied")
     protected lazy val allStatus: Set[S] = Set(Applied)
     lazy val applicable: Applied.type = Applied
-    lazy val category = RewardCategory.CreditCodes
   }
 
 
@@ -233,6 +227,14 @@ object RewardCategory {
   val all: Set[RewardCategory] = Set(CreditCodes, KeepsAndLibraries, OrganizationInformation, OrganizationMembership, Referrals)
   def get(str: String): Option[RewardCategory] = all.find(_.value == str)
   implicit val writes: Writes[RewardCategory] = Writes { rc => JsString(rc.value) }
+
+  def forKind(k: RewardKind): RewardCategory = k match {
+    case RewardKind.Coupon => CreditCodes
+    case RewardKind.OrganizationCreation => OrganizationInformation
+    case RewardKind.OrganizationDescriptionAdded => OrganizationInformation
+    case RewardKind.OrganizationReferral => Referrals
+    case RewardKind.ReferralApplied => CreditCodes
+  }
 }
 case class ExternalCreditReward(
   description: DescriptionElements,
