@@ -675,15 +675,12 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) === OK
         val payload1 = contentAsJson(result1)
         (payload1 \ "libraries").as[Seq[JsValue]].length === directLibs.size
-        (payload1 \ "libraries").as[Seq[JsObject]].count { _.keys.contains("membership") } === directLibs.size
 
         val request2 = createFakeRequest(route.getKeepableLibraries(includeOrgLibraries = true))
         val result2 = controller.getKeepableLibraries(includeOrgLibraries = true)(request2)
         status(result2) === OK
         val payload2 = contentAsJson(result2)
         (payload2 \ "libraries").as[Seq[JsValue]].length === (directLibs ++ indirectLibs).size
-        (payload2 \ "libraries").as[Seq[JsObject]].count { _.keys.contains("membership") } === directLibs.size
-        (payload2 \ "libraries").as[Seq[JsObject]].count { !_.keys.contains("membership") } === indirectLibs.size
       }
     }
 

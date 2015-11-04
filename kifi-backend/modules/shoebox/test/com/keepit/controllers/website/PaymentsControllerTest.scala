@@ -353,6 +353,27 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           1 === 1
         }
       }
+      "use the inclusive flag correctly" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val publicId = Organization.publicId(org.id.get)
+
+          val pageSize = 3
+          val firstEvent = db.readOnlyMaster { implicit session => accountEventRepo.all.head }
+          val fromIdOpt = Option(AccountEvent.publicId(firstEvent.id.get).id)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getEvents(publicId, pageSize, fromIdOpt, inclusive = true)
+          val response = controller.getEvents(publicId, pageSize, fromIdOpt, inclusive = true)(request)
+          val events = (contentAsJson(response) \ "events").as[Seq[JsValue]]
+          val eventIds = events.map { j => AccountEvent.decodePublicId((j \ "id").as[PublicId[AccountEvent]]).get }
+          eventIds.head === firstEvent.id.get
+        }
+      }
     }
     "handle credit codes" in {
       "give an org its referral code" in {
@@ -371,7 +392,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           (contentAsJson(response) \ "code").as[String] === creditRewardCommander.getOrCreateReferralCode(org.id.get).value
         }
       }
-      "let an org redeem a credit code" in {
+      "let an org redeem a referral code" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org1, org2, owner) = db.readWrite { implicit session =>
             val owner = UserFactory.user().saved
@@ -389,6 +410,62 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
 
           status(response) === OK
           (contentAsJson(response) \ "value").as[DollarAmount](DollarAmount.formatAsCents) === DollarAmount.dollars(100)
+
+          // The second time around it should barf
+          val response2 = controller.redeemCreditCode(publicId)(request)
+          status(response2) === BAD_REQUEST
+          (contentAsJson(response2) \ "error").as[String] === "unrepeatable_reward"
+        }
+      }
+      "normalize credit codes when they come in from clients" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val codeInfo = creditRewardCommander.adminCreateCreditCode(CreditCodeInfo(
+            code = CreditCode.normalize("normal_code"),
+            kind = CreditCodeKind.Coupon,
+            credit = DollarAmount.dollars(42),
+            status = CreditCodeStatus.Open,
+            referrer = None
+          ))
+          codeInfo.code === CreditCode("NORMAL_CODE-42") // check the normalization when we create
+
+          val publicId = Organization.publicId(org.id.get)
+          inject[FakeUserActionsHelper].setUser(owner)
+
+          // client-facing normalization will replace spaces with _, so this should fail
+          val payload1 = Json.obj("code" -> "normal code 42")
+          val request1 = route.redeemCreditCode(publicId).withBody(payload1)
+          val response1 = controller.redeemCreditCode(publicId)(request1)
+          status(response1) === BAD_REQUEST
+          (contentAsJson(response1) \ "error").as[String] === "code_nonexistent"
+
+          // but a little closer and it will work
+          val payload2 = Json.obj("code" -> "normal_code-42")
+          val request2 = route.redeemCreditCode(publicId).withBody(payload2)
+          val response2 = controller.redeemCreditCode(publicId)(request2)
+          status(response2) === OK
+          (contentAsJson(response2) \ "value").as[DollarAmount](DollarAmount.formatAsCents) === DollarAmount.dollars(42)
+        }
+      }
+    }
+    "serve up external credit rewards" in {
+      "work" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val publicId = Organization.publicId(org.id.get)
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getRewards(publicId)
+          val response = controller.getRewards(publicId)(request)
+          println(contentAsJson(response))
+          status(response) === OK
         }
       }
     }

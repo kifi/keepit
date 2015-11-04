@@ -307,7 +307,9 @@ class EvernoteParser @Inject() () extends ImportParser {
       val createdAt = Option(note.select("updated")).orElse(Option(note.select("created"))).flatMap(s => Option(s.text())).map(formatter.parseDateTime)
       val links = Jsoup.parse(note.select("content").text()).select("en-note a").iterator().toStream.flatMap { elem =>
         val href = Option(elem.attr("href"))
-        val text = Option(elem.text()).filterNot(href.contains)
+        val text = Option(elem.text()).filterNot { text =>
+          href.contains(text) || text.length < 8
+        }
 
         href.collect {
           case h if h.length > 11 =>

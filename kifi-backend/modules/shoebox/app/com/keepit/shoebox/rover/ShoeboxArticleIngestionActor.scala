@@ -68,12 +68,14 @@ class ShoeboxArticleIngestionActor @Inject() (
           //checking the normalized uris are valid and in the db
           val verifiedAtricles = db.readOnlyMaster { implicit s =>
             updates filter { article =>
-              Try(uriRepo.get(article.uriId)) match {
-                case Success(_) =>
-                  true
-                case Failure(e) =>
-                  airbrake.notify(s"article uri is not in the db: $article", e)
-                  false
+              article.uriId.exists { uriId =>
+                Try(uriRepo.get(uriId)) match {
+                  case Success(_) =>
+                    true
+                  case Failure(e) =>
+                    airbrake.notify(s"article uri is not in the db: $article", e)
+                    false
+                }
               }
             }
           }
@@ -108,8 +110,8 @@ class ShoeboxArticleIngestionActor @Inject() (
   }
 
   private def processRedirectsAndNormalizationInfo(updates: Seq[ShoeboxArticleUpdate]): Future[Iterable[(Id[NormalizedURI], Seq[ShoeboxArticleUpdate], Boolean)]] = {
-    val haveBeenRenormalizedFutures = updates.groupBy(_.uriId).map {
-      case (uriId, updates) =>
+    val haveBeenRenormalizedFutures = updates.groupBy(_.uriId).collect {
+      case (Some(uriId), updates) =>
         processRedirectsAndNormalizationInfo(uriId, updates).imap {
           hasBeenRenormalized => (uriId, updates, hasBeenRenormalized)
         }
@@ -131,14 +133,14 @@ class ShoeboxArticleIngestionActor @Inject() (
     }
   }
 
-  private def processRedirects(update: ShoeboxArticleUpdate): Future[Boolean] = update.httpInfo match {
-    case None => Future.successful(false)
-    case Some(httpInfo) => httpRedirectHelper.processRedirects(update.uriId, update.url, httpInfo.redirects, update.createdAt)
+  private def processRedirects(update: ShoeboxArticleUpdate): Future[Boolean] = (update.uriId, update.httpInfo) match {
+    case (Some(uriId), Some(httpInfo)) => httpRedirectHelper.processRedirects(uriId, update.url, httpInfo.redirects, update.createdAt)
+    case _ => Future.successful(false)
   }
 
-  private def processNormalizationInfo(update: ShoeboxArticleUpdate): Future[Boolean] = update.normalizationInfo match {
-    case Some(normalizationInfo) => normalizationInfoHelper.processNormalizationInfo(update.uriId, update.articleKind, update.destinationUrl, normalizationInfo)
-    case None => Future.successful(false)
+  private def processNormalizationInfo(update: ShoeboxArticleUpdate): Future[Boolean] = (update.uriId, update.normalizationInfo) match {
+    case (Some(uriId), Some(normalizationInfo)) => normalizationInfoHelper.processNormalizationInfo(uriId, update.articleKind, update.destinationUrl, normalizationInfo)
+    case _ => Future.successful(false)
   }
 
   private def updateActiveUris(partiallyProcessedUpdatesByUri: Iterable[(Id[NormalizedURI], Seq[ShoeboxArticleUpdate], Boolean)])(implicit session: RWSession): Unit = {

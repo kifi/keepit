@@ -351,7 +351,7 @@ class LibraryInfoCommanderImpl @Inject() (
       // Include org libs that user is invited to
       val libsInvitedToInOrgs = if (includeOrgLibraries) {
         libraryInviteRepo.getByUser(userId, Set(LibraryInviteStates.DECLINED, LibraryInviteStates.ACCEPTED, LibraryInviteStates.INACTIVE)).collect {
-          case ((invite, lib)) if !memberOrOpenOrgLibIds.contains(lib.id.get) && lib.organizationId.isDefined =>
+          case ((invite, lib)) if invite.isCollaborator && !memberOrOpenOrgLibIds.contains(lib.id.get) && lib.organizationId.isDefined =>
             lib
         }
       } else Seq.empty

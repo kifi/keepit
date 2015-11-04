@@ -31,8 +31,8 @@ class CreditCodeInfoRepoImpl @Inject() (
 
   implicit val creditCodeTypeMapper = CreditCode.columnType(db)
   implicit val dollarAmountColumnType = DollarAmount.columnType(db)
-  implicit val kindColumnType = MappedColumnType.base[CreditCodeKind, String](_.kind, CreditCodeKind.apply)
-  implicit val statusColumnType = MappedColumnType.base[CreditCodeStatus, String](_.value, CreditCodeStatus.apply)
+  implicit val kindColumnType = CreditCodeKind.columnType(db)
+  implicit val statusColumnType = CreditCodeStatus.columnType(db)
 
   type RepoImpl = CreditCodeInfoTable
   class CreditCodeInfoTable(tag: Tag) extends RepoTable[CreditCodeInfo](db, tag, "credit_code_info") {

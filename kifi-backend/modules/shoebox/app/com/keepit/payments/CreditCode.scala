@@ -5,6 +5,7 @@ import java.net.URLEncoder
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.healthcheck.AirbrakeNotifierStatic
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.model.{ Organization, User }
@@ -19,8 +20,8 @@ case class CreditCode(value: String) {
 }
 
 object CreditCode {
-  def normalize(rawCode: String): CreditCode = CreditCode(rawCode.toUpperCase.trim)
-  implicit val format: Format[CreditCode] = Format(Reads.of[String].map(normalize(_)), Writes[CreditCode](code => JsString(code.value)))
+  def normalize(rawCode: String): CreditCode = CreditCode(rawCode.toUpperCase.trim.replaceAllLiterally(" ", "_"))
+  implicit val format: Format[CreditCode] = Format(Reads.of[String].map(normalize), Writes[CreditCode](code => JsString(code.value)))
   def columnType(db: DataBaseComponent) = {
     import db.Driver.simple._
     MappedColumnType.base[CreditCode, String](_.value, CreditCode(_))
@@ -40,11 +41,14 @@ object CreditCodeKind {
   }
 
   private val all: Set[CreditCodeKind] = Set(Coupon, OrganizationReferral, Promotion)
+  private def get(kind: String) = all.find(_.kind equalsIgnoreCase kind)
 
-  def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
-    case Some(validKind) => validKind
-    case None => throw new IllegalArgumentException(s"Unknown CreditCodeKind: $kind")
+  def columnType(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[CreditCodeKind, String](_.kind, get(_).get)
   }
+
+  val reads = EnumFormat.reads(get)
 }
 
 case class CreditCodeReferrer(userId: Id[User], organizationId: Option[Id[Organization]], credit: DollarAmount)
@@ -55,9 +59,11 @@ object CreditCodeStatus {
   case object Closed extends CreditCodeStatus("closed")
 
   private val all = Set(Open, Closed)
-  def apply(value: String) = all.find(_.value equalsIgnoreCase value) match {
-    case Some(validStatus) => validStatus
-    case None => throw new IllegalArgumentException(s"Invalid CreditCodeStatus: $value")
+  private def get(value: String): Option[CreditCodeStatus] = all.find(_.value equalsIgnoreCase value)
+
+  def columnType(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[CreditCodeStatus, String](_.value, get(_).get)
   }
 }
 

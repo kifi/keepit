@@ -14,19 +14,19 @@ case class ArticleVersion(major: VersionNumber[Article], minor: VersionNumber[Ar
   override def toString = s"$major.$minor"
 }
 
-case class ArticleKey[A <: Article](uriId: Id[NormalizedURI], urlHash: UrlHash, kind: ArticleKind[A], version: ArticleVersion)
+case class ArticleKey[A <: Article](urlHash: UrlHash, kind: ArticleKind[A], version: ArticleVersion)
 
 trait ArticleInfoHolder {
   type A <: Article
   def articleKind: ArticleKind[A]
-  def uriId: Id[NormalizedURI]
   def url: String
   def urlHash: UrlHash
+  def uriId: Option[Id[NormalizedURI]]
   def bestVersion: Option[ArticleVersion]
   def latestVersion: Option[ArticleVersion]
   def getLatestKey: Option[ArticleKey[A]] = latestVersion.map(toKey)
   def getBestKey: Option[ArticleKey[A]] = bestVersion.map(toKey)
-  private def toKey(version: ArticleVersion): ArticleKey[A] = ArticleKey(uriId, urlHash, articleKind, version)
+  private def toKey(version: ArticleVersion): ArticleKey[A] = ArticleKey(urlHash, articleKind, version)
 }
 
 trait ArticleKindHolder {
@@ -39,7 +39,7 @@ trait ArticleKindHolder {
 case class ArticleInfo(
   isDeleted: Boolean,
   seq: SequenceNumber[ArticleInfo],
-  uriId: Id[NormalizedURI],
+  uriId: Option[Id[NormalizedURI]],
   url: String,
   urlHash: UrlHash,
   kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
@@ -50,7 +50,7 @@ object ArticleInfo {
   implicit val format = (
     (__ \ 'isDeleted).format[Boolean] and
     (__ \ 'seq).format(SequenceNumber.format[ArticleInfo]) and
-    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'url).format[String] and
     (__ \ 'urlHash).format[UrlHash] and
     (__ \ 'kind).format[String] and

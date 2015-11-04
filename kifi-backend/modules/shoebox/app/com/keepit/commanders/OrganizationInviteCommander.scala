@@ -375,11 +375,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
   }
 
   def suggestMembers(userId: Id[User], orgId: Id[Organization], query: Option[String], limit: Int, request: UserRequest[_]): Future[Seq[MaybeOrganizationMember]] = {
+    val recoScoreThreshold = .001d
     val usersAndEmailsFut = query.map(_.trim).filter(_.nonEmpty) match {
       case None =>
         abookClient.getRecommendationsForOrg(orgId, Some(userId), offset = 0, limit = limit + 9).map { orgInviteRecos =>
-          val userRecos = orgInviteRecos.collect { case reco if reco.identifier.isLeft => reco.identifier.left.get }
-          val emailRecos = orgInviteRecos.collect { case reco if reco.identifier.isRight => RichContact(email = reco.identifier.right.get, name = reco.name) }
+          val userRecos = orgInviteRecos.collect { case reco if reco.identifier.isLeft && reco.score >= recoScoreThreshold => reco.identifier.left.get }
+          val emailRecos = orgInviteRecos.collect { case reco if reco.identifier.isRight && reco.score >= recoScoreThreshold => RichContact(email = reco.identifier.right.get, name = reco.name) }
           (userRecos, emailRecos)
         }
       case Some(validQuery) =>

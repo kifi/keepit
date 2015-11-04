@@ -18,7 +18,7 @@ case class RoverArticleInfo(
     updatedAt: DateTime = currentDateTime,
     state: State[RoverArticleInfo] = ArticleInfoStates.ACTIVE,
     seq: SequenceNumber[RoverArticleInfo] = SequenceNumber.ZERO,
-    uriId: Id[NormalizedURI], // todo(Léo): make optional
+    uriId: Option[Id[NormalizedURI]],
     url: String,
     urlHash: UrlHash,
     kind: String, // todo(Léo): make this kind: ArticleKind[_ <: Article] with Scala 2.11, (with proper mapper, serialization is unchanged)
@@ -117,7 +117,7 @@ object RoverArticleInfo {
     )
   }
 
-  def initialize(uriId: Id[NormalizedURI], url: String, kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
+  def initialize(url: String, uriId: Option[Id[NormalizedURI]], kind: ArticleKind[_ <: Article]): RoverArticleInfo = {
     val urlHash = UrlHash.hashUrl(url)
     val newInfo = RoverArticleInfo(uriId = uriId, url = url, urlHash = urlHash, kind = kind.typeCode)
     newInfo.initializeSchedulingPolicy
@@ -129,7 +129,7 @@ object RoverArticleInfo {
     updatedAt: DateTime,
     state: State[RoverArticleInfo],
     seq: SequenceNumber[RoverArticleInfo],
-    uriId: Id[NormalizedURI],
+    uriId: Option[Id[NormalizedURI]],
     url: String,
     urlHash: UrlHash,
     kind: String,

@@ -155,7 +155,7 @@ class PlanManagementCommanderImpl @Inject() (
                 accountId = account.id.get,
                 credit = orgCreationCredit,
                 applied = None,
-                reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+                reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None),
                 unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
                 code = None
               ), userAttribution = Some(creator)).get
@@ -469,7 +469,7 @@ class PlanManagementCommanderImpl @Inject() (
           orgConfigRepo.save(oldConfig.withSettings(newSettings))
         }
 
-        creditRewardCommander.registerUpgradedAccount(orgId)
+        creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationUpgraded(orgId, newPlan))
 
         val now = clock.now()
         val newPlanStartDate = PlanRenewalPolicy.newPlansStartDate(now)

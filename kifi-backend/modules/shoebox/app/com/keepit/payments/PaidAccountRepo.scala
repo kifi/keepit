@@ -16,6 +16,7 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   def getActiveByIds(ids: Set[Id[PaidAccount]])(implicit session: RSession): Map[Id[PaidAccount], PaidAccount]
   //every org should have a PaidAccount, created during org creation. Every time this method gets called that better exist.
   def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): PaidAccount
+  def getByOrgIds(orgIds: Set[Id[Organization]], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], PaidAccount]
   def maybeGetByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount]
   def getAccountId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Id[PaidAccount]
   def getActiveByPlan(planId: Id[PaidPlan])(implicit session: RSession): Seq[PaidAccount]
@@ -70,6 +71,9 @@ class PaidAccountRepoImpl @Inject() (
 
   def getByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): PaidAccount = {
     (for (row <- rows if row.orgId === orgId && !row.state.inSet(excludeStates)) yield row).first
+  }
+  def getByOrgIds(orgIds: Set[Id[Organization]], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], PaidAccount] = {
+    rows.filter(row => row.orgId.inSet(orgIds) && !row.state.inSet(excludeStates)).list.map(r => r.orgId -> r).toMap
   }
 
   def maybeGetByOrgId(orgId: Id[Organization], excludeStates: Set[State[PaidAccount]] = Set(PaidAccountStates.INACTIVE))(implicit session: RSession): Option[PaidAccount] = {

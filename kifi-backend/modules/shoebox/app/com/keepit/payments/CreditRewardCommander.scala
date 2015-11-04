@@ -2,18 +2,19 @@ package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{ SystemEmailAddress, LocalPostOffice, ElectronicMail }
+import com.keepit.common.mail.{ ElectronicMail, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.time._
-import com.keepit.model.{ OrganizationExperimentType, OrganizationExperiment, OrganizationExperimentRepo, NotificationCategory, UserEmailAddressRepo, OrganizationRole, OrganizationMembershipRepo, User, OrganizationRepo, Organization }
+import com.keepit.model.{ NotificationCategory, Organization, OrganizationMembershipRepo, OrganizationRepo, OrganizationRole, User, UserEmailAddressRepo }
 import com.keepit.payments.CreditRewardFail._
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.JsNull
 
 import scala.concurrent.ExecutionContext
-import scala.util.{ Success, Failure, Try }
+import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[CreditRewardCommanderImpl])
 trait CreditRewardCommander {
@@ -23,9 +24,10 @@ trait CreditRewardCommander {
   // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards]
+  def adminCreateCreditCode(codeTemplate: CreditCodeInfo): CreditCodeInfo
 
   // In-place evolutions of existing rewards
-  def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward]
+  def registerRewardTrigger(trigger: RewardTrigger)(implicit session: RWSession): Set[CreditReward]
 }
 
 @Singleton
@@ -41,13 +43,22 @@ class CreditRewardCommanderImpl @Inject() (
   eventCommander: AccountEventTrackingCommander,
   accountLockHelper: AccountLockHelper,
   postOffice: LocalPostOffice,
-  orgExpRepo: OrganizationExperimentRepo,
+  airbrake: AirbrakeNotifier,
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
 
   private val newOrgReferralCredit = DollarAmount.dollars(100)
   private val orgReferrerCredit = DollarAmount.dollars(100)
 
+  def adminCreateCreditCode(codeTemplate: CreditCodeInfo): CreditCodeInfo = db.readWrite { implicit session =>
+    require(codeTemplate.id.isEmpty)
+    val base = codeTemplate.code.value
+    val suffixes = "" +: Iterator.continually("-" + RandomStringUtils.randomNumeric(2)).take(9).toStream
+    suffixes.map { suf =>
+      creditCodeInfoRepo.create(codeTemplate.copy(code = CreditCode.normalize(base + suf + "-" + codeTemplate.credit.toCents / 100)))
+    }.dropWhile(_.isFailure)
+      .headOption.getOrElse(throw new Exception(s"Could not find an unused code for $base, even with random suffixes")).get
+  }
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode = {
     db.readWrite { implicit session =>
       val org = orgRepo.get(orgId)
@@ -78,11 +89,9 @@ class CreditRewardCommanderImpl @Inject() (
       _ <- if (creditCodeInfo.isSingleUse && creditRewardRepo.getByCreditCode(creditCodeInfo.code).nonEmpty) Failure(CreditCodeAlreadyBurnedException(req.code)) else Success(true)
       rewards <- createRewardsFromCreditCode(creditCodeInfo, accountId, req.applierId, req.orgId)
     } yield {
-      (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo.kind) match {
-        case (Some(referrerOrgId), Some(referredOrgId), CreditCodeKind.OrganizationReferral) =>
-          if (orgExpRepo.hasExperiment(referrerOrgId, OrganizationExperimentType.FAKE) && orgExpRepo.hasExperiment(referredOrgId, OrganizationExperimentType.FAKE)) {
-            sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId)
-          }
+      (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo) match {
+        case (Some(referrerOrgId), Some(referredOrgId), creditInfo: CreditCodeInfo) =>
+          sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId, creditInfo)
         case _ =>
       }
 
@@ -90,7 +99,7 @@ class CreditRewardCommanderImpl @Inject() (
     }
   }
 
-  private def sendReferralCodeAppliedEmail(referrerOrgId: Id[Organization], referredOrgId: Id[Organization])(implicit session: RWSession): Unit = {
+  private def sendReferralCodeAppliedEmail(referrerOrgId: Id[Organization], referredOrgId: Id[Organization], creditInfo: CreditCodeInfo)(implicit session: RWSession): Unit = {
     val referredOrg = orgRepo.get(referredOrgId)
     val referrerOrg = orgRepo.get(referrerOrgId)
     val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
@@ -106,6 +115,8 @@ class CreditRewardCommanderImpl @Inject() (
       s"""
          |Your ${referrerOrg.name} team's referral code was used by ${referredOrg.name}. If they upgrade to a standard plan on Kifi,
          |you'll earn a ${orgReferrerCredit.toDollarString} credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+         |<br><br>
+         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: ${creditInfo.code.value}
        """.stripMargin
     postOffice.sendMail(ElectronicMail(
       from = SystemEmailAddress.NOTIFICATIONS,
@@ -140,7 +151,7 @@ class CreditRewardCommanderImpl @Inject() (
         }
 
       case CreditCodeKind.Promotion =>
-        val targetReward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId.get)
+        val targetReward = Reward(RewardKind.ReferralApplied)(RewardKind.ReferralApplied.Applied)(creditCodeInfo.code)
         for {
           targetCreditReward <- creditRewardRepo.create(CreditReward(
             accountId = accountId,
@@ -153,7 +164,7 @@ class CreditRewardCommanderImpl @Inject() (
         } yield CreditCodeRewards(target = targetCreditReward, referrer = None)
 
       case CreditCodeKind.OrganizationReferral =>
-        val targetReward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId.get)
+        val targetReward = Reward(RewardKind.ReferralApplied)(RewardKind.ReferralApplied.Applied)(creditCodeInfo.code)
         val referrerReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(orgId.get)
         for {
           targetCreditReward <- creditRewardRepo.create(CreditReward(
@@ -186,7 +197,19 @@ class CreditRewardCommanderImpl @Inject() (
     }
   }
 
-  def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
+  def registerRewardTrigger(trigger: RewardTrigger)(implicit session: RWSession): Set[CreditReward] = trigger match {
+    case RewardTrigger.OrganizationUpgraded(orgId, newPlan) if newPlan.pricePerCyclePerUser > DollarAmount.ZERO =>
+      registerUpgradedAccount(orgId)
+    case RewardTrigger.OrganizationDescriptionAdded(orgId, description) if description.nonEmpty =>
+      val currentReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Started)(orgId)
+      val evolvedReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Achieved)(orgId)
+      creditRewardRepo.getByReward(currentReward).map { cr => finalizeCreditReward(cr.withReward(evolvedReward), None) }
+    case _ =>
+      airbrake.notify(s"Tried to register an invalid reward trigger $trigger", new Exception())
+      Set.empty
+  }
+
+  private def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
     val currentReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(orgId)
     val evolvedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(orgId)
     val crs = creditRewardRepo.getByReward(currentReward)
@@ -196,14 +219,15 @@ class CreditRewardCommanderImpl @Inject() (
     }
     crs.headOption.foreach { crToEvolve =>
       val referrerOrgId = accountRepo.get(crToEvolve.accountId).orgId
-      if (orgExpRepo.hasExperiment(orgId, OrganizationExperimentType.FAKE) && orgExpRepo.hasExperiment(referrerOrgId, OrganizationExperimentType.FAKE)) {
-        sendReferredAccountUpgradedEmail(orgId, referrerOrgId)
+      crToEvolve.code match {
+        case Some(usedCode) => sendReferredAccountUpgradedEmail(orgId, referrerOrgId, crToEvolve)
+        case None => airbrake.notify(s"OrganizationReferral ${crToEvolve.id.get} was applied, but crToEvolve.code=None. not sending email.")
       }
     }
     rewards
   }
 
-  private def sendReferredAccountUpgradedEmail(referredOrgId: Id[Organization], referrerOrgId: Id[Organization])(implicit session: RWSession): ElectronicMail = {
+  private def sendReferredAccountUpgradedEmail(referredOrgId: Id[Organization], referrerOrgId: Id[Organization], reward: CreditReward)(implicit session: RWSession): ElectronicMail = {
     val referredOrg = orgRepo.get(referredOrgId)
     val referrerOrg = orgRepo.get(referrerOrgId)
     val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
@@ -218,8 +242,10 @@ class CreditRewardCommanderImpl @Inject() (
        """.stripMargin
     val textBody =
       s"""
-         |Your team, ${referrerOrg.name}, earned a $$100 credit from ${referredOrg.name}. We've added it to your team balance.
+         |Your team, ${referrerOrg.name}, earned a ${orgReferrerCredit.toDollarString} credit from ${referredOrg.name}. We've added it to your team balance.
          |Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+         |<br><br>
+         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: ${reward.code.get.code.value}
        """.stripMargin
     postOffice.sendMail(ElectronicMail(
       from = SystemEmailAddress.NOTIFICATIONS,

@@ -20,7 +20,7 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
 
   "ActivityLogCommanderTest" should {
     def display(event: AccountEvent)(implicit injector: Injector): String = {
-      DescriptionElements.flatWrites.writes(activityLogCommander.buildSimpleEventInfo(event).description).as[Seq[JsObject]].map(obj => (obj \ "text").as[String]).mkString
+      DescriptionElements.formatPlain(activityLogCommander.buildSimpleEventInfo(event).description)
     }
     "display events in a sane way" in {
       def setup()(implicit injector: Injector): Seq[AccountEvent] = db.readWrite { implicit session =>
@@ -45,13 +45,14 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         ))
         val createReward = creditRewardCommander.createCreditReward(CreditReward(
           accountId = account.id.get, credit = DollarAmount.dollars(42), applied = None, unrepeatable = None, code = None,
-          reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(org.id.get)
+          reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None)
         ), Some(owner.id.get)).get
         Seq(
           event(Some(owner), AccountEventAction.OrganizationCreated(account.planId, None)),
           event(Some(owner), AccountEventAction.Charge()),
-          event(Some(owner), AccountEventAction.Refund()),
+          event(Some(owner), AccountEventAction.Refund(Id(1), StripeTransactionId("ch_42"))),
           event(Some(owner), AccountEventAction.ChargeFailure(DollarAmount.dollars(1), ":(", "Failed")),
+          event(Some(owner), AccountEventAction.RefundFailure(Id(1), StripeTransactionId("ch_42"), ":(", "Failed")),
           event(Some(owner), AccountEventAction.DefaultPaymentMethodChanged(None, Id(1), "4242")),
           event(Some(owner), AccountEventAction.PlanRenewal.from(plan, account)),
           event(Some(owner), AccountEventAction.PlanChanged(plan.id.get, plan.id.get, None)),
@@ -70,15 +71,16 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         events.map(_.action.eventType).toSet === AccountEventKind.activityLog
 
         // events.foreach(display _ andThen println)
-        val e = events.toIterator
+        val e = events.iterator
         display(e.next()) === "The Org team was created by Owner and enrolled in the Free plan."
-        display(e.next()) === "Your card was charged $0.00 for your balance. [Invoice not found, please contact billing@kifi.com]"
+        display(e.next()) === "Your card was charged $0.00 for your balance."
         display(e.next()) === "A $0.00 refund was issued to your card."
         display(e.next()) === "We failed to process your payment, please update your payment information."
+        display(e.next()) === "We failed to refund your card."
         display(e.next()) === "Your payment method was changed to the card ending in 4242 by Owner."
         display(e.next()) === "Your Free plan was renewed."
         display(e.next()) === "Your plan was changed from Free to Free by Owner."
-        display(e.next()) === "You earned $42.00 because you're awesome!" // if this test breaks, yell at Ryan
+        display(e.next()) === "You earned $42.00 because you created a team on Kifi. Thanks for being awesome! :)"
         display(e.next()) === "Special credit was granted to your team by Kifi Support thanks to Owner."
         display(e.next()) === "Member was added to your team by Owner."
         display(e.next()) === "Member was added to your team by Owner and is now an admin."

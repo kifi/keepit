@@ -23,7 +23,7 @@ import scala.concurrent.{ Future, ExecutionContext }
 trait LibraryCardCommander {
   def createLibraryCardInfo(lib: Library, owner: BasicUser, viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize): LibraryCardInfo
   def createLibraryCardInfos(libs: Seq[Library], owners: Map[Id[User], BasicUser], viewerOpt: Option[Id[User]], withFollowing: Boolean, idealSize: ImageSize)(implicit session: RSession): ParSeq[LibraryCardInfo]
-  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])]
+  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, Option[MiniLibraryMembership], Seq[LibrarySubscriptionKey])]
   def getMarketingSiteSuggestedLibraries: Future[Seq[LibraryCardInfo]]
 }
 
@@ -94,17 +94,17 @@ class LibraryCardCommanderImpl @Inject() (
     }
   }
 
-  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = {
+  def createLiteLibraryCardInfos(libs: Seq[Library], viewerId: Id[User])(implicit session: RSession): ParSeq[(LibraryCardInfo, Option[MiniLibraryMembership], Seq[LibrarySubscriptionKey])] = {
     val memberships = libraryMembershipRepo.getMinisByLibraryIdsAndAccess(
       libs.map(_.id.get).toSet, Set(LibraryAccess.OWNER, LibraryAccess.READ_WRITE))
-    val userIds = memberships.values.map(_.map(_.userId)).flatten.toSet
+    val userIds = memberships.values.flatMap(_.map(_.userId)).toSet
     val allBasicUsers = basicUserRepo.loadAll(userIds)
 
     val basicOrgViewById = organizationCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, Some(viewerId), authTokenOpt = None)
 
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)
-      val viewerMem = libMems.find(_.userId == viewerId).get
+      val viewerMemOpt = libMems.find(_.userId == viewerId)
       val subscriptions = librarySubscriptionRepo.getByLibraryId(lib.id.get).map { sub => LibrarySubscription.toSubKey(sub) }
       val (numFollowers, numCollaborators, collabsSample) = if (libMems.length > 1) {
         val numFollowers = if (LibraryMembershipCommander.defaultLibraries.contains(lib.id.get)) 0 else libraryMembershipRepo.countWithLibraryIdAndAccess(lib.id.get, LibraryAccess.READ_ONLY)
@@ -150,7 +150,7 @@ class LibraryCardCommanderImpl @Inject() (
         modifiedAt = lib.updatedAt,
         org = basicOrgViewOpt,
         orgMemberAccess = lib.organizationMemberAccess)
-      (info, viewerMem, subscriptions)
+      (info, viewerMemOpt, subscriptions)
     }
   }
 

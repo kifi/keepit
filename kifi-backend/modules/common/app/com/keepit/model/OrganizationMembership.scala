@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db._
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.time._
 import com.kifi.macros.json
@@ -59,23 +60,17 @@ object OrganizationRole {
   case object ADMIN extends OrganizationRole("admin", 0)
   case object MEMBER extends OrganizationRole("member", 1)
 
-  implicit val format: Format[OrganizationRole] =
-    Format(__.read[String].map(OrganizationRole(_)), new Writes[OrganizationRole] {
-      def writes(o: OrganizationRole) = JsString(o.value)
-    })
-
+  implicit val format: Format[OrganizationRole] = Format(
+    EnumFormat.reads(get),
+    Writes { or => JsString(or.value) }
+  )
   val reads = Reads(format.reads)
 
-  def apply(str: String): OrganizationRole = {
-    str match {
-      case ADMIN.value => ADMIN
-      case MEMBER.value => MEMBER
-      case _ => throw new OrganizationRoleNotFoundException(str)
-    }
-  }
+  def get(str: String): Option[OrganizationRole] = all.find(_.value == str)
+  def apply(str: String): OrganizationRole = get(str).getOrElse(throw new OrganizationRoleNotFoundException(str))
 
-  def all: Set[OrganizationRole] = Set(ADMIN, MEMBER)
-  def allOpts: Set[Option[OrganizationRole]] = all.map(Some(_)) ++ Set(None)
+  val all: Set[OrganizationRole] = Set(ADMIN, MEMBER)
+  val allOpts: Set[Option[OrganizationRole]] = all.map(Some(_)) ++ Set(None)
 
   val emptySet: Set[Option[OrganizationRole]] = Set.empty[Option[OrganizationRole]]
   val adminSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN))

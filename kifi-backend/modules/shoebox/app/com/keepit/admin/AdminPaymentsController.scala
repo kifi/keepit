@@ -133,7 +133,9 @@ class AdminPaymentsController @Inject() (
       adminInvolved = adminInvolved,
       creditChange = accountEvent.creditChange,
       paymentCharge = accountEvent.paymentCharge,
-      memo = accountEvent.memo)
+      memo = accountEvent.memo,
+      description = activityLogCommander.buildSimpleEventInfoHelper(accountEvent).description
+    )
   }
 
   private def asPlayHtml(obj: Any) = HtmlFormat.raw(obj.toString)
@@ -154,6 +156,13 @@ class AdminPaymentsController @Inject() (
       page,
       allEvents.length,
       PAGE_SIZE))
+  }
+
+  def refundCharge(eventId: Id[AccountEvent]) = AdminUserAction.async { implicit request =>
+    paymentProcessingCommander.refundCharge(eventId, request.userId).map {
+      case (account, _) =>
+        Redirect(com.keepit.controllers.admin.routes.AdminPaymentsController.getAccountActivity(account.orgId, 0))
+    }
   }
 
   def unfreezeAccount(orgId: Id[Organization]) = AdminUserAction { implicit request =>
@@ -215,8 +224,9 @@ class AdminPaymentsController @Inject() (
 
   def resetAccount(orgId: Id[Organization], doIt: Boolean) = AdminUserAction.async { implicit request =>
     if (doIt) SafeFuture {
-      val events = doResetAccount(orgId).map(activityLogCommander.buildSimpleEventInfo)
-      Ok(Json.toJson(events))
+      val events = doResetAccount(orgId)
+      val simpleEvents = db.readOnlyMaster { implicit s => events.map(activityLogCommander.buildSimpleEventInfoHelper) }
+      Ok(Json.toJson(simpleEvents))
     }
     else {
       Future.successful(BadRequest("You don't want to do this."))
@@ -270,7 +280,7 @@ class AdminPaymentsController @Inject() (
         accountId = account.id.get,
         credit = DollarAmount.dollars(50),
         applied = None,
-        reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(orgId),
+        reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None),
         unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
         code = None
       ), userAttribution = None).get.applied.get
@@ -288,16 +298,14 @@ class AdminPaymentsController @Inject() (
 
   def createCode() = AdminUserAction(parse.tolerantJson) { implicit request =>
     val req = request.body.as[CreditCodeAdminCreateRequest]
-    db.readWrite { implicit session =>
-      creditCodeInfoRepo.create(CreditCodeInfo(
-        code = req.code,
-        kind = req.kind,
-        credit = req.credit,
-        status = CreditCodeStatus.Open,
-        referrer = None
-      )).get
-    }
-    NoContent
+    val newCode = creditRewardCommander.adminCreateCreditCode(CreditCodeInfo(
+      code = req.code,
+      kind = req.kind,
+      credit = req.credit,
+      status = CreditCodeStatus.Open,
+      referrer = None
+    ))
+    Ok(Json.obj("created" -> Json.obj("code" -> newCode.code, "kind" -> newCode.kind.kind, "value" -> DollarAmount.formatAsCents.writes(newCode.credit))))
   }
 }
 
@@ -308,7 +316,7 @@ case class CreditCodeAdminCreateRequest(
 
 object CreditCodeAdminCreateRequest {
   implicit val reads: Reads[CreditCodeAdminCreateRequest] = (
-    (__ \ 'kind).read[String].map(CreditCodeKind(_)) and
+    (__ \ 'kind).read[CreditCodeKind](CreditCodeKind.reads) and
     (__ \ 'code).read[CreditCode] and
     (__ \ 'credit).read[DollarAmount](DollarAmount.formatAsCents)
   )(CreditCodeAdminCreateRequest.apply _)
@@ -323,7 +331,8 @@ case class AdminAccountEventView(
   adminInvolved: Option[User],
   creditChange: DollarAmount,
   paymentCharge: Option[DollarAmount],
-  memo: Option[String])
+  memo: Option[String],
+  description: DescriptionElements)
 
 case class AdminAccountView(
   organization: Organization)

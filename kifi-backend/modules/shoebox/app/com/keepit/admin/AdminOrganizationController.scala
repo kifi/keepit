@@ -441,15 +441,6 @@ class AdminOrganizationController @Inject() (
     }
   }
 
-  def deleteSystemLibrariesWithInactiveOrgs() = AdminUserAction { implicit request =>
-    val zombieLibs = db.readOnlyMaster { implicit session =>
-      val inactiveOrgs = orgRepo.getAllByState(OrganizationStates.INACTIVE)
-      inactiveOrgs.flatMap(org => libRepo.getBySpace(org.id.get)).filter(_.isSystemLibrary) // get all active system libraries in the orgs
-    }
-    zombieLibs.foreach(lib => libraryCommander.unsafeAsyncDeleteLibrary(lib.id.get))
-    Ok
-  }
-
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
     def applyDefaultSettingsForPlan(plan: PaidPlan)(channel: Concurrent.Channel[JsValue]) = {

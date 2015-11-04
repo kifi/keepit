@@ -27,6 +27,7 @@ class PaymentsController @Inject() (
     paymentCommander: PaymentProcessingCommander,
     activityLogCommander: ActivityLogCommander,
     creditRewardCommander: CreditRewardCommander,
+    creditRewardInfoCommander: CreditRewardInfoCommander,
     stripeClient: StripeClient,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -130,14 +131,14 @@ class PaymentsController @Inject() (
     }
   }
 
-  def getEvents(pubId: PublicId[Organization], limit: Int, fromPubIdOpt: Option[String]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+  def getEvents(pubId: PublicId[Organization], limit: Int, fromPubIdOpt: Option[String], inclusive: Boolean = false) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     val fromIdOptTry = fromPubIdOpt.filter(_.nonEmpty) match {
       case None => Success(None)
       case Some(fromPubId) => AccountEvent.decodePublicId(PublicId(fromPubId)).map(Some(_))
     }
     fromIdOptTry match {
       case Success(fromIdOpt) =>
-        val infos = activityLogCommander.getAccountEvents(request.orgId, fromIdOpt, Limit(limit)).map(activityLogCommander.buildSimpleEventInfo)
+        val infos = activityLogCommander.getAccountEvents(request.orgId, fromIdOpt, Limit(limit), inclusive).map(activityLogCommander.buildSimpleEventInfo)
         Ok(Json.obj("events" -> infos))
       case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_event_id"))
     }
@@ -147,7 +148,7 @@ class PaymentsController @Inject() (
     Ok(Json.obj("code" -> creditRewardCommander.getOrCreateReferralCode(request.orgId)))
   }
   def redeemCreditCode(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.REDEEM_CREDIT_CODE)(parse.tolerantJson) { request =>
-    val codeOpt = (request.body \ "code").asOpt[String].map(CreditCode(_))
+    val codeOpt = (request.body \ "code").asOpt[String].map(CreditCode.normalize)
     codeOpt match {
       case None => BadRequest(Json.obj("error" -> "missing_credit_code"))
       case Some(code) =>
@@ -157,5 +158,9 @@ class PaymentsController @Inject() (
           case f: CreditRewardFail => f.asErrorResponse
         }.get
     }
+  }
+
+  def getRewards(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+    Ok(Json.toJson(creditRewardInfoCommander.getRewardsByOrg(request.orgId)))
   }
 }

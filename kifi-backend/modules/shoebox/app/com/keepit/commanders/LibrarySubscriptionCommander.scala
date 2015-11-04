@@ -70,7 +70,7 @@ class LibrarySubscriptionCommanderImpl @Inject() (
   def sendNewKeepMessage(keep: Keep, library: Library): Seq[Future[ClientResponse]] = {
 
     val (subscriptions, keeper) = db.readOnlyReplica { implicit session =>
-      val subscriptions = librarySubscriptionRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP)
+      val subscriptions = librarySubscriptionRepo.getByLibraryIdAndTrigger(library.id.get, SubscriptionTrigger.NEW_KEEP, excludeStates = Set(LibrarySubscriptionStates.INACTIVE, LibrarySubscriptionStates.DISABLED))
       val keeper = userRepo.get(keep.userId)
       (subscriptions, keeper)
     }

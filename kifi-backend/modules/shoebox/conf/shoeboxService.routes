@@ -541,6 +541,7 @@ POST          /site/organizations/:id/featureSettings           @com.keepit.cont
 
 GET           /site/organizations/:id/referralCode              @com.keepit.controllers.website.PaymentsController.getReferralCode(id: PublicId[Organization])
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
+GET           /site/organizations/:id/rewards                   @com.keepit.controllers.website.PaymentsController.getRewards(id: PublicId[Organization])
 
 GET           /site/user-or-org/:handle                   @com.keepit.controllers.website.UserOrOrganizationController.getByHandle(handle: Handle, authToken: Option[String] ?= None)
 GET           /site/user-or-org/:handle/libraries         @com.keepit.controllers.website.UserOrOrganizationController.getLibrariesByHandle(handle: Handle, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
@@ -555,7 +556,7 @@ POST          /site/admin/billing/contacts                      @com.keepit.cont
 GET           /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
-GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None)
+GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None, inclusive: Boolean ?= false)
 
 ##########################################
 # Email-Link API
@@ -600,7 +601,6 @@ POST    /admin/bookmarks/inactive   @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/special    @com.keepit.controllers.admin.AdminBookmarksController.www$youtube$com$watch$v$otCpCn0l4Wo(id: Id[Keep])
 GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmarksController.userBookmarkKeywords
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
-POST    /admin/bookmarks/populateNotes @com.keepit.controllers.admin.AdminBookmarksController.populateKeepNotesWithTag(page: Int ?= 0, size: Int ?= 500, grouping: Int ?= 500)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 GET     /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.controllers.admin.AdminBookmarksController.checkLibraryKeepVisibility(libId: Id[Library])
 
@@ -739,7 +739,6 @@ GET     /admin/findOrganizationByNameJson                    @com.keepit.control
 POST    /admin/organizations/create                          @com.keepit.controllers.admin.AdminOrganizationController.createOrganization()
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
-DELETE  /admin/organizations/deleteSystemLibrariesWithInactiveOrgs      @com.keepit.controllers.admin.AdminOrganizationController.deleteSystemLibrariesWithInactiveOrgs()
 POST    /admin/organizations/applyDefaultSettingsToOrgConfigs           @com.keepit.controllers.admin.AdminOrganizationController.applyDefaultSettingsToOrgConfigs()
 
 
@@ -890,6 +889,7 @@ POST          /admin/payments/changePlanForOrg             @com.keepit.controlle
 GET           /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCardView(orgId: Id[Organization])
 POST          /admin/payments/addCreditCard                @com.keepit.controllers.admin.AdminPaymentsController.addCreditCard(orgId: Id[Organization])
 GET           /admin/payments/getAccountActivity           @com.keepit.controllers.admin.AdminPaymentsController.getAccountActivity(orgId: Id[Organization], page: Int)
+GET           /admin/payments/refundCharge                 @com.keepit.controllers.admin.AdminPaymentsController.refundCharge(eventId: Id[com.keepit.payments.AccountEvent])
 POST          /admin/payments/unfreezeAccount              @com.keepit.controllers.admin.AdminPaymentsController.unfreezeAccount(orgId: Id[Organization])
 
 GET           /admin/payments/checkIntegrity               @com.keepit.controllers.admin.AdminPaymentsController.checkIntegrity(orgId: Id[Organization], doIt: Boolean ?= false)

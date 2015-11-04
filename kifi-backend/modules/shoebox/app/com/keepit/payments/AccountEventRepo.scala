@@ -18,7 +18,7 @@ trait AccountEventRepo extends Repo[AccountEvent] {
   def getByAccount(accountId: Id[PaidAccount], offset: Offset, limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
   def getAllByAccount(accountId: Id[PaidAccount], excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
-  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
+  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, inclusive: Boolean = false, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent]
 
   def getMembershipEventsInOrder(accountId: Id[PaidAccount])(implicit session: RSession): Seq[AccountEvent]
 
@@ -40,6 +40,7 @@ class AccountEventRepoImpl @Inject() (
   case class AccountEventKindNotFoundException(s: String) extends Exception(s"""AccountEventKind "$s" not found""")
   implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val accountEventKindMapper = MappedColumnType.base[AccountEventKind, String](_.value, s => AccountEventKind.get(s).getOrElse(throw new AccountEventKindNotFoundException(s))) // explicitly requires "good" data
+  implicit val chargeIdMapper = MappedColumnType.base[StripeTransactionId, String](_.id, StripeTransactionId(_))
 
   type RepoImpl = AccountEventTable
 
@@ -55,7 +56,7 @@ class AccountEventRepoImpl @Inject() (
     def paymentMethod = column[Option[Id[PaymentMethod]]]("payment_method", O.Nullable)
     def paymentCharge = column[Option[DollarAmount]]("payment_charge", O.Nullable)
     def memo = column[Option[String]]("memo", O.Nullable)
-    def chargeId = column[Option[String]]("charge_id", O.Nullable)
+    def chargeId = column[Option[StripeTransactionId]]("charge_id", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, eventTime, accountId, whoDunnit, whoDunnitExtra, kifiAdminInvolved, eventType, eventTypeExtras, creditChange, paymentMethod, paymentCharge, memo, chargeId) <> ((AccountEvent.applyFromDbRow _).tupled, AccountEvent.unapplyFromDbRow _)
   }
 
@@ -85,13 +86,15 @@ class AccountEventRepoImpl @Inject() (
       .list
   }
 
-  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
+  def getByAccountAndKinds(accountId: Id[PaidAccount], kinds: Set[AccountEventKind], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, inclusive: Boolean = false, excludeStateOpt: Option[State[AccountEvent]] = Some(AccountEventStates.INACTIVE))(implicit session: RSession): Seq[AccountEvent] = {
     val allEvents = getByAccountAndKindsHelper(accountId, kinds, excludeStateOpt)
     val filteredEvents = fromIdOpt match {
       case None => allEvents
       case Some(fromId) =>
         val fromTime = rows.filter(_.id === fromId).map(_.eventTime).first
-        allEvents.filter(ae => ae.eventTime < fromTime || (ae.eventTime === fromTime && ae.id < fromId))
+
+        if (inclusive) allEvents.filter(ae => ae.eventTime < fromTime || (ae.eventTime === fromTime && ae.id <= fromId))
+        else allEvents.filter(ae => ae.eventTime < fromTime || (ae.eventTime === fromTime && ae.id < fromId))
     }
     filteredEvents
       .sortBy(age)

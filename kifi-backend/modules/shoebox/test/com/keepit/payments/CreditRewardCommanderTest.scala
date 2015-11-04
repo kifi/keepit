@@ -1,11 +1,12 @@
 package com.keepit.payments
 
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress, ElectronicMailRepo }
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
+import com.keepit.model.PaidPlanFactoryHelper.PaidPlanPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
-import com.keepit.model.{ OrganizationFactory, UserFactory }
-import com.keepit.payments.CreditRewardFail.{ UnrepeatableRewardKeyCollisionException, CreditCodeAlreadyBurnedException }
+import com.keepit.model._
+import com.keepit.payments.CreditRewardFail.UnrepeatableRewardKeyCollisionException
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
@@ -13,6 +14,7 @@ import org.specs2.mutable.SpecificationLike
 import scala.util.Random
 
 class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInjector {
+  implicit val ctxt = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeStripeClientModule()
@@ -118,50 +120,6 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           paymentsChecker.checkAccount(org1.id.get) must beEmpty
           paymentsChecker.checkAccount(org2.id.get) must beEmpty
           paymentsChecker.checkAccount(org3.id.get) must beEmpty
-        }
-      }
-      "apply rewards to the referrer once the referred org upgrades" in {
-        withDb(modules: _*) { implicit injector =>
-          val owner1Email = "roger_rabbit@csi.gov"
-          val (org1, org2, owner1) = db.readWrite { implicit session =>
-            val owner1 = UserFactory.user().withEmailAddress(owner1Email).saved
-            val org1 = OrganizationFactory.organization().withOwner(owner1).saved
-            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
-            (org1, org2, owner1)
-          }
-
-          // org1 refers org2
-          val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
-          val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, org2.ownerId, Some(org2.id.get))).get
-
-          // org1 has a Reward now, but it has not been applied because org2 has not upgraded
-          val expectedReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(org2.id.get)
-          rewards.referrer.get.reward === expectedReward
-
-          db.readOnlyMaster { implicit session =>
-            val cr = creditRewardRepo.getByReward(expectedReward)
-            cr must haveSize(1)
-            cr.head.applied must beNone
-          }
-
-          // when org2 upgrades, org1 gets some credit
-          val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org1.id.get).credit }
-          val upgradeRewards = db.readWrite { implicit session => creditRewardCommander.registerUpgradedAccount(org2.id.get) }
-          val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org1.id.get).credit }
-          finalCredit - initialCredit === rewards.referrer.get.credit
-
-          upgradeRewards must haveSize(1)
-          upgradeRewards.head.applied must beSome
-
-          //          db.readOnlyMaster { implicit session => // TODO(cam): uncomment when the FAKE exp guard is off
-          //            inject[ElectronicMailRepo].all().count(email =>
-          //              email.from == SystemEmailAddress.NOTIFICATIONS &&
-          //                email.to.contains(EmailAddress(owner1Email)) &&
-          //                email.subject == s"You earned a $$100 credit for ${org1.name} on Kifi") must equalTo(1)
-          //          }
-
-          paymentsChecker.checkAccount(org1.id.get) must beEmpty
-          paymentsChecker.checkAccount(org2.id.get) must beEmpty
         }
       }
     }
@@ -298,6 +256,107 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           paymentsChecker.checkAccount(org3.id.get) must beEmpty
         }
       }
+    }
+    "apply reward triggers correctly" in {
+      "org referral upgrade" in {
+        withDb(modules: _*) { implicit injector =>
+          val owner1Email = "roger_rabbit@csi.gov"
+          val (org1, org2, upgradePlan) = db.readWrite { implicit session =>
+            val org1 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val org2 = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            val upgradePlan = PaidPlanFactory.paidPlan().withPricePerCyclePerUser(DollarAmount.dollars(42)).saved
+            (org1, org2, upgradePlan)
+          }
+          val startReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(org2.id.get)
+          val endReward = Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(org2.id.get)
+
+          // org1 refers org2
+          val code = creditRewardCommander.getOrCreateReferralCode(org1.id.get)
+          val rewards = creditRewardCommander.applyCreditCode(CreditCodeApplyRequest(code, org2.ownerId, Some(org2.id.get))).get
+
+          // org1 has a Reward now, but it has not been applied because org2 has not upgraded
+          rewards.referrer.get.reward === startReward
+
+          db.readOnlyMaster { implicit session =>
+            creditRewardRepo.getByReward(endReward) must beEmpty
+            val cr = creditRewardRepo.getByReward(startReward)
+            cr must haveSize(1)
+            cr.head.applied must beNone
+          }
+
+          // when org2 upgrades, org1 gets some credit
+          val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org1.id.get).credit }
+          planManagementCommander.changePlan(org2.id.get, upgradePlan.id.get, ActionAttribution(Some(org2.ownerId), None)) must beSuccessfulTry
+          val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org1.id.get).credit }
+          finalCredit - initialCredit === rewards.referrer.get.credit
+
+          db.readOnlyMaster { implicit s =>
+            creditRewardRepo.getByReward(startReward) must beEmpty
+            val cr = creditRewardRepo.getByReward(endReward)
+            cr must haveSize(1)
+            cr.head.applied must beSome
+          }
+
+          //          db.readOnlyMaster { implicit session => // TODO(cam): uncomment when the FAKE exp guard is off
+          //            inject[ElectronicMailRepo].all().count(email =>
+          //              email.from == SystemEmailAddress.NOTIFICATIONS &&
+          //                email.to.contains(EmailAddress(owner1Email)) &&
+          //                email.subject == s"You earned a $$100 credit for ${org1.name} on Kifi") must equalTo(1)
+          //          }
+
+          db.readWrite { implicit s =>
+            creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationUpgraded(org2.id.get, upgradePlan)) must beEmpty
+          }
+
+          paymentsChecker.checkAccount(org1.id.get) must beEmpty
+          paymentsChecker.checkAccount(org2.id.get) must beEmpty
+        }
+      }
+      "org description added" in {
+        withDb(modules: _*) { implicit injector =>
+          val org = db.readWrite { implicit session =>
+            val org = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
+            // TODO(ryan): maybe put this into planManagementCommander.createAndInitializePaidPlan
+            creditRewardCommander.createCreditReward(CreditReward(
+              accountId = paidAccountRepo.getByOrgId(org.id.get).id.get,
+              credit = DollarAmount.cents(15123),
+              applied = None,
+              reward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Started)(org.id.get),
+              unrepeatable = None,
+              code = None), None)
+            org
+          }
+          val startReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Started)(org.id.get)
+          val endReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Achieved)(org.id.get)
+
+          db.readOnlyMaster { implicit session =>
+            creditRewardRepo.getByReward(endReward) must beEmpty
+            val cr = creditRewardRepo.getByReward(startReward)
+            cr must haveSize(1)
+            cr.head.applied must beNone
+          }
+
+          // when the org puts in a description, they get a reward
+          val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org.id.get).credit }
+          orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(description = Some("I want to earn credit!")))) must beRight
+          val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org.id.get).credit }
+          finalCredit - initialCredit === DollarAmount.cents(15123)
+
+          db.readOnlyMaster { implicit session =>
+            creditRewardRepo.getByReward(startReward) must beEmpty
+            val cr = creditRewardRepo.getByReward(endReward)
+            cr must haveSize(1)
+            cr.head.applied must beSome
+          }
+
+          db.readWrite { implicit s =>
+            creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationDescriptionAdded(org.id.get, "Can I abuse this?")) must beEmpty
+          }
+
+          paymentsChecker.checkAccount(org.id.get) must beEmpty
+        }
+      }
+
     }
   }
 

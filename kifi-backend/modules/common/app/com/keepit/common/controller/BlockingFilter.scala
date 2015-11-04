@@ -12,7 +12,7 @@ object BlockingFilter extends Filter {
     val ip = IpAddress.fromRequest(requestHeader)
     if (blocked.exists(b => ip.ip.startsWith(b)) && !requestHeader.path.contains("logout") && requestHeader.session.get(KifiSession.FORTYTWO_USER_ID).isDefined) {
       Future.successful(Results.Redirect("/logout"))
-    } else if (tarpit.contains(ip)) {
+    } else if (tarpit.contains(ip.ip)) {
       throwThemInAPit(nextFilter(requestHeader))
     } else {
       nextFilter(requestHeader)
@@ -20,6 +20,7 @@ object BlockingFilter extends Filter {
   }
 
   val blocked = Seq(
+    "14.141.175.",
     "27.255.139.",
     "27.255.149.",
     "27.255.159.",
@@ -27,6 +28,7 @@ object BlockingFilter extends Filter {
     "27.255.192.",
     "43.249.225.",
     "49.201.2.",
+    "88.250.172",
     "88.251.",
     "95.5.131.183",
     "103.60.176.",
@@ -41,6 +43,7 @@ object BlockingFilter extends Filter {
     "124.125.152.",
     "124.253.251.",
     "124.253.252.",
+    "125.62.114.",
     "150.129.198.",
     "180.87.245.",
     "182.69.9.",

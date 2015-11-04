@@ -15,7 +15,7 @@ import play.api.Mode
 import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Try }
 import com.keepit.common.core._
 
 @ImplementedBy(classOf[AccountEventTrackingCommanderImpl])
@@ -59,7 +59,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     implicit val org = o
     implicit val paymentMethod = m
 
-    Future.sequence(Seq(notifyOfCharge(event).imap(_ => ()), notifyOfFailedCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
+    Future.sequence(Seq(notifyOfTransaction(event).imap(_ => ()), notifyOfFailedCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
   } else Future.successful(())
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
@@ -83,8 +83,9 @@ class AccountEventTrackingCommanderImpl @Inject() (
   private def reportToSlack(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[String]] = {
     checkingParameters(event) {
       lazy val msg = {
+        import com.keepit.common.strings._
         val info = activityCommander.buildSimpleEventInfo(event)
-        val orgHeader = s"<https://admin.kifi.com/admin/organization/${org.id.get}|${org.name}>"
+        val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${org.name.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;")}>"
         s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
       }
       Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
@@ -95,10 +96,10 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   private def toSlackChannels(eventType: AccountEventKind): Seq[String] = {
     import AccountEventKind._
-    eventType match {
-      case kind if billing.contains(kind) => Seq("#billing-alerts")
-      case OrganizationCreated | UserJoinedOrganization | UserLeftOrganization | OrganizationRoleChanged => Seq("#org-members")
-    }
+    Seq(
+      billing.contains(eventType) -> "#billing-alerts",
+      orgGrowth.contains(eventType) -> "#org-members"
+    ).collect { case (true, ch) => ch }
   }
 
   private def notifyOfError(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {
@@ -110,16 +111,17 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def notifyOfCharge(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {
+  private def notifyOfTransaction(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {
     checkingParameters(event) {
-      event.chargeId match {
-        case Some(chargeId) => notifyOfCharge(account, paymentMethod.get.stripeToken, event.paymentCharge.get, chargeId).imap(_ => true)
+      event.paymentCharge match {
+        case Some(amount) if amount > DollarAmount.ZERO => notifyOfCharge(account, paymentMethod.get.stripeToken, amount, event.chargeId.get).imap(_ => true)
+        case Some(amount) if amount < DollarAmount.ZERO => notifyOfRefund(account, paymentMethod.get.stripeToken, -amount, event.chargeId.get).imap(_ => true)
         case None => Future.successful(false)
       }
     }
   }
 
-  private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: String): Future[Unit] = {
+  private def notifyOfCharge(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, chargeId: StripeTransactionId): Future[Unit] = {
     val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
     val (userContacts, org) = db.readOnlyReplica { implicit session =>
       val userContacts = account.userContacts.flatMap { userId =>
@@ -130,14 +132,52 @@ class AccountEventTrackingCommanderImpl @Inject() (
     val emails = (account.emailContacts ++ userContacts).distinct
 
     lastFourFuture.map { lastFour =>
-      val subject = s"We've charged you card for your Kifi Organization ${org.name}"
-      val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. $chargeId).<br/>
-      |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history<a>.</p>
+      val subject = s"We've charged you card for your Kifi Team ${org.name}"
+      val htmlBody = s"""|<p>Your card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).<br/>
+      |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history</a>.</p>
       |
       |<p>Thanks,
       |The Kifi Team</p>
       """.stripMargin
-      val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. $chargeId).
+      val textBody = s"""|Your card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).
+      |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings/activity.
+      |
+      |Thanks, <br/>
+      |The Kifi Team
+      """.stripMargin
+      db.readWrite { implicit session =>
+        postOffice.sendMail(ElectronicMail(
+          from = SystemEmailAddress.BILLING,
+          fromName = Some("Kifi Billing"),
+          to = emails,
+          subject = subject,
+          htmlBody = htmlBody,
+          textBody = Some(textBody),
+          category = NotificationCategory.NonUser.BILLING
+        ))
+      }
+    }
+  }
+
+  private def notifyOfRefund(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, refundId: StripeTransactionId): Future[Unit] = {
+    val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
+    val (userContacts, org) = db.readOnlyReplica { implicit session =>
+      val userContacts = account.userContacts.flatMap { userId =>
+        Try(emailRepo.getByUser(userId)).toOption
+      }
+      (userContacts, orgRepo.get(account.orgId))
+    }
+    val emails = (account.emailContacts ++ userContacts).distinct
+
+    lastFourFuture.map { lastFour =>
+      val subject = s"We've refunded a charge made for your Kifi Team ${org.name}"
+      val htmlBody = s"""|<p>Your card on file ending in $lastFour has been refunded $amount (ref. ${refundId.id}).<br/>
+      |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history</a>.</p>
+      |
+      |<p>Thanks,
+      |The Kifi Team</p>
+      """.stripMargin
+      val textBody = s"""|Your card on file ending in $lastFour has been refunded $amount (ref. ${refundId.id}).
       |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings/activity.
       |
       |Thanks, <br/>
@@ -169,22 +209,22 @@ class AccountEventTrackingCommanderImpl @Inject() (
 
   private def doNotifyOfFailedCharge(eventId: Id[AccountEvent], reason: AccountEventAction)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Unit = {
     val subject = s"We failed to charge the card of team ${org.name}"
-    val htmlBody = s"""|<p>We failed to charge <a href="https://admin.kifi.com/admin/organization/${org.id.get}">${org.name}<a> for their ${account.owed.toDollarString} outstanding balance.
+    val htmlBody = s"""|<p>We failed to charge <a href="https://admin.kifi.com/admin/organization/${org.id.get}">${org.name}</a> for their ${account.owed.toDollarString} outstanding balance.
     |${paymentMethod.map(p => s"We tried their payment method with id ${p.id.get}.") getOrElse "We couldn't find their payment method."}
-    |This ended up in a $reason event with id $eventId.
-    ||For more details please consult <a href="https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}">their account history<a>.</p>
+    |This ended up with a $reason event with id $eventId.
+    |For more details please consult <a href="https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}">their account history</a>.</p>
     |
-    |<p>Whoever your are, MAKE THEM PAY!</p>
+    |<p>And to whom it may concern, make them pay.</p>
     |
     |<p>Thanks,
     |The Kifi Team</p>
     """.stripMargin
     val textBody = s"""|We failed to charge ${org.name} for their ${account.owed.toDollarString} outstanding balance.
     |${paymentMethod.map(p => s"We tried their payment method with id ${p.id.get}.") getOrElse "We couldn't find their payment method."}
-    |This ended up in a $reason event with id $eventId.
-    ||For more details please consult their account history: https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}
+    |This ended up with a $reason event with id $eventId.
+    |For more details please consult their account history: https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0}
     |
-    |Whoever your are, MAKE THEM PAY!
+    |And to whom it may concern, make them pay.
     |
     |Thanks,
     |The Kifi Team

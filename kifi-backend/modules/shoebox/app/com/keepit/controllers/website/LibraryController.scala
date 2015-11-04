@@ -220,18 +220,18 @@ class LibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction.async { request =>
-    val libInfos: ParSeq[(LibraryCardInfo, MiniLibraryMembership, Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
+    val libInfos: ParSeq[(LibraryCardInfo, Option[MiniLibraryMembership], Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
       libraryCardCommander.createLiteLibraryCardInfos(libs, request.userId)
     }
     val objs = libInfos.map {
-      case (info: LibraryCardInfo, mem: MiniLibraryMembership, subs: Seq[LibrarySubscriptionKey]) =>
+      case (info: LibraryCardInfo, memOpt: Option[MiniLibraryMembership], subs: Seq[LibrarySubscriptionKey]) =>
         val id = Library.decodePublicId(info.id).get
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
         val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
         val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) + ("subscriptions" -> Json.toJson(subs)) // TODO: stop adding "url" when web app uses "slug" instead
-        if (mem.lastViewed.nonEmpty) {
-          obj ++ Json.obj("lastViewed" -> mem.lastViewed)
+        if (memOpt.flatMap(_.lastViewed).nonEmpty) {
+          obj ++ Json.obj("lastViewed" -> memOpt.flatMap(_.lastViewed).get)
         } else {
           obj
         }
@@ -243,37 +243,16 @@ class LibraryController @Inject() (
 
   def getKeepableLibraries(includeOrgLibraries: Boolean) = UserAction { request =>
     val librariesWithMembershipAndCollaborators = libraryInfoCommander.getLibrariesUserCanKeepTo(request.userId, includeOrgLibraries)
-    val (basicUserById, orgAvatarsById) = {
-      val allUserIds = librariesWithMembershipAndCollaborators.flatMap(_._3).toSet
-      val orgIds = librariesWithMembershipAndCollaborators.map(_._1).flatMap(_.organizationId)
-      db.readOnlyMaster { implicit s =>
-        val basicUserById = basicUserRepo.loadAll(allUserIds)
-        val orgAvatarsById = orgAvatarCommander.getBestImagesByOrgIds(orgIds.toSet, ProcessedImageSize.Medium.idealSize)
-        (basicUserById, orgAvatarsById)
-      }
-    }
+    val libraryCardInfos = db.readOnlyMaster(implicit s => libraryCardCommander.createLiteLibraryCardInfos(librariesWithMembershipAndCollaborators.map(_._1), request.userId))
 
-    val datas = librariesWithMembershipAndCollaborators map {
-      case (lib, membership, collaboratorsIds) =>
-        val owner = basicUserById.getOrElse(lib.ownerId, throw new Exception(s"owner of $lib does not have a membership model"))
-        val collabs = (collaboratorsIds - request.userId).map(basicUserById(_)).toSeq
-        val membershipInfo = membership.map { mem =>
-          db.readOnlyReplica { implicit session => libraryMembershipCommander.createMembershipInfo(mem) }
-        }
-        LibraryData(
-          id = Library.publicId(lib.id.get),
-          name = lib.name,
-          color = lib.color,
-          visibility = lib.visibility,
-          path = libPathCommander.getPathForLibrary(lib),
-          hasCollaborators = collabs.nonEmpty,
-          subscribedToUpdates = membership.exists(_.subscribedToUpdates),
-          collaborators = collabs,
-          orgAvatar = lib.organizationId.map(orgId => orgAvatarsById(orgId).imagePath),
-          membership = membershipInfo
-        )
+    val objs = libraryCardInfos.map {
+      case (libCardInfo, memOpt, subscriptions) =>
+        val obj = Json.toJson(libCardInfo).as[JsObject] + ("subscriptions" -> Json.toJson(subscriptions))
+        if (memOpt.flatMap(_.lastViewed).nonEmpty) {
+          obj + ("lastViewed" -> Json.toJson(memOpt.map(_.lastViewed)))
+        } else obj
     }
-    Ok(Json.obj("libraries" -> datas))
+    Ok(Json.obj("libraries" -> objs.seq))
   }
 
   def getUserByIdOrEmail(json: JsValue): Either[String, Either[ExternalId[User], EmailAddress]] = {

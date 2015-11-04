@@ -13,11 +13,13 @@ import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Writes, Json }
+import play.twirl.api.Html
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
-  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent]
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, inclusive: Boolean = false): Seq[AccountEvent]
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
+  def buildSimpleEventInfoHelper(event: AccountEvent)(implicit session: RSession): SimpleAccountEventInfo
 }
 
 @Singleton
@@ -26,7 +28,9 @@ class ActivityLogCommanderImpl @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
+    creditCodeInfoRepo: CreditCodeInfoRepo,
     creditRewardRepo: CreditRewardRepo,
+    creditRewardInfoCommander: CreditRewardInfoCommander,
     basicUserRepo: BasicUserRepo,
     organizationRepo: OrganizationRepo,
     organizationCommander: OrganizationCommander,
@@ -36,15 +40,19 @@ class ActivityLogCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, inclusive: Boolean = false): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.activityLog, fromIdOpt, limit)
+    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.activityLog, fromIdOpt, limit, inclusive)
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
   private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = organizationCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
 
-  def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit session =>
+  def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit s =>
+    buildSimpleEventInfoHelper(event)
+  }
+
+  def buildSimpleEventInfoHelper(event: AccountEvent)(implicit session: RSession): SimpleAccountEventInfo = {
     import AccountEventAction._
     val maybeUser = event.whoDunnit.map(getUser)
     val account = paidAccountRepo.get(event.accountId)
@@ -53,20 +61,13 @@ class ActivityLogCommanderImpl @Inject() (
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
-        case RewardCredit(id) =>
-          val creditReward = creditRewardRepo.get(id)
-          creditReward.reward match {
-            case Reward(kind, _, _) if kind == RewardKind.Coupon => Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("when", getUser(code.usedBy), "redeemed", code.code.value)), ".")
-            case Reward(kind, _, _) if kind == RewardKind.OrganizationCreation => Elements("You earned", creditReward.credit, "because you're awesome!")
-            case Reward(kind, _, _) if kind == RewardKind.OrganizationReferral => Elements("You earned", creditReward.credit, creditReward.code.map(code => Elements("an organization you referred just upgraded")), ".")
-          }
+        case RewardCredit(id) => creditRewardInfoCommander.getDescription(creditRewardRepo.get(id))
         case IntegrityError(err) => Elements("Found and corrected an error in the account.") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)), ".")
-        case Refund() => Elements("A", event.creditChange, "refund was issued to your card.")
+        case Refund(_, _) => Elements("A", -event.creditChange, "refund was issued to your card", event.chargeId.map(id => s"(ref. ${id.id})"), ".")
+        case RefundFailure(_, _, _, _) => s"We failed to refund your card."
         case PlanRenewal(planId, _, _, _, _) => Elements("Your", paidPlanRepo.get(planId), "plan was renewed.")
-        case Charge() =>
-          val invoiceText = s"Invoice ${event.chargeId.map("#" + _).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
-          Elements("Your card was charged", event.creditChange, s"for your balance. [$invoiceText]")
+        case Charge() => Elements("Your card was charged", event.creditChange, s"for your balance", event.chargeId.map(id => s"(ref. ${id.id})"), ".")
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
         case ChargeFailure(amount, code, message) => s"We failed to process your payment, please update your payment information."
         case MissingPaymentMethod() => s"We failed to process your payment, please register a payment method."
@@ -108,60 +109,6 @@ class ActivityLogCommanderImpl @Inject() (
       paymentCharge = event.paymentCharge.map(_.toDollarString),
       memo = event.memo
     )
-  }
-}
-
-sealed trait DescriptionElements {
-  def flatten: Seq[BasicElement]
-}
-case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
-  def flatten = elements.flatMap(_.flatten)
-}
-case class BasicElement(text: String, url: Option[String]) extends DescriptionElements {
-  def flatten = Seq(this)
-  def withText(newText: String) = this.copy(text = newText)
-}
-object DescriptionElements {
-  def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
-
-  implicit def fromText(text: String): BasicElement = BasicElement(text, None)
-  implicit def fromTextAndUrl(textAndUrl: (String, String)): BasicElement = BasicElement(textAndUrl._1, Some(textAndUrl._2))
-  implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
-  implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
-
-  implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName -> user.path.absolute
-  implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.absolute
-  implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
-  implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
-  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> Path(s"${orgHandle.value}/settings/plan").absolute
-  implicit def fromRole(role: OrganizationRole): BasicElement = role.value
-
-  private def intersperse[T](xs: List[T], ins: List[T]): List[T] = {
-    (xs, ins) match {
-      case (x :: Nil, Nil) => x :: Nil
-      case (x :: xr, in :: inr) => x :: in :: intersperse(xr, inr)
-      case _ => throw new IllegalArgumentException(s"intersperse expects lists with length (n, n-1). it got (${xs.length}, ${ins.length})")
-    }
-  }
-  private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
-    val words = els.map(_.text).toList
-    val wordPairs = words.init zip words.tail
-    val interpolatedPunctuation = wordPairs.map {
-      case (l, r) if l.endsWith("'") || r.startsWith(".") || r.startsWith("'") => ""
-      case _ => " "
-    }.map(BasicElement(_, None))
-    intersperse(els.toList, interpolatedPunctuation).filter(_.text.nonEmpty)
-  }
-  def formatForSlack(description: DescriptionElements): String = {
-    interpolatePunctuation(description.flatten).map {
-      case BasicElement(text, None) => text
-      case BasicElement(text, Some(url)) => s"<$url|$text>"
-    } mkString
-  }
-
-  implicit val flatWrites = {
-    implicit val basicWrites = Json.writes[BasicElement]
-    Writes[DescriptionElements] { description => Json.toJson(interpolatePunctuation(description.flatten)) }
   }
 }
 

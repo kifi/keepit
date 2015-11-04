@@ -1,9 +1,11 @@
 package com.keepit.payments
 
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, ModelWithState, State, States}
 import com.keepit.common.time._
 import com.keepit.model.{Organization, User}
 import org.joda.time.DateTime
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.util.Try
@@ -29,10 +31,9 @@ sealed abstract class RewardKind(val kind: String) {
   protected def allStatus: Set[S]
   def applicable: S
   def writeStatus(status: S): String = status.status
-  def readStatus(status: String): S = allStatus.find(_.status equalsIgnoreCase status) match {
-    case Some(validStatus) => validStatus
-    case None => throw new IllegalArgumentException(s"Invalid status for $this reward: $status")
-  }
+
+  private def get(str: String): Option[S] = allStatus.find(_.status equalsIgnoreCase str)
+  def readStatus(str: String): S = get(str).getOrElse(throw new IllegalArgumentException(s"Invalid status for $this reward: $str"))
 }
 
 sealed trait RewardStatus {
@@ -109,11 +110,18 @@ object RewardKind {
     lazy val applicable: Used.type = Used
   }
 
-  case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithIndependentInfo[Id[Organization]] {
-    lazy val infoFormat = Id.format[Organization]
+  case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithEmptyInfo {
     case object Created extends Status("created")
     protected lazy val allStatus: Set[S] = Set(Created)
     lazy val applicable: Created.type = Created
+  }
+
+  case object OrganizationDescriptionAdded extends RewardKind("org_description_added") with RewardStatus.WithIndependentInfo[Id[Organization]] {
+    lazy val infoFormat = Id.format[Organization]
+    case object Started extends Status("started")
+    case object Achieved extends Status("achieved")
+    protected lazy val allStatus: Set[S] = Set(Started, Achieved)
+    lazy val applicable: Achieved.type = Achieved
   }
 
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
@@ -124,12 +132,24 @@ object RewardKind {
     lazy val applicable: Upgraded.type = Upgraded
   }
 
-  private val all: Set[RewardKind] = Set(Coupon, OrganizationCreation, OrganizationReferral)
-
-  def apply(kind: String) = all.find(_.kind equalsIgnoreCase kind) match {
-    case Some(validKind) => validKind
-    case None => throw new IllegalArgumentException(s"Unknown RewardKind: $kind")
+  case object ReferralApplied extends RewardKind("referral_applied") with RewardStatus.WithIndependentInfo[CreditCode] {
+    lazy val infoFormat = CreditCode.format
+    case object Applied extends Status("applied")
+    protected lazy val allStatus: Set[S] = Set(Applied)
+    lazy val applicable: Applied.type = Applied
   }
+
+
+  private val all: Set[RewardKind] = Set(
+    Coupon,
+    OrganizationCreation,
+    OrganizationDescriptionAdded,
+    OrganizationReferral,
+    ReferralApplied
+  )
+
+  def get(kind: String) = all.find(_.kind equalsIgnoreCase kind)
+  def apply(kind: String) = get(kind).getOrElse(throw new IllegalArgumentException(s"Unknown RewardKind: $kind"))
 }
 
 // subset of CreditCodeInfo
@@ -184,4 +204,52 @@ case class CreditReward(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAppliedEvent(event: AccountEvent) = this.copy(applied = Some(event.id.get))
   def withReward(newReward: Reward) = this.copy(reward = newReward)
+}
+
+
+sealed abstract class RewardTrigger(val value: String)
+object RewardTrigger {
+  case class OrganizationUpgraded(orgId: Id[Organization], newPlan: PaidPlan) extends RewardTrigger(s"$orgId upgraded to plan ${newPlan.id.get}")
+  case class OrganizationDescriptionAdded(orgId: Id[Organization], description: String) extends RewardTrigger(s"$orgId filled in their description")
+}
+
+
+sealed abstract class RewardCategory(val value: String, val priority: Int) extends Ordered[RewardCategory] {
+  def compare(that: RewardCategory) = this.priority compare that.priority
+}
+object RewardCategory {
+  case object KeepsAndLibraries extends RewardCategory("keeps_and_libraries", 0)
+  case object OrganizationInformation extends RewardCategory("org_information", 1)
+  case object OrganizationMembership extends RewardCategory("org_membership", 2)
+  case object Referrals extends RewardCategory("referrals", 3)
+  case object CreditCodes extends RewardCategory("credit_codes", 4)
+
+  val all: Set[RewardCategory] = Set(CreditCodes, KeepsAndLibraries, OrganizationInformation, OrganizationMembership, Referrals)
+  def get(str: String): Option[RewardCategory] = all.find(_.value == str)
+  implicit val writes: Writes[RewardCategory] = Writes { rc => JsString(rc.value) }
+
+  def forKind(k: RewardKind): RewardCategory = k match {
+    case RewardKind.Coupon => CreditCodes
+    case RewardKind.OrganizationCreation => OrganizationInformation
+    case RewardKind.OrganizationDescriptionAdded => OrganizationInformation
+    case RewardKind.OrganizationReferral => Referrals
+    case RewardKind.ReferralApplied => CreditCodes
+  }
+}
+case class ExternalCreditReward(
+  description: DescriptionElements,
+  applied: Option[PublicId[AccountEvent]]
+)
+object ExternalCreditReward {
+  implicit val writes = Json.writes[ExternalCreditReward]
+}
+
+case class CreditRewardsView(rewards: Map[RewardCategory, Seq[ExternalCreditReward]])
+object CreditRewardsView {
+  private implicit val categorizedRewardsWrites: Writes[Map[RewardCategory, Seq[ExternalCreditReward]]] = Writes { m =>
+    JsArray(m.toSeq.sortBy(_._1).map {
+      case (category, rewards) => Json.obj("category" -> category, "items" -> rewards)
+    })
+  }
+  implicit val writes = Json.writes[CreditRewardsView]
 }

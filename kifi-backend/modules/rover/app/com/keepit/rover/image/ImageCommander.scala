@@ -95,12 +95,12 @@ class ImageCommander @Inject() (
 
     futureImageProcessedVersion.imap { imageProcessedVersion =>
       db.readWrite(attempts = 3) { implicit session =>
-        articleInfoRepo.updateAfterImageProcessing(articleInfo.uriId, articleInfo.articleKind, imageProcessedVersion)
+        articleInfoRepo.updateAfterImageProcessing(articleInfo.url, articleInfo.articleKind, imageProcessedVersion)
       }
     }
   }
 
-  private def processArticleImages(url: String, uriId: Id[NormalizedURI], key: ArticleKey[_ <: Article]): Future[Unit] = {
+  private def processArticleImages(url: String, uriId: Option[Id[NormalizedURI]], key: ArticleKey[_ <: Article]): Future[Unit] = {
     getRemoteImageUrls(key).flatMap { remoteImageUrls =>
       FutureHelpers.sequentialExec(remoteImageUrls) { remoteImageUrl =>
         processRemoteArticleImage(url, uriId, key.kind, key.version, remoteImageUrl)
@@ -115,7 +115,7 @@ class ImageCommander @Inject() (
     }
   }
 
-  private def processRemoteArticleImage(url: String, uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion, remoteImageUrl: String): Future[Unit] = {
+  private def processRemoteArticleImage(url: String, uriId: Option[Id[NormalizedURI]], kind: ArticleKind[_ <: Article], version: ArticleVersion, remoteImageUrl: String): Future[Unit] = {
     import com.keepit.rover.image.ArticleImageConfiguration._
     val result = imageFetcher.fetchAndStoreRemoteImage(remoteImageUrl, ImageSource.RoverArticle(kind), imagePathPrefix, scaleSizes, cropSizes).map {
       case Right(sourceImageHash) => {
