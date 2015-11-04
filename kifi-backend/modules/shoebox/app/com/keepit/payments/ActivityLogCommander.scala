@@ -64,12 +64,10 @@ class ActivityLogCommanderImpl @Inject() (
         case RewardCredit(id) => creditRewardInfoCommander.getDescription(id)
         case IntegrityError(err) => Elements("Found and corrected an error in the account.") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)), ".")
-        case Refund(_, _) => Elements("A", -event.creditChange, "refund was issued to your card.")
+        case Refund(_, _) => Elements("A", -event.creditChange, "refund was issued to your card", event.chargeId.map(id => s"(ref. ${id.id})"), ".")
         case RefundFailure(_, _, _, _) => s"We failed to refund your card."
         case PlanRenewal(planId, _, _, _, _) => Elements("Your", paidPlanRepo.get(planId), "plan was renewed.")
-        case Charge() =>
-          val invoiceText = s"Invoice ${event.chargeId.map("#" + _.id).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
-          Elements("Your card was charged", event.creditChange, s"for your balance. [$invoiceText]")
+        case Charge() => Elements("Your card was charged", event.creditChange, s"for your balance", event.chargeId.map(id => s"(ref. ${id.id})"), ".")
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
         case ChargeFailure(amount, code, message) => s"We failed to process your payment, please update your payment information."
         case MissingPaymentMethod() => s"We failed to process your payment, please register a payment method."
