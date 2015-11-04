@@ -6,9 +6,27 @@ import java.security.SecureRandom
 import com.keepit.common.db._
 import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
 import com.keepit.common.time._
-import com.keepit.model.UserExperimentType.{ AUTO_GEN, FAKE }
 
 import org.joda.time.DateTime
+import play.api.mvc.PathBindable
+
+case class EmailVerificationCode(value: String) extends AnyVal
+object EmailVerificationCode {
+  private lazy val random = new SecureRandom()
+  def make = EmailVerificationCode(new BigInteger(128, random).toString(36))
+
+  implicit def pathBinder(implicit stringBinder: PathBindable[String]) = new PathBindable[EmailVerificationCode] {
+    override def bind(key: String, value: String): Either[String, EmailVerificationCode] =
+      stringBinder.bind(key, value) match {
+        case Right(code) => Right(EmailVerificationCode(code))
+        case _ => Left("Unable to bind an EmailVerificationCode")
+      }
+    override def unbind(key: String, code: EmailVerificationCode): String = code.value
+  }
+
+  def verifyPath(code: EmailVerificationCode): String = com.keepit.controllers.core.routes.AuthController.verifyEmail(code).url
+
+}
 
 case class UserEmailAddress(
     id: Option[Id[UserEmailAddress]] = None,
@@ -21,7 +39,7 @@ case class UserEmailAddress(
     primary: Boolean = false,
     verifiedAt: Option[DateTime] = None,
     lastVerificationSent: Option[DateTime] = None,
-    verificationCode: Option[String] = None,
+    verificationCode: Option[EmailVerificationCode] = None,
     seq: SequenceNumber[UserEmailAddress] = SequenceNumber.ZERO) extends ModelWithState[UserEmailAddress] with ModelWithSeqNumber[UserEmailAddress] {
   def withId(id: Id[UserEmailAddress]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
@@ -29,7 +47,7 @@ case class UserEmailAddress(
   def withVerificationCode(now: DateTime) = {
     this.copy(
       lastVerificationSent = Some(now),
-      verificationCode = Some(new BigInteger(128, UserEmailAddress.random).toString(36)))
+      verificationCode = Some(EmailVerificationCode.make))
   }
   def withAddress(address: EmailAddress) = copy(address = address, hash = EmailAddressHash.hashEmailAddress(address))
   def clearVerificationCode = copy(lastVerificationSent = None, verificationCode = None)
@@ -39,7 +57,6 @@ case class UserEmailAddress(
 }
 
 object UserEmailAddress {
-  private lazy val random = new SecureRandom()
 
   def create(userId: Id[User], address: EmailAddress): UserEmailAddress = {
     UserEmailAddress(
@@ -61,7 +78,7 @@ object UserEmailAddress {
     primaryOption: Option[Boolean],
     verifiedAt: Option[DateTime] = None,
     lastVerificationSent: Option[DateTime] = None,
-    verificationCode: Option[String] = None,
+    verificationCode: Option[EmailVerificationCode] = None,
     seq: SequenceNumber[UserEmailAddress] = SequenceNumber.ZERO): UserEmailAddress = {
 
     UserEmailAddress(

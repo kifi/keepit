@@ -1,4 +1,4 @@
-@(toUserId: Id[User])
+@(toUserId: Id[User], verifyUrl: Option[String])
 @import com.keepit.common.mail.template.helpers._
 @import play.api.libs.json._
 
@@ -24,5 +24,10 @@
 
     <p>Eishay Smith, CEO<br>
     <a href="@eishayKifiUrl">http://www.kifi.com/eishay</a></p>
+    @verifyUrl.map { url =>
+
+        <p>To protect your privacy and security, please confirm your email address by clicking the link below:</p>
+        <p><a href="@url">@url</a></p>
+    }
     </body>
 </html>

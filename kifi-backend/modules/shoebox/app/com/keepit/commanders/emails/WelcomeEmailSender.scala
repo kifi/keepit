@@ -8,20 +8,23 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailLayout.CustomLayout
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, SystemEmailAddress }
-import com.keepit.model.{ UserExperimentType, NotificationCategory, User }
+import com.keepit.inject.FortyTwoConfig
+import com.keepit.model.{ EmailVerificationCode, UserExperimentType, NotificationCategory, User }
 
 import scala.concurrent.Future
 
 class WelcomeEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
     localUserExperimentCommander: LocalUserExperimentCommander,
+    fortytwoConfig: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def apply(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = true) = sendToUser(userId, toAddress, isPlainEmail)
+  def apply(userId: Id[User], toAddress: Option[EmailAddress], isPlainEmail: Boolean = true, verificationCode: Option[EmailVerificationCode]) = sendToUser(userId, toAddress, isPlainEmail, verificationCode)
 
-  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[ElectronicMail] = {
+  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = true, verificationCode: Option[EmailVerificationCode] = None): Future[ElectronicMail] = {
 
     val usePlainEmail = isPlainEmail || localUserExperimentCommander.userHasExperiment(userId, UserExperimentType.PLAIN_EMAIL)
+    val verifyUrl = verificationCode.map(code => s"${fortytwoConfig.applicationBaseUrl}${EmailVerificationCode.verifyPath(code)}")
 
     val emailToSend = EmailToSend(
       title = "Kifi — Welcome",
@@ -30,7 +33,7 @@ class WelcomeEmailSender @Inject() (
       subject = "Let's get started with Kifi",
       to = toAddress.map(Right.apply).getOrElse(Left(userId)),
       category = NotificationCategory.User.WELCOME,
-      htmlTemplate = if (usePlainEmail) { views.html.email.black.welcomePlain(userId) } else { views.html.email.black.welcome(userId) },
+      htmlTemplate = if (usePlainEmail) { views.html.email.black.welcomePlain(userId, verifyUrl) } else { views.html.email.black.welcome(userId, verifyUrl) },
       textTemplate = Some(views.html.email.black.welcomeText(userId)),
       templateOptions = if (usePlainEmail) { Map("layout" -> CustomLayout) } else { Map.empty },
       tips = if (usePlainEmail) { Seq.empty } else { Seq(EmailTip.ConnectFacebook) }

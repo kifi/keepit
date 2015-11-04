@@ -54,7 +54,7 @@ GET     /signup/:provider           @com.keepit.controllers.core.AuthController.
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 
-GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code)
+GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code: EmailVerificationCode)
 
 POST    /password/forgot            @com.keepit.controllers.core.AuthController.forgotPassword()
 GET     /password/:code             @com.keepit.controllers.core.AuthController.setPasswordPage(code: String)
