@@ -4,7 +4,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.model.{ OrganizationRole, OrganizationHandle, BasicOrganization }
 import com.keepit.social.BasicUser
-import play.api.libs.json.{ Writes, Json }
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import play.twirl.api.Html
 
 sealed trait DescriptionElements {
@@ -13,15 +14,25 @@ sealed trait DescriptionElements {
 case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
   def flatten = elements.flatMap(_.flatten)
 }
-case class BasicElement(text: String, url: Option[String]) extends DescriptionElements {
+case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElements {
   def flatten = Seq(this)
   def withText(newText: String) = this.copy(text = newText)
 }
+object BasicElement {
+  implicit val writes: Writes[BasicElement] = (
+    (__ \ 'text).write[String] and
+    (__ \ 'url).writeNullable[String] and
+    (__ \ 'hover).writeNullable[DescriptionElements]
+  )(unlift(BasicElement.unapply))
+}
+
+case class Hover(elements: DescriptionElements)
 object DescriptionElements {
   def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
 
-  implicit def fromText(text: String): BasicElement = BasicElement(text, None)
-  implicit def fromTextAndUrl(textAndUrl: (String, String)): BasicElement = BasicElement(textAndUrl._1, Some(textAndUrl._2))
+  implicit def fromText(text: String): BasicElement = BasicElement(text, None, None)
+  implicit def fromTextAndUrl(textAndUrl: (String, String)): BasicElement = BasicElement(textAndUrl._1, Some(textAndUrl._2), None)
+  implicit def fromTextAndHover(textAndHover: (String, Hover)): BasicElement = BasicElement(textAndHover._1, None, Some(textAndHover._2.elements))
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
@@ -46,25 +57,30 @@ object DescriptionElements {
     val interpolatedPunctuation = wordPairs.map {
       case (l, r) if l.endsWith("'") || r.startsWith(".") || r.startsWith("'") => ""
       case _ => " "
-    }.map(BasicElement(_, None))
+    }.map(BasicElement(_, None, None))
     intersperse(els.toList, interpolatedPunctuation).filter(_.text.nonEmpty)
   }
+
+  def formatPlain(description: DescriptionElements): String = interpolatePunctuation(description.flatten).map(_.text).mkString
   def formatForSlack(description: DescriptionElements): String = {
-    interpolatePunctuation(description.flatten).map {
-      case BasicElement(text, None) => text
-      case BasicElement(text, Some(url)) => s"<$url|$text>"
-    } mkString
+    interpolatePunctuation(description.flatten).map { be =>
+      be.url
+        .map(u => s"<$u|${be.text}>")
+        .getOrElse(be.text)
+    }.mkString
   }
 
   def formatAsHtml(description: DescriptionElements): Html = {
-    Html(interpolatePunctuation(description.flatten).map {
-      case BasicElement(text, None) => text
-      case BasicElement(text, Some(url)) => s"""<a href="$url">$text</a>"""
-    } mkString)
+    val htmlStr = interpolatePunctuation(description.flatten).map { be =>
+      val h = be.hover.map(DescriptionElements.formatPlain).getOrElse("")
+      be.url
+        .map(u => s"""<a href="$u" title="$h">${be.text}</a>""")
+        .getOrElse(s"""<span title="$h">${be.text}</span>""")
+    }.mkString
+    Html(htmlStr)
   }
 
   implicit val flatWrites = {
-    implicit val basicWrites = Json.writes[BasicElement]
     Writes[DescriptionElements] { description => Json.toJson(interpolatePunctuation(description.flatten)) }
   }
 }

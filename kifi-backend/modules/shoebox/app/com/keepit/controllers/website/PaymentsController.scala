@@ -161,6 +161,6 @@ class PaymentsController @Inject() (
   }
 
   def getRewards(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    Ok(Json.obj("rewards" -> creditRewardInfoCommander.getRewardsByOrg(request.orgId)))
+    Ok(Json.toJson(creditRewardInfoCommander.getRewardsByOrg(request.orgId)))
   }
 }
