@@ -336,7 +336,7 @@ class OrganizationCommanderImpl @Inject() (
         case None =>
           val org = orgRepo.get(request.orgId)
 
-          request.modifications.description.foreach { d =>
+          request.modifications.description.filter(_.nonEmpty).foreach { d =>
             creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationDescriptionAdded(org.id.get, d))
           }
 
