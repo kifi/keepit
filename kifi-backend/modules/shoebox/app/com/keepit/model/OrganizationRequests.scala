@@ -87,6 +87,8 @@ object OrganizationFail {
   case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
   case object INVALID_AUTHTOKEN extends OrganizationFail(UNAUTHORIZED, "invalid_authtoken")
   case object MODIFYING_UNEDITABLE_SETTINGS extends OrganizationFail(FORBIDDEN, "modifying_uneditable_settings")
+  case object POKE_ON_COOLDOWN extends OrganizationFail(FORBIDDEN, "poke_on_cooldown")
+  case object ALREADY_INVITED extends OrganizationFail(BAD_REQUEST, "already_invited")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -102,8 +104,10 @@ object OrganizationFail {
       case INVALID_MODIFY_SITEURL.message => INVALID_MODIFY_SITEURL
       case INVITATION_NOT_FOUND.message => INVITATION_NOT_FOUND
       case ALREADY_A_MEMBER.message => ALREADY_A_MEMBER
+      case ALREADY_INVITED.message => ALREADY_INVITED
       case INVALID_AUTHTOKEN.message => INVALID_AUTHTOKEN
       case MODIFYING_UNEDITABLE_SETTINGS.message => MODIFYING_UNEDITABLE_SETTINGS
+      case POKE_ON_COOLDOWN.message => POKE_ON_COOLDOWN
     }
   }
 }

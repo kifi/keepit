@@ -159,7 +159,9 @@ class PermissionCommanderImpl @Inject() (
 
   val extraInviteePermissions: Set[OrganizationPermission] = Set(OrganizationPermission.VIEW_ORGANIZATION)
   def settinglessOrganizationPermissions(orgRoleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = orgRoleOpt match {
-    case None => Set.empty
+    case None => Set(
+      OrganizationPermission.POKE
+    )
     case Some(OrganizationRole.MEMBER) => Set(
       OrganizationPermission.ADD_LIBRARIES,
       OrganizationPermission.REDEEM_CREDIT_CODE

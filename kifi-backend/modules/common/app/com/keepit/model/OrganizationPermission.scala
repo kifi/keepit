@@ -16,6 +16,7 @@ object OrganizationPermission {
   case object INVITE_MEMBERS extends OrganizationPermission("invite_members")
   case object MANAGE_PLAN extends OrganizationPermission("manage_plan")
   case object MODIFY_MEMBERS extends OrganizationPermission("modify_members")
+  case object POKE extends OrganizationPermission("poke")
   case object PUBLISH_LIBRARIES extends OrganizationPermission("publish_libraries")
   case object REDEEM_CREDIT_CODE extends OrganizationPermission("redeem_credit_code")
   case object REMOVE_LIBRARIES extends OrganizationPermission("remove_libraries")
@@ -34,6 +35,7 @@ object OrganizationPermission {
     INVITE_MEMBERS,
     MANAGE_PLAN,
     MODIFY_MEMBERS,
+    POKE,
     PUBLISH_LIBRARIES,
     REDEEM_CREDIT_CODE,
     REMOVE_LIBRARIES,
@@ -64,6 +66,7 @@ object OrganizationPermission {
       case INVITE_MEMBERS.value => INVITE_MEMBERS
       case MANAGE_PLAN.value => MANAGE_PLAN
       case MODIFY_MEMBERS.value => MODIFY_MEMBERS
+      case POKE.value => POKE
       case PUBLISH_LIBRARIES.value => PUBLISH_LIBRARIES
       case REDEEM_CREDIT_CODE.value => REDEEM_CREDIT_CODE
       case "move_org_libraries" => REMOVE_LIBRARIES
