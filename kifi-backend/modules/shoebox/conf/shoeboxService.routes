@@ -556,7 +556,7 @@ POST          /site/admin/billing/contacts                      @com.keepit.cont
 GET           /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
-GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None)
+GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None, inclusive: Boolean ?= false)
 
 ##########################################
 # Email-Link API

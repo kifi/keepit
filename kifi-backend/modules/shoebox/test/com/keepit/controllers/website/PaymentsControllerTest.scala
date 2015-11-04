@@ -353,6 +353,27 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           1 === 1
         }
       }
+      "use the inclusive flag correctly" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            (org, owner)
+          }
+          val publicId = Organization.publicId(org.id.get)
+
+          val pageSize = 3
+          val firstEvent = db.readOnlyMaster { implicit session => accountEventRepo.all.head }
+          val fromIdOpt = Option(AccountEvent.publicId(firstEvent.id.get).id)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+          val request = route.getEvents(publicId, pageSize, fromIdOpt, inclusive = true)
+          val response = controller.getEvents(publicId, pageSize, fromIdOpt, inclusive = true)(request)
+          val events = (contentAsJson(response) \ "events").as[Seq[JsValue]]
+          val eventIds = events.map { j => AccountEvent.decodePublicId((j \ "id").as[PublicId[AccountEvent]]).get }
+          eventIds.head === firstEvent.id.get
+        }
+      }
     }
     "handle credit codes" in {
       "give an org its referral code" in {
