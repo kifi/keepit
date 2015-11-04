@@ -439,23 +439,25 @@ class UserCommanderImpl @Inject() (
       userEmailTry match {
         case Success(userEmail) => {
           val mail = postOffice.sendMail(ElectronicMail(
-            fromName = Some("Kifi Support"),
             from = SystemEmailAddress.NOTIFICATIONS,
+            fromName = Some("Kifi"),
             to = Seq(userEmail.address),
             subject = "Create a Kifi team from your desktop",
             htmlBody =
               s"""
-                  |Per your request, you can now <a href="https://www.kifi.com/teams/new">create a team</a> on Kifi from
-                  |your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+                  |Per your request, you can <a href="https://www.kifi.com/teams/new">create a team</a> on Kifi from
+                  |your desktop. Teams allow you to quickly onboard new members via access to all of the libraries within your team's space.
+                  |You can also send a page to all team members in just 1 click, integrate your libraries with Slack, and more.
                   |
                   |Get started by visiting the page to <a href="https://www.kifi.com/teams/new">create a team</a>.
-              """,
+              """.stripMargin,
             textBody = Some(
               s"""
-                  |Per your request, you can now create a team on Kifi from
-                  |your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+                  |Per your request, you can create a team on Kifi from
+                  |your desktop. Teams allow you to quickly onboard new members via access to all of the libraries within your team's space.
+                  |You can also send a page to all team members in just 1 click, integrate your libraries with Slack, and more.
                   |
-                  |Get started by visiting the page to create a team: https://www.kifi.com/teams/new.
+                  |Get started by visiting the page to create a team: www.kifi.com/teams/new
                """.stripMargin),
             category = NotificationCategory.User.CREATE_TEAM
           ))
