@@ -109,7 +109,7 @@ class CreditRewardCommanderImpl @Inject() (
          |Your <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a> team's referral code was used by <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>. If they upgrade to a standard plan on Kifi,
          |you'll earn a ${orgReferrerCredit.toDollarString} credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
          |<br><br>
-         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: ${creditInfo.code.value}
+         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/credits">${creditInfo.code.value}</a>
        """.stripMargin
     val textBody =
       s"""
@@ -120,6 +120,7 @@ class CreditRewardCommanderImpl @Inject() (
        """.stripMargin
     postOffice.sendMail(ElectronicMail(
       from = SystemEmailAddress.NOTIFICATIONS,
+      fromName = Some("Kifi"),
       to = adminEmails,
       subject = subject,
       htmlBody = htmlBody,
@@ -237,7 +238,7 @@ class CreditRewardCommanderImpl @Inject() (
          |We've added it to your <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/plan">team balance</a>. Thank you so much for spreading the word
          |about Kifi with great teams like ${referredOrg.name}!
          |<br><br>
-         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: ${reward.code.get.code.value}
+         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/credits">${reward.code.get.code.value}</a>
        """.stripMargin
     val textBody =
       s"""
@@ -248,6 +249,7 @@ class CreditRewardCommanderImpl @Inject() (
        """.stripMargin
     postOffice.sendMail(ElectronicMail(
       from = SystemEmailAddress.NOTIFICATIONS,
+      fromName = Some("Kifi"),
       to = adminEmails,
       subject = subject,
       htmlBody = htmlBody,
