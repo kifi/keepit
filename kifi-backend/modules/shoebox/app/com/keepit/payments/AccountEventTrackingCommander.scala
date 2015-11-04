@@ -59,7 +59,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     implicit val org = o
     implicit val paymentMethod = m
 
-    Future.sequence(Seq(notifyOfCharge(event).imap(_ => ()), notifyOfFailedCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
+    Future.sequence(Seq(notifyOfTransaction(event).imap(_ => ()), notifyOfFailedCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
   } else Future.successful(())
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
@@ -111,10 +111,11 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def notifyOfCharge(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {
+  private def notifyOfTransaction(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {
     checkingParameters(event) {
-      event.chargeId match {
-        case Some(chargeId) => notifyOfCharge(account, paymentMethod.get.stripeToken, event.paymentCharge.get, chargeId).imap(_ => true)
+      event.paymentCharge match {
+        case Some(amount) if amount > DollarAmount.ZERO => notifyOfCharge(account, paymentMethod.get.stripeToken, amount, event.chargeId.get).imap(_ => true)
+        case Some(amount) if amount < DollarAmount.ZERO => notifyOfRefund(account, paymentMethod.get.stripeToken, -amount, event.chargeId.get).imap(_ => true)
         case None => Future.successful(false)
       }
     }
@@ -131,14 +132,52 @@ class AccountEventTrackingCommanderImpl @Inject() (
     val emails = (account.emailContacts ++ userContacts).distinct
 
     lastFourFuture.map { lastFour =>
-      val subject = s"We've charged you card for your Kifi Organization ${org.name}"
-      val htmlBody = s"""|<p>You card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).<br/>
+      val subject = s"We've charged you card for your Kifi Team ${org.name}"
+      val htmlBody = s"""|<p>Your card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).<br/>
       |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history</a>.</p>
       |
       |<p>Thanks,
       |The Kifi Team</p>
       """.stripMargin
-      val textBody = s"""|You card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).
+      val textBody = s"""|Your card on file ending in $lastFour has been charged $amount (ref. ${chargeId.id}).
+      |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings/activity.
+      |
+      |Thanks, <br/>
+      |The Kifi Team
+      """.stripMargin
+      db.readWrite { implicit session =>
+        postOffice.sendMail(ElectronicMail(
+          from = SystemEmailAddress.BILLING,
+          fromName = Some("Kifi Billing"),
+          to = emails,
+          subject = subject,
+          htmlBody = htmlBody,
+          textBody = Some(textBody),
+          category = NotificationCategory.NonUser.BILLING
+        ))
+      }
+    }
+  }
+
+  private def notifyOfRefund(account: PaidAccount, stripeToken: StripeToken, amount: DollarAmount, refundId: StripeTransactionId): Future[Unit] = {
+    val lastFourFuture = stripeClient.getLastFourDigitsOfCard(stripeToken)
+    val (userContacts, org) = db.readOnlyReplica { implicit session =>
+      val userContacts = account.userContacts.flatMap { userId =>
+        Try(emailRepo.getByUser(userId)).toOption
+      }
+      (userContacts, orgRepo.get(account.orgId))
+    }
+    val emails = (account.emailContacts ++ userContacts).distinct
+
+    lastFourFuture.map { lastFour =>
+      val subject = s"We've refunded a charge made for your Kifi Team ${org.name}"
+      val htmlBody = s"""|<p>Your card on file ending in $lastFour has been refunded $amount (ref. ${refundId.id}).<br/>
+      |For more details please consult <a href="${pathCommander.pathForOrganization(org).absolute}/settings/activity">your account history</a>.</p>
+      |
+      |<p>Thanks,
+      |The Kifi Team</p>
+      """.stripMargin
+      val textBody = s"""|Your card on file ending in $lastFour has been refunded $amount (ref. ${refundId.id}).
       |For more details please consult your account history at ${pathCommander.pathForOrganization(org).absolute}/settings/activity.
       |
       |Thanks, <br/>
