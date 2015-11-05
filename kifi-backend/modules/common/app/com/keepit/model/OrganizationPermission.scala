@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.json.TraversableFormat
+import com.keepit.common.json.{EnumFormat, TraversableFormat}
 import com.keepit.common.reflection.Enumerator
 import play.api.libs.json._
 
@@ -26,10 +26,10 @@ object OrganizationPermission extends Enumerator[OrganizationPermission] {
 
   def all: Set[OrganizationPermission] = _all.toSet
 
-  val format: Format[OrganizationPermission] =
-    Format(__.read[String].map(OrganizationPermission(_)), new Writes[OrganizationPermission] {
-      def writes(o: OrganizationPermission) = JsString(o.value)
-    })
+  val format: Format[OrganizationPermission] = Format(
+    EnumFormat.reads(get, all.map(_.value)),
+    Writes { o => JsString(o.value) }
+  )
 
   implicit val writes = Writes(format.writes)
   val reads = Reads(format.reads)

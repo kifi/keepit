@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.cache._
 import com.keepit.common.db._
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
@@ -80,8 +81,11 @@ object LibraryAccess extends Enumerator[LibraryAccess] {
   case object READ_WRITE extends LibraryAccess("read_write", 2)
   case object OWNER extends LibraryAccess("owner", 3)
 
-  implicit def format[T]: Format[LibraryAccess] =
-    Format(__.read[String].map(LibraryAccess(_)), new Writes[LibraryAccess] { def writes(o: LibraryAccess) = JsString(o.value) })
+  def get(str: String) = all.find(_.value == str)
+  implicit def format[T]: Format[LibraryAccess] = Format(
+    EnumFormat.reads(get, all.map(_.value).toSet),
+    Writes { o => JsString(o.value) }
+  )
 
   implicit def ord: Ordering[LibraryAccess] = new Ordering[LibraryAccess] {
     def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
@@ -111,10 +115,10 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
   case object EXPORT_KEEPS extends LibraryPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends LibraryPermission("create_slack_integration")
 
-  implicit val format: Format[LibraryPermission] =
-    Format(__.read[String].map(LibraryPermission(_)), new Writes[LibraryPermission] {
-      def writes(o: LibraryPermission) = JsString(o.value)
-    })
+  implicit val format: Format[LibraryPermission] = Format(
+    EnumFormat.reads(get, all.map(_.value)),
+    Writes { o => JsString(o.value) }
+  )
 
   def all = _all.toSet
   def get(str: String): Option[LibraryPermission] = all.find(_.value == str)

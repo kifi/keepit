@@ -7,6 +7,7 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db._
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
@@ -254,7 +255,10 @@ case class LibrarySlug(value: String) {
 }
 object LibrarySlug {
   implicit def format: Format[LibrarySlug] =
-    Format(__.read[String].map(LibrarySlug(_)), new Writes[LibrarySlug] { def writes(o: LibrarySlug) = JsString(o.value) })
+    Format(
+      __.read[String].map(LibrarySlug(_)),
+      Writes { o => JsString(o.value) }
+    )
 
   private val MaxLength = 50
   private val ReservedSlugs = Set("libraries", "connections", "followers", "keeps", "tags", "members")
@@ -293,11 +297,14 @@ object LibraryVisibility extends Enumerator[LibraryVisibility] {
   case object ORGANIZATION extends LibraryVisibility("organization") // private to everyone but members of organization
   case object SECRET extends LibraryVisibility("secret") // secret, not discoverable
 
-  implicit def format[T]: Format[LibraryVisibility] =
-    Format(__.read[String].map(LibraryVisibility(_)), new Writes[LibraryVisibility] { def writes(o: LibraryVisibility) = JsString(o.value) })
-
   def all = _all.toSet
-  def apply(str: String) = all.find(_.value == str).getOrElse(throw new Exception(s"unknown library visibility: $str"))
+  def get(str: String) = all.find(_.value == str)
+  def apply(str: String) = get(str).getOrElse(throw new Exception(s"unknown library visibility: $str"))
+
+  implicit def format[T]: Format[LibraryVisibility] = Format(
+    EnumFormat.reads(get, all.map(_.value)),
+    Writes { o => JsString(o.value) }
+  )
 }
 
 sealed abstract class LibraryKind(val value: String, val priority: Int) {
@@ -313,11 +320,14 @@ object LibraryKind extends Enumerator[LibraryKind] {
   case object SYSTEM_READ_IT_LATER extends LibraryKind("system_read_it_later", 3)
   case object SYSTEM_GUIDE extends LibraryKind("system_guide", 4)
 
-  implicit def format[T]: Format[LibraryKind] =
-    Format(__.read[String].map(LibraryKind(_)), new Writes[LibraryKind] { def writes(o: LibraryKind) = JsString(o.value) })
-
   def all = _all.toSet
-  def apply(str: String) = all.find(_.value == str).getOrElse(throw new Exception(s"unknown library kind: $str"))
+  def get(str: String): Option[LibraryKind] = all.find(_.value == str)
+  def apply(str: String) = get(str).getOrElse(throw new Exception(s"unknown library kind: $str"))
+
+  implicit val format: Format[LibraryKind] = Format(
+    EnumFormat.reads(get, all.map(_.value)),
+    Writes { o => JsString(o.value) }
+  )
 }
 
 case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind)
@@ -374,8 +384,6 @@ case class BasicLibraryDetails(
 sealed abstract class LibraryColor(val value: String, val hex: String)
 object LibraryColor extends Enumerator[LibraryColor] {
 
-  implicit def format[T]: Format[LibraryColor] =
-    Format(__.read[String].map(LibraryColor(_)), new Writes[LibraryColor] { def writes(o: LibraryColor) = JsString(o.hex) })
 
   case object BLUE extends LibraryColor("blue", "#447ab7")
   case object SKY_BLUE extends LibraryColor("sky_blue", "#5ab7e7")
@@ -386,7 +394,13 @@ object LibraryColor extends Enumerator[LibraryColor] {
   case object PURPLE extends LibraryColor("purple", "#9166ac")
 
   def all = _all.toSet
-  def apply(str: String): LibraryColor = all.find(c => c.value == str || c.hex == str).getOrElse(throw new Exception(s"Unknown library color $str"))
+  def get(str: String) = all.find(c => c.value == str || c.hex == str)
+  def apply(str: String): LibraryColor = get(str).getOrElse(throw new Exception(s"Unknown library color $str"))
+
+  implicit val format: Format[LibraryColor] = Format(
+    EnumFormat.reads(get, all.map(_.value) ++ all.map(_.hex)),
+    Writes { o => JsString(o.hex) }
+  )
 
   val AllColors: Seq[LibraryColor] = all.toSeq.sortBy(_.value)
 
