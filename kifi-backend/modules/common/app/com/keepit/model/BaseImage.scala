@@ -114,5 +114,5 @@ object ProcessImageOperation extends Enumerator[ProcessImageOperation] {
   def get(str: String): Option[ProcessImageOperation] = all.find(_.kind == str)
   def apply(kind: String): ProcessImageOperation = get(kind).getOrElse(Original)
 
-  implicit val format: Format[ProcessImageOperation] = Format(EnumFormat.reads(get, all.map(_.kind)), Writes(op => JsString(op.kind)))
+  implicit val format: Format[ProcessImageOperation] = Format(__.read[String].map(ProcessImageOperation(_)), Writes(op => JsString(op.kind)))
 }

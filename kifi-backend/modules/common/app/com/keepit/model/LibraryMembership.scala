@@ -81,8 +81,13 @@ object LibraryAccess extends Enumerator[LibraryAccess] {
   case object READ_WRITE extends LibraryAccess("read_write", 2)
   case object OWNER extends LibraryAccess("owner", 3)
 
+  val all: Seq[LibraryAccess] = _all.sorted
+  val collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE)
+
   def get(str: String) = all.find(_.value == str)
-  implicit def format[T]: Format[LibraryAccess] = Format(
+  def apply(str: String): LibraryAccess = all.find(_.value == str).getOrElse(throw new Exception(s"Unknown LibraryAccess $str"))
+
+  implicit val format: Format[LibraryAccess] = Format(
     EnumFormat.reads(get, all.map(_.value).toSet),
     Writes { o => JsString(o.value) }
   )
@@ -90,11 +95,6 @@ object LibraryAccess extends Enumerator[LibraryAccess] {
   implicit def ord: Ordering[LibraryAccess] = new Ordering[LibraryAccess] {
     def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
   }
-
-  def apply(str: String): LibraryAccess = all.find(_.value == str).getOrElse(throw new Exception(s"Unknown LibraryAccess $str"))
-
-  val all: Seq[LibraryAccess] = _all.sorted
-  val collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE)
 }
 
 sealed abstract class LibraryPermission(val value: String)

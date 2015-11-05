@@ -45,14 +45,14 @@ object LibrarySubscriptionStates extends States[LibrarySubscription] {
   val DISABLED = State[LibrarySubscription]("disabled")
 }
 
-case class SubscriptionTrigger(value: String)
-
+sealed abstract class SubscriptionTrigger(val value: String)
 object SubscriptionTrigger extends Enumerator[SubscriptionTrigger] {
   case object NEW_KEEP extends SubscriptionTrigger("new_keep")
   case object NEW_MEMBER extends SubscriptionTrigger("new_member")
 
   def all = _all.toSet
-  def get(str: String): Option[SubscriptionTrigger] = all.find(_.value == str)
+  def get(str: String) = all.find(_.value == str)
+  def apply(str: String): SubscriptionTrigger = get(str).getOrElse(throw new Exception(s"Unknown SubscriptionTrigger $str"))
   implicit val format: Format[SubscriptionTrigger] = Format(
     EnumFormat.reads(get, all.map(_.value)),
     Writes { o => JsString(o.value) }

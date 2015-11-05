@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.keepit.common.json.{EnumFormat, TraversableFormat}
+import com.keepit.common.json.{ EnumFormat, TraversableFormat }
 import com.keepit.common.reflection.Enumerator
 import play.api.libs.json._
 
@@ -35,5 +35,6 @@ object OrganizationPermission extends Enumerator[OrganizationPermission] {
   val reads = Reads(format.reads)
   implicit val safeSetReads = TraversableFormat.safeSetReads[OrganizationPermission](reads)
 
-  def apply(str: String): OrganizationPermission = all.find(_.value == str).getOrElse(throw new Exception(s"Unknown OrganizationPermission $str"))
+  def get(str: String) = all.find(_.value == str)
+  def apply(str: String): OrganizationPermission = get(str).getOrElse(throw new Exception(s"Unknown OrganizationPermission $str"))
 }

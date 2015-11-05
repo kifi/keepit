@@ -301,7 +301,7 @@ object LibraryVisibility extends Enumerator[LibraryVisibility] {
   def get(str: String) = all.find(_.value == str)
   def apply(str: String) = get(str).getOrElse(throw new Exception(s"unknown library visibility: $str"))
 
-  implicit def format[T]: Format[LibraryVisibility] = Format(
+  implicit val format: Format[LibraryVisibility] = Format(
     EnumFormat.reads(get, all.map(_.value)),
     Writes { o => JsString(o.value) }
   )
@@ -383,7 +383,6 @@ case class BasicLibraryDetails(
 
 sealed abstract class LibraryColor(val value: String, val hex: String)
 object LibraryColor extends Enumerator[LibraryColor] {
-
 
   case object BLUE extends LibraryColor("blue", "#447ab7")
   case object SKY_BLUE extends LibraryColor("sky_blue", "#5ab7e7")
