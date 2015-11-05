@@ -9,6 +9,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPubl
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
@@ -286,7 +287,7 @@ object LibrarySlug {
 
 sealed abstract class LibraryVisibility(val value: String)
 
-object LibraryVisibility {
+object LibraryVisibility extends Enumerator[LibraryVisibility] {
   case object PUBLISHED extends LibraryVisibility("published") // published library, is discoverable
   case object DISCOVERABLE extends LibraryVisibility("discoverable") // "help my friends", is discoverable
   case object ORGANIZATION extends LibraryVisibility("organization") // private to everyone but members of organization
@@ -295,21 +296,15 @@ object LibraryVisibility {
   implicit def format[T]: Format[LibraryVisibility] =
     Format(__.read[String].map(LibraryVisibility(_)), new Writes[LibraryVisibility] { def writes(o: LibraryVisibility) = JsString(o.value) })
 
-  def apply(str: String) = {
-    str match {
-      case PUBLISHED.value => PUBLISHED
-      case DISCOVERABLE.value => DISCOVERABLE
-      case ORGANIZATION.value => ORGANIZATION
-      case SECRET.value => SECRET
-    }
-  }
+  def all = _all.toSet
+  def apply(str: String) = all.find(_.value == str).getOrElse(throw new Exception(s"unknown library visibility: $str"))
 }
 
 sealed abstract class LibraryKind(val value: String, val priority: Int) {
   def compare(other: LibraryKind): Int = this.priority compare other.priority
 }
 
-object LibraryKind {
+object LibraryKind extends Enumerator[LibraryKind] {
   case object SYSTEM_MAIN extends LibraryKind("system_main", 0)
   case object SYSTEM_SECRET extends LibraryKind("system_secret", 1)
   case object SYSTEM_ORG_GENERAL extends LibraryKind("system_org_general", 2)
@@ -321,18 +316,8 @@ object LibraryKind {
   implicit def format[T]: Format[LibraryKind] =
     Format(__.read[String].map(LibraryKind(_)), new Writes[LibraryKind] { def writes(o: LibraryKind) = JsString(o.value) })
 
-  def apply(str: String) = {
-    str match {
-      case SYSTEM_MAIN.value => SYSTEM_MAIN
-      case SYSTEM_SECRET.value => SYSTEM_SECRET
-      case SYSTEM_ORG_GENERAL.value => SYSTEM_ORG_GENERAL
-      case SYSTEM_PERSONA.value => SYSTEM_PERSONA
-      case SYSTEM_READ_IT_LATER.value => SYSTEM_READ_IT_LATER
-      case SYSTEM_GUIDE.value => SYSTEM_GUIDE
-      case USER_CREATED.value => USER_CREATED
-      case _ => throw new Exception(s"unknown library kind: $str")
-    }
-  }
+  def all = _all.toSet
+  def apply(str: String) = all.find(_.value == str).getOrElse(throw new Exception(s"unknown library kind: $str"))
 }
 
 case class LibraryView(id: Option[Id[Library]], ownerId: Id[User], state: State[Library], seq: SequenceNumber[Library], kind: LibraryKind)
@@ -386,33 +371,24 @@ case class BasicLibraryDetails(
   url: Path,
   permissions: Set[LibraryPermission])
 
-sealed abstract class LibraryColor(val hex: String)
-object LibraryColor {
+sealed abstract class LibraryColor(val value: String, val hex: String)
+object LibraryColor extends Enumerator[LibraryColor] {
 
   implicit def format[T]: Format[LibraryColor] =
     Format(__.read[String].map(LibraryColor(_)), new Writes[LibraryColor] { def writes(o: LibraryColor) = JsString(o.hex) })
 
-  case object BLUE extends LibraryColor("#447ab7")
-  case object SKY_BLUE extends LibraryColor("#5ab7e7")
-  case object GREEN extends LibraryColor("#4fc49e")
-  case object ORANGE extends LibraryColor("#f99457")
-  case object RED extends LibraryColor("#dd5c60")
-  case object MAGENTA extends LibraryColor("#c16c9e")
-  case object PURPLE extends LibraryColor("#9166ac")
+  case object BLUE extends LibraryColor("blue", "#447ab7")
+  case object SKY_BLUE extends LibraryColor("sky_blue", "#5ab7e7")
+  case object GREEN extends LibraryColor("green", "#4fc49e")
+  case object ORANGE extends LibraryColor("orange", "#f99457")
+  case object RED extends LibraryColor("red", "#dd5c60")
+  case object MAGENTA extends LibraryColor("magenta", "#c16c9e")
+  case object PURPLE extends LibraryColor("purple", "#9166ac")
 
-  def apply(str: String): LibraryColor = {
-    str match {
-      case "blue" | BLUE.hex => BLUE
-      case "sky_blue" | SKY_BLUE.hex => SKY_BLUE
-      case "green" | GREEN.hex => GREEN
-      case "orange" | ORANGE.hex => ORANGE
-      case "red" | RED.hex => RED
-      case "magenta" | MAGENTA.hex => MAGENTA
-      case "purple" | PURPLE.hex => PURPLE
-    }
-  }
+  def all = _all.toSet
+  def apply(str: String): LibraryColor = all.find(c => c.value == str || c.hex == str).getOrElse(throw new Exception(s"Unknown library color $str"))
 
-  val AllColors: Seq[LibraryColor] = Seq(BLUE, SKY_BLUE, GREEN, ORANGE, RED, MAGENTA, PURPLE)
+  val AllColors: Seq[LibraryColor] = all.toSeq.sortBy(_.value)
 
   private lazy val rnd = new Random
 

@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.json.{ EnumFormat, TraversableFormat }
+import com.keepit.common.reflection.Enumerator
 import com.keepit.model.Feature.InvalidSettingForFeatureException
 import play.api.libs.json._
 
@@ -74,23 +75,12 @@ object FeatureSetting {
   case object ANYONE extends FeatureSetting("anyone")
 }
 
-object Feature {
+object Feature extends Enumerator[Feature] {
   case class InvalidSettingForFeatureException(feature: Feature, str: String) extends Exception(s""""$str" is not a valid setting for feature ${feature.value}""")
   case class FeatureNotFoundException(featureStr: String) extends Exception(s"""Feature "$featureStr" not found""")
 
-  val ALL: Set[Feature] = Set(
-    PublishLibraries,
-    InviteMembers,
-    GroupMessaging,
-    ForceEditLibraries,
-    ViewOrganization,
-    ViewMembers,
-    RemoveLibraries,
-    CreateSlackIntegration,
-    EditOrganization,
-    ExportKeeps,
-    ViewSettings
-  )
+  val ALL: Set[Feature] = _all.toSet
+
   def get(str: String): Option[Feature] = ALL.find(_.value == str)
   def apply(str: String): Feature = get(str).getOrElse(throw new FeatureNotFoundException(str))
 

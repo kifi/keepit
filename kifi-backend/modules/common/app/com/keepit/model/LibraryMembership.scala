@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.model.view.LibraryMembershipView
 import com.kifi.macros.json
@@ -74,7 +75,7 @@ object LibraryMembershipStates extends States[LibraryMembership]
 
 sealed abstract class LibraryAccess(val value: String, val priority: Int)
 
-object LibraryAccess {
+object LibraryAccess extends Enumerator[LibraryAccess] {
   case object READ_ONLY extends LibraryAccess("read_only", 0)
   case object READ_WRITE extends LibraryAccess("read_write", 2)
   case object OWNER extends LibraryAccess("owner", 3)
@@ -86,21 +87,15 @@ object LibraryAccess {
     def compare(x: LibraryAccess, y: LibraryAccess): Int = x.priority compare y.priority
   }
 
-  def apply(str: String): LibraryAccess = {
-    str match {
-      case READ_ONLY.value => READ_ONLY
-      case READ_WRITE.value => READ_WRITE
-      case OWNER.value => OWNER
-    }
-  }
+  def apply(str: String): LibraryAccess = all.find(_.value == str).getOrElse(throw new Exception(s"Unknown LibraryAccess $str"))
 
-  val all: Seq[LibraryAccess] = Seq(OWNER, READ_WRITE, READ_ONLY)
+  val all: Seq[LibraryAccess] = _all.sorted
   val collaborativePermissions: Set[LibraryAccess] = Set(OWNER, READ_WRITE)
 }
 
 sealed abstract class LibraryPermission(val value: String)
 
-object LibraryPermission {
+object LibraryPermission extends Enumerator[LibraryPermission] {
   case object VIEW_LIBRARY extends LibraryPermission("view_library")
   case object EDIT_LIBRARY extends LibraryPermission("edit_library")
   case object MOVE_LIBRARY extends LibraryPermission("move_library")
@@ -121,24 +116,9 @@ object LibraryPermission {
       def writes(o: LibraryPermission) = JsString(o.value)
     })
 
-  def apply(str: String): LibraryPermission = {
-    str match {
-      case VIEW_LIBRARY.value => VIEW_LIBRARY
-      case EDIT_LIBRARY.value => EDIT_LIBRARY
-      case MOVE_LIBRARY.value => MOVE_LIBRARY
-      case DELETE_LIBRARY.value => DELETE_LIBRARY
-      case INVITE_FOLLOWERS.value => INVITE_FOLLOWERS
-      case INVITE_COLLABORATORS.value => INVITE_COLLABORATORS
-      case REMOVE_MEMBERS.value => REMOVE_MEMBERS
-      case ADD_KEEPS.value => ADD_KEEPS
-      case EDIT_OWN_KEEPS.value => EDIT_OWN_KEEPS
-      case EDIT_OTHER_KEEPS.value => EDIT_OTHER_KEEPS
-      case REMOVE_OWN_KEEPS.value => REMOVE_OWN_KEEPS
-      case REMOVE_OTHER_KEEPS.value => REMOVE_OTHER_KEEPS
-      case EXPORT_KEEPS.value => EXPORT_KEEPS
-      case CREATE_SLACK_INTEGRATION.value => CREATE_SLACK_INTEGRATION
-    }
-  }
+  def all = _all.toSet
+  def get(str: String): Option[LibraryPermission] = all.find(_.value == str)
+  def apply(str: String): LibraryPermission = get(str).getOrElse(throw new Exception(s"Unknown LibraryPermission $str"))
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readWrite: Int, owner: Int)

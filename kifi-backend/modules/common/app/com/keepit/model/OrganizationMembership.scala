@@ -4,6 +4,7 @@ import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatis
 import com.keepit.common.db._
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -55,7 +56,7 @@ sealed abstract class OrganizationRole(val value: String, val priority: Int) ext
   override def compare(that: OrganizationRole): Int = that.priority compare priority
 }
 
-object OrganizationRole {
+object OrganizationRole extends Enumerator[OrganizationRole] {
   case class OrganizationRoleNotFoundException(str: String) extends Exception(s"""Organization role "$str" not found""")
   case object ADMIN extends OrganizationRole("admin", 0)
   case object MEMBER extends OrganizationRole("member", 1)
@@ -69,13 +70,13 @@ object OrganizationRole {
   def get(str: String): Option[OrganizationRole] = all.find(_.value == str)
   def apply(str: String): OrganizationRole = get(str).getOrElse(throw new OrganizationRoleNotFoundException(str))
 
-  val all: Set[OrganizationRole] = Set(ADMIN, MEMBER)
-  val allOpts: Set[Option[OrganizationRole]] = all.map(Some(_)) ++ Set(None)
+  val all: Set[OrganizationRole] = _all.toSet
+  val allOpts: Set[Option[OrganizationRole]] = all.map(Option(_)) + None
 
   val emptySet: Set[Option[OrganizationRole]] = Set.empty[Option[OrganizationRole]]
   val adminSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN))
   val memberSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN), Some(MEMBER))
-  val totalSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN), Some(MEMBER), None)
+  val totalSet: Set[Option[OrganizationRole]] = allOpts
 }
 
 case class IngestableOrganizationMembership(
