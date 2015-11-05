@@ -260,7 +260,7 @@ class ABookUserRecommendationCommander @Inject() (
         case None => Future.successful(Stream.empty)
         case Some(relatedEmails) => {
           val rejectedEmailInviteRecommendations = db.readOnlyReplica { implicit session => userEmailInviteRecommendationRepo.getIrrelevantRecommendations(userId) }
-          val allContacts = db.readOnlyMaster { implicit session => contactRepo.getByUserId(userId) }
+          val allContacts = db.readOnlyMaster { implicit session => contactRepo.getByUserId(userId).filter(_.contactUserId.contains(userId)) }
           for {
             existingInvites <- futureExistingInvites
             normalizedUserNames <- futureNormalizedUserNames
