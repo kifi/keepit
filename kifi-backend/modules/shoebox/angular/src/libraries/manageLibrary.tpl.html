@@ -134,14 +134,14 @@
         </div>
 
         <div class="dialog-buttons">
-          <button ng-if="!modifyingExistingLibrary" class="manage-lib-create-button" ng-click="saveLibrary()">Create Library</button>
+          <button ng-if="!modifyingExistingLibrary" class="kf-button kf-button-large manage-lib-create-button" ng-click="saveLibrary()">Create library</button>
           <button
             ng-if="modifyingExistingLibrary"
-            class="manage-lib-delete-button"
+            class="kf-button kf-button-large manage-lib-delete-button"
             ng-click="openDeleteLibraryModal()"
             ng-disabled="!hasPermission(LIB_PERMISSION.DELETE_LIBRARY)"
           >Delete library</button>
-          <button ng-if="modifyingExistingLibrary" class="manage-lib-save-button" ng-click="saveLibrary()">Save</button>
+          <button ng-if="modifyingExistingLibrary" class="kf-button kf-button-large manage-lib-save-button" ng-click="saveLibrary()">Save</button>
         </div>
       </div>
     </div>

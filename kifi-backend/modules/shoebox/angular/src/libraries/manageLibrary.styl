@@ -609,11 +609,9 @@ textarea.manage-lib-sub-input
 // Delete library confirm modal
 //
 .kf-delete-library-confirm-modal
-  // Switch the position of the cancel and confirm buttons.
-  .dialog-warn
-    position: relative
-    left: -110px
+  .dialog-buttons
+    // Switch the position of the cancel and confirm buttons.
+    flex-direction: row-reverse
 
-  .dialog-cancel
-    position: relative
-    left: 110px
+    > *
+      margin: 0 5px

@@ -87,6 +87,8 @@ angular.module('kifi')
       scope.withCancel = (attrs.withCancel !== void 0) || false;
       scope.withOk = (typeof attrs.withOk !== 'undefined' ? attrs.withOk !== 'false' : true); // default value of true
       scope.withWarning = (attrs.withWarning !== void 0) || false;
+      scope.withCta = (attrs.withCta !== void 0) || false;
+      scope.equalButtons = (typeof attrs.equalButtons !== 'undefined' ? attrs.equalButtons !== 'false' : true); // default value of true
       scope.withoutButtons = 'withoutButtons' in attrs;
       scope.centered = attrs.centered;
 

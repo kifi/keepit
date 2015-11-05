@@ -2,10 +2,30 @@
   <a class="dialog-x" ng-click="closeAndCancel()"></a>
   <div class="dialog-body-wrap">
     <h1 class="dialog-header" ng-if="title.length" ng-bind-html="title"></h1>
-    <div class="dialog-body" ng-transclude ng-class="{'dialog-centered': centered}"></div>
+    <div class="dialog-body" ng-transclude ng-class="{ 'dialog-centered': centered }"></div>
   </div>
   <div class="dialog-buttons" ng-if="!withoutButtons">
-    <button class="dialog-cancel" ng-click="closeAndCancel()" ng-if="withCancel" tabindex="0">{{cancelText || 'Cancel'}}</button>
-    <button class="kf-action-button" ng-class="{'dialog-warn': withWarning}" ng-click="closeAndAction()" ng-if="withOk" tabindex="0">{{actionText || 'Ok'}}</button>
+    <button
+      class="kf-button kf-button-large dialog-cancel"
+      tabindex="0"
+      ng-if="withCancel"
+      ng-class="{
+        'dialog-buttons-constant': equalButtons
+      }"
+      ng-click="closeAndCancel()"
+      ng-bind="cancelText || 'Cancel'"
+    ></button>
+    <button
+      class="kf-button kf-button-large kf-action-button"
+      tabindex="0"
+      ng-if="withOk"
+      ng-class="{
+        'kf-button-cta-red': withWarning,
+        'kf-button-cta-blue': withCta,
+        'dialog-buttons-constant': equalButtons
+      }"
+      ng-click="closeAndAction()"
+      ng-bind="actionText || 'Ok'"
+    ></button>
   </div>
 </div>
