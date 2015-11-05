@@ -31,7 +31,8 @@ if (!_.isString(filename) || !fs.statSync(filename).isFile()) {
 }
 
 // logging config
-var logfile = 'logs/' + path.basename(filename, '.txt') + '.log';
+var filenameExt = _.endsWith(filename, '.txt.bz2') ? '.txt.bz2' : '.txt';
+var logfile = 'logs/' + path.basename(filename, filenameExt) + '.log';
 var logger = new (winston.Logger)({
   transports: [
     new (winston.transports.Console)({ level: _.get(process.env, 'LOGGER_LEVEL', 'debug') }),
@@ -287,16 +288,16 @@ function isSimpleMatch(value) {
   };
 }
 
-var isSnakeCaseRegExp = /^[a-z]+[a-z0-9]*[A-Z][A-Za-z0-9]*$/;
+var isCamelCaseRegExp = /^[a-z]+[a-z0-9]*[A-Z][A-Za-z0-9]*$/;
 
-function isSnakeCase(value) {
- return isSnakeCaseRegExp.test(value);
+function isCamelCase(value) {
+ return isCamelCaseRegExp.test(value);
 }
 
 function shouldConvertValueToSnakeCase(field, value) {
   return !_.some(valuesThatAreOkayAsSnakeCase, isSimpleMatch(value)) &&
       !_.some(fieldsToNotChangeValuesToSnakeCase, isSimpleMatch(field)) &&
-      isSnakeCase(value);
+      isCamelCase(value);
 }
 
 function getUserAndEventProperties(mixpanelEvent) {
@@ -372,6 +373,7 @@ var handleApiResponse = function(task) {
         var result = {statusCode: res.statusCode, message: resBody, event: task.event};
 
         if (res.statusCode !== 200) {
+          logger.error({result: result}, 'bad api response code');
           reject(result);
         } else {
           resolve(result);
@@ -396,7 +398,8 @@ var eventsByTypeCounter = {};
 var failedEvents = [];
 
 function printQueueState() {
-  logger.info("[api queue] success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
+  logger.info("[api queue] [%s] success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
+    path.basename(filename),
     successCounter, failedEvents.length, amplitudeApiQueue.length(), amplitudeApiQueue.running(), skipCounter, retryCount);
   logger.info("[summary]", eventsByTypeCounter);
 }
@@ -413,8 +416,9 @@ if (_.endsWith(filename, 'bz2')) {
   filename = filename.substring(0, filename.length - 4);
 }
 
-setInterval(printQueueState, 2000);
+var printQueueStateInterval = setInterval(printQueueState, 2000);
 
+logger.info('START: import from %s', filename);
 var reader = new LineByLineReader(filename);
 
 // used to prevent the entire file from being loaded into memory
@@ -442,9 +446,18 @@ function handleLine(line, retries) {
     event: event
   };
 
+  if (!event.user_id && !event.device_id) {
+    logger.warn('skipping event: missing user_id and device_id for event_type=%s', event.event_type);
+    return;
+  }
+
   amplitudeApiQueue.push(task, function(err, result) {
     if (err) {
       if (retries === 0) {
+        if (err === undefined) {
+          log.error({result: result, mpEvent: mpEvent}, 'undefined error for some reason');
+        }
+
         failedEvents.push([err, mpEvent]);
       }
 
@@ -472,12 +485,13 @@ function handleLine(line, retries) {
 reader.on('line', handleLine);
 
 reader.on('end', function() {
-  logger.info('file reader done');
+  logger.info('DONE: import from %s', filename);
+  clearInterval(printQueueStateInterval);
+  printQueueState();
+  printFailedEvents();
 });
 
-process.on('SIGINT', function() {
-  logger.info('SIGINT caught');
-
+function printFailedEvents() {
   if (failedEvents.length > 0) {
     failedEvents.forEach(function(arr) {
       var err = arr[0];
@@ -485,8 +499,11 @@ process.on('SIGINT', function() {
       logger.info(arr[1]);
     });
   }
+}
 
+process.on('SIGINT', function() {
+  logger.info('SIGINT caught');
   printQueueState();
-
+  printFailedEvents();
   process.exit();
 });
