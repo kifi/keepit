@@ -24,7 +24,7 @@ class StateException(message: String) extends Exception(message)
 object State {
   implicit def format[T]: Format[State[T]] = Format(
     __.read[String].map(State(_)),
-    new Writes[State[T]] { def writes(o: State[T]) = JsString(o.value) }
+    Writes { o => JsString(o.value) }
   )
 
   implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[State[T]] {

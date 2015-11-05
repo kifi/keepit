@@ -1,7 +1,9 @@
 package com.keepit.model
 
 import com.keepit.common.db.{ Id, State, ModelWithState, States }
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.net.{ URI, URIParser }
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -43,15 +45,18 @@ object LibrarySubscriptionStates extends States[LibrarySubscription] {
   val DISABLED = State[LibrarySubscription]("disabled")
 }
 
-case class SubscriptionTrigger(value: String)
+sealed abstract class SubscriptionTrigger(val value: String)
+object SubscriptionTrigger extends Enumerator[SubscriptionTrigger] {
+  case object NEW_KEEP extends SubscriptionTrigger("new_keep")
+  case object NEW_MEMBER extends SubscriptionTrigger("new_member")
 
-object SubscriptionTrigger {
-  val NEW_KEEP = SubscriptionTrigger("new_keep")
-  val NEW_MEMBER = SubscriptionTrigger("new_member")
-
+  def all = _all.toSet
+  def get(str: String) = all.find(_.value == str)
+  def apply(str: String): SubscriptionTrigger = get(str).getOrElse(throw new Exception(s"Unknown SubscriptionTrigger $str"))
   implicit val format: Format[SubscriptionTrigger] = Format(
-    __.read[String].map(SubscriptionTrigger(_)),
-    new Writes[SubscriptionTrigger] { def writes(o: SubscriptionTrigger) = JsString(o.value) })
+    EnumFormat.reads(get, all.map(_.value)),
+    Writes { o => JsString(o.value) }
+  )
 }
 
 trait SubscriptionInfo {
@@ -61,11 +66,10 @@ trait SubscriptionInfo {
 case class SlackInfo(url: String) extends SubscriptionInfo {
   def hasSameEndpoint(other: SubscriptionInfo) = {
     other match {
-      case SlackInfo(otherUrl) => {
+      case SlackInfo(otherUrl) =>
         val uri1 = URIParser.parse(URIParser.uri, url).getOrElse("1").toString
         val uri2 = URIParser.parse(URIParser.uri, otherUrl).getOrElse("2").toString
         uri1 == uri2
-      }
       case _ => false
     }
   }

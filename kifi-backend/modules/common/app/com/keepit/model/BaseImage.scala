@@ -3,6 +3,8 @@ package com.keepit.model
 import java.io.{ File, ByteArrayInputStream }
 
 import com.keepit.common.images.RawImageInfo
+import com.keepit.common.json.EnumFormat
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.store.{ ImagePath, ImageSize }
 import com.keepit.rover.article.{ ArticleKind, Article }
 import org.joda.time.DateTime
@@ -101,17 +103,16 @@ object ImageHash {
 }
 
 sealed abstract class ProcessImageOperation(val kind: String, val fileNameSuffix: String)
-object ProcessImageOperation {
+object ProcessImageOperation extends Enumerator[ProcessImageOperation] {
   object Original extends ProcessImageOperation("original", "_o")
   case object Scale extends ProcessImageOperation("scale", "_s")
   case object CenteredCrop extends ProcessImageOperation("crop", "_c")
   case object CropScale extends ProcessImageOperation("cropscale", "_cs")
 
-  val all = Scale :: CenteredCrop :: CropScale :: Original :: Nil
+  val all = _all.toSet
 
-  def apply(kind: String): ProcessImageOperation = {
-    all.find(_.kind == kind) getOrElse Original
-  }
+  def get(str: String): Option[ProcessImageOperation] = all.find(_.kind == str)
+  def apply(kind: String): ProcessImageOperation = get(kind).getOrElse(Original)
 
   implicit val format: Format[ProcessImageOperation] = Format(__.read[String].map(ProcessImageOperation(_)), Writes(op => JsString(op.kind)))
 }
