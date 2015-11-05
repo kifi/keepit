@@ -166,7 +166,7 @@ object RewardKind extends Enumerator[RewardKind] {
 
   val orgLibsReached = OrganizationLibrariesReached.all
   val orgMembersReached = OrganizationMembersReached.all
-  private val all = _all.toSet ++ orgLibsReached ++ orgMembersReached
+  private val all = _all.toSet
   def get(kind: String) = all.find(_.kind equalsIgnoreCase kind)
   def apply(kind: String) = get(kind).getOrElse(throw new IllegalArgumentException(s"Unknown RewardKind: $kind"))
 }
