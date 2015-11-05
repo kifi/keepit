@@ -51,6 +51,7 @@ class CreditRewardCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends CreditRewardCommander with Logging {
 
+  private val orgCreationCredit = DollarAmount.dollars(50)
   private val newOrgReferralCredit = DollarAmount.dollars(100)
   private val orgReferrerCredit = DollarAmount.dollars(100)
 
@@ -297,6 +298,7 @@ class CreditRewardCommanderImpl @Inject() (
   }
 
   def initializeRewards(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
+    val org = orgRepo.get(orgId)
     val accountId = accountRepo.getAccountId(orgId)
     val initialRewards = Map[RewardChecklistKind, DollarAmount](
       RewardKind.OrganizationAvatarUploaded -> DollarAmount.dollars(5),
@@ -307,7 +309,17 @@ class CreditRewardCommanderImpl @Inject() (
       } ++ RewardKind.orgMembersReached.map { k =>
         k -> DollarAmount.dollars(50 * k.threshold)
       }
-    initialRewards.map {
+
+    val orgCreationReward = createCreditReward(CreditReward(
+      accountId = accountId,
+      credit = orgCreationCredit,
+      applied = None,
+      reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None),
+      unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
+      code = None
+    ), Some(org.ownerId)).get
+
+    val initialChecklistRewards = initialRewards.map {
       case (kind, value) =>
         createCreditReward(CreditReward(
           accountId = accountId,
@@ -318,6 +330,8 @@ class CreditRewardCommanderImpl @Inject() (
           code = None
         ), None).get
     }.toSet
+
+    initialChecklistRewards + orgCreationReward
   }
 
 }

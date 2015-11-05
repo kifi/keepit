@@ -317,7 +317,6 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
         withDb(modules: _*) { implicit injector =>
           val org = db.readWrite { implicit session =>
             val org = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
-            creditRewardCommander.initializeRewards(org.id.get)
             org
           }
 
