@@ -19,6 +19,7 @@ import scala.util.{ Failure, Success }
 class OrganizationMembershipController @Inject() (
     orgCommander: OrganizationCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
+    orgMembershipPokeCommander: OrganizationMembershipPokeCommander,
     orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
@@ -87,16 +88,21 @@ class OrganizationMembershipController @Inject() (
     }
   }
 
-  def leaveOrganization(pubId: PublicId[Organization]) = UserAction { request =>
-    Organization.decodePublicId(pubId) match {
-      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_id"))
-      case Success(orgId) =>
-        val leaveRequest = OrganizationMembershipRemoveRequest(orgId, request.userId, request.userId)
-        orgMembershipCommander.removeMembership(leaveRequest) match {
-          case Left(fail) => fail.asErrorResponse
-          case Right(response) => Ok(JsString("success"))
-        }
+  def leaveOrganization(pubId: PublicId[Organization]) = OrganizationUserAction(pubId) { request =>
+    val leaveRequest = OrganizationMembershipRemoveRequest(request.orgId, request.request.userId, request.request.userId)
+    orgMembershipCommander.removeMembership(leaveRequest) match {
+      case Left(fail) => fail.asErrorResponse
+      case Right(response) => Ok(JsString("success"))
     }
+  }
+
+  def poke(pubId: PublicId[Organization]) = OrganizationAction(pubId, None, OrganizationPermission.POKE) { request =>
+    request.request.userIdOpt.map { userId =>
+      orgMembershipPokeCommander.poke(userId, request.orgId) match {
+        case Left(fail) => fail.asErrorResponse
+        case Right(response) => Ok("success")
+      }
+    }.getOrElse(Forbidden("not_logged_in"))
   }
 
 }
