@@ -5,9 +5,8 @@ import com.keepit.common.db.{Id, ModelWithState, State, States}
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.model.{OrganizationAvatar, Organization, User}
-import com.keepit.payments.RewardStatus.RewardChecklistKind
+import com.keepit.payments.RewardStatus.WithIndependentInfo
 import org.joda.time.DateTime
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.util.Try
@@ -26,6 +25,7 @@ trait Reward {
   }
 
   override def hashCode: Int = Seq(kind, status, info).map(_.hashCode()).reduce(_ ^ _)
+  override def toString = Reward.unapply(this).toString
 }
 
 sealed abstract class RewardKind(val kind: String) {
@@ -36,16 +36,18 @@ sealed abstract class RewardKind(val kind: String) {
 
   private def get(str: String): Option[S] = allStatus.find(_.status equalsIgnoreCase str)
   def readStatus(str: String): S = get(str).getOrElse(throw new IllegalArgumentException(s"Invalid status for $this reward: $str"))
+  override def toString = kind
 }
 
 sealed trait RewardStatus {
   type I
   def infoFormat: Format[I]
   def status: String
+  override def toString = status
 }
 
 object Reward {
-  def apply(k: RewardKind)(s: k.S)(i: s.I): Reward = {
+  def apply[K <: RewardKind](k: K)(s: k.S)(i: s.I): Reward = {
     new Reward {
       val kind: k.type = k
       val status: s.type = s
@@ -96,14 +98,6 @@ object RewardStatus {
     def infoFormat: Format[None.type] = noneInfoFormat
   }
 
-  trait RewardChecklistKind extends WithIndependentInfo[Id[Organization]] { self: RewardKind =>
-    lazy val infoFormat = Id.format[Organization]
-    case object Started extends Status("started")
-    case object Achieved extends Status("achieved")
-    protected lazy val allStatus: Set[S] = Set(Started, Achieved)
-    lazy val applicable: Achieved.type = Achieved
-  }
-
   private val noneInfoFormat: Format[None.type] = Format(
     Reads {
       case JsNull => JsSuccess(None)
@@ -113,30 +107,12 @@ object RewardStatus {
   )
 }
 
-object RewardKind {
+object RewardKind extends Enumerator[RewardKind] {
   case object Coupon extends RewardKind("coupon") with RewardStatus.WithEmptyInfo {
     case object Used extends Status("used")
     protected lazy val allStatus: Set[S] = Set(Used)
     lazy val applicable: Used.type = Used
   }
-
-
-  case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithEmptyInfo {
-    case object Created extends Status("created")
-    protected lazy val allStatus: Set[S] = Set(Created)
-    lazy val applicable: Created.type = Created
-  }
-
-  case object OrganizationAvatarUploaded extends RewardKind("org_avatar_uploaded") with RewardChecklistKind
-  case object OrganizationDescriptionAdded extends RewardKind("org_description_added") with RewardChecklistKind
-  case object OrganizationMembersReached5 extends RewardKind("org_members_5") with RewardChecklistKind
-  case object OrganizationMembersReached10 extends RewardKind("org_members_10") with RewardChecklistKind
-  case object OrganizationMembersReached15 extends RewardKind("org_members_15") with RewardChecklistKind
-  case object OrganizationMembersReached20 extends RewardKind("org_members_20") with RewardChecklistKind
-  case object OrganizationMembersReached25 extends RewardKind("org_members_25") with RewardChecklistKind
-  case object OrganizationLibrariesReached10 extends RewardKind("org_libraries_10") with RewardChecklistKind
-  case object OrganizationGeneralLibraryKeepsReached50 extends RewardKind("org_general_lib_keeps_50") with RewardChecklistKind
-
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     lazy val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
@@ -144,23 +120,53 @@ object RewardKind {
     protected lazy val allStatus: Set[S] = Set(Created, Upgraded)
     lazy val applicable: Upgraded.type = Upgraded
   }
-
   case object ReferralApplied extends RewardKind("referral_applied") with RewardStatus.WithIndependentInfo[CreditCode] {
     lazy val infoFormat = CreditCode.format
     case object Applied extends Status("applied")
     protected lazy val allStatus: Set[S] = Set(Applied)
     lazy val applicable: Applied.type = Applied
   }
+  case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithEmptyInfo {
+    case object Created extends Status("created")
+    protected lazy val allStatus: Set[S] = Set(Created)
+    lazy val applicable: Created.type = Created
+  }
 
 
-  private val all: Set[RewardKind] = Set(
-    Coupon,
-    OrganizationCreation,
-    OrganizationDescriptionAdded,
-    OrganizationReferral,
-    ReferralApplied
-  )
+  sealed abstract class RewardChecklistKind(kind: String) extends RewardKind(kind) with WithIndependentInfo[Id[Organization]] {
+    lazy val infoFormat = Id.format[Organization]
+    case object Started extends Status("started")
+    case object Achieved extends Status("achieved")
+    protected lazy val allStatus: Set[S] = Set(Started, Achieved)
+    lazy val applicable: Achieved.type = Achieved
+  }
 
+  sealed abstract class ThresholdChecklistKind(prefix: String, val threshold: Int) extends RewardChecklistKind(s"${prefix}_${threshold}")
+  sealed abstract class OrganizationMembersReached(threshold: Int) extends ThresholdChecklistKind("org_members", threshold)
+  sealed abstract class OrganizationLibrariesReached(threshold: Int) extends ThresholdChecklistKind("org_libraries", threshold)
+
+  case object OrganizationAvatarUploaded extends RewardChecklistKind("org_avatar_uploaded")
+  case object OrganizationDescriptionAdded extends RewardChecklistKind("org_description_added")
+  object OrganizationMembersReached extends Enumerator[OrganizationMembersReached] {
+    case object OrganizationMembersReached5 extends OrganizationMembersReached(5)
+    case object OrganizationMembersReached10 extends OrganizationMembersReached(10)
+    case object OrganizationMembersReached15 extends OrganizationMembersReached(15)
+    case object OrganizationMembersReached20 extends OrganizationMembersReached(20)
+    case object OrganizationMembersReached25 extends OrganizationMembersReached(25)
+    val all = _all.toSet
+  }
+
+  object OrganizationLibrariesReached extends Enumerator[OrganizationLibrariesReached] {
+    case object OrganizationLibrariesReached10 extends OrganizationLibrariesReached(10)
+    case object OrganizationLibrariesReached20 extends OrganizationLibrariesReached(20)
+    val all = _all.toSet
+  }
+
+  case object OrganizationGeneralLibraryKeepsReached50 extends ThresholdChecklistKind("org_general_keeps", 50)
+
+  val orgLibsReached = OrganizationLibrariesReached.all
+  val orgMembersReached = OrganizationMembersReached.all
+  private val all = _all.toSet ++ orgLibsReached ++ orgMembersReached
   def get(kind: String) = all.find(_.kind equalsIgnoreCase kind)
   def apply(kind: String) = get(kind).getOrElse(throw new IllegalArgumentException(s"Unknown RewardKind: $kind"))
 }
@@ -224,7 +230,7 @@ sealed abstract class RewardTrigger(val value: String)
 object RewardTrigger {
   case class OrganizationUpgraded(orgId: Id[Organization], newPlan: PaidPlan) extends RewardTrigger(s"$orgId upgraded to plan ${newPlan.id.get}")
   case class OrganizationDescriptionAdded(orgId: Id[Organization], description: String) extends RewardTrigger(s"$orgId filled in their description")
-  case class OrganizationAvatarUploaded(orgId: Id[Organization], avatar: OrganizationAvatar) extends RewardTrigger(s"$orgId uploaded an avatar")
+  case class OrganizationAvatarUploaded(orgId: Id[Organization]) extends RewardTrigger(s"$orgId uploaded an avatar")
   case class OrganizationKeepAddedToGeneralLibrary(orgId: Id[Organization], keepCount: Int) extends RewardTrigger(s"$orgId reached $keepCount keeps in their General library")
   case class OrganizationAddedLibrary(orgId: Id[Organization], libraryCount: Int) extends RewardTrigger(s"$orgId reached $libraryCount total libraries")
   case class OrganizationMemberAdded(orgId: Id[Organization], memberCount: Int) extends RewardTrigger(s"$orgId reached $memberCount total members")
@@ -251,14 +257,10 @@ object RewardCategory extends Enumerator[RewardCategory] {
 
     case RewardKind.OrganizationAvatarUploaded  => OrganizationInformation
     case RewardKind.OrganizationCreation => OrganizationInformation
-    case RewardKind.OrganizationDescriptionAdded  => OrganizationInformation
-    case RewardKind.OrganizationMembersReached5  => OrganizationInformation
-    case RewardKind.OrganizationMembersReached10  => OrganizationInformation
-    case RewardKind.OrganizationMembersReached15  => OrganizationInformation
-    case RewardKind.OrganizationMembersReached20  => OrganizationInformation
-    case RewardKind.OrganizationMembersReached25  => OrganizationInformation
-    case RewardKind.OrganizationLibrariesReached10  => OrganizationInformation
-    case RewardKind.OrganizationGeneralLibraryKeepsReached50  => OrganizationInformation
+    case RewardKind.OrganizationDescriptionAdded => OrganizationInformation
+    case _: RewardKind.OrganizationMembersReached => OrganizationInformation
+    case _: RewardKind.OrganizationLibrariesReached => OrganizationInformation
+    case RewardKind.OrganizationGeneralLibraryKeepsReached50 => OrganizationInformation
   }
 }
 case class ExternalCreditReward(

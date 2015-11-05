@@ -52,15 +52,11 @@ class CreditRewardInfoCommanderImpl @Inject() (
   }
   private def describeUnearnedReward(creditReward: CreditReward)(implicit session: RSession): DescriptionElements = {
     val trigger = creditReward.reward match {
+      case Reward(kind: RewardKind.OrganizationLibrariesReached, _, _) => DescriptionElements(s"your team reaches ${kind.threshold} total libraries.") // TODO(ryan): linkify!
+      case Reward(kind: RewardKind.OrganizationMembersReached, _, _) => DescriptionElements(s"your team reaches ${kind.threshold} total members.") // TODO(ryan): linkify!
       case Reward(kind, _, _) if kind == RewardKind.OrganizationAvatarUploaded => DescriptionElements("you upload an image for your team.")
       case Reward(kind, _, _) if kind == RewardKind.OrganizationDescriptionAdded => DescriptionElements("you tell us about your team.")
       case Reward(kind, _, _) if kind == RewardKind.OrganizationGeneralLibraryKeepsReached50 => DescriptionElements("your team adds 50 keeps into the General library.") // TODO(ryan): linkify!
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationLibrariesReached10 => DescriptionElements("your team reaches 10 total libraries.") // TODO(ryan): linkify!
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached5 => DescriptionElements("your team reaches 5 total members.") // TODO(ryan): linkify!
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached10 => DescriptionElements("your team reaches 10 total members.") // TODO(ryan): linkify!
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached15 => DescriptionElements("your team reaches 15 total members.") // TODO(ryan): linkify!
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached20 => DescriptionElements("your team reaches 20 total members.") // TODO(ryan): linkify!
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached25 => DescriptionElements("your team reaches 25 total members.") // TODO(ryan): linkify!
       case Reward(kind, _, referredOrgId: Id[Organization] @unchecked) if kind == RewardKind.OrganizationReferral =>
         DescriptionElements(getOrg(referredOrgId), "upgrades to a pro account.")
     }
@@ -68,18 +64,14 @@ class CreditRewardInfoCommanderImpl @Inject() (
   }
   private def describeAppliedReward(creditReward: CreditReward)(implicit session: RSession): DescriptionElements = {
     val reason = creditReward.reward match {
+      case Reward(kind: RewardKind.OrganizationLibrariesReached, _, _) => DescriptionElements(s"your team reached ${kind.threshold} total libraries.")
+      case Reward(kind: RewardKind.OrganizationMembersReached, _, _) => DescriptionElements(s"your team reached ${kind.threshold} total members.")
       case Reward(kind, _, _) if kind == RewardKind.Coupon =>
         DescriptionElements(getUser(creditReward.code.get.usedBy), "redeemed the coupon code", creditReward.code.get.code, ".")
       case Reward(kind, _, _) if kind == RewardKind.OrganizationAvatarUploaded => DescriptionElements("you uploaded an image for your team.")
       case Reward(kind, _, _) if kind == RewardKind.OrganizationCreation => DescriptionElements("you created a team on Kifi. Thanks for being awesome! :)")
       case Reward(kind, _, _) if kind == RewardKind.OrganizationDescriptionAdded => DescriptionElements("you told us about your team.")
       case Reward(kind, _, _) if kind == RewardKind.OrganizationGeneralLibraryKeepsReached50 => DescriptionElements("your team added 50 keeps into the General library.")
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationLibrariesReached10 => DescriptionElements("your team reached 10 total libraries.")
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached5 => DescriptionElements("your team reached 5 total members.")
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached10 => DescriptionElements("your team reached 10 total members.")
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached15 => DescriptionElements("your team reached 15 total members.")
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached20 => DescriptionElements("your team reached 20 total members.")
-      case Reward(kind, _, _) if kind == RewardKind.OrganizationMembersReached25 => DescriptionElements("your team reached 25 total members.")
       case Reward(kind, _, referredOrgId: Id[Organization] @unchecked) if kind == RewardKind.OrganizationReferral =>
         DescriptionElements("you referred", getOrg(referredOrgId), ". Thank you!")
       case Reward(kind, _, _) if kind == RewardKind.ReferralApplied =>
