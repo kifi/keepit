@@ -7,6 +7,7 @@ import com.keepit.model.PaidPlanFactoryHelper.PaidPlanPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model._
 import com.keepit.payments.CreditRewardFail.UnrepeatableRewardKeyCollisionException
+import com.keepit.payments.RewardKind.RewardChecklistKind
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
@@ -312,47 +313,52 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
           paymentsChecker.checkAccount(org2.id.get) must beEmpty
         }
       }
-      "org description added" in {
+      "checklist triggers" in {
         withDb(modules: _*) { implicit injector =>
           val org = db.readWrite { implicit session =>
             val org = OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved
-            // TODO(ryan): maybe put this into planManagementCommander.createAndInitializePaidPlan
-            creditRewardCommander.createCreditReward(CreditReward(
-              accountId = paidAccountRepo.getByOrgId(org.id.get).id.get,
-              credit = DollarAmount.cents(15123),
-              applied = None,
-              reward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Started)(org.id.get),
-              unrepeatable = None,
-              code = None), None)
             org
           }
-          val startReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Started)(org.id.get)
-          val endReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Achieved)(org.id.get)
 
-          db.readOnlyMaster { implicit session =>
-            creditRewardRepo.getByReward(endReward) must beEmpty
-            val cr = creditRewardRepo.getByReward(startReward)
-            cr must haveSize(1)
-            cr.head.applied must beNone
+          val rewardsByTrigger = Seq[(RewardTrigger, RewardChecklistKind)](
+            RewardTrigger.OrganizationAvatarUploaded(org.id.get) -> RewardKind.OrganizationAvatarUploaded,
+            RewardTrigger.OrganizationDescriptionAdded(org.id.get, "dummy") -> RewardKind.OrganizationDescriptionAdded,
+            RewardTrigger.OrganizationKeepAddedToGeneralLibrary(org.id.get, 50) -> RewardKind.OrganizationGeneralLibraryKeepsReached50
+          ) ++ RewardKind.orgLibsReached.toSeq.sortBy(_.threshold).map { k =>
+              RewardTrigger.OrganizationAddedLibrary(org.id.get, k.threshold) -> k
+            } ++ RewardKind.orgMembersReached.toSeq.sortBy(_.threshold).map { k =>
+              RewardTrigger.OrganizationMemberAdded(org.id.get, k.threshold) -> k
+            }
+
+          rewardsByTrigger.foreach {
+            case (trigger, kind) =>
+              val startReward = Reward(kind)(kind.Started)(org.id.get)
+              val endReward = Reward(kind)(kind.Achieved)(org.id.get)
+
+              val rewardCredit = db.readOnlyMaster { implicit session =>
+                creditRewardRepo.getByReward(endReward) must beEmpty
+                val cr = creditRewardRepo.getByReward(startReward)
+                cr must haveSize(1)
+                cr.head.applied must beNone
+                cr.head.credit
+              }
+
+              // when the org puts in a description, they get a reward
+              val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org.id.get).credit }
+              db.readWrite { implicit s => creditRewardCommander.registerRewardTrigger(trigger) }
+              val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org.id.get).credit }
+              finalCredit - initialCredit === rewardCredit
+
+              db.readOnlyMaster { implicit session =>
+                creditRewardRepo.getByReward(startReward) must beEmpty
+                val cr = creditRewardRepo.getByReward(endReward)
+                cr must haveSize(1)
+                cr.head.applied must beSome
+              }
+              db.readWrite { implicit s =>
+                creditRewardCommander.registerRewardTrigger(trigger) must beEmpty
+              }
           }
-
-          // when the org puts in a description, they get a reward
-          val initialCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org.id.get).credit }
-          orgCommander.modifyOrganization(OrganizationModifyRequest(org.ownerId, org.id.get, OrganizationModifications(description = Some("I want to earn credit!")))) must beRight
-          val finalCredit = db.readOnlyMaster { implicit session => paidAccountRepo.getByOrgId(org.id.get).credit }
-          finalCredit - initialCredit === DollarAmount.cents(15123)
-
-          db.readOnlyMaster { implicit session =>
-            creditRewardRepo.getByReward(startReward) must beEmpty
-            val cr = creditRewardRepo.getByReward(endReward)
-            cr must haveSize(1)
-            cr.head.applied must beSome
-          }
-
-          db.readWrite { implicit s =>
-            creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationDescriptionAdded(org.id.get, "Can I abuse this?")) must beEmpty
-          }
-
           paymentsChecker.checkAccount(org.id.get) must beEmpty
         }
       }
