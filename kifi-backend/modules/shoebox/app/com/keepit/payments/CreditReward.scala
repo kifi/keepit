@@ -265,9 +265,9 @@ object RewardCategory extends Enumerator[RewardCategory] {
     case RewardKind.OrganizationAvatarUploaded  => OrganizationInformation
     case RewardKind.OrganizationCreation => OrganizationInformation
     case RewardKind.OrganizationDescriptionAdded => OrganizationInformation
-    case _: RewardKind.OrganizationMembersReached => OrganizationInformation
-    case _: RewardKind.OrganizationLibrariesReached => OrganizationInformation
-    case RewardKind.OrganizationGeneralLibraryKeepsReached50 => OrganizationInformation
+    case _: RewardKind.OrganizationMembersReached => OrganizationMembership
+    case _: RewardKind.OrganizationLibrariesReached => KeepsAndLibraries
+    case RewardKind.OrganizationGeneralLibraryKeepsReached50 => KeepsAndLibraries
   }
 }
 case class ExternalCreditReward(
