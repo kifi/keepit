@@ -28,7 +28,7 @@ trait Reward {
   override def toString = Reward.unapply(this).toString
 }
 
-sealed abstract class RewardKind(val kind: String) {
+sealed abstract class RewardKind(val kind: String) extends Ordered[RewardKind] {
   type S <: RewardStatus
   protected def allStatus: Set[S]
   def applicable: S
@@ -37,6 +37,8 @@ sealed abstract class RewardKind(val kind: String) {
   private def get(str: String): Option[S] = allStatus.find(_.status equalsIgnoreCase str)
   def readStatus(str: String): S = get(str).getOrElse(throw new IllegalArgumentException(s"Invalid status for $this reward: $str"))
   override def toString = kind
+
+  def compare(that: RewardKind) = this.kind compare that.kind
 }
 
 sealed trait RewardStatus {
@@ -141,7 +143,12 @@ object RewardKind extends Enumerator[RewardKind] {
     lazy val applicable: Achieved.type = Achieved
   }
 
-  sealed abstract class ThresholdChecklistKind(prefix: String, val threshold: Int) extends RewardChecklistKind(s"${prefix}_${threshold}")
+  sealed abstract class ThresholdChecklistKind(val prefix: String, val threshold: Int) extends RewardChecklistKind(s"${prefix}_${threshold}") {
+    override def compare(that: RewardKind) = that match {
+      case thresh: ThresholdChecklistKind if this.prefix == thresh.prefix => this.threshold compare thresh.threshold
+      case other => super.compare(that)
+    }
+  }
   sealed abstract class OrganizationMembersReached(threshold: Int) extends ThresholdChecklistKind("org_members", threshold)
   sealed abstract class OrganizationLibrariesReached(threshold: Int) extends ThresholdChecklistKind("org_libraries", threshold)
 
@@ -153,6 +160,7 @@ object RewardKind extends Enumerator[RewardKind] {
     case object OrganizationMembersReached15 extends OrganizationMembersReached(15)
     case object OrganizationMembersReached20 extends OrganizationMembersReached(20)
     case object OrganizationMembersReached25 extends OrganizationMembersReached(25)
+
     val all = _all.toSet
   }
 

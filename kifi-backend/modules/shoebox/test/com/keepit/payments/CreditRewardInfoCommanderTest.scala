@@ -8,6 +8,7 @@ import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
+import play.api.libs.json.{ JsValue, Json }
 
 class CreditRewardInfoCommanderTest extends SpecificationLike with ShoeboxTestInjector {
   implicit val ctxt = HeimdalContext.empty
@@ -17,6 +18,22 @@ class CreditRewardInfoCommanderTest extends SpecificationLike with ShoeboxTestIn
   )
 
   "CreditRewardInfoCommanderTest" should {
+    "categorize and order rewards" in {
+      withDb(modules: _*) { implicit injector =>
+        val org = db.readWrite { implicit s =>
+          OrganizationFactory.organization().withName("Team").withOwner(UserFactory.user().withName("Owner", "OwnerLN").saved).saved
+        }
+        val view = inject[CreditRewardInfoCommander].getRewardsByOrg(org.id.get)
+        // Uncomment this block to visually inspect the rewards ordering
+        /*
+        (Json.toJson(view) \ "rewards").as[Seq[JsValue]].foreach { rs =>
+          println(rs \ "category")
+          (rs \ "items").as[Seq[JsValue]].foreach(i => println("\t" + i))
+        }
+        */
+        view.rewards.keySet === RewardCategory.all
+      }
+    }
     "describe credit rewards appropriately" in {
       withDb(modules: _*) { implicit injector =>
         val (org, account, owner) = db.readWrite { implicit s =>
@@ -59,10 +76,10 @@ class CreditRewardInfoCommanderTest extends SpecificationLike with ShoeboxTestIn
             "You will get $42.00 when your team reaches 10 total members.",
           makeReward(Reward(RewardKind.OrganizationMembersReached.OrganizationMembersReached10)(RewardKind.OrganizationMembersReached.OrganizationMembersReached10.Achieved)(org.id.get)) ->
             "You earned $42.00 because your team reached 10 total members.",
-          makeReward(Reward(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached10)(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached10.Started)(org.id.get)) ->
-            "You will get $42.00 when your team reaches 10 total libraries.",
-          makeReward(Reward(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached10)(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached10.Achieved)(org.id.get)) ->
-            "You earned $42.00 because your team reached 10 total libraries.",
+          makeReward(Reward(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached7)(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached7.Started)(org.id.get)) ->
+            "You will get $42.00 when your team reaches 7 total libraries.",
+          makeReward(Reward(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached7)(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached7.Achieved)(org.id.get)) ->
+            "You earned $42.00 because your team reached 7 total libraries.",
           makeReward(Reward(RewardKind.OrganizationGeneralLibraryKeepsReached50)(RewardKind.OrganizationGeneralLibraryKeepsReached50.Started)(org.id.get)) ->
             "You will get $42.00 when your team adds 50 keeps into the General library.",
           makeReward(Reward(RewardKind.OrganizationGeneralLibraryKeepsReached50)(RewardKind.OrganizationGeneralLibraryKeepsReached50.Achieved)(org.id.get)) ->
