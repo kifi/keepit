@@ -2,13 +2,14 @@
 
 from mixpanel import Mixpanel
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import errno
 import os
 import requests
 import sys
 import urllib2
 import shutil
+import subprocess
 
 MP_API_KEY = 'c17a5e3624c92cf4aa4d995b4b8bb589'
 MP_API_SECRET = '0b22bedb78ec2fa9d390110be35dfb2a'
@@ -27,15 +28,24 @@ class MixpanelDataExporter(object):
         }
 
         save_as = EXPORT_DIR + "/mixpanel-{}-{}.txt".format(from_date.strftime("%Y%m%d"), to_date.strftime("%Y%m%d"))
+        compressed_save_as = save_as + ".bz2"
         if os.path.isfile(save_as):
             print "File already exists: %s" % save_as
+        elif os.path.isfile(compressed_save_as):
+            print "File already exists: %s" % compressed_save_as
         else:
             request_url = self.request_url(params)
             print "Downloading: from_date=%s to_date=%s" % (from_date, to_date)
             self.download(request_url, save_as)
             print "Done"
+            self.compress(save_as)
 
         return save_as
+
+    def compress(self, filename):
+        print "Running bzip on %s" % filename
+        subprocess.call(["bzip2", filename])
+        print "Done"
 
     def request_url(self, params):
         return self.api.request(params)
@@ -81,6 +91,10 @@ def mkdir_p(path):
             pass
         else: raise
 
+def daterange(start_date, end_date):
+    for n in range(int ((end_date - start_date).days)):
+        yield start_date + timedelta(n)
+
 if __name__ == '__main__':
     mkdir_p(EXPORT_DIR)
 
@@ -93,4 +107,6 @@ if __name__ == '__main__':
 
     from_date = datetime.strptime(sys.argv[1], "%Y-%m-%d")
     to_date = datetime.strptime(sys.argv[2], "%Y-%m-%d")
-    file = exporter.export(from_date, to_date)
+
+    for single_date in daterange(from_date, to_date):
+        exporter.export(single_date, single_date)

@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 
-/*eslint-env node */
+/* eslint-env node, amd */
+
+/*
+ * usage examples:
+ *    USE_FAKE_API=1 LOGGER_LEVEL=warn ./amplitude_import.js exports/mixpanel-20150707-20150707.txt
+ *    ./amplitude_import.js exports/mixpanel-20150707-20150707.txt
+ */
 
 var _ = require('lodash');
 var async = require('async');
@@ -13,8 +19,10 @@ var Promise = require('bluebird');
 var querystring = require('querystring');
 var winston = require('winston');
 
-var USE_FAKE_API = false;
-var AMPLITUDE_API_KEY = '5a7a940f68887487129b20a4cbf0622d';
+var USE_FAKE_API = !!_.get(process.env, 'USE_FAKE_API', false);
+
+// var AMPLITUDE_API_KEY = '5a7a940f68887487129b20a4cbf0622d'; // Test
+var AMPLITUDE_API_KEY = 'ca7e6c5bdd95ed9e43ffb7c106479e17'; // Test 2
 
 var filename = process.argv[2];
 if (!_.isString(filename) || !fs.statSync(filename).isFile()) {
@@ -23,10 +31,11 @@ if (!_.isString(filename) || !fs.statSync(filename).isFile()) {
 }
 
 // logging config
-var logfile = 'logs/' + path.basename(filename, '.txt') + '.log';
+var filenameExt = _.endsWith(filename, '.txt.bz2') ? '.txt.bz2' : '.txt';
+var logfile = 'logs/' + path.basename(filename, filenameExt) + '.log';
 var logger = new (winston.Logger)({
   transports: [
-    new (winston.transports.Console)({ level: 'debug' }),
+    new (winston.transports.Console)({ level: _.get(process.env, 'LOGGER_LEVEL', 'debug') }),
     new (winston.transports.File)({ filename: logfile, level: 'info' })
   ]
 });
@@ -51,7 +60,7 @@ var skippedEvents = ['user_old_slider_sliderShown', 'user_expanded_keeper', 'use
   function(mpEvent) {
     var typeProperty = mpEvent.properties.type;
     // skip {user,visitor}_viewed_page events where the "type" property starts with a "/", with a few exceptions
-    return _.endsWith(mpEvent.event, '_viewed_page') && typeProperty.charAt(0) === '/' &&
+    return _.endsWith(mpEvent.event, '_viewed_page') && _.isString(typeProperty) && typeProperty.charAt(0) === '/' &&
       typeProperty !== '/settings' && typeProperty !== '/tags/manage' && !_.startsWith(typeProperty, '/?m=0');
   },
   function(mpEvent) {
@@ -94,6 +103,20 @@ var defaultUserProperties = {
 
 // for user_was_notified events, these 'action' properties should be user_clicked_notification events
 var userWasNotifiedClickActions = ['open', 'click', 'spamreport', 'cleared', 'marked_read', 'marked_unread'];
+
+// many property values will be automatically convereted from camelCase to snake_case,
+// but the following fields should not be changed
+var fieldsToNotChangeValuesToSnakeCase = [
+  'library_owner_user_name', '$email',
+  function(field) {
+    return _.startsWith(field, 'kcid') ||
+      _.startsWith(field, 'utm_') ||
+      _.endsWith(field, '_id');
+  }
+];
+
+// do not convert these values from snakeCase to camel_case
+var valuesThatAreOkayAsSnakeCase = ['iPad', 'iPhone'];
 
 // function(url) - https GET request that return a promise
 var httpsGet = Promise.method(function(url) {
@@ -254,6 +277,29 @@ function renameProperty(key) {
 var unsupportedPropertyKeys = {};
 var defaultUserPropertyKeys = _.keys(defaultUserProperties);
 
+function isSimpleMatch(value) {
+  return function(pattern) {
+    if (_.isRegExp(pattern)) {
+      return pattern.test(value);
+    } else if (_.isFunction(pattern)) {
+      return pattern(value);
+    }
+    return pattern === value;
+  };
+}
+
+var isCamelCaseRegExp = /^[a-z]+[a-z0-9]*[A-Z][A-Za-z0-9]*$/;
+
+function isCamelCase(value) {
+ return isCamelCaseRegExp.test(value);
+}
+
+function shouldConvertValueToSnakeCase(field, value) {
+  return !_.some(valuesThatAreOkayAsSnakeCase, isSimpleMatch(value)) &&
+      !_.some(fieldsToNotChangeValuesToSnakeCase, isSimpleMatch(field)) &&
+      isCamelCase(value);
+}
+
 function getUserAndEventProperties(mixpanelEvent) {
   var userProperties = {}, eventProperties = {};
 
@@ -267,10 +313,10 @@ function getUserAndEventProperties(mixpanelEvent) {
     }
 
     var newKey = renameProperty(key);
-    if (isUserProperty(key, value)) {
-      userProperties[newKey] = value;
-    } else {
-      eventProperties[newKey] = value;
+    var propertiesObj = isUserProperty(key, value) ? userProperties : eventProperties;
+
+    if (shouldConvertValueToSnakeCase(newKey, value)) {
+      propertiesObj[newKey] = _.snakeCase(value);
     }
   });
 
@@ -327,6 +373,7 @@ var handleApiResponse = function(task) {
         var result = {statusCode: res.statusCode, message: resBody, event: task.event};
 
         if (res.statusCode !== 200) {
+          logger.error({result: result}, 'bad api response code');
           reject(result);
         } else {
           resolve(result);
@@ -342,7 +389,7 @@ function hashString(str) {
   return hash.digest('hex');
 }
 
-// have no more than 50 requests in flight at a time
+// have no more than 100 requests in flight at a time
 var amplitudeApiQueue = async.queue(USE_FAKE_API ? fakeApiWorker : apiWorker, 100);
 var successCounter = 0;
 var skipCounter = 0;
@@ -351,13 +398,27 @@ var eventsByTypeCounter = {};
 var failedEvents = [];
 
 function printQueueState() {
-  logger.info("[api queue] success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
+  logger.info("[api queue] [%s] success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
+    path.basename(filename),
     successCounter, failedEvents.length, amplitudeApiQueue.length(), amplitudeApiQueue.running(), skipCounter, retryCount);
   logger.info("[summary]", eventsByTypeCounter);
 }
 
-setInterval(printQueueState, 2000);
+if (_.endsWith(filename, 'bz2')) {
+  logger.info('running bunzip2 on %s', filename);
+  var bunzipProcess = require('child_process').spawnSync('bunzip2', [filename], {stdio: 'inherit'});
 
+  if (bunzipProcess.status !== 0) {
+    logger.error('bunzip error', bunzipProcess);
+    process.exit(bunzipProcess.status);
+  }
+
+  filename = filename.substring(0, filename.length - 4);
+}
+
+var printQueueStateInterval = setInterval(printQueueState, 2000);
+
+logger.info('START: import from %s', filename);
 var reader = new LineByLineReader(filename);
 
 // used to prevent the entire file from being loaded into memory
@@ -385,9 +446,18 @@ function handleLine(line, retries) {
     event: event
   };
 
+  if (!event.user_id && !event.device_id) {
+    logger.warn('skipping event: missing user_id and device_id for event_type=%s', event.event_type);
+    return;
+  }
+
   amplitudeApiQueue.push(task, function(err, result) {
     if (err) {
       if (retries === 0) {
+        if (err === undefined) {
+          log.error({result: result, mpEvent: mpEvent}, 'undefined error for some reason');
+        }
+
         failedEvents.push([err, mpEvent]);
       }
 
@@ -415,12 +485,13 @@ function handleLine(line, retries) {
 reader.on('line', handleLine);
 
 reader.on('end', function() {
-  logger.info('file reader done');
+  logger.info('DONE: import from %s', filename);
+  clearInterval(printQueueStateInterval);
+  printQueueState();
+  printFailedEvents();
 });
 
-process.on('SIGINT', function() {
-  logger.info('SIGINT caught');
-
+function printFailedEvents() {
   if (failedEvents.length > 0) {
     failedEvents.forEach(function(arr) {
       var err = arr[0];
@@ -428,8 +499,11 @@ process.on('SIGINT', function() {
       logger.info(arr[1]);
     });
   }
+}
 
+process.on('SIGINT', function() {
+  logger.info('SIGINT caught');
   printQueueState();
-
+  printFailedEvents();
   process.exit();
 });
