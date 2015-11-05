@@ -157,8 +157,7 @@ object RewardKind extends Enumerator[RewardKind] {
   }
 
   object OrganizationLibrariesReached extends Enumerator[OrganizationLibrariesReached] {
-    case object OrganizationLibrariesReached10 extends OrganizationLibrariesReached(10)
-    case object OrganizationLibrariesReached20 extends OrganizationLibrariesReached(20)
+    case object OrganizationLibrariesReached7 extends OrganizationLibrariesReached(7)
     val all = _all.toSet
   }
 
