@@ -221,8 +221,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  private def unsafeAddMembership(request: OrganizationMembershipAddRequest): OrganizationMembershipAddResponse = {
-    val newMembership = db.readWrite { implicit session =>
+  private def unsafeAddMembership(request: OrganizationMembershipAddRequest)(implicit session: RWSession): OrganizationMembershipAddResponse = {
+    val newMembership = {
       orgMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId).foreach(orgMembershipCandidateRepo.deactivate)
       val inactiveMembershipOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
       assert(inactiveMembershipOpt.forall(_.isInactive))
@@ -232,14 +232,15 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
 
     // Fire off a few Futures to take care of low priority tasks
-    refreshOrganizationMembersTypeahead(request.orgId)
-
-    val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
-    orgGeneralLibrary.foreach { lib =>
-      implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
-      libraryMembershipCommander.joinLibrary(request.targetId, lib.id.get)
+    val orgGeneralLibraryId = libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL).map(_.id.get)
+    session.onTransactionSuccess {
+      refreshOrganizationMembersTypeahead(request.orgId)
+      orgGeneralLibraryId.foreach { libId =>
+        implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
+        libraryMembershipCommander.joinLibrary(request.targetId, libId)
+      }
+      elizaServiceClient.flush(request.targetId)
     }
-    elizaServiceClient.flush(request.targetId)
 
     OrganizationMembershipAddResponse(request, newMembership)
   }
