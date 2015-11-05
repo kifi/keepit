@@ -14,6 +14,7 @@ import com.keepit.common.net.WebService
 import com.keepit.common.store._
 import com.keepit.model.ImageSource.UserUpload
 import com.keepit.model._
+import com.keepit.payments.{ RewardTrigger, CreditRewardCommander }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -32,6 +33,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
     imageStore: RoverImageStore,
     implicit val photoshop: Photoshop,
     val webService: WebService,
+    creditRewardCommander: CreditRewardCommander,
     private implicit val executionContext: ExecutionContext) extends OrganizationAvatarCommander with ProcessedImageHelper with Logging {
 
   def getBestImageByOrgId(orgId: Id[Organization], imageSize: ImageSize)(implicit session: RSession): OrganizationAvatar = getBestImagesByOrgIds(Set(orgId), imageSize).head._2
@@ -115,6 +117,7 @@ class OrganizationAvatarCommanderImpl @Inject() (
         val orgAvatar = OrganizationAvatar(organizationId = orgId, width = img.imageInfo.width, height = img.imageInfo.height, format = img.format, kind = img.processOperation, imagePath = img.key, source = UserUpload, sourceFileHash = imageHash, sourceImageURL = None)
         orgAvatarRepo.save(orgAvatar)
       }
+      creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationAvatarUploaded(orgId))
     }
   }
 }
