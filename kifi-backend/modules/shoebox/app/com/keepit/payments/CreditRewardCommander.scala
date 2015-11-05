@@ -305,9 +305,9 @@ class CreditRewardCommanderImpl @Inject() (
       RewardKind.OrganizationDescriptionAdded -> DollarAmount.dollars(5),
       RewardKind.OrganizationGeneralLibraryKeepsReached50 -> DollarAmount.dollars(20)
     ) ++ RewardKind.orgLibsReached.map { k =>
-        k -> DollarAmount.dollars(10 * k.threshold)
+        k -> DollarAmount.dollars(5 * k.threshold)
       } ++ RewardKind.orgMembersReached.map { k =>
-        k -> DollarAmount.dollars(50 * k.threshold)
+        k -> DollarAmount.dollars(8 * k.threshold)
       }
 
     val orgCreationReward = createCreditReward(CreditReward(
