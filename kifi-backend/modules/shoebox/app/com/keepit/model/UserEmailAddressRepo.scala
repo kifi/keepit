@@ -20,6 +20,7 @@ import scala.concurrent.duration._
 trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[UserEmailAddress] with SeqNumberFunction[UserEmailAddress] {
   def getByAddress(address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
   def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress]
+  def getUsersByAddresses(addresses: Set[EmailAddress], excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Map[EmailAddress, Id[User]]
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getPrimaryByUser(userId: Id[User])(implicit session: RSession): Option[UserEmailAddress]
@@ -79,6 +80,14 @@ class UserEmailAddressRepoImpl @Inject() (
   def getByAddressAndUser(userId: Id[User], address: EmailAddress, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Option[UserEmailAddress] = {
     val hash = EmailAddressHash.hashEmailAddress(address)
     (for (f <- rows if f.address === address && f.hash === hash && f.userId === userId && f.state =!= excludeState.orNull) yield f).firstOption
+  }
+
+  def getUsersByAddresses(addresses: Set[EmailAddress], excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Map[EmailAddress, Id[User]] = {
+    val hashesByEmail = addresses.map(address => address -> EmailAddressHash.hashEmailAddress(address)).toMap
+    val candidates = rows.filter(row => row.address.inSet(addresses) && row.state =!= excludeState.orNull).list.groupBy(_.address)
+    candidates.collect {
+      case (email, Seq(userEmail)) if hashesByEmail(email) == userEmail.hash => email -> userEmail.userId
+    }
   }
 
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress] = {

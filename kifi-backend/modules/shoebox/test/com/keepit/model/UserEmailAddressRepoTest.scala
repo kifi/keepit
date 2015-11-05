@@ -42,6 +42,12 @@ class UserEmailAddressRepoTest extends Specification with ShoeboxTestInjector {
           val unverified = userEmailAddressRepo.getUnverified(now.minusHours(1), now)
           unverified.isEmpty === true
         }
+
+        db.readOnlyMaster { implicit s =>
+          val emails = Set("shachaf@gmail.com", "shanee@gmail.com", "dafna@gmail.com", "eishay@gmail.com").map(EmailAddress.apply)
+          val userByEmail = userEmailAddressRepo.getUsersByAddresses(emails)
+          userByEmail === emails.map(email => email -> user.id.get).toMap - EmailAddress("eishay@gmail.com")
+        }
       }
     }
   }
