@@ -197,16 +197,34 @@ class CreditRewardCommanderImpl @Inject() (
     }
   }
 
+  // TODO(ryan): you need to atone for this travesty. Jesus christ...
   def registerRewardTrigger(trigger: RewardTrigger)(implicit session: RWSession): Set[CreditReward] = trigger match {
-    case RewardTrigger.OrganizationUpgraded(orgId, newPlan) if newPlan.pricePerCyclePerUser > DollarAmount.ZERO =>
-      registerUpgradedAccount(orgId)
-    case RewardTrigger.OrganizationDescriptionAdded(orgId, description) if description.nonEmpty =>
-      val currentReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Started)(orgId)
-      val evolvedReward = Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Achieved)(orgId)
-      creditRewardRepo.getByReward(currentReward).map { cr => finalizeCreditReward(cr.withReward(evolvedReward), None) }
-    case _ =>
-      airbrake.notify(s"Tried to register an invalid reward trigger $trigger", new Exception())
-      Set.empty
+    case RewardTrigger.OrganizationUpgraded(orgId, newPlan) if newPlan.pricePerCyclePerUser > DollarAmount.ZERO => registerUpgradedAccount(orgId)
+    case RewardTrigger.OrganizationAvatarUploaded(orgId, avatar) => processRewardChecklistItem(RewardKind.OrganizationAvatarUploaded, orgId)
+    case RewardTrigger.OrganizationDescriptionAdded(orgId, description) if description.nonEmpty => processRewardChecklistItem(RewardKind.OrganizationDescriptionAdded, orgId)
+    case RewardTrigger.OrganizationKeepAddedToGeneralLibrary(orgId, keepCount) if keepCount >= 50 => processRewardChecklistItem(RewardKind.OrganizationGeneralLibraryKeepsReached50, orgId)
+    case RewardTrigger.OrganizationAddedLibrary(orgId, libCount) if libCount >= 10 => processRewardChecklistItem(RewardKind.OrganizationLibrariesReached10, orgId)
+    case RewardTrigger.OrganizationMemberAdded(orgId, memberCount) if memberCount >= 25 => processRewardChecklistItem(RewardKind.OrganizationMembersReached25, orgId)
+    case RewardTrigger.OrganizationMemberAdded(orgId, memberCount) if memberCount >= 20 => processRewardChecklistItem(RewardKind.OrganizationMembersReached20, orgId)
+    case RewardTrigger.OrganizationMemberAdded(orgId, memberCount) if memberCount >= 15 => processRewardChecklistItem(RewardKind.OrganizationMembersReached15, orgId)
+    case RewardTrigger.OrganizationMemberAdded(orgId, memberCount) if memberCount >= 10 => processRewardChecklistItem(RewardKind.OrganizationMembersReached10, orgId)
+    case RewardTrigger.OrganizationMemberAdded(orgId, memberCount) if memberCount >= 5 => processRewardChecklistItem(RewardKind.OrganizationMembersReached5, orgId)
+    case _ => Set.empty
+  }
+  private def processRewardChecklistItem(kind: RewardKind, orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
+    val (started, achieved) = kind match {
+      case k @ RewardKind.OrganizationAvatarUploaded => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case k @ RewardKind.OrganizationDescriptionAdded => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case k @ RewardKind.OrganizationGeneralLibraryKeepsReached50 => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case k @ RewardKind.OrganizationLibrariesReached10 => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case k @ RewardKind.OrganizationMembersReached5 => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case k @ RewardKind.OrganizationMembersReached10 => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case k @ RewardKind.OrganizationMembersReached15 => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case k @ RewardKind.OrganizationMembersReached20 => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case k @ RewardKind.OrganizationMembersReached25 => (Reward(k)(k.Started)(orgId), Reward(k)(k.Achieved)(orgId))
+      case _ => throw new IllegalArgumentException(s"RewardKind $kind is not a reward checklist item")
+    }
+    creditRewardRepo.getByReward(started).map { cr => finalizeCreditReward(cr.withReward(achieved), None) }
   }
 
   private def registerUpgradedAccount(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {

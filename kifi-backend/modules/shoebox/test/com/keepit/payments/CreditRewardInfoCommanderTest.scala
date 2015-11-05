@@ -47,10 +47,26 @@ class CreditRewardInfoCommanderTest extends SpecificationLike with ShoeboxTestIn
             "You earned $42.00 because Owner redeemed the coupon code COUPON.",
           makeReward(Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None)) ->
             "You earned $42.00 because you created a team on Kifi. Thanks for being awesome! :)",
+          makeReward(Reward(RewardKind.OrganizationAvatarUploaded)(RewardKind.OrganizationAvatarUploaded.Started)(org.id.get)) ->
+            "You will get $42.00 when you upload an image for your team.",
+          makeReward(Reward(RewardKind.OrganizationAvatarUploaded)(RewardKind.OrganizationAvatarUploaded.Achieved)(org.id.get)) ->
+            "You earned $42.00 because you uploaded an image for your team.",
           makeReward(Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Started)(org.id.get)) ->
             "You will get $42.00 when you tell us about your team.",
           makeReward(Reward(RewardKind.OrganizationDescriptionAdded)(RewardKind.OrganizationDescriptionAdded.Achieved)(org.id.get)) ->
             "You earned $42.00 because you told us about your team.",
+          makeReward(Reward(RewardKind.OrganizationMembersReached10)(RewardKind.OrganizationMembersReached10.Started)(org.id.get)) ->
+            "You will get $42.00 when your team reaches 10 total members.",
+          makeReward(Reward(RewardKind.OrganizationMembersReached10)(RewardKind.OrganizationMembersReached10.Achieved)(org.id.get)) ->
+            "You earned $42.00 because your team reached 10 total members.",
+          makeReward(Reward(RewardKind.OrganizationLibrariesReached10)(RewardKind.OrganizationLibrariesReached10.Started)(org.id.get)) ->
+            "You will get $42.00 when your team reaches 10 total libraries.",
+          makeReward(Reward(RewardKind.OrganizationLibrariesReached10)(RewardKind.OrganizationLibrariesReached10.Achieved)(org.id.get)) ->
+            "You earned $42.00 because your team reached 10 total libraries.",
+          makeReward(Reward(RewardKind.OrganizationGeneralLibraryKeepsReached50)(RewardKind.OrganizationGeneralLibraryKeepsReached50.Started)(org.id.get)) ->
+            "You will get $42.00 when your team adds 50 keeps into the General library.",
+          makeReward(Reward(RewardKind.OrganizationGeneralLibraryKeepsReached50)(RewardKind.OrganizationGeneralLibraryKeepsReached50.Achieved)(org.id.get)) ->
+            "You earned $42.00 because your team added 50 keeps into the General library.",
           makeReward(Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Created)(org.id.get)) ->
             "You will get $42.00 when Team upgrades to a pro account.",
           makeReward(Reward(RewardKind.OrganizationReferral)(RewardKind.OrganizationReferral.Upgraded)(org.id.get)) ->
