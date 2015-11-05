@@ -29,6 +29,7 @@ trait CreditRewardCommander {
 
   // Initialize a hard-coded set of rewards (TODO(ryan): should probably be moved into an integrity plugin at some point)
   def initializeRewards(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward]
+  def initializeChecklistReward(orgId: Id[Organization], kind: RewardChecklistKind)(implicit session: RWSession): Try[CreditReward]
 
   // In-place evolutions of existing rewards
   def registerRewardTrigger(trigger: RewardTrigger)(implicit session: RWSession): Set[CreditReward]
@@ -297,10 +298,8 @@ class CreditRewardCommanderImpl @Inject() (
     }
   }
 
-  def initializeRewards(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
-    val org = orgRepo.get(orgId)
-    val accountId = accountRepo.getAccountId(orgId)
-    val initialRewards = Map[RewardChecklistKind, DollarAmount](
+  def initializeChecklistReward(orgId: Id[Organization], kind: RewardChecklistKind)(implicit session: RWSession): Try[CreditReward] = {
+    val valueByRewardKind = Map[RewardChecklistKind, DollarAmount](
       RewardKind.OrganizationAvatarUploaded -> DollarAmount.dollars(5),
       RewardKind.OrganizationDescriptionAdded -> DollarAmount.dollars(5),
       RewardKind.OrganizationGeneralLibraryKeepsReached50 -> DollarAmount.dollars(20)
@@ -309,6 +308,22 @@ class CreditRewardCommanderImpl @Inject() (
       } ++ RewardKind.orgMembersReached.map { k =>
         k -> DollarAmount.dollars(8 * k.threshold)
       }
+    assert(valueByRewardKind.keySet.map(x => x: RewardKind) subsetOf RewardKind.allActive, s"We shouldn't initialize new deprecated rewards: $kind")
+
+    val accountId = accountRepo.getAccountId(orgId)
+    createCreditReward(CreditReward(
+      accountId = accountId,
+      credit = valueByRewardKind(kind),
+      applied = None,
+      reward = Reward(kind)(kind.Started)(orgId),
+      unrepeatable = None,
+      code = None
+    ), None)
+  }
+  def initializeRewards(orgId: Id[Organization])(implicit session: RWSession): Set[CreditReward] = {
+    val org = orgRepo.get(orgId)
+    val accountId = accountRepo.getAccountId(orgId)
+    val initialRewards = RewardKind.allActive.collect { case k: RewardChecklistKind => k }
 
     val orgCreationReward = createCreditReward(CreditReward(
       accountId = accountId,
@@ -319,18 +334,7 @@ class CreditRewardCommanderImpl @Inject() (
       code = None
     ), Some(org.ownerId)).get
 
-    val initialChecklistRewards = initialRewards.map {
-      case (kind, value) =>
-        createCreditReward(CreditReward(
-          accountId = accountId,
-          credit = value,
-          applied = None,
-          reward = Reward(kind)(kind.Started)(orgId),
-          unrepeatable = None,
-          code = None
-        ), None).get
-    }.toSet
-
+    val initialChecklistRewards = initialRewards.flatMap(kind => initializeChecklistReward(orgId, kind).toOption)
     initialChecklistRewards + orgCreationReward
   }
 

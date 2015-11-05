@@ -114,6 +114,7 @@ object RewardKind extends Enumerator[RewardKind] {
     case object Used extends Status("used")
     protected lazy val allStatus: Set[S] = Set(Used)
     lazy val applicable: Used.type = Used
+    val isDeprecated = true
   }
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     lazy val infoFormat = Id.format[Organization]
@@ -173,7 +174,10 @@ object RewardKind extends Enumerator[RewardKind] {
 
   val orgLibsReached = OrganizationLibrariesReached.all
   val orgMembersReached = OrganizationMembersReached.all
-  private val all = _all.toSet
+
+  val all = _all.toSet
+  val deprecated = Set.empty[RewardKind]
+  val allActive = all -- deprecated
   def get(kind: String) = all.find(_.kind equalsIgnoreCase kind)
   def apply(kind: String) = get(kind).getOrElse(throw new IllegalArgumentException(s"Unknown RewardKind: $kind"))
 }
