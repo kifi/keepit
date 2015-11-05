@@ -191,7 +191,7 @@ class MobileKeepsController @Inject() (
             h <- idealImageHeight
           } yield ImageSize(w, h)
         } getOrElse ProcessedImageSize.Large.idealSize
-        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true).imap {
+        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, Seq(keep), idealImageSize, withKeepTime = true, sanitizeUrls = true).imap {
           case Seq(keepInfo) =>
             Ok(Json.toJson(keepInfo.copy(note = Hashtags.formatMobileNote(keepInfo.note, v1))))
         }
@@ -269,7 +269,7 @@ class MobileKeepsController @Inject() (
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
 
-    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId).map { keeps =>
+    keepsCommander.getKeepStream(request.userId, limit, beforeExtId, afterExtId, sanitizeUrls = true).map { keeps =>
       Ok(Json.obj("keeps" -> keeps))
     }
   }
