@@ -1,17 +1,16 @@
 package com.keepit.common.reflection
 
+import scala.collection.mutable
 import scala.language.experimental.macros
 import scala.language.postfixOps
 import scala.reflect.macros.blackbox
-import scala.util.control.NonFatal
 
 object EnumerationMacro {
   def findValuesImpl[A: c.WeakTypeTag](c: blackbox.Context): c.Expr[IndexedSeq[A]] = {
     import c.universe._
     val resultType = implicitly[c.WeakTypeTag[A]].tpe
     val typeSymbol = weakTypeOf[A].typeSymbol
-    validateType(c)(typeSymbol)
-    val subclassSymbols = enclosedSubClasses(c)(typeSymbol)
+    val subclassSymbols = enclosedSubClasses(c)(typeSymbol).toList
     if (subclassSymbols.isEmpty) {
       c.Expr[IndexedSeq[A]](reify(IndexedSeq.empty[A]).tree)
     } else {
@@ -21,29 +20,25 @@ object EnumerationMacro {
             Select(reify(IndexedSeq).tree, TermName("apply")),
             List(TypeTree(resultType))
           ),
-          subclassSymbols.map(Ident(_)).toList
+          subclassSymbols.map(Ident(_))
         )
       )
     }
   }
-
-  private[this] def validateType(c: blackbox.Context)(typeSymbol: c.universe.Symbol): Unit = {
-    if (!typeSymbol.asClass.isSealed)
-      c.abort(
-        c.enclosingPosition,
-        "You can only use findValues on sealed traits or classes"
-      )
-  }
-  private[this] def enclosedSubClasses(c: blackbox.Context)(typeSymbol: c.universe.Symbol): Seq[c.universe.Symbol] = {
-    import c.universe._
-    val enclosingBodySubclasses: List[Symbol] = try {
-      val enclosingModuleMembers = c.internal.enclosingOwner.owner.typeSignature.decls.toList
-      enclosingModuleMembers.filter { x =>
-        try x.asModule.moduleClass.asClass.baseClasses.contains(typeSymbol) catch { case _: Throwable => false }
+  private[this] def enclosedSubClasses(c: blackbox.Context)(target: c.universe.Symbol): Set[c.universe.Symbol] = {
+    val start = c.internal.enclosingOwner.owner
+    val q = mutable.Queue(start)
+    val visited = mutable.Set.empty[c.universe.Symbol]
+    while (q.nonEmpty) {
+      val cur = q.dequeue()
+      if (!visited.contains(cur)) {
+        visited += cur
+        val children = cur.typeSignature.decls.toList.filter { s => s.isModule || s.isClass }
+        q.enqueue(children: _*)
       }
-    } catch { case NonFatal(e) => c.abort(c.enclosingPosition, s"Unexpected error: ${e.getMessage}") }
-    if (!enclosingBodySubclasses.forall(x => x.isModule))
-      c.abort(c.enclosingPosition, "All subclasses must be objects.")
-    else enclosingBodySubclasses
+    }
+    visited.filter { s =>
+      try { s.asModule.moduleClass.asClass.baseClasses.contains(target) } catch { case _: Throwable => false }
+    }.toSet
   }
 }
