@@ -93,7 +93,7 @@ trait KeepCommander {
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
-  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]]
+  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
 }
 
 @Singleton
@@ -288,7 +288,7 @@ class KeepCommanderImpl @Inject() (
     keepsF.flatMap {
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
-        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true)
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true, sanitizeUrls = false)
     }
   }
 
@@ -890,7 +890,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]]): Future[Seq[KeepInfo]] = {
+  def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]] = {
     val keeps: Seq[Keep] = db.readOnlyReplica { implicit session =>
       keepRepo.getRecentKeeps(userId, limit, beforeExtId, afterExtId)
     }.foldRight((List.empty[Keep], Set.empty[Id[NormalizedURI]])) {
@@ -898,7 +898,7 @@ class KeepCommanderImpl @Inject() (
         if (seenUriIds(keep.uriId)) (acc, seenUriIds) else (keep :: acc, seenUriIds + keep.uriId)
     }._1
 
-    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true)
+    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true, sanitizeUrls = sanitizeUrls)
   }
 }
 

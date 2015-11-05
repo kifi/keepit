@@ -43,7 +43,7 @@ object URIParserUtil {
     val builder = new StringBuilder()
     string.foreach { c =>
       if (symbols.contains(c)) builder ++= encodingMap(c)
-      else if (c <= 255) builder += c // ASCII
+      else if (c <= 127) builder += c // ASCII
       else builder ++= encodeChar(c) // non-ASCII
     }
     builder.toString

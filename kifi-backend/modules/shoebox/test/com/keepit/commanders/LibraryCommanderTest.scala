@@ -336,7 +336,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             KeepFactory.keeps(100).map(_.withUser(user).withLibrary(lib)).saved
             (user, lib)
           }
-          val fullInfoFut = inject[LibraryInfoCommander].createFullLibraryInfo(Some(user.id.get), true, lib, ProcessedImageSize.XLarge.idealSize, None, true)
+          val fullInfoFut = inject[LibraryInfoCommander].createFullLibraryInfo(Some(user.id.get), true, lib, ProcessedImageSize.XLarge.idealSize, None, withKeepTime = true, sanitizeUrls = true)
           val fullInfo = Await.result(fullInfoFut, Duration.Inf)
           fullInfo.keeps.nonEmpty === true
         }

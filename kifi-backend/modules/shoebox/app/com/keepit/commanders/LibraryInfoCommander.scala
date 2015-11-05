@@ -31,12 +31,12 @@ trait LibraryInfoCommander {
   def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser]
   def getKeeps(libraryId: Id[Library], offset: Int, limit: Int, useMultilibLogic: Boolean = false): Future[Seq[Keep]]
   def getKeepsCount(libraryId: Id[Library]): Future[Int]
-  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Future[FullLibraryInfo]
+  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]], sanitizeUrls: Boolean)(implicit context: HeimdalContext): Future[FullLibraryInfo]
   def getLibraryMembersAndInvitees(libraryId: Id[Library], offset: Int, limit: Int, fillInWithInvites: Boolean): Seq[MaybeLibraryMember]
   def getBasicLibraryDetails(libraryIds: Set[Id[Library]], idealImageSize: ImageSize, viewerId: Option[Id[User]]): Map[Id[Library], BasicLibraryDetails]
   def getLibraryWithOwnerAndCounts(libraryId: Id[Library], viewerUserId: Id[User]): Either[LibraryFail, (Library, BasicUser, Int, Option[Boolean], Boolean)]
-  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]]
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], showKeepCreateTime: Boolean = true, useMultilibLogic: Boolean = false): Future[FullLibraryInfo]
+  def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int, idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, sanitizeUrls: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]]
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], withKeepTime: Boolean, sanitizeUrls: Boolean, useMultilibLogic: Boolean = false): Future[FullLibraryInfo]
   def getLibrariesByUser(userId: Id[User]): (Seq[(LibraryMembership, Library)], Seq[(LibraryInvite, Library)])
   def getLibrariesUserCanKeepTo(userId: Id[User], includeOrgLibraries: Boolean): Seq[(Library, Option[LibraryMembership], Set[Id[User]])]
   def sortAndSelectLibrariesWithTopGrowthSince(libraryIds: Set[Id[Library]], since: DateTime, totalMemberCount: Id[Library] => Int): Seq[(Id[Library], Seq[LibraryMembership])]
@@ -94,10 +94,10 @@ class LibraryInfoCommanderImpl @Inject() (
     db.readOnlyMasterAsync { implicit s => libraryRepo.get(libraryId).keepCount }
   }
 
-  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Future[FullLibraryInfo] = {
+  def getLibraryById(userIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, id: Id[Library], imageSize: ImageSize, viewerId: Option[Id[User]], sanitizeUrls: Boolean)(implicit context: HeimdalContext): Future[FullLibraryInfo] = {
     val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
     libraryAnalytics.viewedLibrary(viewerId, lib, context)
-    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib, imageSize, None)
+    createFullLibraryInfo(userIdOpt, showPublishedLibraries, lib, imageSize, None, withKeepTime = true, sanitizeUrls = sanitizeUrls)
   }
 
   def getLibraryPath(library: Library): String = {
@@ -171,7 +171,7 @@ class LibraryInfoCommanderImpl @Inject() (
   }.toMap
 
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
-    idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
+    idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, sanitizeUrls: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
     libraries.groupBy(l => l.id.get).foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
@@ -191,7 +191,7 @@ class LibraryInfoCommanderImpl @Inject() (
                 if (useMultilibLogic) newWay else oldWay
             }
           }
-          keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime)
+          keepDecorator.decorateKeepsIntoKeepInfos(viewerUserIdOpt, showPublishedLibraries, keeps, idealKeepImageSize, withKeepTime, sanitizeUrls)
         } else Future.successful(Seq.empty)
       }
     }.toMap
@@ -316,9 +316,9 @@ class LibraryInfoCommanderImpl @Inject() (
   def sortUsersByImage(users: Seq[BasicUser]): Seq[BasicUser] =
     users.sortBy(_.pictureName == BasicNonUser.DefaultPictureName)
 
-  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], showKeepCreateTime: Boolean = true, useMultilibLogic: Boolean = false): Future[FullLibraryInfo] = {
+  def createFullLibraryInfo(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, library: Library, libImageSize: ImageSize, authToken: Option[String], withKeepTime: Boolean, sanitizeUrls: Boolean, useMultilibLogic: Boolean = false): Future[FullLibraryInfo] = {
     val maxMembersShown = 10
-    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, maxMembersShown = maxMembersShown * 2, maxKeepsShown = 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, showKeepCreateTime, useMultilibLogic, authToken.map(library.id.get -> _).toMap).imap {
+    createFullLibraryInfos(viewerUserIdOpt, showPublishedLibraries, maxMembersShown = maxMembersShown * 2, maxKeepsShown = 10, ProcessedImageSize.Large.idealSize, Seq(library), libImageSize, withKeepTime, sanitizeUrls, useMultilibLogic, authToken.map(library.id.get -> _).toMap).imap {
       case Seq((_, info)) =>
         val followers = info.followers
         val sortedFollowers = sortUsersByImage(followers)

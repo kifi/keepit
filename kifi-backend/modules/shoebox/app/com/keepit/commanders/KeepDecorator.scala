@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.model._
@@ -19,7 +20,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepDecoratorImpl])
 trait KeepDecorator {
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]]
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean, sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
   def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo]
   def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]]
 }
@@ -49,7 +50,7 @@ class KeepDecoratorImpl @Inject() (
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepDecorator with Logging {
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean, sanitizeUrls: Boolean): Future[Seq[KeepInfo]] = {
     val keeps = keepsSeq match {
       case k: List[Keep] => k
       case other =>
@@ -152,7 +153,7 @@ class KeepDecoratorImpl @Inject() (
             KeepInfo(
               id = Some(keep.externalId),
               title = keep.title,
-              url = keep.url,
+              url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
               isPrivate = keep.isPrivate,
               user = Some(idToBasicUser(keep.userId)),
               createdAt = keptAt,

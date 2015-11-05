@@ -188,28 +188,6 @@ class RecommendationsCommanderTest extends Specification with ShoeboxTestInjecto
           recoCommander.sampleFairly(seqOfSeqs, maxPerSeq = 3) === Seq(11, 12, 13, 21, 22, 23, 31, 41, 42, 43)
         }
       }
-
-      "sample actual keeps fairly" in {
-        withDb(modules: _*) { implicit injector =>
-          val t1 = DateTime.now()
-          implicit val config = inject[PublicIdConfiguration]
-          val recoCommander = inject[RecommendationsCommander]
-          val (userIron, userCaptain, libMurica, libScience, libIron) = setupUsersAndLibrariesAndKeeps()
-
-          db.readOnlyMaster { implicit s =>
-            val resF = recoCommander.maybeUpdatesFromFollowedLibraries(userIron.id.get, 20, maxUpdatesPerLibrary = 5)
-            val Some(recos) = Await.result(resF, Duration(5, "seconds"))
-            recos.itemInfo.length === 6
-            recos.itemInfo.map(_.url) ===
-              Seq("http://www.reddit.com/r/science",
-                "http://www.reddit.com/r/news",
-                "http://www.reddit.com/r/jokes",
-                "http://www.reddit.com/r/funny",
-                "http://www.reddit.com/r/aww",
-                "http://www.reddit.com/r/pics")
-          }
-        }
-      }
     }
   }
 
