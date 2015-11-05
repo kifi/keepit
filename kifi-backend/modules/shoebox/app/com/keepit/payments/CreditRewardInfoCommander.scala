@@ -31,7 +31,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
   def getRewardsByOrg(orgId: Id[Organization]): CreditRewardsView = db.readOnlyMaster { implicit session =>
     val rewards = creditRewardRepo.getByAccount(accountRepo.getByOrgId(orgId).id.get).toSeq
     val categorizedRewards = RewardCategory.all.map { category =>
-      category -> rewards.filter(r => RewardCategory.forKind(r.reward.kind) == category).sortBy(r => (r.applied.isEmpty, r.reward.kind)) // (r.applied.isDefined, r.reward.kind))
+      category -> rewards.filter(r => RewardCategory.forKind(r.reward.kind) == category).sortBy(_.applied.isEmpty).sortBy(_.reward.kind) // The compiler doesn't like sortyBy(r => (r.applied.isEmpty, r.reward.kind))
     }.toMap
     val externalCategorizedRewards = categorizedRewards.map {
       case (category, crs) => category -> crs.map { cr =>
