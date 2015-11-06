@@ -75,7 +75,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
 
   def intern(userId: Id[User], address: EmailAddress, verified: Boolean = false)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)] = {
     userEmailAddressRepo.getByAddress(address, excludeState = None) match {
-      case Some(email) if email.verified && email.userId != userId => Failure(new UnavailableEmailAddressException(email, userId))
+      case Some(email) if (email.verified || email.primary) && email.userId != userId => Failure(new UnavailableEmailAddressException(email, userId))
       case Some(email) if email.state != UserEmailAddressStates.INACTIVE => Success {
         val isNew = email.userId != userId
         val updatedEmail = if (isNew) email.copy(userId = userId).withAddress(address).clearVerificationCode else email.withAddress(address)
