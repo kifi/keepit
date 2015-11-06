@@ -257,7 +257,10 @@ class NotificationKindInfoRequests @Inject()() {
         image = UserImage(inviter),
         title = s"${inviter.firstName} ${inviter.lastName} invited you to join ${invitedOrg.abbreviatedName}!",
         body = s"Help ${invitedOrg.abbreviatedName} by sharing your knowledge with them.",
-        linkText = "Visit organization",
+        linkText = "Visit team",
+        extraJson = Some(Json.obj(
+          "organization" -> Json.toJson(invitedOrg)
+        )),
         category = NotificationCategory.User.ORGANIZATION_INVITATION
       )
     }
@@ -275,7 +278,7 @@ class NotificationKindInfoRequests @Inject()() {
         image = UserImage(accepter),
         title = s"${accepter.firstName} accepted your invitation to join ${acceptedOrg.abbreviatedName}!",
         body = s"You invited ${accepter.firstName} to join ${acceptedOrg.abbreviatedName}",
-        linkText = "Visit organization",
+        linkText = "Visit team",
         extraJson = Some(Json.obj(
           "member" -> accepter,
           "organization" -> Json.toJson(acceptedOrg)

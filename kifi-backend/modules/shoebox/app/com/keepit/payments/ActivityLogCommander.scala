@@ -17,7 +17,7 @@ import play.twirl.api.Html
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
-  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent]
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, inclusive: Boolean = false): Seq[AccountEvent]
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo
   def buildSimpleEventInfoHelper(event: AccountEvent)(implicit session: RSession): SimpleAccountEventInfo
 }
@@ -40,9 +40,9 @@ class ActivityLogCommanderImpl @Inject() (
     paidAccountRepo.getAccountId(orgId)
   }
 
-  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
+  def getAccountEvents(orgId: Id[Organization], fromIdOpt: Option[Id[AccountEvent]], limit: Limit, inclusive: Boolean = false): Seq[AccountEvent] = db.readOnlyMaster { implicit session =>
     val accountId = orgId2AccountId(orgId)
-    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.activityLog, fromIdOpt, limit)
+    accountEventRepo.getByAccountAndKinds(accountId, AccountEventKind.activityLog, fromIdOpt, limit, inclusive)
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
@@ -61,15 +61,13 @@ class ActivityLogCommanderImpl @Inject() (
     val description: DescriptionElements = {
       import com.keepit.payments.{ DescriptionElements => Elements }
       event.action match {
-        case RewardCredit(id) => creditRewardInfoCommander.getDescription(id)
+        case RewardCredit(id) => creditRewardInfoCommander.getDescription(creditRewardRepo.get(id))
         case IntegrityError(err) => Elements("Found and corrected an error in the account.") // this is intentionally vague to avoid sending dangerous information to clients
         case SpecialCredit() => Elements("Special credit was granted to your team by Kifi Support", maybeUser.map(Elements("thanks to", _)), ".")
-        case Refund(_, _) => Elements("A", event.creditChange, "refund was issued to your card.")
+        case Refund(_, _) => Elements("A", -event.creditChange, "refund was issued to your card", event.chargeId.map(id => s"(ref. ${id.id})"), ".")
         case RefundFailure(_, _, _, _) => s"We failed to refund your card."
         case PlanRenewal(planId, _, _, _, _) => Elements("Your", paidPlanRepo.get(planId), "plan was renewed.")
-        case Charge() =>
-          val invoiceText = s"Invoice ${event.chargeId.map("#" + _.id).getOrElse(s"not found, please contact ${SystemEmailAddress.BILLING}")}"
-          Elements("Your card was charged", event.creditChange, s"for your balance. [$invoiceText]")
+        case Charge() => Elements("Your card was charged", event.creditChange, s"for your balance", event.chargeId.map(id => s"(ref. ${id.id})"), ".")
         case LowBalanceIgnored(amount) => s"Your account has a low balance of $amount."
         case ChargeFailure(amount, code, message) => s"We failed to process your payment, please update your payment information."
         case MissingPaymentMethod() => s"We failed to process your payment, please register a payment method."

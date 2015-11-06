@@ -23,7 +23,7 @@ import play.api.Mode.Mode
 import play.api.Play
 import play.api.libs.json._
 import com.keepit.common.core._
-import com.keepit.payments.{ PlanManagementCommander, ActionAttribution }
+import com.keepit.payments.{ RewardTrigger, CreditRewardCommander, PlanManagementCommander, ActionAttribution }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -78,6 +78,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     kifiUserTypeahead: KifiUserTypeahead,
     planCommander: PlanManagementCommander,
+    creditRewardCommander: CreditRewardCommander,
     mode: Mode,
     implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
 
@@ -221,8 +222,8 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  private def unsafeAddMembership(request: OrganizationMembershipAddRequest): OrganizationMembershipAddResponse = {
-    val newMembership = db.readWrite { implicit session =>
+  private def unsafeAddMembership(request: OrganizationMembershipAddRequest)(implicit session: RWSession): OrganizationMembershipAddResponse = {
+    val newMembership = {
       orgMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId).foreach(orgMembershipCandidateRepo.deactivate)
       val inactiveMembershipOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
       assert(inactiveMembershipOpt.forall(_.isInactive))
@@ -230,16 +231,18 @@ class OrganizationMembershipCommanderImpl @Inject() (
       planCommander.registerNewUser(request.orgId, request.targetId, request.newRole, ActionAttribution(user = Some(request.requesterId), admin = request.adminIdOpt))
       orgMembershipRepo.save(membership.copy(id = inactiveMembershipOpt.map(_.id.get)))
     }
+    creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationMemberAdded(request.orgId, orgMembershipRepo.countByOrgId(request.orgId)))
 
     // Fire off a few Futures to take care of low priority tasks
-    refreshOrganizationMembersTypeahead(request.orgId)
-
-    val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
-    orgGeneralLibrary.foreach { lib =>
-      implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
-      libraryMembershipCommander.joinLibrary(request.targetId, lib.id.get)
+    val orgGeneralLibraryId = libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL).map(_.id.get)
+    session.onTransactionSuccess {
+      refreshOrganizationMembersTypeahead(request.orgId)
+      orgGeneralLibraryId.foreach { libId =>
+        implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful
+        libraryMembershipCommander.joinLibrary(request.targetId, libId)
+      }
+      elizaServiceClient.flush(request.targetId)
     }
-    elizaServiceClient.flush(request.targetId)
 
     OrganizationMembershipAddResponse(request, newMembership)
   }

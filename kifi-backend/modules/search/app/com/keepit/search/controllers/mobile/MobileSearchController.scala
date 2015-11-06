@@ -3,6 +3,7 @@ package com.keepit.search.controllers.mobile
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.db.Id
 import com.keepit.common.json
+import com.keepit.common.net.URISanitizer
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
@@ -269,7 +270,7 @@ class MobileSearchController @Inject() (
               val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize)))
               Json.obj(
                 "title" -> hit.title,
-                "url" -> hit.url,
+                "url" -> URISanitizer.sanitize(hit.url),
                 "score" -> hit.finalScore,
                 "summary" -> json.aggressiveMinify(Json.obj(
                   "title" -> summary.flatMap(_.article.title),

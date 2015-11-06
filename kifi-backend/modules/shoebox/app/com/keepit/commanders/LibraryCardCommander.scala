@@ -125,6 +125,7 @@ class LibraryCardCommanderImpl @Inject() (
       }
 
       val permissions = permissionCommander.getLibraryPermissions(lib.id.get, Some(viewerId))
+      val viewerMemInfoOpt = viewerMemOpt.map(miniMem => LibraryMembershipInfo(miniMem.access, miniMem.listed, miniMem.subscribed, permissions))
 
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),
@@ -143,7 +144,7 @@ class LibraryCardCommanderImpl @Inject() (
         collaborators = collabsSample,
         lastKept = lib.lastKept.getOrElse(lib.createdAt),
         following = None, // not needed
-        membership = None, // not needed
+        membership = viewerMemInfoOpt,
         invite = None, // not needed
         permissions = permissions,
         path = path,

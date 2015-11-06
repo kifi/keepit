@@ -95,7 +95,6 @@ class PlanManagementCommanderImpl @Inject() (
     extends PlanManagementCommander with Logging {
 
   private val MATH_CONTEXT = new MathContext(34, RoundingMode.HALF_DOWN)
-  private val orgCreationCredit = DollarAmount.dollars(50)
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
     paidAccountRepo.getAccountId(orgId)
@@ -150,15 +149,8 @@ class PlanManagementCommanderImpl @Inject() (
                 action = AccountEventAction.OrganizationCreated(planId, Some(account.planRenewal))
               ))
 
-              log.info(s"[PAC] $orgId: Granting creation reward...")
-              creditRewardCommander.createCreditReward(CreditReward(
-                accountId = account.id.get,
-                credit = orgCreationCredit,
-                applied = None,
-                reward = Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None),
-                unrepeatable = Some(UnrepeatableRewardKey.WasCreated(orgId)),
-                code = None
-              ), userAttribution = Some(creator)).get
+              log.info(s"[PAC] $orgId: Granting initial rewards...")
+              creditRewardCommander.initializeRewards(orgId)
 
               log.info(s"[PAC] $orgId: Registering owner...")
               registerNewUser(orgId, creator, OrganizationRole.ADMIN, attribution)

@@ -120,7 +120,7 @@ class ShoeboxArticleIngestionActor @Inject() (
   }
 
   private def processRedirectsAndNormalizationInfo(uriId: Id[NormalizedURI], updates: Seq[ShoeboxArticleUpdate]): Future[Boolean] = {
-    require(updates.forall(_.uriId == uriId), s"Updates do not match expecting uriId ($uriId): $updates")
+    require(updates.forall(_.uriId.contains(uriId)), s"Updates do not match expecting uriId ($uriId): $updates")
     throttle.withLockFuture {
       FutureHelpers.exists(updates)(processRedirectsAndNormalizationInfo)
     }
@@ -154,7 +154,7 @@ class ShoeboxArticleIngestionActor @Inject() (
   }
 
   private def updateUriAndKeeps(uriId: Id[NormalizedURI], updates: Seq[ShoeboxArticleUpdate], rules: UrlPatternRules)(implicit session: RWSession): Unit = {
-    require(updates.forall(_.uriId == uriId), s"Updates do not match expecting uriId ($uriId): $updates")
+    require(updates.forall(_.uriId.contains(uriId)), s"Updates do not match expecting uriId ($uriId): $updates")
     log.debug(s"Updating NormalizedURI ($uriId) after processing associated ShoeboxArticleUpdates from Rover: $updates")
     val uri = uriRepo.get(uriId)
     val fetchedTitles = updates.map(update => (update.articleKind -> update.title)).collect {

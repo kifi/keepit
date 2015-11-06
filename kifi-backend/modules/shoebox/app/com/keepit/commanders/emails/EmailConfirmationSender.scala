@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ User, NotificationCategory, UserEmailAddress }
+import com.keepit.model.{ EmailVerificationCode, User, NotificationCategory, UserEmailAddress }
 
 import scala.concurrent.Future
 
@@ -19,10 +19,10 @@ class EmailConfirmationSender @Inject() (
   def apply(emailAddr: UserEmailAddress): Future[ElectronicMail] =
     sendToUser(emailAddr.userId, emailAddr.address, emailAddr.verificationCode.get)
 
-  def sendToUser(toUserId: Id[User], address: EmailAddress, verificationCode: String): Future[ElectronicMail] = {
+  def sendToUser(toUserId: Id[User], address: EmailAddress, verificationCode: EmailVerificationCode): Future[ElectronicMail] = {
 
     val siteUrl = fortytwoConfig.applicationBaseUrl
-    val verifyUrl = s"$siteUrl${com.keepit.controllers.core.routes.AuthController.verifyEmail(verificationCode)}"
+    val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(verificationCode)}"
 
     val emailToSend = EmailToSend(
       fromName = None,

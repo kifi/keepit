@@ -41,7 +41,7 @@ angular.module('kifi')
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
         scope.showSubIntegrations = false;
-        scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }}; };
+        scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }, 'disabled': false }; };
         scope.showError = false;
         scope.me = profileService.me;
         scope.libraryProps = {
@@ -216,7 +216,7 @@ angular.module('kifi')
             if (!sub.name || sub.name.indexOf(' ') > -1) {
               sub.$error.name = true;
               scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
-            } else if (sub.info.url === '' || sub.info.url.match(/https:\/\/hooks.slack.com\/services\/.*\/.*\/.*/i) == null) {
+            } else if (sub.info.url === '' || sub.info.url.match(/^https:\/\/hooks.slack.com\/services\/.*\/.*\/.*[^\/]$/i) == null) {
               sub.$error.url = true;
               scope.$error.general = 'Please enter a valid webhook URL for each subscription.';
             }
@@ -339,9 +339,7 @@ angular.module('kifi')
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
           scope.library.subscriptions = scope.library.subscriptions || [];
-          if (scope.library.subscriptions.length < 3) {
-            scope.library.subscriptions.push(scope.newBlankSub());
-          }
+          scope.library.subscriptions.push(scope.newBlankSub());
         } else {
           scope.library = {
             'name': '',

@@ -20,7 +20,7 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
 
   "ActivityLogCommanderTest" should {
     def display(event: AccountEvent)(implicit injector: Injector): String = {
-      DescriptionElements.flatWrites.writes(activityLogCommander.buildSimpleEventInfo(event).description).as[Seq[JsObject]].map(obj => (obj \ "text").as[String]).mkString
+      DescriptionElements.formatPlain(activityLogCommander.buildSimpleEventInfo(event).description)
     }
     "display events in a sane way" in {
       def setup()(implicit injector: Injector): Seq[AccountEvent] = db.readWrite { implicit session =>
@@ -71,9 +71,9 @@ class ActivityLogCommanderTest extends SpecificationLike with ShoeboxTestInjecto
         events.map(_.action.eventType).toSet === AccountEventKind.activityLog
 
         // events.foreach(display _ andThen println)
-        val e = events.toIterator
+        val e = events.iterator
         display(e.next()) === "The Org team was created by Owner and enrolled in the Free plan."
-        display(e.next()) === "Your card was charged $0.00 for your balance. [Invoice not found, please contact billing@kifi.com]"
+        display(e.next()) === "Your card was charged $0.00 for your balance."
         display(e.next()) === "A $0.00 refund was issued to your card."
         display(e.next()) === "We failed to process your payment, please update your payment information."
         display(e.next()) === "We failed to refund your card."

@@ -123,7 +123,7 @@ trait UserCommander {
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
   def getUserSegment(userId: Id[User]): UserSegment
   def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]]
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit]
+  def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit]
   def changePassword(userId: Id[User], newPassword: String, oldPassword: Option[String]): Try[Unit]
   def resetPassword(code: String, ip: IpAddress, password: String): Either[String, Id[User]]
   def sendCloseAccountEmail(userId: Id[User], comment: String): ElectronicMail
@@ -367,11 +367,18 @@ class UserCommanderImpl @Inject() (
     } else Option(Future.successful(Set.empty))
   }
 
-  def sendWelcomeEmail(newUser: User, withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(newUser.id.get, UserValues.welcomeEmailSent) }) {
-      val emailF = welcomeEmailSender.get.apply(newUser.id.get, targetEmailOpt, isPlainEmail)
+  def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(userId, UserValues.welcomeEmailSent) }) {
+      val verificationCode = db.readWrite { implicit session =>
+        for {
+          emailAddress <- targetEmailOpt if withVerification
+          emailRecord <- emailRepo.getByAddressAndUser(userId, emailAddress)
+          code <- emailRecord.verificationCode orElse emailRepo.save(emailRecord.withVerificationCode(clock.now())).verificationCode
+        } yield code
+      }
+      val emailF = welcomeEmailSender.get.apply(userId, targetEmailOpt, isPlainEmail, verificationCode)
       emailF.map { email =>
-        db.readWrite { implicit rw => userValueRepo.setValue(newUser.id.get, UserValues.welcomeEmailSent.name, true) }
+        db.readWrite { implicit rw => userValueRepo.setValue(userId, UserValues.welcomeEmailSent.name, true) }
         ()
       }
     } else Future.successful(())
@@ -439,23 +446,25 @@ class UserCommanderImpl @Inject() (
       userEmailTry match {
         case Success(userEmail) => {
           val mail = postOffice.sendMail(ElectronicMail(
-            fromName = Some("Kifi Support"),
             from = SystemEmailAddress.NOTIFICATIONS,
+            fromName = Some("Kifi"),
             to = Seq(userEmail.address),
             subject = "Create a Kifi team from your desktop",
             htmlBody =
               s"""
-                  |Per your request, you can now <a href="https://www.kifi.com/teams/new">create a team</a> on Kifi from
-                  |your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+                  |Per your request, you can <a href="https://www.kifi.com/teams/new">create a team</a> on Kifi from
+                  |your desktop. Teams allow you to quickly onboard new members via access to all of the libraries within your team's space.
+                  |You can also send a page to all team members in just 1 click, integrate your libraries with Slack, and more.
                   |
                   |Get started by visiting the page to <a href="https://www.kifi.com/teams/new">create a team</a>.
-              """,
+              """.stripMargin,
             textBody = Some(
               s"""
-                  |Per your request, you can now create a team on Kifi from
-                  |your desktop. Teams allow you to quickly send messages to groups of users, integrate your libraries with Slack, and more.
+                  |Per your request, you can create a team on Kifi from
+                  |your desktop. Teams allow you to quickly onboard new members via access to all of the libraries within your team's space.
+                  |You can also send a page to all team members in just 1 click, integrate your libraries with Slack, and more.
                   |
-                  |Get started by visiting the page to create a team: https://www.kifi.com/teams/new.
+                  |Get started by visiting the page to create a team: www.kifi.com/teams/new
                """.stripMargin),
             category = NotificationCategory.User.CREATE_TEAM
           ))

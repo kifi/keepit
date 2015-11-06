@@ -14,7 +14,7 @@ angular.module('kifi')
           modalData.title = 'Cancel Invitation?';
           modalData.descriptions = [(
             'Canceling this invitation will prevent ' + (modalData.member.firstName || modalData.member.email) +
-            ' from joining the organization. They will not be notified. You can re-invite them at any time.'
+            ' from joining the team. They will not be notified. You can re-invite them at any time.'
           )];
           modalData.actionText = 'Cancel Invitation';
           modalData.action = 'cancel';
@@ -31,14 +31,14 @@ angular.module('kifi')
             )
           ];
           modalData.action = 'remove';
-          modalData.actionText = 'Leave Organization';
+          modalData.actionText = 'Leave Team';
         } else {
           modalData.title = 'Remove ' + modalData.member.firstName + ' from ' + modalData.organization.name + '?';
           modalData.descriptions = [
             (
               'Continuing will remove ' + modalData.member.firstName +
               '\'s access to content that is only visible to ' + modalData.organization.name + ' members. ' +
-              'They will still have access to your organization\'s public libraries ' +
+              'They will still have access to your team\'s public libraries ' +
               'and any content they have been explicitly invited to follow or collaborate on.'
             ),
             (

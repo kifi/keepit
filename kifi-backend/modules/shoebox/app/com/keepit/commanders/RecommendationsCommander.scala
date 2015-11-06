@@ -93,34 +93,6 @@ class RecommendationsCommander @Inject() (
   def sampleFairly[T](seqOfSeqs: Seq[Seq[T]], maxPerSeq: Int): Seq[T] = {
     seqOfSeqs.flatMap(_.take(maxPerSeq))
   }
-  def maybeUpdatesFromFollowedLibraries(userId: Id[User], maxUpdates: Int = 20, maxUpdatesPerLibrary: Int = 5): Future[Option[FullLibUpdatesRecoInfo]] = {
-    val keepsOpt: Option[Seq[Keep]] = db.readWrite { implicit session =>
-      val lastSeen = userValueRepo.getValue(userId, UserValues.libraryUpdatesLastSeen)
-      if (lastSeen.isBefore(currentDateTime.minusHours(12))) {
-        userValueRepo.setValue(userId, UserValueName.UPDATED_LIBRARIES_LAST_SEEN, currentDateTime)
-
-        val recentlyUpdatedKeeps = keepRepo.getRecentKeeps(userId, 10 * maxUpdates, None, None).filterNot(_.userId == userId)
-        val keepsByLibrary = recentlyUpdatedKeeps.groupBy(_.libraryId).values.toList
-        val fairlySampledKeeps = sampleFairly(keepsByLibrary, maxUpdatesPerLibrary)
-        val result = fairlySampledKeeps.sortBy(_.keptAt).reverse.take(maxUpdates)
-
-        Some(result)
-      } else {
-        None
-      }
-    }
-
-    keepsOpt.map { keeps =>
-      keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true).map { keepInfos =>
-        FullLibUpdatesRecoInfo(itemInfo = keepInfos)
-      }
-    }.map { keepInfoFuture =>
-      keepInfoFuture.map { infos =>
-        if (infos.itemInfo.isEmpty) None
-        else Some(infos)
-      }
-    }.getOrElse(Future.successful(None))
-  }
 
   private def decorateUriRecos(userId: Id[User], recos: Seq[RecoInfo], explain: Boolean): Future[Seq[FullUriRecoInfo]] = {
     val recosWithUris: Seq[(RecoInfo, NormalizedURI)] = db.readOnlyReplica { implicit session =>
@@ -197,7 +169,7 @@ class RecommendationsCommander @Inject() (
   private def createFullLibraryInfos(userId: Id[User], libraries: Seq[Library], explainer: Id[Library] => Option[String] = noopLibRecoExplainer): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {
     libraryInfoCommander.createFullLibraryInfos(Some(userId), showPublishedLibraries = false, maxMembersShown = 10,
       maxKeepsShown = 0, ProcessedImageSize.Large.idealSize, libraries,
-      ProcessedImageSize.Large.idealSize, withKeepTime = true).map { fullLibraryInfos =>
+      ProcessedImageSize.Large.idealSize, withKeepTime = true, sanitizeUrls = false).map { fullLibraryInfos =>
         fullLibraryInfos.map {
           case (id, libInfo) => id -> FullLibRecoInfo(metaData = None, itemInfo = libInfo, explain = explainer(id))
         }

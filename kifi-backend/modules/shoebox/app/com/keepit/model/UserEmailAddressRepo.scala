@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SequencingPlugin, SchedulingProperties }
+import com.keepit.payments.RewardKind
 import com.keepit.social.{ UserIdentityIdentityIdKey, UserIdentityCache }
 import org.joda.time.DateTime
 
@@ -22,7 +23,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getAllByUser(userId: Id[User])(implicit session: RSession): Seq[UserEmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): EmailAddress
   def getPrimaryByUser(userId: Id[User])(implicit session: RSession): Option[UserEmailAddress]
-  def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress]
+  def getByCode(verificationCode: EmailVerificationCode)(implicit session: RSession): Option[UserEmailAddress]
   def getOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
 }
@@ -36,6 +37,8 @@ class UserEmailAddressRepoImpl @Inject() (
 
   import db.Driver.simple._
 
+  implicit val verificationCodeColumnType = MappedColumnType.base[EmailVerificationCode, String](_.value, EmailVerificationCode.apply(_))
+
   type RepoImpl = UserEmailAddressTable
   class UserEmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
@@ -44,7 +47,7 @@ class UserEmailAddressRepoImpl @Inject() (
     def primary = column[Option[Boolean]]("primary", O.Nullable)
     def verifiedAt = column[Option[DateTime]]("verified_at", O.Nullable)
     def lastVerificationSent = column[Option[DateTime]]("last_verification_sent", O.Nullable)
-    def verificationCode = column[Option[String]]("verification_code", O.Nullable)
+    def verificationCode = column[Option[EmailVerificationCode]]("verification_code", O.Nullable)
     def * = (id.?, createdAt, updatedAt, userId, state, address, hash, primary, verifiedAt, lastVerificationSent,
       verificationCode, seq) <> ((UserEmailAddress.applyFromDbRow _).tupled, UserEmailAddress.unapplyToDbRow _)
   }
@@ -94,7 +97,7 @@ class UserEmailAddressRepoImpl @Inject() (
     getAllByUser(userId).find(_.primary)
   }
 
-  def getByCode(verificationCode: String)(implicit session: RSession): Option[UserEmailAddress] = {
+  def getByCode(verificationCode: EmailVerificationCode)(implicit session: RSession): Option[UserEmailAddress] = {
     (for (e <- rows if e.verificationCode === verificationCode && e.state =!= UserEmailAddressStates.INACTIVE) yield e).firstOption
   }
 

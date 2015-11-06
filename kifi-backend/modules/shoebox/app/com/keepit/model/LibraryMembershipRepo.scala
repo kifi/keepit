@@ -20,7 +20,7 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration.FiniteDuration
 
 // a tuple with named fields, for when many rows need to be read and only a few fields are needed
-case class MiniLibraryMembership(userId: Id[User], access: LibraryAccess, lastViewed: Option[DateTime])
+case class MiniLibraryMembership(userId: Id[User], access: LibraryAccess, lastViewed: Option[DateTime], listed: Boolean, subscribed: Boolean)
 
 @ImplementedBy(classOf[LibraryMembershipRepoImpl])
 trait LibraryMembershipRepo extends Repo[LibraryMembership] with RepoWithDelete[LibraryMembership] with SeqNumberFunction[LibraryMembership] {
@@ -195,11 +195,11 @@ class LibraryMembershipRepoImpl @Inject() (
   }
 
   def getMinisByLibraryIdsAndAccess(libraryIds: Set[Id[Library]], accessSet: Set[LibraryAccess])(implicit session: RSession): Map[Id[Library], Seq[MiniLibraryMembership]] = {
-    (for (b <- rows if b.libraryId.inSet(libraryIds) && b.access.inSet(accessSet) && b.state === LibraryMembershipStates.ACTIVE) yield (b.libraryId, b.userId, b.access, b.lastViewed, b.createdAt))
+    (for (b <- rows if b.libraryId.inSet(libraryIds) && b.access.inSet(accessSet) && b.state === LibraryMembershipStates.ACTIVE) yield (b.libraryId, b.userId, b.access, b.lastViewed, b.listed, b.subscribedToUpdates, b.createdAt))
       .sortBy(r => (r._1, r._3.desc, r._5)) // libraryId, access desc (owner first), createdAt
       .list
       .groupBy(_._1)
-      .mapValues(_.map(t => MiniLibraryMembership(t._2, t._3, t._4)))
+      .mapValues(_.map(t => MiniLibraryMembership(t._2, t._3, t._4, t._5, t._6)))
   }
 
   def countMembersForLibrarySince(libraryId: Id[Library], since: DateTime)(implicit session: RSession): Int = {

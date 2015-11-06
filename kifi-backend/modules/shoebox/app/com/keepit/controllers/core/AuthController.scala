@@ -583,13 +583,8 @@ class AuthController @Inject() (
   def OkStreamFile(filename: String) =
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
-  def verifyEmail(code: String) = MaybeUserAction { implicit request =>
+  def verifyEmail(code: EmailVerificationCode) = MaybeUserAction { implicit request =>
     authHelper.doVerifyEmail(code)
-  }
-
-  def requireLoginToVerifyEmail(code: String)(implicit request: Request[_]): Result = {
-    Redirect(routes.AuthController.loginPage())
-      .withSession(request.session + (SecureSocial.OriginalUrlKey -> routes.AuthController.verifyEmail(code).url))
   }
 
   def forgotPassword() = MaybeUserAction.async(parse.tolerantJson) { implicit request =>

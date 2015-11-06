@@ -15,6 +15,7 @@ import com.keepit.common.path.Path
 import com.keepit.model._
 import com.kifi.macros.json
 import play.api.libs.json._
+import play.api.http.Status._
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Try, Failure, Success }
@@ -81,16 +82,23 @@ class LibrarySubscriptionCommanderImpl @Inject() (
           val message = slackMessageForNewKeep(keeper, keep, library, subscription.name.toLowerCase)
 
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(message)))
-          log.info(s"sendNewKeepMessage: Slack message request sent to subscription.id=${subscription.id}")
 
           response.onComplete {
             case Success(res) =>
-              log.info(s"[sendNewKeepMessage] Slack message to subscriptionId=${subscription.id.get} succeeded.")
             case Failure(t: NonOKResponseException) =>
-              log.warn(s"[sendNewKeepMessage] Slack info invalid for subscriptionId=${subscription.id.get}, disabling.")
-              db.readWrite { implicit s => librarySubscriptionRepo.save(subscription.withState(LibrarySubscriptionStates.DISABLED)) }
+              t.response.status match {
+                case NOT_FOUND => // returned when the webhook is invalid
+                  db.readWrite { implicit s => librarySubscriptionRepo.save(subscription.withState(LibrarySubscriptionStates.DISABLED)) }
+                case INTERNAL_SERVER_ERROR if t.response.body == "Invalid channel specified" =>
+                  db.readWrite { implicit s => librarySubscriptionRepo.save(subscription.withState(LibrarySubscriptionStates.DISABLED)) }
+                case TOO_MANY_REQUEST =>
+                  airbrake.notify(s"[sendNewKeepMessage] can't send to library subscription ${subscription.id.get}", t)
+                case _ =>
+                  airbrake.notify(s"s[sendNewKeepMessage] can't send message to slack", t)
+              }
+
             case _ =>
-              log.error(s"[sendNewKeepMessage] Slack message request failed.")
+              airbrake.notify("s[sendNewKeepMessage] can't send message to slack for unknown reason")
           }
           response
         case _ =>
@@ -109,11 +117,11 @@ class LibrarySubscriptionCommanderImpl @Inject() (
 
   def updateSubsByLibIdAndKey(libId: Id[Library], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
 
-    def hasSameNameOrEndpoint(key: LibrarySubscriptionKey, sub: LibrarySubscription) = sub.name == key.name || sub.info.hasSameEndpoint(key.info)
+    def hasSameNameAndEndpoint(key: LibrarySubscriptionKey, sub: LibrarySubscription) = sub.name == key.name && sub.info.hasSameEndpoint(key.info)
     def saveUpdates(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       subKeys.foreach { key =>
         currSubs.find {
-          hasSameNameOrEndpoint(key, _)
+          hasSameNameAndEndpoint(key, _)
         } match {
           case None => saveSubByLibIdAndKey(libId, key) // key represents a new sub, save it
           case Some(equivalentSub) => librarySubscriptionRepo.save(equivalentSub.copy(name = key.name, info = key.info, state = LibrarySubscriptionStates.ACTIVE))
@@ -124,7 +132,7 @@ class LibrarySubscriptionCommanderImpl @Inject() (
     def removeDifferences(currSubs: Seq[LibrarySubscription], subKeys: Seq[LibrarySubscriptionKey])(implicit session: RWSession): Unit = {
       currSubs.foreach { currSub =>
         subKeys.find {
-          hasSameNameOrEndpoint(_, currSub)
+          hasSameNameAndEndpoint(_, currSub)
         } match {
           case None => librarySubscriptionRepo.save(currSub.copy(state = LibrarySubscriptionStates.INACTIVE))
           case Some(key) => // currSub has already been updated above, do nothing
