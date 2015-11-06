@@ -114,10 +114,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           }
         }
 
+        val userIdsByEmail = db.readOnlyReplica { implicit session => userEmailAddressRepo.getUsersByAddresses(inviteeAddresses) }
+
         contactsByEmailAddressFut map { contactsByEmail =>
           val (allInviteeUserIds, nonUserContactsByEmail) = contactsByEmail.foldLeft((inviteeUserIds, Map.empty[EmailAddress, RichContact])) {
-            case ((userIds, nonUserContactsByEmail), (email, contact)) if contact.userId.isDefined => (userIds + contact.userId.get, nonUserContactsByEmail)
-            case ((userIds, nonUserContactsByEmail), (email, contact)) if contact.userId.isEmpty => (userIds, nonUserContactsByEmail + (email -> contact))
+            case ((userIds, nonUserContactsByEmail), (email, contact)) if contact.userId.isDefined || userIdsByEmail.contains(email) => (userIds + userIdsByEmail.getOrElse(email, contact.userId.get), nonUserContactsByEmail)
+            case ((userIds, nonUserContactsByEmail), (email, contact)) => (userIds, nonUserContactsByEmail + (email -> contact))
           }
 
           val basicUserByUserId: Map[Id[User], BasicUser] = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(allInviteeUserIds) }

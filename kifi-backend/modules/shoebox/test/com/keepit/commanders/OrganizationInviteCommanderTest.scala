@@ -12,6 +12,7 @@ import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.{ OrganizationFactory, _ }
+import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 
@@ -51,7 +52,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         val inviteesWithAccess = result.right.get
         inviteesWithAccess.size === 1
         val invited = inviteesWithAccess.head
-        invited must equalTo(Right(RichContact(EmailAddress("kiwi-test@kifi.com"))))
+        invited must equalTo(Left(BasicUser.fromUser(owner)))
       }
     }
 
