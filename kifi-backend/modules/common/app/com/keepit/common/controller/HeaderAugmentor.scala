@@ -42,7 +42,6 @@ private object Security extends Augmentor {
           "default-src *.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net"
       }
 
-
       val report = if (request.rawQueryString.contains("--report-csp")) "; report-uri https://www.kifi.com/up/report" else ""
       result.withHeaders(
         "Strict-Transport-Security" -> "max-age=16070400; includeSubDomains",
