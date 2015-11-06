@@ -292,15 +292,16 @@ angular.module('kifi')
               text: successMessage,
               type: 'green'
             });
-            resetForm();
-            $state.reload('orgProfile');
           })
         );
       }
 
       saveSeriesPromise = (
         saveSeriesPromise
-        ['catch'](function (error) {
+        .then(function () {
+          resetForm();
+          $state.reload('orgProfile');
+        })['catch'](function (error) {
           switch (error) {
             default:
               modalService.openGenericErrorModal();

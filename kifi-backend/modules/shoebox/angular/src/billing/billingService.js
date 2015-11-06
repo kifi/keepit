@@ -37,6 +37,7 @@ angular.module('kifi')
         .setBillingCCToken(pubId, { token: token })
         .then(function (response) {
           invalidateCache();
+          orgProfileService.invalidateOrgProfileCache();
           return getResponseData(response);
         });
       },
@@ -50,6 +51,7 @@ angular.module('kifi')
         .setBillingContacts(pubId, contacts)
         .then(function (response) {
           invalidateCache();
+          orgProfileService.invalidateOrgProfileCache();
           return getResponseData(response);
         });
       },
