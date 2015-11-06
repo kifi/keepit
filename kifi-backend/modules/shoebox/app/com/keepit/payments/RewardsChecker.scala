@@ -71,7 +71,7 @@ class RewardsChecker @Inject() (
     // Until we're sure this won't give people way too much credit, only run it on orgs owned by admins
     val orgIds = db.readOnlyReplica { implicit session =>
       val adminIds = userExperimentRepo.getUserIdsByExperiment(UserExperimentType.ADMIN)
-      adminIds.toSet.flatMap(uid => orgRepo.getAllByOwnerId(uid).map(_.id.get))
+      adminIds.toSet.flatMap { uid: Id[User] => orgRepo.getAllByOwnerId(uid).map(_.id.get) }
     }
     orgIds.foreach(checkAccount)
   }
