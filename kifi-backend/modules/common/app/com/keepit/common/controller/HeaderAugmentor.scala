@@ -24,6 +24,20 @@ private object Security extends Augmentor {
   def augment[A](result: Result)(implicit request: Request[A]): Result = {
     if (request.rawQueryString.contains("andrew-testing-security-headers")) {
       val report = if (request.rawQueryString.contains("--report-csp")) "; report-uri https://www.kifi.com/up/report" else ""
+      val csp = {
+        "style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
+          //           ↓ CDN                          ↓ Google Analytics          ↓ Amplitude               ↓ Mixpanel
+          "script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com 'unsafe-eval'; " +
+          "font-src fonts.gstatic.com; " +
+          "img-src data: d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net; " +
+          // child-src
+          // form-action
+          // frame-ancestors
+          // frame-src
+          //                          ↓ Tracking uses `connect`
+          "default-src *.kifi.com api.mixpanel.com api.amplitude.com" +
+          "$report"
+      }
       result.withHeaders(
         "Strict-Transport-Security" -> "max-age=16070400; includeSubDomains",
         "X-Frame-Options" -> "deny",
