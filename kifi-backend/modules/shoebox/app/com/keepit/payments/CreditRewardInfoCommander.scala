@@ -55,7 +55,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
     else describeUnearnedReward(creditReward)
   }
   private def describeUnearnedReward(creditReward: CreditReward)(implicit session: RSession): DescriptionElements = {
-    import BasicElement._
+    import DescriptionElements._
     val trigger = creditReward.reward match {
       case Reward(kind: RewardKind.OrganizationLibrariesReached, _, orgId: Id[Organization] @unchecked) =>
         val hover = Hover("Your team currently has", libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)).size, "libraries")

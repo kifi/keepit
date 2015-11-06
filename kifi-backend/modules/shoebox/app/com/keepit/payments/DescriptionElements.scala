@@ -20,6 +20,8 @@ case class BasicElement(text: String, url: Option[String], hover: Option[Descrip
   def withUrl(newUrl: String) = this.copy(url = Some(newUrl))
   def withHover(newHover: DescriptionElements) = this.copy(hover = Some(newHover))
 
+  def -->(link: LinkElement): BasicElement = this.withUrl(link.url)
+  def -->(hover: Hover): BasicElement = this.withHover(hover.elements)
 }
 object BasicElement {
   implicit val writes: Writes[BasicElement] = (
@@ -27,23 +29,6 @@ object BasicElement {
     (__ \ 'url).writeNullable[String] and
     (__ \ 'hover).writeNullable[DescriptionElements]
   )(unlift(BasicElement.unapply))
-
-  implicit class PimpedElement(be: BasicElement) {
-    def -->(link: LinkElement): BasicElement = be.withUrl(link.url)
-    def -->(hover: Hover): BasicElement = be.withHover(hover.elements)
-  }
-  // I can't get implicit defs to convert these strings/ints AND THEN use the PimpedElement,
-  // so I have to add explicit implicit classes for each of them
-  implicit class PimpedString(txt: String) {
-    val be = DescriptionElements.fromText(txt)
-    def -->(link: LinkElement): BasicElement = be --> link
-    def -->(hover: Hover): BasicElement = be --> hover
-  }
-  implicit class PimpedInt(x: Int) {
-    val be = DescriptionElements.fromInt(x)
-    def -->(link: LinkElement): BasicElement = be --> link
-    def -->(hover: Hover): BasicElement = be --> hover
-  }
 }
 
 case class LinkElement(url: String)
@@ -52,15 +37,14 @@ object Hover {
   def apply(elements: DescriptionElements*): Hover = Hover(SequenceOfElements(elements))
 }
 object DescriptionElements {
-  import BasicElement.PimpedString
   def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
 
   implicit def fromText(text: String): BasicElement = BasicElement(text, None, None)
-  implicit def fromInt(x: Int): BasicElement = fromText(x.toString)
 
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
+  implicit def fromInt(x: Int): BasicElement = x.toString
   implicit def fromCreditCode(code: CreditCode): BasicElement = code.value
   implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName --> LinkElement(user.path.absolute)
   implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name --> LinkElement(org.path.absolute)
