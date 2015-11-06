@@ -17,6 +17,7 @@ class RewardsChecker @Inject() (
   creditRewardCommander: CreditRewardCommander,
   paidAccountRepo: PaidAccountRepo,
   paidPlanRepo: PaidPlanRepo,
+  userExperimentRepo: UserExperimentRepo,
   // For double-checking checklist rewards
   libRepo: LibraryRepo,
   ktlRepo: KeepToLibraryRepo,
@@ -65,7 +66,13 @@ class RewardsChecker @Inject() (
   def checkAccounts(modulus: Int = 7): Unit = {
     // we are going to process ~1/modulus of the orgs, based on the date
     val partition = clock.now.getDayOfYear % modulus
-    val orgIds = db.readOnlyReplica { implicit session => paidAccountRepo.getIdSubsetByModulus(modulus, partition) }
+    // val orgIds = db.readOnlyReplica { implicit session => paidAccountRepo.getIdSubsetByModulus(modulus, partition) }
+
+    // Until we're sure this won't give people way too much credit, only run it on orgs owned by admins
+    val orgIds = db.readOnlyReplica { implicit session =>
+      val adminIds = userExperimentRepo.getUserIdsByExperiment(UserExperimentType.ADMIN)
+      adminIds.toSet.flatMap(orgRepo.getAllByOwnerId(_).map(_.id.get))
+    }
     orgIds.foreach(checkAccount)
   }
 
