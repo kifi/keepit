@@ -73,6 +73,9 @@ POST    /extmsg/email/mute          @com.keepit.controllers.website.EmailNonUser
 GET     /get                        @com.keepit.controllers.website.HomeController.get()
 
 
+POST    /up/report                  @com.keepit.controllers.tracking.EventProxyController.report()
+
+
 ##########################################
 # Special projects
 ##########################################

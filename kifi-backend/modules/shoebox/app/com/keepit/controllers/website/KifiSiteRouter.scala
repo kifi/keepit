@@ -178,7 +178,7 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
-  def metadata(handle: Either[Organization, User]): Future[String] = handle match {
+  private def metadata(handle: Either[Organization, User]): Future[String] = handle match {
     case Left(org) => orgMetadata(org)
     case Right(user) => userMetadata(user, UserProfileTab.Libraries)
   }

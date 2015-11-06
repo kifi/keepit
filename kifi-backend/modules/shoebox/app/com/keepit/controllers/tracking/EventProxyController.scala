@@ -2,13 +2,18 @@ package com.keepit.controllers.tracking
 
 import com.keepit.commanders.UserIpAddressCommander
 import com.keepit.common.controller._
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.mail.{EmailAddress, SystemEmailAddress, ElectronicMail, LocalPostOffice}
+import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.http._
 
 import com.google.inject.Inject
-import play.api.libs.json.JsObject
+import com.keepit.model.NotificationCategory
+import play.api.libs.json.{Json, JsObject}
 
 import scala.concurrent.ExecutionContext
 
@@ -19,6 +24,8 @@ class EventProxyController @Inject() (
     heimdal: HeimdalServiceClient,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     airbrake: AirbrakeNotifier,
+    postOffice: LocalPostOffice,
+    db: Database,
     implicit val executionContext: ExecutionContext
   ) extends UserActions with ShoeboxServiceController {
 
@@ -50,6 +57,34 @@ class EventProxyController @Inject() (
         heimdal.trackEvent(event)
       }
     }
+    NoContent
+  }
+
+  def report() = MaybeUserAction(parse.anyContent) { request =>
+    val bodyStr = {
+      val b = request.body
+      b.asJson.map(Json.prettyPrint).orElse(b.asFormUrlEncoded.map(_.toString)).orElse(b.asText)
+    }
+    val body =
+      s"""<pre>
+          |User: ${request.userIdOpt}
+          |IP: ${IpAddress.fromRequest(request)}
+          |Agent: ${request.userAgentOpt}
+          |
+          |Body:
+          |
+          |$bodyStr
+          |</pre>
+       """.stripMargin
+    val email = ElectronicMail(
+      from = SystemEmailAddress.ANDREW,
+      to = Seq(EmailAddress("andrew@kifi.com")),
+      subject = "CSP Report",
+      htmlBody = body,
+      fromName = Some("CSP Reporter"),
+      category = NotificationCategory.System.PLAY
+    )
+    db.readWrite { implicit rw => postOffice.sendMail(email) }
     NoContent
   }
 
