@@ -322,7 +322,8 @@ class UserController @Inject() (
           "experiments" -> experiments.map(_.value),
           "pendingFriendRequests" -> pendingFriendRequests,
           "orgs" -> pimpedUser.orgs,
-          "pendingOrgs" -> pimpedUser.pendingOrgs
+          "pendingOrgs" -> pimpedUser.pendingOrgs,
+          "potentialOrgs" -> pimpedUser.potentialOrgs
         )
     }
     Ok(json)
