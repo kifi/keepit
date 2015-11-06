@@ -54,6 +54,8 @@ object EmailAddress {
     localAt + host.toLowerCase
   }
 
+  def getHostname(email: EmailAddress): String = email.address.splitAt(email.address.lastIndexOf('@') + 1)._2
+
   def validate(address: String): Try[EmailAddress] = {
     val trimmed = address.trim
     if (isValid(trimmed)) {

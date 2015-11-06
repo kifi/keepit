@@ -1,7 +1,6 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.controller.UserRequest
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -12,7 +11,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.{ ImageSize }
+import com.keepit.common.store.ImageSize
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationPermission.{ MANAGE_PLAN, EDIT_ORGANIZATION }
@@ -20,10 +19,8 @@ import com.keepit.model._
 import com.keepit.social.BasicUser
 import com.keepit.payments._
 import play.api.Play
-import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[OrganizationCommanderImpl])
 trait OrganizationCommander {
@@ -65,6 +62,7 @@ class OrganizationCommanderImpl @Inject() (
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
+    organizationDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     orgInviteRepo: OrganizationInviteRepo,
     userExperimentRepo: UserExperimentRepo,
     organizationAvatarCommander: OrganizationAvatarCommander,
@@ -85,8 +83,6 @@ class OrganizationCommanderImpl @Inject() (
     basicOrganizationIdCache: BasicOrganizationIdCache,
     eliza: ElizaServiceClient,
     implicit val executionContext: ExecutionContext) extends OrganizationCommander with Logging {
-
-  private val httpLock = new ReactiveLock(5)
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {
     db.readOnlyReplica { implicit session => getOrganizationViewHelper(orgId, viewerIdOpt, authTokenOpt) }
@@ -216,13 +212,14 @@ class OrganizationCommanderImpl @Inject() (
   }
 
   private def getMembershipInfoHelper(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String])(implicit session: RSession): OrganizationViewerInfo = {
-    val membershipOpt = viewerIdOpt.flatMap { viewerId =>
-      orgMembershipRepo.getByOrgIdAndUserId(orgId, viewerId)
-    }
+    val membershipOpt = viewerIdOpt.flatMap(orgMembershipRepo.getByOrgIdAndUserId(orgId, _))
     val inviteOpt = orgInviteCommander.getViewerInviteInfo(orgId, viewerIdOpt, authTokenOpt)
+    val sharedEmails = viewerIdOpt.map(userId => organizationDomainOwnershipCommander.getSharedUnverifiedEmailsHelper(userId, orgId)).getOrElse(Set.empty)
     val permissions = permissionCommander.getOrganizationPermissions(orgId, viewerIdOpt)
+
     OrganizationViewerInfo(
       invite = inviteOpt,
+      sharedEmails = sharedEmails,
       permissions = permissions,
       membership = membershipOpt.map(mem => OrganizationMembershipInfo(mem.role))
     )

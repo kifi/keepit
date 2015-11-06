@@ -21,7 +21,7 @@ class OrganizationInfoTest extends Specification {
       val orgDescription = Some("my description")
       val avatarPath = ImagePath("my image path")
       val basicOrg = BasicOrganization(orgId, userId, orgHandle, orgName, orgDescription, avatarPath)
-      val viewerInfo = OrganizationViewerInfo(None, Set.empty, None)
+      val viewerInfo = OrganizationViewerInfo(None, Set.empty, Set.empty, None)
       val basicOrgView = BasicOrganizationView(basicOrg, viewerInfo)
       Json.toJson(basicOrgView) === Json.obj("id" -> orgId, "ownerId" -> userId, "handle" -> orgHandle, "name" -> orgName, "description" -> orgDescription, "avatarPath" -> avatarPath, "viewer" -> viewerInfo)
     }

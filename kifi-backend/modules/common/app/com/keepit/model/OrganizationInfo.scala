@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
-import com.keepit.common.json.TraversableFormat
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
@@ -49,11 +49,13 @@ object OrganizationMembershipInfo {
 
 case class OrganizationViewerInfo(
   invite: Option[OrganizationInviteInfo],
+  sharedEmails: Set[EmailAddress],
   permissions: Set[OrganizationPermission],
   membership: Option[OrganizationMembershipInfo])
 object OrganizationViewerInfo {
   implicit val internalFormat: OFormat[OrganizationViewerInfo] = (
     (__ \ 'invite).formatNullable[OrganizationInviteInfo] and
+    (__ \ 'sharedEmails).format[Set[EmailAddress]] and
     (__ \ 'permissions).format[Set[OrganizationPermission]] and
     (__ \ 'membership).formatNullable[OrganizationMembershipInfo]
   )(OrganizationViewerInfo.apply, unlift(OrganizationViewerInfo.unapply))
