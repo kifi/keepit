@@ -1,14 +1,16 @@
-<div kf-modal class="kf-plan-downgrade-confirm" kf-width="500px">
+<div kf-modal kf-width="500px">
   <div kf-basic-modal-content with-cancel="true" title="Downgrade your plan" with-warning action-text="Downgrade" action="modalData.save()">
-    <h4>Downgrading your plan to Free means that you will lose the ability to:</h4>
-    <ul class="kf-downgrade-features-list">
-      <li>Allow admins to edit libraries</li>
-      <li>Prevent users from moving libraries out of your team</li>
-      <li>Prevent public libraries from being created within your team</li>
-      <li>Hide your team's members</li>
-      <li>Create Slack integrations</li>
-      <li>Export your team's keeps</li>
-    </ul>
-    <p><a class="kf-link kf-link-black kf-link-underline" ng-click="modalData.close()" href="/about/pricing" target="_self">Details</a> on our team plan page</p>
+    <div class="kf-plan-downgrade-confirm">
+      <span>Downgrading your plan to Free means that you will lose the ability to:</span>
+      <ul class="kf-list kf-downgrade-features-list">
+        <li>Allow admins to edit libraries</li>
+        <li>Prevent users from moving libraries out of your team</li>
+        <li>Prevent public libraries from being created within your team</li>
+        <li>Hide your team's members</li>
+        <li>Create Slack integrations</li>
+        <li>Export your team's keeps</li>
+      </ul>
+      <p><a class="kf-link kf-link-black kf-link-underline" ng-click="modalData.close()" href="/about/pricing" target="_self">Details</a> on our team plan page</p>
+    </div>
   </div>
 </div>
