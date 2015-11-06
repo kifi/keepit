@@ -72,6 +72,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def keepChecker(implicit injector: Injector) = inject[KeepChecker]
   def organizationChecker(implicit injector: Injector) = inject[OrganizationChecker]
   def paymentsChecker(implicit injector: Injector) = inject[PaymentsIntegrityChecker]
+  def rewardsChecker(implicit injector: Injector) = inject[RewardsChecker]
   def permissionCommander(implicit injector: Injector) = inject[PermissionCommander].asInstanceOf[PermissionCommanderImpl]
   def keepExportCommander(implicit injector: Injector) = inject[KeepExportCommander].asInstanceOf[KeepExportCommanderImpl]
   def orgConfigRepo(implicit injector: Injector) = inject[OrganizationConfigurationRepo]

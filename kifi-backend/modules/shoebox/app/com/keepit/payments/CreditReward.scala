@@ -84,7 +84,6 @@ object Reward {
 }
 
 object RewardStatus {
-
   trait WithIndependentInfo[F] { self: RewardKind =>
     def infoFormat: Format[F]
 
@@ -160,6 +159,7 @@ object RewardKind extends Enumerator[RewardKind] {
     case object OrganizationMembersReached15 extends OrganizationMembersReached(15)
     case object OrganizationMembersReached20 extends OrganizationMembersReached(20)
     case object OrganizationMembersReached25 extends OrganizationMembersReached(25)
+    case object OrganizationMembersReached1_DUMMYKIND extends OrganizationMembersReached(1)
 
     val all = _all.toSet
   }
@@ -171,9 +171,14 @@ object RewardKind extends Enumerator[RewardKind] {
 
   case object OrganizationGeneralLibraryKeepsReached50 extends ThresholdChecklistKind("org_general_keeps", 50)
 
+
+  val all = _all.toSet
+  val deprecated: Set[RewardKind] = Set(OrganizationMembersReached.OrganizationMembersReached1_DUMMYKIND)
+  val allActive = all -- deprecated
+
   val orgLibsReached = OrganizationLibrariesReached.all
   val orgMembersReached = OrganizationMembersReached.all
-  private val all = _all.toSet
+
   def get(kind: String) = all.find(_.kind equalsIgnoreCase kind)
   def apply(kind: String) = get(kind).getOrElse(throw new IllegalArgumentException(s"Unknown RewardKind: $kind"))
 }
@@ -230,13 +235,14 @@ case class CreditReward(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAppliedEvent(event: AccountEvent) = this.copy(applied = Some(event.id.get))
   def withReward(newReward: Reward) = this.copy(reward = newReward)
+  def withState(newState: State[CreditReward]) = this.copy(state = newState)
 }
 
 
 sealed abstract class RewardTrigger(val value: String)
 object RewardTrigger {
   case class OrganizationUpgraded(orgId: Id[Organization], newPlan: PaidPlan) extends RewardTrigger(s"$orgId upgraded to plan ${newPlan.id.get}")
-  case class OrganizationDescriptionAdded(orgId: Id[Organization], description: String) extends RewardTrigger(s"$orgId filled in their description")
+  case class OrganizationDescriptionAdded(orgId: Id[Organization], org: Organization) extends RewardTrigger(s"$orgId filled in their description")
   case class OrganizationAvatarUploaded(orgId: Id[Organization]) extends RewardTrigger(s"$orgId uploaded an avatar")
   case class OrganizationKeepAddedToGeneralLibrary(orgId: Id[Organization], keepCount: Int) extends RewardTrigger(s"$orgId reached $keepCount keeps in their General library")
   case class OrganizationAddedLibrary(orgId: Id[Organization], libraryCount: Int) extends RewardTrigger(s"$orgId reached $libraryCount total libraries")
