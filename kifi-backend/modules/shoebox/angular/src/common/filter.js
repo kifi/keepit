@@ -151,6 +151,27 @@ angular.module('kifi')
   }
 ])
 
+.filter('moneyDelta', [
+  '$filter',
+  function ($filter) {
+    var moneyFilter = $filter('money');
+    var isPositiveMoneyFilter = $filter('isPositiveMoney');
+    var isNegativeMoneyFilter = $filter('isNegativeMoney');
+
+    return function (money) {
+      var moneyString = moneyFilter(money);
+
+      if (isPositiveMoneyFilter(money)) {
+        return '+' + moneyString;
+      } else if (isNegativeMoneyFilter(money)) {
+        return (moneyString[0] === '-' ? '' : '-') + moneyString;
+      } else {
+        return moneyString;
+      }
+    };
+  }
+])
+
 .filter('moneyUnwrap', function () {
   return function (amount, unit) {
     if (typeof amount === 'object') {
