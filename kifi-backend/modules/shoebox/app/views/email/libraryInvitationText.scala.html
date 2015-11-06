@@ -19,10 +19,8 @@ Hi @firstName(inviteeId.get),
 @emailMessage = {
 @if(inviteAccess == LibraryAccess.READ_ONLY) {
 I'm using Kifi to publish useful links I've collected. Check out the @libraryInfo.name library I created at www.kifi.com@libraryInfo.url
-@libraryInfo.shortDescription.map { description => s"Here's what it's about: $@description" }.getOrElse("")
 } else {
 Please help me build the @libraryInfo.name Kifi library at www.kifi.com@libraryInfo.url, so we can collaborate together. It's a great way to organize the links that we find.
-@libraryInfo.shortDescription.map { description => s"Here's what it's about: $@description" }.getOrElse("")
 }
 }
 
