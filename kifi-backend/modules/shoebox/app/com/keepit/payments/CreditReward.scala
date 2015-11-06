@@ -84,7 +84,6 @@ object Reward {
 }
 
 object RewardStatus {
-
   trait WithIndependentInfo[F] { self: RewardKind =>
     def infoFormat: Format[F]
 
@@ -100,7 +99,7 @@ object RewardStatus {
     def infoFormat: Format[None.type] = noneInfoFormat
   }
 
-  private val noneInfoFormat: Format[None.type] = Format(
+  private lazy val noneInfoFormat: Format[None.type] = Format(
     Reads {
       case JsNull => JsSuccess(None)
       case unknown => JsError(s"Unknown RewardStatus info: $unknown")
@@ -114,7 +113,6 @@ object RewardKind extends Enumerator[RewardKind] {
     case object Used extends Status("used")
     protected lazy val allStatus: Set[S] = Set(Used)
     lazy val applicable: Used.type = Used
-    val isDeprecated = true
   }
   case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
     lazy val infoFormat = Id.format[Organization]
@@ -161,6 +159,7 @@ object RewardKind extends Enumerator[RewardKind] {
     case object OrganizationMembersReached15 extends OrganizationMembersReached(15)
     case object OrganizationMembersReached20 extends OrganizationMembersReached(20)
     case object OrganizationMembersReached25 extends OrganizationMembersReached(25)
+    case object OrganizationMembersReached1_DUMMYKIND extends OrganizationMembersReached(1)
 
     val all = _all.toSet
   }
@@ -172,12 +171,14 @@ object RewardKind extends Enumerator[RewardKind] {
 
   case object OrganizationGeneralLibraryKeepsReached50 extends ThresholdChecklistKind("org_general_keeps", 50)
 
+
+  val all = _all.toSet
+  val deprecated: Set[RewardKind] = Set(OrganizationMembersReached.OrganizationMembersReached1_DUMMYKIND)
+  val allActive = all -- deprecated
+
   val orgLibsReached = OrganizationLibrariesReached.all
   val orgMembersReached = OrganizationMembersReached.all
 
-  val all = _all.toSet
-  val deprecated = Set.empty[RewardKind]
-  val allActive = all -- deprecated
   def get(kind: String) = all.find(_.kind equalsIgnoreCase kind)
   def apply(kind: String) = get(kind).getOrElse(throw new IllegalArgumentException(s"Unknown RewardKind: $kind"))
 }
@@ -234,6 +235,7 @@ case class CreditReward(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withAppliedEvent(event: AccountEvent) = this.copy(applied = Some(event.id.get))
   def withReward(newReward: Reward) = this.copy(reward = newReward)
+  def withState(newState: State[CreditReward]) = this.copy(state = newState)
 }
 
 

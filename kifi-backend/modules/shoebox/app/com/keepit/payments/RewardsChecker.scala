@@ -23,13 +23,14 @@ class RewardsChecker @Inject() (
     extends Logging {
 
   private def rewardsPreventedBy(kind: RewardChecklistKind): Set[RewardChecklistKind] = kind match {
-    case _ => Set.empty
+    case RewardKind.OrganizationMembersReached.OrganizationMembersReached1_DUMMYKIND =>
+      RewardKind.OrganizationMembersReached.all.map(x => x: RewardChecklistKind)
+    case _ => Set.empty[RewardChecklistKind]
   }
   private def processChecklistRewards(orgId: Id[Organization]): Unit = accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
     val accountId = paidAccountRepo.getAccountId(orgId)
     val currentRewards: Set[RewardChecklistKind] = creditRewardRepo.getByAccount(accountId).map(_.reward.kind).collect { case k: RewardChecklistKind => k }
     val blockedRewards = currentRewards.flatMap(rewardsPreventedBy)
-    assert(blockedRewards.map(x => x: RewardKind).subsetOf(RewardKind.deprecated), "We should not block non-deprecated rewards: " + (blockedRewards.map(x => x: RewardKind) -- RewardKind.deprecated))
 
     RewardKind.allActive.collect {
       case k: RewardChecklistKind if !currentRewards.contains(k) && !blockedRewards.contains(k) =>

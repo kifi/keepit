@@ -308,7 +308,7 @@ class CreditRewardCommanderImpl @Inject() (
       } ++ RewardKind.orgMembersReached.map { k =>
         k -> DollarAmount.dollars(8 * k.threshold)
       }
-    assert(valueByRewardKind.keySet.map(x => x: RewardKind) subsetOf RewardKind.allActive, s"We shouldn't initialize new deprecated rewards: $kind")
+    assert(!RewardKind.deprecated.contains(kind: RewardKind), s"We shouldn't initialize new deprecated rewards: $kind")
 
     val accountId = accountRepo.getAccountId(orgId)
     createCreditReward(CreditReward(
