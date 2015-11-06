@@ -56,7 +56,7 @@ private object Kcid extends Augmentor {
       case ur: UserRequest[_] => result
       case _ =>
         if (result.header.status == OK && result.header.headers.get("Content-Type").exists(_.contains("text/html"))) {
-          augmentNonUser(result)
+          play.api.Play.maybeApplication.map(_ => augmentNonUser(result)).getOrElse(result)
         } else {
           result
         }
