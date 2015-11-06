@@ -604,7 +604,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson \ "library" \ "org").as[Option[BasicOrganizationView]] must equalTo(Some(
           BasicOrganizationView(
             BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg")),
-            OrganizationViewerInfo(invite = None, permissions, Some(OrganizationMembershipInfo(OrganizationRole.ADMIN)))
+            OrganizationViewerInfo(invite = None, emails = Set.empty, permissions = permissions, Some(OrganizationMembershipInfo(OrganizationRole.ADMIN)))
           )
         ))
         (resultJson \ "library" \ "orgMemberAccess").as[Option[LibraryAccess]] must equalTo(Some(LibraryAccess.READ_WRITE))
@@ -635,7 +635,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result1) must equalTo(OK)
         contentType(result1) must beSome("application/json")
 
-        val (basicUser1, basicUser2) = db.readOnlyMaster { implicit s => (basicUserRepo.load(user1.id.get), basicUserRepo.load(user2.id.get)) }
+        val Seq(basicUser1, _) = Seq(user1, user2).map(BasicUser.fromUser)
 
         val resultJson = Json.parse(contentAsString(result1))
         val lib = (resultJson \ "libraries").as[Seq[JsObject]].head
@@ -649,10 +649,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
     "get all of the libraries that a user can keep to" in {
       withDb(modules: _*) { implicit injector =>
-        val (user, org, libs) = db.readWrite { implicit session =>
+        val (user, org, _) = db.readWrite { implicit session =>
           val owner = UserFactory.user().saved
           val users = UserFactory.users(10).saved.toSet
-          val (members, randos) = users.splitAt(5)
+          val (members, _) = users.splitAt(5)
           val org = OrganizationFactory.organization().withOwner(owner).withMembers(members.toSeq).saved
           val libraries = users.flatMap { user =>
             val lib = LibraryFactory.library().withOwner(user).withCollaborators(Random.shuffle(users - user).take(3).toSeq).saved
