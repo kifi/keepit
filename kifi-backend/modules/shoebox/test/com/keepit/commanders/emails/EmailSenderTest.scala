@@ -521,7 +521,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.subject === "Invite to join my Kifi library on Football"
         email.htmlBody.value must contain(deepLink)
         email.htmlBody.value must contain("Hi Aaron")
-        email.htmlBody.value must contain("Check out the \"Football\" library I created")
+        email.htmlBody.value must contain("Check out the \"Football\" library")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
@@ -551,7 +551,6 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         email.subject === "Invite to collaborate on my Kifi library Football"
         email.htmlBody.value must contain(deepLink)
         email.htmlBody.value must contain("Hi Aaron")
-        email.htmlBody.value must contain("help me build")
         val params = List("utm_campaign=na", "utm_source=library_invite", "utm_medium=vf_email", "kcid=na-vf_email-library_invite", "kma=1")
         params.map(email.htmlBody.contains(_)) === List(true, true, true, true, true)
         email.to(0) === EmailAddress("aaronrodgers@gmail.com")
