@@ -28,7 +28,8 @@ private object Security extends Augmentor {
         "X-Frame-Options" -> "deny",
         "X-XSS-Protection" -> "1; mode=block",
         "X-Content-Type-Options" -> "nosniff",
-        "Content-Security-Policy-Report-Only" -> "default-src 'self' *.kifi.com d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net fonts.googleapis.com ssl.google-analytics.com cdn.mxpnl.com d24n15hnbwhuhn.cloudfront.net; report-uri https://www.kifi.com/up/report"
+      // REMOVE `unsafe-inline`s 
+        "Content-Security-Policy-Report-Only" -> "default-src 'self' *.kifi.com d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net fonts.googleapis.com ssl.google-analytics.com cdn.mxpnl.com d24n15hnbwhuhn.cloudfront.net; style-src unsafe-inline; script-src unsafe-inline" // report-uri https://www.kifi.com/up/report;
       )
     } else {
       result
