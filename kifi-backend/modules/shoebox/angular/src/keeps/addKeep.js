@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfAddKeep', [
-  '$document', '$rootScope', '$location', '$state', '$timeout',
+  '$document', '$rootScope', '$location', '$state', '$timeout', '$q',
   'KEY', 'keepActionService', 'libraryService', 'modalService', 'util',
-  function ($document, $rootScope, $location, $state, $timeout,
+  function ($document, $rootScope, $location, $state, $timeout, $q,
             KEY, keepActionService, libraryService, modalService, util) {
     return {
       restrict: 'A',
@@ -71,34 +71,42 @@ angular.module('kifi')
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
           if (url && util.validateUrl(url)) {
-            keepActionService.keepToLibrary([{ url: url }], scope.selectedLibrary.id).then(function (result) {
-              if (result.failures && result.failures.length) {
-                scope.resetAndHide();
-                modalService.open({
-                  template: 'common/modal/genericErrorModal.tpl.html'
-                });
-              } else {
-                libraryService.fetchLibraryInfos(true);
-                if (scope.selectedLibrary.visibility === 'secret') {
-                  scope.keptPrivate = true;
-                } else {
-                  scope.keptPublic = true;
-                }
-                scope.inAnimation = true;
-                $timeout(function () {
-                  scope.inAnimation = false;
-                }, 200);
 
-                $timeout(scope.resetAndHide, 1700);
-
-                // If we are on the library page where the keep is being added, add the keep to the top of the list of keeps.
-                if ((result.alreadyKept.length === 0) &&
-                    ($state.href($state.current.name) === scope.selectedLibrary.url)) {
-                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (keep) {
-                    $rootScope.$emit('keepAdded', [keep], scope.selectedLibrary);
+            var libraryInvitePromise = null;
+            if (!scope.selectedLibrary.membership || scope.selectedLibrary.membership === 'read_only') {
+              libraryInvitePromise = libraryService.joinLibrary(scope.selectedLibrary.id,
+               null, scope.selectedLibrary.membership && scope.selectedLibrary.membership.subscribed);
+            }
+            $q.when(libraryInvitePromise).then(function () {
+              keepActionService.keepToLibrary([{ url: url }], scope.selectedLibrary.id).then(function (result) {
+                if (result.failures && result.failures.length) {
+                  scope.resetAndHide();
+                  modalService.open({
+                    template: 'common/modal/genericErrorModal.tpl.html'
                   });
+                } else {
+                  libraryService.fetchLibraryInfos(true);
+                  if (scope.selectedLibrary.visibility === 'secret') {
+                    scope.keptPrivate = true;
+                  } else {
+                    scope.keptPublic = true;
+                  }
+                  scope.inAnimation = true;
+                  $timeout(function () {
+                    scope.inAnimation = false;
+                  }, 200);
+
+                  $timeout(scope.resetAndHide, 1700);
+
+                  // If we are on the library page where the keep is being added, add the keep to the top of the list of keeps.
+                  if ((result.alreadyKept.length === 0) &&
+                      ($state.href($state.current.name) === scope.selectedLibrary.url)) {
+                    return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(function (keep) {
+                      $rootScope.$emit('keepAdded', [keep], scope.selectedLibrary);
+                    });
+                  }
                 }
-              }
+              });
             })['catch'](modalService.openGenericErrorModal);
           } else {
             scope.state.invalidUrl = true;

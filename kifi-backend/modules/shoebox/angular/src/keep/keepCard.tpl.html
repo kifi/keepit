@@ -24,8 +24,8 @@
       </section>
     </div>
 
-    <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || keep.user.id === me.id"></div>
-    <div class="kf-keep-add-note" ng-if="::keep.user.id === me.id"><!-- wrapping button in div to reduce watch count on read-only libraries -->
+    <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml" ng-if="::keep.note || (keep.user.id === me.id && keep.library.permissions.indexOf('edit_own_keeps') !== -1)"></div>
+    <div class="kf-keep-add-note" ng-if="::(keep.user.id === me.id && keep.library.permissions.indexOf('edit_own_keeps') !== -1)"><!-- wrapping button in div to reduce watch count on read-only libraries -->
       <button class="kf-keep-add-note-btn" ng-click="editKeepNote($event, keep)" ng-if="!keep.note">Add a note (type # to add a tag)</button>
     </div>
 
