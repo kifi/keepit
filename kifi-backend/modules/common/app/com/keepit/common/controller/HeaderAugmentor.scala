@@ -1,5 +1,6 @@
 package com.keepit.common.controller
 
+import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.net.URI
 import play.api.mvc.{ Request, Result }
 import play.api.http.Status.OK
@@ -21,24 +22,27 @@ private sealed trait Augmentor {
 }
 
 private object Security extends Augmentor {
-  private val csp = {
-    "" +
-      "style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
-      //           ↓ CDN                          ↓ Google Analytics          ↓ Amplitude               ↓ Mixpanel     ↓ AngularJS does this for performance
-      "script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com 'unsafe-eval'; " +
-      "font-src fonts.gstatic.com; " +
-      "img-src data: d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net; " +
-      // child-src
-      // form-action
-      // frame-ancestors
-      // frame-src
-      //                          ↓ Tracking uses `connect`
-      "default-src *.kifi.com api.mixpanel.com api.amplitude.com" +
-      s"$report"
-  }
-
   def augment[A](result: Result)(implicit request: Request[A]): Result = {
     if (request.rawQueryString.contains("andrew-testing-security-headers")) {
+
+      val nonce = CryptoSupport.generateHexSha256("kifi nonce salt" + request.id)
+      val csp = {
+        "" +
+          "style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
+          //           ↓ CDN                          ↓ Google Analytics          ↓ Amplitude               ↓ Mixpanel     ↓ AngularJS does this for performance
+          s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com 'unsafe-eval' 'nonce-$nonce'; " +
+          "font-src fonts.gstatic.com; " +
+          //               ↓ Assets CDN                  ↓ Images CDN
+          "img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net; " +
+          // child-src
+          // form-action
+          // frame-ancestors
+          // frame-src
+          //                          ↓ Tracking uses `connect`        ↓ CDN, `connect` used for svgs
+          "default-src *.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net"
+      }
+
+
       val report = if (request.rawQueryString.contains("--report-csp")) "; report-uri https://www.kifi.com/up/report" else ""
       result.withHeaders(
         "Strict-Transport-Security" -> "max-age=16070400; includeSubDomains",
@@ -46,7 +50,7 @@ private object Security extends Augmentor {
         "X-XSS-Protection" -> "1; mode=block",
         "X-Content-Type-Options" -> "nosniff",
         // REMOVE `unsafe-inline`s
-        "Content-Security-Policy-Report-Only" -> csp
+        "Content-Security-Policy-Report-Only" -> (csp + report)
       )
     } else {
       result
