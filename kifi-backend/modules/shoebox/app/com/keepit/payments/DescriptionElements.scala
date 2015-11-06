@@ -20,6 +20,11 @@ case class BasicElement(text: String, url: Option[String], hover: Option[Descrip
   def withUrl(newUrl: String) = this.copy(url = Some(newUrl))
   def withHover(newHover: DescriptionElements) = this.copy(hover = Some(newHover))
 
+  def combineWith(that: BasicElement): Option[BasicElement] = {
+    if (this.url == that.url && this.hover == that.hover) Some(BasicElement(this.text + that.text, url, hover))
+    else None
+  }
+
   def -->(link: LinkElement): BasicElement = this.withUrl(link.url)
   def -->(hover: Hover): BasicElement = this.withHover(hover.elements)
 }
@@ -53,21 +58,21 @@ object DescriptionElements {
   implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName --> LinkElement(Path(s"${orgHandle.value}/settings/plan").absolute)
   implicit def fromRole(role: OrganizationRole): BasicElement = role.value
 
-  private def intersperse[T](xs: List[T], ins: List[T]): List[T] = {
+  private def intersperse[T](xs: Seq[T], ins: Seq[T]): Seq[T] = {
     (xs, ins) match {
-      case (x :: Nil, Nil) => x :: Nil
-      case (x :: xr, in :: inr) => x :: in :: intersperse(xr, inr)
+      case (x +: Seq(), Seq()) => x +: Seq()
+      case (x +: xr, in +: inr) => x +: in +: intersperse(xr, inr)
       case _ => throw new IllegalArgumentException(s"intersperse expects lists with length (n, n-1). it got (${xs.length}, ${ins.length})")
     }
   }
   private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
-    val words = els.map(_.text).toList
+    val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
     val interpolatedPunctuation = wordPairs.map {
       case (l, r) if l.endsWith("'") || r.startsWith(".") || r.startsWith("'") => ""
       case _ => " "
     }.map(BasicElement(_, None, None))
-    intersperse(els.toList, interpolatedPunctuation).filter(_.text.nonEmpty)
+    intersperse(els, interpolatedPunctuation).filter(_.text.nonEmpty)
   }
 
   def formatPlain(description: DescriptionElements): String = interpolatePunctuation(description.flatten).map(_.text).mkString
@@ -89,7 +94,15 @@ object DescriptionElements {
     Html(htmlStr)
   }
 
+  private def simplifyElements(els: Seq[BasicElement]): Seq[BasicElement] = els match {
+    case Seq() => Seq()
+    case Seq(x) => Seq(x)
+    case x +: y +: rs => x combineWith y match {
+      case Some(z) => simplifyElements(z +: rs)
+      case None => x +: simplifyElements(y +: rs)
+    }
+  }
   implicit val flatWrites: Writes[DescriptionElements] = Writes { dsc =>
-    JsArray(interpolatePunctuation(dsc.flatten).map(BasicElement.writes.writes))
+    JsArray(simplifyElements(interpolatePunctuation(dsc.flatten)).map(BasicElement.writes.writes))
   }
 }
