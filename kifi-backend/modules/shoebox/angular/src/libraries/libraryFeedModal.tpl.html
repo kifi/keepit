@@ -7,11 +7,11 @@
 		</div>
 		<div class="kf-feed-text">
 			<label for="rss">RSS Feed:</label>
-			<input onclick="this.select();" name="rss" type="text" value='{{"https://www.kifi.com/" + username + "/" + librarySlug + "/rss"}}'></input>
+			<input class="kf-textbox" onclick="this.select();" name="rss" type="text" ng-attr-value="{{ 'https://www.kifi.com/' + username + '/' + librarySlug + '/rss' }}"/>
 		</div>
 		<div class="kf-feed-text">
 			<label for="atom">Atom Feed:</label>
-			<input onclick="this.select();" name="atom" type="text" value='{{"https://www.kifi.com/" + username + "/" + librarySlug + "/atom"}}'></input>
+			<input class="kf-textbox" onclick="this.select();" name="atom" type="text" ng-attr-value="{{ 'https://www.kifi.com/' + username + '/' + librarySlug + '/atom' }}"/>
 		</div>
 	</div>
 </div>

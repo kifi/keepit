@@ -96,9 +96,9 @@ angular.module('kifi')
 
       fetchLibraryInfos: function (invalidateCache) {
         if (invalidateCache) {
-          net.getLibraryInfos.clearCache();
+          net.getKeepableLibraries.clearCache();
         }
-        return net.getLibraryInfos().then(function (res) {
+        return net.getKeepableLibraries().then(function (res) {
           infos = res.data.libraries.map(augment);
           return infos;
         });

@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .directive('kfKeepCard', [
-  '$state', '$analytics', 'extensionLiaison', 'util', 'installService', 'libraryService',
+  '$state', '$analytics', '$q', 'extensionLiaison', 'util', 'installService', 'libraryService',
   'modalService', 'keepActionService', 'undoService', '$rootScope', 'profileService',
   '$injector',
-  function ($state, $analytics, extensionLiaison, util, installService, libraryService,
+  function ($state, $analytics, $q, extensionLiaison, util, installService, libraryService,
       modalService, keepActionService, undoService, $rootScope, profileService,
       $injector) {
 
@@ -216,12 +216,17 @@ angular.module('kifi')
 
               scope.$emit('keepAdded', [fullKeep], clickedLibrary);
             };
-
-            keepActionService.keepToLibrary([{title: scope.keep.title, url: scope.keep.url}], clickedLibrary.id).then(function (result) {
-              if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
-                return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(fetchKeepInfoCallback);
-              }
-            })['catch'](modalService.openGenericErrorModal);
+            var libraryInvitePromise = null;
+            if (!clickedLibrary.membership || clickedLibrary.membership === 'read_only') {
+              libraryInvitePromise = libraryService.joinLibrary(clickedLibrary.id, null, clickedLibrary.membership && clickedLibrary.membership.subscribed);
+            }
+            $q.when(libraryInvitePromise).then(function () {
+              keepActionService.keepToLibrary([{title: scope.keep.title, url: scope.keep.url}], clickedLibrary.id).then(function (result) {
+                if ((!result.failures || !result.failures.length) && result.alreadyKept.length === 0) {
+                  return keepActionService.fetchFullKeepInfo(result.keeps[0]).then(fetchKeepInfoCallback);
+                }
+              })['catch'](modalService.openGenericErrorModal);
+            });
           }
         };
 

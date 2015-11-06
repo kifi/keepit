@@ -1,21 +1,16 @@
-<div class="dialog-body-wrap">
-  <h1 class="dialog-header">Are you sure?</h1>
-  <div class="dialog-body">
-    <p>Transferring ownership to {{member|name}} will remove ownership privileges from {{currentOwner|name}}</p>
+<div kf-basic-modal-content title="Are you sure?" with-cancel with-ok action-text="Make owner" action="transferOwner()">
+  <div class="kf-org-member-owner-transfer">
+    <p>
+      Transferring ownership to <span ng-bind="member | name"></span>
+      will remove ownership privileges from <span ng-bind="currentOwner|name"></span>
+    </p>
     <div class="kf-flow-horizontal-right">
-      <img ng-src="{{currentOwner|pic:200}}" />
-      <svg
-        kf-symbol-sprite
-        icon="arrow-right"
-      ></svg>
-      <img ng-src="{{member|pic:200}}" />
+      <img ng-src="{{ currentOwner | pic:200 }}"/>
+      <svg kf-symbol-sprite icon="arrow-right"></svg>
+      <img ng-src="{{ member | pic:200 }}"/>
     </div>
-    <p>{{currentOwner|name}} will retain their admin privileges, however.</p>
-    <div class="kf-org-actions">
-      <button class="opis-contact-button" ng-click="close()">Cancel</button>&nbsp;
-      <button class="opis-contact-button" ng-click="transferOwner()">Yes</button>
-    </div>
+    <p>
+      <span ng-bind="currentOwner | name"></span> will retain their admin privileges, however.
+    </p>
   </div>
 </div>
-
-

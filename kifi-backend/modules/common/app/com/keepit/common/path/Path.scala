@@ -7,7 +7,6 @@ import java.net.{ URLDecoder, URLEncoder }
 import play.api.libs.json._
 
 sealed class Path(private val value: String) {
-
   def encode: EncodedPath = new EncodedPath(value)
   def decode: Path = this
 
@@ -19,6 +18,7 @@ sealed class Path(private val value: String) {
 
   override def toString: String = value
 
+  def +(segment: String) = Path(value + segment)
 }
 
 class EncodedPath(private val value: String) extends Path(URLEncoder.encode(value, UTF8)) {

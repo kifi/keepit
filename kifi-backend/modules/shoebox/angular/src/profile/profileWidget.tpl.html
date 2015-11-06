@@ -100,8 +100,16 @@
       <button class="kf-pw-org-inv-btn kf-pw-org-inv-btn-decline" ng-if="org.pending && org.notDeclined" ng-click="declineInvite(org)">Decline</button>
     </div>
   </div>
-  <div ng-if="::shouldShowCreateTeam()" class="kf-pw-create-org kf-link-parent" ng-click="createTeam()">
-    <span class="svg-create-library kf-pw-create-org-icon"></span>
-    <button class="kf-pw-create-org-label kf-link">Create a team</button>
+  <div ng-if="::shouldShowCreateTeam()" class="kf-pw-create-org" >
+    <div class="kf-pw-create-org-wrapper kf-link-parent" ng-click="createTeam()">
+      <span class="svg-create-library kf-pw-create-org-icon"></span>
+      <button class="kf-pw-create-org-label kf-link">Create a team</button>
+    </div>
+    <button
+      class="kf-link kf-link-underline kf-pw-learn-more"
+      ng-click="openLearnMoreModal()"
+    >
+      Learn more
+    </button>
   </div>
 </div>
