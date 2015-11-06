@@ -125,7 +125,7 @@ class LibrarySubscriptionCommanderImpl @Inject() (
         } match {
           case None => saveSubByLibIdAndKey(libId, key) // key represents a new sub, save it
           case Some(equivalentSub) if equivalentSub.state == LibrarySubscriptionStates.INACTIVE => librarySubscriptionRepo.save(equivalentSub.copy(name = key.name, info = key.info, state = LibrarySubscriptionStates.ACTIVE))
-          case Some(equivalentSub) if equivalentSub.state == LibrarySubscriptionStates.DISABLED => // broken integration didn't change, don't update it
+          case _ => // broken integration didn't change, don't update it
         }
       }
     }
