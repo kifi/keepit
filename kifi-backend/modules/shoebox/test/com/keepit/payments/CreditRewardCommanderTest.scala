@@ -326,7 +326,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
             RewardTrigger.OrganizationKeepAddedToGeneralLibrary(org.id.get, 50) -> RewardKind.OrganizationGeneralLibraryKeepsReached50
           ) ++ RewardKind.orgLibsReached.toSeq.sortBy(_.threshold).map { k =>
               RewardTrigger.OrganizationAddedLibrary(org.id.get, k.threshold) -> k
-            } ++ RewardKind.orgMembersReached.toSeq.sortBy(_.threshold).map { k =>
+            } ++ RewardKind.orgMembersReached.filter(k => !RewardKind.deprecated.contains(k: RewardKind)).toSeq.sortBy(_.threshold).map { k =>
               RewardTrigger.OrganizationMemberAdded(org.id.get, k.threshold) -> k
             }
 
