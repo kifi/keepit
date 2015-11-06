@@ -89,5 +89,7 @@ object DescriptionElements {
     Html(htmlStr)
   }
 
-  implicit val flatWrites: Writes[DescriptionElements] = Writes { dsc => Json.toJson(interpolatePunctuation(dsc.flatten)) }
+  implicit val flatWrites: Writes[DescriptionElements] = Writes { dsc =>
+    JsArray(interpolatePunctuation(dsc.flatten).map(BasicElement.writes.writes))
+  }
 }
