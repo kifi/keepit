@@ -129,7 +129,7 @@ class AbookOrganizationRecommendationCommander @Inject() (
           }
           val allContacts = db.readOnlyMaster { implicit session =>
             viewerIdOpt match {
-              case Some(viewerId) => contactRepo.getByUserId(viewerId)
+              case Some(viewerId) => contactRepo.getByUserId(viewerId).filter(_.contactUserId.contains(viewerId))
               case None =>
                 val relevantEmailAccountIds = relatedEmailAccounts.related.map { case (id, score) => EmailAccount.fromEmailAccountInfoId(id) }.toSet
                 contactRepo.getByEmailAccountIds(relevantEmailAccountIds)
