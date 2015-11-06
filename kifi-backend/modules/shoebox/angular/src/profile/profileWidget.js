@@ -58,6 +58,26 @@ angular.module('kifi')
           $state.go('teams.new');
         };
 
+        scope.openLearnMoreModal = function () {
+          $analytics.eventTrack('user_clicked_page', {
+            'type': 'homeFeed',
+            'action': 'learnMoreTeams'
+          });
+
+          modalService.open({
+            template: 'profile/learnMoreModal.tpl.html',
+            modalData: {
+              triggerCreateTeam: function () {
+                $analytics.eventTrack('user_clicked_page', {
+                  'type' : 'homeFeed',
+                  'action' : 'clickedCreateTeamLearnMore'
+                });
+                scope.createTeam();
+              }
+            }
+          });
+        };
+
         scope.acceptInvite = function(org) {
           orgProfileService
             .acceptOrgMemberInvite(org.id)
@@ -70,6 +90,7 @@ angular.module('kifi')
           orgProfileService.declineOrgMemberInvite(org.id);
           org.notDeclined = false;
         };
+
       }
     };
   }

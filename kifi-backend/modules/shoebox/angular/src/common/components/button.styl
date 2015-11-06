@@ -1,14 +1,16 @@
 .kf-button
-  padding: 4px defaultPadding
+  height: auto
+  padding: 6px defaultPadding 4px
+  border: 1px solid #bbb
   border-radius: 5px
   background: #f3f3f3 linear-gradient(#fff, alpha(#fff, 0))
-  border: 1px solid #bbb
-  color: textBlackColor
-  height: auto
+  color: textSoftBlackColor
+  font-size: 12px
+  font-weight: 700
+  font-smoothing: antialiased
   line-height: normal
-  appearance: none
-  font-size: 13px
   cursor: pointer
+  appearance: none
 
   &:not([disabled]):not(.disabled)
     &:hover
@@ -40,8 +42,8 @@
   padding: 2px 9px
 
 .kf-button-large
-  padding: 8px (defaultPadding*1.5)
-  font-size: 0.9rem
+  padding: 8px (defaultPadding * 1.5)
+  font-size: 14px
 
 .kf-button-dialog
   border: 2px solid textLightGrey
@@ -71,7 +73,6 @@
     &:active
       background: darken(linkBlueColor, 20%)
 
-
 .kf-button-cta-green
   background: linear-gradient(accentGreen, darken(accentGreen, 20%))
   color: #fff
@@ -82,3 +83,14 @@
 
     &:active
       background: darken(accentGreen, 20%)
+
+.kf-button-cta-red
+  background: linear-gradient(errorRed, darken(errorRed, 20%))
+  color: #fff
+
+  &:not([disabled]):not(.disabled)
+    &:hover:not(:active)
+      background: linear-gradient(errorRed, darken(errorRed, 20%))
+
+    &:active
+      background: darken(errorRed, 20%)

@@ -1,25 +1,6 @@
 //
 // Blocks
 //
-generic-dialog-button =
-  width: 100px
-  padding: 10px 0
-  border: 1px solid rgba(166, 175, 189, 0.53)
-  border-radius: 6px
-  font-size: 12px
-  font-weight: 700
-  font-smoothing: antialiased
-  color: #5c6373
-  cursor: pointer
-
-  &.dialog-warn
-    background: #d50000
-    color: white
-
-    &:focus
-    &:hover
-      background: #c80000
-
 .modal-dialog.modal-dialog
   position: fixed
   left: 50%
@@ -126,30 +107,13 @@ dialog-header-height = (dialog-header-vpad * 2) + dialog-header-line-height + di
   padding: 13px 0
   background-color: #f3f5f7
 
-  button
-    {generic-dialog-button}
+  button + button
+    margin-left: 5px
 
-    // TODO(yiping): these rules in the block are not being picked up by the stylus preprocessor, argh!
-    // Maybe the block needs to turn into a mixin or function...
-    border-radius: 6px
-    background: linear-gradient(to top, #f3f3f3, #fff)
-
-    + button
-      margin-left: 5px
-
-    &:hover
-      background: #e6e8ea
-
-    &:active
-      background: #dadcde
-
-    &.disabled
-    &.disabled:hover
-    &:disabled
-      background: #f3f5f7
-      color: #a9b0c0
-      cursor: default
-
+  .dialog-buttons-constant
+    width: 120px
+    padding-left: 0
+    padding-right: 0
 
 .dialog-body-wrap
   min-width: 300px
