@@ -211,7 +211,6 @@ angular.module('kifi')
         return invalidEmailValidationResult();
       case 403: // belongs to another user
         return failureInputActionResult(
-          'This email address is already taken',
           'This email address belongs to another user.<br>Please enter another email address.'
         );
       }

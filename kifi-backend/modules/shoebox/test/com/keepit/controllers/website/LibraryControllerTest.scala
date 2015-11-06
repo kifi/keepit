@@ -604,7 +604,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         (resultJson \ "library" \ "org").as[Option[BasicOrganizationView]] must equalTo(Some(
           BasicOrganizationView(
             BasicOrganization(Organization.publicId(org1.id.get)(inject[PublicIdConfiguration]), user1.externalId, org1.handle, org1.name, description = None, ImagePath("oa/076fccc32247ae67bb75d48879230953_1024x1024-0x0-200x200_cs.jpg")),
-            OrganizationViewerInfo(invite = None, permissions, Some(OrganizationMembershipInfo(OrganizationRole.ADMIN)))
+            OrganizationViewerInfo(invite = None, sharedEmails = Set.empty, permissions = permissions, Some(OrganizationMembershipInfo(OrganizationRole.ADMIN)))
           )
         ))
         (resultJson \ "library" \ "orgMemberAccess").as[Option[LibraryAccess]] must equalTo(Some(LibraryAccess.READ_WRITE))
