@@ -294,7 +294,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             val getRequest = route.getCreditCardToken(publicId)
             val getResponse = controller.getCreditCardToken(publicId)(getRequest)
             status(getResponse) === OK
-            (contentAsJson(getResponse) \ "token").asOpt[String] must beSome
           }
           for (user <- badUsers) {
             inject[FakeUserActionsHelper].setUser(user)
