@@ -4,13 +4,14 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
-import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.{ ImagePath, FakeShoeboxStoreModule }
+import com.keepit.common.store.{ FakeShoeboxStoreModule, ImagePath }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
@@ -18,7 +19,6 @@ import com.keepit.payments.RewardKind.RewardChecklistKind
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
-import play.api.libs.json.{ JsSuccess, Json }
 
 class RewardsCheckerTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   def modules = Seq(
@@ -115,42 +115,59 @@ class RewardsCheckerTest extends TestKitSupport with SpecificationLike with Shoe
       }
     }
     "trigger rewards that may have been missed" in {
-      withDb(modules: _*) { implicit injector =>
-        val orgId = db.readWrite { implicit s =>
-          OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved.id.get
+      "retroactively" in {
+        withDb(modules: _*) { implicit injector =>
+          val (owner, orgId, orgGeneralLib) = db.readWrite { implicit s =>
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).saved
+            val orgGeneralLib = libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(org.id.get), LibraryKind.SYSTEM_ORG_GENERAL).head
+            (owner, org.id.get, orgGeneralLib)
+          }
+
+          val kindsAndFunctions = Seq[(RewardChecklistKind, RWSession => Unit)](
+            RewardKind.OrganizationAvatarUploaded -> { implicit s =>
+              inject[OrganizationAvatarRepo].save(OrganizationAvatar(organizationId = orgId, width = 1, height = 1, format = ImageFormat.PNG,
+                kind = ProcessImageOperation.CropScale, imagePath = ImagePath("foo"), source = ImageSource.Unknown, sourceFileHash = ImageHash("foo"), sourceImageURL = None))
+            },
+
+            RewardKind.OrganizationDescriptionAdded -> { implicit s =>
+              orgRepo.save(orgRepo.get(orgId).withDescription(Some("dummy")))
+            },
+
+            RewardKind.OrganizationGeneralLibraryKeepsReached50 -> { implicit s =>
+              KeepFactory.keeps(50).map(_.withUser(owner).withLibrary(orgGeneralLib)).saved
+            },
+
+            RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached7 -> { implicit s =>
+              LibraryFactory.libraries(7).map(_.withOwner(owner).withOrganizationIdOpt(Some(orgId))).saved
+            },
+
+            RewardKind.OrganizationMembersReached.OrganizationMembersReached5 -> { implicit s =>
+              UserFactory.users(4).saved.foreach { u => orgMembershipRepo.save(OrganizationMembership(organizationId = orgId, userId = u.id.get, role = OrganizationRole.MEMBER)) }
+            }
+          )
+
+          for ((k, fn) <- kindsAndFunctions) {
+            db.readWrite { implicit s =>
+              // Check that the reward hasn't been achieved
+              creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must haveSize(1)
+              creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must beEmpty
+              // Do the function
+              fn(s)
+              // Make sure it still hasn't been achieved
+              creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must haveSize(1)
+              creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must beEmpty
+            }
+            // Run the checker
+            rewardsChecker.checkAccount(orgId)
+            // It should have been triggered
+            db.readOnlyMaster { implicit s =>
+              creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must beEmpty
+              creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must haveSize(1)
+            }
+          }
+          1 === 1
         }
-
-        val kindsAndFunctions = Seq[(RewardChecklistKind, RWSession => Unit)](
-          RewardKind.OrganizationAvatarUploaded -> { implicit s =>
-            inject[OrganizationAvatarRepo].save(OrganizationAvatar(organizationId = orgId, width = 1, height = 1, format = ImageFormat.PNG,
-              kind = ProcessImageOperation.CropScale, imagePath = ImagePath("foo"), source = ImageSource.Unknown, sourceFileHash = ImageHash("foo"), sourceImageURL = None))
-          },
-
-          RewardKind.OrganizationDescriptionAdded -> { implicit s =>
-            orgRepo.save(orgRepo.get(orgId).withDescription(Some("dummy")))
-          }
-        )
-
-        for ((k, fn) <- kindsAndFunctions) {
-          db.readWrite { implicit s =>
-            // Check that the reward hasn't been achieved
-            creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must haveSize(1)
-            creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must beEmpty
-            // Do the function
-            fn(s)
-            // Make sure it still hasn't been achieved
-            creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must haveSize(1)
-            creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must beEmpty
-          }
-          // Run the checker
-          rewardsChecker.checkAccount(orgId)
-          // It should have been triggered
-          db.readOnlyMaster { implicit s =>
-            creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must beEmpty
-            creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must haveSize(1)
-          }
-        }
-        1 === 1
       }
     }
   }
