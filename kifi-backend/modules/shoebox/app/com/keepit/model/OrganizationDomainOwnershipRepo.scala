@@ -19,6 +19,7 @@ trait OrganizationDomainOwnershipRepo extends Repo[OrganizationDomainOwnership] 
   def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
   def getOwnershipsForOrganization(organization: Id[Organization], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationDomainOwnership]
   def getOwnershipForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
+  def getOwnershipsByDomains(domainHostnames: Set[NormalizedHostname], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Map[NormalizedHostname, OrganizationDomainOwnership]
 }
 
 @Singleton
@@ -66,6 +67,11 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
     (for { row <- rows if row.domainHostname === domainHostname && row.state =!= excludeState.orNull } yield row).firstOption
   }
 
+  override def getOwnershipsByDomains(domainHostnames: Set[NormalizedHostname], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Map[NormalizedHostname, OrganizationDomainOwnership] = {
+    rows.filter(r => r.domainHostname.inSet(domainHostnames) && r.state =!= excludeState.orNull).list.groupBy(_.normalizedHostname).collect {
+      case (hostname, ownerships) if ownerships.size == 1 => hostname -> ownerships.head
+    }
+  }
 }
 
 case class OrganizationDomainOwnershipAllKey() extends Key[Seq[OrganizationDomainOwnership]] {

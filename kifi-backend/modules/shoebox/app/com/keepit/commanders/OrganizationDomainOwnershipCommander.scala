@@ -4,8 +4,10 @@ import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
 import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ InvalidDomainName, DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
 import org.joda.time.DateTime
 
@@ -18,6 +20,8 @@ trait OrganizationDomainOwnershipCommander {
   def getOwningOrganization(domainHostname: NormalizedHostname): Option[Organization]
   def addDomainOwnership(orgId: Id[Organization], domainName: String): Either[OwnDomainFailure, OwnDomainSuccess]
   def removeDomainOwnership(orgId: Id[Organization], domainHostname: String): Option[OwnDomainFailure]
+  def getSharedEmails(userId: Id[User], orgId: Id[Organization]): Set[EmailAddress]
+  def getSharedEmailsHelper(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Set[EmailAddress]
 }
 
 object OrganizationDomainOwnershipCommander {
@@ -47,6 +51,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     orgRepo: OrganizationRepo,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     domainRepo: DomainRepo,
+    userEmailAddressRepo: UserEmailAddressRepo,
     implicit val executionContext: ScalaExecutionContext) extends OrganizationDomainOwnershipCommander with Logging {
 
   override def getDomainsOwned(orgId: Id[Organization]): Set[Domain] = {
@@ -98,5 +103,18 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
         }
       case None => Some(InvalidDomainName(domainHostname))
     }
+  }
+
+  override def getSharedEmails(userId: Id[User], orgId: Id[Organization]): Set[EmailAddress] = db.readOnlyReplica { implicit session =>
+    getSharedEmailsHelper(userId, orgId)
+  }
+
+  override def getSharedEmailsHelper(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Set[EmailAddress] = {
+    val emails = userEmailAddressRepo.getAllByUser(userId).map(_.address)
+    val orgDomains = orgDomainOwnershipRepo.getOwnershipsForOrganization(orgId).map(_.normalizedHostname).toSet
+    emails.filter { email =>
+      val hostnameOpt = NormalizedHostname.fromHostname(EmailAddress.getHostname(email))
+      hostnameOpt.exists(orgDomains.contains)
+    }.toSet
   }
 }
