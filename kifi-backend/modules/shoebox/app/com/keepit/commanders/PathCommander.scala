@@ -1,6 +1,8 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
@@ -22,6 +24,10 @@ class PathCommander @Inject() (
   def pathForUser(user: User): Path = Path(user.username.value)
 
   def pathForOrganization(org: Organization): Path = Path(org.handle.value)
+
+  def orgPage(orgId: Id[Organization])(implicit session: RSession): Path = Path(orgRepo.get(orgId).handle.value)
+  def orgMembersPage(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgId) + "/members"
+  def orgLibrariesPage(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgId)
 
   // todo: remove these and replace with Path-returning versions
   def getPathForLibrary(lib: Library): String = {

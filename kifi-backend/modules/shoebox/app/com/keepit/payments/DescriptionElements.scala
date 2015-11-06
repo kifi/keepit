@@ -17,6 +17,9 @@ case class SequenceOfElements(elements: Seq[DescriptionElements]) extends Descri
 case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElements {
   def flatten = Seq(this)
   def withText(newText: String) = this.copy(text = newText)
+  def withUrl(newUrl: String) = this.copy(url = Some(newUrl))
+  def withHover(newHover: DescriptionElements) = this.copy(hover = Some(newHover))
+
 }
 object BasicElement {
   implicit val writes: Writes[BasicElement] = (
@@ -24,24 +27,46 @@ object BasicElement {
     (__ \ 'url).writeNullable[String] and
     (__ \ 'hover).writeNullable[DescriptionElements]
   )(unlift(BasicElement.unapply))
+
+  implicit class PimpedElement(be: BasicElement) {
+    def -->(link: LinkElement): BasicElement = be.withUrl(link.url)
+    def -->(hover: Hover): BasicElement = be.withHover(hover.elements)
+  }
+  // I can't get implicit defs to convert these strings/ints AND THEN use the PimpedElement,
+  // so I have to add explicit implicit classes for each of them
+  implicit class PimpedString(txt: String) {
+    val be = DescriptionElements.fromText(txt)
+    def -->(link: LinkElement): BasicElement = be --> link
+    def -->(hover: Hover): BasicElement = be --> hover
+  }
+  implicit class PimpedInt(x: Int) {
+    val be = DescriptionElements.fromInt(x)
+    def -->(link: LinkElement): BasicElement = be --> link
+    def -->(hover: Hover): BasicElement = be --> hover
+  }
 }
 
+case class LinkElement(url: String)
 case class Hover(elements: DescriptionElements)
+object Hover {
+  def apply(elements: DescriptionElements*): Hover = Hover(SequenceOfElements(elements))
+}
 object DescriptionElements {
+  import BasicElement.PimpedString
   def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
 
   implicit def fromText(text: String): BasicElement = BasicElement(text, None, None)
-  implicit def fromTextAndUrl(textAndUrl: (String, String)): BasicElement = BasicElement(textAndUrl._1, Some(textAndUrl._2), None)
-  implicit def fromTextAndHover(textAndHover: (String, Hover)): BasicElement = BasicElement(textAndHover._1, None, Some(textAndHover._2.elements))
+  implicit def fromInt(x: Int): BasicElement = fromText(x.toString)
+
   implicit def fromSeq[T](seq: Seq[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = SequenceOfElements(seq.map(toElements))
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
   implicit def fromCreditCode(code: CreditCode): BasicElement = code.value
-  implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName -> user.path.absolute
-  implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name -> org.path.absolute
+  implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName --> LinkElement(user.path.absolute)
+  implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name --> LinkElement(org.path.absolute)
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
-  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName -> Path(s"${orgHandle.value}/settings/plan").absolute
+  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName --> LinkElement(Path(s"${orgHandle.value}/settings/plan").absolute)
   implicit def fromRole(role: OrganizationRole): BasicElement = role.value
 
   private def intersperse[T](xs: List[T], ins: List[T]): List[T] = {
@@ -80,7 +105,5 @@ object DescriptionElements {
     Html(htmlStr)
   }
 
-  implicit val flatWrites = {
-    Writes[DescriptionElements] { description => Json.toJson(interpolatePunctuation(description.flatten)) }
-  }
+  implicit val flatWrites: Writes[DescriptionElements] = Writes { dsc => Json.toJson(interpolatePunctuation(dsc.flatten)) }
 }
