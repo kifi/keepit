@@ -23,13 +23,14 @@ private sealed trait Augmentor {
 private object Security extends Augmentor {
   def augment[A](result: Result)(implicit request: Request[A]): Result = {
     if (request.rawQueryString.contains("andrew-testing-security-headers")) {
+      val report = if (request.rawQueryString.contains("--report-csp")) "; report-uri https://www.kifi.com/up/report" else ""
       result.withHeaders(
         "Strict-Transport-Security" -> "max-age=16070400; includeSubDomains",
         "X-Frame-Options" -> "deny",
         "X-XSS-Protection" -> "1; mode=block",
         "X-Content-Type-Options" -> "nosniff",
-      // REMOVE `unsafe-inline`s 
-        "Content-Security-Policy-Report-Only" -> "default-src 'self' *.kifi.com d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net fonts.googleapis.com ssl.google-analytics.com cdn.mxpnl.com d24n15hnbwhuhn.cloudfront.net; style-src unsafe-inline; script-src unsafe-inline" // report-uri https://www.kifi.com/up/report;
+        // REMOVE `unsafe-inline`s
+        "Content-Security-Policy-Report-Only" -> s"default-src 'self' *.kifi.com d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net fonts.googleapis.com ssl.google-analytics.com cdn.mxpnl.com d24n15hnbwhuhn.cloudfront.net; style-src 'unsafe-inline'; script-src 'unsafe-eval' 'unsafe-inline'; font-src fonts.gstatic.com; img-src data:$report" // report-uri https://www.kifi.com/up/report;
       )
     } else {
       result
