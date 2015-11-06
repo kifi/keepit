@@ -6,19 +6,23 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.model.{ Organization, OrganizationRepo }
+import com.keepit.model._
 import com.keepit.payments.RewardKind.RewardChecklistKind
 
 @Singleton
 class RewardsChecker @Inject() (
   db: Database,
   clock: Clock,
-  orgRepo: OrganizationRepo,
   creditRewardRepo: CreditRewardRepo,
   creditRewardCommander: CreditRewardCommander,
   paidAccountRepo: PaidAccountRepo,
-  accountLockHelper: AccountLockHelper,
-  eventTrackingCommander: AccountEventTrackingCommander,
+  paidPlanRepo: PaidPlanRepo,
+  // For double-checking checklist rewards
+  libRepo: LibraryRepo,
+  ktlRepo: KeepToLibraryRepo,
+  orgRepo: OrganizationRepo,
+  orgMembershipRepo: OrganizationMembershipRepo,
+  orgAvatarRepo: OrganizationAvatarRepo,
   airbrake: AirbrakeNotifier)
     extends Logging {
 
@@ -27,7 +31,7 @@ class RewardsChecker @Inject() (
       RewardKind.OrganizationMembersReached.all.map(x => x: RewardChecklistKind)
     case _ => Set.empty[RewardChecklistKind]
   }
-  private def processChecklistRewards(orgId: Id[Organization]): Unit = accountLockHelper.maybeSessionWithAccountLock(orgId) { implicit session =>
+  private def backfillChecklistRewards(orgId: Id[Organization]): Unit = db.readWrite { implicit s =>
     val accountId = paidAccountRepo.getAccountId(orgId)
     val currentRewards: Set[RewardChecklistKind] = creditRewardRepo.getByAccount(accountId).map(_.reward.kind).collect { case k: RewardChecklistKind => k }
     val blockedRewards = currentRewards.flatMap(rewardsPreventedBy)
@@ -38,8 +42,24 @@ class RewardsChecker @Inject() (
     }
   }
 
+  private def sendValidRewardTriggers(orgId: Id[Organization]): Unit = db.readWrite { implicit s =>
+    val rewardTriggers: Seq[RewardTrigger] = Seq(
+      Some(RewardTrigger.OrganizationAvatarUploaded(orgId)).filter { _ => orgAvatarRepo.getByOrgId(orgId).nonEmpty },
+      Some(orgRepo.get(orgId)).filter(_.description.exists(_.nonEmpty)).map { org => RewardTrigger.OrganizationDescriptionAdded(orgId, org) },
+      libRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(orgId), LibraryKind.SYSTEM_ORG_GENERAL).headOption.map { orgGeneralLib =>
+        RewardTrigger.OrganizationKeepAddedToGeneralLibrary(orgId, ktlRepo.getCountByLibraryId(orgGeneralLib.id.get))
+      },
+      Some(RewardTrigger.OrganizationAddedLibrary(orgId, libRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)).size)),
+      Some(RewardTrigger.OrganizationMemberAdded(orgId, orgMembershipRepo.countByOrgId(orgId))),
+      Some(RewardTrigger.OrganizationUpgraded(orgId, paidPlanRepo.get(paidAccountRepo.getByOrgId(orgId).planId)))
+    ).flatten
+
+    rewardTriggers.foreach { creditRewardCommander.registerRewardTrigger }
+  }
+
   def checkAccount(orgId: Id[Organization]): Unit = {
-    processChecklistRewards(orgId)
+    backfillChecklistRewards(orgId)
+    sendValidRewardTriggers(orgId)
   }
 
   def checkAccounts(modulus: Int = 7): Unit = {

@@ -206,7 +206,7 @@ class CreditRewardCommanderImpl @Inject() (
   def registerRewardTrigger(trigger: RewardTrigger)(implicit session: RWSession): Set[CreditReward] = trigger match {
     case RewardTrigger.OrganizationUpgraded(orgId, newPlan) if newPlan.pricePerCyclePerUser > DollarAmount.ZERO => registerUpgradedAccount(orgId)
     case RewardTrigger.OrganizationAvatarUploaded(orgId) => processRewardChecklistItem(RewardKind.OrganizationAvatarUploaded, orgId)
-    case RewardTrigger.OrganizationDescriptionAdded(orgId, description) if description.nonEmpty => processRewardChecklistItem(RewardKind.OrganizationDescriptionAdded, orgId)
+    case RewardTrigger.OrganizationDescriptionAdded(orgId, org) if org.description.exists(_.nonEmpty) => processRewardChecklistItem(RewardKind.OrganizationDescriptionAdded, orgId)
     case RewardTrigger.OrganizationKeepAddedToGeneralLibrary(orgId, keepCount) if keepCount >= 50 => processRewardChecklistItem(RewardKind.OrganizationGeneralLibraryKeepsReached50, orgId)
     case RewardTrigger.OrganizationAddedLibrary(orgId, libCount) =>
       RewardKind.orgLibsReached.filter(k => k.threshold <= libCount).flatMap { k => processRewardChecklistItem(k, orgId) }

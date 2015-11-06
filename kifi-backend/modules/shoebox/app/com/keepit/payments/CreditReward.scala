@@ -99,7 +99,7 @@ object RewardStatus {
     def infoFormat: Format[None.type] = noneInfoFormat
   }
 
-  private lazy val noneInfoFormat: Format[None.type] = Format(
+  private val noneInfoFormat: Format[None.type] = Format(
     Reads {
       case JsNull => JsSuccess(None)
       case unknown => JsError(s"Unknown RewardStatus info: $unknown")
@@ -242,7 +242,7 @@ case class CreditReward(
 sealed abstract class RewardTrigger(val value: String)
 object RewardTrigger {
   case class OrganizationUpgraded(orgId: Id[Organization], newPlan: PaidPlan) extends RewardTrigger(s"$orgId upgraded to plan ${newPlan.id.get}")
-  case class OrganizationDescriptionAdded(orgId: Id[Organization], description: String) extends RewardTrigger(s"$orgId filled in their description")
+  case class OrganizationDescriptionAdded(orgId: Id[Organization], org: Organization) extends RewardTrigger(s"$orgId filled in their description")
   case class OrganizationAvatarUploaded(orgId: Id[Organization]) extends RewardTrigger(s"$orgId uploaded an avatar")
   case class OrganizationKeepAddedToGeneralLibrary(orgId: Id[Organization], keepCount: Int) extends RewardTrigger(s"$orgId reached $keepCount keeps in their General library")
   case class OrganizationAddedLibrary(orgId: Id[Organization], libraryCount: Int) extends RewardTrigger(s"$orgId reached $libraryCount total libraries")

@@ -335,12 +335,10 @@ class OrganizationCommanderImpl @Inject() (
       getValidationError(request) match {
         case None =>
           val org = orgRepo.get(request.orgId)
-
-          request.modifications.description.filter(_.nonEmpty).foreach { d =>
-            creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationDescriptionAdded(org.id.get, d))
-          }
-
           val modifiedOrg = organizationWithModifications(org, request.modifications)
+          request.modifications.description.filter(_.nonEmpty).foreach { d =>
+            creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationDescriptionAdded(org.id.get, modifiedOrg))
+          }
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
           val orgView = getOrganizationViewHelper(request.orgId, Some(request.requesterId), None)
           Right(OrganizationModifyResponse(request, orgRepo.save(modifiedOrg), orgView))

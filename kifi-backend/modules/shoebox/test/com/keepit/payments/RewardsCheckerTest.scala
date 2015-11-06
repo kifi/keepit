@@ -5,9 +5,10 @@ import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.{ ImagePath, FakeShoeboxStoreModule }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._
@@ -111,6 +112,45 @@ class RewardsCheckerTest extends TestKitSupport with SpecificationLike with Shoe
           }
           beforeFixing === afterFixing
         }
+      }
+    }
+    "trigger rewards that may have been missed" in {
+      withDb(modules: _*) { implicit injector =>
+        val orgId = db.readWrite { implicit s =>
+          OrganizationFactory.organization().withOwner(UserFactory.user().saved).saved.id.get
+        }
+
+        val kindsAndFunctions = Seq[(RewardChecklistKind, RWSession => Unit)](
+          RewardKind.OrganizationAvatarUploaded -> { implicit s =>
+            inject[OrganizationAvatarRepo].save(OrganizationAvatar(organizationId = orgId, width = 1, height = 1, format = ImageFormat.PNG,
+              kind = ProcessImageOperation.CropScale, imagePath = ImagePath("foo"), source = ImageSource.Unknown, sourceFileHash = ImageHash("foo"), sourceImageURL = None))
+          },
+
+          RewardKind.OrganizationDescriptionAdded -> { implicit s =>
+            orgRepo.save(orgRepo.get(orgId).withDescription(Some("dummy")))
+          }
+        )
+
+        for ((k, fn) <- kindsAndFunctions) {
+          db.readWrite { implicit s =>
+            // Check that the reward hasn't been achieved
+            creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must haveSize(1)
+            creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must beEmpty
+            // Do the function
+            fn(s)
+            // Make sure it still hasn't been achieved
+            creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must haveSize(1)
+            creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must beEmpty
+          }
+          // Run the checker
+          rewardsChecker.checkAccount(orgId)
+          // It should have been triggered
+          db.readOnlyMaster { implicit s =>
+            creditRewardRepo.getByReward(Reward(k)(k.Started)(orgId)) must beEmpty
+            creditRewardRepo.getByReward(Reward(k)(k.Achieved)(orgId)) must haveSize(1)
+          }
+        }
+        1 === 1
       }
     }
   }

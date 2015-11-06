@@ -322,7 +322,7 @@ class CreditRewardCommanderTest extends SpecificationLike with ShoeboxTestInject
 
           val rewardsByTrigger = Seq[(RewardTrigger, RewardChecklistKind)](
             RewardTrigger.OrganizationAvatarUploaded(org.id.get) -> RewardKind.OrganizationAvatarUploaded,
-            RewardTrigger.OrganizationDescriptionAdded(org.id.get, "dummy") -> RewardKind.OrganizationDescriptionAdded,
+            RewardTrigger.OrganizationDescriptionAdded(org.id.get, org.withDescription(Some("dummy"))) -> RewardKind.OrganizationDescriptionAdded,
             RewardTrigger.OrganizationKeepAddedToGeneralLibrary(org.id.get, 50) -> RewardKind.OrganizationGeneralLibraryKeepsReached50
           ) ++ RewardKind.orgLibsReached.toSeq.sortBy(_.threshold).map { k =>
               RewardTrigger.OrganizationAddedLibrary(org.id.get, k.threshold) -> k
