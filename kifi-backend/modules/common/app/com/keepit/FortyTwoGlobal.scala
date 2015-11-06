@@ -204,9 +204,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         case req: WrappedRequest[_] => s"$bareErrorMessage : with body: ${req.body.toString}"
         case _ => bareErrorMessage
       }
-      System.err.println(errorMessage)
-      ex.printStackTrace()
-      log.error(errorMessage)
+      log.error(errorMessage, ex)
       serviceDiscoveryHandleError()
       if (request.path.startsWith("/internal/")) {
         //todo(eishay) consider use the original ex.getCause instead

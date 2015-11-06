@@ -161,42 +161,12 @@ trait UserActions extends Logging { self: Controller =>
   private def buildUserRequest[A](userId: Id[User], adminUserId: Option[Id[User]] = None)(implicit request: Request[A]): UserRequest[A] =
     UserRequest(request, userId, adminUserId, userActionsHelper)
 
-  private def maybeAugmentCORS[A](res: Result)(implicit request: Request[A]): Result = {
-    request.headers.get("Origin").filter { uri =>
-      val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
-      host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
-    } map { h =>
-      res.withHeaders(
-        "Access-Control-Allow-Origin" -> h,
-        "Access-Control-Allow-Credentials" -> "true"
-      )
-    } getOrElse res
-  }
-
-  private def maybeAugmentKcid[A](res: Result)(implicit request: Request[A]): Result = { // for campaign tracking
-    Play.maybeApplication.map { app =>
-      request.queryString.get("kcid").flatMap(_.headOption).map { kcid =>
-        res.addingToSession("kcid" -> kcid)(request)
-      } getOrElse {
-        val referrer: String = request.headers.get("Referer").flatMap { ref =>
-          URI.parse(ref).toOption.flatMap(_.host).map(_.name)
-        } getOrElse ("na")
-        request.session.get("kcid").map { existingKcid =>
-          if (existingKcid.startsWith("organic") && !referrer.contains("kifi.com")) {
-            res.addingToSession("kcid" -> s"na-organic-$referrer")(request)
-          } else res
-        } getOrElse {
-          res.addingToSession("kcid" -> s"na-organic-$referrer")(request)
-        }
-      }
-    } getOrElse res
-  }
-
   private def maybeSetUserIdInSession[A](userId: Id[User], res: Result)(implicit request: Request[A]): Result = {
     Play.maybeApplication.map { app =>
       userActionsHelper.getUserIdFromSession match {
         case Success(Some(id)) if id == userId => res
-        case Success(_) => res.withSession(res.session.setUserId(userId))
+        case Success(_) =>
+          res.withSession(res.session.setUserId(userId))
         case Failure(t) =>
           log.error(s"[maybeSetUserIdInSession($userId)] Caught exception while retrieving userId from kifi cookie", t)
           res.withSession(res.session.setUserId(userId))
@@ -229,13 +199,13 @@ trait UserActions extends Logging { self: Controller =>
   object UserAction extends ActionBuilder[UserRequest] {
     def invokeBlock[A](request: Request[A], block: (UserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
-      val result = userActionsHelper.getUserIdOptWithFallback flatMap { userIdOpt =>
+      val result = userActionsHelper.getUserIdOptWithFallback.flatMap { userIdOpt =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
           case None => Future.successful(Forbidden)
         }
       }
-      result.map(maybeAugmentCORS(_))
+      result.map(r => HeaderAugmentor.process(r))
     }
   }
 
@@ -259,17 +229,13 @@ trait UserActions extends Logging { self: Controller =>
   object MaybeUserAction extends ActionBuilder[MaybeUserRequest] {
     def invokeBlock[A](request: Request[A], block: (MaybeUserRequest[A]) => Future[Result]): Future[Result] = {
       implicit val req = request
-      val result = userActionsHelper.getUserIdOptWithFallback flatMap { userIdOpt =>
+      val result = userActionsHelper.getUserIdOptWithFallback.flatMap { userIdOpt =>
         userIdOpt match {
           case Some(userId) => buildUserAction(userId, block)
-          case None => block(userActionsHelper.buildNonUserRequest).map { resp =>
-            if (resp.header.status == OK && resp.header.headers.get("Content-Type").exists(_.contains("text/html"))) {
-              maybeAugmentKcid(resp)
-            } else resp
-          }
+          case None => block(userActionsHelper.buildNonUserRequest)
         }
       }
-      result.map(maybeAugmentCORS(_))
+      result.map(r => HeaderAugmentor.process(r))
     }
   }
 
@@ -290,7 +256,7 @@ trait AdminUserActions extends UserActions with ShoeboxServiceController {
     }
   }
 
-  val AdminUserAction = (UserAction andThen AdminCheck)
+  val AdminUserAction = UserAction andThen AdminCheck
   val AdminUserPage = AdminUserAction // not forwarding user when the hit an admin page when not logged in is okay
 
 }
