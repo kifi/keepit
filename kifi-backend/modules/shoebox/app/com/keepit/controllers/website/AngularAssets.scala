@@ -57,10 +57,9 @@ object AngularApp extends Controller with Logging {
   }
 
   @inline
-  private def augmentPage(head: Future[String], feet: => Seq[Future[String]] = Seq.empty)(implicit request: MaybeUserRequest[_]): Enumerator[String] = {
+  private def augmentPage(nonce: String, head: Future[String], feet: => Seq[Future[String]] = Seq.empty)(implicit request: MaybeUserRequest[_]): Enumerator[String] = {
     val (idx1, idx2) = maybeCachedIndex
     val noncedIdx2 = idx2.map { body =>
-      val nonce = CryptoSupport.generateHexSha256("Kifi nonce s@lt" + request.id)
       body.replaceAllLiterally(NONCE_STRING, nonce)
     }(ExecutionContext.immediate)
     idx1 andThen enumerateFuture(head) andThen noncedIdx2 andThen enumerateFutures(feet) andThen Enumerator.eof
@@ -75,7 +74,8 @@ object AngularApp extends Controller with Logging {
       case _ =>
         Future.successful("<title>Kifi</title>")
     }
-    Ok.chunked(augmentPage(head)).as(HTML)
+    val nonce = CryptoSupport.generateHexSha256("Kifi nonce s@lt" + request.id)
+    Ok.chunked(augmentPage(nonce, head)).as(HTML).withHeaders("X-Nonce" -> nonce)
   }
 
   def app(makeBotMetadata: () => Future[String])(implicit request: MaybeUserRequest[_]): Result = app(Some(makeBotMetadata))
