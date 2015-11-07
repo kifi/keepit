@@ -43,7 +43,8 @@ private object Security extends Augmentor {
               s"form-action www.kifi.com api.kifi.com $dev; " +
               s"frame-src www.kifi.com *.facebook.com; " + // to support Safari 9
               s"child-src www.kifi.com *.facebook.com; " +
-              s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net $dev"
+              s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net $dev; " +
+              "report-uri https://www.kifi.com/up/report"
 
           //val report = if (request.rawQueryString.contains("--report-csp")) "; report-uri https://www.kifi.com/up/report" else ""
 
