@@ -63,7 +63,7 @@ class EventProxyController @Inject() (
   def report() = MaybeUserAction(parse.anyContent) { request =>
     val bodyStr = {
       val b = request.body
-      b.asJson.map(Json.prettyPrint).orElse(b.asFormUrlEncoded.map(_.toString)).orElse(b.asText).orElse(b.asRaw.flatMap(b => new String(b.asBytes())))
+      b.asJson.map(Json.prettyPrint).orElse(b.asFormUrlEncoded.map(_.toString)).orElse(b.asText).orElse(b.asRaw.flatMap(b => b.asBytes(2048).map(new String(_))))
     }.getOrElse("<No body>")
     val body =
       s"""<pre>
