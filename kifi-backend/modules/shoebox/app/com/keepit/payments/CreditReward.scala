@@ -27,7 +27,7 @@ trait Reward {
   override def toString = Reward.unapply(this).toString
 }
 
-sealed abstract class RewardKind(val kind: String) extends Ordered[RewardKind] {
+sealed abstract class RewardKind(val kind: String) {
   type S <: RewardStatus
   protected def allStatus: Set[S]
   def applicable: S
@@ -137,12 +137,7 @@ object RewardKind extends Enumerator[RewardKind] {
     lazy val applicable: Achieved.type = Achieved
   }
 
-  sealed abstract class ThresholdChecklistKind(val prefix: String, val threshold: Int) extends RewardChecklistKind(s"${prefix}_${threshold}") {
-    override def compare(that: RewardKind) = that match {
-      case thresh: ThresholdChecklistKind if this.prefix == thresh.prefix => this.threshold compare thresh.threshold
-      case other => super.compare(that)
-    }
-  }
+  sealed abstract class ThresholdChecklistKind(val prefix: String, val threshold: Int) extends RewardChecklistKind(s"${prefix}_${threshold}")
   sealed abstract class OrganizationMembersReached(threshold: Int) extends ThresholdChecklistKind("org_members", threshold)
   sealed abstract class OrganizationLibrariesReached(threshold: Int) extends ThresholdChecklistKind("org_libraries", threshold)
 
@@ -244,45 +239,51 @@ object RewardTrigger {
   case class OrganizationMemberAdded(orgId: Id[Organization], memberCount: Int) extends RewardTrigger(s"$orgId reached $memberCount total members")
 }
 
+
 sealed abstract class RewardCategory(val value: String, val priority: Int) extends Ordered[RewardCategory] {
   def compare(that: RewardCategory) = this.priority compare that.priority
 }
 object RewardCategory extends Enumerator[RewardCategory] {
-  case object KeepsAndLibraries extends RewardCategory("keeps_and_libraries", 0)
-  case object OrganizationInformation extends RewardCategory("org_information", 1)
-  case object OrganizationMembership extends RewardCategory("org_membership", 2)
+  case object OrganizationInformation extends RewardCategory("org_information", 0)
+  case object OrganizationMembership extends RewardCategory("org_membership", 1)
+  case object KeepsAndLibraries extends RewardCategory("keeps_and_libraries", 2)
   case object Referrals extends RewardCategory("referrals", 3)
   case object CreditCodes extends RewardCategory("credit_codes", 4)
 
-  val all = _all.toSet
+  val all = _all.sorted
   def get(str: String): Option[RewardCategory] = all.find(_.value == str)
   implicit val writes: Writes[RewardCategory] = Writes { rc => JsString(rc.value) }
 
   def forKind(k: RewardKind): RewardCategory = k match {
-    case RewardKind.Coupon => CreditCodes
-    case RewardKind.OrganizationReferral => Referrals
-    case RewardKind.ReferralApplied => CreditCodes
-
-    case RewardKind.OrganizationAvatarUploaded  => OrganizationInformation
     case RewardKind.OrganizationCreation => OrganizationInformation
+    case RewardKind.OrganizationAvatarUploaded  => OrganizationInformation
     case RewardKind.OrganizationDescriptionAdded => OrganizationInformation
+
     case _: RewardKind.OrganizationMembersReached => OrganizationMembership
+
     case _: RewardKind.OrganizationLibrariesReached => KeepsAndLibraries
     case RewardKind.OrganizationGeneralLibraryKeepsReached50 => KeepsAndLibraries
+
+    case RewardKind.OrganizationReferral => Referrals
+
+    case RewardKind.Coupon => CreditCodes
+    case RewardKind.ReferralApplied => CreditCodes
   }
 }
 case class ExternalCreditReward(
   description: DescriptionElements,
+  credit: DollarAmount,
   applied: Option[PublicId[AccountEvent]]
 )
 object ExternalCreditReward {
+  implicit val ecrDollarAmount = DollarAmount.formatAsCents
   implicit val writes = Json.writes[ExternalCreditReward]
 }
 
-case class CreditRewardsView(rewards: Map[RewardCategory, Seq[ExternalCreditReward]])
+case class CreditRewardsView(rewards: Seq[(RewardCategory, Seq[ExternalCreditReward])])
 object CreditRewardsView {
-  private implicit val categorizedRewardsWrites: Writes[Map[RewardCategory, Seq[ExternalCreditReward]]] = Writes { m =>
-    JsArray(m.toSeq.sortBy(_._1).map {
+  private implicit val categorizedRewardsWrites: Writes[Seq[(RewardCategory, Seq[ExternalCreditReward])]] = Writes { lol =>
+    JsArray(lol.map {
       case (category, rewards) => Json.obj("category" -> category, "items" -> rewards)
     })
   }
