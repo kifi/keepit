@@ -289,10 +289,11 @@ class UserCommanderImpl @Inject() (
       val pendingOrgViews = pendingOrgs.map(orgId => organizationCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
 
       val emailHostnames = emails.flatMap(email => NormalizedHostname.fromHostname(EmailAddress.getHostname(email.address)))
-      val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values.map(_.organizationId)
-      val potentialOrgs = potentialOrgIds.map(orgId => organizationCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
+      val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values
+        .collect { case ownership if !orgs.contains(ownership.organizationId) && !pendingOrgs.contains(ownership.organizationId) => ownership.organizationId }
+      val potentialOrgViews = potentialOrgIds.map(orgId => organizationCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
 
-      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgs.toSeq)
+      (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgViews.toSeq)
     }
 
     val emailInfos = emails.sortBy { e => (e.primary, !e.verified, e.id.get.id) }.reverse.map {
