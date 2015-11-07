@@ -87,6 +87,12 @@ angular.module('kifi')
           return response;
         });
       },
+      getRewards: function (pubId) {
+        return net
+        .getRewards(pubId)
+        .then(getResponseData);
+      },
+
       invalidateCache: invalidateCache
     };
 

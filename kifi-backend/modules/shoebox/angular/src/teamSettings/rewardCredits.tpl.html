@@ -1,0 +1,31 @@
+<div class="kf-reward-credits kf-container">
+  <div class="kf-container-header">
+    <h2>Earn more credit for your team</h2>
+  </div>
+  <div class="kf-container-body">
+    <p>
+      In addition to sharing your team’s referral code,
+      you can earn credit for your team by completing the checklists below.
+    </p>
+    <div class="kf-container-section" ng-repeat="category in rewards">
+      <h3 class="kf-reward-credits-section-title" ng-bind="getCategoryFromKey(category.category)"></h3>
+      <ul class="kf-reward-credits-items" ng-if="category.items.length">
+        <li
+          class="kf-reward-credits-item"
+          ng-repeat="item in category.items"
+          ng-class="{
+            'kf-reward-credits-item-complete': !!item.applied
+          }"
+        >
+          <span class="kf-reward-credits-check" ng-class="{ 'svg-checkmark-green': !!item.applied }"></span>
+          <div class="kf-reward-credits-bust-flex">
+            <span kf-structured-text segments="item.description"></span>
+          </div>
+        </li>
+      </ul>
+      <p class="kf-reward-credits-empty" ng-if="category.items.length === 0">
+        Nothing to see here, yet ;)
+      </p>
+    </div>
+  </div>
+</div>

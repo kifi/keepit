@@ -47,7 +47,7 @@
       </div>
     </div>
     <form class="kf-container-section kf-payment-plan-form" name="planSelectsForm">
-      <h2 class="kf-heading-pull">Choose your Plan</h2>
+      <h2>Choose your Plan</h2>
       <p>Select which plan you'd like for your team on Kifi. Contact us if you're either a <a class="kf-link" href="mailto:nonprofit@kifi.com" ng-click="trackClick('choose_plan:nonprofit_link')">non-profit</a> or <a class="kf-link" href="mailto:educational@kifi.com" ng-click="trackClick('choose_plan:educational_link')">educational institution</a> for free or discounted rates. Learn more on our <a class="kf-link" href="/about/pricing" target="_self" ng-click="trackClick('choose_plan:pricing_page')">pricing guide</a>.</p>
       <div class="custom-select kf-button">
         <select
@@ -75,7 +75,7 @@
     </div>
     <div class="kf-container-section" ng-if="isPaidPlanName(plan.name)">
       <form name="creditCardForm">
-        <h2 class="kf-heading-pull">Manage your Credit Card Information</h2>
+        <h2>Manage your Credit Card Information</h2>
         <p>
           <span ng-if="!card">You haven't added a card yet, and you'll need to add a card to upgrade your plan.</span>
           <span ng-if="card">
