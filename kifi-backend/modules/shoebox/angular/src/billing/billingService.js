@@ -15,7 +15,8 @@ angular.module('kifi')
         net.getBillingContacts,
         net.getBillingEvents,
         net.getBillingPlans,
-        net.getReferralCode
+        net.getReferralCode,
+        net.getRewards
       ].forEach(function (endpoint) {
         endpoint.clearCache();
       });
