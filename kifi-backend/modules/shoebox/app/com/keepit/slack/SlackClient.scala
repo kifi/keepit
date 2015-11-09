@@ -47,7 +47,9 @@ class SlackClientImpl(
   implicit val ec: ExecutionContext)
     extends SlackClient with Logging {
   def sendToSlack(url: String, msg: BasicSlackMessage): Future[SlackResponse] = {
+    println(s"About to send $msg to $url")
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).map { clientResponse =>
+      println("Got a response")
       clientResponse.json.as[SlackResponse]
     }
   }

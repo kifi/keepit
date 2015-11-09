@@ -14,7 +14,7 @@ case class ProdSlackClientModule() extends SlackClientModule {
 
   @Singleton
   @Provides
-  def stripeClient(httpClient: HttpClient, mode: Mode, ec: ExecutionContext): SlackClient = {
+  def slackClient(httpClient: HttpClient, mode: Mode, ec: ExecutionContext): SlackClient = {
     new SlackClientImpl(httpClient, mode, ec)
   }
 }
@@ -24,7 +24,7 @@ case class FakeSlackClientModule() extends SlackClientModule {
 
   @Singleton
   @Provides
-  def stripeClient(): SlackClient = {
+  def slackClient(): SlackClient = {
     new FakeSlackClientImpl()
   }
 }
