@@ -18,5 +18,10 @@
     </div>
   </section>
   <div kf-redeem-credits profile="profile" standalone="true" on-apply="trackApplyCodeClick" autofocus="true"></div>
-  <div ng-if="hasPermission(ORG_PERMISSION.MANAGE_PLAN)" kf-reward-credits profile="profile"></div>
+  <div ng-if="isKifiAdmin && hasPermission(ORG_PERMISSION.MANAGE_PLAN)" kf-reward-credits profile="profile"></div>
+  <div ng-if="!isKifiAdmin">
+    <h3 class="kf-earn-credits-activity kf-earn-credits-activity-header">Coming Soon: your team's referral activity</h3>
+    <p class="kf-earn-credits-activity kf-earn-credits-activity-body">In the meantime, we'll email you if anyone uses your referral
+  code upon creating and upgrading a team.</p>
+  </div>
 </div>

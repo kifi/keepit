@@ -3,11 +3,12 @@
 angular.module('kifi')
 
 .controller('EarnCreditsCtrl', [
-  '$scope', 'billingService', '$timeout', 'ORG_PERMISSION',
-  function ($scope, billingService, $timeout, ORG_PERMISSION) {
+  '$scope', '$timeout', 'billingService', 'profileService', 'ORG_PERMISSION',
+  function ($scope, $timeout, billingService, profileService, ORG_PERMISSION) {
     $scope.redeemCode = '';
     $scope.trackingType = 'org_settings:earn_credits';
     $scope.ORG_PERMISSION = ORG_PERMISSION;
+    $scope.isKifiAdmin = (profileService.me.experiments.indexOf('admin') > -1);
     $scope.hasPermission = function () {
       return $scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) > -1;
     };
