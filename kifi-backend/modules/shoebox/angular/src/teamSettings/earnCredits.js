@@ -3,15 +3,15 @@
 angular.module('kifi')
 
 .controller('EarnCreditsCtrl', [
-  '$scope', 'billingService', '$timeout',
-  function ($scope, billingService, $timeout) {
-    billingService.getReferralCode($scope.profile.id)
-      .then(function(response) {
-      $scope.referralCode = response.code;
-      });
-
+  '$scope', '$timeout', 'billingService', 'profileService', 'ORG_PERMISSION',
+  function ($scope, $timeout, billingService, profileService, ORG_PERMISSION) {
     $scope.redeemCode = '';
     $scope.trackingType = 'org_settings:earn_credits';
+    $scope.ORG_PERMISSION = ORG_PERMISSION;
+    $scope.isKifiAdmin = (profileService.me.experiments.indexOf('admin') > -1);
+    $scope.hasPermission = function () {
+      return $scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) > -1;
+    };
 
     $scope.copied = false;
     $scope.showCopied = function () {
@@ -29,5 +29,10 @@ angular.module('kifi')
     };
 
     $scope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:settings:earn_credits' });
+
+    billingService.getReferralCode($scope.profile.id)
+    .then(function(response) {
+      $scope.referralCode = response.code;
+    });
   }
 ]);

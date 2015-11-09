@@ -53,6 +53,7 @@ angular.module('kifi')
       setBillingPlan: post(shoebox, '/admin/billing/plan?pubId=:pubId&planPubId=:planPubId'),
       getReferralCode: get(shoebox, '/organizations/:id/referralCode', 30),
       applyReferralCode: post(shoebox, '/organizations/:id/redeemCode'),
+      getRewards: get(shoebox, '/organizations/:id/rewards', 30),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
 

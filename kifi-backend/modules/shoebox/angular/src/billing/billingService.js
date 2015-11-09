@@ -15,7 +15,8 @@ angular.module('kifi')
         net.getBillingContacts,
         net.getBillingEvents,
         net.getBillingPlans,
-        net.getReferralCode
+        net.getReferralCode,
+        net.getRewards
       ].forEach(function (endpoint) {
         endpoint.clearCache();
       });
@@ -87,6 +88,12 @@ angular.module('kifi')
           return response;
         });
       },
+      getRewards: function (pubId) {
+        return net
+        .getRewards(pubId)
+        .then(getResponseData);
+      },
+
       invalidateCache: invalidateCache
     };
 

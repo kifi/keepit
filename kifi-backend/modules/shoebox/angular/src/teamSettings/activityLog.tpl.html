@@ -15,10 +15,7 @@
         <tr ng-repeat="b in billingEvents">
           <td ng-bind="b.eventTime | amDateFormat:'YYYY-MM-DD'"></td>
           <td class="kf-team-activity-entry">
-            <span ng-repeat="descriptionSegment in b.description">
-              <span ng-if="!descriptionSegment.url" ng-bind="descriptionSegment.text"></span><!--
-             --><a class="kf-link kf-link-underline" ng-if="descriptionSegment.url" ng-href="{{ descriptionSegment.url }}" ng-bind="descriptionSegment.text" ng-click="trackActivityClick(descriptionSegment.url)"></a>
-            </span>
+            <span kf-structured-text segments="b.description"></span>
           </td>
           <td
             ng-bind="b.creditChange | moneyDelta"
