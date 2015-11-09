@@ -226,17 +226,17 @@ tooltip-arrow-right()
 
   &:hover
     &:before
-    .kf-tooltip-body
+    > .kf-tooltip-body
       tooltip-hover-show()
 
-    .kf-tooltip-body
+    > .kf-tooltip-body
       tooltip-hover-slide()
 
   &[data-kf-tooltip-position="bottom"]
     .kf-tooltip-body
       tooltip-body-bottom()
 
-    &:hover .kf-tooltip-body
+    &:hover > .kf-tooltip-body
       tooltip-hover-slide-bottom()
 
     &:before
@@ -246,7 +246,7 @@ tooltip-arrow-right()
     .kf-tooltip-body
       tooltip-body-left()
 
-    &:hover .kf-tooltip-body
+    &:hover > .kf-tooltip-body
       tooltip-hover-slide-left()
 
     &:before
@@ -256,7 +256,7 @@ tooltip-arrow-right()
     .kf-tooltip-body
       tooltip-body-right()
 
-    &:hover .kf-tooltip-body
+    &:hover > .kf-tooltip-body
       tooltip-hover-slide-right()
 
     &:before

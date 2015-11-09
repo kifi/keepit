@@ -2,6 +2,7 @@ package com.keepit.common.controller
 
 import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.net.URI
+import play.api.Mode
 import play.api.mvc.{ Request, Result }
 import play.api.http.Status.OK
 
@@ -22,35 +23,46 @@ private sealed trait Augmentor {
 }
 
 private object Security extends Augmentor {
-  def augment[A](result: Result)(implicit request: Request[A]): Result = {
-    if (request.rawQueryString.contains("andrew-testing-security-headers")) {
+  private val dev = if (play.api.Play.maybeApplication.exists(_.mode == Mode.Dev)) {
+    "dev.ezkeep.com:9000 www.google-analytics.com d1scct5mnc9d9m.cloudfront.net"
+  } else ""
 
-      val nonce = CryptoSupport.generateHexSha256("kifi nonce salt" + request.id)
-      val csp = {
-        "" +
-          "style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
-          //           ↓ CDN                          ↓ Google Analytics          ↓ Amplitude               ↓ Mixpanel     ↓ AngularJS does this for performance
-          s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com 'unsafe-eval' 'nonce-$nonce'; " +
-          "font-src fonts.gstatic.com; " +
-          //               ↓ Assets CDN                  ↓ Images CDN
-          "img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net; " +
-          // child-src
-          // form-action
-          // frame-ancestors
-          // frame-src
-          //                          ↓ Tracking uses `connect`        ↓ CDN, `connect` used for svgs
-          "default-src *.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net"
+  def augment[A](result: Result)(implicit request: Request[A]): Result = {
+    val useTestHeaders = request.cookies.get("security-headers-test").isDefined
+
+    if (useTestHeaders) {
+      val cspIfNeeded: (String, String) = {
+        if (result.header.headers.get("X-Nonce").isDefined && result.header.headers.get("Content-Type").exists(_.startsWith("text/html"))) {
+          val nonce = result.header.headers.get("X-Nonce").get
+          val cspStr =
+            "" +
+              s"style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
+              s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com connect.facebook.net platform.twitter.com js.stripe.com checkout.stripe.com 'unsafe-eval' 'nonce-$nonce' $dev; " +
+              s"font-src fonts.gstatic.com; " +
+              s"img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net static.xx.fbcdn.net q.stripe.com $dev; " +
+              s"form-action www.kifi.com api.kifi.com $dev; " +
+              s"frame-src www.kifi.com *.facebook.com *.stripe.com; " + // to support Safari 9
+              s"child-src www.kifi.com *.facebook.com *.stripe.com; " +
+              s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net *.stripe.com $dev; " +
+              "report-uri https://www.kifi.com/up/report"
+
+          //val report = if (request.rawQueryString.contains("--report-csp")) "; report-uri https://www.kifi.com/up/report" else ""
+
+          "Content-Security-Policy" -> cspStr // + report
+        } else {
+          "" -> ""
+        }
       }
 
-      val report = if (request.rawQueryString.contains("--report-csp")) "; report-uri https://www.kifi.com/up/report" else ""
-      result.withHeaders(
+      val headers = Seq(
         "Strict-Transport-Security" -> "max-age=16070400; includeSubDomains",
-        "X-Frame-Options" -> "deny",
         "X-XSS-Protection" -> "1; mode=block",
         "X-Content-Type-Options" -> "nosniff",
-        // REMOVE `unsafe-inline`s
-        "Content-Security-Policy-Report-Only" -> (csp + report)
-      )
+        "X-Frame-Options" -> "SAMEORIGIN",
+        cspIfNeeded
+      ).filter(_._1.nonEmpty)
+
+      result.withHeaders(headers: _*)
     } else {
       result
     }
@@ -85,11 +97,11 @@ private object Kcid extends Augmentor {
   }
 
   private def augmentNonUser[A](result: Result)(implicit request: Request[A]): Result = {
-    val referrerOpt = request.headers.get("Referer").flatMap { ref =>
+    lazy val referrerOpt = request.headers.get("Referer").flatMap { ref =>
       URI.parse(ref).toOption.flatMap(_.host).map(_.name)
     }
     request.session.get("kcid").map { existingKcid =>
-      if (existingKcid.startsWith("organic") && referrerOpt.exists(!_.contains("kifi.com"))) {
+      if (existingKcid == "na-organic-na" && referrerOpt.exists(!_.contains("kifi.com"))) {
         result.removingFromSession("kcid").addingToSession("kcid" -> s"na-organic-${referrerOpt.getOrElse("na")}")(request)
       } else {
         result

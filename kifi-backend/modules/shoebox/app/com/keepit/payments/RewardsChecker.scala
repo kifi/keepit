@@ -5,6 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.performance.StatsdTiming
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.payments.RewardKind.RewardChecklistKind
@@ -63,16 +64,11 @@ class RewardsChecker @Inject() (
     sendValidRewardTriggers(orgId)
   }
 
-  def checkAccounts(modulus: Int = 7): Unit = {
+  @StatsdTiming("RewardsChecker.checkAccounts")
+  def checkAccounts(modulus: Int = 3): Unit = {
     // we are going to process ~1/modulus of the orgs, based on the date
     val partition = clock.now.getDayOfYear % modulus
-    // val orgIds = db.readOnlyReplica { implicit session => paidAccountRepo.getIdSubsetByModulus(modulus, partition) }
-
-    // Until we're sure this won't give people way too much credit, only run it on orgs owned by admins
-    val orgIds = db.readOnlyReplica { implicit session =>
-      val adminIds = userExperimentRepo.getUserIdsByExperiment(UserExperimentType.ADMIN)
-      adminIds.toSet.flatMap { uid: Id[User] => orgRepo.getAllByOwnerId(uid).map(_.id.get) }
-    }
+    val orgIds = db.readOnlyReplica { implicit session => paidAccountRepo.getIdSubsetByModulus(modulus, partition) }
     orgIds.foreach(checkAccount)
   }
 

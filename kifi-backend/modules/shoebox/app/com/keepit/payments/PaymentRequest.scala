@@ -18,7 +18,7 @@ sealed abstract class PaymentRequest
 case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boolean) extends PaymentRequest
 
 @json
-case class CardInfo(token: StripeToken, lastFour: String, brand: String)
+case class CardInfo(lastFour: String, brand: String)
 
 case class AccountStateResponse(
   users: Int,

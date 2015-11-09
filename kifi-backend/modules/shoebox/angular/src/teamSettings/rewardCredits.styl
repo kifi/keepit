@@ -1,0 +1,41 @@
+.kf-reward-credits-section-title
+  font-weight: bold
+
+.kf-reward-credits-empty
+.kf-reward-credits-items
+  padding-left: 10px
+
+.kf-reward-credits-items
+  margin-top: 10px
+
+.kf-reward-credits-item
+  display: flex
+  flex-wrap: row-wrap
+  align-items: center
+  font-size: 13px
+
+  // Children adjacent to each other
+  > * + *
+    margin-left: 5px
+
+  // Siblings of the same type
+  & + &
+    margin-top: 5px
+
+.kf-reward-credits-check
+  display: inline-block
+  flex-shrink: 0
+  width: 23px
+  height: 23px
+  border: 1px solid #bbb
+  border-radius: 50%
+
+  background-position: center
+  background-size: 14px 14px
+  background-repeat: no-repeat
+
+.kf-reward-credits-item-complete
+  color: accentGreen
+
+  .kf-reward-credits-check
+    border-color: accentGreen

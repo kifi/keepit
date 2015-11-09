@@ -2,12 +2,12 @@
 
 angular.module('kifi')
 
-.directive('kfRedeemCredits', [ 'billingService', '$filter', '$timeout',
-  function (billingService, $filter, $timeout) {
-
-
+.directive('kfRedeemCredits', [
+  'billingService', '$timeout',
+  function (billingService, $timeout) {
     return {
       restrict: 'A',
+      replace: true,
       templateUrl: 'teamSettings/redeemCredits.tpl.html',
       scope: {
         profile: '=',
@@ -15,8 +15,7 @@ angular.module('kifi')
         onApply: '=',
         autofocus: '='
       },
-      link: function($scope, $element) {
-
+      link: function ($scope, $element) {
         $scope.$error = {};
         $scope.creditRedeemed = 0;
 

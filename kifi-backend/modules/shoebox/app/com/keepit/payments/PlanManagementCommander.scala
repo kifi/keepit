@@ -14,6 +14,7 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
+import com.stripe.exception.APIException
 import org.joda.time.{ DateTime, Days }
 import play.api.libs.json._
 
@@ -372,7 +373,9 @@ class PlanManagementCommanderImpl @Inject() (
       (account, plan)
     }
     val cardFut = getDefaultPaymentMethod(orgId).map { method =>
-      stripe.getCardInfo(method.stripeToken).map(Some(_))
+      stripe.getCardInfo(method.stripeToken).map(Some(_)).recover {
+        case ex: APIException => None
+      }
     }.getOrElse(Future.successful(None))
 
     cardFut.map { card =>

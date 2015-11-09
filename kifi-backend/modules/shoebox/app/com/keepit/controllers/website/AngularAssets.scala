@@ -2,9 +2,11 @@ package com.keepit.controllers.website
 
 import java.io.StringWriter
 
+import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.concurrent.ExecutionContext.immediate
 import com.keepit.common.controller.{ MaybeUserRequest, UserRequest, NonUserRequest }
 import com.keepit.common.core._
+import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.http._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
@@ -21,6 +23,7 @@ import scala.concurrent.Future
 object AngularApp extends Controller with Logging {
 
   val COMMENT_STRING = "<!-- HEADER_PLACEHOLDER -->"
+  val NONCE_STRING = "<!-- NONCE_PLACEHOLDER -->"
 
   private def index(): (Enumerator[String], Enumerator[String]) = {
     val fileStream = Play.resourceAsStream("public/ng/index_cdn.html").orElse(Play.resourceAsStream("public/ng/index.html")).get
@@ -54,9 +57,12 @@ object AngularApp extends Controller with Logging {
   }
 
   @inline
-  private def augmentPage(head: Future[String], feet: => Seq[Future[String]] = Seq.empty): Enumerator[String] = {
+  private def augmentPage(nonce: String, head: Future[String], feet: => Seq[Future[String]] = Seq.empty)(implicit request: MaybeUserRequest[_]): Enumerator[String] = {
     val (idx1, idx2) = maybeCachedIndex
-    idx1 andThen enumerateFuture(head) andThen idx2 andThen enumerateFutures(feet) andThen Enumerator.eof
+    val noncedIdx2 = idx2.map { body =>
+      body.replaceAllLiterally(NONCE_STRING, nonce)
+    }(ExecutionContext.immediate)
+    idx1 andThen enumerateFuture(head) andThen noncedIdx2 andThen enumerateFutures(feet) andThen Enumerator.eof
   }
 
   def app(makeBotMetadata: Option[() => Future[String]] = None)(implicit request: MaybeUserRequest[_]): Result = {
@@ -68,7 +74,8 @@ object AngularApp extends Controller with Logging {
       case _ =>
         Future.successful("<title>Kifi</title>")
     }
-    Ok.chunked(augmentPage(head)).as(HTML)
+    val nonce = CryptoSupport.generateHexSha256("Kifi nonce s@lt" + request.id)
+    Ok.chunked(augmentPage(nonce, head)).as(HTML).withHeaders("X-Nonce" -> nonce)
   }
 
   def app(makeBotMetadata: () => Future[String])(implicit request: MaybeUserRequest[_]): Result = app(Some(makeBotMetadata))

@@ -1,0 +1,24 @@
+<span class="kf-structured-text">
+  <span ng-repeat="segment in getSegments()">
+    <a
+      class="kf-link kf-link-underline"
+      ng-if="isSegmentLink(segment)"
+      ng-href="{{ segment.url }}"
+      ng-bind="segment.text"
+      ng-click="trackActivityClick(descriptionSegment.url)"
+    ></a><!--
+    --><div
+      class="kf-link kf-link-underline kf-link-black kf-structured-text-hover kf-tooltip-parent"
+      ng-if="isSegmentHover(segment) && segment.hover.length > 0"
+    >
+      <span ng-bind="segment.text"></span>
+      <div class="kf-tooltip-body">
+        <span kf-structured-text segments="segment.hover"></span>
+      </div>
+    </div><!--
+    --><span
+      ng-if="isSegmentText(segment)"
+      ng-bind="segment.text"
+    ></span>
+  </span>
+</span>

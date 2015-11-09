@@ -1,7 +1,7 @@
 package com.keepit.eliza.controllers
 
 import com.keepit.common.strings._
-import com.keepit.common.controller.ElizaServiceController
+import com.keepit.common.controller.{ KifiSession, ElizaServiceController }
 import com.keepit.common.db.Id
 import com.keepit.model.{ UserExperimentType, KifiVersion, KifiExtVersion, KifiIPhoneVersion, KifiAndroidVersion, User, SocialUserInfo }
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -114,45 +114,62 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   // A hack which allows us to pass the SecureSocial session ID (sid) by query string.
   // This is mainly a workaround for the mobile client, since the library we use doesn't support cookies
-  private def getAuthenticatorFromRequest()(implicit request: RequestHeader): Option[Authenticator] =
-    SecureSocial.authenticatorFromRequest orElse {
-      (for {
-        sid <- request.queryString.get("sid").map(_.head)
-        auth <- Authenticator.find(sid).fold(_ => None, Some(_)).flatten
-      } yield auth) match {
-        case Some(auth) if !auth.isValid =>
-          Authenticator.delete(auth.id)
-          None
-        case maybeAuth => maybeAuth
+  private def getUserIdFromRequest(implicit request: RequestHeader): Future[Option[Id[User]]] = {
+    request.session.get(KifiSession.FORTYTWO_USER_ID).map { userIdStr =>
+      Future.successful(Try(userIdStr.toLong).map(Id[User](_)).toOption)
+    }.getOrElse {
+      // Fall back to SecureSocial's blocking API to do true lookups to shoebox
+      val authenticatorOpt = SecureSocial.authenticatorFromRequest(request).orElse {
+        (for {
+          sid <- request.queryString.get("sid").map(_.head)
+          auth <- Authenticator.find(sid).fold(_ => None, Some(_)).flatten
+        } yield auth) match {
+          case Some(auth) if !auth.isValid =>
+            Authenticator.delete(auth.id)
+            log.info(s"[getUserIdFromRequest] Refusing auth because not valid: ${request.headers.toSimpleMap.toString}")
+            None
+          case maybeAuth => maybeAuth
+        }
+      }
+      authenticatorOpt.map { auth =>
+        shoebox.getUserIdentity(auth.identityId).map {
+          case Some(identity) if identity.userId.isDefined =>
+            identity.userId
+          case _ =>
+            log.warn(s"[getUserIdFromRequest] Auth exists, no userId in identity. ${auth.identityId.providerId} :: ${auth.identityId.userId}.")
+            None
+        }
+      }.getOrElse {
+        log.warn(s"[getUserIdFromRequest] Could not find user. ${request.headers.toSimpleMap.toString}")
+        Future.successful(None)
       }
     }
+  }
 
-  private def authenticate(implicit request: RequestHeader): Option[Future[Option[StreamSession]]] = {
-    for { // Options
-      auth <- getAuthenticatorFromRequest()
-    } yield {
-      (for { // Futures
-        userIdOpt <- shoebox.getUserIdentity(auth.identityId).map(_.flatMap(_.userId))
-      } yield {
-        userIdOpt.map { userId =>
-          userExperimentCommander.getExperimentsByUser(userId).flatMap { experiments =>
-            val userAgent = request.headers.get("User-Agent").getOrElse("NA")
-            if (experiments.contains(UserExperimentType.ADMIN)) {
-              impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME)) map { impExtUserId =>
-                for {
-                  impUserId <- shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
-                } yield {
-                  StreamSession(impUserId, experiments, Some(userId), userAgent)
-                }
-              } getOrElse {
-                Future.successful(StreamSession(userId, experiments, Some(userId), userAgent))
+  private def authenticate(implicit request: RequestHeader): Future[Option[StreamSession]] = {
+    getUserIdFromRequest(request).flatMap { userIdOpt =>
+      userIdOpt.map { userId =>
+        userExperimentCommander.getExperimentsByUser(userId).flatMap { experiments =>
+          val userAgent = request.headers.get("User-Agent").getOrElse("NA")
+          if (experiments.contains(UserExperimentType.ADMIN)) {
+            impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME)) map { impExtUserId =>
+              for {
+                impUserId <- shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
+              } yield {
+                StreamSession(impUserId, experiments, Some(userId), userAgent)
               }
-            } else {
-              Future.successful(StreamSession(userId, experiments, None, userAgent))
+            } getOrElse {
+              Future.successful(StreamSession(userId, experiments, Some(userId), userAgent))
             }
-          } map { Some(_): Option[StreamSession] }
-        } getOrElse (Future.successful(None)) //from Option[Future] => Future[Option]
-      }) flatMap identity
+          } else {
+            Future.successful(StreamSession(userId, experiments, None, userAgent))
+          }
+        }.map { session =>
+          Some(session): Option[StreamSession]
+        }
+      }.getOrElse {
+        Future.successful(None)
+      }
     }
   }
 
@@ -165,53 +182,46 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         Right((Iteratee.ignore, Enumerator(Json.arr("bye", "shutdown")) >>> Enumerator.eof))
       }
     } else {
-      authenticate(request) match {
-        case Some(streamSessionOptFuture) =>
-          val iterateeAndEnumeratorFuture = streamSessionOptFuture.map { streamSessionOpt =>
-            //type inference fail
-            val temp: Either[play.api.mvc.Result, (Iteratee[JsArray, _], Enumerator[JsArray])] = streamSessionOpt.map { streamSession =>
-              implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
+      val iterateeAndEnumeratorFuture = authenticate(request).map { streamSessionOpt =>
+        //type inference fail
+        val response: (Iteratee[JsArray, Unit], Enumerator[JsArray]) = streamSessionOpt.map { streamSession =>
+          implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
 
-              val typedVersionOpt: Option[KifiVersion] = try {
-                UserAgent(streamSession.userAgent) match {
-                  case ua if ua.isKifiIphoneApp || versionOpt.exists(_.startsWith("m")) => versionOpt.map { v => KifiIPhoneVersion(v.stripPrefix("m")) }
-                  case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
-                  case _ => versionOpt.map(KifiExtVersion.apply)
-                }
-              } catch {
-                case t: Throwable =>
-                  airbrake.notify(s"Failed getting ws client version for user ${streamSession.userId} on ${streamSession.userAgent}", t)
-                  None
-              }
-
-              val ipOpt: Option[String] = eipOpt.flatMap { eip =>
-                crypt.decrypt(ipkey, eip).toOption
-              }
-              val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, typedVersionOpt, streamSession.userAgent, ipOpt)
-              reportConnect(streamSession, socketInfo, request, connectTimer)
-              var startMessages = Seq[JsArray](Json.arr("hi"))
-              if (updateNeeded(typedVersionOpt, streamSession.userId)) {
-                startMessages = startMessages :+ Json.arr("version", "new")
-              }
-              onConnect(socketInfo)
-              val finalEnum = Enumerator(startMessages: _*) >>> enumerator
-              Right((iteratee(streamSession, versionOpt, socketInfo, channel), finalEnum))
-            } getOrElse {
-              Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
+          val typedVersionOpt: Option[KifiVersion] = try {
+            UserAgent(streamSession.userAgent) match {
+              case ua if ua.isKifiIphoneApp || versionOpt.exists(_.startsWith("m")) => versionOpt.map { v => KifiIPhoneVersion(v.stripPrefix("m")) }
+              case ua if ua.isKifiAndroidApp => versionOpt.map(KifiAndroidVersion.apply)
+              case _ => versionOpt.map(KifiExtVersion.apply)
             }
-            temp
-          }
-          iterateeAndEnumeratorFuture.onFailure {
+          } catch {
             case t: Throwable =>
-              airbrake.notify("Fatal error when establishing websocket connection", t)
+              airbrake.notify(s"Failed getting ws client version for user ${streamSession.userId} on ${streamSession.userAgent}", t)
+              None
           }
-          iterateeAndEnumeratorFuture
-        case None => Future.successful {
-          statsd.incrementOne(s"websocket.anonymous", ONE_IN_HUNDRED)
-          accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
-          Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
+
+          val ipOpt: Option[String] = eipOpt.flatMap { eip =>
+            crypt.decrypt(ipkey, eip).toOption
+          }
+          val socketInfo = SocketInfo(channel, clock.now, streamSession.userId, streamSession.experiments, typedVersionOpt, streamSession.userAgent, ipOpt)
+          reportConnect(streamSession, socketInfo, request, connectTimer)
+          var startMessages = Seq[JsArray](Json.arr("hi"))
+          if (updateNeeded(typedVersionOpt, streamSession.userId)) {
+            startMessages = startMessages :+ Json.arr("version", "new")
+          }
+          onConnect(socketInfo)
+          val finalEnum = Enumerator(startMessages: _*) >>> enumerator
+          (iteratee(streamSession, versionOpt, socketInfo, channel), finalEnum)
+        }.getOrElse {
+          log.info(s"[websocket] Denied client because no user found: ${request.headers.toSimpleMap.toString}")
+          (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
         }
+        response
       }
+      iterateeAndEnumeratorFuture.onFailure {
+        case t: Throwable =>
+          airbrake.notify("Fatal error when establishing websocket connection", t)
+      }
+      iterateeAndEnumeratorFuture.map(Right(_))
     }
   }
 
