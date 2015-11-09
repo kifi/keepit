@@ -1,44 +1,21 @@
 package com.keepit.slack
 
+import java.net.URLEncoder
+
+import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ HttpClient, DirectUrl }
-import com.kifi.macros.json
+import com.keepit.common.net.{DirectUrl, HttpClient}
+import com.keepit.model.User
 import play.api.Mode.Mode
-import play.api.libs.functional.syntax._
+import play.api.http.Status
 import play.api.libs.json._
 
-import scala.concurrent.{ ExecutionContext, Future }
-
-@json
-case class SlackAttachment(fallback: String, text: String)
-
-case class BasicSlackMessage( // https://api.slack.com/incoming-webhooks
-  text: String,
-  channel: Option[String] = None,
-  username: String = "Kifi",
-  iconUrl: String = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png",
-  attachments: Seq[SlackAttachment] = Seq.empty)
-
-object BasicSlackMessage {
-  implicit val writes: Writes[BasicSlackMessage] = Writes { o =>
-    Json.obj("text" -> o.text, "channel" -> o.channel, "username" -> o.username, "icon_url" -> o.iconUrl, "attachments" -> o.attachments)
-  }
-}
-
-// TODO(ryan): this is garbage, put real fields in here
-case class SlackResponse(
-  channel: String,
-  ok: Boolean)
-object SlackResponse {
-  val FAKE_SUCCESS = SlackResponse("dummy", ok = true)
-  implicit val format: Format[SlackResponse] = (
-    (__ \ 'channel).format[String] and
-    (__ \ 'ok).format[Boolean]
-  )(SlackResponse.apply, unlift(SlackResponse.unapply))
-}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 trait SlackClient {
-  def sendToSlack(url: String, msg: BasicSlackMessage): Future[SlackResponse]
+  def sendToSlack(url: String, msg: SlackMessage): Future[Try[Unit]]
+  def generateAuthorizationRequest(scopes: Set[SlackAuthScope], redirectUri: Option[String] = None): SlackAuthorizationRequest
 }
 
 class SlackClientImpl(
@@ -46,11 +23,32 @@ class SlackClientImpl(
   mode: Mode,
   implicit val ec: ExecutionContext)
     extends SlackClient with Logging {
-  def sendToSlack(url: String, msg: BasicSlackMessage): Future[SlackResponse] = {
-    println(s"About to send $msg to $url")
+
+  // Kifi Slack app properties
+  private val SLACK_CLIENT_ID = "garbage_client_id"
+  private val SLACK_CLIENT_SECRET = "garbage_client_secret"
+
+  def sendToSlack(url: String, msg: SlackMessage): Future[Try[Unit]] = {
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).map { clientResponse =>
-      println("Got a response")
-      clientResponse.json.as[SlackResponse]
+      (clientResponse.status, clientResponse.json) match {
+        case (Status.OK, ok) if ok.asOpt[String].contains("ok") => Success(())
+        case (status, payload) => Failure(SlackAPIFail(status, payload))
+      }
     }
+  }
+
+  def generateAuthorizationRequest(scopes: Set[SlackAuthScope], userId: ExternalId[User], redirectUri: Option[String] = None): SlackAuthorizationRequest = {
+    val uniqueToken = userId.id
+    val scopesStr = scopes.map(_.value).mkString(",")
+    val redirectStr = redirectUri.map(r => "&" + URLEncoder.encode(r, "ascii")).getOrElse("")
+    val url = s"https://slack.com/oauth/authorize?client_id=$SLACK_CLIENT_ID&scope=$scopesStr&state=$uniqueToken$redirectStr"
+    SlackAuthorizationRequest(url, scopes, uniqueToken, redirectUri)
+  }
+
+  private def processAuthorizationResponse(payload: JsValue): Try[SlackAuthorizationResponse] = {
+    payload.validate[SlackAuthorizationResponse].fold(
+      errs => Failure(errs.head._2.head),
+      sar => Success(sar)
+    )
   }
 }

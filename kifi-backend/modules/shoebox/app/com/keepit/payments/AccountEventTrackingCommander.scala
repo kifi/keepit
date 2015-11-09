@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.net.HttpClient
 import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
-import com.keepit.slack.{ BasicSlackMessage, SlackClient }
+import com.keepit.slack.{ SlackMessage, SlackClient }
 import play.api.Mode
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -67,7 +67,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
   private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
   def reportToSlack(msg: String, channel: String): Future[Unit] = {
     reportingLock.withLockFuture {
-      val fullMsg = BasicSlackMessage(
+      val fullMsg = SlackMessage(
         text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
         username = "Activity",
         channel = Some(channel)
