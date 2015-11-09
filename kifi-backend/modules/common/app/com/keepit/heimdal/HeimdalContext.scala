@@ -2,7 +2,6 @@ package com.keepit.heimdal
 
 import javax.xml.bind.DatatypeConverter
 
-import com.fasterxml.jackson.core.JsonParseException
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailTrackingParam
 import org.joda.time.DateTime
@@ -182,10 +181,7 @@ class HeimdalContextBuilder extends Logging {
         }
       } catch {
         // don't let these exceptions bubble up, but still log them
-        case iae: IllegalArgumentException => // base64 encode error
-          log.warn(s"HeimdalContextBuilder.addDistinctid(): amplitude_idkifi.com cookie is invalid: ${cookie.value}")
-        case je: JsonParseException =>
-          log.warn(s"HeimdalContextBuilder.addDistinctid(): amplitude_idkifi.com cookie is not valid json: ${cookie.value}")
+        case t: Throwable => log.warn(s"HeimdalContextBuilder.addDistinctid(): amplitude_idkifi.com cookie is invalid: ${cookie.value}")
       }
     }
   }
