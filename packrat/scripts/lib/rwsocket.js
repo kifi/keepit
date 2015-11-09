@@ -94,7 +94,7 @@ function ReconnectingWebSocket(url, opts) {
       sendOutboxMessages();
     } else if (e.data === '["denied"]') {
       log('#a00', '[RWS.onMessage1]', e.data);
-      disconnect('denied');
+      disconnect('denied', null, 'polite');
     } else if (e.data.lastIndexOf('["bye"', 0) === 0) {
       log('#a00', '[RWS.onMessage1]', e.data);
       disconnect('bye', null, 'polite');

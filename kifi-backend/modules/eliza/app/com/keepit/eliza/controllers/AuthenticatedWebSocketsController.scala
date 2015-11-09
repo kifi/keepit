@@ -122,6 +122,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
       } yield auth) match {
         case Some(auth) if !auth.isValid =>
           Authenticator.delete(auth.id)
+          log.info(s"[getAuthenticatorFromRequest] Refusing auth because not valid: ${request.headers.toSimpleMap.toString}")
           None
         case maybeAuth => maybeAuth
       }
@@ -150,8 +151,12 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
             } else {
               Future.successful(StreamSession(userId, experiments, None, userAgent))
             }
-          } map { Some(_): Option[StreamSession] }
-        } getOrElse (Future.successful(None)) //from Option[Future] => Future[Option]
+          }.map { session =>
+           Some(session): Option[StreamSession]
+          }
+        } getOrElse {
+          Future.successful(None)
+        } //from Option[Future] => Future[Option]
       }) flatMap identity
     }
   }
@@ -197,6 +202,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               val finalEnum = Enumerator(startMessages: _*) >>> enumerator
               Right((iteratee(streamSession, versionOpt, socketInfo, channel), finalEnum))
             } getOrElse {
+              log.info(s"[websocket] Denied client because no user found: ${request.headers.toSimpleMap.toString}")
               Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
             }
             temp
@@ -209,6 +215,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         case None => Future.successful {
           statsd.incrementOne(s"websocket.anonymous", ONE_IN_HUNDRED)
           accessLog.add(connectTimer.done(method = "DISCONNECT", body = "disconnecting anonymous user"))
+          log.info(s"[websocket] Denied client because no session found: ${request.headers.toSimpleMap}")
           Right((Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof))
         }
       }
