@@ -1,22 +1,21 @@
 package com.keepit.payments
 
-import com.google.inject.{ Singleton, ImplementedBy, Inject }
-import com.keepit.commanders.{ BasicSlackMessage, PathCommander }
-import com.keepit.common.akka.SafeFuture
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.PathCommander
 import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.core._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.mail.{ EmailAddress, LocalPostOffice, SystemEmailAddress, ElectronicMail }
-import com.keepit.common.net.{ HttpClient, DirectUrl }
-import com.keepit.model.{ Organization, OrganizationRepo, UserEmailAddressRepo, NotificationCategory }
+import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
+import com.keepit.common.net.HttpClient
+import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
+import com.keepit.slack.{ BasicSlackMessage, SlackClient }
 import play.api.Mode
-import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Try }
-import com.keepit.common.core._
 
 @ImplementedBy(classOf[AccountEventTrackingCommanderImpl])
 trait AccountEventTrackingCommander {
@@ -34,6 +33,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     paymentMethodRepo: PaymentMethodRepo,
     pathCommander: PathCommander,
     postOffice: LocalPostOffice,
+    slackClient: SlackClient,
     stripeClient: StripeClient,
     httpClient: HttpClient,
     mode: play.api.Mode.Mode,
@@ -65,18 +65,14 @@ class AccountEventTrackingCommanderImpl @Inject() (
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
   private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
-  def reportToSlack(msg: String, channel: String): Future[Unit] = reportingLock.withLockFuture {
-    SafeFuture {
-      if (msg.nonEmpty && mode == play.api.Mode.Prod) {
-        val fullMsg = BasicSlackMessage(
-          text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
-          username = "Activity",
-          channel = Some(channel)
-        )
-        httpClient.post(DirectUrl(slackChannelUrl), Json.toJson(fullMsg))
-      } else {
-        Future.successful(())
-      }
+  def reportToSlack(msg: String, channel: String): Future[Unit] = {
+    reportingLock.withLockFuture {
+      val fullMsg = BasicSlackMessage(
+        text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
+        username = "Activity",
+        channel = Some(channel)
+      )
+      slackClient.sendToSlack(slackChannelUrl, fullMsg).imap(_ => ())
     }
   }
 

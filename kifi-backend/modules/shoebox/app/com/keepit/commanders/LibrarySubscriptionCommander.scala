@@ -2,39 +2,23 @@ package com.keepit.commanders
 
 import java.net.URLEncoder
 
-import com.google.inject.{ ImplementedBy, Singleton, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ NonOKResponseException, ClientResponse, DirectUrl, CallTimeouts, HttpClient }
-import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.net.{ CallTimeouts, ClientResponse, DirectUrl, HttpClient, NonOKResponseException }
 import com.keepit.common.path.Path
 import com.keepit.model._
-import com.kifi.macros.json
-import play.api.libs.json._
+import com.keepit.slack.{ BasicSlackMessage, SlackAttachment }
 import play.api.http.Status._
+import play.api.libs.json._
 
-import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Try, Failure, Success }
-
-@json
-case class SlackAttachment(fallback: String, text: String)
-
-case class BasicSlackMessage( // https://api.slack.com/incoming-webhooks
-  text: String,
-  channel: Option[String] = None,
-  username: String = "Kifi",
-  iconUrl: String = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png",
-  attachments: Seq[SlackAttachment] = Seq.empty)
-
-object BasicSlackMessage {
-  implicit val writes = new Writes[BasicSlackMessage] {
-    def writes(o: BasicSlackMessage): JsValue = Json.obj("text" -> o.text, "channel" -> o.channel, "username" -> o.username, "icon_url" -> o.iconUrl, "attachments" -> o.attachments)
-  }
-}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[LibrarySubscriptionCommanderImpl])
 trait LibrarySubscriptionCommander {
