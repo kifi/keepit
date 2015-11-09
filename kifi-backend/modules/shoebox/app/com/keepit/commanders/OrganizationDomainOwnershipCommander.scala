@@ -10,6 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
 import org.joda.time.DateTime
+import play.api.libs.json.{ JsArray, Json }
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
 import scala.util.{ Success, Failure, Try }
@@ -22,6 +23,7 @@ trait OrganizationDomainOwnershipCommander {
   def removeDomainOwnership(orgId: Id[Organization], domainHostname: String): Option[OwnDomainFailure]
   def getSharedEmails(userId: Id[User], orgId: Id[Organization]): Set[EmailAddress]
   def getSharedEmailsHelper(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Set[EmailAddress]
+  def ignoreOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit
 }
 
 object OrganizationDomainOwnershipCommander {
@@ -51,6 +53,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     orgRepo: OrganizationRepo,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     domainRepo: DomainRepo,
+    userValueRepo: UserValueRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
     implicit val executionContext: ScalaExecutionContext) extends OrganizationDomainOwnershipCommander with Logging {
 
@@ -116,5 +119,12 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
       val hostnameOpt = NormalizedHostname.fromHostname(EmailAddress.getHostname(email))
       hostnameOpt.exists(orgDomains.contains)
     }.toSet
+  }
+
+  override def ignoreOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit = {
+    db.readWrite { implicit session =>
+      val newOrgsToIgnore = userValueRepo.getValue(userId, UserValues.ignoreDomainSharedOrganizations).as[JsArray] :+ Json.toJson(orgId)
+      userValueRepo.setValue(userId, UserValueName.IGNORE_DOMAIN_SHARED_ORGANIZATIONS, newOrgsToIgnore)
+    }
   }
 }

@@ -1,6 +1,7 @@
 package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.classify.NormalizedHostname
 import com.keepit.commanders.emails.EmailConfirmationSender
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -42,7 +43,10 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     userEmailAddressRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
     userRepo: UserRepo,
+    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     pendingInviteCommander: PendingInviteCommander,
+    orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
+    organizationMembershipCommander: OrganizationMembershipCommander,
     heimdalClient: HeimdalServiceClient,
     emailConfirmationSender: EmailConfirmationSender,
     clock: Clock,
@@ -53,9 +57,10 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit] = {
+    val sharedOrgOpt = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailAddress.address)).flatMap(orgDomainOwnershipRepo.getOwnershipForDomain(_).map(_.organizationId))
     val emailWithCode = userEmailAddressRepo.save(emailAddress.withVerificationCode(clock.now()))
     session.onTransactionSuccess {
-      emailConfirmationSender(emailWithCode) recoverWith {
+      emailConfirmationSender(emailWithCode, sharedOrgOpt) recoverWith {
         case error => {
           db.readWrite { implicit session => userEmailAddressRepo.save(emailWithCode.clearVerificationCode) }
           Future.failed(error)
@@ -67,10 +72,24 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def verifyEmailAddress(verificationCode: EmailVerificationCode)(implicit session: RWSession): Option[(UserEmailAddress, Boolean)] = { // returns Option(verifiedEmail, isVerifiedForTheFirstTime)
-    userEmailAddressRepo.getByCode(verificationCode).map { emailAddress =>
+    val emailAndIsFirstTimeOpt = userEmailAddressRepo.getByCode(verificationCode).map { emailAddress =>
       val isVerifiedForTheFirstTime = !emailAddress.verified
       (saveAsVerified(emailAddress), isVerifiedForTheFirstTime)
     }
+    emailAndIsFirstTimeOpt.foreach { case (email, _) => autoJoinOrgViaEmail(email) }
+    emailAndIsFirstTimeOpt
+  }
+
+  private def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
+    NormalizedHostname.fromHostname(EmailAddress.getHostname(verifiedEmail.address))
+      .flatMap(orgDomainOwnershipCommander.getOwningOrganization)
+      .foreach { orgToJoin =>
+        val addRequest = OrganizationMembershipAddRequest(orgToJoin.id.get, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId, adminIdOpt = None)
+        organizationMembershipCommander.addMembershipHelper(addRequest) match {
+          case Left(fail: OrganizationFail) => log.info(s"[domainAutoJoin] failed to add user ${verifiedEmail.userId} to org ${orgToJoin.id.get}, error: ${fail.message}")
+          case Right(success) => log.info(s"[domainAutoJoin] successfully added user ${verifiedEmail.userId} to org ${orgToJoin.id.get}")
+        }
+      }
   }
 
   def intern(userId: Id[User], address: EmailAddress, verified: Boolean = false)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)] = {
