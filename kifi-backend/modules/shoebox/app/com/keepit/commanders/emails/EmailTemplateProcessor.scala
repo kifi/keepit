@@ -239,6 +239,7 @@ class EmailTemplateProcessorImpl @Inject() (
           config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.organizationId => Organization.publicId(org.id.get).id
+        case tags.organizationName => org.name
         case tags.organizationLink =>
           val data = Json.obj("t" -> "oi", "oid" -> Organization.publicId(org.id.get).id, "at" -> orgAuthToken)
           config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
@@ -306,7 +307,7 @@ class EmailTemplateProcessorImpl @Inject() (
         case tags.firstName | tags.lastName | tags.fullName | tags.profileUrl |
           tags.unsubscribeUserUrl | tags.userExternalId => UserNeeded(userId)
         case tags.avatarUrl => AvatarUrlNeeded(userId)
-        case tags.organizationId | tags.organizationLink =>
+        case tags.organizationId | tags.organizationLink | tags.organizationName =>
           val orgId = tagArgs(0).as[Id[Organization]]
           OrganizationNeeded(orgId)
         case tags.libraryName | tags.libraryUrl | tags.libraryLink | tags.libraryOwnerFullName =>

@@ -1,5 +1,7 @@
-@(toUserId: Id[User], verifyUrl: String)
+@(toUserId: Id[User], verifyUrl: String, sharedDomainOrgOpt: Option[Id[Organization]])
 @import com.keepit.common.mail.template.helpers._
+
+@orgName = @{sharedDomainOrgOpt.map { orgId => organizationName(orgId) } }
 
 <div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif;padding:20px;">
 
@@ -8,6 +10,10 @@
 <p>To protect your privacy and security, please confirm your email address by clicking the link below:</p>
 
 <p><a href="@verifyUrl">@verifyUrl</a></p>
+
+@if(orgName.isDefined) {
+<p>Since you share an email domain with Kifi's @{orgName.get} team, you'll automatically become a member of their team by verifying.</p>
+}
 
 <p>We look forward seeing you on Kifi,</p>
 
