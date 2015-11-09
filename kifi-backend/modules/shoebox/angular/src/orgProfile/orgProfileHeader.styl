@@ -4,7 +4,6 @@ ophImageWidth = 100px
 .kf-oph
   background: pageHeaderColor
   color: #fff
-  position: relative
 
 .kf-oph-wrapper
   wrapper()
@@ -15,17 +14,6 @@ ophImageWidth = 100px
   padding-top: 50px
   max-width: 480px
   margin: 0 auto
-  display: flex
-  flex-direction: column
-
-  textarea.kf-edit-field
-    background: transparent
-
-  &.kf-editing
-    textarea.kf-edit-field
-      background: white
-      color: textDarkGrey
-
 
   .profile-image-widget
     width: ophImageWidth
@@ -36,18 +24,21 @@ ophImageWidth = 100px
     margin-bottom: 15px
 
 .kf-oph-upper-right
-  position: absolute
-  top: 15px
-  right: 0
-  left: 0
-  margin: auto 10px
-  text-align: right
   color: rgba(255,255,255,0.8)
+  margin: 0 20px
+  padding: 10px
+  border-top: 1px solid textLightGrey
+  border-bottom: 1px solid textLightGrey
 
   @media (min-width: 480px)
-    right: 25px
-    left: auto
-    margin: 0
+    position: absolute
+    top: 15px
+    right: 0
+    left: 0
+    margin: auto 10px
+    padding: 0
+    border: 0
+    text-align: right
 
   .kf-oph-credit-banner
     margin-top: 10px
@@ -62,116 +53,56 @@ ophImageWidth = 100px
 .kf-oph-invite-button.kf-link
   color: rgba(255, 255, 255, 0.8)
 
-  svg
-    fill: rgba(255, 255, 255, 0.8)
-
   &:hover
-    color: white
+    color: #fff
 
-    svg
-      fill: white
+  svg
+    fill: currentColor
 
-.kf-oph-pic-wrapper
-  position: relative
-  overflow: hidden
-  border-radius: 10px
-  cursor: pointer
+.kf-oph-input
+  margin: 0 5px
 
-.kf-oph-pic-wrapper:hover:before
-  content: 'Upload Logo'
-  position: absolute
-  right: 0
-  bottom: 0
-  left: 0
-  height: 50px
-  line-height: 50px
-  color: #000
-  background-color: rgba(255, 255, 255, .5);
-
-.kf-oph-pic-wrapper:hover:before:hover
-  background-color: rgba(255, 255, 255, 1);
-
-.kf-oph-about
-  flex: 1
-  text-align: left
-
-  .kf-oph-input
-    width: 100%
-    text-align: center
-
-  .kf-click-to-edit .kf-click-to-edit-p
-    text-align: center
-    width: 100%
-
-.kf-oph-about-info
-  margin-bottom: 40px
+  + .kf-oph-input
+    margin-top: 2px
 
 .kf-oph-name
-  line-height: 31px
   font-size: 30px
-  font-weight: normal
-  color: inherit
-  box-sizing: border-box
-
 
 .kf-oph-description
   color: #d8d8d8
   line-height: 1.6em
   font-size: 0.9em
   font-smoothing: antialiased
-  word-break: break-word
-  width: 100%
-  margin-bottom: 10px
-
-  &>a[href]
-    color: inherit
-
-    &:hover
-      text-decoration: underline
 
 .kf-oph-admin-link
-  margin-top: -24px
-  display: block
+  position: absolute
 
 .kf-oph-url
-.kf-click-to-edit-p
-  margin-top: 0
   color: lighten(accentGreen, 15%)
-
-  textarea, a
-    font-size: 0.85rem
-    color: lighten(accentGreen, 15%)
-    text-decoration: underline
-
-  a
-    text-decoration: none
-
-    &:hover
-      text-decoration: underline
+  font-size: 0.85rem
+  text-decoration: underline
 
 .kf-oph-stats
   text-align: center
-  margin: 10px auto 0
+  margin: 25px auto 0
 
   @media (max-height: uphSmallMaxDim) and (max-width: uphSmallMaxDim)
     &::before
       transform: scale(1,.5)  // half-pixel border workaround crbug.com/236371
 
 .kf-oph-stats-a
-  display: inline-block
+  display: inline-flex
   margin: 0 1px
   padding: 6px 14px
-  color: #9fa3aa
   background-color: alpha(#fff, 5%)
   border-top-left-radius: 5px
   border-top-right-radius: 5px
+  color: #9fa3aa
+  font-size: 14px
+  line-height: 24px
 
-  &:not(.active)[href]:hover
+  &:hover:not(.active)
     background-color: alpha(#fff, 10%)
-
-  &:not([href])
-    color: accentGreen
-    cursor: default
 
   &:focus
     outline: none
@@ -180,51 +111,48 @@ ophImageWidth = 100px
     background: appBackgroundColor
     color: textBlackColor
 
-    .kf-oph-stats-count
-      color: inherit
+  > * + *
+    margin-left: 5px
 
-  .kf-oph-stats-count
-  .kf-oph-stats-name
-    display: inline-block
-    vertical-align: middle
+@keyframes pop-up
+  0%
+    bottom: -40px
+    transform: scaleY(.5)
 
-.kf-oph-stats-name
-  line-height: 24px
-  font-size: 14px
+  75%
+    transform: scaleY(1.1)
+    bottom: 0
 
-.kf-oph-stats-count
-  color: #fff
-  line-height: 24px
-  font-size: 14px
-  margin-right: 5px
-
-  :not([href])>&
-    color: inherit
+  100%
+    transform: scaleY(1)
 
 .profile-image.editable
   overflow: hidden
   position: relative
 
-  &.default-image
-    &:after
-      bottom: 0
-
   &:after
     content: 'Upload new'
     position: absolute
     right: 5%
+    bottom: -50px
     left: 5%
-    background: white
-    font-size: 0.85rem
     padding: 7px
     background: secondaryTextGray
     border-top-left-radius: defaultBorderRadius
     border-top-right-radius: defaultBorderRadius
-    bottom: -50px
+    font-size: 0.85rem
     transition: bottom 0.25s ease-out
 
+  // Show 'Upload new' on hover
   &:hover
     &:after
+      bottom: 0
+
+  // Animate in 'Upload new' when the logo is the default
+  &.default-image
+    &:after
+      transform-origin: bottom
+      animation: pop-up ease-in-out .75s
       bottom: 0
 
 .kf-oph-upsell-invite .kf-tooltip-body

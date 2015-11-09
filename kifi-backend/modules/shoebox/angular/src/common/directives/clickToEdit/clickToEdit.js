@@ -12,7 +12,6 @@ angular.module('kifi')
         inputPlaceholder: '=',
         onSave: '=',
         linkable: '=',
-        className: '=',
         readonly: '='
       },
       replace: true,
@@ -23,22 +22,8 @@ angular.module('kifi')
           textareaHeight: '',
           textareaWidth: ''
         };
+        $scope.focus = false;
         $scope.saveable = true;
-
-        var calculateHeight = function() {
-          var textarea = $element.find('textarea'),
-              span     = $element.find('span');
-          if (textarea && span) {
-            // Show an element that matches the textarea's styling to determine
-            // how high it should be to show all of textarea's text.
-            var tester = span[0];
-            tester.style.width = textarea.css('width');
-            $scope.view.textareaHeight = {'height': span.css('height') };
-          }
-        };
-
-        $scope.$watch('view.editableValue', function() { calculateHeight(); });
-        $scope.$evalAsync(function() { calculateHeight(); });
 
         $scope.editEvent = function($event) {
           if ($event.which === 27) {
@@ -73,11 +58,41 @@ angular.module('kifi')
         };
 
         $scope.onBlur = function () {
+          $scope.focus = false;
+
           if ($scope.saveable) {
             $scope.save();
             $scope.saveable = true;
           }
         };
+
+        $scope.onFocus = function () {
+          $scope.selectAll();
+          $scope.focus = true;
+        };
+
+        $scope.selectAll = function () {
+          var textarea = $element.find('textarea')[0];
+          if (!$scope.focus && textarea.selectionStart === textarea.selectionEnd) {
+            textarea.select();
+          }
+        };
+
+        function calculateHeight() {
+          var textarea = $element.find('textarea');
+          var span = $element.find('span');
+          if (textarea && span) {
+            // Show an element that matches the textarea's styling to determine
+            // how high it should be to show all of textarea's text.
+            var tester = span[0];
+            tester.style.width = textarea.css('width');
+            $scope.view.textareaHeight = {'height': span.css('height') };
+          }
+        }
+
+        $scope.$watch('view.editableValue', function () {
+          calculateHeight();
+        }, true);
       }
     };
   }
