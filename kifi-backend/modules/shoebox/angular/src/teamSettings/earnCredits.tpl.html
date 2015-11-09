@@ -18,5 +18,5 @@
     </div>
   </section>
   <div kf-redeem-credits profile="profile" standalone="true" on-apply="trackApplyCodeClick" autofocus="true"></div>
-  <div kf-reward-credits profile="profile"></div>
+  <div ng-if="hasPermission(ORG_PERMISSION.MANAGE_PLAN)" kf-reward-credits profile="profile"></div>
 </div>
