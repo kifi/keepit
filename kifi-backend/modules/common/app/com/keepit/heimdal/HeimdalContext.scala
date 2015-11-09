@@ -1,6 +1,6 @@
 package com.keepit.heimdal
 
-import java.util.Base64
+import javax.xml.bind.DatatypeConverter
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.keepit.common.logging.Logging
@@ -174,7 +174,7 @@ class HeimdalContextBuilder extends Logging {
   def addDistinctId(request: RequestHeader): Unit = {
     request.cookies.get("amplitude_idkifi.com").foreach { cookie =>
       try {
-        val json = new String(Base64.getDecoder.decode(cookie.value), "UTF-8")
+        val json = new String(DatatypeConverter.parseBase64Binary(cookie.value), "UTF-8")
         val amplitudeCookieData = Json.parse(json)
         amplitudeCookieData \ "deviceId" match {
           case JsString(value) => this += ("distinct_id", value)
