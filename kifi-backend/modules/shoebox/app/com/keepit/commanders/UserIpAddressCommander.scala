@@ -2,24 +2,24 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorInstance
-import com.keepit.common.akka.{ UnsupportedActorMessage, FortyTwoActor, SafeFuture }
-import com.keepit.common.cache.{ ImmutableJsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
+import com.keepit.common.akka.{ FortyTwoActor, UnsupportedActorMessage }
+import com.keepit.common.cache.TransactionalCaching.Implicits._
+import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, ImmutableJsonCacheImpl, Key }
 import com.keepit.common.controller.UserRequest
-import com.keepit.common.db.{ SequenceNumber, State, ExternalId, Id }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
-import com.keepit.common.cache.TransactionalCaching.Implicits._
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.slack.{ SlackClient, BasicSlackMessage }
 import org.joda.time.{ DateTime, Period }
-import play.api.{ Mode, Play }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.kifi.macros.json
+import play.api.{ Mode, Play }
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext, Future }
@@ -89,6 +89,7 @@ class UserIpAddressEventLogger @Inject() (
     userIpAddressRepo: UserIpAddressRepo,
     userValueRepo: UserValueRepo,
     httpClient: HttpClient,
+    slackClient: SlackClient,
     userStatisticsCommander: UserStatisticsCommander,
     richIpAddressCache: RichIpAddressCache,
     organizationRepo: OrganizationRepo,
@@ -208,7 +209,7 @@ class UserIpAddressEventLogger @Inject() (
           } else {
             log.info(s"[IPTRACK NOTIFY] making request to notify slack channel about $clusterIp")
             val msg = formatCluster(ipInfo, usersFromCluster, newUserId)
-            httpClient.post(DirectUrl(ipClusterSlackChannelUrl), Json.toJson(msg))
+            slackClient.sendToSlack(ipClusterSlackChannelUrl, msg)
           }
         }
       }

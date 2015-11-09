@@ -1,33 +1,34 @@
 package com.keepit.shoebox
 
-import com.keepit.commanders.emails.activity.{ ActivityEmailQueueModule }
-import com.keepit.common.controller.UserActionsModule
-import com.keepit.common.seo.SiteMapGeneratorModule
-import com.keepit.controllers.internal.DataPipelineExecutorModule
-import com.keepit.reports._
-import com.keepit.common.cache.ShoeboxCacheModule
-import com.keepit.rover.RoverServiceClientModule
-import com.keepit.shoebox.cron.{ ActivityPushCronModule, ActivityEmailCronModule }
-import com.keepit.social.SecureSocialModule
-import com.keepit.common.mail.MailModule
+import com.keepit.abook.ABookServiceClientModule
+import com.keepit.commanders.emails.activity.ActivityEmailQueueModule
 import com.keepit.common.analytics.AnalyticsModule
-import com.keepit.model.{ ProdSliderHistoryTrackerModule }
+import com.keepit.common.cache.ShoeboxCacheModule
+import com.keepit.common.concurrent.ForkJoinContextMonitorModule
+import com.keepit.common.controller.UserActionsModule
+import com.keepit.common.integration.ReaperModule
+import com.keepit.common.mail.MailModule
+import com.keepit.common.seo.SiteMapGeneratorModule
+import com.keepit.common.service.ServiceType
+import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.common.store.ShoeboxStoreModule
+import com.keepit.common.zookeeper.ServiceTypeModule
+import com.keepit.controllers.internal.DataPipelineExecutorModule
+import com.keepit.cortex.CortexServiceClientModule
+import com.keepit.eliza.ElizaServiceClientModule
+import com.keepit.graph.GraphServiceClientModule
+import com.keepit.heimdal.HeimdalServiceClientModule
 import com.keepit.inject.{ CommonServiceModule, ConfigurationModule }
 import com.keepit.integrity.DataIntegrityModule
-import com.keepit.search.{ SearchServiceClientModule }
-import com.keepit.eliza.{ ElizaServiceClientModule }
-import com.keepit.common.social.ProdSocialGraphModule
-import com.keepit.heimdal.{ HeimdalServiceClientModule }
-import com.keepit.abook.{ ABookServiceClientModule }
-import com.keepit.common.integration.ReaperModule
-import com.keepit.queue.{ LibrarySuggestedSearchQueueModule, NormalizationUpdateJobQueueModule }
-import com.keepit.common.concurrent.ForkJoinContextMonitorModule
-import com.keepit.cortex.{ CortexServiceClientModule }
-import com.keepit.graph.{ GraphServiceClientModule }
-import com.keepit.common.zookeeper.ServiceTypeModule
-import com.keepit.common.service.ServiceType
+import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.payments.ProdStripeClientModule
+import com.keepit.queue.{ LibrarySuggestedSearchQueueModule, NormalizationUpdateJobQueueModule }
+import com.keepit.reports._
+import com.keepit.rover.RoverServiceClientModule
+import com.keepit.search.SearchServiceClientModule
+import com.keepit.shoebox.cron.{ ActivityEmailCronModule, ActivityPushCronModule }
+import com.keepit.slack.ProdSlackClientModule
+import com.keepit.social.SecureSocialModule
 
 case class ShoeboxServiceTypeModule() extends ServiceTypeModule {
   val serviceType = ServiceType.SHOEBOX
@@ -73,6 +74,7 @@ trait ShoeboxModule extends ConfigurationModule with CommonServiceModule {
   val dataIntegrityModule = DataIntegrityModule()
   val keepImportsModule = KeepImportsModule()
   val stripeClientModule = ProdStripeClientModule()
+  val slackClientModule = ProdSlackClientModule()
 
   val dbSequencingModule = ShoeboxDbSequencingModule()
 
