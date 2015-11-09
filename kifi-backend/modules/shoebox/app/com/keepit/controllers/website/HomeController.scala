@@ -10,6 +10,7 @@ import com.keepit.common.http._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.UserAgent
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.controllers.routing.KifiSiteRouter
 import com.keepit.heimdal._
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._

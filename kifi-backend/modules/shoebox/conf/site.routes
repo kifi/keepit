@@ -1,0 +1,49 @@
+##########################################
+# Web App
+##########################################
+
+# Let's keep these routes alphabetized.
+
+GET     /connections               @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /find                      @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
+GET     /friends                   @com.keepit.controllers.routing.KifiSiteRouter.redirectFromFriends(friend: Option[String])
+GET     /friends/invite            @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/invite")
+GET     /friends/requests          @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/email    @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/linkedin @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/facebook @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /friends/requests/refresh  @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /invite                    @com.keepit.controllers.routing.KifiSiteRouter.handleInvitePage(friend: Option[String])
+GET     /me                        @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "")
+GET     /me/connections            @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
+GET     /me/followers              @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/followers")
+GET     /me/libraries              @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries")
+GET     /me/libraries/following    @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/following")
+GET     /me/libraries/invited      @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
+GET     /profile                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/settings")
+GET     /settings                  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
+GET     /teams/new                 @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUserOrSignup
+GET     /pricing                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", noTeam = "/teams/new", fallback = "/about/pricing")
+GET     /credits                   @com.keepit.controllers.routing.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", noTeam = "/teams/new", fallback = "/about/pricing#referral")
+GET     /organizations             @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/teams")
+GET     /recommendations           @com.keepit.controllers.routing.KifiSiteRouter.redirectUserTo(path = "/")
+GET     /tags/manage               @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppToUser
+GET     /redir                     @com.keepit.controllers.routing.KifiSiteRouter.generalRedirect(data: String)
+
+# Note: If you add any routes below this /:handle they aren't going to get matched, since :handle will wildcard match anything
+GET     /:handle                   @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
+GET     /:name/connections         @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/followers           @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:handle/members           @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings          @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/plan     @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/contacts @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/export   @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/activity @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/settings/credits  @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
+GET     /:handle/libraries         @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
+GET     /:name/libraries/following @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
+GET     /:name/libraries/invited   @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
+GET     /:handle/:slug             @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
+GET     /:handle/:slug/find        @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
+
