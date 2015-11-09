@@ -152,7 +152,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               Future.successful(StreamSession(userId, experiments, None, userAgent))
             }
           }.map { session =>
-           Some(session): Option[StreamSession]
+            Some(session): Option[StreamSession]
           }
         } getOrElse {
           Future.successful(None)
