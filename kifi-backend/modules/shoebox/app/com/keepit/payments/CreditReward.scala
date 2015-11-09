@@ -4,8 +4,7 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, ModelWithState, State, States}
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
-import com.keepit.model.{OrganizationAvatar, Organization, User}
-import com.keepit.payments.RewardStatus.WithIndependentInfo
+import com.keepit.model.{Organization, User}
 import org.joda.time.DateTime
 import play.api.libs.json._
 
@@ -83,7 +82,7 @@ object Reward {
   }
 }
 
-object RewardStatus {
+object RewardKind extends Enumerator[RewardKind] {
   trait WithIndependentInfo[F] { self: RewardKind =>
     def infoFormat: Format[F]
 
@@ -96,38 +95,34 @@ object RewardStatus {
   }
 
   trait WithEmptyInfo extends WithIndependentInfo[None.type] { self: RewardKind =>
-    def infoFormat: Format[None.type] = noneInfoFormat
+    def infoFormat: Format[None.type] = Format(
+      Reads {
+        case JsNull => JsSuccess(None)
+        case unknown => JsError(s"Unknown RewardStatus info: $unknown")
+      },
+      Writes(None => JsNull)
+    )
   }
 
-  private val noneInfoFormat: Format[None.type] = Format(
-    Reads {
-      case JsNull => JsSuccess(None)
-      case unknown => JsError(s"Unknown RewardStatus info: $unknown")
-    },
-    Writes(None => JsNull)
-  )
-}
-
-object RewardKind extends Enumerator[RewardKind] {
-  case object Coupon extends RewardKind("coupon") with RewardStatus.WithEmptyInfo {
+  case object Coupon extends RewardKind("coupon") with WithEmptyInfo {
     case object Used extends Status("used")
     protected lazy val allStatus: Set[S] = Set(Used)
     lazy val applicable: Used.type = Used
   }
-  case object OrganizationReferral extends RewardKind("org_referral") with RewardStatus.WithIndependentInfo[Id[Organization]] {
+  case object OrganizationReferral extends RewardKind("org_referral") with WithIndependentInfo[Id[Organization]] {
     lazy val infoFormat = Id.format[Organization]
     case object Created extends Status("created")
     case object Upgraded extends Status("upgraded")
     protected lazy val allStatus: Set[S] = Set(Created, Upgraded)
     lazy val applicable: Upgraded.type = Upgraded
   }
-  case object ReferralApplied extends RewardKind("referral_applied") with RewardStatus.WithIndependentInfo[CreditCode] {
+  case object ReferralApplied extends RewardKind("referral_applied") with WithIndependentInfo[CreditCode] {
     lazy val infoFormat = CreditCode.format
     case object Applied extends Status("applied")
     protected lazy val allStatus: Set[S] = Set(Applied)
     lazy val applicable: Applied.type = Applied
   }
-  case object OrganizationCreation extends RewardKind("org_creation") with RewardStatus.WithEmptyInfo {
+  case object OrganizationCreation extends RewardKind("org_creation") with WithEmptyInfo {
     case object Created extends Status("created")
     protected lazy val allStatus: Set[S] = Set(Created)
     lazy val applicable: Created.type = Created

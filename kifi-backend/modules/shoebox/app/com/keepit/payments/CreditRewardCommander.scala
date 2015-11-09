@@ -304,9 +304,9 @@ class CreditRewardCommanderImpl @Inject() (
       RewardKind.OrganizationDescriptionAdded -> DollarAmount.dollars(5),
       RewardKind.OrganizationGeneralLibraryKeepsReached50 -> DollarAmount.dollars(20)
     ) ++ RewardKind.orgLibsReached.map { k =>
-        k -> DollarAmount.dollars(5 * k.threshold)
+        k -> DollarAmount.dollars(35)
       } ++ RewardKind.orgMembersReached.map { k =>
-        k -> DollarAmount.dollars(8 * k.threshold)
+        k -> DollarAmount.dollars(40)
       }
     assert(!RewardKind.deprecated.contains(kind: RewardKind), s"We shouldn't initialize new deprecated rewards: $kind")
 
