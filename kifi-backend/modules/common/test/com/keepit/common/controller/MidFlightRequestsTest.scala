@@ -1,23 +1,13 @@
 package com.keepit.common.controller
 
-import org.specs2.mutable._
-import play.api.mvc.{ RequestHeader, Headers }
 import java.util.concurrent.atomic.AtomicLong
+
 import com.google.inject.util.Providers
 import com.keepit.common.amazon.MyInstanceInfo
-import com.keepit.common.zookeeper.DiscoveryModule
 import com.keepit.common.service.ServiceType
-
-case class DummyRequestHeader(id: Long, path: String) extends RequestHeader {
-  def tags = Map()
-  def uri = ""
-  def method = ""
-  def version = ""
-  def queryString = Map()
-  def remoteAddress = ""
-  def secure: Boolean = false
-  lazy val headers = new Headers { val data = Seq() }
-}
+import com.keepit.common.zookeeper.DiscoveryModule
+import com.keepit.test.DummyRequestHeader
+import org.specs2.mutable.Specification
 
 class MidFlightRequestsTest extends Specification {
 

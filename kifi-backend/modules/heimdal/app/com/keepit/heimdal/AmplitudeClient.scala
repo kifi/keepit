@@ -1,5 +1,7 @@
 package com.keepit.heimdal
 
+import java.util.regex.Pattern
+
 import com.google.common.base.CaseFormat
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
@@ -11,6 +13,7 @@ import play.api.libs.json._
 import play.api.libs.ws.WS
 
 import scala.concurrent.Future
+import scala.util.matching.Regex
 
 object AmplitudeClient {
   // do not send these existing properties to amplitude
@@ -128,7 +131,14 @@ class AmplitudeClientImpl(apiKey: String, ws: WebService) extends AmplitudeClien
 
 // translates specific properties (originally created for MixPanel) into for amplitude
 case class AmplitudeSpecificProperties(heimdalContext: HeimdalContext) {
-  val distinctId = heimdalContext.get[String]("distinct_id")
+  private val uuidRegex = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".r
+
+  // regex check is protection against the client specifying a generic/non-unique deviceId,
+  // only accept the distinct_id property if it's a UUID
+  val distinctId = heimdalContext.get[String]("distinct_id").flatMap { value =>
+    uuidRegex.findFirstIn(value)
+  }
+
   val appVersion = heimdalContext.get[String]("clientVersion")
   val platform = heimdalContext.get[String]("client")
   val osName = heimdalContext.get[String]("os")
@@ -325,15 +335,14 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
   private def getIpAddress(): Option[String] =
     heimdalContext.get[String]("ip") orElse heimdalContext.get[String]("remoteAddress")
 
-  protected def getDistinctId(): String = event match {
-    case userEvent: UserEvent => getDistinctId(userEvent.userId)
-    case nonUserEvent: NonUserEvent => nonUserEvent.identifier
-    case visitorEvent: VisitorEvent =>
-      specificProperties.distinctId orElse
-        getIpAddress() getOrElse
-        VisitorEvent.typeCode
-    case systemEvent: SystemEvent => SystemEvent.typeCode
-    case anonymousEvent: AnonymousEvent => AnonymousEvent.typeCode
+  protected def getDistinctId(): String = specificProperties.distinctId.getOrElse {
+    event match {
+      case userEvent: UserEvent => getDistinctId(userEvent.userId)
+      case nonUserEvent: NonUserEvent => nonUserEvent.identifier
+      case visitorEvent: VisitorEvent => getIpAddress() getOrElse VisitorEvent.typeCode
+      case systemEvent: SystemEvent => SystemEvent.typeCode
+      case anonymousEvent: AnonymousEvent => AnonymousEvent.typeCode
+    }
   }
 
 }
