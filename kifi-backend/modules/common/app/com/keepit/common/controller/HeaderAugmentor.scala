@@ -29,43 +29,36 @@ private object Security extends Augmentor {
 
   def augment[A](result: Result)(implicit request: Request[A]): Result = {
     val useTestHeaders = request.cookies.get("security-headers-test").isDefined
-
-    if (useTestHeaders) {
-      val cspIfNeeded: (String, String) = {
-        if (result.header.headers.get("X-Nonce").isDefined && result.header.headers.get("Content-Type").exists(_.startsWith("text/html"))) {
-          val nonce = result.header.headers.get("X-Nonce").get
-          val cspStr =
-            "" +
-              s"style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
-              s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com connect.facebook.net platform.twitter.com js.stripe.com checkout.stripe.com 'unsafe-eval' 'nonce-$nonce' $dev; " +
-              s"font-src fonts.gstatic.com; " +
-              s"img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net static.xx.fbcdn.net q.stripe.com $dev; " +
-              s"form-action www.kifi.com api.kifi.com $dev; " +
-              s"frame-src www.kifi.com *.facebook.com *.stripe.com; " + // to support Safari 9
-              s"child-src www.kifi.com *.facebook.com *.stripe.com; " +
-              s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net *.stripe.com $dev; " +
-              "report-uri https://www.kifi.com/up/report"
-
-          //val report = if (request.rawQueryString.contains("--report-csp")) "; report-uri https://www.kifi.com/up/report" else ""
-
-          "Content-Security-Policy" -> cspStr // + report
-        } else {
-          "" -> ""
-        }
+    val cspIfNeeded: (String, String) = {
+      if (result.header.headers.get("X-Nonce").isDefined && result.header.headers.get("Content-Type").exists(_.startsWith("text/html"))) {
+        val nonce = result.header.headers.get("X-Nonce").get
+        val cspStr =
+          "" +
+            s"style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
+            s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com connect.facebook.net platform.twitter.com js.stripe.com checkout.stripe.com 'unsafe-eval' 'nonce-$nonce' $dev; " +
+            s"font-src fonts.gstatic.com; " +
+            s"img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net static.xx.fbcdn.net q.stripe.com $dev; " +
+            s"form-action www.kifi.com api.kifi.com $dev; " +
+            s"frame-src www.kifi.com *.facebook.com *.stripe.com; " + // to support Safari 9
+            s"child-src www.kifi.com *.facebook.com *.stripe.com; " +
+            s"frame-ancestors 'self' $dev; " +
+            s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net *.stripe.com $dev; " +
+            "report-uri https://www.kifi.com/up/report"
+        "Content-Security-Policy" -> cspStr
+      } else {
+        "" -> ""
       }
-
-      val headers = Seq(
-        "Strict-Transport-Security" -> "max-age=16070400; includeSubDomains",
-        "X-XSS-Protection" -> "1; mode=block",
-        "X-Content-Type-Options" -> "nosniff",
-        "X-Frame-Options" -> "SAMEORIGIN",
-        cspIfNeeded
-      ).filter(_._1.nonEmpty)
-
-      result.withHeaders(headers: _*)
-    } else {
-      result
     }
+
+    val headers = Seq(
+      "Strict-Transport-Security" -> "max-age=16070400; includeSubDomains",
+      "X-XSS-Protection" -> "1; mode=block",
+      "X-Content-Type-Options" -> "nosniff",
+      "X-Frame-Options" -> "SAMEORIGIN",
+      cspIfNeeded
+    ).filter(_._1.nonEmpty)
+
+    result.withHeaders(headers: _*)
   }
 }
 
