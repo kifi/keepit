@@ -31,8 +31,9 @@
   var identifiedViewEventQueue = [];
   var userId;
 
-  // used for sanity check against user id
-  var uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
+  // used for sanity check against user id; the pattern matches UUID (very
+  // loose match) and mixpanel's distinct_id (which is a 54 characters)
+  var distinctIdRegex = /^[a-z0-9\-]{36,54}$/;
 
   var locations = {
     homeFeed: /^\/$/,  // TODO: this is now recommendations!
@@ -116,7 +117,7 @@
     // sanity check shouldn't be necessary, but it's to make sure user.id is
     // valid and doesn't accidentally get set to a value that's not unique
     // across users
-    if ($window.amplitude && userId && uuidRegex.test(userId)) {
+    if ($window.amplitude && userId && distinctIdRegex.test(userId)) {
       // does not call amplitude.setUserId because this id is internal only and will not be known here
       $window.amplitude.setDeviceId(userId);
     }

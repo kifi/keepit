@@ -131,12 +131,12 @@ class AmplitudeClientImpl(apiKey: String, ws: WebService) extends AmplitudeClien
 
 // translates specific properties (originally created for MixPanel) into for amplitude
 case class AmplitudeSpecificProperties(heimdalContext: HeimdalContext) {
-  private val uuidRegex = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".r
+  private val distinctIdRegex = "[0-9a-f\\-]{36,54}".r
 
   // regex check is protection against the client specifying a generic/non-unique deviceId,
   // only accept the distinct_id property if it's a UUID
   val distinctId = heimdalContext.get[String]("distinct_id").flatMap { value =>
-    uuidRegex.findFirstIn(value)
+    distinctIdRegex.findFirstIn(value)
   }
 
   val appVersion = heimdalContext.get[String]("clientVersion")
