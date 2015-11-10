@@ -268,6 +268,11 @@ class LibraryInfoCommanderImpl @Inject() (
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
         val attr = getSourceAttribution(libId)
+        val slackInfo = LibrarySlackInfo(
+          link = slackClient.generateAuthorizationRequest(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))),
+          integrations = Seq.empty[String]
+        )
+
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
         }
@@ -298,7 +303,7 @@ class LibraryInfoCommanderImpl @Inject() (
           membership = membershipByLibraryId.flatMap(_.get(libId)),
           invite = inviteByLibraryId.flatMap(_.get(libId)),
           permissions = permissionsByLibraryId(libId),
-          slackLink = slackClient.generateAuthorizationRequest(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId)))
+          slack = slackInfo
         )
       }
     }

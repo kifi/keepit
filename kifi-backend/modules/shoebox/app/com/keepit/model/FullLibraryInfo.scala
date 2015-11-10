@@ -224,6 +224,11 @@ object MaybeLibraryMember {
   }
 }
 
+@json
+case class LibrarySlackInfo(
+  link: String,
+  integrations: Seq[String])
+
 case class FullLibraryInfo(
   id: PublicId[Library],
   name: String,
@@ -251,7 +256,7 @@ case class FullLibraryInfo(
   membership: Option[LibraryMembershipInfo],
   invite: Option[LibraryInviteInfo],
   permissions: Set[LibraryPermission],
-  slackLink: String)
+  slack: LibrarySlackInfo)
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
@@ -284,7 +289,7 @@ object FullLibraryInfo {
       "membership" -> o.membership,
       "invite" -> o.invite,
       "permissions" -> o.permissions,
-      "slackLink" -> o.slackLink
+      "slack" -> o.slack
     ).nonNullFields
   }
 }
