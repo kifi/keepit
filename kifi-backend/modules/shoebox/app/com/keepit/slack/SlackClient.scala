@@ -13,6 +13,7 @@ import scala.util.{ Failure, Success, Try }
 trait SlackClient {
   def sendToSlack(url: String, msg: SlackMessage): Future[Try[Unit]]
   def generateAuthorizationRequest(scopes: Set[SlackAuthScope], state: JsObject, redirectUri: Option[String] = None): String
+  def processAuthorizationResponse(code: SlackAuthorizationCode, state: String): Future[Try[(SlackAuthorizationResponse, JsObject)]] // the JsObject is a DeepLink
 }
 
 class SlackClientImpl(
@@ -26,8 +27,8 @@ class SlackClientImpl(
     val OAuthAccess = "https://slack.com/api/oauth.access"
   }
   // Kifi Slack app properties
-  private val SLACK_CLIENT_ID = "garbage_client_id"
-  private val SLACK_CLIENT_SECRET = "garbage_client_secret"
+  private val SLACK_CLIENT_ID = "2348051170.12884760868"
+  private val SLACK_CLIENT_SECRET = "3cfeb40c29a06272bbb159fc1d9d4fb3"
 
   private def mkUrlOpt(base: String, params: (String, Option[String])*): String = {
     base + "?" + params.collect { case (k, Some(v)) => s"$k=$v" }.mkString("&")
@@ -39,7 +40,7 @@ class SlackClientImpl(
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).map { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, ok) if ok.asOpt[String].contains("ok") => Success(())
-        case (status, payload) => Failure(SlackAPIFail(status, payload))
+        case (status, payload) => Failure(SlackAPIFail.Generic(status, payload))
       }
     }
   }
@@ -48,18 +49,27 @@ class SlackClientImpl(
     mkUrlOpt(Route.OAuthAuthorize,
       "client_id" -> Some(SLACK_CLIENT_ID),
       "scope" -> Some(scopes.map(_.value).mkString(",")),
-      "state" -> Some(CryptoSupport.toBase64(state.toString())),
+      "state" -> Some(CryptoSupport.encodeBase64(Json.stringify(state))),
       "redirect_uri" -> redirectUri
     )
   }
 
-  def processAuthorizationResponse(code: SlackAuthorizationCode): Future[Try[SlackAuthorizationResponse]] = {
+  def processAuthorizationResponse(code: SlackAuthorizationCode, state: String): Future[Try[(SlackAuthorizationResponse, JsObject)]] = {
     val authResponse = httpClient.getFuture(DirectUrl(mkUrl(Route.OAuthAccess, "client_id" -> SLACK_CLIENT_ID, "client_secret" -> SLACK_CLIENT_SECRET, "code" -> code.code)))
     authResponse.map { clientResponse =>
-      (clientResponse.status, clientResponse.json) match {
-        case (Status.OK, payload) if (payload \ "ok").asOpt[String].contains("ok") => ???
-        case (status, payload) => Failure(SlackAPIFail(status, payload))
+      val responseTry = (clientResponse.status, clientResponse.json) match {
+        case (Status.OK, payload) if (payload \ "ok").asOpt[String].contains("ok") =>
+          payload.validate[SlackAuthorizationResponse] match {
+            case JsSuccess(res, _) => Success(res)
+            case errs: JsError => Failure(SlackAPIFail.ParseError(payload, errs))
+          }
+        case (status, payload) => Failure(SlackAPIFail.Generic(status, payload))
       }
+      val redirStateTry = Try(Json.parse(state).as[JsObject]).orElse(Failure(SlackAPIFail.StateError(state)))
+      for {
+        response <- responseTry
+        redirState <- redirStateTry
+      } yield (response, redirState)
     }
   }
 }
