@@ -1006,4 +1006,8 @@ class AdminUserController @Inject() (
     abookClient.hideOrganizationRecommendationForUser(userId, orgId)
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
+
+  def flushClients(id: Id[User]) = AdminUserPage.async { implicit request =>
+    eliza.flush(id).map(_ => Ok)
+  }
 }

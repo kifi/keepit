@@ -24,7 +24,7 @@ import com.keepit.model.OrganizationPermission.INVITE_MEMBERS
 import com.keepit.model._
 import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
-import com.keepit.notify.model.event.{ OrgInviteAccepted, OrgNewInvite }
+import com.keepit.notify.model.event.{ OrgMemberJoined, OrgInviteAccepted, OrgNewInvite }
 import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
@@ -122,9 +122,13 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             case ((userIds, nonUserContactsByEmail), (email, contact)) => (userIds, nonUserContactsByEmail + (email -> contact))
           }
 
-          val basicUserByUserId: Map[Id[User], BasicUser] = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(allInviteeUserIds) }
+          val (nonMemberUserIds, basicUserByUserId) = db.readOnlyMaster { implicit session =>
+            val nonMemberUserIds = allInviteeUserIds.filterNot(userId => organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId))
+            val basicUserById = basicUserRepo.loadAll(nonMemberUserIds)
+            (nonMemberUserIds, basicUserById)
+          }
 
-          val addMembers = allInviteeUserIds.map { userId =>
+          val addMembers = nonMemberUserIds.map { userId =>
             val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), message = message)
             val inviteeInfo: Either[BasicUser, RichContact] = Left(basicUserByUserId(userId))
             (orgInvite, inviteeInfo)
@@ -288,10 +292,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role, adminIdOpt = None)
         }
 
-        val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership)
-          .find(_.isRight)
-        firstSuccess.map(_.right.map(_.membership))
-          .getOrElse(Left(OrganizationFail.NO_VALID_INVITATIONS))
+        val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership).find(_.isRight)
+        val invitationOpt = firstSuccess.map(_.right.map(_.membership))
+        invitationOpt.getOrElse(Left(OrganizationFail.NO_VALID_INVITATIONS))
     }
     updatedMembership.right.map { success =>
       // on success accept invitations
@@ -301,6 +304,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         val basicInvitee = userRepo.get(userId)
 
         val invitesWithActiveInviter = invitations.filter(invite => organizationMembershipRepo.getByOrgIdAndUserId(orgId, invite.inviterId).isDefined)
+
         notifyInviterOnOrganizationInvitationAcceptance(invitesWithActiveInviter, basicInvitee, organization)
 
         invitations.foreach { invite =>
@@ -309,6 +313,36 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         }
       }
       success
+    }
+  }
+
+  private def acceptInvitationNotifications(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
+    invitesToAlert foreach { invite =>
+      val title = s"${invitee.firstName} has joined the ${org.abbreviatedName} team!"
+      val allMembers = organizationMembershipCommander.getMemberIds(org.id.get)
+      //don't send the inviter since he already gets a message via notifyInviterOnOrganizationInvitationAcceptance
+      val recipiants = allMembers.filterNot(_ == invite.inviterId).filterNot(_ == invitee.id.get)
+
+      invite.userId.foreach { inviteeId =>
+        recipiants.foreach { recipiantId =>
+          elizaClient.sendNotificationEvent(
+            OrgMemberJoined(
+              recipient = Recipient(recipiantId),
+              time = currentDateTime,
+              memberId = inviteeId,
+              invite.organizationId)
+          )
+          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipiantId, KifiAndroidVersion("4.0.0"), KifiIPhoneVersion("4.0.0"))
+          if (canSendPush) {
+            elizaClient.sendUserPushNotification(
+              userId = recipiantId,
+              message = title,
+              recipient = invitee,
+              pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+              category = UserPushNotificationCategory.NewOrganizationMember)
+          }
+        }
+      }
     }
   }
 
