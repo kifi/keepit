@@ -32,7 +32,7 @@ object SlackMessage {
 }
 
 sealed abstract class SlackAPIFail(val status: Int, val msg: String, val payload: JsValue) extends Exception(s"$status response: $msg ($payload)") {
-  def asResponse = Status(status)(Json.obj("error" -> msg, "payload" -> payload))
+  def asResponse = Status(status)(Json.obj("error" -> msg, "payload" -> payload, "status" -> status))
 }
 object SlackAPIFail {
   case class Generic(override val status: Int, js: JsValue) extends SlackAPIFail(status, "api_error", js)
@@ -100,3 +100,8 @@ case class SlackAuthorizationResponse(
   scopes: Set[SlackAuthScope],
   teamName: String,
   incomingWebhook: Option[SlackIncomingWebhook])
+
+case class SlackSearchQuery(queryString: String)
+
+@json
+case class SlackSearchResponse(query: String, messages: JsObject)
