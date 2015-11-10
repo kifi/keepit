@@ -54,6 +54,7 @@ object SlackAuthScope extends Enumerator[SlackAuthScope] {
   case object GroupsWrite extends SlackAuthScope("groups:write")
   case object GroupsHistory extends SlackAuthScope("groups:history")
   case object GroupsRead extends SlackAuthScope("groups:read")
+  case object IncomingWebhook extends SlackAuthScope("incoming-webhook")
   case object ImWrite extends SlackAuthScope("im:write")
   case object ImHistory extends SlackAuthScope("im:history")
   case object ImRead extends SlackAuthScope("im:read")
@@ -70,6 +71,8 @@ object SlackAuthScope extends Enumerator[SlackAuthScope] {
   case object TeamRead extends SlackAuthScope("team:read")
   case object UsersRead extends SlackAuthScope("users:read")
   case object UsersWrite extends SlackAuthScope("users:write")
+
+  val library: Set[SlackAuthScope] = Set(IncomingWebhook)
   def all = _all.toSet
 
   def apply(str: String): SlackAuthScope = all.find(_.value == str).get

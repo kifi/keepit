@@ -250,7 +250,8 @@ case class FullLibraryInfo(
   orgMemberAccess: Option[LibraryAccess],
   membership: Option[LibraryMembershipInfo],
   invite: Option[LibraryInviteInfo],
-  permissions: Set[LibraryPermission])
+  permissions: Set[LibraryPermission],
+  slackLink: String)
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes
@@ -282,7 +283,8 @@ object FullLibraryInfo {
       "orgMemberAccess" -> o.orgMemberAccess,
       "membership" -> o.membership,
       "invite" -> o.invite,
-      "permissions" -> o.permissions
+      "permissions" -> o.permissions,
+      "slackLink" -> o.slackLink
     ).nonNullFields
   }
 }
