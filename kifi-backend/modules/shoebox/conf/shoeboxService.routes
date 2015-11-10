@@ -561,6 +561,7 @@ POST          /site/admin/billing/featureSettings               @com.keepit.cont
 POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
 GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None, inclusive: Boolean ?= false)
 
+GET       /site/slackAuth @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: String, state: String)
 ##########################################
 # Email-Link API
 ##########################################
