@@ -43,7 +43,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
   implicit val slackTeamNameColumnType = SlackDbColumnTypes.teamName(db)
   implicit val tokenColumnType = MappedColumnType.base[SlackAccessToken, String](_.token, SlackAccessToken(_))
 
-  def membershipFromDbRow(
+  private def membershipFromDbRow(
     id: Option[Id[SlackTeamMembership]],
     createdAt: DateTime,
     updatedAt: DateTime,
@@ -54,9 +54,23 @@ class SlackTeamMembershipRepoImpl @Inject() (
     slackTeamId: SlackTeamId,
     slackTeamName: SlackTeamName,
     token: Option[SlackAccessToken],
-    scope: JsValue) = SlackTeamMembership(id, createdAt, updatedAt, state, userId, slackUserId, slackUsername, slackTeamId, slackTeamName, token, scope.as[Set[SlackAuthScope]])
+    scope: JsValue) = {
+    SlackTeamMembership(
+      id,
+      createdAt,
+      updatedAt,
+      state,
+      userId,
+      slackUserId,
+      slackUsername,
+      slackTeamId,
+      slackTeamName,
+      token,
+      scope.as[Set[SlackAuthScope]]
+    )
+  }
 
-  def membershipToDbRow(membership: SlackTeamMembership) = Some((
+  private def membershipToDbRow(membership: SlackTeamMembership) = Some((
     membership.id,
     membership.createdAt,
     membership.updatedAt,

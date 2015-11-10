@@ -73,6 +73,7 @@ object SlackMessage {
   def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }
 
+@json
 case class SlackAPIFailure(status: Int, payload: JsValue) extends Exception(s"Slack returned a $status response: $payload")
 
 sealed abstract class SlackAuthScope(val value: String)
