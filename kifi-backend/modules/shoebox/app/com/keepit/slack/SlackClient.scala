@@ -40,7 +40,7 @@ class SlackClientImpl(
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).map { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, ok) if ok.asOpt[String].contains("ok") => Success(())
-        case (status, payload) => Failure(SlackAPIFail(status, payload))
+        case (status, payload) => Failure(SlackAPIFailure(status, payload))
       }
     }
   }
@@ -59,7 +59,7 @@ class SlackClientImpl(
     authResponse.map { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, payload) if (payload \ "ok").asOpt[String].contains("ok") => ???
-        case (status, payload) => Failure(SlackAPIFail(status, payload))
+        case (status, payload) => Failure(SlackAPIFailure(status, payload))
       }
     }
   }

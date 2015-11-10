@@ -1,5 +1,6 @@
 package com.keepit.slack.models
 
+import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithReplacements
 import com.kifi.macros.json
@@ -13,6 +14,40 @@ case class SlackTeamName(value: String)
 
 case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
 case class SlackChannel(value: String) // broad sense, can be channel, group or DM
+
+case class SlackAccessToken(token: String)
+
+case class SlackIncomingWebhook(
+  channel: SlackChannel,
+  url: String,
+  configUrl: String)
+
+object SlackDbColumnTypes {
+  def userId(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[SlackUserId, String](_.value, SlackUserId(_))
+  }
+  def username(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[SlackUsername, String](_.value, SlackUsername(_))
+  }
+  def teamId(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[SlackTeamId, String](_.value, SlackTeamId(_))
+  }
+  def teamName(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[SlackTeamName, String](_.value, SlackTeamName(_))
+  }
+  def channelId(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[SlackChannelId, String](_.value, SlackChannelId(_))
+  }
+  def channel(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[SlackChannel, String](_.value, SlackChannel(_))
+  }
+}
 
 @json
 case class SlackAttachment(fallback: String, text: String)
@@ -38,7 +73,7 @@ object SlackMessage {
   def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }
 
-case class SlackAPIFail(status: Int, payload: JsValue) extends Exception(s"Slack returned a $status response: $payload")
+case class SlackAPIFailure(status: Int, payload: JsValue) extends Exception(s"Slack returned a $status response: $payload")
 
 sealed abstract class SlackAuthScope(val value: String)
 object SlackAuthScope extends Enumerator[SlackAuthScope] {
@@ -71,6 +106,12 @@ object SlackAuthScope extends Enumerator[SlackAuthScope] {
   case object UsersRead extends SlackAuthScope("users:read")
   case object UsersWrite extends SlackAuthScope("users:write")
   def all = _all.toSet
+
+  implicit val format = {
+    val reads = Reads[SlackAuthScope](_.validate[String].flatMap(str => all.find(_.value == str).map(JsSuccess(_)) getOrElse JsError(s"Unknown SlackAuthScope: $str")))
+    val writes = Writes[SlackAuthScope](scope => JsString(scope.value))
+    Format(reads, writes)
+  }
 }
 
 case class SlackAuthorizationRequest(
@@ -80,11 +121,6 @@ case class SlackAuthorizationRequest(
   redirectUri: Option[String])
 
 case class SlackAuthorizationCode(code: String)
-case class SlackAccessToken(token: String)
-case class SlackIncomingWebhook(
-  channel: SlackChannel,
-  url: String,
-  configUrl: String)
 
 case class SlackAuthorizationResponse(
   accessToken: SlackAccessToken,
