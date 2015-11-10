@@ -1,6 +1,7 @@
 package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
+import com.keepit.classify.NormalizedHostname
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import org.apache.commons.lang3.RandomStringUtils
@@ -22,7 +23,8 @@ object OrganizationFactory {
       invitedEmails: Seq[EmailAddress] = Seq.empty[EmailAddress],
       nonstandardSettings: Map[Feature, FeatureSetting] = Map.empty,
       // TODO(ryan): this Long is literally my least favorite thing in the world right now
-      planOpt: Option[Long] = None) {
+      planOpt: Option[Long] = None,
+      domainName: Option[NormalizedHostname] = None) {
 
     def withName(newName: String) = this.copy(org = org.withName(newName))
     def withOwner(newOwner: User) = this.copy(org = org.withOwner(newOwner.id.get))
@@ -33,6 +35,7 @@ object OrganizationFactory {
     def withInvitedUsers(newInvitedUsers: Seq[User]) = this.copy(invitedUsers = newInvitedUsers)
     def withInvitedEmails(newInvitedEmails: Seq[EmailAddress]) = this.copy(invitedEmails = newInvitedEmails)
     def withHandle(newHandle: OrganizationHandle): PartialOrganization = this.copy(org = org.copy(primaryHandle = Some(PrimaryOrganizationHandle(newHandle, newHandle))))
+    def withDomain(domain: String): PartialOrganization = this.copy(domainName = NormalizedHostname.fromHostname(domain))
 
     // This method makes it so an org's members cannot invite, useful for testing
     def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.InviteMembers -> FeatureSetting.ADMINS))

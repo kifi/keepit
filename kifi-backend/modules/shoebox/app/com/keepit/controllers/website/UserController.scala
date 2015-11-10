@@ -7,6 +7,7 @@ import com.keepit.abook.{ ABookServiceClient, ABookUploadConf }
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.commanders.{ ConnectionInfo, _ }
 import com.keepit.common.controller._
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ ExternalId, Id }
@@ -58,6 +59,7 @@ class UserController @Inject() (
     friendRequestRepo: FriendRequestRepo,
     postOffice: LocalPostOffice,
     userConnectionsCommander: UserConnectionsCommander,
+    organizationDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     userCommander: UserCommander,
     clock: Clock,
     s3ImageStore: S3ImageStore,
@@ -68,7 +70,8 @@ class UserController @Inject() (
     emailSender: EmailSenderProvider,
     userProfileCommander: UserProfileCommander,
     checklistCommander: ChecklistCommander,
-    fortytwoConfig: FortyTwoConfig) extends UserActions with ShoeboxServiceController {
+    fortytwoConfig: FortyTwoConfig,
+    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def friends(page: Int, pageSize: Int) = UserAction { request =>
     val (connectionsPage, total) = userConnectionsCommander.getConnectionsPage(request.userId, page, pageSize)
@@ -447,6 +450,16 @@ class UserController @Inject() (
       emailRepo.getByAddressAndUser(request.userId, email) match {
         case Some(emailAddr) => userEmailAddressCommander.sendVerificationEmailHelper(emailAddr).imap(_ => Ok("0"))
         case _ => Future.successful(Forbidden("0"))
+      }
+    }
+  }
+
+  def hideOrganizationDomain(pubOrgId: PublicId[Organization]) = UserAction { request =>
+    Organization.decodePublicId(pubOrgId) match {
+      case Failure(ex) => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
+      case Success(orgId: Id[Organization]) => {
+        organizationDomainOwnershipCommander.hideOrganizationForUser(request.userId, orgId)
+        Ok
       }
     }
   }
