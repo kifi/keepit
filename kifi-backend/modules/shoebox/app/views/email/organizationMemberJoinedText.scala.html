@@ -1,0 +1,14 @@
+@(userId: Id[User],
+memberId: Id[User],
+organization: Organization
+)
+
+@import com.keepit.common.mail.template.helpers._
+@orgLink = @{organizationLink(organization.id.get, None, "clickedOrgURL")}
+
+Hi @firstName(userId) @lastName(userId),
+
+@firstName(memberId) @lastName(memberId) joined you on the <a href="@orgLink">@organization.name</a> Kifi team.
+
+Keep calm and SHARE YOUR KNOWLEDGE!
+The Kifi Team https://www.kifi.com/kifi

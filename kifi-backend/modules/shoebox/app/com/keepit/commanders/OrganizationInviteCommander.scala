@@ -305,6 +305,9 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           notifyInviterOnOrganizationInvitationAcceptance(invitesWithActiveInviter, basicInvitee, organization)
           acceptInvitationNotifications(invitesWithActiveInviter.map(_.inviterId).toSet, basicInvitee, organization)
         }
+        SafeFuture {
+          acceptInvitationEmail(basicInvitee, organization)
+        }
 
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
@@ -312,6 +315,25 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         }
       }
       success
+    }
+  }
+
+  private def acceptInvitationEmail(invitee: User, org: Organization): Unit = {
+    val subject = s"${invitee.firstName} ${invitee.lastName} has joined the ${org.abbreviatedName} team on Kifi"
+    val allMembers = organizationMembershipCommander.getMemberIds(org.id.get)
+    val recipiants = allMembers.filterNot(_ == invitee.id.get)
+
+    recipiants.foreach { toRecipient =>
+      val emailToSend = EmailToSend(
+        from = SystemEmailAddress.NOTIFICATIONS,
+        subject = subject,
+        to = Left(toRecipient),
+        category = NotificationCategory.User.ORGANIZATION_JOINED,
+        htmlTemplate = views.html.email.organizationMemberJoined(toRecipient, invitee.id.get, org),
+        textTemplate = Some(views.html.email.organizationMemberJoinedText(toRecipient, invitee.id.get, org)),
+        templateOptions = Seq(CustomLayout).toMap
+      )
+      emailTemplateSender.send(emailToSend) map (Some(_))
     }
   }
 
