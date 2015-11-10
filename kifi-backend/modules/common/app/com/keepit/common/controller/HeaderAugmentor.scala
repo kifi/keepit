@@ -28,9 +28,9 @@ private object Security extends Augmentor {
   } else ""
 
   def augment[A](result: Result)(implicit request: Request[A]): Result = {
-    val useTestHeaders = request.cookies.get("security-headers-test").isDefined
+    val useTestHeaders = request.cookies.get("security-headers-test").isDefined || (request.id % 100 == 0)
     val cspIfNeeded: (String, String) = {
-      if (result.header.headers.get("X-Nonce").isDefined && result.header.headers.get("Content-Type").exists(_.startsWith("text/html"))) {
+      if (useTestHeaders && result.header.headers.get("X-Nonce").isDefined && result.header.headers.get("Content-Type").exists(_.startsWith("text/html"))) {
         val nonce = result.header.headers.get("X-Nonce").get
         val cspStr =
           "" +
