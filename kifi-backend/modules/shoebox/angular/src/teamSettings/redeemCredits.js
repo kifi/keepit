@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfRedeemCredits', [
-  'billingService', '$timeout',
-  function (billingService, $timeout) {
+  'billingService', '$timeout', 'profileService',
+  function (billingService, $timeout, profileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -18,6 +18,14 @@ angular.module('kifi')
       link: function ($scope, $element) {
         $scope.$error = {};
         $scope.creditRedeemed = 0;
+
+        $scope.$watch(function () {
+          return profileService.prefs.stored_credit_code;
+        }, function () {
+          if (profileService.prefs.stored_credit_code) {
+            $scope.redeemCode = profileService.prefs.stored_credit_code;
+          }
+        });
 
         if ($scope.autofocus) {
           $timeout(function() {

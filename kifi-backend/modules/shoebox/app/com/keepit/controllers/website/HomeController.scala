@@ -56,9 +56,10 @@ class HomeController @Inject() (
     extends UserActions with ShoeboxServiceController with Logging {
 
   def home = MaybeUserAction.async { implicit request =>
+    val special = specialHandler(request)
     request match {
-      case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite())
-      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request)
+      case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite() |> special)
+      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request).map(special)
     }
   }
 

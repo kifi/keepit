@@ -90,6 +90,7 @@ class CreditRewardCommanderImpl @Inject() (
     }
   }
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards] = db.readWrite { implicit session =>
+    userValueRepo.clearValue(req.applierId, UserValueName.STORED_CREDIT_CODE)
     for {
       creditCodeInfo <- getCreditCodeInfo(req)
       accountId <- req.orgId.map(accountRepo.getAccountId(_)).map(Success(_)).getOrElse(Failure(NoPaidAccountException(req.applierId, req.orgId)))
@@ -97,7 +98,6 @@ class CreditRewardCommanderImpl @Inject() (
     } yield {
       (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo) match {
         case (Some(referrerOrgId), Some(referredOrgId), creditInfo: CreditCodeInfo) =>
-          userValueRepo.clearValue(req.applierId, UserValueName.STORED_CREDIT_CODE)
           sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId, creditInfo)
         case _ =>
       }

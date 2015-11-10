@@ -9,6 +9,14 @@ angular.module('kifi')
     $scope.disableCreate = false;
 
     $scope.orgName = '';
+    $scope.$watch(function () {
+      return profileService.prefs.stored_credit_code;
+    }, function () {
+      if (profileService.prefs.stored_credit_code) {
+        $scope.redeemCode = profileService.prefs.stored_credit_code;
+      }
+    });
+
     if (!profileService.prefs.company_name) {
       profileService.fetchPrefs().then(function (prefs) {
         if (prefs.company_name && !orgNameExists(prefs.company_name)) {
