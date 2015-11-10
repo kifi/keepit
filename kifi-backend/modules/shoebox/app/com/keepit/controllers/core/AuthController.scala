@@ -453,9 +453,10 @@ class AuthController @Inject() (
       val pubLibIdOpt = cookiePublicLibraryId.map(cookie => PublicId[Library](cookie.value))
       val publicOrgIdCookie = request.cookies.get("publicOrgId")
       val orgAuthToken = request.cookies.get("orgAuthToken")
+      val creditCodeCookie = request.cookies.get("creditCode")
       val pubOrgIdOpt = publicOrgIdCookie.map(cookie => PublicId[Organization](cookie.value))
 
-      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent, libAuthToken, publicOrgIdCookie, orgAuthToken).flatten.map(c => DiscardingCookie(c.name))
+      val discardedCookies = Seq(cookiePublicLibraryId, cookieIntent, libAuthToken, publicOrgIdCookie, orgAuthToken, creditCodeCookie).flatten.map(c => DiscardingCookie(c.name))
 
       request match {
         case ur: UserRequest[_] =>
@@ -465,23 +466,25 @@ class AuthController @Inject() (
 
             val homeUrl = s"${com.keepit.controllers.website.routes.HomeController.home.url}?m=0"
 
-            if (cookieIntent.isDefined) {
+            val redirect = if (cookieIntent.isDefined) {
               cookieIntent.get.value match {
                 case "follow" if pubLibIdOpt.isDefined =>
                   val joinedSuccessfully = authCommander.autoJoinLib(ur.userId, pubLibIdOpt.get, libAuthToken.map(_.value))
                   // todo redirect to library if `joinedSuccessfully`
-                  Redirect(homeUrl).discardingCookies(discardedCookies: _*)
+                  Redirect(homeUrl)
                 case "joinOrg" if pubOrgIdOpt.isDefined =>
                   orgAuthToken.map(_.value).foreach(authToken => authCommander.autoJoinOrg(ur.userId, pubOrgIdOpt.get, authToken))
-                  Redirect(homeUrl).discardingCookies(discardedCookies: _*)
+                  Redirect(homeUrl)
                 case "waitlist" =>
-                  Redirect("/twitter/thanks").discardingCookies(discardedCookies: _*)
+                  Redirect("/twitter/thanks")
                 case _ =>
-                  Redirect(homeUrl).discardingCookies(discardedCookies: _*)
+                  Redirect(homeUrl)
               }
             } else {
-              Redirect(homeUrl).discardingCookies(discardedCookies: _*)
+              Redirect(homeUrl)
             }
+
+            redirect.discardingCookies(discardedCookies: _*)
 
           } else if (ur.identityOpt.isDefined) {
             log.info(s"[doSignupPage] ${ur.identityOpt.get} has incomplete signup state")

@@ -337,7 +337,8 @@ class UserController @Inject() (
       HAS_NO_PASSWORD,
       USE_MINIMAL_KEEP_CARD,
       HAS_SEEN_FTUE,
-      COMPANY_NAME
+      COMPANY_NAME,
+      STORED_CREDIT_CODE
     )
   }
 
