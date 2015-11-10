@@ -37,10 +37,10 @@ private object Security extends Augmentor {
             s"style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
             s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com connect.facebook.net platform.twitter.com js.stripe.com checkout.stripe.com 'unsafe-eval' 'nonce-$nonce' $dev; " +
             s"font-src fonts.gstatic.com; " +
-            s"img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net static.xx.fbcdn.net q.stripe.com $dev; " +
+            s"img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net static.xx.fbcdn.net q.stripe.com img.youtube.com $dev; " +
             s"form-action www.kifi.com api.kifi.com $dev; " +
-            s"frame-src www.kifi.com *.facebook.com *.stripe.com; " + // to support Safari 9
-            s"child-src www.kifi.com *.facebook.com *.stripe.com; " +
+            s"frame-src www.kifi.com *.facebook.com *.stripe.com *.youtube.com; " + // to support Safari 9
+            s"child-src www.kifi.com *.facebook.com *.stripe.com *.youtube.com; " +
             s"frame-ancestors 'self' $dev; " +
             s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net *.stripe.com airbrake.io $dev; " +
             "report-uri https://www.kifi.com/up/report"
