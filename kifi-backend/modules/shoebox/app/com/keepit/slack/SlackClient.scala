@@ -1,5 +1,7 @@
 package com.keepit.slack
 
+import java.net.URLEncoder
+
 import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient }
@@ -30,6 +32,8 @@ class SlackClientImpl(
   private val SLACK_CLIENT_ID = "2348051170.12884760868"
   private val SLACK_CLIENT_SECRET = "3cfeb40c29a06272bbb159fc1d9d4fb3"
 
+  private val REDIRECT_URI = URLEncoder.encode("https://www.kifi.com/oauth2/slack", "ascii")
+
   private def mkUrlOpt(base: String, params: (String, Option[String])*): String = {
     base + "?" + params.collect { case (k, Some(v)) => s"$k=$v" }.mkString("&")
   }
@@ -50,12 +54,12 @@ class SlackClientImpl(
       "client_id" -> Some(SLACK_CLIENT_ID),
       "scope" -> Some(scopes.map(_.value).mkString(",")),
       "state" -> Some(CryptoSupport.encodeBase64(Json.stringify(state))),
-      "redirect_uri" -> redirectUri
+      "redirect_uri" -> REDIRECT_URI
     )
   }
 
   def processAuthorizationResponse(code: SlackAuthorizationCode, state: String): Future[Try[(SlackAuthorizationResponse, JsObject)]] = {
-    val authResponse = httpClient.getFuture(DirectUrl(mkUrl(Route.OAuthAccess, "client_id" -> SLACK_CLIENT_ID, "client_secret" -> SLACK_CLIENT_SECRET, "code" -> code.code)))
+    val authResponse = httpClient.getFuture(DirectUrl(mkUrl(Route.OAuthAccess, "client_id" -> SLACK_CLIENT_ID, "client_secret" -> SLACK_CLIENT_SECRET, "code" -> code.code, "redirect_uri" -> REDIRECT_URI)))
     authResponse.map { clientResponse =>
       val responseTry = (clientResponse.status, clientResponse.json) match {
         case (Status.OK, payload) if (payload \ "ok").asOpt[String].contains("ok") =>
