@@ -29,7 +29,8 @@ private object Security extends Augmentor {
 
   def augment[A](result: Result)(implicit request: Request[A]): Result = {
     val useTestHeaders = request.cookies.get("security-headers-test").isDefined || (request.id % 100 == 0)
-    val cspIfNeeded: (String, String) = {
+    val useAlphaHeaders = request.cookies.get("security-headers-alpha").isDefined
+    val cspIfNeeded = {
       if (useTestHeaders && result.header.headers.get("X-Nonce").isDefined && result.header.headers.get("Content-Type").exists(_.startsWith("text/html"))) {
         val nonce = result.header.headers.get("X-Nonce").get
         val cspStr =
@@ -44,9 +45,14 @@ private object Security extends Augmentor {
             s"frame-ancestors 'self' $dev; " +
             s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net *.stripe.com airbrake.io $dev; " +
             "report-uri https://www.kifi.com/up/report"
-        "Content-Security-Policy" -> cspStr
+        Seq("Content-Security-Policy" -> cspStr)
+      } else if (useAlphaHeaders) {
+        Seq(
+          "Content-Security-Policy-Report-Only" -> "report-uri //cspbuilder.info/report/258896321291100397/noscripteval/; connect-src 'none' ; child-src 'none' ; font-src 'none' ; form-action 'none' ; frame-ancestors 'none' ; frame-src 'none' ; img-src 'none' ; media-src 'none' ; object-src 'none' ; script-src 'none' ; style-src 'none' ; default-src 'none' ; strict-mixed-content-checking; reflected-xss filter; referrer origin-when-cross-origin;",
+          "Content-Security-Policy-Report-Only" -> "report-uri //cspbuilder.info/report/258896321291100397/noscriptinline/; connect-src 'none' ; child-src 'none' ; font-src 'none' ; form-action 'none' ; frame-ancestors 'none' ; frame-src 'none' ; img-src 'none' ; media-src 'none' ; object-src 'none' ; script-src 'none' ; style-src 'none' ; default-src 'none' ; strict-mixed-content-checking; reflected-xss filter; referrer origin-when-cross-origin; "
+        )
       } else {
-        "" -> ""
+        Seq.empty
       }
     }
 
@@ -54,9 +60,8 @@ private object Security extends Augmentor {
       "Strict-Transport-Security" -> "max-age=16070400; includeSubDomains",
       "X-XSS-Protection" -> "1; mode=block",
       "X-Content-Type-Options" -> "nosniff",
-      "X-Frame-Options" -> "SAMEORIGIN",
-      cspIfNeeded
-    ).filter(_._1.nonEmpty)
+      "X-Frame-Options" -> "SAMEORIGIN"
+    ) ++ cspIfNeeded
 
     result.withHeaders(headers: _*)
   }
