@@ -10,7 +10,7 @@ case class LibraryToSlackChannel(
   updatedAt: DateTime = currentDateTime,
   state: State[LibraryToSlackChannel] = LibraryToSlackChannelStates.ACTIVE,
   ownerId: Id[SlackTeamMembership], // denormalized from SlackIncomingWebhook
-  webhookId: Id[SlackIncomingWebhook],
+  webhookId: Id[SlackIncomingWebhookInfo],
   library: Id[Library],
   channel: SlackChannel,
   status: SlackIntegrationStatus,

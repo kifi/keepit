@@ -10,11 +10,11 @@ object SlackIntegrationStatus {
   case object Off extends SlackIntegrationStatus("off")
 }
 
-case class SlackIncomingWebhook(
-  id: Option[Id[SlackIncomingWebhook]] = None,
+case class SlackIncomingWebhookInfo(
+  id: Option[Id[SlackIncomingWebhookInfo]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  state: State[SlackIncomingWebhook] = SlackIncomingWebhookStates.ACTIVE,
+  state: State[SlackIncomingWebhookInfo] = SlackIncomingWebhookInfoStates.ACTIVE,
   ownerId: Id[SlackTeamMembership],
   channel: SlackChannel,
   url: String,
@@ -23,4 +23,4 @@ case class SlackIncomingWebhook(
   failureCount: Int = 0,
   failureInfo: Option[String])
 
-object SlackIncomingWebhookStates extends States[SlackIncomingWebhook]
+object SlackIncomingWebhookInfoStates extends States[SlackIncomingWebhookInfo]
