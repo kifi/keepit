@@ -7,7 +7,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ Organization, EmailVerificationCode, User, NotificationCategory, UserEmailAddress }
+import com.keepit.model.{ EmailVerificationCode, User, NotificationCategory, UserEmailAddress }
 
 import scala.concurrent.Future
 
@@ -16,10 +16,10 @@ class EmailConfirmationSender @Inject() (
     protected val airbrake: AirbrakeNotifier,
     fortytwoConfig: FortyTwoConfig) extends Logging {
 
-  def apply(emailAddr: UserEmailAddress, sharedDomainOrgOpt: Option[Id[Organization]]): Future[ElectronicMail] =
-    sendToUser(emailAddr.userId, emailAddr.address, emailAddr.verificationCode.get, sharedDomainOrgOpt)
+  def apply(emailAddr: UserEmailAddress): Future[ElectronicMail] =
+    sendToUser(emailAddr.userId, emailAddr.address, emailAddr.verificationCode.get)
 
-  def sendToUser(toUserId: Id[User], address: EmailAddress, verificationCode: EmailVerificationCode, sharedDomainOrgOpt: Option[Id[Organization]]): Future[ElectronicMail] = {
+  def sendToUser(toUserId: Id[User], address: EmailAddress, verificationCode: EmailVerificationCode): Future[ElectronicMail] = {
 
     val siteUrl = fortytwoConfig.applicationBaseUrl
     val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(verificationCode)}"
@@ -30,8 +30,8 @@ class EmailConfirmationSender @Inject() (
       subject = "Kifi.com | Please confirm your email address",
       to = Right(address),
       category = NotificationCategory.User.EMAIL_CONFIRMATION,
-      htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl, sharedDomainOrgOpt),
-      textTemplate = Some(views.html.email.verifyEmailText(toUserId, verifyUrl, sharedDomainOrgOpt))
+      htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl),
+      textTemplate = Some(views.html.email.verifyEmailText(toUserId, verifyUrl))
     )
     emailTemplateSender.send(emailToSend)
   }

@@ -1,15 +1,10 @@
-@(toUserId: Id[User], verifyUrl: String, sharedDomainOrgOpt: Option[Id[Organization]])
+@(toUserId: Id[User], verifyUrl: String)
 @import com.keepit.common.mail.template.helpers._
-@orgName = @{sharedDomainOrgOpt.map(orgId => organizationName(orgId))}
 
 Hi @firstName(toUserId),
 
 To protect your privacy and security, please confirm your email address by clicking the link below:
 @verifyUrl
-
-@if(orgName.isDefined) {
-Since you share an email domain with Kifi's @{orgName.get} team, you'll automatically become a member of their team by verifying.
-}
 
 We look forward seeing you on Kifi,
 
