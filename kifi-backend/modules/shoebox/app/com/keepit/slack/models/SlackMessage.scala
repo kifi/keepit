@@ -17,6 +17,7 @@ case class SlackChannel(value: String) // broad sense, can be channel, group or 
 
 case class SlackAccessToken(token: String)
 
+// Can we add slackUserId, slackTeamId, channelId in there?
 case class SlackIncomingWebhook(
   channel: SlackChannel,
   url: String,

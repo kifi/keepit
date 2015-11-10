@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.time._
-import com.keepit.model.{ Keep, Library }
+import com.keepit.model.{ User, Keep, Library }
 import org.joda.time.DateTime
 
 case class LibraryToSlackChannel(
@@ -12,9 +12,12 @@ case class LibraryToSlackChannel(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[LibraryToSlackChannel] = LibraryToSlackChannelStates.ACTIVE,
-    membershipId: Id[SlackTeamMembership],
-    libraryId: Id[Library],
+    ownerId: Id[User],
+    slackUserId: SlackUserId,
+    slackTeamId: SlackTeamId,
+    channelId: SlackChannelId,
     webhookId: Id[SlackIncomingWebhookInfo],
+    libraryId: Id[Library],
     status: SlackIntegrationStatus,
     lastProcessedAt: Option[DateTime],
     lastKeepId: Option[Id[Keep]]) extends ModelWithState[LibraryToSlackChannel] {
@@ -35,6 +38,9 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
+  implicit val slackUserIdColumnType = SlackDbColumnTypes.userId(db)
+  implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
+  implicit val channelIdColumnType = SlackDbColumnTypes.channelId(db)
   implicit val statusColumnType = SlackIntegrationStatus.columnType(db)
 
   private def ltsFromDbRow(
@@ -42,9 +48,12 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[LibraryToSlackChannel],
-    membershipId: Id[SlackTeamMembership],
-    libraryId: Id[Library],
+    ownerId: Id[User],
+    slackUserId: SlackUserId,
+    slackTeamId: SlackTeamId,
+    channelId: SlackChannelId,
     webhookId: Id[SlackIncomingWebhookInfo],
+    libraryId: Id[Library],
     status: SlackIntegrationStatus,
     lastProcessedAt: Option[DateTime],
     lastKeepId: Option[Id[Keep]]) = {
@@ -53,9 +62,12 @@ class LibraryToSlackChannelRepoImpl @Inject() (
       createdAt,
       updatedAt,
       state,
-      membershipId,
-      libraryId,
+      ownerId,
+      slackUserId,
+      slackTeamId,
+      channelId,
       webhookId,
+      libraryId,
       status,
       lastProcessedAt,
       lastKeepId
@@ -67,9 +79,12 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     lts.createdAt,
     lts.updatedAt,
     lts.state,
-    lts.membershipId,
-    lts.libraryId,
+    lts.ownerId,
+    lts.slackUserId,
+    lts.slackTeamId,
+    lts.channelId,
     lts.webhookId,
+    lts.libraryId,
     lts.status,
     lts.lastProcessedAt,
     lts.lastKeepId
@@ -78,13 +93,16 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   type RepoImpl = LibraryToSlackChannelTable
 
   class LibraryToSlackChannelTable(tag: Tag) extends RepoTable[LibraryToSlackChannel](db, tag, "library_to_slack_channel") {
-    def membershipId = column[Id[SlackTeamMembership]]("membership_id", O.NotNull)
-    def libraryId = column[Id[Library]]("library_id", O.NotNull)
+    def ownerId = column[Id[User]]("owner_id", O.NotNull)
+    def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
+    def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
+    def channelId = column[SlackChannelId]("channel_id", O.NotNull)
     def webhookId = column[Id[SlackIncomingWebhookInfo]]("webhook_id", O.NotNull)
+    def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def status = column[SlackIntegrationStatus]("status", O.NotNull)
     def lastProcessedAt = column[Option[DateTime]]("last_processed_at", O.Nullable)
     def lastKeepId = column[Option[Id[Keep]]]("last_keep_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, membershipId, libraryId, webhookId, status, lastProcessedAt, lastKeepId) <> ((ltsFromDbRow _).tupled, ltsToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, channelId, webhookId, libraryId, status, lastProcessedAt, lastKeepId) <> ((ltsFromDbRow _).tupled, ltsToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === LibraryToSlackChannelStates.ACTIVE)
