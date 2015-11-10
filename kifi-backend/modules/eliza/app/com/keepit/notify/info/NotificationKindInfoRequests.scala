@@ -300,7 +300,7 @@ class NotificationKindInfoRequests @Inject()() {
         url = Path(acceptedOrg.handle.value).absolute,
         image = UserImage(member),
         title = s"${member.firstName} joined the ${acceptedOrg.abbreviatedName} team!",
-        body = s"You can now share knowledge with ${member.firstName} on the ${acceptedOrg.abbreviatedName} team space",
+        body = s"You can now share knowledge with ${member.firstName} on the ${acceptedOrg.abbreviatedName} team",
         linkText = "View team members",
         extraJson = Some(Json.obj(
           "member" -> member,
