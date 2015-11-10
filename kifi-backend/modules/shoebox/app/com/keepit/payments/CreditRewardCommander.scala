@@ -22,6 +22,7 @@ trait CreditRewardCommander {
   // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards]
+  def getCreditCodeInfo(req: CreditCodeApplyRequest): Try[CreditCodeInfo]
   def adminCreateCreditCode(codeTemplate: CreditCodeInfo): CreditCodeInfo
 
   // Generic API for creating a credit reward (use for one-off rewards, like the org creation bonus)
@@ -89,10 +90,8 @@ class CreditRewardCommanderImpl @Inject() (
   }
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards] = db.readWrite { implicit session =>
     for {
-      creditCodeInfo <- creditCodeInfoRepo.getByCode(req.code).map(Success(_)).getOrElse(Failure(CreditCodeNotFoundException(req.code)))
+      creditCodeInfo <- getCreditCodeInfo(req)
       accountId <- req.orgId.map(accountRepo.getAccountId(_)).map(Success(_)).getOrElse(Failure(NoPaidAccountException(req.applierId, req.orgId)))
-      _ <- if (creditCodeInfo.referrer.exists(r => r.organizationId.isDefined && r.organizationId == req.orgId)) Failure(CreditCodeAbuseException(req)) else Success(true)
-      _ <- if (creditCodeInfo.isSingleUse && creditRewardRepo.getByCreditCode(creditCodeInfo.code).nonEmpty) Failure(CreditCodeAlreadyBurnedException(req.code)) else Success(true)
       rewards <- createRewardsFromCreditCode(creditCodeInfo, accountId, req.applierId, req.orgId)
     } yield {
       (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo) match {
@@ -100,9 +99,16 @@ class CreditRewardCommanderImpl @Inject() (
           sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId, creditInfo)
         case _ =>
       }
-
       rewards
     }
+  }
+
+  def getCreditCodeInfo(req: CreditCodeApplyRequest): Try[CreditCodeInfo] = {
+    for {
+      creditCodeInfo <- creditCodeInfoRepo.getByCode(req.code).map(Success(_)).getOrElse(Failure(CreditCodeNotFoundException(req.code)))
+      _ <- if (creditCodeInfo.referrer.exists(r => r.organizationId.isDefined && r.organizationId == req.orgId)) Failure(CreditCodeAbuseException(req)) else Success(true)
+      _ <- if (creditCodeInfo.isSingleUse && creditRewardRepo.getByCreditCode(creditCodeInfo.code).nonEmpty) Failure(CreditCodeAlreadyBurnedException(req.code)) else Success(true)
+    } yield creditCodeInfo
   }
 
   private def sendReferralCodeAppliedEmail(referrerOrgId: Id[Organization], referredOrgId: Id[Organization], creditInfo: CreditCodeInfo)(implicit session: RWSession): Unit = {

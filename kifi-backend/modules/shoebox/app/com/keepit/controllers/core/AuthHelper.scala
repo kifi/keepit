@@ -202,32 +202,36 @@ class AuthHelper @Inject() (
     // the `intent` from the cookies. Hence, ambiguity. In practice, we should find an intent in a cookie, or libraryPublicId is set
     // (meaning, "follow" intent), or nothing. Below is an attempt to unify state:
 
-    val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
-      case "follow" =>
-        request.cookies.get("publicLibraryId").map(i => PublicId[Library](i.value)).map { libPubId =>
-          val authToken = request.cookies.get("libraryAuthToken").map(_.value)
-          AutoFollowLibrary(libPubId, authToken)
-        }
-      case "joinOrg" =>
-        request.cookies.get("publicOrgId").map(i => PublicId[Organization](i.value)).flatMap { orgPubId =>
-          request.cookies.get("orgAuthToken").map(_.value).map { authToken =>
-            AutoJoinOrganization(orgPubId, authToken)
+    val intent: PostRegIntent = {
+      val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
+        case "follow" =>
+          request.cookies.get("publicLibraryId").map(i => PublicId[Library](i.value)).map { libPubId =>
+            val authToken = request.cookies.get("libraryAuthToken").map(_.value)
+            AutoFollowLibrary(libPubId, authToken)
           }
-        }
-      case "waitlist" =>
-        Some(JoinTwitterWaitlist)
-      case _ => None
-    }
-
-    val intent: PostRegIntent = intentFromCookie.orElse {
-      (libraryPublicId, libAuthToken, orgPublicId, orgAuthToken) match { // assumes only one intent exists per request
-        case (Some(libPubId), authTokenOpt, _, _) =>
-          Some(AutoFollowLibrary(libPubId, authTokenOpt))
-        case (_, _, Some(orgPubId), Some(authToken)) =>
-          Some(AutoJoinOrganization(orgPubId, authToken))
+        case "joinOrg" =>
+          request.cookies.get("publicOrgId").map(i => PublicId[Organization](i.value)).flatMap { orgPubId =>
+            request.cookies.get("orgAuthToken").map(_.value).map { authToken =>
+              AutoJoinOrganization(orgPubId, authToken)
+            }
+          }
+        case "waitlist" =>
+          Some(JoinTwitterWaitlist)
         case _ => None
       }
-    }.getOrElse(NoIntent)
+
+      intentFromCookie.orElse {
+        (libraryPublicId, libAuthToken, orgPublicId, orgAuthToken) match { // assumes only one intent exists per request
+          case (Some(libPubId), authTokenOpt, _, _) =>
+            Some(AutoFollowLibrary(libPubId, authTokenOpt))
+          case (_, _, Some(orgPubId), Some(authToken)) =>
+            Some(AutoJoinOrganization(orgPubId, authToken))
+          case _ => None
+        }
+      }.getOrElse(NoIntent)
+    }
+
+
 
     // Sorry, refactoring this is exceeding my mental stack, so keeping some original behavior:
 
@@ -296,7 +300,7 @@ class AuthHelper @Inject() (
     }
 
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
-    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv", "publicOrgId", "orgAuthToken").map(n => DiscardingCookie(n))
+    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv", "publicOrgId", "orgAuthToken", "creditCode").map(n => DiscardingCookie(n))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
