@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .controller('OrgProfileCreateCtrl', [
-  '$scope', '$timeout', 'orgProfileService', '$state', 'profileService', 'modalService',
-  function($scope, $timeout, orgProfileService, $state, profileService, modalService) {
+  '$scope', '$timeout', 'orgProfileService', '$state', 'profileService', 'modalService', 'billingService',
+  function($scope, $timeout, orgProfileService, $state, profileService, modalService, billingService) {
     $scope.orgSlug = ''; // Not yet implemented.
     $scope.disableCreate = false;
 
@@ -41,9 +41,16 @@ angular.module('kifi')
 
       orgProfileService
       .createOrg(this.orgName)
-      .then(function(handle) {
-        profileService.fetchMe(); // update the me object
-        $state.go('orgProfile.libraries', { handle: handle, openInviteModal: true, addMany: true  });
+      .then(function(org) {
+        if ($scope.redeemCode) {
+          billingService.applyReferralCode(org.id, $scope.redeemCode)['finally'](next);
+        } else {
+          next();
+        }
+        function next() {
+          profileService.fetchMe();
+          $state.go('orgProfile.libraries', { handle: org.handle, openInviteModal: true, addMany: true  });
+        }
       })
       ['catch'](function () {
         modalService.openGenericErrorModal();
