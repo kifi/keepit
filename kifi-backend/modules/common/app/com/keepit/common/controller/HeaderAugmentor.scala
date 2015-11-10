@@ -36,7 +36,7 @@ private object Security extends Augmentor {
         val cspStr =
           "" +
             s"style-src d1dwdv9wd966qu.cloudfront.net fonts.googleapis.com 'unsafe-inline'; " +
-            s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com connect.facebook.net platform.twitter.com js.stripe.com checkout.stripe.com 'unsafe-eval' 'nonce-$nonce' $dev; " +
+            s"script-src d1dwdv9wd966qu.cloudfront.net ssl.google-analytics.com d24n15hnbwhuhn.cloudfront.net cdn.mxpnl.com connect.facebook.net platform.twitter.com js.stripe.com checkout.stripe.com 'unsafe-eval' 'nonce-$nonce' 'sha256-XnNQECY9o+nIv2Qgcd1A39YarwxTm10rhdzegH/JBxY=' $dev; " + // sha is twitter's lib
             s"font-src fonts.gstatic.com; " +
             s"img-src data: d1dwdv9wd966qu.cloudfront.net djty7jcqog9qu.cloudfront.net ssl.google-analytics.com stats.g.doubleclick.net static.xx.fbcdn.net q.stripe.com img.youtube.com $dev; " +
             s"form-action www.kifi.com api.kifi.com $dev; " +
@@ -47,10 +47,7 @@ private object Security extends Augmentor {
             "report-uri https://www.kifi.com/up/report"
         Seq("Content-Security-Policy" -> cspStr)
       } else if (useAlphaHeaders) {
-        Seq(
-          "Content-Security-Policy-Report-Only" -> "report-uri //cspbuilder.info/report/258896321291100397/noscripteval/; connect-src 'none' ; child-src 'none' ; font-src 'none' ; form-action 'none' ; frame-ancestors 'none' ; frame-src 'none' ; img-src 'none' ; media-src 'none' ; object-src 'none' ; script-src 'none' ; style-src 'none' ; default-src 'none' ; strict-mixed-content-checking; reflected-xss filter; referrer origin-when-cross-origin;",
-          "Content-Security-Policy-Report-Only" -> "report-uri //cspbuilder.info/report/258896321291100397/noscriptinline/; connect-src 'none' ; child-src 'none' ; font-src 'none' ; form-action 'none' ; frame-ancestors 'none' ; frame-src 'none' ; img-src 'none' ; media-src 'none' ; object-src 'none' ; script-src 'none' ; style-src 'none' ; default-src 'none' ; strict-mixed-content-checking; reflected-xss filter; referrer origin-when-cross-origin; "
-        )
+        Seq()
       } else {
         Seq.empty
       }
