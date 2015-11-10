@@ -14,7 +14,7 @@ import scala.util.{ Failure, Success, Try }
 
 trait SlackClient {
   def sendToSlack(url: String, msg: SlackMessage): Future[Try[Unit]]
-  def generateAuthorizationRequest(scopes: Set[SlackAuthScope], state: JsObject, redirectUri: Option[String] = None): String
+  def generateAuthorizationRequest(scopes: Set[SlackAuthScope], state: JsObject): String
   def processAuthorizationResponse(code: SlackAuthorizationCode, state: String): Future[Try[(SlackAuthorizationResponse, JsObject)]] // the JsObject is a DeepLink
 }
 
@@ -34,9 +34,6 @@ class SlackClientImpl(
 
   private val REDIRECT_URI = URLEncoder.encode("https://www.kifi.com/oauth2/slack", "ascii")
 
-  private def mkUrlOpt(base: String, params: (String, Option[String])*): String = {
-    base + "?" + params.collect { case (k, Some(v)) => s"$k=$v" }.mkString("&")
-  }
   private def mkUrl(base: String, params: (String, String)*): String = {
     base + "?" + params.map { case (k, v) => s"$k=$v" }.mkString("&")
   }
@@ -49,11 +46,11 @@ class SlackClientImpl(
     }
   }
 
-  def generateAuthorizationRequest(scopes: Set[SlackAuthScope], state: JsObject, redirectUri: Option[String] = None): String = {
-    mkUrlOpt(Route.OAuthAuthorize,
-      "client_id" -> Some(SLACK_CLIENT_ID),
-      "scope" -> Some(scopes.map(_.value).mkString(",")),
-      "state" -> Some(CryptoSupport.encodeBase64(Json.stringify(state))),
+  def generateAuthorizationRequest(scopes: Set[SlackAuthScope], state: JsObject): String = {
+    mkUrl(Route.OAuthAuthorize,
+      "client_id" -> SLACK_CLIENT_ID,
+      "scope" -> scopes.map(_.value).mkString(","),
+      "state" -> CryptoSupport.encodeBase64(Json.stringify(state)),
       "redirect_uri" -> REDIRECT_URI
     )
   }
