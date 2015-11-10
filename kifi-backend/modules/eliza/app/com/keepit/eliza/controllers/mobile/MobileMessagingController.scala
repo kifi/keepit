@@ -36,8 +36,8 @@ class MobileMessagingController @Inject() (
     val url = obj.value.get("url").collect { case JsString(raw) => JsString(URISanitizer.sanitize(raw)) }
     val nUrl = obj.value.get("nUrl").collect { case JsString(raw) => JsString(URISanitizer.sanitize(raw)) }
     var result = obj
-    url.foreach(sanitized => result = result + ("url" -> sanitized))
-    nUrl.foreach(sanitized => result = result + ("nUrl" -> sanitized))
+    url.foreach(sanitized => result = (result - "url") + ("url" -> sanitized))
+    nUrl.foreach(sanitized => result = (result - "nUrl") + ("nUrl" -> sanitized))
     result
   }
 
