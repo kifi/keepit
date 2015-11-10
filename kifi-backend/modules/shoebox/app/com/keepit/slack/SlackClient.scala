@@ -49,7 +49,7 @@ class SlackClientImpl(
     mkUrlOpt(Route.OAuthAuthorize,
       "client_id" -> Some(SLACK_CLIENT_ID),
       "scope" -> Some(scopes.map(_.value).mkString(",")),
-      "state" -> Some(CryptoSupport.base64ify(state.toString())),
+      "state" -> Some(CryptoSupport.encodeBase64(Json.stringify(state))),
       "redirect_uri" -> redirectUri
     )
   }

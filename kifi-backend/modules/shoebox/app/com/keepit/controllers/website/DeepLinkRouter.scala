@@ -1,7 +1,5 @@
 package com.keepit.controllers.website
 
-import java.net.URLEncoder
-
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.PathCommander
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -10,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.path.Path
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import play.api.libs.json.{ Json, JsObject }
+import play.api.libs.json.JsObject
 
 case class DeepLinkRedirect(url: String, externalLocator: Option[String] = None)
 
@@ -29,8 +27,6 @@ class DeepLinkRouterImpl @Inject() (
     uriRepo: NormalizedURIRepo,
     pathCommander: PathCommander,
     implicit val publicIdConfiguration: PublicIdConfiguration) extends DeepLinkRouter {
-
-  private def deepLink(data: JsObject): String = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
   def generateRedirect(data: JsObject): Option[DeepLinkRedirect] = {
     (data \ "t").asOpt[String].flatMap {

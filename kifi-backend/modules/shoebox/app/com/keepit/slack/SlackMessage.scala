@@ -31,13 +31,13 @@ object SlackMessage {
   def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }
 
-sealed abstract class SlackAPIFail(val status: Int, val msg: String) extends Exception(s"$status response: $msg") {
-  def asResponse = Status(status)(Json.obj("error" -> msg))
+sealed abstract class SlackAPIFail(val status: Int, val msg: String, val payload: JsValue) extends Exception(s"$status response: $msg ($payload)") {
+  def asResponse = Status(status)(Json.obj("error" -> msg, "payload" -> payload))
 }
 object SlackAPIFail {
-  case class Generic(override val status: Int, payload: JsValue) extends SlackAPIFail(status, payload.toString())
-  case class ParseError(payload: JsValue, err: JsError) extends SlackAPIFail(OK, s"unparseable payload $payload ($err)")
-  case class StateError(state: String) extends SlackAPIFail(OK, s"broken auth state: $state")
+  case class Generic(override val status: Int, js: JsValue) extends SlackAPIFail(status, "api_error", js)
+  case class ParseError(js: JsValue, err: JsError) extends SlackAPIFail(OK, "unparseable_payload", js)
+  case class StateError(state: String) extends SlackAPIFail(OK, "broken_state", JsString(state))
 }
 
 sealed abstract class SlackAuthScope(val value: String)
