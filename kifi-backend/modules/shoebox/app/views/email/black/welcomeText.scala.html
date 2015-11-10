@@ -1,7 +1,12 @@
-@(toUserId: Id[User])
+@(toUserId: Id[User], verifyUrl: Option[String])
 @import com.keepit.common.mail.template.helpers._
 
 Dear @firstName(toUserId),
+
+@verifyUrl.map { url =>
+To protect your privacy and security, please confirm your email address by clicking the following link:
+@url
+}
 
 I’m Kifi’s co-founder and CEO. I would like to personally welcome you to our vibrant community discovering, organizing, and sharing knowledge. We built Kifi (www.kifi.com) to make keeping and sharing web pages from any device a snap, and to that end we’ve made our platform available on web, iOS and Android.
 

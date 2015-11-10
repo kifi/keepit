@@ -4,7 +4,6 @@
 
 @homeUrl = @{kifiUrl("kifiHome")}
 @kifiGuideUrl = @{htmlUrl("https://www.kifi.com/kifi/kifi-tutorials?", "kifiTutorials", false)}
-@eishayKifiUrl = @{profileUrl(Id[User](1), "eishayProf")}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -15,6 +14,10 @@
     Dear @firstName(toUserId),<br>
 
     <p>Thank you for signing up for Kifi.</p>
+    @verifyUrl.map { url =>
+      <br>To protect your privacy and security, please <a href="@url">confirm your email address</a> by clicking the following link:<br/>
+      <a href="@url">@url</a></p>
+    }
 
     <p>We built Kifi to make keeping and sharing web pages from any device a snap, and to that end we’ve made
     our platform available on <a href="@homeUrl">web</a> (with must-have <a href="@kifiChromeExtensionUrl">Chrome</a> and <a href="@kifiFirefoxExtensionUrl">Firefox</a> extensions), <a href="@iOsAppStoreUrl">iOS</a> and <a href="@googlePlayStoreUrl">Android</a>.
@@ -23,11 +26,6 @@
         If you would like to have a different profile URL, please reach out to me and let me know.</p>
 
     <p>Eishay Smith, CEO<br>
-    <a href="@eishayKifiUrl">http://www.kifi.com/eishay</a></p>
-    @verifyUrl.map { url =>
-
-        <p>To protect your privacy and security, please confirm your email address by clicking the link below:
-        <a href="@url">@url</a></p>
-    }
+    <a href="https://www.kifi.com/eishay">https://www.kifi.com/eishay</a></p>
     </body>
 </html>
