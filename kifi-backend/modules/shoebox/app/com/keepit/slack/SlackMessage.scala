@@ -1,5 +1,6 @@
 package com.keepit.slack
 
+import com.keepit.common.strings.StringWithReplacements
 import com.keepit.common.reflection.Enumerator
 import com.kifi.macros.json
 import play.api.libs.json._
@@ -16,8 +17,16 @@ case class SlackMessage( // https://api.slack.com/incoming-webhooks
 
 object SlackMessage {
   implicit val writes: Writes[SlackMessage] = Writes { o =>
-    Json.obj("text" -> o.text, "channel" -> o.channel, "username" -> o.username, "icon_url" -> o.iconUrl, "attachments" -> o.attachments)
+    Json.obj(
+      "text" -> o.text,
+      "channel" -> o.channel,
+      "username" -> o.username,
+      "icon_url" -> o.iconUrl,
+      "attachments" -> o.attachments
+    )
   }
+
+  def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }
 
 case class SlackAPIFail(status: Int, payload: JsValue) extends Exception(s"Slack returned a $status response: $payload")
@@ -59,21 +68,17 @@ case class SlackAuthorizationRequest(
   url: String,
   scopes: Set[SlackAuthScope],
   uniqueToken: String,
-  redirectUri: Option[String]
-)
+  redirectUri: Option[String])
 
 case class SlackAuthorizationCode(code: String)
 case class SlackAccessToken(token: String)
 case class SlackIncomingWebhook(
   url: String,
   channel: String,
-  configUrl: String
-)
+  configUrl: String)
 
 case class SlackAuthorizationResponse(
   accessToken: SlackAccessToken,
   scopes: Set[SlackAuthScope],
   teamName: String,
-  incomingWebhook: Option[SlackIncomingWebhook]
-)
-
+  incomingWebhook: Option[SlackIncomingWebhook])
