@@ -445,9 +445,6 @@ var socketHandlers = {
     } else {
       lightFlush();
     }
-    authenticate(function () {
-      log('[socket:flush] we\'re back');
-    });
   },
   experiments: function (exp) {
     log('[socket:experiments]', exp);
