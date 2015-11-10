@@ -3,14 +3,21 @@ package com.keepit.slack.models
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsNull, Json, JsValue }
 
-abstract class SlackIntegrationStatus(status: String)
-object SlackIntegrationStatus {
+abstract class SlackIntegrationStatus(val status: String)
+object SlackIntegrationStatus extends Enumerator[SlackIntegrationStatus] {
   case object On extends SlackIntegrationStatus("on")
   case object Off extends SlackIntegrationStatus("off")
+  val all = Set(On, Off)
+
+  def columnType(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[SlackIntegrationStatus, String](_.status, status => all.find(_.status == status).getOrElse { throw new IllegalStateException(s"Unkwown SlackIntegrationStatus: $status") })
+  }
 }
 
 case class SlackIncomingWebhookInfo(
