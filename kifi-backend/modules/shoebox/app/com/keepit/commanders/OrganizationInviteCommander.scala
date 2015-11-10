@@ -122,9 +122,13 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
             case ((userIds, nonUserContactsByEmail), (email, contact)) => (userIds, nonUserContactsByEmail + (email -> contact))
           }
 
-          val basicUserByUserId: Map[Id[User], BasicUser] = db.readOnlyMaster { implicit session => basicUserRepo.loadAll(allInviteeUserIds) }
+          val (nonMemberUserIds, basicUserByUserId) = db.readOnlyMaster { implicit session =>
+            val nonMemberUserIds = allInviteeUserIds.filterNot(userId => organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId))
+            val basicUserById = basicUserRepo.loadAll(nonMemberUserIds)
+            (nonMemberUserIds, basicUserById)
+          }
 
-          val addMembers = allInviteeUserIds.map { userId =>
+          val addMembers = nonMemberUserIds.map { userId =>
             val orgInvite = OrganizationInvite(organizationId = orgId, inviterId = inviterId, userId = Some(userId), message = message)
             val inviteeInfo: Either[BasicUser, RichContact] = Left(basicUserByUserId(userId))
             (orgInvite, inviteeInfo)

@@ -1,4 +1,4 @@
-package com.keepit.controllers.website
+package com.keepit.controllers.routing
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders._
@@ -11,6 +11,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
 import com.keepit.common.mail.KifiMobileAppLinkFlag
+import com.keepit.controllers.website.{ AngularApp, DeepLinkRouter }
 import com.keepit.heimdal.{ HeimdalContextBuilderFactory, HeimdalContextBuilder }
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._

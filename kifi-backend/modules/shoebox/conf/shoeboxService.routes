@@ -563,6 +563,7 @@ POST          /site/admin/billing/featureSettings               @com.keepit.cont
 POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
 GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None, inclusive: Boolean ?= false)
 
+GET       /site/slackAuth @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: String, state: String)
 ##########################################
 # Email-Link API
 ##########################################
@@ -704,6 +705,7 @@ POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
 POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
 POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User])
+GET     /admin/user/:id/clientFlush @com.keepit.controllers.admin.AdminUserController.flushClients(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
 GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
@@ -1029,54 +1031,7 @@ GET     /dist/*file                com.keepit.controllers.website.AngularDistAss
 GET     /img/*file                 com.keepit.controllers.website.AngularImgAssets.at(path = "/public/ng/img", file)
 
 ->  / commonService.Routes
+->  / site.Routes
 
-##########################################
-# Web App
-##########################################
-
-# Let's keep these routes alphabetized.
-
-GET     /connections               @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
-GET     /find                      @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
-GET     /friends                   @com.keepit.controllers.website.KifiSiteRouter.redirectFromFriends(friend: Option[String])
-GET     /friends/invite            @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/invite")
-GET     /friends/requests          @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
-GET     /friends/requests/email    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
-GET     /friends/requests/linkedin @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
-GET     /friends/requests/facebook @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
-GET     /friends/requests/refresh  @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
-GET     /invite                    @com.keepit.controllers.website.KifiSiteRouter.handleInvitePage(friend: Option[String])
-GET     /me                        @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "")
-GET     /me/connections            @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/connections")
-GET     /me/followers              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/followers")
-GET     /me/libraries              @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries")
-GET     /me/libraries/following    @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/following")
-GET     /me/libraries/invited      @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnProfile(subpath = "/libraries/invited")
-GET     /profile                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/settings")
-GET     /settings                  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
-GET     /teams/new                 @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUserOrSignup
-GET     /pricing                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/plan", noTeam = "/teams/new", fallback = "/about/pricing")
-GET     /credits                   @com.keepit.controllers.website.KifiSiteRouter.redirectUserToOwnOrg(subpath = "/settings/credits", noTeam = "/teams/new", fallback = "/about/pricing#referral")
-GET     /organizations             @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/teams")
-GET     /recommendations           @com.keepit.controllers.website.KifiSiteRouter.redirectUserTo(path = "/")
-GET     /tags/manage               @com.keepit.controllers.website.KifiSiteRouter.serveWebAppToUser
-GET     /redir                     @com.keepit.controllers.website.KifiSiteRouter.generalRedirect(data: String)
-
-# Note: If you add any routes below this /:handle they aren't going to get matched, since :handle will wildcard match anything
-GET     /:handle                   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
-GET     /:name/connections         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
-GET     /:name/followers           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
-GET     /:handle/members           @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
-GET     /:handle/settings          @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
-GET     /:handle/settings/plan     @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
-GET     /:handle/settings/contacts @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
-GET     /:handle/settings/export   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
-GET     /:handle/settings/activity @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
-GET     /:handle/settings/credits  @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfOrganizationFound(handle: OrganizationHandle)
-GET     /:handle/libraries         @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
-GET     /:name/libraries/following @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
-GET     /:name/libraries/invited   @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
 GET     /:handle/:slug/rss        @com.keepit.controllers.website.LibraryFeedController.libraryRSSFeed(handle: Handle, slug, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
 GET     /:handle/:slug/atom       @com.keepit.controllers.website.LibraryFeedController.libraryAtomFeed(handle: Handle, slug, authToken: Option[String] ?= None, count: Int ?= 20, offset: Int ?= 0)
-GET     /:handle/:slug             @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
-GET     /:handle/:slug/find        @com.keepit.controllers.website.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)

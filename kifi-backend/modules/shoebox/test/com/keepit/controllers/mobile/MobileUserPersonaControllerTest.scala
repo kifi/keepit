@@ -10,11 +10,12 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ PersonaName, UserPersona, Persona }
-import com.keepit.search.FakeSearchServiceClientModule
-import com.keepit.test.ShoeboxTestInjector
-import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.{ Persona, PersonaName, UserPersona }
+import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.slack.FakeSlackClientModule
+import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.FakeRequest

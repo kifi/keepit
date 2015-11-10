@@ -2,39 +2,23 @@ package com.keepit.commanders
 
 import java.net.URLEncoder
 
-import com.google.inject.{ ImplementedBy, Singleton, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ Id, State }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ NonOKResponseException, ClientResponse, DirectUrl, CallTimeouts, HttpClient }
-import com.keepit.common.concurrent.ReactiveLock
+import com.keepit.common.net.{ CallTimeouts, ClientResponse, DirectUrl, HttpClient, NonOKResponseException }
 import com.keepit.common.path.Path
 import com.keepit.model._
-import com.kifi.macros.json
-import play.api.libs.json._
+import com.keepit.slack.{ SlackMessage, SlackAttachment }
 import play.api.http.Status._
+import play.api.libs.json._
 
-import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Try, Failure, Success }
-
-@json
-case class SlackAttachment(fallback: String, text: String)
-
-case class BasicSlackMessage( // https://api.slack.com/incoming-webhooks
-  text: String,
-  channel: Option[String] = None,
-  username: String = "Kifi",
-  iconUrl: String = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png",
-  attachments: Seq[SlackAttachment] = Seq.empty)
-
-object BasicSlackMessage {
-  implicit val writes = new Writes[BasicSlackMessage] {
-    def writes(o: BasicSlackMessage): JsValue = Json.obj("text" -> o.text, "channel" -> o.channel, "username" -> o.username, "icon_url" -> o.iconUrl, "attachments" -> o.attachments)
-  }
-}
+import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[LibrarySubscriptionCommanderImpl])
 trait LibrarySubscriptionCommander {
@@ -57,7 +41,7 @@ class LibrarySubscriptionCommanderImpl @Inject() (
 
   val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000)))
 
-  def slackMessageForNewKeep(user: User, keep: Keep, library: Library, channel: String): BasicSlackMessage = {
+  def slackMessageForNewKeep(user: User, keep: Keep, library: Library, channel: String): SlackMessage = {
     val keepTitle = if (keep.title.exists(_.nonEmpty)) { keep.title.get } else { "a keep" }
     val userRedir = URLEncoder.encode(Json.obj("t" -> "us", "uid" -> user.externalId).toString(), "ascii")
     val libRedir = URLEncoder.encode(Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id).toString(), "ascii")
@@ -65,7 +49,7 @@ class LibrarySubscriptionCommanderImpl @Inject() (
     val libLink = Path(s"redir?data=$libRedir&kma=1").absolute
     val text = s"<$userLink|${user.fullName}> just added <${keep.url}|$keepTitle> to the <$libLink|${library.name}> library."
     val attachments: Seq[SlackAttachment] = keep.note.toSeq.collect { case content if content.nonEmpty => SlackAttachment(fallback = "Check out this keep", text = s"${content} - ${user.firstName}") }
-    BasicSlackMessage(text = text, channel = Some(channel), attachments = attachments)
+    SlackMessage(text = text, channel = Some(channel), attachments = attachments)
   }
 
   def sendNewKeepMessage(keep: Keep, library: Library): Seq[Future[ClientResponse]] = {

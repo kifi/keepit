@@ -321,6 +321,10 @@ class OrganizationCommanderImpl @Inject() (
           val orgGeneralLibrary = libraryCommander.unsafeCreateLibrary(LibraryInitialValues.forOrgGeneralLibrary(org), org.ownerId)
           organizationAnalytics.trackOrganizationEvent(org, userRepo.get(request.requesterId), request)
 
+          session.onTransactionSuccess {
+            eliza.flush(request.requesterId)
+          }
+
           val orgView = getOrganizationViewHelper(org.id.get, Some(request.requesterId), None)
           Right(OrganizationCreateResponse(request, org, orgGeneralLibrary, orgView))
       }

@@ -31,6 +31,7 @@ import com.keepit.queue.FakeNormalizationUpdateJobQueueModule
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox._
+import com.keepit.slack.FakeSlackClientModule
 
 class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
   extends DbTestApplication(path, overridingModules, Seq(
@@ -48,6 +49,7 @@ class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new F
     FakeFortyTwoModule(),
     FakeDiscoveryModule(),
     FakeSlickModule(TestDbInfo.dbInfo),
+    FakeSlackClientModule(),
     ShoeboxCacheModule(HashMapMemoryCacheModule()),
     FakeNormalizationServiceModule(),
     FakeSecureSocialClientIdModule(),
@@ -96,6 +98,7 @@ trait ShoeboxTestInjector extends TestInjector with DbInjectionHelper with Shoeb
     FakeShoeboxStoreModule(),
     FakeCortexServiceClientModule(),
     FakeSearchServiceClientModule(),
+    FakeSlackClientModule(),
     FakeHttpClientModule(),
     DevTwilioCredentialsModule(),
     FakeExecutionContextModule(),
