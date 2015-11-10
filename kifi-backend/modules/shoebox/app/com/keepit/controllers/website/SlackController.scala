@@ -21,13 +21,10 @@ class SlackController @Inject() (
     implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
 
   def registerSlackAuthorization(code: String, state: String) = UserAction.async { request =>
-    slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), state).map { authTry =>
-      authTry.map {
-        case (auth, redirState) =>
-          Ok(Json.obj("auth" -> auth.scopes, "redir" -> redirState))
-      }.recover {
-        case fail: SlackAPIFail => fail.asResponse
-      }.get
+    slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), state).map {
+      case (auth, redirState) => Ok(Json.obj("auth" -> auth.scopes, "redir" -> redirState))
+    }.recover {
+      case fail: SlackAPIFail => fail.asResponse
     }
   }
 }
