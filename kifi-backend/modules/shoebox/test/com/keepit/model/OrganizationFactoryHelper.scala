@@ -59,9 +59,6 @@ object OrganizationFactoryHelper {
       for (invitedEmail <- partialOrganization.invitedEmails) {
         orgInvRepo.save(OrganizationInvite(organizationId = org.id.get, inviterId = org.ownerId, emailAddress = Some(invitedEmail), role = OrganizationRole.MEMBER))
       }
-
-      partialOrganization.domainName.foreach(domain => injector.getInstance(classOf[OrganizationDomainOwnershipRepo]).save(OrganizationDomainOwnership(organizationId = org.id.get, normalizedHostname = domain)))
-
       org
     }
   }

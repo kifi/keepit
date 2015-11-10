@@ -1,8 +1,5 @@
-@(toUserId: Id[User], verifyUrl: String, sharedDomainOrgOpt: Option[Id[Organization]])
+@(toUserId: Id[User], verifyUrl: String)
 @import com.keepit.common.mail.template.helpers._
-
-@orgName = @{sharedDomainOrgOpt.map { orgId => organizationName(orgId) } }
-@orgLink = @{sharedDomainOrgOpt.map { orgId => organizationLink(orgId, None, "") } }
 
 <div style="color:#333;font:13px 'Helvetica Neue',Helvetica,Arial,sans-serif;padding:20px;">
 
@@ -12,13 +9,9 @@
 
 <p><a href="@verifyUrl">@verifyUrl</a></p>
 
-@if(orgName.isDefined) {
-<p>Upon verification, you'll join <a href="@orgLink" target="_blank">@{orgName.get}'s</a> Kifi team.</p>
-}
-
 <p>We look forward seeing you on Kifi,</p>
 
-<p><br>
+<p>—<br>
 The Kifi Team</p>
 
 </div>
