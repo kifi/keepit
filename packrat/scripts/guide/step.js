@@ -29,9 +29,13 @@ k.guide.step = k.guide.step || function () {
         window.addEventListener(type, screenEvent, true);
       });
       if (document.readyState === 'complete') {
-        timeout = setTimeout(show2, 500);
+        timeout = setTimeout(function () {
+          show2();
+        }, 500);
       } else {
-        timeout = setTimeout(show2, 3500);
+        timeout = setTimeout(function () {
+          show2();
+        }, 3500);
         window.addEventListener('load', onDocumentComplete, true);
       }
       return {
@@ -44,7 +48,9 @@ k.guide.step = k.guide.step || function () {
 
   function onDocumentComplete() {
     clearTimeout(timeout);
-    timeout = setTimeout(show2, 200);
+    timeout = setTimeout(function () {
+      show2();
+    }, 200);
   }
 
   function show2() {
@@ -192,7 +198,9 @@ k.guide.step = k.guide.step || function () {
             arrow.reveal(stepIdx === 0 ? 600 : 400);
           }
           if (step.litFor) {
-            setTimeout(animateSpotlightTo.bind(null, null, null, 600), step.litFor);
+            setTimeout(function () {
+              animateSpotlightTo(null, null, 600);
+            }, step.litFor);
           }
         }
       })

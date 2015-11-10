@@ -82,20 +82,26 @@ var selectionchange = (function (undefined) {
   }
 
   function onKeyDown(e) {
+    var self = this;
     var code = e.keyCode;
     if (code === 65 && e[SELECT_ALL_MODIFIER] && !e.shiftKey && !e.altKey || // Ctrl-A or Cmd-A
         code >= 37 && code <= 40 || // arrow key
         e.ctrlKey && MAC && MAC_MOVE_KEYS.indexOf(code) >= 0) {
       if (!HAS_OWN_SELECTION[e.target.tagName]) {
-        setTimeout(dispatchIfChanged.bind(null, this), 0);
+        setTimeout(function () {
+          dispatchIfChanged(self);
+        }, 0);
       }
     }
   }
 
   function onMouseDown(e) {
+    var self = this;
     if (e.button === 0) {
       on(this, 'mousemove', onMouseMove);
-      setTimeout(dispatchIfChanged.bind(null, this), 0);
+      setTimeout(function () {
+        dispatchIfChanged(self);
+      }, 0);
     }
   }
 
@@ -108,22 +114,30 @@ var selectionchange = (function (undefined) {
   }
 
   function onMouseUp(e) {
+    var self = this;
     if (e.button === 0) {
-      setTimeout(dispatchIfChanged.bind(null, this), 0);
+      setTimeout(function () {
+        dispatchIfChanged(self);
+      }, 0);
     } else {
       off(this, 'mousemove', onMouseMove);
     }
   }
 
   function onFocus() {
-    setTimeout(dispatchIfChanged.bind(null, this.document), 0);
+    var self = this;
+    setTimeout(function () {
+      dispatchIfChanged(self.document);
+    }, 0);
   }
 
   function dispatchIfChanged(doc, force) {
     var r = getSelectionRange(doc);
     if (force || !sameRange(r, ranges.get(doc))) {
       ranges.set(doc, r);
-      setTimeout(doc.dispatchEvent.bind(doc, new Event('selectionchange')), 0);
+      setTimeout(function () {
+        doc.dispatchEvent(new Event('selectionchange'));
+      }, 0);
     }
   }
 

@@ -753,7 +753,9 @@
     }
 
     function focusAsync() {
-      setTimeout(focus, 0);
+      setTimeout(function () {
+        focus();
+      }, 0);
     }
 
     function focus() {

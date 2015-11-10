@@ -165,7 +165,9 @@ k.keepBox = k.keepBox || (function () {
       makeScrollable($box);
       var deferred = Q.defer();
       $box.data({imagePromise: deferred.promise, imagePromisedAt: Date.now()});
-      setTimeout(findPageImages.bind(null, $box.data(), deferred), 10);
+      setTimeout(function () {
+        findPageImages($box.data(), deferred);
+      }, 10);
     }
   }
 
@@ -1215,13 +1217,20 @@ k.keepBox = k.keepBox || (function () {
   function progress(parent, promise) {
     var $el = $('<div class="kifi-keep-box-progress"/>').appendTo(parent);
     var frac = 0, ms = 10, deferred = Q.defer();
-    var timeout = setTimeout(function update() {
+
+    var timeout;
+    function update() {
       var left = .9 - frac;
       frac += .06 * left;
       $el[0].style.width = Math.min(frac * 100, 100) + '%';
       if (left > .0001) {
-        timeout = setTimeout(update, ms);
+        timeout = setTimeout(function () {
+          update();
+        }, ms);
       }
+    }
+    timeout = setTimeout(function () {
+      update();
     }, ms);
 
     promise.done(function (val) {

@@ -310,7 +310,9 @@ document.addEventListener('keydown', function (e) {
             return $('<li class=reset-password-address>').text(addr);
           }));
           $dialog.addClass('reset-password-sent');
-          setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
+          setTimeout(function () {
+            $dialog.find('.reset-password-cancel').focus();
+          }, 100);
         })
         .fail(function (xhr) {
           var o = xhr.responseJSON;

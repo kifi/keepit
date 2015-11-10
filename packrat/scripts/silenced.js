@@ -23,7 +23,9 @@ var showSilenced = (function () {
     document.addEventListener('keydown', onKeyDown, true);
     k.hideKeeperCallout = hide;
     api.onEnd.push(hide);
-    setTimeout(hide, 8000);
+    setTimeout(function () {
+      hide();
+    }, 8000);
   };
 
   function onKeyDown(e) {

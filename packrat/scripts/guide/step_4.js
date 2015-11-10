@@ -36,7 +36,9 @@ k.guide.step4 = k.guide.step4 || function () {
     $(document).data('esc').add(hide);
     arrows = [];
     clearTimeout(timeout);
-    timeout = setTimeout(welcome, 600);
+    timeout = setTimeout(function () {
+      welcome();
+    }, 600);
     api.port.emit('track_guide', [4, 0]);
   }
 
@@ -70,7 +72,9 @@ k.guide.step4 = k.guide.step4 || function () {
       .each(layout)
       .addClass('kifi-opaque');
     clearTimeout(timeout);
-    timeout = setTimeout(cutHole, 800);
+    timeout = setTimeout(function () {
+      cutHole();
+    }, 800);
   }
 
   function removeAll() {
@@ -118,7 +122,14 @@ k.guide.step4 = k.guide.step4 || function () {
           anchor.css);
         arrow.reveal(400);
         arrows.push(arrow);
-        timeout = setTimeout(arrows.length < holes.length ? cutHole : drumRoll, 1200);
+
+        timeout = setTimeout(function () {
+          if (arrows.length < holes.length) {
+            cutHole();
+          } else {
+            drumRoll();
+          }
+        }, 1200);
         $steps.data().updateProgress((i + 2) / (arcs.length + 2));
       })
       .addClass('kifi-opaque');

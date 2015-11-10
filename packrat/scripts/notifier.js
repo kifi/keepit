@@ -84,7 +84,11 @@ var notifier = function () {
         clearTimeout($item.data('fadeTimer'));
         $item.stop().css({opacity: '', height: ''});
       }).mouseleave(function() {
-        $item.data('fadeTimer', setTimeout(fadeItem.bind(null, $item), params.showForMs));
+        var timeout = setTimeout(function () {
+          fadeItem($item);
+        }, params.showForMs);
+
+        $item.data('fadeTimer', timeout);
       }).triggerHandler('mouseleave');
     }
 

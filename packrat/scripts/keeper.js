@@ -115,7 +115,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
     }).mousedown(function (e) {
       if (e.which !== 1 || e.isDefaultPrevented() || data.stickiness || $(e.target).is('.kifi-tip,.kifi-tip *,.kifi-keepers,.kifi-keepers *') || e.originalEvent.isTrusted === false) return;
       e.preventDefault();  // prevents selection and selection scrolling
-      data.dragTimer = setTimeout(startDrag.bind(null, data), 900);
+      data.dragTimer = setTimeout(function () {
+        startDrag(data);
+      }, 900);
       data.mousedownEvent = e.originalEvent;
     }).mouseup(function () {
       if (data.dragTimer || data.dragStarting) {
@@ -291,7 +293,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       extMsgIntroEligible = false;
       api.port.emit('prefs', function (prefs) {
         if (prefs.showExtMsgIntro) {
-          setTimeout(api.require.bind(api, 'scripts/external_messaging_intro.js', api.noop), 1000);
+          setTimeout(function () {
+            api.require('scripts/external_messaging_intro.js', api.noop);
+          }, 1000);
         }
       });
     }
@@ -409,7 +413,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       k.pane.unshade();
     }
     if (doneWithKeeper) {
-      setTimeout(hideDelayed.bind(null, 'keepBox'), 40);
+      setTimeout(function () {
+        hideDelayed('keepBox');
+      }, 40);
     }
   }
   function onToasterHide(doneWithKeeper) {
@@ -418,7 +424,9 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
       k.pane.unshade();
     }
     if (doneWithKeeper) {
-      setTimeout(hideDelayed.bind(null, 'toaster'), 40);
+      setTimeout(function () {
+        hideDelayed('toaster');
+      }, 40);
     }
   }
   function hideDelayed(trigger) {
@@ -597,8 +605,13 @@ k.keeper = k.keeper || function () {  // idempotent for Chrome
                   $promo.detach();
                 }
                 configureHover($promo, {parent: $tile, mustHoverFor: 0, canLeaveFor: 1e9, ignoreWheel: true});
+
+                var socialTooltipTimeout = setTimeout(function () {
+                  $tile.hoverfu('hide')
+                }, 3000 + 1800 * o.libraries.length);
+
                 attachSocialToolTipHandlers($promo, params, 'tile')
-                .data('timeout', setTimeout($.fn.hoverfu.bind($tile, 'hide'), 3000 + 1800 * o.libraries.length))
+                .data('timeout', socialTooltipTimeout)
                 .on('mouseover', function f(e) {
                   $promo.off(e.type, f).removeClass('kifi-slowly');
                   clearTimeout($promo.data('timeout'));

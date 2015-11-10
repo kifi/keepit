@@ -36,9 +36,9 @@ function ReconnectingWebSocket(url, opts) {
     ws.onopen = onOpen;
     ws.onclose = onClose.bind(null, retryPolicy, elapsedRetryDelayMs);
     ws.onerror = onError;
-    timers.disconnect = setTimeout(
-      disconnect.bind(null, 'connect', o.openTimeoutMs, retryPolicy, elapsedRetryDelayMs),
-      o.openTimeoutMs);  // expecting onOpen
+    timers.disconnect = setTimeout(function () {
+      disconnect('connect', o.openTimeoutMs, retryPolicy, elapsedRetryDelayMs);
+    }, o.openTimeoutMs);  // expecting onOpen
   }
 
   function disconnect(why, msWaited, retryPolicy, prevRetryDelayMs) {
@@ -52,7 +52,9 @@ function ReconnectingWebSocket(url, opts) {
     clearTimers();
     if (retryDelayMs) {
       window.addEventListener('online', onOnlineConnect);
-      timers.connect = setTimeout(connect.bind(null, retryPolicy, retryDelayMs), retryDelayMs);
+      timers.connect = setTimeout(function () {
+        connect(retryPolicy, retryDelayMs);
+      }, retryDelayMs);
       o.onDisconnect(why, msWaited / 1000);
     } else {
       window.removeEventListener('online', onOnlineConnect);
@@ -65,9 +67,9 @@ function ReconnectingWebSocket(url, opts) {
     ws.onmessage = onMessage1;
     clearTimers();
     window.removeEventListener('online', onOnlineConnect);
-    timers.disconnect = setTimeout(
-      disconnect.bind(null, 'stillborn', o.helloTimeoutMs),
-      o.helloTimeoutMs);
+    timers.disconnect = setTimeout(function () {
+      disconnect('stillborn', o.helloTimeoutMs);
+    }, o.helloTimeoutMs);
   }
 
   function onClose(retryPolicy, elapsedRetryDelayMs) {
@@ -85,7 +87,11 @@ function ReconnectingWebSocket(url, opts) {
 
   function onMessage1(e) {
     clearTimers();
-    timers.ping = setTimeout(ping, o.pingAfterMs);
+
+    timers.ping = setTimeout(function () {
+      ping();
+    }, o.pingAfterMs);
+
     lastRecOrPingTime = Date.now();
     if (e.data === '["hi"]') {
       log('#0bf', '[RWS.onMessage1]', e.data);
@@ -106,7 +112,11 @@ function ReconnectingWebSocket(url, opts) {
 
   function onMessageN(e) {
     clearTimers();
-    timers.ping = setTimeout(ping, o.pingAfterMs);
+
+    timers.ping = setTimeout(function () {
+      ping();
+    }, o.pingAfterMs);
+
     lastRecOrPingTime = Date.now();
     if (e.data === '["pong"]') {
       log('#0ac', '[RWS.pong]');
@@ -138,8 +148,11 @@ function ReconnectingWebSocket(url, opts) {
     log('#0bf', '[RWS.ping]');
     ws.send('["ping"]');
     lastRecOrPingTime = Date.now();
+
     clearTimers();
-    timers.disconnect = setTimeout(disconnect.bind(null, 'pong', o.pongTimeoutMs), o.pongTimeoutMs);
+    timers.disconnect = setTimeout(function () {
+      disconnect('pong', o.pongTimeoutMs);
+    }, o.pongTimeoutMs);
   }
 
   function clearTimers() {

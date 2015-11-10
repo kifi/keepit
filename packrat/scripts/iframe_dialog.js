@@ -87,7 +87,9 @@ var iframeDialog = function () {
   function hide() {
     if ($dialog && !$dialog.data('hiding')) {
       $dialog.data('hiding', true).removeClass('kifi-show');
-      setTimeout(remove.bind(null, $dialog), 320);
+      setTimeout(function () {
+        remove($dialog);
+      }, 320);
     }
   }
 

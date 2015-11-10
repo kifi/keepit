@@ -117,7 +117,9 @@
       }
       var ms = showImmediately ? 0 : (opts.mustHoverFor || 0) - (Date.now() - createStartTime);
       if (ms > 0) {
-        data.show = setTimeout(show.bind(a), ms);
+        data.show = setTimeout(function () {
+          show.call(a);
+        }, ms);
       } else {
         show.call(a);
       }
@@ -137,6 +139,7 @@
     }
   }
   function show() {
+    var self = this;
     var data = getData(this);
     clearTimeout(data.show);
     delete data.show;
@@ -148,7 +151,9 @@
     data.showTime = Date.now();
     data.showing = true;
     if (data.opts.hideAfter) {
-      data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
+      data.hide = setTimeout(function () {
+        hide.call(self);
+      }, data.opts.hideAfter);
     }
     if (!data.opts.ignoreWheel) {
       $(doc).on('mousewheel.hoverfu', hide.bind(this));
@@ -179,6 +184,7 @@
     }
   }
   function onMouseOver(create, e) {  // $a or $h
+    var self = this;
     var data = getData(this), a = data.$a[0], h = (data.$h || [])[0], rT = e.relatedTarget;
     if (rT && (a.contains(rT) || h && data.opts.canLeaveFor && h.contains(rT)) || e.originalEvent.isTrusted === false) return;
     if (e.originalEvent.hoverfu === data) return;  // e.g. mouseover $h from containing $a propagated up to $a
@@ -193,7 +199,9 @@
         $(doc).off("mousemove.hoverfu");
       }
       if (data.opts.hideAfter && this === a) {
-        data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
+        data.hide = setTimeout(function () {
+          hide.call(self);
+        }, data.opts.hideAfter);
       }
     }
   }
@@ -207,7 +215,9 @@
         clearTimeout(data.hide), delete data.hide;
       }
       if (data.opts.canLeaveFor && (edge = between(this, this === a ? h : a, e.clientX, e.clientY))) {
-        data.hide = setTimeout(hide.bind(a), data.opts.canLeaveFor);
+        data.hide = setTimeout(function () {
+          hide.call(a);
+        }, data.opts.canLeaveFor);
         data.x = e.clientX;
         data.y = e.clientY;
         $(doc).on("mousemove.hoverfu", onMouseMoveMaybeHide.bind(a, edge, data));

@@ -49,9 +49,9 @@ k.snapshot = k.snapshot || (function () {
       var id = el.id;
       if (id && !spaceRe.test(id)) sel += '#' + escapeToken(id);
 
-      sel += slice(el.classList).map(function (c) {return '.' + escapeToken(c)}).join('');
+      sel += Array.prototype.slice.call(el.classList).map(function (c) {return '.' + escapeToken(c)}).join('');
 
-      var children = slice(el.parentNode.children);
+      var children = Array.prototype.slice.call(el.parentNode.children);
       if (children.some(function (ch) {return ch !== el && ch[matchesSelector](sel)})) {
         sel += ':nth-child(' + (1 + children.indexOf(el)) + ')';
       }
@@ -68,8 +68,6 @@ k.snapshot = k.snapshot || (function () {
     return node.nodeType === 1 ? node : node.parentNode;
   }
 
-  var slice = Array.slice || Function.call.bind(Array.prototype.slice);
-  var indexOf = Array.indexOf || Function.call.bind(Array.prototype.indexOf);
   var scopeChild = ':scope>';
   try {
     document.querySelector(scopeChild + '*'); // bugzil.la/528456
@@ -107,7 +105,7 @@ k.snapshot = k.snapshot || (function () {
           arr.push(s, RANGE_TEXT_NODE_SEPARATOR_H);
         }
       }
-      so = indexOf(sce.childNodes, sc) + 1;
+      so = Array.prototype.indexOf.call(sce.childNodes, sc) + 1;
       sc = sce;
     } else {
       arr = [];
@@ -117,7 +115,7 @@ k.snapshot = k.snapshot || (function () {
     if (ece !== ec) {
       var s = ec.nodeValue;
       suffix = eo < s.length ? s.substr(0, eo) : s;
-      eo = indexOf(ece.childNodes, ec);
+      eo = Array.prototype.indexOf.call(ece.childNodes, ec);
       ec = ece;
     }
 
@@ -131,7 +129,7 @@ k.snapshot = k.snapshot || (function () {
           makeLastSeparatorVertical();
         }
         var p = c.parentNode;
-        return visit(p, indexOf(p.childNodes, c) + 1);
+        return visit(p, Array.prototype.indexOf.call(p.childNodes, c) + 1);
       } else if (node.nodeType === 3) {
         var s = node.nodeValue;
         if (s && (s = collapseSpaces(s, c))) {
@@ -298,9 +296,9 @@ k.snapshot = k.snapshot || (function () {
       return ['r',
         encodeURIComponent(generateSelector(ane)),
         sce === ane ? '' : encodeURIComponent(generateSelector(sce, ane, null)),
-        sc === sce ? so : indexOf(sce.childNodes, sc) + ':' + so,
+        sc === sce ? so : Array.prototype.indexOf.call(sce.childNodes, sc) + ':' + so,
         ece === ane ? '' : encodeURIComponent(generateSelector(ece, ane, null)),
-        ec === ece ? eo : indexOf(ece.childNodes, ec) + ':' + eo,
+        ec === ece ? eo : Array.prototype.indexOf.call(ece.childNodes, ec) + ':' + eo,
         encodeURIComponent(getRangeText(sce, sc, so, ece, ec, eo))
       ].join('|');
     },

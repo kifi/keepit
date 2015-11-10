@@ -182,7 +182,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     if (!('me' in k)) {  // not yet initialized
       var args = Array.prototype.slice.call(arguments);
       args.unshift(null);
-      whenMeKnown.push(Function.bind.apply(loadAndDo, args));
+      whenMeKnown.push(loadAndDo.bind(null, args));
     } else if (!k.me) {
       toggleLoginDialog();
     } else {
@@ -235,7 +235,9 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   function onResize() {
     if (k.pane && k.pane.showing()) return;
     clearTimeout(onResize.t);  // throttling tile repositioning
-    onResize.t = setTimeout(positionTile, 50);
+    onResize.t = setTimeout(function () {
+      positionTile();
+    }, 50);
   }
 
   function positionTile(pos) { // goal: as close to target position as possible while still in window

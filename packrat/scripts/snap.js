@@ -312,7 +312,9 @@ k.snap = k.snap || (function () {
 
   function asyncUpdateSelSnapLink() {
     clearTimeout(timeoutSel);
-    timeoutSel = setTimeout(updateSnapSelLink, 40);
+    timeoutSel = setTimeout(function () {
+      updateSnapSelLink();
+    }, 40);
   }
 
   function updateSnapSelLink() {
@@ -412,7 +414,9 @@ k.snap = k.snap || (function () {
       transform: 'translate(' + (aRect.left - bRect.left) + 'px,' + (aRect.top - bRect.top) + 'px) scale(' + scale + ',' + scale + ')',
       opacity: 0
     });
-    var onEndTimeout = setTimeout(onEnd, ms + 5); // in case transition fails
+    var onEndTimeout = setTimeout(function () {
+      onEnd();
+    }, ms + 5); // in case transition fails
     function onEnd() {
       clearTimeout(onEndTimeout);
       $img.remove();

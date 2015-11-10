@@ -106,7 +106,9 @@ k.guide.step3 = k.guide.step3 || function () {
           if (el) {
             observer.observe(el, {childList: true});
           } else {
-            setTimeout(observeTokens, 20);
+            setTimeout(function () {
+              observeTokens();
+            }, 20);
           }
         }, 20);
         break;
