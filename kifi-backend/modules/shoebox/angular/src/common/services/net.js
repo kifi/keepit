@@ -81,7 +81,11 @@ angular.module('kifi')
         resultClicked: post(search, '/search/events/resultClicked')
       },
 
-      sendMobileAppSMS: post(shoebox, '/sms')
+      sendMobileAppSMS: post(shoebox, '/sms'),
+
+      // library slack integration
+      modifyLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/modify'),
+      deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete')
     };
 
     function get(base, pathSpec, cacheSec) {

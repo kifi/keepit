@@ -1,0 +1,98 @@
+.kf-cta-hover
+  border-color = #0081f1
+  position: absolute
+  z-index: 1
+  transform: translate(-50%)
+  border: 1px solid border-color
+  border-radius: 12px
+  padding: 30px 30px 10px
+  width: 220px
+  line-height: 1.25
+  font-family: Lato, Helvetica, Arial, sans-serif
+  font-size: 14px
+  text-align: center
+  background: #fff
+
+  &.ng-enter
+    transition: opacity .16s linear, transform .16s
+
+  &.ng-leave
+    transition: opacity .16s, transform .16s
+
+  .kf-above>&
+    bottom: 100%
+    margin-bottom: 20px
+    transform-origin: center bottom
+
+    &.ng-enter:not(.ng-enter-active)
+    &.ng-leave.ng-leave-active
+      opacity: 0
+      transform: translate(-75%,12px) scale(.86)
+
+  .kf-below>&
+    top: 100%
+    margin-top: 20px
+    transform-origin: center top
+
+    &.ng-enter:not(.ng-enter-active)
+    &.ng-leave.ng-leave-active
+      opacity: 0
+      transform: translate(-75%,-12px) scale(.86)
+
+  &::before
+    content: ''
+    position: absolute
+    width: 0
+    height: 0
+    left: 50%
+    margin-left: -15px
+    border-left: 15px solid transparent
+    border-right: 15px solid transparent
+
+  .kf-above>&::before
+    top: 100%
+    border-top: 15px solid border-color
+
+  .kf-below>&::before
+    bottom: 100%
+    border-bottom: 15px solid border-color
+
+  &::after
+    content: ''
+    position: absolute
+    width: 0
+    height: 0
+    left: 50%
+    margin-left: -15px
+    border-left: 15px solid transparent
+    border-right: 15px solid transparent
+
+  .kf-above>&::after
+    top: 100%
+    margin-top: -1px
+    border-top: 15px solid #fff
+
+  .kf-below>&::after
+    bottom: 100%
+    margin-bottom: -1px
+    border-bottom: 15px solid #fff
+
+.kf-cta-hover-main-text
+  font-size: 1.1em
+  font-weight: 600
+  margin-bottom: 20px
+
+.kf-cta-hover-user-quote-container
+  font-style: italic
+
+.kf-cta-hover-user-quote
+  color: border-color
+
+.kf-cta-hover-user-quote-by
+  font-size: 0.9em
+  padding: 10px 0 12px
+  color: #9ea4aa
+  text-align: right
+
+.kf-cta-hover-element
+  border: none

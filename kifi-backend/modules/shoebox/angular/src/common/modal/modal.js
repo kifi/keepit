@@ -81,22 +81,27 @@ angular.module('kifi')
     link: function (scope, element, attrs, kfModalCtrl) {
       element.removeAttr('title');  // TODO: use a different attribute name for modal title
 
-      scope.title = attrs.title || '';
-      scope.actionText = attrs.actionText;
-      scope.cancelText = attrs.cancelText;
-      scope.withCancel = (attrs.withCancel !== void 0) || false;
-      scope.withOk = (typeof attrs.withOk !== 'undefined' ? attrs.withOk !== 'false' : true); // default value of true
-      scope.withWarning = (attrs.withWarning !== void 0) || false;
-      scope.withCta = (attrs.withCta !== void 0) || false;
-      scope.equalButtons = (typeof attrs.equalButtons !== 'undefined' ? attrs.equalButtons !== 'false' : true); // default value of true
-      scope.withoutButtons = 'withoutButtons' in attrs;
-      scope.centered = attrs.centered;
+      var modalDefaults = scope.$parent.modalDefaults || {};
+
+      scope.title = attrs.title || modalDefaults.title || '';
+      scope.actionText = attrs.actionText || modalDefaults.actionText;
+      scope.cancelText = attrs.cancelText || modalDefaults.cancelText;
+      scope.withCancel = (attrs.withCancel !== void 0) || modalDefaults.withCancel || false;
+
+      scope.withOk = (typeof attrs.withOk !== 'undefined' ? (attrs.withOk !== 'false' || modalDefaults.withOk) : true); // default value of true
+
+      scope.withWarning = (attrs.withWarning !== void 0) || modalDefaults.withWarning || false;
+      scope.withCta = (attrs.withCta !== void 0) || modalDefaults.withCta || false;
+      scope.equalButtons = (typeof attrs.equalButtons !== 'undefined' ? (attrs.equalButtons !== 'false'
+                                                                                || modalDefaults.equalButtons) : true); // default value of true
+      scope.withoutButtons = 'withoutButtons' in attrs || modalDefaults.withoutButtons;
+      scope.centered = attrs.centered || modalDefaults.centered;
 
       scope.closeAndCancel = function () {
-        kfModalCtrl.close(scope.cancel);
+        kfModalCtrl.close(modalDefaults.cancel || scope.cancel);
       };
       scope.closeAndAction = function () {
-        kfModalCtrl.close(scope.action);
+        kfModalCtrl.close(modalDefaults.action || scope.action);
       };
 
       scope.close = function () {

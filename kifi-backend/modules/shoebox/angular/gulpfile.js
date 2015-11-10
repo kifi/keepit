@@ -338,10 +338,12 @@ gulp.task('scripts', ['jshint'], function () {
     .pipe(cache(jsCache));
 
   return es.merge(html2js, scripts)
+    .pipe(gulpif(!isProdMode, sourcemaps.init()))
     .pipe(remember(htmlCache))
     .pipe(remember(jsCache))
     .pipe(order())
     .pipe(concat(pkgName + '.js'))
+    .pipe(gulpif(!isProdMode, sourcemaps.write('./')))
     .pipe(gulpif(!isProdMode, gulp.dest(outDir)))
     .pipe(gulpif(isProdMode, makeMinJs()));
 });
