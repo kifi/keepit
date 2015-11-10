@@ -4,30 +4,29 @@ import java.io.File
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ LibraryImageCommander, KeepData }
+import com.keepit.commanders.LibraryImageCommander
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession.RWSession
-
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImageSize }
 import com.keepit.common.time._
-import com.keepit.controllers.website.LibraryController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.UserFactory._
-import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.LibraryFactory._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryMembershipFactory._
 import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.UserFactory._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.slack.FakeSlackClientModule
 import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.io.FileUtils
@@ -35,13 +34,12 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{ JsObject, Json }
-import play.api.mvc.{ Result, Call }
-import scala.concurrent.duration.Duration
-import scala.concurrent.{ Await, Future }
+import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
-import scala.concurrent.Future
+import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration.Duration
 
 class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector {
 

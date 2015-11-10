@@ -1,16 +1,18 @@
 package com.keepit.heimdal
 
+import java.util.concurrent.atomic.AtomicLong
+
 import com.google.inject.Module
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule, ProdHttpClientModule }
 import com.keepit.common.time._
-import com.keepit.heimdal.ContextStringData
 import com.keepit.model.{ User, UserExperimentType }
-import com.keepit.shoebox.{ FakeShoeboxServiceModule, FakeShoeboxServiceClientModule }
+import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.social.NonUserKinds
-import com.keepit.test.{ FakeWebServiceModule, HeimdalApplication, HeimdalApplicationInjector }
+import com.keepit.test.{ DummyRequestHeader, FakeWebServiceModule, HeimdalApplication, HeimdalApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.libs.json.JsString
+import play.api.mvc.RequestHeader
 import play.api.test.Helpers._
 
 import scala.concurrent.duration.Duration
@@ -28,6 +30,8 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
   val testUserId = Id[User](777)
   val testUserExternalId = ExternalId[User]("68a320e9-3c33-4b76-b577-d7cba0102745")
 
+  val requestId = new AtomicLong(0)
+
   def heimdalContext(data: (String, ContextData)*) = {
     val builder = new HeimdalContextBuilder
     builder += ("agentVersion", "1.2.3")
@@ -36,6 +40,20 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
     builder.addExperiments(Set(UserExperimentType.ADMIN))
     builder ++= data.toMap
     builder.build
+  }
+
+  def contextWithRequestHeader(data: (String, ContextData)*)(f: (DummyRequestHeader) => Unit) = {
+    val builder = new HeimdalContextBuilder
+    builder ++= data.toMap
+    val reqHeader = DummyRequestHeader(requestId.getAndIncrement(), "/")
+    reqHeader.mutableHeaders.append(("X-Forwarded-For", Seq("192.168.1.1")))
+    f(reqHeader)
+    builder.addRequestInfo(reqHeader)
+    builder.build
+  }
+
+  def setAmplitudeCookie(requestHeader: DummyRequestHeader, value: String): Unit = {
+    requestHeader.mutableCookies("amplitude_idkifi.com") = value
   }
 
   "AmplitudeClient" should {
@@ -56,14 +74,26 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val userViewedPane = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("libraryChooser")), UserEventTypes.VIEWED_PANE, now)
       val userViewedPage1 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/josh")), UserEventTypes.VIEWED_PAGE, now)
       val userViewedPage2 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/settings")), UserEventTypes.VIEWED_PAGE, now)
-      val userViewedPage3 = new UserEvent(testUserId, heimdalContext("type" -> ContextStringData("/?m=0")), UserEventTypes.VIEWED_PAGE, now)
+
+      val contextWithInvalidJsonAmplitudeCookie = contextWithRequestHeader("type" -> ContextStringData("/?m=0")) { reqHeader =>
+        setAmplitudeCookie(reqHeader, "a2VlcGl0") // keepit
+      }
+      val userViewedPage3 = new UserEvent(testUserId, contextWithInvalidJsonAmplitudeCookie, UserEventTypes.VIEWED_PAGE, now)
 
       val visitorViewedPane1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("login")), UserEventTypes.VIEWED_PANE, now)
       val visitorViewedPage1 = new VisitorEvent(heimdalContext("type" -> ContextStringData("signupLibrary")), UserEventTypes.VIEWED_PAGE, now)
       val visitorViewedPage2 = new VisitorEvent(heimdalContext("type" -> ContextStringData("install")), UserEventTypes.VIEWED_PAGE, now)
 
-      val userWasNotified1 = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("spamreport")), UserEventTypes.WAS_NOTIFIED, now)
-      val userWasNotified2 = new UserEvent(testUserId, heimdalContext("action" -> ContextStringData("deferred")), UserEventTypes.WAS_NOTIFIED, now)
+      val contextWithValidAmplitudeCookie = contextWithRequestHeader("action" -> ContextStringData("spamreport")) { reqHeader =>
+        // {"deviceId":"12345678-1234-4567-1234-123412341234","userId":null,"optOut":false}
+        setAmplitudeCookie(reqHeader, "eyJkZXZpY2VJZCI6IjEyMzQ1Njc4LTEyMzQtNDU2Ny0xMjM0LTEyMzQxMjM0MTIzNCIsInVzZXJJZCI6bnVsbCwib3B0T3V0IjpmYWxzZX0=")
+      }
+      val userWasNotified1 = new UserEvent(testUserId, contextWithValidAmplitudeCookie, UserEventTypes.WAS_NOTIFIED, now)
+
+      val contextWithNonBase64AmplitudeCookie = contextWithRequestHeader("action" -> ContextStringData("deferred")) { reqHeader =>
+        setAmplitudeCookie(reqHeader, "*(&#@($&(@#$&@#$")
+      }
+      val userWasNotified2 = new UserEvent(testUserId, contextWithNonBase64AmplitudeCookie, UserEventTypes.WAS_NOTIFIED, now)
 
       // any future that doesn't return the type we expect will throw an exception
       val eventsFList = List(
@@ -143,10 +173,14 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
           case dat: AmplitudeEventSent =>
             // event name should have been renamed
             dat.eventData \ "event_type" === JsString("user_clicked_notification")
+            // device_id should be fetched from the amplitude base64-encoded cookie
+            dat.eventData \ "device_id" === JsString("12345678-1234-4567-1234-123412341234")
         },
         amplitude.track(userWasNotified2) map {
           case dat: AmplitudeEventSent =>
             dat.eventData \ "event_type" === JsString("user_was_notified")
+            // default device_id for a user event is user_<user_id>
+            dat.eventData \ "device_id" === JsString("user_777")
         }
       )
 

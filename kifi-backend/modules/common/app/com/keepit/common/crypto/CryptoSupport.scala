@@ -27,6 +27,7 @@ object CryptoSupport {
   val base64 = new Base64(true)
   val base32 = new Base32(true)
   def toBase64(bytes: Array[Byte]): String = base64.encode(bytes).map(_.toChar).mkString
+  def toBase64(str: String): String = toBase64(str.toCharArray.map(_.toByte))
   def fromBase64(s: String): Array[Byte] = base64.decode(s.getBytes)
   def toBase32(bytes: Array[Byte]): String = base32.encode(bytes).map(_.toChar).mkString
   def fromBase32(s: String): Array[Byte] = base32.decode(s.getBytes)
