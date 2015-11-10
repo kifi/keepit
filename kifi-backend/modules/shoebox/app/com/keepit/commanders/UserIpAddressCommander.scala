@@ -15,7 +15,8 @@ import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.slack.{ SlackClient, SlackMessage }
+import com.keepit.slack.SlackClient
+import com.keepit.slack.models.SlackMessage
 import org.joda.time.{ DateTime, Period }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

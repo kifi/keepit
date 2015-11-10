@@ -1,6 +1,6 @@
-package com.keepit.model
+package com.keepit.slack.models
 
-import com.keepit.common.db.{ States, State, Id }
+import com.keepit.common.db.{ Id, State, States }
 import com.keepit.common.time._
 import org.joda.time.DateTime
 
@@ -15,10 +15,8 @@ case class SlackIncomingWebhookInfo(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   state: State[SlackIncomingWebhookInfo] = SlackIncomingWebhookInfoStates.ACTIVE,
-  ownerId: Id[SlackTeamMembership],
-  channel: SlackChannel,
-  url: String,
-  configurationUrl: String,
+  membershipId: Id[SlackTeamMembership],
+  webhook: SlackIncomingWebhook,
   lastUsedAt: DateTime, // all hooks should be tested once upon initial integration
   failureCount: Int = 0,
   failureInfo: Option[String])

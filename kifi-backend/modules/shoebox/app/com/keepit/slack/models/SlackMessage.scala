@@ -1,9 +1,18 @@
-package com.keepit.slack
+package com.keepit.slack.models
 
-import com.keepit.common.strings.StringWithReplacements
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.strings.StringWithReplacements
 import com.kifi.macros.json
 import play.api.libs.json._
+
+case class SlackUserId(value: String)
+case class SlackUsername(value: String)
+
+case class SlackTeamId(value: String)
+case class SlackTeamName(value: String)
+
+case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
+case class SlackChannel(value: String) // broad sense, can be channel, group or DM
 
 @json
 case class SlackAttachment(fallback: String, text: String)
@@ -73,12 +82,12 @@ case class SlackAuthorizationRequest(
 case class SlackAuthorizationCode(code: String)
 case class SlackAccessToken(token: String)
 case class SlackIncomingWebhook(
+  channel: SlackChannel,
   url: String,
-  channel: String,
   configUrl: String)
 
 case class SlackAuthorizationResponse(
   accessToken: SlackAccessToken,
   scopes: Set[SlackAuthScope],
-  teamName: String,
+  teamName: SlackTeamName,
   incomingWebhook: Option[SlackIncomingWebhook])

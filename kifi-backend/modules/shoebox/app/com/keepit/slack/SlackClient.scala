@@ -3,6 +3,7 @@ package com.keepit.slack
 import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.slack.models._
 import play.api.Mode.Mode
 import play.api.http.Status
 import play.api.libs.json._
