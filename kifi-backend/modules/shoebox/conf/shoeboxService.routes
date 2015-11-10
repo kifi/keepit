@@ -89,7 +89,7 @@ GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitl
 GET     /i/:id                      @com.keepit.controllers.website.InviteController.userInvite(id: ExternalId[User])
 
 
-GET     /join/:creditCode           @com.keepit.controllers.website.InviteController.creditInvite(creditCode: CreditCode)
+GET     /join/:creditCodeStr        @com.keepit.controllers.website.InviteController.creditInvite(creditCodeStr: String)
 
 ##########################################
 # Extension API

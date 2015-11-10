@@ -2,7 +2,7 @@ package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -22,7 +22,7 @@ trait CreditRewardCommander {
   // CreditCode methods, open DB sessions (intended to be called directly from controllers)
   def getOrCreateReferralCode(orgId: Id[Organization]): CreditCode
   def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards]
-  def getCreditCodeInfo(req: CreditCodeApplyRequest): Try[CreditCodeInfo]
+  def getCreditCodeInfo(req: CreditCodeApplyRequest)(implicit session: RSession): Try[CreditCodeInfo]
   def adminCreateCreditCode(codeTemplate: CreditCodeInfo): CreditCodeInfo
 
   // Generic API for creating a credit reward (use for one-off rewards, like the org creation bonus)
@@ -103,7 +103,7 @@ class CreditRewardCommanderImpl @Inject() (
     }
   }
 
-  def getCreditCodeInfo(req: CreditCodeApplyRequest): Try[CreditCodeInfo] = {
+  def getCreditCodeInfo(req: CreditCodeApplyRequest)(implicit session: RSession): Try[CreditCodeInfo] = {
     for {
       creditCodeInfo <- creditCodeInfoRepo.getByCode(req.code).map(Success(_)).getOrElse(Failure(CreditCodeNotFoundException(req.code)))
       _ <- if (creditCodeInfo.referrer.exists(r => r.organizationId.isDefined && r.organizationId == req.orgId)) Failure(CreditCodeAbuseException(req)) else Success(true)
