@@ -454,11 +454,11 @@ class UserController @Inject() (
     }
   }
 
-  def ignoreOrganizationDomain(pubOrgId: PublicId[Organization]) = UserAction { request =>
+  def hideOrganizationDomain(pubOrgId: PublicId[Organization]) = UserAction { request =>
     Organization.decodePublicId(pubOrgId) match {
       case Failure(ex) => OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse
       case Success(orgId: Id[Organization]) => {
-        organizationDomainOwnershipCommander.ignoreOrganizationForUser(request.userId, orgId)
+        organizationDomainOwnershipCommander.hideOrganizationForUser(request.userId, orgId)
         Ok
       }
     }
