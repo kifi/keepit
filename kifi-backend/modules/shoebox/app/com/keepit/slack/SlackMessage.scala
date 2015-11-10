@@ -1,9 +1,11 @@
 package com.keepit.slack
 
-import com.keepit.common.strings.StringWithReplacements
 import com.keepit.common.reflection.Enumerator
+import com.keepit.common.strings.StringWithReplacements
 import com.kifi.macros.json
 import play.api.libs.json._
+import play.api.mvc.Results.Status
+import play.api.http.Status._
 
 @json
 case class SlackAttachment(fallback: String, text: String)
@@ -29,7 +31,14 @@ object SlackMessage {
   def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }
 
-case class SlackAPIFail(status: Int, payload: JsValue) extends Exception(s"Slack returned a $status response: $payload")
+sealed abstract class SlackAPIFail(val status: Int, val msg: String, val payload: JsValue) extends Exception(s"$status response: $msg ($payload)") {
+  def asResponse = Status(status)(Json.obj("error" -> msg, "payload" -> payload))
+}
+object SlackAPIFail {
+  case class Generic(override val status: Int, js: JsValue) extends SlackAPIFail(status, "api_error", js)
+  case class ParseError(js: JsValue, err: JsError) extends SlackAPIFail(OK, "unparseable_payload", js)
+  case class StateError(state: String) extends SlackAPIFail(OK, "broken_state", JsString(state))
+}
 
 sealed abstract class SlackAuthScope(val value: String)
 object SlackAuthScope extends Enumerator[SlackAuthScope] {
@@ -62,6 +71,12 @@ object SlackAuthScope extends Enumerator[SlackAuthScope] {
   case object UsersRead extends SlackAuthScope("users:read")
   case object UsersWrite extends SlackAuthScope("users:write")
   def all = _all.toSet
+
+  def apply(str: String): SlackAuthScope = all.find(_.value == str).get
+  implicit val setFormat: Format[Set[SlackAuthScope]] = Format(
+    Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) },
+    Writes { scopes => JsString(scopes.map(_.value).mkString(",")) }
+  )
 }
 
 case class SlackAuthorizationRequest(
@@ -70,13 +85,16 @@ case class SlackAuthorizationRequest(
   uniqueToken: String,
   redirectUri: Option[String])
 
+@json
 case class SlackAuthorizationCode(code: String)
+@json
 case class SlackAccessToken(token: String)
+@json
 case class SlackIncomingWebhook(
   url: String,
   channel: String,
   configUrl: String)
-
+@json
 case class SlackAuthorizationResponse(
   accessToken: SlackAccessToken,
   scopes: Set[SlackAuthScope],

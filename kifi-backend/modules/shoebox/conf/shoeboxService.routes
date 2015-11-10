@@ -14,6 +14,7 @@ GET     /contacts/refresh           @com.keepit.controllers.core.OAuth2Controlle
 GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
+GET     /oauth2/slack               @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: String, state: String)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
@@ -562,8 +563,6 @@ GET           /site/admin/billing/featureSettings               @com.keepit.cont
 POST          /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
 GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None, inclusive: Boolean ?= false)
-
-GET       /site/slackAuth @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: String, state: String)
 ##########################################
 # Email-Link API
 ##########################################

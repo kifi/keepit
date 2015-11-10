@@ -4,6 +4,7 @@ import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.{ OrganizationInviteRecommendation, RichContact }
 import com.keepit.commanders.emails.EmailTemplateSender
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.UserRequest
 import com.keepit.common.time._
 import com.keepit.common.core._
@@ -302,10 +303,12 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
         // Notify inviters on organization joined.
         val organization = organizationRepo.get(orgId)
         val basicInvitee = userRepo.get(userId)
-
         val invitesWithActiveInviter = invitations.filter(invite => organizationMembershipRepo.getByOrgIdAndUserId(orgId, invite.inviterId).isDefined)
 
-        notifyInviterOnOrganizationInvitationAcceptance(invitesWithActiveInviter, basicInvitee, organization)
+        SafeFuture {
+          notifyInviterOnOrganizationInvitationAcceptance(invitesWithActiveInviter, basicInvitee, organization)
+          acceptInvitationNotifications(invitesWithActiveInviter.map(_.inviterId).toSet, basicInvitee, organization)
+        }
 
         invitations.foreach { invite =>
           organizationInviteRepo.save(invite.accepted.withState(OrganizationInviteStates.INACTIVE))
@@ -316,32 +319,28 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
     }
   }
 
-  private def acceptInvitationNotifications(invitesToAlert: Seq[OrganizationInvite], invitee: User, org: Organization): Unit = {
-    invitesToAlert foreach { invite =>
-      val title = s"${invitee.firstName} has joined the ${org.abbreviatedName} team!"
-      val allMembers = organizationMembershipCommander.getMemberIds(org.id.get)
-      //don't send the inviter since he already gets a message via notifyInviterOnOrganizationInvitationAcceptance
-      val recipiants = allMembers.filterNot(_ == invite.inviterId).filterNot(_ == invitee.id.get)
+  private def acceptInvitationNotifications(inviters: Set[Id[User]], invitee: User, org: Organization): Unit = {
+    val title = s"${invitee.firstName} has joined the ${org.abbreviatedName} team!"
+    val allMembers = organizationMembershipCommander.getMemberIds(org.id.get)
+    //don't send the inviter since he already gets a message via notifyInviterOnOrganizationInvitationAcceptance
+    val recipiants = allMembers.filterNot(m => inviters.contains(m)).filterNot(_ == invitee.id.get)
 
-      invite.userId.foreach { inviteeId =>
-        recipiants.foreach { recipiantId =>
-          elizaClient.sendNotificationEvent(
-            OrgMemberJoined(
-              recipient = Recipient(recipiantId),
-              time = currentDateTime,
-              memberId = inviteeId,
-              invite.organizationId)
-          )
-          val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipiantId, KifiAndroidVersion("4.0.0"), KifiIPhoneVersion("4.0.0"))
-          if (canSendPush) {
-            elizaClient.sendUserPushNotification(
-              userId = recipiantId,
-              message = title,
-              recipient = invitee,
-              pushNotificationExperiment = PushNotificationExperiment.Experiment1,
-              category = UserPushNotificationCategory.NewOrganizationMember)
-          }
-        }
+    recipiants.foreach { recipiantId =>
+      elizaClient.sendNotificationEvent(
+        OrgMemberJoined(
+          recipient = Recipient(recipiantId),
+          time = currentDateTime,
+          memberId = invitee.id.get,
+          org.id.get)
+      )
+      val canSendPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(recipiantId, KifiAndroidVersion("4.0.0"), KifiIPhoneVersion("4.0.0"))
+      if (canSendPush) {
+        elizaClient.sendUserPushNotification(
+          userId = recipiantId,
+          message = title,
+          recipient = invitee,
+          pushNotificationExperiment = PushNotificationExperiment.Experiment1,
+          category = UserPushNotificationCategory.NewOrganizationMember)
       }
     }
   }
