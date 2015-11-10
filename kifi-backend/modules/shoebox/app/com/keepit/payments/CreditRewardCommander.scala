@@ -8,7 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ ElectronicMail, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.time._
-import com.keepit.model.{ NotificationCategory, Organization, OrganizationMembershipRepo, OrganizationRepo, OrganizationRole, User, UserEmailAddressRepo }
+import com.keepit.model._
 import com.keepit.payments.CreditRewardFail._
 import com.keepit.payments.RewardKind.RewardChecklistKind
 import org.apache.commons.lang3.RandomStringUtils
@@ -46,6 +46,7 @@ class CreditRewardCommanderImpl @Inject() (
   orgMembershipRepo: OrganizationMembershipRepo,
   emailAddressRepo: UserEmailAddressRepo,
   clock: Clock,
+  userValueRepo: UserValueRepo,
   eventCommander: AccountEventTrackingCommander,
   accountLockHelper: AccountLockHelper,
   postOffice: LocalPostOffice,
@@ -96,6 +97,7 @@ class CreditRewardCommanderImpl @Inject() (
     } yield {
       (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo) match {
         case (Some(referrerOrgId), Some(referredOrgId), creditInfo: CreditCodeInfo) =>
+          userValueRepo.clearValue(req.applierId, UserValueName.STORED_CREDIT_CODE)
           sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId, creditInfo)
         case _ =>
       }
