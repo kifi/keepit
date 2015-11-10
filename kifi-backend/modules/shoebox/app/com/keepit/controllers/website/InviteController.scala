@@ -229,7 +229,15 @@ class InviteController @Inject() (db: Database,
         val redirectUrl = db.readWrite(attempts = 3) { implicit session =>
           val (orgIdOpt, validCodeOpt) = allOrgIds.foldLeft(None: Option[(Id[Organization], CreditCodeInfo)]) {
             case (codeOpt, orgId) =>
-              codeOpt.orElse(creditRewardCommander.getCreditCodeInfo(CreditCodeApplyRequest(creditCode, ur.userId, Some(orgId))).toOption.map(orgId -> _))
+              codeOpt.orElse {
+                val codeInfoOpt = creditRewardCommander.getCreditCodeInfo(CreditCodeApplyRequest(creditCode, ur.userId, Some(orgId))).toOption
+
+                if (codeInfoOpt.isDefined && permissionCommander.getOrganizationPermissions(orgId, Some(ur.userId)).contains(OrganizationPermission.MANAGE_PLAN)) {
+                  codeInfoOpt.map(orgId -> _)
+                } else {
+                  None
+                }
+              }
           }.map {
             case ((orgId, creditInfo)) =>
               (Option(orgId), Option(creditInfo.code)) // Found an org that this code could be applied for
