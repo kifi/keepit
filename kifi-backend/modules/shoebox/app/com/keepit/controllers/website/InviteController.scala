@@ -226,7 +226,7 @@ class InviteController @Inject() (db: Database,
         val creditCode = CreditCode.normalize(creditCodeStr)
         val allOrgIds = orgMembershipCommander.getAllOrganizationsForUser(ur.userId)
 
-        val redirectUrl = db.readWrite { implicit session =>
+        val redirectUrl = db.readWrite(attempts = 3) { implicit session =>
           val (orgIdOpt, validCodeOpt) = allOrgIds.foldLeft(None: Option[(Id[Organization], CreditCodeInfo)]) {
             case (codeOpt, orgId) =>
               codeOpt.orElse(creditRewardCommander.getCreditCodeInfo(CreditCodeApplyRequest(creditCode, ur.userId, Some(orgId))).toOption.map(orgId -> _))
@@ -244,7 +244,6 @@ class InviteController @Inject() (db: Database,
         Redirect(redirectUrl)
       case nur: NonUserRequest[_] =>
         val creditCode = CreditCode.normalize(creditCodeStr)
-        // todo: special kcid?
         Redirect("/signup").withCookies(Cookie("intent", "applyCredit"), Cookie("creditCode", creditCode.value))
     }
   }

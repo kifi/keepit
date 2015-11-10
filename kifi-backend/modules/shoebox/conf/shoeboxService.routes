@@ -522,7 +522,6 @@ POST    /site/user/pic/upload       @com.keepit.controllers.website.UserControll
 POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
 
-GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 POST    /site/sms                   @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
 
 POST          /site/organizations/create                        @com.keepit.controllers.website.OrganizationController.createOrganization()
@@ -923,8 +922,6 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 ##########################################
 #INTERNAL ROUTES/Shoebox
 ##########################################
-
-GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
 
 GET     /internal/shoebox/auth/getUserIdentity                         @com.keepit.controllers.internal.ShoeboxController.getUserIdentity(providerId: String, id: String)
 GET     /internal/shoebox/auth/getUserIdentityByUserId                 @com.keepit.controllers.internal.ShoeboxController.getUserIdentityByUserId(userId: Id[User])
