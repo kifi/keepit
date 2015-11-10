@@ -244,7 +244,7 @@ class AuthHelper @Inject() (
     intent match {
       case JoinTwitterWaitlist => // Nothing for now
       case _ => // Anything BUT twitter waitlist
-        db.readWrite { implicit session =>
+        db.readWrite(attempts = 3) { implicit session =>
           emailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
             userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
           }
@@ -434,7 +434,7 @@ class AuthHelper @Inject() (
     libAuthToken.exists { authToken =>
       libraryPublicId.exists { publicLibId =>
         Library.decodePublicId(publicLibId).toOption.exists { libId =>
-          db.readWrite { implicit session =>
+          db.readWrite(attempts = 3) { implicit session =>
             libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).exists { libraryInvite =>
               libraryInvite.emailAddress.exists { sentTo =>
                 (sentTo == email) && emailAddressRepo.getByAddressAndUser(userId, email).exists { emailRecord =>
@@ -508,7 +508,7 @@ class AuthHelper @Inject() (
   }
 
   def doVerifyEmail(code: EmailVerificationCode)(implicit request: MaybeUserRequest[_]): Result = {
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       userEmailAddressCommander.verifyEmailAddress(code) map {
         case (address, _) if userRepo.get(address.userId).state == UserStates.PENDING =>
           Redirect(s"/?m=1")
