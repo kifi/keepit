@@ -42,7 +42,7 @@ private object Security extends Augmentor {
             s"frame-src www.kifi.com *.facebook.com *.stripe.com; " + // to support Safari 9
             s"child-src www.kifi.com *.facebook.com *.stripe.com; " +
             s"frame-ancestors 'self' $dev; " +
-            s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net *.stripe.com $dev; " +
+            s"connect-src www.kifi.com api.kifi.com search.kifi.com eliza.kifi.com api.mixpanel.com api.amplitude.com d1dwdv9wd966qu.cloudfront.net *.stripe.com airbrake.io $dev; " +
             "report-uri https://www.kifi.com/up/report"
         "Content-Security-Policy" -> cspStr
       } else {
