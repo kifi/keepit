@@ -5,12 +5,12 @@ import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders._
 import com.keepit.common.akka.TimeoutFuture
 import com.keepit.common.controller._
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ Invitation, _ }
-import com.keepit.payments.{CreditCodeInfo, CreditCodeApplyRequest, CreditRewardCommander, CreditCode}
+import com.keepit.payments.{ CreditCodeInfo, CreditCodeApplyRequest, CreditRewardCommander, CreditCode }
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -214,13 +214,13 @@ class InviteController @Inject() (db: Database,
     } getOrElse BadRequest("Invalid Library Id")
   }
 
-
   def creditCode(creditCodeStr: String) = MaybeUserAction {
     case request: UserRequest[_] =>
       val creditCode = CreditCode.normalize(creditCodeStr)
       val allOrgIds = orgMembershipCommander.getAllOrganizationsForUser(request.userId)
-      val findMeAnOrgOpt = allOrgIds.foldLeft(None: Option[(Id[Organization], CreditCodeInfo)]) { case (codeOpt, orgId) =>
-        codeOpt.orElse(creditRewardCommander.getCreditCodeInfo(CreditCodeApplyRequest(creditCode, request.userId, Some(orgId))).toOption.map(orgId -> _))
+      val findMeAnOrgOpt = allOrgIds.foldLeft(None: Option[(Id[Organization], CreditCodeInfo)]) {
+        case (codeOpt, orgId) =>
+          codeOpt.orElse(creditRewardCommander.getCreditCodeInfo(CreditCodeApplyRequest(creditCode, request.userId, Some(orgId))).toOption.map(orgId -> _))
       }
       findMeAnOrgOpt match {
         case Some(orgId) =>
