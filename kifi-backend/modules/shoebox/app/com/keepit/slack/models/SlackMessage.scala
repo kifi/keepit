@@ -83,13 +83,20 @@ object SlackMessage {
   def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }
 
-sealed abstract class SlackAPIFailure(val status: Int, val msg: String, val payload: JsValue) extends Exception(s"$status response: $msg ($payload)") {
-  def asResponse = Status(status)(Json.obj("error" -> msg, "payload" -> payload, "status" -> status))
+case class SlackAPIFailure(status: Int, error: String, payload: JsValue) extends Exception(s"$status response: $error ($payload)") {
+  def asResponse = Status(status)(Json.toJson(this)(SlackAPIFailure.format))
 }
 object SlackAPIFailure {
-  case class Generic(override val status: Int, js: JsValue) extends SlackAPIFailure(status, "api_error", js)
-  case class ParseError(js: JsValue, err: JsError) extends SlackAPIFailure(OK, "unparseable_payload", js)
-  case class StateError(state: String) extends SlackAPIFailure(OK, "broken_state", JsString(state))
+  implicit val format: Format[SlackAPIFailure] = Json.format[SlackAPIFailure]
+
+  object Error {
+    val generic = "api_error"
+    val parse = "unparseable_payload"
+    val state = "broken_state"
+  }
+  def Generic(status: Int, payload: JsValue) = SlackAPIFailure(status, Error.generic, payload)
+  def ParseError(payload: JsValue) = SlackAPIFailure(OK, Error.parse, payload)
+  def StateError(state: String) = SlackAPIFailure(OK, Error.state, JsString(state))
 }
 
 case class SlackAuthScope(value: String)
