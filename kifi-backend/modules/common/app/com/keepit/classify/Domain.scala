@@ -72,7 +72,7 @@ object NormalizedHostname extends Logging {
   private val MaxLength = 256
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
 
-  def fromHostname(hostname: String): Option[NormalizedHostname] = Try(NormalizedHostname(IDN.toASCII(hostname).toLowerCase)).toOption
+  def fromHostname(hostname: String): Option[NormalizedHostname] = Try(NormalizedHostname(IDN.toASCII(hostname).toLowerCase)).toOption.filter(hostname => isValid(hostname.value))
 
   implicit val format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
     def reads(json: JsValue): JsResult[NormalizedHostname] = {

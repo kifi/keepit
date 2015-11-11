@@ -40,6 +40,7 @@
                     <th>Org keeps</th>
                     <th>Chats between members</th>
                     <th>All member chats</th>
+                    <th>Domains</th>
                     <th class="sorter-mmddyy">Creation date</th>
                 </tr>
             </thead>
@@ -54,6 +55,7 @@
                         <td>@orgStats.numKeeps</td>
                         <td>@orgStats.internalMemberChatStats</td>
                         <td>@orgStats.allMemberChatStats</td>
+                        <td>@orgStats.domains.map(_.hostname.value).mkString(", ")</td>
                         <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td>
                     </tr>
                 }

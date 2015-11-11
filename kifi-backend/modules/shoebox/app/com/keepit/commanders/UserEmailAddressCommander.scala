@@ -1,8 +1,8 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.classify.NormalizedHostname
-import com.keepit.commanders.emails.EmailConfirmationSender
+import com.keepit.commanders.emails.{ EmailSenderProvider, EmailConfirmationSender }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
