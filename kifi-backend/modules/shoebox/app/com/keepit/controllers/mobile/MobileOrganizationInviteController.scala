@@ -20,7 +20,7 @@ import scala.util.{ Failure, Success }
 @Singleton
 class MobileOrganizationInviteController @Inject() (
     userCommander: UserCommander,
-    orgCommander: OrganizationCommander,
+    orgInfoCommander: OrganizationInfoCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     fortyTwoConfig: FortyTwoConfig,
@@ -97,7 +97,7 @@ class MobileOrganizationInviteController @Inject() (
   def getPendingOrganizationsForUser = UserAction { request =>
     val userId = request.userId
     val pendingOrgs = orgInviteCommander.getInvitesByInviteeAndDecision(userId, InvitationDecision.PENDING).map(_.organizationId)
-    val pendingOrgInfos = orgCommander.getOrganizationInfos(pendingOrgs, viewerIdOpt = None).values.toSeq
+    val pendingOrgInfos = orgInfoCommander.getOrganizationInfos(pendingOrgs, viewerIdOpt = None).values.toSeq
     Ok(Json.toJson(pendingOrgInfos))
   }
 }

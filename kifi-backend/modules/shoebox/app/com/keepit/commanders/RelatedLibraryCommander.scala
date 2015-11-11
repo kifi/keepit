@@ -29,7 +29,6 @@ trait RelatedLibraryCommander {
 class RelatedLibraryCommanderImpl @Inject() (
     db: Database,
     libRepo: LibraryRepo,
-    orgCommander: OrganizationCommander,
     libMemRepo: LibraryMembershipRepo,
     libraryInfoCommander: LibraryInfoCommander,
     cortex: CortexServiceClient,
@@ -143,7 +142,7 @@ class RelatedLibraryCommanderImpl @Inject() (
 
   private def librariesFromSameOrg(library: Library, userIdOpt: Option[Id[User]]): Future[Seq[RelatedLibrary]] = {
     db.readOnlyReplicaAsync { implicit s =>
-      val libs = orgCommander.getLibrariesVisibleToUserHelper(library.organizationId.get, userIdOpt, Offset.ZERO, Limit(SUB_RETURN_SIZE))
+      val libs = libraryInfoCommander.getLibrariesVisibleToUserHelper(library.organizationId.get, userIdOpt, Offset.ZERO, Limit(SUB_RETURN_SIZE))
       libs.map(lib => RelatedLibrary(lib, RelatedLibraryKind.OWNER))
     }
   }

@@ -14,7 +14,7 @@ import com.keepit.abook.model.RichContact
 
 class MobileContactsController @Inject() (
   val userActionsHelper: UserActionsHelper,
-  orgCommander: OrganizationCommander,
+  orgInfoCommander: OrganizationInfoCommander,
   orgMemberRepo: OrganizationMembershipRepo,
   db: Database,
   typeaheadCommander: TypeaheadCommander,
@@ -39,7 +39,7 @@ class MobileContactsController @Inject() (
             permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
           }
       }
-      val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
+      val basicOrgs = orgInfoCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
       val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs
         case orgQ =>
