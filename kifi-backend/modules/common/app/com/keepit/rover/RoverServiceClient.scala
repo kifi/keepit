@@ -189,7 +189,7 @@ class RoverServiceClientImpl(
       "recency" -> recency
     )
     call(Rover.internal.getOrElseFetchRecentArticle, payload, callTimeouts = longTimeout).map { r =>
-      r.json.asOpt(kind.format)
+      (r.json \ "article").asOpt(kind.format)
     }
   }
 
