@@ -39,7 +39,7 @@ class UserProfileController @Inject() (
     friendStatusCommander: FriendStatusCommander,
     libraryCommander: LibraryCommander,
     orgMembershipRepo: OrganizationMembershipRepo,
-    organizationCommander: OrganizationCommander,
+    organizationInfoCommander: OrganizationInfoCommander,
     orgInviteRepo: OrganizationInviteRepo,
     libraryRepo: LibraryRepo,
     orgRepo: OrganizationRepo,
@@ -65,9 +65,9 @@ class UserProfileController @Inject() (
         val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
         val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
         val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
-          organizationCommander.getOrganizationInfo(orgId, viewer.flatMap(_.id))
+          organizationInfoCommander.getOrganizationInfo(orgId, viewer.flatMap(_.id))
         }
-        val orgInfos = orgMemberships.map { orgMembership => organizationCommander.getOrganizationInfo(orgMembership.organizationId, viewer.flatMap(_.id)) }
+        val orgInfos = orgMemberships.map { orgMembership => organizationInfoCommander.getOrganizationInfo(orgMembership.organizationId, viewer.flatMap(_.id)) }
         (numConnections, numFollowers, userBio, orgInfos, pendingOrgs)
       }
 

@@ -13,20 +13,16 @@ import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OwnedLibraryNewFollower, OwnedLibraryNewCollaborator }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.BasicUser
 import com.keepit.typeahead.KifiUserTypeahead
 import org.joda.time.DateTime
 import play.api.Mode.Mode
 import play.api.http.Status._
 import com.keepit.common.core._
-import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
 
 @ImplementedBy(classOf[LibraryMembershipCommanderImpl])
 trait LibraryMembershipCommander {
@@ -64,7 +60,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     libraryInviteCommander: LibraryInviteCommander,
     libraryAccessCommander: LibraryAccessCommander,
     permissionCommander: PermissionCommander,
-    organizationMembershipCommander: OrganizationMembershipCommander,
+    organizationMembershipRepo: OrganizationMembershipRepo,
     typeaheadCommander: TypeaheadCommander,
     kifiUserTypeahead: KifiUserTypeahead,
     libraryAnalytics: LibraryAnalytics,
@@ -152,7 +148,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     } else { // User can at least view the library, so can join as read_only. Determine if they could do better.
       val maxAccess: LibraryAccess = {
         val orgMemberAccess: Option[LibraryAccess] = if (lib.isSecret) None else lib.organizationId.flatMap { orgId =>
-          lib.organizationMemberAccess.orElse(Some(LibraryAccess.READ_WRITE)).filter { _ => organizationMembershipCommander.getMembership(orgId, userId).isDefined }
+          lib.organizationMemberAccess.orElse(Some(LibraryAccess.READ_WRITE)).filter { _ => db.readOnlyMaster { implicit s => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined } }
         }
         (inviteList.map(_.access).toSet ++ orgMemberAccess).maxOpt.getOrElse(LibraryAccess.READ_ONLY)
       }

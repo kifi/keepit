@@ -3,6 +3,7 @@ package com.keepit.social
 import com.google.inject.Injector
 import com.keepit.common.mail.{ FakeMailModule, EmailAddress }
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.search.FakeSearchServiceClientModule
 import org.joda.time.DateTime
 import org.specs2.mutable._
 
@@ -19,7 +20,7 @@ import com.keepit.model.UserFactoryHelper._
 
 class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxApplicationInjector {
 
-  val modules = Seq(FakeShoeboxStoreModule(), FakeMailModule())
+  val modules = Seq(FakeShoeboxStoreModule(), FakeMailModule(), FakeSearchServiceClientModule())
 
   def airbrake = inject[AirbrakeNotifier]
 
