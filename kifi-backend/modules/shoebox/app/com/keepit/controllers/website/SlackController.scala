@@ -14,6 +14,7 @@ import scala.concurrent.ExecutionContext
 @Singleton
 class SlackController @Inject() (
     slackClient: SlackClient,
+    deepLinkRouter: DeepLinkRouter,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
     val permissionCommander: PermissionCommander,
@@ -23,7 +24,7 @@ class SlackController @Inject() (
   def registerSlackAuthorization(code: String, state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
     slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), state).map {
-      case (auth, redirState) => Ok(Json.obj("auth" -> auth.scopes, "redir" -> redirState))
+      case (auth, redirState) => Ok(Json.obj("auth" -> auth.scopes, "state" -> redirState, "redir" -> deepLinkRouter.generateRedirect(redirState).map(_.url)))
     }.recover {
       case fail: SlackAPIFail => fail.asResponse
     }
