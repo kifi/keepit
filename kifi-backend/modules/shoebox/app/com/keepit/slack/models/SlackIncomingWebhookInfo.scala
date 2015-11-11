@@ -9,18 +9,6 @@ import com.keepit.model.User
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsNull, Json, JsValue }
 
-abstract class SlackIntegrationStatus(val status: String)
-object SlackIntegrationStatus extends Enumerator[SlackIntegrationStatus] {
-  case object On extends SlackIntegrationStatus("on")
-  case object Off extends SlackIntegrationStatus("off")
-  val all = Set(On, Off)
-
-  def columnType(db: DataBaseComponent) = {
-    import db.Driver.simple._
-    MappedColumnType.base[SlackIntegrationStatus, String](_.status, status => all.find(_.status == status).getOrElse { throw new IllegalStateException(s"Unkwown SlackIntegrationStatus: $status") })
-  }
-}
-
 // track revokedSince
 case class SlackIncomingWebhookInfo(
     id: Option[Id[SlackIncomingWebhookInfo]] = None,

@@ -20,7 +20,7 @@ case class SlackChannelToLibrary(
     libraryId: Id[Library],
     status: SlackIntegrationStatus,
     lastProcessedAt: Option[DateTime],
-    lastMessageAt: Option[DateTime]) extends ModelWithState[SlackChannelToLibrary] {
+    lastMessageAt: Option[DateTime]) extends ModelWithState[SlackChannelToLibrary] with SlackIntegration {
   def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }

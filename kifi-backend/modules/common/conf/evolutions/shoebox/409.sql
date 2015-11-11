@@ -11,7 +11,7 @@ CREATE TABLE slack_team_membership (
 	slack_user_id VARCHAR(32) NOT NULL,
 	slack_username VARCHAR(32) NOT NULL,
 	slack_team_id VARCHAR(32) NOT NULL,
-    slack_team_name VARCHAR(32) NOT NULL,
+    slack_team_name VARCHAR(512) NOT NULL,
 	token VARCHAR(512) NOT NULL,
 	scope text NOT NULL,
 
@@ -37,7 +37,7 @@ CREATE TABLE slack_incoming_webhook_info (
 	last_failure text DEFAULT NULL,
 
 	PRIMARY KEY(id),
-	INDEX slack_incoming_webhook_info_i_id_owner_id_slack_user_id_slack_team_id_channel_id (id, owner_id, slack_user_id, slack_team_id, channel_id)
+	INDEX slack_incoming_webhook_info_i_slack_team_id_channel_id (slack_team_id, channel_id),
 	CONSTRAINT slack_incoming_webhook_info_f_slack_team_membership FOREIGN KEY (owner_id, slack_user_id, slack_team_id) REFERENCES slack_team_membership(user_id, slack_user_id, slack_team_id)
 );
 
@@ -50,7 +50,7 @@ CREATE TABLE library_to_slack_channel (
 	slack_user_id VARCHAR(32) NOT NULL,
 	slack_team_id VARCHAR(32) NOT NULL,
 	channel_id VARCHAR(32) NOT NULL,
-    original_webhook_id BIGINT(20) NOT NULL,
+    channel VARCHAR(32) NOT NULL,
     library_id BIGINT(20) NOT NULL,
     status VARCHAR(32) NOT NULL,
     last_processed_at DATETIME DEFAULT NULL,
@@ -59,7 +59,6 @@ CREATE TABLE library_to_slack_channel (
 	PRIMARY KEY(id),
 	UNIQUE KEY library_to_slack_channel_u_slack_team_id_channel_id_library_id (slack_team_id, channel_id, library_id),
 	CONSTRAINT library_to_slack_channel_f_slack_team_membership FOREIGN KEY (owner_id, slack_user_id, slack_team_id) REFERENCES slack_team_membership(user_id, slack_user_id, slack_team_id)
-	CONSTRAINT library_to_slack_channel_f_slack_incoming_webhook_info FOREIGN KEY (original_webhook_id, owner_id, slack_user_id, slack_team_id, channel_id) REFERENCES slack_incoming_webhook_info(id, owner_id, slack_user_id, slack_team_id, channel_id)
 );
 
 CREATE TABLE slack_channel_to_library (
@@ -68,6 +67,7 @@ CREATE TABLE slack_channel_to_library (
 	updated_at DATETIME NOT NULL,
 	state VARCHAR(20) NOT NULL,
 	owner_id BIGINT(20) NOT NULL,
+	slack_user_id VARCHAR(32) NOT NULL,
 	slack_team_id VARCHAR(32) NOT NULL,
 	channel_id VARCHAR(32) NOT NULL,
     channel VARCHAR(32) NOT NULL,
@@ -80,6 +80,7 @@ CREATE TABLE slack_channel_to_library (
 	UNIQUE KEY slack_channel_to_library_u_slack_team_id_channel_id_library_id (slack_team_id, channel_id, library_id),
 	CONSTRAINT slack_channel_library_f_slack_team_membership FOREIGN KEY (owner_id, slack_user_id, slack_team_id) REFERENCES slack_team_membership(user_id, slack_user_id, slack_team_id)
 );
+
 insert into evolutions(name, description) values('409.sql', 'create tables slack_team_membership, slack_incoming_webhook_info, library_to_slack_channel, slack_channel_to_library');
 
 # --- !Downs

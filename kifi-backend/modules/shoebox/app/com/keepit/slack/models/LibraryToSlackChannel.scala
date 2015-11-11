@@ -16,11 +16,11 @@ case class LibraryToSlackChannel(
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     channelId: SlackChannelId,
-    webhookId: Id[SlackIncomingWebhookInfo],
+    channel: SlackChannel,
     libraryId: Id[Library],
     status: SlackIntegrationStatus,
     lastProcessedAt: Option[DateTime],
-    lastKeepId: Option[Id[Keep]]) extends ModelWithState[LibraryToSlackChannel] {
+    lastKeepId: Option[Id[Keep]]) extends ModelWithState[LibraryToSlackChannel] with SlackIntegration {
   def withId(id: Id[LibraryToSlackChannel]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
@@ -41,6 +41,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   implicit val slackUserIdColumnType = SlackDbColumnTypes.userId(db)
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val channelIdColumnType = SlackDbColumnTypes.channelId(db)
+  implicit val channelColumnType = SlackDbColumnTypes.channel(db)
   implicit val statusColumnType = SlackIntegrationStatus.columnType(db)
 
   private def ltsFromDbRow(
@@ -52,7 +53,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     channelId: SlackChannelId,
-    webhookId: Id[SlackIncomingWebhookInfo],
+    channel: SlackChannel,
     libraryId: Id[Library],
     status: SlackIntegrationStatus,
     lastProcessedAt: Option[DateTime],
@@ -66,7 +67,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
       slackUserId,
       slackTeamId,
       channelId,
-      webhookId,
+      channel,
       libraryId,
       status,
       lastProcessedAt,
@@ -83,7 +84,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     lts.slackUserId,
     lts.slackTeamId,
     lts.channelId,
-    lts.webhookId,
+    lts.channel,
     lts.libraryId,
     lts.status,
     lts.lastProcessedAt,
@@ -97,12 +98,12 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def channelId = column[SlackChannelId]("channel_id", O.NotNull)
-    def webhookId = column[Id[SlackIncomingWebhookInfo]]("webhook_id", O.NotNull)
+    def channel = column[SlackChannel]("channel", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def status = column[SlackIntegrationStatus]("status", O.NotNull)
     def lastProcessedAt = column[Option[DateTime]]("last_processed_at", O.Nullable)
     def lastKeepId = column[Option[Id[Keep]]]("last_keep_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, channelId, webhookId, libraryId, status, lastProcessedAt, lastKeepId) <> ((ltsFromDbRow _).tupled, ltsToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, channelId, channel, libraryId, status, lastProcessedAt, lastKeepId) <> ((ltsFromDbRow _).tupled, ltsToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === LibraryToSlackChannelStates.ACTIVE)
