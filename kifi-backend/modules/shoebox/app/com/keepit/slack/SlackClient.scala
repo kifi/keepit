@@ -71,7 +71,7 @@ class SlackClientImpl(
         case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
           reads.reads(payload) match {
             case JsSuccess(res, _) => Future.successful(res)
-            case errs: JsError => Future.failed(SlackAPIFail.ParseError(payload, errs))
+            case errs: JsError => Future.failed(SlackAPIFail.ParseError(payload))
           }
         case (status, payload) => Future.failed(SlackAPIFail.Generic(status, payload))
       }
