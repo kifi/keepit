@@ -1,11 +1,10 @@
 package com.keepit.slack
 
-import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithReplacements
 import com.kifi.macros.json
+import play.api.http.Status._
 import play.api.libs.json._
 import play.api.mvc.Results.Status
-import play.api.http.Status._
 
 @json
 case class SlackAttachment(fallback: String, text: String)
@@ -40,45 +39,44 @@ object SlackAPIFail {
   case class StateError(state: String) extends SlackAPIFail(OK, "broken_state", JsString(state))
 }
 
-sealed abstract class SlackAuthScope(val value: String)
-object SlackAuthScope extends Enumerator[SlackAuthScope] {
-  case object ChannelsWrite extends SlackAuthScope("channels:write")
-  case object ChannelsHistory extends SlackAuthScope("channels:history")
-  case object ChannelsRead extends SlackAuthScope("channels:read")
-  case object ChatWrite extends SlackAuthScope("chat:write")
-  case object ChatWriteBot extends SlackAuthScope("chat:write:bot")
-  case object ChatWriteUser extends SlackAuthScope("chat:write:user")
-  case object EmojiRead extends SlackAuthScope("emoji:read")
-  case object FilesWriteUser extends SlackAuthScope("files:write:user")
-  case object FilesRead extends SlackAuthScope("files:read")
-  case object GroupsWrite extends SlackAuthScope("groups:write")
-  case object GroupsHistory extends SlackAuthScope("groups:history")
-  case object GroupsRead extends SlackAuthScope("groups:read")
-  case object IncomingWebhook extends SlackAuthScope("incoming-webhook")
-  case object ImWrite extends SlackAuthScope("im:write")
-  case object ImHistory extends SlackAuthScope("im:history")
-  case object ImRead extends SlackAuthScope("im:read")
-  case object MpimWrite extends SlackAuthScope("mpim:write")
-  case object MpimHistory extends SlackAuthScope("mpim:history")
-  case object MpimRead extends SlackAuthScope("mpim:read")
-  case object PinsWrite extends SlackAuthScope("pins:write")
-  case object PinsRead extends SlackAuthScope("pins:read")
-  case object ReactionsWrite extends SlackAuthScope("reactions:write")
-  case object ReactionsRead extends SlackAuthScope("reactions:read")
-  case object SearchRead extends SlackAuthScope("search:read")
-  case object StarsWrite extends SlackAuthScope("stars:write")
-  case object StarsRead extends SlackAuthScope("stars:read")
-  case object TeamRead extends SlackAuthScope("team:read")
-  case object UsersRead extends SlackAuthScope("users:read")
-  case object UsersWrite extends SlackAuthScope("users:write")
+case class SlackAuthScope(value: String)
+object SlackAuthScope {
+  val ChannelsWrite = SlackAuthScope("channels:write")
+  val ChannelsHistory = SlackAuthScope("channels:history")
+  val ChannelsRead = SlackAuthScope("channels:read")
+  val ChatWrite = SlackAuthScope("chat:write")
+  val ChatWriteBot = SlackAuthScope("chat:write:bot")
+  val ChatWriteUser = SlackAuthScope("chat:write:user")
+  val EmojiRead = SlackAuthScope("emoji:read")
+  val FilesWriteUser = SlackAuthScope("files:write:user")
+  val FilesRead = SlackAuthScope("files:read")
+  val GroupsWrite = SlackAuthScope("groups:write")
+  val GroupsHistory = SlackAuthScope("groups:history")
+  val GroupsRead = SlackAuthScope("groups:read")
+  val IncomingWebhook = SlackAuthScope("incoming-webhook")
+  val ImWrite = SlackAuthScope("im:write")
+  val ImHistory = SlackAuthScope("im:history")
+  val ImRead = SlackAuthScope("im:read")
+  val MpimWrite = SlackAuthScope("mpim:write")
+  val MpimHistory = SlackAuthScope("mpim:history")
+  val MpimRead = SlackAuthScope("mpim:read")
+  val PinsWrite = SlackAuthScope("pins:write")
+  val PinsRead = SlackAuthScope("pins:read")
+  val ReactionsWrite = SlackAuthScope("reactions:write")
+  val ReactionsRead = SlackAuthScope("reactions:read")
+  val SearchRead = SlackAuthScope("search:read")
+  val StarsWrite = SlackAuthScope("stars:write")
+  val StarsRead = SlackAuthScope("stars:read")
+  val TeamRead = SlackAuthScope("team:read")
+  val UsersRead = SlackAuthScope("users:read")
+  val UsersWrite = SlackAuthScope("users:write")
 
   val library: Set[SlackAuthScope] = Set(IncomingWebhook)
-  def all = _all.toSet
+  val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
 
-  def apply(str: String): SlackAuthScope = all.find(_.value == str).get
-  implicit val setFormat: Format[Set[SlackAuthScope]] = Format(
-    Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) },
-    Writes { scopes => JsString(scopes.map(_.value).mkString(",")) }
+  val dbFormat: Format[SlackAuthScope] = Format(
+    Reads { j => j.validate[String].map(SlackAuthScope.apply) },
+    Writes { sas => JsString(sas.value) }
   )
 }
 
@@ -97,12 +95,16 @@ case class SlackIncomingWebhook(
   url: String,
   channel: String,
   configUrl: String)
-@json
+
 case class SlackAuthorizationResponse(
   accessToken: SlackAccessToken,
   scopes: Set[SlackAuthScope],
   teamName: String,
   incomingWebhook: Option[SlackIncomingWebhook])
+object SlackAuthorizationResponse {
+  private implicit val slackScopesReads = SlackAuthScope.slackReads
+  implicit val reads: Reads[SlackAuthorizationResponse] = Json.reads[SlackAuthorizationResponse]
+}
 
 case class SlackSearchQuery(queryString: String)
 
