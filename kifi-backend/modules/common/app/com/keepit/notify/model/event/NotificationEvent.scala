@@ -287,7 +287,6 @@ case class OrgInviteAccepted(
 
   type N = OrgInviteAccepted
   val kind = OrgInviteAccepted
-
 }
 
 object OrgInviteAccepted extends NonGroupingNotificationKind[OrgInviteAccepted] {
@@ -303,6 +302,27 @@ object OrgInviteAccepted extends NonGroupingNotificationKind[OrgInviteAccepted] 
 
 }
 
+case class OrgMemberJoined(
+  recipient: Recipient,
+  time: DateTime,
+  memberId: Id[User],
+  orgId: Id[Organization]) extends NotificationEvent {
+
+  type N = OrgMemberJoined
+  val kind = OrgMemberJoined
+}
+
+object OrgMemberJoined extends NonGroupingNotificationKind[OrgMemberJoined] {
+
+  override val name: String = "org_member_joined"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "memberId").format[Id[User]] and
+      (__ \ "orgId").format[Id[Organization]]
+    )(OrgMemberJoined.apply, unlift(OrgMemberJoined.unapply))
+}
 
 case class OwnedLibraryNewCollabInvite(
   recipient: Recipient,

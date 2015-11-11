@@ -39,6 +39,7 @@ class NotificationKindInfoRequests @Inject()() {
       case DepressedRobotGrumble => genericInfoFn(infoForDepressedRobotGrumble)
       case OrgNewInvite => genericInfoFn(infoForOrgNewInvite)
       case OrgInviteAccepted => genericInfoFn(infoForOrgInviteAccepted)
+      case OrgMemberJoined => genericInfoFn(infoForOrgMemberJoined)
       case OwnedLibraryNewCollabInvite => genericInfoFn(infoForOwnedLibraryNewCollabInvite)
       case OwnedLibraryNewFollowInvite => genericInfoFn(infoForOwnedLibraryNewFollowInvite)
       case OwnedLibraryNewFollower => genericInfoFn(infoForOwnedLibraryNewFollower)
@@ -281,6 +282,28 @@ class NotificationKindInfoRequests @Inject()() {
         linkText = "Visit team",
         extraJson = Some(Json.obj(
           "member" -> accepter,
+          "organization" -> Json.toJson(acceptedOrg)
+        )),
+        category = NotificationCategory.User.ORGANIZATION_JOINED
+      )
+    }
+  }
+
+  def infoForOrgMemberJoined(events: Set[OrgMemberJoined]): RequestingNotificationInfos[StandardNotificationInfo] = {
+    val event = requireOne(events)
+    RequestingNotificationInfos(Requests(
+      RequestUser(event.memberId), RequestOrganization(event.orgId)
+    )) { batched =>
+      val member = RequestUser(event.memberId).lookup(batched)
+      val acceptedOrg = RequestOrganization(event.orgId).lookup(batched)
+      StandardNotificationInfo(
+        url = Path(acceptedOrg.handle.value).absolute,
+        image = UserImage(member),
+        title = s"${member.firstName} joined the ${acceptedOrg.abbreviatedName} team!",
+        body = s"You can now share knowledge with ${member.firstName} on the ${acceptedOrg.abbreviatedName} team",
+        linkText = "View team members",
+        extraJson = Some(Json.obj(
+          "member" -> member,
           "organization" -> Json.toJson(acceptedOrg)
         )),
         category = NotificationCategory.User.ORGANIZATION_JOINED

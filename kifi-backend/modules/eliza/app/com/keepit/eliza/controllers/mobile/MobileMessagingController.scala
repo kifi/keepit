@@ -5,7 +5,7 @@ import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserA
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
 import com.keepit.common.mail.BasicContact
-import com.keepit.common.net.UserAgent
+import com.keepit.common.net.{ URISanitizer, UserAgent }
 import com.keepit.common.time._
 import com.keepit.eliza.commanders._
 import com.keepit.eliza.model.{ Message, MessageSource, MessageThread }
@@ -32,6 +32,15 @@ class MobileMessagingController @Inject() (
     messageSearchCommander: MessageSearchCommander,
     implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
 
+  private def sanitizeUrls(obj: JsObject): JsObject = { // yolo
+    val url = obj.value.get("url").collect { case JsString(raw) => JsString(URISanitizer.sanitize(raw)) }
+    val nUrl = obj.value.get("nUrl").collect { case JsString(raw) => JsString(URISanitizer.sanitize(raw)) }
+    var result = obj
+    url.foreach(sanitized => result = (result - "url") + ("url" -> sanitized))
+    nUrl.foreach(sanitized => result = (result - "nUrl") + ("nUrl" -> sanitized))
+    result
+  }
+
   def getNotifications(howMany: Int, before: Option[String]) = UserAction.async { request =>
     val threadNoticesFuture = before match {
       case Some(before) =>
@@ -50,7 +59,8 @@ class MobileMessagingController @Inject() (
       notices <- noticesFuture
     } yield {
       val numUnreadUnmuted = notificationDeliveryCommander.getTotalUnreadUnmutedCount(request.userId)
-      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
+      val notifications = notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)).map(sanitizeUrls(_))
+      Ok(Json.arr("notifications", notifications, numUnreadUnmuted))
     }
   }
 
@@ -65,7 +75,8 @@ class MobileMessagingController @Inject() (
       notices <- noticesFuture
     } yield {
       val numUnreadUnmuted = notificationCommander.getUnreadNotificationsCount(Recipient(request.userId))
-      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(Seq(), notices, Some(howMany)), numUnreadUnmuted))
+      val notifications = notificationMessagingCommander.combineNotificationsWithThreads(Seq(), notices, Some(howMany)).map(sanitizeUrls(_))
+      Ok(Json.arr("notifications", notifications, numUnreadUnmuted))
     }
   }
 
@@ -78,7 +89,8 @@ class MobileMessagingController @Inject() (
     }
     noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
       val numUnreadUnmuted = messagingCommander.getUnreadUnmutedThreadCount(request.userId)
-      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+      val notifications = notices.map(notif => sanitizeUrls(notif.obj))
+      Ok(Json.arr("notifications", notifications, numUnreadUnmuted))
     }
   }
 
@@ -100,7 +112,8 @@ class MobileMessagingController @Inject() (
       notices <- noticesFuture
     } yield {
       val numUnreadUnmuted = notificationDeliveryCommander.getTotalUnreadUnmutedCount(request.userId)
-      Ok(Json.arr("notifications", notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)), numUnreadUnmuted))
+      val notifications = notificationMessagingCommander.combineNotificationsWithThreads(threadNotices, notices, Some(howMany)).map(sanitizeUrls(_))
+      Ok(Json.arr("notifications", notifications, numUnreadUnmuted))
     }
   }
 
@@ -113,7 +126,8 @@ class MobileMessagingController @Inject() (
     }
     noticesFuture.map { notices: Seq[com.keepit.eliza.commanders.NotificationJson] =>
       val numUnreadUnmuted = notificationDeliveryCommander.getTotalUnreadUnmutedCount(request.userId)
-      Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+      val notifications = notices.map(notif => sanitizeUrls(notif.obj))
+      Ok(Json.arr("notifications", notifications, numUnreadUnmuted))
     }
   }
 
@@ -136,8 +150,8 @@ class MobileMessagingController @Inject() (
           "id" -> message.externalId.id,
           "parentId" -> message.threadExtId.id,
           "createdAt" -> message.createdAt,
-          "threadInfo" -> threadInfoOpt,
-          "messages" -> messages.reverse))
+          "threadInfo" -> threadInfoOpt.map(info => info.copy(url = info.url.map(URISanitizer.sanitize), nUrl = info.nUrl.map(URISanitizer.sanitize))),
+          "messages" -> messages.reverse.map(message => message.copy(url = URISanitizer.sanitize(message.url)))))
     }.recover {
       case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
         Forbidden(Json.obj("error" -> "insufficient_org_permissions"))
@@ -163,8 +177,8 @@ class MobileMessagingController @Inject() (
   def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(request.userId, ExternalId[MessageThread](threadId)) map {
       case (thread, allMsgs) =>
-        val url = thread.url.getOrElse("") // needs to change when we have detached threads
-        val nUrl = thread.nUrl.getOrElse("") // needs to change when we have detached threads
+        val url = thread.url.map(URISanitizer.sanitize).getOrElse("") // needs to change when we have detached threads
+        val nUrl = thread.nUrl.map(URISanitizer.sanitize).getOrElse("") // needs to change when we have detached threads
         val participants: Set[BasicUserLikeEntity] = allMsgs.map(_.participants).flatten.toSet
         val page = fromMessageId match {
           case None =>
@@ -212,8 +226,8 @@ class MobileMessagingController @Inject() (
   def getCompactThread(threadId: String) = UserAction.async { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(request.userId, ExternalId[MessageThread](threadId)) map {
       case (thread, msgs) =>
-        val url = thread.url.getOrElse("") // needs to change when we have detached threads
-        val nUrl = thread.nUrl.getOrElse("") // needs to change when we have detached threads
+        val url = thread.url.map(URISanitizer.sanitize).getOrElse("") // needs to change when we have detached threads
+        val nUrl = thread.nUrl.map(URISanitizer.sanitize).getOrElse("") // needs to change when we have detached threads
         val participants: Set[BasicUserLikeEntity] = msgs.map(_.participants).flatten.toSet
         Ok(Json.obj(
           "id" -> threadId,
@@ -251,7 +265,7 @@ class MobileMessagingController @Inject() (
   def getThreadsByUrl(url: String) = UserAction.async { request =>
     messagingCommander.getThreadInfos(request.userId, url).map {
       case (_, threadInfos) =>
-        Ok(Json.toJson(threadInfos))
+        Ok(Json.toJson(threadInfos.map(info => info.copy(url = info.url.map(URISanitizer.sanitize), nUrl = info.nUrl.map(URISanitizer.sanitize)))))
     }
   }
 
@@ -263,7 +277,8 @@ class MobileMessagingController @Inject() (
 
   def searchMessages(query: String, page: Int, storeInHistory: Boolean) = UserAction.async { request =>
     messageSearchCommander.searchMessages(request.userId, query, page, storeInHistory).map { notifs =>
-      Ok(Json.toJson(notifs.map(_.obj)))
+      val notifications = notifs.map(notif => sanitizeUrls(notif.obj))
+      Ok(Json.toJson(notifications))
     }
   }
 

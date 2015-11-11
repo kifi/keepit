@@ -1,10 +1,12 @@
 package com.keepit.slack.models
 
 import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.reflection.Enumerator
 import com.keepit.common.strings.StringWithReplacements
 import com.kifi.macros.json
+import play.api.http.Status._
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
+import play.api.mvc.Results.Status
 
 case class SlackUserId(value: String)
 case class SlackUsername(value: String)
@@ -15,13 +17,20 @@ case class SlackTeamName(value: String)
 case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
 case class SlackChannel(value: String) // broad sense, can be channel, group or DM
 
+@json
 case class SlackAccessToken(token: String)
 
-// Can we add slackUserId, slackTeamId, channelId in there?
 case class SlackIncomingWebhook(
   channel: SlackChannel,
   url: String,
   configUrl: String)
+object SlackIncomingWebhook {
+  implicit val reads: Reads[SlackIncomingWebhook] = (
+    (__ \ 'channel).read[String].map(SlackChannel(_)) and
+    (__ \ 'url).read[String] and
+    (__ \ 'configuration_url).read[String]
+  )(SlackIncomingWebhook.apply _)
+}
 
 object SlackDbColumnTypes {
   def userId(db: DataBaseComponent) = {
@@ -74,47 +83,58 @@ object SlackMessage {
   def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }
 
-@json
-case class SlackAPIFailure(status: Int, payload: JsValue) extends Exception(s"Slack returned a $status response: $payload")
-
-sealed abstract class SlackAuthScope(val value: String)
-object SlackAuthScope extends Enumerator[SlackAuthScope] {
-  case object ChannelsWrite extends SlackAuthScope("channels:write")
-  case object ChannelsHistory extends SlackAuthScope("channels:history")
-  case object ChannelsRead extends SlackAuthScope("channels:read")
-  case object ChatWrite extends SlackAuthScope("chat:write")
-  case object ChatWriteBot extends SlackAuthScope("chat:write:bot")
-  case object ChatWriteUser extends SlackAuthScope("chat:write:user")
-  case object EmojiRead extends SlackAuthScope("emoji:read")
-  case object FilesWriteUser extends SlackAuthScope("files:write:user")
-  case object FilesRead extends SlackAuthScope("files:read")
-  case object GroupsWrite extends SlackAuthScope("groups:write")
-  case object GroupsHistory extends SlackAuthScope("groups:history")
-  case object GroupsRead extends SlackAuthScope("groups:read")
-  case object ImWrite extends SlackAuthScope("im:write")
-  case object ImHistory extends SlackAuthScope("im:history")
-  case object ImRead extends SlackAuthScope("im:read")
-  case object MpimWrite extends SlackAuthScope("mpim:write")
-  case object MpimHistory extends SlackAuthScope("mpim:history")
-  case object MpimRead extends SlackAuthScope("mpim:read")
-  case object PinsWrite extends SlackAuthScope("pins:write")
-  case object PinsRead extends SlackAuthScope("pins:read")
-  case object ReactionsWrite extends SlackAuthScope("reactions:write")
-  case object ReactionsRead extends SlackAuthScope("reactions:read")
-  case object SearchRead extends SlackAuthScope("search:read")
-  case object StarsWrite extends SlackAuthScope("stars:write")
-  case object StarsRead extends SlackAuthScope("stars:read")
-  case object TeamRead extends SlackAuthScope("team:read")
-  case object UsersRead extends SlackAuthScope("users:read")
-  case object UsersWrite extends SlackAuthScope("users:write")
-  def all = _all.toSet
-
-  implicit val format = {
-    val reads = Reads[SlackAuthScope](_.validate[String].flatMap(str => all.find(_.value == str).map(JsSuccess(_)) getOrElse JsError(s"Unknown SlackAuthScope: $str")))
-    val writes = Writes[SlackAuthScope](scope => JsString(scope.value))
-    Format(reads, writes)
-  }
+sealed abstract class SlackAPIFailure(val status: Int, val msg: String, val payload: JsValue) extends Exception(s"$status response: $msg ($payload)") {
+  def asResponse = Status(status)(Json.obj("error" -> msg, "payload" -> payload, "status" -> status))
 }
+object SlackAPIFailure {
+  case class Generic(override val status: Int, js: JsValue) extends SlackAPIFailure(status, "api_error", js)
+  case class ParseError(js: JsValue, err: JsError) extends SlackAPIFailure(OK, "unparseable_payload", js)
+  case class StateError(state: String) extends SlackAPIFailure(OK, "broken_state", JsString(state))
+}
+
+case class SlackAuthScope(value: String)
+object SlackAuthScope {
+  val ChannelsWrite = SlackAuthScope("channels:write")
+  val ChannelsHistory = SlackAuthScope("channels:history")
+  val ChannelsRead = SlackAuthScope("channels:read")
+  val ChatWrite = SlackAuthScope("chat:write")
+  val ChatWriteBot = SlackAuthScope("chat:write:bot")
+  val ChatWriteUser = SlackAuthScope("chat:write:user")
+  val EmojiRead = SlackAuthScope("emoji:read")
+  val FilesWriteUser = SlackAuthScope("files:write:user")
+  val FilesRead = SlackAuthScope("files:read")
+  val GroupsWrite = SlackAuthScope("groups:write")
+  val GroupsHistory = SlackAuthScope("groups:history")
+  val GroupsRead = SlackAuthScope("groups:read")
+  val IncomingWebhook = SlackAuthScope("incoming-webhook")
+  val ImWrite = SlackAuthScope("im:write")
+  val ImHistory = SlackAuthScope("im:history")
+  val ImRead = SlackAuthScope("im:read")
+  val MpimWrite = SlackAuthScope("mpim:write")
+  val MpimHistory = SlackAuthScope("mpim:history")
+  val MpimRead = SlackAuthScope("mpim:read")
+  val PinsWrite = SlackAuthScope("pins:write")
+  val PinsRead = SlackAuthScope("pins:read")
+  val ReactionsWrite = SlackAuthScope("reactions:write")
+  val ReactionsRead = SlackAuthScope("reactions:read")
+  val SearchRead = SlackAuthScope("search:read")
+  val StarsWrite = SlackAuthScope("stars:write")
+  val StarsRead = SlackAuthScope("stars:read")
+  val TeamRead = SlackAuthScope("team:read")
+  val UsersRead = SlackAuthScope("users:read")
+  val UsersWrite = SlackAuthScope("users:write")
+
+  val library: Set[SlackAuthScope] = Set(IncomingWebhook, SearchRead)
+  val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
+
+  val dbFormat: Format[SlackAuthScope] = Format(
+    Reads { j => j.validate[String].map(SlackAuthScope.apply) },
+    Writes { sas => JsString(sas.value) }
+  )
+}
+
+@json
+case class SlackAuthorizationCode(code: String)
 
 case class SlackAuthorizationRequest(
   url: String,
@@ -122,10 +142,25 @@ case class SlackAuthorizationRequest(
   uniqueToken: String,
   redirectUri: Option[String])
 
-case class SlackAuthorizationCode(code: String)
-
 case class SlackAuthorizationResponse(
   accessToken: SlackAccessToken,
   scopes: Set[SlackAuthScope],
   teamName: SlackTeamName,
+  teamId: SlackTeamId,
   incomingWebhook: Option[SlackIncomingWebhook])
+object SlackAuthorizationResponse {
+  implicit val reads: Reads[SlackAuthorizationResponse] = (
+    (__ \ 'access_token).read[SlackAccessToken] and
+    (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackReads) and
+    (__ \ 'team_name).read[String].map(SlackTeamName(_)) and
+    (__ \ 'team_id).read[String].map(SlackTeamId(_)) and
+    (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook]
+  )(SlackAuthorizationResponse.apply _)
+}
+
+case class SlackSearchQuery(queryString: String)
+
+case class SlackSearchResponse(query: String, messages: JsObject)
+object SlackSearchResponse {
+  implicit val reads = Json.reads[SlackSearchResponse]
+}

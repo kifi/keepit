@@ -86,7 +86,7 @@ class ShoeboxController @Inject() (
   organizationMembershipCommander: OrganizationMembershipCommander,
   s3ImageStore: S3ImageStore,
   pathCommander: PathCommander,
-  organizationCommander: OrganizationCommander,
+  organizationInfoCommander: OrganizationInfoCommander,
   userPersonaRepo: UserPersonaRepo,
   orgCandidateRepo: OrganizationMembershipCandidateRepo,
   permissionCommander: PermissionCommander,
@@ -544,12 +544,12 @@ class ShoeboxController @Inject() (
   }
 
   def getOrgTrackingValues(orgId: Id[Organization]) = Action { request =>
-    Ok(Json.toJson(organizationCommander.getOrgTrackingValues(orgId)))
+    Ok(Json.toJson(organizationInfoCommander.getOrgTrackingValues(orgId)))
   }
 
   def getBasicOrganizationsByIds() = Action(parse.tolerantJson) { request =>
     val orgIds = request.body.as[Set[Id[Organization]]]
-    val basicOrgs = organizationCommander.getBasicOrganizations(orgIds)
+    val basicOrgs = organizationInfoCommander.getBasicOrganizations(orgIds)
     Ok(Json.toJson(basicOrgs))
   }
 

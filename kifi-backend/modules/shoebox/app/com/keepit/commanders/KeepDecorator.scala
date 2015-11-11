@@ -40,7 +40,7 @@ class KeepDecoratorImpl @Inject() (
     keepImageCommander: KeepImageCommander,
     libraryCardCommander: LibraryCardCommander,
     userCommander: Provider[UserCommander],
-    organizationCommander: OrganizationCommander,
+    organizationInfoCommander: OrganizationInfoCommander,
     searchClient: SearchServiceClient,
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
     experimentCommander: LocalUserExperimentCommander,
@@ -73,7 +73,7 @@ class KeepDecoratorImpl @Inject() (
         val basicOrgByLibId = {
           val orgIdByLibId = idToLibrary.collect { case (libId, lib) if lib.organizationId.isDefined => libId -> lib.organizationId.get }
           val orgIds = orgIdByLibId.values.toSet
-          val basicOrgById = organizationCommander.getBasicOrganizations(orgIds)
+          val basicOrgById = organizationInfoCommander.getBasicOrganizations(orgIds)
           orgIdByLibId.mapValues(basicOrgById(_))
         }
 

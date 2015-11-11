@@ -42,7 +42,6 @@ private[social] class SocialGraphActor @Inject() (
   socialUserCreateConnections: UserConnectionCreator,
   socialUserTypeahead: SocialUserTypeahead,
   userValueRepo: UserValueRepo,
-  userCommander: UserCommander,
   emailAddressCommander: UserEmailAddressCommander,
   heimdal: HeimdalServiceClient,
   clock: Clock)

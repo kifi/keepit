@@ -41,7 +41,6 @@ trait UserEmailAddressCommander {
 class UserEmailAddressCommanderImpl @Inject() (db: Database,
     userEmailAddressRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
-    userRepo: UserRepo,
     pendingInviteCommander: PendingInviteCommander,
     heimdalClient: HeimdalServiceClient,
     emailConfirmationSender: EmailConfirmationSender,

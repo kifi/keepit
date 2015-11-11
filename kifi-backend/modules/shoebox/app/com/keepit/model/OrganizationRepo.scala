@@ -30,8 +30,7 @@ class OrganizationRepoImpl @Inject() (
     orgCache: OrganizationCache,
     orgMetadataCache: OrgMetadataCache,
     basicOrgCache: BasicOrganizationIdCache,
-    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
-    orgPermissionsCache: OrganizationPermissionsCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
+    orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache) extends OrganizationRepo with DbRepo[Organization] with SeqNumberDbFunction[Organization] with Logging {
 
   import DBSession._
   import db.Driver.simple._

@@ -3,13 +3,16 @@ package com.keepit.controllers.website
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.commanders._
+import com.keepit.common.core._
 import com.keepit.common.akka.TimeoutFuture
-import com.keepit.common.controller.{ UserActions, UserActionsHelper, ShoeboxServiceController }
-import com.keepit.common.db.ExternalId
+import com.keepit.common.controller._
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model.{ Invitation, _ }
+import com.keepit.payments._
 import com.keepit.social._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
@@ -36,6 +39,12 @@ class InviteController @Inject() (db: Database,
     inviteCommander: InviteCommander,
     fortytwoConfig: FortyTwoConfig,
     airbrake: AirbrakeNotifier,
+    creditRewardCommander: CreditRewardCommander,
+    creditCodeInfoRepo: CreditCodeInfoRepo,
+    userValueRepo: UserValueRepo,
+    orgMembershipCommander: OrganizationMembershipCommander,
+    organizationRepo: OrganizationRepo,
+    permissionCommander: PermissionCommander,
     implicit val config: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def invite = UserAction { implicit request =>
@@ -209,6 +218,51 @@ class InviteController @Inject() (db: Database,
         "twitter" -> s"Check out this interesting Kifi library: $link"
       ))
     } getOrElse BadRequest("Invalid Library Id")
+  }
+
+  def creditInvite(creditCodeStr: String) = MaybeUserAction { request =>
+    request match {
+      case ur: UserRequest[_] =>
+        val creditCode = CreditCode.normalize(creditCodeStr)
+        val allOrgIds = orgMembershipCommander.getAllOrganizationsForUser(ur.userId)
+
+        val redirectUrl = db.readWrite(attempts = 3) { implicit session =>
+          val (orgIdOpt, validCodeOpt) = allOrgIds.foldLeft(None: Option[(Id[Organization], CreditCodeInfo)]) {
+            case (codeOpt, orgId) =>
+              codeOpt.orElse {
+                val codeInfoOpt = creditRewardCommander.getCreditCodeInfo(CreditCodeApplyRequest(creditCode, ur.userId, Some(orgId))).toOption
+
+                if (codeInfoOpt.isDefined && permissionCommander.getOrganizationPermissions(orgId, Some(ur.userId)).contains(OrganizationPermission.MANAGE_PLAN)) {
+                  codeInfoOpt.map(orgId -> _)
+                } else {
+                  None
+                }
+              }
+          }.map {
+            case ((orgId, creditInfo)) =>
+              (Option(orgId), Option(creditInfo.code)) // Found an org that this code could be applied for
+          }.getOrElse {
+            (allOrgIds.headOption, creditCodeInfoRepo.getByCode(creditCode).map(_.code))
+          }
+
+          validCodeOpt.map(c => userValueRepo.setValue(ur.userId, UserValueName.STORED_CREDIT_CODE, c.value))
+          orgIdOpt.map(orgIdToRedirectUrl(_, ur.userId)).getOrElse("/teams/new")
+        }
+
+        Redirect(redirectUrl)
+      case nur: NonUserRequest[_] =>
+        val creditCode = CreditCode.normalize(creditCodeStr)
+        Redirect("/signup").withCookies(Cookie("intent", "applyCredit"), Cookie("creditCode", creditCode.value))
+    }
+  }
+
+  private def orgIdToRedirectUrl(orgId: Id[Organization], userId: Id[User])(implicit session: RSession) = {
+    if (permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.MANAGE_PLAN)) {
+      // these are split out because Jen originally wanted it to go to the plan page, and I'm sure it will soon
+      "/" + organizationRepo.get(orgId).handle.value + "/settings/credits"
+    } else {
+      "/" + organizationRepo.get(orgId).handle.value + "/settings/credits"
+    }
   }
 
 }
