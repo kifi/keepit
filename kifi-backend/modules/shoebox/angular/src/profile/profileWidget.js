@@ -15,13 +15,16 @@ angular.module('kifi')
         scope.me = me;
         scope.organizations = me.orgs;
 
-        if (me.pendingOrgs) {
-          me.pendingOrgs.forEach(function (o) {
+        scope.organizations.forEach(function(o) {
+          if (o.viewer.invite) {
             o.pending = true;
-            o.notDeclined = true;
-          });
-          scope.organizations = scope.organizations.concat(me.pendingOrgs);
-        }
+            o.declined = false;
+          }
+          if (o.viewer.emails.length > 0) {
+            o.potential = true;
+            o.declined = false;
+          }
+        });
 
         scope.shouldShowCreateTeam = function () {
           return scope.me.experiments.indexOf('admin') !== -1 || (scope.me.experiments.indexOf('create_team') !== -1 && scope.me.orgs.length <= 1);
