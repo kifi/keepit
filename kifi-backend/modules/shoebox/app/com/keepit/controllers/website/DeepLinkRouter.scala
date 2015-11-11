@@ -39,7 +39,7 @@ class DeepLinkRouterImpl @Inject() (
           messageId <- messageIdOpt
         } yield DeepLinkRedirect(uri.url, Some(s"/messages/$messageId"))
       case _ =>
-        generateRedirectUrl(data).map(DeepLinkRedirect(_, externalLocator = None))
+        generateRedirectUrl(data).map(url => DeepLinkRedirect(url = url, externalLocator = None))
     }
   }
 

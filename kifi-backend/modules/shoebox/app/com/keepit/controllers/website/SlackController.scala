@@ -6,15 +6,15 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.slack.SlackClient
-import com.keepit.slack.models.{ SlackAuthScope, SlackAPIFailure, SlackAuthorizationCode }
-import play.api.libs.json.Json
+import com.keepit.slack.models.{ SlackAPIFailure, SlackAuthScope, SlackAuthorizationCode }
+import com.keepit.slack.{ SlackClient, SlackCommander }
 
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class SlackController @Inject() (
     slackClient: SlackClient,
+    slackCommander: SlackCommander,
     deepLinkRouter: DeepLinkRouter,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -24,9 +24,17 @@ class SlackController @Inject() (
 
   def registerSlackAuthorization(code: String, state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
-    slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), state).map {
-      case (auth, redirState) => Ok(Json.obj("auth" -> auth.scopes, "state" -> redirState, "redir" -> deepLinkRouter.generateRedirect(redirState).map(_.url)))
-    }.recover {
+    val redir = slackClient.decodeState(state).toOption.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
+
+    val authFut = for {
+      slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
+      slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
+    } yield {
+      slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
+      Redirect(redir, OK)
+    }
+
+    authFut.recover {
       case fail: SlackAPIFailure => fail.asResponse
     }
   }

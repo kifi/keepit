@@ -165,6 +165,22 @@ object SlackAuthorizationResponse {
   )(SlackAuthorizationResponse.apply _)
 }
 
+case class SlackIdentifyResponse(
+  url: String,
+  teamName: SlackTeamName,
+  userName: SlackUsername,
+  teamId: SlackTeamId,
+  userId: SlackUserId)
+object SlackIdentifyResponse {
+  implicit val reads: Reads[SlackIdentifyResponse] = (
+    (__ \ 'url).read[String] and
+    (__ \ 'team).read[String].map(SlackTeamName(_)) and
+    (__ \ 'user).read[String].map(SlackUsername(_)) and
+    (__ \ 'team_id).read[String].map(SlackTeamId(_)) and
+    (__ \ 'user_id).read[String].map(SlackUserId(_))
+  )(SlackIdentifyResponse.apply _)
+}
+
 case class SlackSearchQuery(queryString: String)
 
 case class SlackSearchResponse(query: String, messages: JsObject)
