@@ -11,7 +11,10 @@
           <label>Name</label>
           <input type="text" ng-model="orgName" class="kf-textbox kf-org-create-name" placeholder="Choose a name for your team" autofocus/>
         </div>
-
+        <div class="kf-org-create-field" ng-show="redeemCode">
+          <label>Promotion Code</label>
+          <input type="text" class="kf-textbox kf-org-create-name" placeholder="Enter code (e.g. KIFI50)" ng-model="redeemCode" />
+        </div>
         <input type="submit" ng-click="createOrg()" class="kf-button kf-button-large" value="Create Team" ng-disabled="disableCreate"/>
       </div>
       <div class="kf-split-pane">
