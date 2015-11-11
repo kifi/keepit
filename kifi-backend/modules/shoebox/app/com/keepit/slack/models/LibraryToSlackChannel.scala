@@ -1,6 +1,7 @@
 package com.keepit.slack.models
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.time._
@@ -18,17 +19,21 @@ case class LibraryToSlackChannel(
     channelId: SlackChannelId,
     channel: SlackChannel,
     libraryId: Id[Library],
-    status: SlackIntegrationStatus,
-    lastProcessedAt: Option[DateTime],
-    lastKeepId: Option[Id[Keep]]) extends ModelWithState[LibraryToSlackChannel] with SlackIntegration {
+    status: SlackIntegrationStatus = SlackIntegrationStatus.On,
+    lastProcessedAt: Option[DateTime] = None,
+    lastKeepId: Option[Id[Keep]] = None) extends ModelWithState[LibraryToSlackChannel] with SlackIntegration {
   def withId(id: Id[LibraryToSlackChannel]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def isActive: Boolean = (state == LibraryToSlackChannelStates.ACTIVE)
 }
 
 object LibraryToSlackChannelStates extends States[LibraryToSlackChannel]
 
 @ImplementedBy(classOf[LibraryToSlackChannelRepoImpl])
-trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel]
+trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
+  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel]
+  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationRequest)(implicit session: RWSession): (LibraryToSlackChannel, Boolean)
+}
 
 @Singleton
 class LibraryToSlackChannelRepoImpl @Inject() (
@@ -111,4 +116,30 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   initTable()
   override def deleteCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {}
   override def invalidateCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {}
+
+  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel] = {
+    rows.filter(row => row.slackTeamId === slackTeamId && row.channelId === slackChannelId && row.libraryId === libraryId && row.state =!= excludeState.orNull).firstOption
+  }
+
+  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationRequest)(implicit session: RWSession): (LibraryToSlackChannel, Boolean) = {
+    getBySlackTeamChannelAndLibrary(request.slackTeamId, request.channelId, request.libraryId, excludeState = None) match {
+      case Some(integration) if integration.isActive =>
+        val isIntegrationOwner = (integration.ownerId == request.userId && integration.slackUserId == request.slackUserId)
+        val updated = integration.copy(channel = request.channel)
+        val saved = if (updated == integration) integration else save(updated)
+        (saved, isIntegrationOwner)
+      case inactiveIntegrationOpt =>
+        val newIntegration = LibraryToSlackChannel(
+          id = inactiveIntegrationOpt.flatMap(_.id),
+          ownerId = request.userId,
+          slackUserId = request.slackUserId,
+          slackTeamId = request.slackTeamId,
+          channelId = request.channelId,
+          channel = request.channel,
+          libraryId = request.libraryId
+        )
+        (save(newIntegration), true)
+    }
+  }
+
 }

@@ -1,9 +1,9 @@
 package com.keepit.slack.models
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
-import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.model.User
 import org.joda.time.DateTime
@@ -21,8 +21,8 @@ case class SlackIncomingWebhookInfo(
     channelId: SlackChannelId,
     webhook: SlackIncomingWebhook,
     lastPostedAt: Option[DateTime],
-    lastFailedAt: Option[DateTime],
-    lastFailure: Option[SlackAPIFailure]) extends ModelWithState[SlackIncomingWebhookInfo] {
+    lastFailedAt: Option[DateTime] = None,
+    lastFailure: Option[SlackAPIFailure] = None) extends ModelWithState[SlackIncomingWebhookInfo] {
   def withId(id: Id[SlackIncomingWebhookInfo]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
@@ -30,7 +30,9 @@ case class SlackIncomingWebhookInfo(
 object SlackIncomingWebhookInfoStates extends States[SlackIncomingWebhookInfo]
 
 @ImplementedBy(classOf[SlackIncomingWebhookInfoRepoImpl])
-trait SlackIncomingWebhookInfoRepo extends Repo[SlackIncomingWebhookInfo]
+trait SlackIncomingWebhookInfoRepo extends Repo[SlackIncomingWebhookInfo] {
+  def add(ownerId: Id[User], slackUserId: SlackUserId, slackTeamId: SlackTeamId, channelId: SlackChannelId, hook: SlackIncomingWebhook, lastPostedAt: Option[DateTime] = None)(implicit session: RWSession): SlackIncomingWebhookInfo
+}
 
 @Singleton
 class SlackIncomingWebhookInfoRepoImpl @Inject() (
@@ -114,4 +116,15 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   initTable()
   override def deleteCache(info: SlackIncomingWebhookInfo)(implicit session: RSession): Unit = {}
   override def invalidateCache(info: SlackIncomingWebhookInfo)(implicit session: RSession): Unit = {}
+
+  def add(ownerId: Id[User], slackUserId: SlackUserId, slackTeamId: SlackTeamId, channelId: SlackChannelId, hook: SlackIncomingWebhook, lastPostedAt: Option[DateTime] = None)(implicit session: RWSession): SlackIncomingWebhookInfo = {
+    save(SlackIncomingWebhookInfo(
+      ownerId = ownerId,
+      slackUserId = slackUserId,
+      slackTeamId = slackTeamId,
+      channelId = channelId,
+      webhook = hook,
+      lastPostedAt = lastPostedAt
+    ))
+  }
 }

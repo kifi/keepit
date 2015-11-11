@@ -26,3 +26,12 @@ trait SlackIntegration {
   def libraryId: Id[Library]
   def status: SlackIntegrationStatus
 }
+
+case class SlackIntegrationRequest(
+  userId: Id[User],
+  slackUserId: SlackUserId,
+  slackTeamId: SlackTeamId,
+  channelId: SlackChannelId,
+  channel: SlackChannel,
+  libraryId: Id[Library])
+
