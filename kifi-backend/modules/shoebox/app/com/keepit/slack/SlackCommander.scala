@@ -33,6 +33,16 @@ class SlackCommanderImpl @Inject() (
         token = auth.accessToken,
         scopes = auth.scopes
       ))
+      auth.incomingWebhook.foreach { webhook =>
+        slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
+          ownerId = userId,
+          slackUserId = identity.userId,
+          slackTeamId = identity.teamId,
+          slackChannelId = SlackChannelId("CTOTALLYGARBAGE"), // TODO(ryan): make Léo turn this into an Option and fill in a None
+          webhook = webhook,
+          lastPostedAt = None
+        ))
+      }
     }
   }
 }
