@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id

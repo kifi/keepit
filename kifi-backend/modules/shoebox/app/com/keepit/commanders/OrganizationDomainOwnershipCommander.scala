@@ -56,6 +56,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     userEmailAddressRepo: UserEmailAddressRepo,
     userEmailAddressCommander: UserEmailAddressCommander,
     orgMembershipRepo: OrganizationMembershipRepo,
+    userValueRepo: UserValueRepo,
     implicit val executionContext: ScalaExecutionContext) extends OrganizationDomainOwnershipCommander with Logging {
 
   override def getDomainsOwned(orgId: Id[Organization]): Set[Domain] = {
@@ -98,6 +99,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
           val orgMembers = orgMembershipRepo.getAllByOrgId(success.ownership.organizationId)
           val usersToEmail = userEmailAddressRepo.getByDomain(success.ownership.normalizedHostname)
             .filter(userEmail => !orgMembers.exists(_.userId == userEmail.userId))
+            .filter(userEmail => !userValueRepo.getValue(userEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(success.ownership.organizationId))
           usersToEmail.foreach(userEmailAddressCommander.sendVerificationEmailHelper)
         }
         Right(success)
