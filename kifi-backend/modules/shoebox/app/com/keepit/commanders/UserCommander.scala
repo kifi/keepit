@@ -156,7 +156,7 @@ class UserCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
-    organizationCommander: OrganizationCommander,
+    organizationInfoCommander: OrganizationInfoCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     organizationInviteCommander: OrganizationInviteCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
@@ -283,15 +283,16 @@ class UserCommanderImpl @Inject() (
       val numFollowers = libraryMembershipRepo.countFollowersForOwner(user.id.get)
 
       val orgs = organizationMembershipRepo.getByUserId(user.id.get, Limit(Int.MaxValue), Offset(0)).map(_.organizationId)
-      val orgViews = orgs.map(orgId => organizationCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
+      val orgViews = orgs.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
 
       val pendingOrgs = organizationInviteRepo.getByInviteeIdAndDecision(user.id.get, InvitationDecision.PENDING).map(_.organizationId)
-      val pendingOrgViews = pendingOrgs.map(orgId => organizationCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
+      val pendingOrgViews = pendingOrgs.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
 
       val emailHostnames = emails.flatMap(email => NormalizedHostname.fromHostname(EmailAddress.getHostname(email.address)))
       val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values
         .map(_.organizationId).filter(orgId => !organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == user.id.get))
-      val potentialOrgs = potentialOrgIds.map(orgId => organizationCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
+      val potentialOrgs = potentialOrgIds.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
+git s
 
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews ++ pendingOrgViews.toSeq ++ potentialOrgs.toSeq)
     }

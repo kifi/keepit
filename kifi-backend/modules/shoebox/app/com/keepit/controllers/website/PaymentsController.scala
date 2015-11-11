@@ -5,7 +5,7 @@ import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, Use
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.model._
-import com.keepit.commanders.{ PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
+import com.keepit.commanders.{ OrganizationInfoCommander, PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }
 import com.keepit.payments._
 import com.keepit.common.core._
 
@@ -21,6 +21,7 @@ import org.joda.time.DateTime
 @Singleton
 class PaymentsController @Inject() (
     orgCommander: OrganizationCommander,
+    orgInfoCommander: OrganizationInfoCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     planCommander: PlanManagementCommander,
@@ -98,7 +99,7 @@ class PaymentsController @Inject() (
   }
 
   def getAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_SETTINGS) { request =>
-    Ok(Json.toJson(orgCommander.getExternalOrgConfiguration(request.orgId)))
+    Ok(Json.toJson(orgInfoCommander.getExternalOrgConfiguration(request.orgId)))
   }
 
   def setAccountFeatureSettings(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.VIEW_SETTINGS, OrganizationPermission.MANAGE_PLAN)(parse.tolerantJson) { request =>
@@ -109,7 +110,7 @@ class PaymentsController @Inject() (
         orgCommander.setAccountFeatureSettings(settingsRequest) match {
           case Left(fail) => fail.asErrorResponse
           case Right(response) =>
-            val config = db.readOnlyMaster { implicit session => orgCommander.getExternalOrgConfigurationHelper(request.orgId) } // avoiding using replica
+            val config = db.readOnlyMaster { implicit session => orgInfoCommander.getExternalOrgConfigurationHelper(request.orgId) } // avoiding using replica
             Ok(Json.toJson(config))
         }
     }

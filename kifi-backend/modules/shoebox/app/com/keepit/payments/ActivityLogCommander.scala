@@ -1,19 +1,17 @@
 package com.keepit.payments
 
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
-import com.keepit.commanders.OrganizationCommander
+import com.keepit.commanders.{ OrganizationInfoCommander, OrganizationAvatarCommander, OrganizationCommander }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
-import com.keepit.common.path.Path
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import play.api.libs.json.{ Writes, Json }
-import play.twirl.api.Html
+import play.api.libs.json.Json
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
@@ -32,8 +30,8 @@ class ActivityLogCommanderImpl @Inject() (
     creditRewardRepo: CreditRewardRepo,
     creditRewardInfoCommander: CreditRewardInfoCommander,
     basicUserRepo: BasicUserRepo,
-    organizationRepo: OrganizationRepo,
-    organizationCommander: OrganizationCommander,
+    orgInfoCommander: OrganizationInfoCommander,
+    organizationAvatarCommander: OrganizationAvatarCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {
@@ -46,7 +44,7 @@ class ActivityLogCommanderImpl @Inject() (
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
-  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = organizationCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
+  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = orgInfoCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
 
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit s =>
     buildSimpleEventInfoHelper(event)

@@ -19,7 +19,7 @@ class ExtUserController @Inject() (
   permissionCommander: PermissionCommander,
   orgMemberRepo: OrganizationMembershipRepo,
   orgRepo: OrganizationRepo,
-  orgCommander: OrganizationCommander,
+  orgInfoCommander: OrganizationInfoCommander,
   db: Database,
   implicit val config: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
@@ -35,7 +35,7 @@ class ExtUserController @Inject() (
             permissionCommander.getOrganizationPermissions(orgId, Some(request.userId)).contains(OrganizationPermission.GROUP_MESSAGING)
           }
       }
-      val basicOrgs = orgCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
+      val basicOrgs = orgInfoCommander.getBasicOrganizations(orgsUserIsIn.toSet).values
       val orgsToShow = query.getOrElse("") match {
         case "" => basicOrgs
         case orgQ =>

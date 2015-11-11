@@ -258,7 +258,8 @@ class InviteController @Inject() (db: Database,
 
   private def orgIdToRedirectUrl(orgId: Id[Organization], userId: Id[User])(implicit session: RSession) = {
     if (permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.MANAGE_PLAN)) {
-      "/" + organizationRepo.get(orgId).handle.value + "/settings/plan"
+      // these are split out because Jen originally wanted it to go to the plan page, and I'm sure it will soon
+      "/" + organizationRepo.get(orgId).handle.value + "/settings/credits"
     } else {
       "/" + organizationRepo.get(orgId).handle.value + "/settings/credits"
     }
