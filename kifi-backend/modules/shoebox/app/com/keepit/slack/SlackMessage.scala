@@ -100,7 +100,7 @@ object SlackIncomingWebhook {
   implicit val reads: Reads[SlackIncomingWebhook] = (
     (__ \ 'url).read[String] and
     (__ \ 'channel).read[String] and
-    (__ \ 'config_url).read[String]
+    (__ \ 'configuration_url).read[String]
   )(SlackIncomingWebhook.apply _)
 }
 
