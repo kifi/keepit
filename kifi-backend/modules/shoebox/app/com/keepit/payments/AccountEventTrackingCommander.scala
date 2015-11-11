@@ -10,7 +10,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.net.HttpClient
-import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
+import com.keepit.model._
+import com.keepit.payments.AccountEventAction.RewardCredit
 import com.keepit.slack.{ SlackClient, SlackMessage }
 import play.api.Mode
 
@@ -39,6 +40,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
     mode: play.api.Mode.Mode,
     airbrake: AirbrakeNotifier,
     activityCommander: ActivityLogCommander,
+    creditRewardRepo: CreditRewardRepo,
+    creditRewardInfoCommander: CreditRewardInfoCommander,
     implicit val defaultContext: ExecutionContext) extends AccountEventTrackingCommander {
 
   def track(event: AccountEvent)(implicit session: RWSession): AccountEvent = {
@@ -59,7 +62,13 @@ class AccountEventTrackingCommanderImpl @Inject() (
     implicit val org = o
     implicit val paymentMethod = m
 
-    Future.sequence(Seq(notifyOfTransaction(event).imap(_ => ()), notifyOfFailedCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
+    Future.sequence(Seq(
+      notifyOfTransaction(event).imap(_ => ()),
+      notifyOfFailedCharge(event).imap(_ => ()),
+      notifyOfError(event).imap(_ => ()),
+      reportToSlack(event).imap(_ => ()),
+      sendNotificationToMembers(event).imap(_ => ())
+    )).imap(_ => ())
   } else Future.successful(())
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
@@ -73,6 +82,26 @@ class AccountEventTrackingCommanderImpl @Inject() (
         channel = Some(channel)
       )
       slackClient.sendToSlack(slackChannelUrl, fullMsg).imap(_ => ())
+    }
+  }
+
+  private def sendNotificationToMembers(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[User[Id]]] = {
+    checkingParameters(event) {
+      event.action match {
+        case RewardCredit(id) =>
+          val description = db.readOnlyMaster { implicit s =>
+            creditRewardInfoCommander.getDescription(creditRewardRepo.get(id))
+          }
+          lazy val msg = {
+            val info = activityCommander.buildSimpleEventInfo(event)
+            val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${SlackMessage.escapeSegment(org.name)}>"
+            s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
+          }
+          Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
+            reportToSlack(msg, channel).imap(_ => channel)
+          })
+        case None => Future.successful(Seq.empty)
+      }
     }
   }
 
