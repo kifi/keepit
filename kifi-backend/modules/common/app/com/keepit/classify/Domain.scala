@@ -3,6 +3,7 @@ package com.keepit.classify
 import java.security.MessageDigest
 
 import java.net.IDN
+import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import com.keepit.common.strings._
 import com.kifi.macros.json
 import org.apache.commons.codec.binary.Base64
@@ -72,7 +73,14 @@ object NormalizedHostname extends Logging {
   private val MaxLength = 256
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
 
-  def fromHostname(hostname: String): Option[NormalizedHostname] = Try(NormalizedHostname(IDN.toASCII(hostname).toLowerCase)).toOption.filter(hostname => isValid(hostname.value))
+  def fromHostname(hostname: String): Option[NormalizedHostname] = {
+    Try(NormalizedHostname(IDN.toASCII(hostname).toLowerCase)).toOption
+      .filter { hostname =>
+        val isValidHostname = isValid(hostname.value)
+        if (!isValidHostname)  AirbrakeNotifierStatic.notify(s"found an invalid hostname $hostname, make sure this isn't stored in the DB as normalized", new Exception)
+        isValidHostname
+    }
+  }
 
   implicit val format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
     def reads(json: JsValue): JsResult[NormalizedHostname] = {
