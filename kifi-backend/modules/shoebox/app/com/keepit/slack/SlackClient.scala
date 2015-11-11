@@ -78,7 +78,7 @@ class SlackClientImpl(
     }
   }
   def processAuthorizationResponse(code: SlackAuthorizationCode, state: String): Future[(SlackAuthorizationResponse, JsObject)] = {
-    val redirStateFut = Try(Json.parse(state).as[JsObject]).map(Future.successful).getOrElse(Future.failed(SlackAPIFail.StateError(state))) // this should never fail
+    val redirStateFut = Try(Json.parse(CryptoSupport.decodeBase64(state)).as[JsObject]).map(Future.successful).getOrElse(Future.failed(SlackAPIFail.StateError(state))) // this should never fail
     val authResponseFut = slackCall[SlackAuthorizationResponse](Route.OAuthAccess, Param.CLIENT_ID, Param.CLIENT_SECRET, Param.REDIRECT_URI, Param.code(code))
     for {
       authResponse <- authResponseFut
