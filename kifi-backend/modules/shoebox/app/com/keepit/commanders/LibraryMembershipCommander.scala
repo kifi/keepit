@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -64,7 +64,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     libraryInviteCommander: LibraryInviteCommander,
     libraryAccessCommander: LibraryAccessCommander,
     permissionCommander: PermissionCommander,
-    organizationMembershipCommander: OrganizationMembershipCommander,
+    organizationMembershipRepo: OrganizationMembershipRepo,
     typeaheadCommander: TypeaheadCommander,
     kifiUserTypeahead: KifiUserTypeahead,
     libraryAnalytics: LibraryAnalytics,
@@ -152,7 +152,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     } else { // User can at least view the library, so can join as read_only. Determine if they could do better.
       val maxAccess: LibraryAccess = {
         val orgMemberAccess: Option[LibraryAccess] = if (lib.isSecret) None else lib.organizationId.flatMap { orgId =>
-          lib.organizationMemberAccess.orElse(Some(LibraryAccess.READ_WRITE)).filter { _ => organizationMembershipCommander.getMembership(orgId, userId).isDefined }
+          lib.organizationMemberAccess.orElse(Some(LibraryAccess.READ_WRITE)).filter { _ => db.readOnlyMaster { implicit s => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined } }
         }
         (inviteList.map(_.access).toSet ++ orgMemberAccess).maxOpt.getOrElse(LibraryAccess.READ_ONLY)
       }

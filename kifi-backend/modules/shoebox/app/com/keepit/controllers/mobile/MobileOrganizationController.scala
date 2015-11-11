@@ -19,11 +19,13 @@ import scala.util.{ Success, Failure }
 @Singleton
 class MobileOrganizationController @Inject() (
     orgCommander: OrganizationCommander,
+    orgInfoCommander: OrganizationInfoCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
+    libraryInfoCommander: LibraryInfoCommander,
     val db: Database,
     val permissionCommander: PermissionCommander,
     implicit val imageConfig: S3ImageConfig,
@@ -41,7 +43,7 @@ class MobileOrganizationController @Inject() (
         orgCommander.createOrganization(createRequest) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
+            val organizationView = orgInfoCommander.getOrganizationView(response.newOrg.id.get, request.userIdOpt, authTokenOpt = None)
             Ok(Json.toJson(organizationView))
         }
     }
@@ -55,7 +57,7 @@ class MobileOrganizationController @Inject() (
         orgCommander.modifyOrganization(OrganizationModifyRequest(request.request.userId, request.orgId, modifications)) match {
           case Left(failure) => failure.asErrorResponse
           case Right(response) =>
-            val organizationView = orgCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt, authTokenOpt = None)
+            val organizationView = orgInfoCommander.getOrganizationView(response.modifiedOrg.id.get, request.request.userIdOpt, authTokenOpt = None)
             Ok(Json.toJson(organizationView))
         }
     }
@@ -71,19 +73,19 @@ class MobileOrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization]) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt = None)
+    val organizationView = orgInfoCommander.getOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt = None)
     Ok(Json.toJson(organizationView))
   }
 
   def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
+    Ok(Json.obj("libraries" -> Json.toJson(libraryInfoCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
   }
 
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalId(extId)
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
 
-    val orgViewsMap = orgCommander.getOrganizationViews(visibleOrgs.toSet, request.userIdOpt, authTokenOpt = None)
+    val orgViewsMap = orgInfoCommander.getOrganizationViews(visibleOrgs.toSet, request.userIdOpt, authTokenOpt = None)
 
     val orgViews = visibleOrgs.map(org => orgViewsMap(org))
 

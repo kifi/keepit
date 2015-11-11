@@ -35,7 +35,7 @@ class LibraryCardCommanderImpl @Inject() (
     librarySubscriptionRepo: LibrarySubscriptionRepo,
     basicUserRepo: BasicUserRepo,
     systemValueRepo: SystemValueRepo,
-    organizationCommander: OrganizationCommander,
+    organizationInfoCommander: OrganizationInfoCommander,
     libraryInviteCommander: LibraryInviteCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
     permissionCommander: PermissionCommander,
@@ -56,7 +56,7 @@ class LibraryCardCommanderImpl @Inject() (
     val membershipsToLibsMap = viewerIdOpt.map { viewerId =>
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewerId)
     } getOrElse Map.empty
-    val orgViews = organizationCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerIdOpt, authTokenOpt = None)
+    val orgViews = organizationInfoCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerIdOpt, authTokenOpt = None)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -100,7 +100,7 @@ class LibraryCardCommanderImpl @Inject() (
     val userIds = memberships.values.flatMap(_.map(_.userId)).toSet
     val allBasicUsers = basicUserRepo.loadAll(userIds)
 
-    val basicOrgViewById = organizationCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, Some(viewerId), authTokenOpt = None)
+    val basicOrgViewById = organizationInfoCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, Some(viewerId), authTokenOpt = None)
 
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)
@@ -242,5 +242,4 @@ class LibraryCardCommanderImpl @Inject() (
       }
     } getOrElse Future.successful(Seq.empty)
   }
-
 }

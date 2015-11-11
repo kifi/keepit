@@ -9,11 +9,8 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
-import org.joda.time.DateTime
-import play.api.libs.json.{ JsArray, Json }
 
-import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
-import scala.util.{ Success, Failure, Try }
+import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipCommanderImpl])
 trait OrganizationDomainOwnershipCommander {

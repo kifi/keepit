@@ -1,7 +1,7 @@
 package com.keepit.payments
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ PathCommander, OrganizationCommander }
+import com.keepit.commanders.{ OrganizationInfoCommander, PathCommander, OrganizationCommander }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -27,7 +27,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   libraryRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
-  orgCommander: OrganizationCommander,
+  orgInfoCommander: OrganizationInfoCommander,
   pathCommander: PathCommander,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends CreditRewardInfoCommander with Logging {
@@ -49,7 +49,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
-  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = orgCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
+  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = orgInfoCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
   def getDescription(creditReward: CreditReward)(implicit session: RSession): DescriptionElements = {
     if (creditReward.applied.isDefined) describeAppliedReward(creditReward)
     else describeUnearnedReward(creditReward)

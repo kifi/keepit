@@ -44,10 +44,13 @@ trait LibraryInfoCommander {
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
   def getLibraryWithHandleAndSlug(handle: Handle, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
+  def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
+  def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library]
 }
 
 class LibraryInfoCommanderImpl @Inject() (
     db: Database,
+    libraryCardCommander: LibraryCardCommander,
     libraryImageRepo: LibraryImageRepo,
     librarySubscriptionRepo: LibrarySubscriptionRepo,
     systemValueRepo: SystemValueRepo,
@@ -69,7 +72,7 @@ class LibraryInfoCommanderImpl @Inject() (
     keepCommander: KeepCommander,
     libraryAnalytics: LibraryAnalytics,
     keepDecorator: KeepDecorator,
-    organizationCommander: OrganizationCommander,
+    organizationInfoCommander: OrganizationInfoCommander,
     experimentCommander: LocalUserExperimentCommander,
     libraryInviteRepo: LibraryInviteRepo,
     basicUserRepo: BasicUserRepo,
@@ -206,7 +209,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val basicOrgViewByIdF = {
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
       db.readOnlyReplicaAsync { implicit s =>
-        organizationCommander.getBasicOrganizationViewsHelper(allOrgsShown, viewerUserIdOpt, authTokenOpt = None)
+        organizationInfoCommander.getBasicOrganizationViewsHelper(allOrgsShown, viewerUserIdOpt, authTokenOpt = None)
       }
     }
 
@@ -515,4 +518,17 @@ class LibraryInfoCommanderImpl @Inject() (
     else (Seq.empty, Seq.empty, Seq.empty, CountWithLibraryIdByAccess.empty)
   }
 
+  def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo] = {
+    db.readOnlyReplica { implicit session =>
+      val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
+      val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId).toSet)
+      libraryCardCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, userIdOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+    }
+  }
+
+  def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
+    val viewerLibraryMemberships = userIdOpt.map(libraryMembershipRepo.getWithUserId(_).map(_.libraryId).toSet).getOrElse(Set.empty[Id[Library]])
+    val includeOrgVisibleLibs = userIdOpt.exists(organizationMembershipRepo.getByOrgIdAndUserId(orgId, _).isDefined)
+    libraryRepo.getVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships, offset, limit)
+  }
 }

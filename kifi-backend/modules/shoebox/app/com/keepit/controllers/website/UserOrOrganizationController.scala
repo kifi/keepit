@@ -6,7 +6,6 @@ import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.iteratee.Iteratee
@@ -19,14 +18,8 @@ import scala.util.{ Either, Success, Failure, Try }
 @Singleton
 class UserOrOrganizationController @Inject() (
     val userActionsHelper: UserActionsHelper,
-    val db: Database,
     val permissionCommander: PermissionCommander,
-    orgCommander: OrganizationCommander,
-    orgMembershipCommander: OrganizationMembershipCommander,
-    orgInviteCommander: OrganizationInviteCommander,
-    userCommander: UserCommander,
-    libraryController: LibraryController,
-    heimdalContextBuilder: HeimdalContextBuilderFactory,
+    val db: Database,
     userProfileController: UserProfileController,
     orgController: OrganizationController,
     handleCommander: HandleCommander,

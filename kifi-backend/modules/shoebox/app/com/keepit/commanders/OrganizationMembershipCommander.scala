@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.keepit.common.cache._
 import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.db.Id
@@ -23,7 +23,7 @@ import play.api.Mode.Mode
 import play.api.Play
 import play.api.libs.json._
 import com.keepit.common.core._
-import com.keepit.payments.{ RewardTrigger, CreditRewardCommander, PlanManagementCommander, ActionAttribution }
+import com.keepit.payments.{ CreditRewardCommanderImpl, RewardTrigger, CreditRewardCommander, PlanManagementCommander, ActionAttribution }
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
@@ -79,10 +79,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     kifiUserTypeahead: KifiUserTypeahead,
     planCommander: PlanManagementCommander,
     creditRewardCommander: CreditRewardCommander,
-    mode: Mode,
     implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
-
-  private val httpLock = new ReactiveLock(5)
 
   def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]] = {
     primaryOrgForUserCache.getOrElseOpt(PrimaryOrgForUserKey(userId)) {
