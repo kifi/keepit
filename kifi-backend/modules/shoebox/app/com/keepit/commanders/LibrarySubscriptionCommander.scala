@@ -13,7 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, DirectUrl, HttpClient, NonOKResponseException }
 import com.keepit.common.path.Path
 import com.keepit.model._
-import com.keepit.slack.{ SlackMessage, SlackAttachment }
+import com.keepit.slack.models.{ SlackAttachment, SlackMessage }
 import play.api.http.Status._
 import play.api.libs.json._
 

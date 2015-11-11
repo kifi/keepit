@@ -6,7 +6,8 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.slack.{ SlackAuthScope, SlackAPIFail, SlackAuthorizationCode, SlackClient }
+import com.keepit.slack.SlackClient
+import com.keepit.slack.models.{ SlackAuthScope, SlackAPIFailure, SlackAuthorizationCode }
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
@@ -26,7 +27,7 @@ class SlackController @Inject() (
     slackClient.processAuthorizationResponse(SlackAuthorizationCode(code), state).map {
       case (auth, redirState) => Ok(Json.obj("auth" -> auth.scopes, "state" -> redirState, "redir" -> deepLinkRouter.generateRedirect(redirState).map(_.url)))
     }.recover {
-      case fail: SlackAPIFail => fail.asResponse
+      case fail: SlackAPIFailure => fail.asResponse
     }
   }
 }

@@ -15,7 +15,8 @@ import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.slack.{ SlackClient, SlackMessage }
+import com.keepit.slack.SlackClient
+import com.keepit.slack.models.SlackMessage
 import org.joda.time.{ DateTime, Period }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -124,7 +125,7 @@ class UserIpAddressEventLogger @Inject() (
     }
 
     if (event.reportNewClusters && !cluster.contains(event.userId) && cluster.nonEmpty && !ignoreForPotentialOrgs && !userIsFake
-      && !Set("67.161.4.140").contains(event.ip.ip) //office ip address
+      && !Set("67.161.4.140", "67.160.194.3").contains(event.ip.ip) //office ip(s) address
       && !Play.maybeApplication.forall(_.mode == Mode.Dev)) {
       log.info("[IPTRACK NOTIFY] Cluster " + cluster + " has new member " + event.userId)
       notifySlackChannelAboutCluster(clusterIp = event.ip, clusterMembers = cluster + event.userId, newUserId = Some(event.userId))

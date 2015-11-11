@@ -86,11 +86,9 @@ GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitl
 GET     /twitter/request            @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlist()
 GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlist()
 
-
 GET     /i/:id                      @com.keepit.controllers.website.InviteController.userInvite(id: ExternalId[User])
-
-
 GET     /join/:creditCodeStr        @com.keepit.controllers.website.InviteController.creditInvite(creditCodeStr: String)
+GET     /k/cached                   @com.keepit.controllers.website.KeepCacheController.getCachedKeep(id: ExternalId[Keep])
 
 ##########################################
 # Extension API
