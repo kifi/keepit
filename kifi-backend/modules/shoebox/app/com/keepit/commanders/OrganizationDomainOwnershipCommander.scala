@@ -81,17 +81,23 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
 
   override def addDomainOwnership(orgId: Id[Organization], domainName: String): Either[OwnDomainFailure, OwnDomainSuccess] = {
     db.readWrite { implicit session =>
-      NormalizedHostname.fromHostname(domainName).fold[Either[OwnDomainFailure, OwnDomainSuccess]](ifEmpty = Left(InvalidDomainName(domainName))) { normalizedHostname =>
-        domainRepo.intern(normalizedHostname) match {
-          case domain if domain.isEmailProvider => Left(DomainIsEmailProvider(domainName))
-          case domain => orgDomainOwnershipRepo.getOwnershipForDomain(domain.hostname, excludeState = None).fold[Either[OwnDomainFailure, OwnDomainSuccess]](
-            ifEmpty = Right(OwnDomainSuccess(domain, orgDomainOwnershipRepo.save(orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, normalizedHostname = domain.hostname)))))
-          ) {
-              case ownership if ownership.state == OrganizationDomainOwnershipStates.INACTIVE =>
-                Right(OwnDomainSuccess(domain, orgDomainOwnershipRepo.save(ownership.copy(state = OrganizationDomainOwnershipStates.ACTIVE))))
-              case ownership if ownership.organizationId != orgId => Left(DomainAlreadyOwned(domainName))
-              case ownership => Right(OwnDomainSuccess(domain, ownership))
+      NormalizedHostname.fromHostname(domainName) match {
+        case None => Left(InvalidDomainName(domainName))
+        case Some(normalizedHostname) => {
+          domainRepo.intern(normalizedHostname) match {
+            case domain if domain.isEmailProvider => Left(DomainIsEmailProvider(domainName))
+            case domain => {
+              orgDomainOwnershipRepo.getOwnershipForDomain(domain.hostname, excludeState = None) match {
+                case None =>
+                  val ownership = orgDomainOwnershipRepo.save(orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, normalizedHostname = domain.hostname)))
+                  Right(OwnDomainSuccess(domain, ownership))
+                case Some(ownership) if !ownership.isActive =>
+                  Right(OwnDomainSuccess(domain, orgDomainOwnershipRepo.save(OrganizationDomainOwnership(id = ownership.id, state = OrganizationDomainOwnershipStates.ACTIVE, organizationId = orgId, normalizedHostname = normalizedHostname))))
+                case Some(ownership) if ownership.organizationId != orgId => Left(DomainAlreadyOwned(domainName))
+                case Some(ownership) => Right(OwnDomainSuccess(domain, ownership))
+              }
             }
+          }
         }
       }
     } match {

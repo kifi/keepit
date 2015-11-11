@@ -472,7 +472,9 @@ class AdminOrganizationController @Inject() (
   def populateEmailAddressDomains() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "secret").as[String] == "shhhhhh")
     val emails = db.readOnlyMaster { implicit session => userEmailAddressRepo.all().filter(_.state == UserEmailAddressStates.ACTIVE) }
-    db.readWrite(implicit s => emails.map(userEmailAddressRepo.save))
+    emails.grouped(1000).foreach { emailGroup =>
+      db.readWrite(implicit s => emailGroup.foreach(userEmailAddressRepo.save))
+    }
     Ok
   }
 }

@@ -55,11 +55,9 @@ class DomainRepoImpl @Inject() (
 
   def intern(hostname: NormalizedHostname)(implicit session: RWSession): Domain = {
     domainCache.getOrElse(DomainKey(hostname)) {
-      val resultOpt = rows.filter(r => r.hostname === hostname).firstOption
-      resultOpt match {
-        case Some(domain) if domain.state == DomainStates.INACTIVE => save(Domain(id = domain.id, hostname = hostname))
-        case Some(domain) => domain
-        case None => save(Domain(hostname = hostname))
+      rows.filter(r => r.hostname === hostname).firstOption match {
+        case Some(domain) if domain.isActive => domain
+        case inactiveOpt => save(Domain(id = inactiveOpt.map(_.id.get), hostname = hostname))
       }
     }
   }
