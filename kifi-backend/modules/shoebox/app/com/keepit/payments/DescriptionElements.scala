@@ -12,14 +12,15 @@ sealed trait DescriptionElements {
   def flatten: Seq[BasicElement]
 }
 case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
-  def flatten = elements.flatMap(_.flatten)
+  def flatten = elements.flatMap(_.flatten).filter(_.text.nonEmpty)
 }
 case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElements {
-  def flatten = Seq(this)
+  def flatten = Seq(simplify)
   def withText(newText: String) = this.copy(text = newText)
   def withUrl(newUrl: String) = this.copy(url = Some(newUrl))
   def withHover(newHover: DescriptionElements) = this.copy(hover = Some(newHover))
 
+  def simplify = this.copy(url = url.filter(_.nonEmpty), hover = hover.filter(_.flatten.nonEmpty))
   def combineWith(that: BasicElement): Option[BasicElement] = {
     if (this.url == that.url && this.hover == that.hover) Some(BasicElement(this.text + that.text, url, hover))
     else None
@@ -37,10 +38,7 @@ object BasicElement {
 }
 
 case class LinkElement(url: String)
-case class Hover(elements: DescriptionElements)
-object Hover {
-  def apply(elements: DescriptionElements*): Hover = Hover(SequenceOfElements(elements))
-}
+case class Hover(elements: DescriptionElements*)
 object DescriptionElements {
   def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
 
