@@ -1,20 +1,17 @@
 package com.keepit.payments
 
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
-import com.keepit.commanders.{ OrganizationAvatarCommander, OrganizationCommander }
+import com.keepit.commanders.{ OrganizationInfoCommander, OrganizationAvatarCommander, OrganizationCommander }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
-import com.keepit.common.path.Path
+import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImageSize
 import com.keepit.model._
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
-import play.api.libs.json.{ Writes, Json }
-import play.twirl.api.Html
+import play.api.libs.json.Json
 
 @ImplementedBy(classOf[ActivityLogCommanderImpl])
 trait ActivityLogCommander {
@@ -33,7 +30,7 @@ class ActivityLogCommanderImpl @Inject() (
     creditRewardRepo: CreditRewardRepo,
     creditRewardInfoCommander: CreditRewardInfoCommander,
     basicUserRepo: BasicUserRepo,
-    organizationRepo: OrganizationRepo,
+    orgInfoCommander: OrganizationInfoCommander,
     organizationAvatarCommander: OrganizationAvatarCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
@@ -47,20 +44,7 @@ class ActivityLogCommanderImpl @Inject() (
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
-  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = {
-    val org = organizationRepo.get(id)
-    if (org.isInactive) throw new Exception(s"Tried to build event info for dead org: $id")
-    else {
-      BasicOrganization(
-        orgId = Organization.publicId(org.id.get),
-        ownerId = basicUserRepo.load(org.ownerId).externalId,
-        handle = org.handle,
-        name = org.name,
-        description = org.description,
-        avatarPath = organizationAvatarCommander.getBestImageByOrgId(org.id.get, ImageSize(200, 200)).imagePath
-      )
-    }
-  }
+  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = orgInfoCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
 
   def buildSimpleEventInfo(event: AccountEvent): SimpleAccountEventInfo = db.readOnlyMaster { implicit s =>
     buildSimpleEventInfoHelper(event)
