@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
-import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ DomainUnclaimable, InvalidDomainName, DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
+import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ DomainIsEmailProvider, InvalidDomainName, DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -37,8 +37,8 @@ object OrganizationDomainOwnershipCommander {
     override def humanString = s"Domain '$domainName' did not exist!"
   }
 
-  case class DomainUnclaimable(domainName: String) extends OwnDomainFailure {
-    override def humanString = s"Domain '$domainName' is unclaimable!"
+  case class DomainIsEmailProvider(domainName: String) extends OwnDomainFailure {
+    override def humanString = s"Domain '$domainName' is an email provider!"
   }
 
   case class DomainAlreadyOwned(domainName: String) extends OwnDomainFailure {
@@ -83,7 +83,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       NormalizedHostname.fromHostname(domainName).fold[Either[OwnDomainFailure, OwnDomainSuccess]](ifEmpty = Left(InvalidDomainName(domainName))) { normalizedHostname =>
         domainRepo.intern(normalizedHostname) match {
-          case domain if domain.isEmailProvider => Left(DomainUnclaimable(domainName))
+          case domain if domain.isEmailProvider => Left(DomainIsEmailProvider(domainName))
           case domain => orgDomainOwnershipRepo.getOwnershipForDomain(domain.hostname, excludeState = None).fold[Either[OwnDomainFailure, OwnDomainSuccess]](
             ifEmpty = Right(OwnDomainSuccess(domain, orgDomainOwnershipRepo.save(orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, normalizedHostname = domain.hostname)))))
           ) {
