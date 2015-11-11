@@ -23,7 +23,7 @@ angular.module('kifi')
           };
 
           $scope.isSegmentHover = function (segment) {
-            return !!segment.hover;
+            return !!segment.hover && segment.hover.length > 0;
           };
         }
 
