@@ -11,9 +11,10 @@
           <div class="kf-payment-plan-card-bottom">
             <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="/about/pricing" target="_self" ng-click="trackClick('free_card:details')">Details</a></p>
             <p class="kf-payment-plan-card-current" ng-if="isFreePlanName(currentPlan.name)">Your Current Plan</p>
+            <p class="kf-payment-plan-card-pending" ng-if="!isFreePlanName(currentPlan.name) && isFreePlanName(plan.name)">Selected for downgrade</p>
             <button
               class="kf-payment-plan-card-cta"
-              ng-if="!isFreePlanName(currentPlan.name)"
+              ng-if="!isFreePlanName(currentPlan.name) && !isFreePlanName(plan.name)"
               ng-bind="isNoPlanName(currentPlan.name) ? 'Choose plan' : 'Downgrade'"
               ng-click="changePlanToFree()"
             ></button>
@@ -27,9 +28,10 @@
           <div class="kf-payment-plan-card-bottom">
             <p class="kf-payment-plan-card-description"><a class="kf-link kf-link-white kf-link-underline" href="/about/pricing" target="_self" ng-click="trackClick('standard_card:details')">Details</a></p>
             <p class="kf-payment-plan-card-current" ng-if="isPaidPlanName(currentPlan.name)">Your Current Plan</p>
+            <p class="kf-payment-plan-card-pending" ng-if="!isPaidPlanName(currentPlan.name) && isPaidPlanName(plan.name)">Selected for upgrade</p>
             <button
               class="kf-payment-plan-card-cta"
-              ng-if="!isPaidPlanName(currentPlan.name)"
+              ng-if="!isPaidPlanName(currentPlan.name) && !isPaidPlanName(plan.name)"
               ng-click="changePlanToStandard()"
               ng-bind="(isFreePlanName(currentPlan.name) ? 'Upgrade now' :
                 (isNoPlanName(currentPlan.name) ? 'Choose Plan' : 'Downgrade'))"
