@@ -14,6 +14,7 @@ trait DomainRepo extends Repo[Domain] {
   def getAllByName(domains: Seq[NormalizedHostname], excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def getOverrides(excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Seq[Domain]
   def updateAutoSensitivity(domainIds: Seq[Id[Domain]], value: Option[Boolean])(implicit session: RWSession): Int
+  def intern(hostname: NormalizedHostname)(implicit session: RWSession): Domain
   def internAllByNames(domainNames: Set[NormalizedHostname])(implicit session: RWSession): Map[NormalizedHostname, Domain]
 }
 
@@ -49,6 +50,17 @@ class DomainRepoImpl @Inject() (
   def get(domain: NormalizedHostname, excludeState: Option[State[Domain]] = Some(DomainStates.INACTIVE))(implicit session: RSession): Option[Domain] = {
     domainCache.getOrElseOpt(DomainKey(domain)) {
       (for (d <- rows if d.hostname === domain && d.state =!= excludeState.orNull) yield d).firstOption
+    }
+  }
+
+  def intern(hostname: NormalizedHostname)(implicit session: RWSession): Domain = {
+    domainCache.getOrElse(DomainKey(hostname)) {
+      val resultOpt = rows.filter(r => r.hostname === hostname).firstOption
+      resultOpt match {
+        case Some(domain) if domain.state == DomainStates.INACTIVE => save(Domain(id = domain.id, hostname = hostname))
+        case Some(domain) => domain
+        case None => save(Domain(hostname = hostname))
+      }
     }
   }
 

@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
-import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ InvalidDomainName, DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
+import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ DomainUnclaimable, InvalidDomainName, DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -35,6 +35,10 @@ object OrganizationDomainOwnershipCommander {
 
   case class DomainDidNotExist(domainName: String) extends OwnDomainFailure {
     override def humanString = s"Domain '$domainName' did not exist!"
+  }
+
+  case class DomainUnclaimable(domainName: String) extends OwnDomainFailure {
+    override def humanString = s"Domain '$domainName' is unclaimable!"
   }
 
   case class DomainAlreadyOwned(domainName: String) extends OwnDomainFailure {
@@ -76,8 +80,9 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
   override def addDomainOwnership(orgId: Id[Organization], domainName: String): Either[OwnDomainFailure, OwnDomainSuccess] = {
     db.readWrite { implicit session =>
       NormalizedHostname.fromHostname(domainName).fold[Either[OwnDomainFailure, OwnDomainSuccess]](ifEmpty = Left(InvalidDomainName(domainName))) { normalizedHostname =>
-        domainRepo.get(normalizedHostname).fold[Either[OwnDomainFailure, OwnDomainSuccess]](ifEmpty = Left(DomainDidNotExist(domainName))) { domain =>
-          orgDomainOwnershipRepo.getOwnershipForDomain(domain.hostname, excludeState = None).fold[Either[OwnDomainFailure, OwnDomainSuccess]](
+        domainRepo.intern(normalizedHostname) match {
+          case domain if domain.isEmailProvider => Left(DomainUnclaimable(domainName))
+          case domain => orgDomainOwnershipRepo.getOwnershipForDomain(domain.hostname, excludeState = None).fold[Either[OwnDomainFailure, OwnDomainSuccess]] (
             ifEmpty = Right(OwnDomainSuccess(domain, orgDomainOwnershipRepo.save(orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, normalizedHostname = domain.hostname)))))
           ) {
               case ownership if ownership.state == OrganizationDomainOwnershipStates.INACTIVE =>
