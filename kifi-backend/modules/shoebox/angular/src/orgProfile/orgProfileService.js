@@ -51,7 +51,7 @@ angular.module('kifi')
         return net
         .createOrg({ name: name })
         .then(function(response) {
-          return response.data.organization.handle;
+          return response.data.organization;
         });
       },
       sendOrgMemberInvite: function (orgId, inviteFields) {

@@ -9,6 +9,7 @@ import com.google.inject.Inject
 import com.keepit.common.oauth.adaptor.SecureSocialAdaptor
 import com.keepit.common.oauth.{ OAuth1ProviderRegistry, OAuth2AccessToken, ProviderIds, OAuth2ProviderRegistry }
 import com.keepit.common.service.IpAddress
+import com.keepit.payments.{ CreditRewardCommander, CreditCode }
 import play.api.Mode._
 import play.api.mvc._
 import play.api.http.{ Status, HeaderNames }
@@ -78,6 +79,7 @@ class AuthHelper @Inject() (
     twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient,
+    creditRewardCommander: CreditRewardCommander,
     implicit val secureSocialClientIds: SecureSocialClientIds,
     implicit val config: PublicIdConfiguration,
     resetPasswordEmailSender: ResetPasswordEmailSender,
@@ -178,6 +180,7 @@ class AuthHelper @Inject() (
   }
 
   trait PostRegIntent
+  case class ApplyCreditCode(creditCode: CreditCode) extends PostRegIntent
   case class AutoFollowLibrary(libraryPublicId: PublicId[Library], authToken: Option[String]) extends PostRegIntent
   case class AutoJoinOrganization(organizationPublicId: PublicId[Organization], authToken: String) extends PostRegIntent
   case object JoinTwitterWaitlist extends PostRegIntent
@@ -202,39 +205,46 @@ class AuthHelper @Inject() (
     // the `intent` from the cookies. Hence, ambiguity. In practice, we should find an intent in a cookie, or libraryPublicId is set
     // (meaning, "follow" intent), or nothing. Below is an attempt to unify state:
 
-    val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
-      case "follow" =>
-        request.cookies.get("publicLibraryId").map(i => PublicId[Library](i.value)).map { libPubId =>
-          val authToken = request.cookies.get("libraryAuthToken").map(_.value)
-          AutoFollowLibrary(libPubId, authToken)
-        }
-      case "joinOrg" =>
-        request.cookies.get("publicOrgId").map(i => PublicId[Organization](i.value)).flatMap { orgPubId =>
-          request.cookies.get("orgAuthToken").map(_.value).map { authToken =>
-            AutoJoinOrganization(orgPubId, authToken)
+    val intent: PostRegIntent = {
+      val intentFromCookie: Option[PostRegIntent] = request.cookies.get("intent").map(_.value).flatMap {
+        case "applyCredit" =>
+          request.cookies.get("creditCode").map(_.value).map {
+            case code if code.nonEmpty =>
+              ApplyCreditCode(CreditCode.normalize(code))
           }
-        }
-      case "waitlist" =>
-        Some(JoinTwitterWaitlist)
-      case _ => None
-    }
-
-    val intent: PostRegIntent = intentFromCookie.orElse {
-      (libraryPublicId, libAuthToken, orgPublicId, orgAuthToken) match { // assumes only one intent exists per request
-        case (Some(libPubId), authTokenOpt, _, _) =>
-          Some(AutoFollowLibrary(libPubId, authTokenOpt))
-        case (_, _, Some(orgPubId), Some(authToken)) =>
-          Some(AutoJoinOrganization(orgPubId, authToken))
+        case "follow" =>
+          request.cookies.get("publicLibraryId").map(i => PublicId[Library](i.value)).map { libPubId =>
+            val authToken = request.cookies.get("libraryAuthToken").map(_.value)
+            AutoFollowLibrary(libPubId, authToken)
+          }
+        case "joinOrg" =>
+          request.cookies.get("publicOrgId").map(i => PublicId[Organization](i.value)).flatMap { orgPubId =>
+            request.cookies.get("orgAuthToken").map(_.value).map { authToken =>
+              AutoJoinOrganization(orgPubId, authToken)
+            }
+          }
+        case "waitlist" =>
+          Some(JoinTwitterWaitlist)
         case _ => None
       }
-    }.getOrElse(NoIntent)
+
+      intentFromCookie.orElse {
+        (libraryPublicId, libAuthToken, orgPublicId, orgAuthToken) match { // assumes only one intent exists per request
+          case (Some(libPubId), authTokenOpt, _, _) =>
+            Some(AutoFollowLibrary(libPubId, authTokenOpt))
+          case (_, _, Some(orgPubId), Some(authToken)) =>
+            Some(AutoJoinOrganization(orgPubId, authToken))
+          case _ => None
+        }
+      }.getOrElse(NoIntent)
+    }
 
     // Sorry, refactoring this is exceeding my mental stack, so keeping some original behavior:
 
     intent match {
       case JoinTwitterWaitlist => // Nothing for now
       case _ => // Anything BUT twitter waitlist
-        db.readWrite { implicit session =>
+        db.readWrite(attempts = 3) { implicit session =>
           emailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
             userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
           }
@@ -260,6 +270,10 @@ class AuthHelper @Inject() (
     }
 
     val performPrimaryIntentAction: IntentAction = {
+      case ApplyCreditCode(creditCode) =>
+        db.readWrite { implicit session =>
+          userValueRepo.setValue(user.id.get, UserValueName.STORED_CREDIT_CODE, creditCode.value)
+        }
       case AutoFollowLibrary(libId, authTokenOpt) =>
         authCommander.autoJoinLib(user.id.get, libId, authTokenOpt)
       case AutoJoinOrganization(orgPubId, authToken) =>
@@ -271,6 +285,8 @@ class AuthHelper @Inject() (
       .foreach(i => i(intent))
 
     val uri = intent match {
+      case ApplyCreditCode(creditCode) =>
+        "/teams/new"
       case AutoFollowLibrary(libId, authTokenOpt) =>
         val url = Library.decodePublicId(libId).map { libraryId =>
           val library = db.readOnlyMaster { implicit session => libraryRepo.get(libraryId) }
@@ -296,7 +312,7 @@ class AuthHelper @Inject() (
     }
 
     request.session.get("kcid").foreach(saveKifiCampaignId(user.id.get, _))
-    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv", "publicOrgId", "orgAuthToken").map(n => DiscardingCookie(n))
+    val discardedCookies = Seq("publicLibraryId", "intent", "libraryAuthToken", "inv", "publicOrgId", "orgAuthToken", "creditCode").map(n => DiscardingCookie(n))
 
     Authenticator.create(newIdentity).fold(
       error => Status(INTERNAL_SERVER_ERROR)("0"),
@@ -418,7 +434,7 @@ class AuthHelper @Inject() (
     libAuthToken.exists { authToken =>
       libraryPublicId.exists { publicLibId =>
         Library.decodePublicId(publicLibId).toOption.exists { libId =>
-          db.readWrite { implicit session =>
+          db.readWrite(attempts = 3) { implicit session =>
             libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).exists { libraryInvite =>
               libraryInvite.emailAddress.exists { sentTo =>
                 (sentTo == email) && emailAddressRepo.getByAddressAndUser(userId, email).exists { emailRecord =>
@@ -492,7 +508,7 @@ class AuthHelper @Inject() (
   }
 
   def doVerifyEmail(code: EmailVerificationCode)(implicit request: MaybeUserRequest[_]): Result = {
-    db.readWrite { implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       userEmailAddressCommander.verifyEmailAddress(code) map {
         case (address, _) if userRepo.get(address.userId).state == UserStates.PENDING =>
           Redirect(s"/?m=1")

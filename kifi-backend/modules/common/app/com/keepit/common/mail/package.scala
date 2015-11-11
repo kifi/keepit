@@ -29,7 +29,6 @@ package object template {
     val fullName = TagLabel("fullName")
     val avatarUrl = TagLabel("avatarUrl")
     val organizationId = TagLabel("organizationId")
-    val organizationName = TagLabel("organizationName")
     val organizationLink = TagLabel("organizationLink")
     val libraryId = TagLabel("libraryId")
     val libraryName = TagLabel("libraryName")
@@ -93,7 +92,7 @@ package object template {
     def profileUrl(id: Id[User], content: String) = Html(appendTrackingParams(Tag1(tags.profileUrl, id) + "?", content, openInAppIfMobile = true))
 
     def organizationId(id: Id[Organization]) = Tag1(tags.organizationId, id).value
-    def organizationName(id: Id[Organization]) = Tag1(tags.organizationName, id).toHtml
+
     def organizationLink(id: Id[Organization], authToken: Option[String], content: String) =
       Html(appendTrackingParams(Tag2(tags.organizationLink, id, authToken) + "&", content, openInAppIfMobile = true))
 

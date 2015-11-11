@@ -1,8 +1,8 @@
 package com.keepit.commanders
 
-import com.keepit.common.core._
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -10,21 +10,19 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
+import com.keepit.common.time._
+import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.{ SlackAuthScope, SlackClient }
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
-import play.api.libs.json.Json
-import com.keepit.common.time._
 
-import scala.collection.parallel.ParSeq
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.duration._
 
 @ImplementedBy(classOf[LibraryInfoCommanderImpl])
 trait LibraryInfoCommander {
@@ -44,10 +42,13 @@ trait LibraryInfoCommander {
   def getMainAndSecretLibrariesForUser(userId: Id[User])(implicit session: RWSession): (Library, Library)
   def getLibraryWithHandleAndSlug(handle: Handle, slug: LibrarySlug, viewerId: Option[Id[User]])(implicit context: HeimdalContext): Either[LibraryFail, Library]
   def getLibraryBySlugOrAlias(space: LibrarySpace, slug: LibrarySlug): Option[(Library, Boolean)]
+  def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo]
+  def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library]
 }
 
 class LibraryInfoCommanderImpl @Inject() (
     db: Database,
+    libraryCardCommander: LibraryCardCommander,
     libraryImageRepo: LibraryImageRepo,
     librarySubscriptionRepo: LibrarySubscriptionRepo,
     systemValueRepo: SystemValueRepo,
@@ -69,12 +70,13 @@ class LibraryInfoCommanderImpl @Inject() (
     keepCommander: KeepCommander,
     libraryAnalytics: LibraryAnalytics,
     keepDecorator: KeepDecorator,
-    organizationCommander: OrganizationCommander,
+    organizationInfoCommander: OrganizationInfoCommander,
     experimentCommander: LocalUserExperimentCommander,
     libraryInviteRepo: LibraryInviteRepo,
     basicUserRepo: BasicUserRepo,
     orgRepo: OrganizationRepo,
     libraryRepo: LibraryRepo,
+    slackClient: SlackClient,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInfoCommander with Logging {
 
@@ -206,7 +208,7 @@ class LibraryInfoCommanderImpl @Inject() (
     val basicOrgViewByIdF = {
       val allOrgsShown = libraries.flatMap { library => library.organizationId }.toSet
       db.readOnlyReplicaAsync { implicit s =>
-        organizationCommander.getBasicOrganizationViewsHelper(allOrgsShown, viewerUserIdOpt, authTokenOpt = None)
+        organizationInfoCommander.getBasicOrganizationViewsHelper(allOrgsShown, viewerUserIdOpt, authTokenOpt = None)
       }
     }
 
@@ -269,6 +271,11 @@ class LibraryInfoCommanderImpl @Inject() (
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
         val attr = getSourceAttribution(libId)
+        val slackInfo = LibrarySlackInfo(
+          link = slackClient.generateAuthorizationRequest(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))),
+          integrations = Seq.empty[String]
+        )
+
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
         }
@@ -298,7 +305,8 @@ class LibraryInfoCommanderImpl @Inject() (
           orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None,
           membership = membershipByLibraryId.flatMap(_.get(libId)),
           invite = inviteByLibraryId.flatMap(_.get(libId)),
-          permissions = permissionsByLibraryId(libId)
+          permissions = permissionsByLibraryId(libId),
+          slack = slackInfo
         )
       }
     }
@@ -515,4 +523,17 @@ class LibraryInfoCommanderImpl @Inject() (
     else (Seq.empty, Seq.empty, Seq.empty, CountWithLibraryIdByAccess.empty)
   }
 
+  def getOrganizationLibrariesVisibleToUser(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit): Seq[LibraryCardInfo] = {
+    db.readOnlyReplica { implicit session =>
+      val visibleLibraries = getLibrariesVisibleToUserHelper(orgId, userIdOpt, offset, limit)
+      val basicOwnersByOwnerId = basicUserRepo.loadAll(visibleLibraries.map(_.ownerId).toSet)
+      libraryCardCommander.createLibraryCardInfos(visibleLibraries, basicOwnersByOwnerId, userIdOpt, withFollowing = false, ProcessedImageSize.Medium.idealSize).seq
+    }
+  }
+
+  def getLibrariesVisibleToUserHelper(orgId: Id[Organization], userIdOpt: Option[Id[User]], offset: Offset, limit: Limit)(implicit session: RSession): Seq[Library] = {
+    val viewerLibraryMemberships = userIdOpt.map(libraryMembershipRepo.getWithUserId(_).map(_.libraryId).toSet).getOrElse(Set.empty[Id[Library]])
+    val includeOrgVisibleLibs = userIdOpt.exists(organizationMembershipRepo.getByOrgIdAndUserId(orgId, _).isDefined)
+    libraryRepo.getVisibleOrganizationLibraries(orgId, includeOrgVisibleLibs, viewerLibraryMemberships, offset, limit)
+  }
 }

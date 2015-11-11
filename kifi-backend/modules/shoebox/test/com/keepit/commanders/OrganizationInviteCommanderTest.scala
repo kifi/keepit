@@ -22,12 +22,12 @@ import scala.concurrent.duration.Duration
 class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
 
-  def setup(implicit injector: Injector): (Organization, User) = {
+  def setup(implicit injector: Injector): (Organization, User, User) = {
     db.readWrite { implicit session =>
       val owner = UserFactory.user().withName("Kiwi", "Kiwi").saved
-      userEmailAddressCommander.intern(userId = owner.id.get, address = EmailAddress("kiwi-test@kifi.com")).get
+      val user = UserFactory.user().withEmailAddress("kiwi-test@kifi.com").saved
       val org = OrganizationFactory.organization().withName("Kifi").withOwner(owner).withHandle(OrganizationHandle("kifiorg")).withWeakMembers().saved
-      (org, owner)
+      (org, owner, user)
     }
   }
 
@@ -42,7 +42,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
     "invite members" in {
       withDb(modules: _*) { implicit injector =>
         val invitees: Set[Either[Id[User], EmailAddress]] = Set(Right(EmailAddress("kiwi-test@kifi.com")))
-        val (org, owner) = setup
+        val (org, owner, user) = setup
         val inviteeEmails = invitees.collect { case Right(email) => email }
         val inviteeUserIds = invitees.collect { case Left(userId) => userId }
         val orgInvite = OrganizationInviteSendRequest(org.id.get, owner.id.get, inviteeEmails, inviteeUserIds, Some("would you like to join Kifi?"))
@@ -52,14 +52,14 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
         val inviteesWithAccess = result.right.get
         inviteesWithAccess.size === 1
         val invited = inviteesWithAccess.head
-        invited must equalTo(Left(BasicUser.fromUser(owner)))
+        invited must equalTo(Left(BasicUser.fromUser(user)))
       }
     }
 
     "when inviting members already in the org" in {
       "return an error" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, owner) = setup
+          val (org, owner, _) = setup
           val invitees: Set[Either[Id[User], EmailAddress]] = Set(Left(owner.id.get))
           val inviteeEmails = invitees.collect { case Right(email) => email }
           val inviteeUserIds = invitees.collect { case Left(userId) => userId }
@@ -75,7 +75,7 @@ class OrganizationInviteCommanderTest extends TestKitSupport with SpecificationL
     "not invite members when" in {
       "the inviter cannot invite" in {
         withDb(modules: _*) { implicit injector =>
-          val (org, _) = setup
+          val (org, _, _) = setup
           val invitees = Set.empty[Either[Id[User], EmailAddress]]
           val aMemberThatCannotInvite = db.readWrite { implicit session =>
             val bond = UserFactory.user().withName("James", "Bond").saved

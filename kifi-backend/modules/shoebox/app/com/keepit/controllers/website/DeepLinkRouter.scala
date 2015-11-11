@@ -1,7 +1,5 @@
 package com.keepit.controllers.website
 
-import java.net.URLEncoder
-
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.PathCommander
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -29,8 +27,6 @@ class DeepLinkRouterImpl @Inject() (
     uriRepo: NormalizedURIRepo,
     pathCommander: PathCommander,
     implicit val publicIdConfiguration: PublicIdConfiguration) extends DeepLinkRouter {
-
-  private def deepLink(data: JsObject): String = config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
   def generateRedirect(data: JsObject): Option[DeepLinkRedirect] = {
     (data \ "t").asOpt[String].flatMap {
@@ -78,6 +74,10 @@ class DeepLinkRouterImpl @Inject() (
       case _ => None
     }
   }
+}
+
+object DeepLinkRouter {
+  def libraryLink(libId: PublicId[Library]): JsObject = Json.obj("t" -> DeepLinkType.LibraryView, DeepLinkField.LibraryId -> libId.id)
 }
 
 object DeepLinkType {

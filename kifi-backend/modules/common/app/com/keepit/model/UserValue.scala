@@ -83,6 +83,7 @@ object UserValueName {
   val HAS_NO_PASSWORD = UserValueName("has_no_password")
   val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
   val HAS_SEEN_FTUE = UserValueName("has_seen_ftue")
+  val STORED_CREDIT_CODE = UserValueName("stored_credit_code")
 
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
 
@@ -90,7 +91,7 @@ object UserValueName {
   val COMPANY_NAME = UserValueName("company_name")
 
   val IGNORE_FOR_POTENTIAL_ORGANIZATIONS = UserValueName("ignore_for_potential_organizations")
-  val IGNORE_DOMAIN_SHARED_ORGANIZATIONS = UserValueName("ignore_domain_shared_organizations")
+  val HIDE_EMAIL_DOMAIN_ORGANIZATIONS = UserValueName("hide_email_domain_organizations")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
@@ -179,7 +180,7 @@ object UserValues {
 
   val ignoreForPotentialOrganizations = UserValueBooleanHandler(UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS, default = false)
 
-  val ignoreDomainSharedOrganizations = UserValueJsValueHandler(UserValueName.IGNORE_DOMAIN_SHARED_ORGANIZATIONS, default = JsArray())
+  val hideEmailDomainOrganizations = UserValueJsValueHandler(UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, default = JsArray())
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)
