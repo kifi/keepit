@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.path.Path
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
-import play.api.libs.json.JsObject
+import play.api.libs.json.{ Json, JsObject }
 
 case class DeepLinkRedirect(url: String, externalLocator: Option[String] = None)
 
@@ -74,6 +74,10 @@ class DeepLinkRouterImpl @Inject() (
       case _ => None
     }
   }
+}
+
+object DeepLinkRouter {
+  def libraryLink(libId: PublicId[Library]): JsObject = Json.obj("t" -> DeepLinkType.LibraryView, DeepLinkField.LibraryId -> libId.id)
 }
 
 object DeepLinkType {

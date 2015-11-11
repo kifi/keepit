@@ -1,30 +1,28 @@
 package com.keepit.commanders
 
-import com.keepit.common.core._
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ BasicContact, EmailAddress }
-import com.keepit.common.performance.{ StatsdTiming, AlertingTimer }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
+import com.keepit.common.time._
+import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.{ SlackAuthScope, SlackClient }
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
-import play.api.libs.json.Json
-import com.keepit.common.time._
 
-import scala.collection.parallel.ParSeq
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.duration._
 
 @ImplementedBy(classOf[LibraryInfoCommanderImpl])
 trait LibraryInfoCommander {
@@ -75,6 +73,7 @@ class LibraryInfoCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     orgRepo: OrganizationRepo,
     libraryRepo: LibraryRepo,
+    slackClient: SlackClient,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInfoCommander with Logging {
 
@@ -269,6 +268,11 @@ class LibraryInfoCommanderImpl @Inject() (
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
         val attr = getSourceAttribution(libId)
+        val slackInfo = LibrarySlackInfo(
+          link = slackClient.generateAuthorizationRequest(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))),
+          integrations = Seq.empty[String]
+        )
+
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
         }
@@ -298,7 +302,8 @@ class LibraryInfoCommanderImpl @Inject() (
           orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None,
           membership = membershipByLibraryId.flatMap(_.get(libId)),
           invite = inviteByLibraryId.flatMap(_.get(libId)),
-          permissions = permissionsByLibraryId(libId)
+          permissions = permissionsByLibraryId(libId),
+          slack = slackInfo
         )
       }
     }
