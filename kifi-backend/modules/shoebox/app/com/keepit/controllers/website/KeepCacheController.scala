@@ -21,20 +21,20 @@ class KeepCacheController @Inject() (
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
   def getCachedKeep(id: ExternalId[Keep]) = MaybeUserPage.async { request =>
-    val nUriOpt = db.readOnlyReplica { implicit session =>
+    val nUrlOpt = db.readOnlyReplica { implicit session =>
       keepRepo.getOpt(id).map { keep =>
-        normalizedUriRepo.get(keep.uriId)
+        normalizedUriRepo.get(keep.uriId).url
       }
     }
-    nUriOpt.map { nUri =>
-      roverServiceClient.getOrElseFetchRecentArticle(nUri.url, 182.days)(EmbedlyArticle).map {
+    nUrlOpt.map { nUrl =>
+      roverServiceClient.getOrElseFetchRecentArticle(nUrl, 182.days)(EmbedlyArticle).map {
         case Some(article) => Some(article.content.description.getOrElse("no desc") + article.content.content.getOrElse("no content"))
-        case None => None
+        case None => Some("No article found")
       }
-    }.getOrElse(Future.successful(None)).map {
+    }.getOrElse(Future.successful(Some("Invalid keep"))).map {
       case Some(articleHtml) =>
-        Ok(Html(articleHtml)).withHeaders("Content-Security-Policy-Report-Only" -> "default 'none'")
-      case None => NotFound
+        Ok(Html(nUrlOpt + "\n" + articleHtml)).withHeaders("Content-Security-Policy-Report-Only" -> "default 'none'")
+      //case None => NotFound
     }
   }
 
