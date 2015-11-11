@@ -56,7 +56,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: SlackChannelId,
-    slackChannel: SlackChannel,
+    slackChannelName: SlackChannelName,
     url: String,
     configUrl: String,
     lastPostedAt: Option[DateTime],
@@ -71,7 +71,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
       slackUserId,
       slackTeamId,
       slackChannelId,
-      SlackIncomingWebhook(channel = slackChannel, url = url, configUrl = configUrl),
+      SlackIncomingWebhook(channel = slackChannelName, url = url, configUrl = configUrl),
       lastPostedAt,
       lastFailedAt,
       lastFailure.map(_.as[SlackAPIFailure])
@@ -102,13 +102,13 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def slackChannelId = column[SlackChannelId]("slack_channel_id", O.NotNull)
-    def slackChannel = column[SlackChannel]("slack_channel", O.NotNull)
+    def slackChannelName = column[SlackChannelName]("slack_channel_name", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def configUrl = column[String]("config_url", O.NotNull)
     def lastPostedAt = column[Option[DateTime]]("last_posted_at", O.Nullable)
     def lastFailedAt = column[Option[DateTime]]("last_failed_at", O.Nullable)
     def lastFailure = column[Option[JsValue]]("last_failure", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannel, url, configUrl, lastPostedAt, lastFailedAt, lastFailure) <> ((infoFromDbRow _).tupled, infoToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, url, configUrl, lastPostedAt, lastFailedAt, lastFailure) <> ((infoFromDbRow _).tupled, infoToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackIncomingWebhookInfoStates.ACTIVE)

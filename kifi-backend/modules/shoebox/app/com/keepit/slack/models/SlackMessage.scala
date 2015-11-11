@@ -15,18 +15,18 @@ case class SlackTeamId(value: String)
 case class SlackTeamName(value: String)
 
 case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
-case class SlackChannel(value: String) // broad sense, can be channel, group or DM
+case class SlackChannelName(value: String) // broad sense, can be channel, group or DM
 
 @json
 case class SlackAccessToken(token: String)
 
 case class SlackIncomingWebhook(
-  channel: SlackChannel,
+  channel: SlackChannelName,
   url: String,
   configUrl: String)
 object SlackIncomingWebhook {
   implicit val reads: Reads[SlackIncomingWebhook] = (
-    (__ \ 'channel).read[String].map(SlackChannel(_)) and
+    (__ \ 'channel).read[String].map(SlackChannelName(_)) and
     (__ \ 'url).read[String] and
     (__ \ 'configuration_url).read[String]
   )(SlackIncomingWebhook.apply _)
@@ -55,7 +55,7 @@ object SlackDbColumnTypes {
   }
   def channel(db: DataBaseComponent) = {
     import db.Driver.simple._
-    MappedColumnType.base[SlackChannel, String](_.value, SlackChannel(_))
+    MappedColumnType.base[SlackChannelName, String](_.value, SlackChannelName(_))
   }
 }
 

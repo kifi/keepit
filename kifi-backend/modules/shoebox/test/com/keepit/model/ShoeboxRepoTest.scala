@@ -101,7 +101,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
 
         // SlackIncomingWebhookInfoRepo
         val slackWebhookRepo = inject[SlackIncomingWebhookInfoRepo]
-        val channel = SlackChannel("#fake")
+        val channel = SlackChannelName("#fake")
         val channelId = SlackChannelId("CFAKE")
         val hook = SlackIncomingWebhook(channel, "fake_url", "fake_config_url")
         db.readWrite { implicit session =>
