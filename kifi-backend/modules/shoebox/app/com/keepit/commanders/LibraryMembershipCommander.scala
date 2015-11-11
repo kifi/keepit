@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -13,20 +13,16 @@ import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, PushNotificationExperiment, UserPushNotificationCategory }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
-import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.{ OwnedLibraryNewFollower, OwnedLibraryNewCollaborator }
 import com.keepit.search.SearchServiceClient
-import com.keepit.social.BasicUser
 import com.keepit.typeahead.KifiUserTypeahead
 import org.joda.time.DateTime
 import play.api.Mode.Mode
 import play.api.http.Status._
 import com.keepit.common.core._
-import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
 
 @ImplementedBy(classOf[LibraryMembershipCommanderImpl])
 trait LibraryMembershipCommander {
