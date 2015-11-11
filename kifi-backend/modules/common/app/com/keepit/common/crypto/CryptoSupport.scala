@@ -31,7 +31,7 @@ object CryptoSupport {
   def toBase32(bytes: Array[Byte]): String = base32.encode(bytes).map(_.toChar).mkString
   def fromBase32(s: String): Array[Byte] = base32.decode(s.getBytes)
 
-  def encodeBase64(s: String): String = toBase64(s.toCharArray.map(_.toByte))
+  def encodeBase64(s: String): String = toBase64(s.toCharArray.map(_.toByte)).trim
   def decodeBase64(s: String): String = new String(fromBase64(s))
 
   val random = new SecureRandom()

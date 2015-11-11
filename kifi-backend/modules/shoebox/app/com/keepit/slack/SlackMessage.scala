@@ -4,6 +4,7 @@ import com.keepit.common.strings.StringWithReplacements
 import com.kifi.macros.json
 import play.api.http.Status._
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 import play.api.mvc.Results.Status
 
 @json
@@ -90,23 +91,38 @@ case class SlackAuthorizationRequest(
 case class SlackAuthorizationCode(code: String)
 @json
 case class SlackAccessToken(token: String)
-@json
+
 case class SlackIncomingWebhook(
   url: String,
   channel: String,
   configUrl: String)
+object SlackIncomingWebhook {
+  implicit val reads: Reads[SlackIncomingWebhook] = (
+    (__ \ 'url).read[String] and
+    (__ \ 'channel).read[String] and
+    (__ \ 'config_url).read[String]
+  )(SlackIncomingWebhook.apply _)
+}
 
 case class SlackAuthorizationResponse(
   accessToken: SlackAccessToken,
   scopes: Set[SlackAuthScope],
   teamName: String,
+  teamId: String,
   incomingWebhook: Option[SlackIncomingWebhook])
 object SlackAuthorizationResponse {
-  private implicit val slackScopesReads = SlackAuthScope.slackReads
-  implicit val reads: Reads[SlackAuthorizationResponse] = Json.reads[SlackAuthorizationResponse]
+  implicit val reads: Reads[SlackAuthorizationResponse] = (
+    (__ \ 'access_token).read[SlackAccessToken] and
+    (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackReads) and
+    (__ \ 'team_name).read[String] and
+    (__ \ 'team_id).read[String] and
+    (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook]
+  )(SlackAuthorizationResponse.apply _)
 }
 
 case class SlackSearchQuery(queryString: String)
 
-@json
 case class SlackSearchResponse(query: String, messages: JsObject)
+object SlackSearchResponse {
+  implicit val reads = Json.reads[SlackSearchResponse]
+}
