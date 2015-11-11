@@ -11,7 +11,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.net.HttpClient
 import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
-import com.keepit.slack.{ SlackClient, SlackMessage }
+import com.keepit.slack.SlackClient
+import com.keepit.slack.models.SlackMessage
 import play.api.Mode
 
 import scala.concurrent.{ ExecutionContext, Future }

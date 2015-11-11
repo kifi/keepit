@@ -1,5 +1,6 @@
 package com.keepit.slack
 
+import com.keepit.slack.models.{ SlackAuthorizationResponse, SlackAuthorizationCode, SlackAuthScope, SlackMessage }
 import play.api.libs.json.JsObject
 
 import scala.concurrent.Future

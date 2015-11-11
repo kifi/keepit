@@ -1,6 +1,7 @@
 package com.keepit.slack
 
 import java.net.URLEncoder
+import models._
 
 import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.logging.Logging
@@ -51,7 +52,7 @@ class SlackClientImpl(
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, json) if json.asOpt[String].contains("ok") => Future.successful(())
-        case (status, payload) => Future.failed(SlackAPIFail.Generic(status, payload))
+        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
       }
     }
   }
@@ -70,15 +71,17 @@ class SlackClientImpl(
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
           reads.reads(payload) match {
-            case JsSuccess(res, _) => Future.successful(res)
-            case errs: JsError => Future.failed(SlackAPIFail.ParseError(payload))
+            case JsSuccess(res, _) =>
+              Future.successful(res)
+            case errs: JsError =>
+              Future.failed(SlackAPIFailure.ParseError(payload))
           }
-        case (status, payload) => Future.failed(SlackAPIFail.Generic(status, payload))
+        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
       }
     }
   }
   def processAuthorizationResponse(code: SlackAuthorizationCode, state: String): Future[(SlackAuthorizationResponse, JsObject)] = {
-    val redirStateFut = Try(Json.parse(CryptoSupport.decodeBase64(state)).as[JsObject]).map(Future.successful).getOrElse(Future.failed(SlackAPIFail.StateError(state))) // this should never fail
+    val redirStateFut = Try(Json.parse(CryptoSupport.decodeBase64(state)).as[JsObject]).map(Future.successful).getOrElse(Future.failed(SlackAPIFailure.StateError(state))) // this should never fail
     val authResponseFut = slackCall[SlackAuthorizationResponse](Route.OAuthAccess, Param.CLIENT_ID, Param.CLIENT_SECRET, Param.REDIRECT_URI, Param.code(code))
     for {
       authResponse <- authResponseFut
