@@ -39,6 +39,7 @@ class AdminOrganizationController @Inject() (
     paidAccountRepo: PaidAccountRepo,
     paidPlanRepo: PaidPlanRepo,
     libRepo: LibraryRepo,
+    userEmailAddressRepo: UserEmailAddressRepo,
     libraryCommander: LibraryCommander,
     userExperimentRepo: UserExperimentRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
@@ -466,5 +467,14 @@ class AdminOrganizationController @Inject() (
       channel.eofAndEnd()
     })
     Ok.chunked(enum)
+  }
+
+  def populateEmailAddressDomains() = AdminUserAction(parse.tolerantJson) { implicit request =>
+    require((request.body \ "secret").as[String] == "shhhhhh")
+    val emails = db.readOnlyMaster { implicit session => userEmailAddressRepo.all().filter(_.state == UserEmailAddressStates.ACTIVE) }
+    emails.grouped(1000).foreach { emailGroup =>
+      db.readWrite(implicit s => emailGroup.foreach(userEmailAddressRepo.save))
+    }
+    Ok
   }
 }

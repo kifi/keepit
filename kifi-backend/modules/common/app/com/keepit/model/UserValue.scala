@@ -91,6 +91,7 @@ object UserValueName {
   val COMPANY_NAME = UserValueName("company_name")
 
   val IGNORE_FOR_POTENTIAL_ORGANIZATIONS = UserValueName("ignore_for_potential_organizations")
+  val HIDE_EMAIL_DOMAIN_ORGANIZATIONS = UserValueName("hide_email_domain_organizations")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
@@ -178,6 +179,8 @@ object UserValues {
   val libraryUpdatesLastSeen = UserValueDateTimeHandler(UserValueName.UPDATED_LIBRARIES_LAST_SEEN, START_OF_TIME)
 
   val ignoreForPotentialOrganizations = UserValueBooleanHandler(UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS, default = false)
+
+  val hideEmailDomainOrganizations = UserValueJsValueHandler(UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, default = JsArray())
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)

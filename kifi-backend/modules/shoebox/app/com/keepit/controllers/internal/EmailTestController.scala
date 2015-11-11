@@ -48,13 +48,14 @@ class EmailTestController @Inject() (
     def friendId = Id[User](request.getQueryString("friendId").get.toLong)
     def sendTo = EmailAddress(request.getQueryString("sendTo").get)
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
+    def orgId: Option[Id[Organization]] = request.getQueryString("organizationId").map(orgId => Id[Organization](orgId.toLong))
     def msg = request.getQueryString("msg")
     def tip = request.getQueryString("tip")
     def verificationCode = EmailVerificationCode(request.getQueryString("code") getOrElse s"fake_verification_code_${currentDateTime.getMillis}")
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
-      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, verificationCode = Some(verificationCode))
+      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, verificationCode = Some(verificationCode), domainOwnerId = orgId)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
         val sender = emailSenderProvider.waitList
@@ -73,7 +74,7 @@ class EmailTestController @Inject() (
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, inviterId = userId, emailAddress = Some(sendTo), userId = None, access = LibraryAccess.READ_ONLY, message = msg)
         emailSenderProvider.libraryInvite.sendInvite(invite).map(_.get)
-      case "confirm" => emailSenderProvider.confirmation.sendToUser(userId, sendTo, verificationCode)
+      case "confirm" => emailSenderProvider.confirmation.sendToUser(userId, sendTo, verificationCode, orgId)
       case "tip" if tip.isDefined =>
         val emailTip = EmailTip(tip.get).get
         testEmailTip(Left(userId), emailTip)

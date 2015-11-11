@@ -1,11 +1,16 @@
-@(toUserId: Id[User], verifyUrl: Option[String])
+@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerId: Option[Id[Organization]])
 @import com.keepit.common.mail.template.helpers._
+@orgName = @{domainOwnerId.map { orgId => organizationName(orgId) } }
+@orgLink = @{domainOwnerId.map { orgId => organizationLink(orgId, None, "domainOwnerOrg") } }
 
 Dear @firstName(toUserId),
 
 @verifyUrl.map { url =>
 To protect your privacy and security, please confirm your email address by clicking the following link:
 @url
+@if(orgName.isDefined) {
+You'll become a member of @{orgName}'s Kifi team upon confirmation.
+}
 }
 
 I’m Kifi’s co-founder and CEO. I would like to personally welcome you to our vibrant community discovering, organizing, and sharing knowledge. We built Kifi (www.kifi.com) to make keeping and sharing web pages from any device a snap, and to that end we’ve made our platform available on web, iOS and Android.

@@ -1,7 +1,7 @@
 package com.keepit.payments
 
 import com.google.inject.{ Singleton, Inject, ImplementedBy }
-import com.keepit.commanders.{ OrganizationInfoCommander, OrganizationAvatarCommander, OrganizationCommander }
+import com.keepit.commanders.OrganizationInfoCommander
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
@@ -31,7 +31,6 @@ class ActivityLogCommanderImpl @Inject() (
     creditRewardInfoCommander: CreditRewardInfoCommander,
     basicUserRepo: BasicUserRepo,
     orgInfoCommander: OrganizationInfoCommander,
-    organizationAvatarCommander: OrganizationAvatarCommander,
     implicit val publicIdConfig: PublicIdConfiguration) extends ActivityLogCommander {
 
   private def orgId2AccountId(orgId: Id[Organization])(implicit session: RSession): Id[PaidAccount] = {

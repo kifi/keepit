@@ -3,7 +3,9 @@ package com.keepit.model
 import java.math.BigInteger
 import java.security.SecureRandom
 
+import com.keepit.classify.NormalizedHostname
 import com.keepit.common.db._
+import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
 import com.keepit.common.time._
 
@@ -74,6 +76,7 @@ object UserEmailAddress {
     userId: Id[User],
     state: State[UserEmailAddress] = UserEmailAddressStates.ACTIVE,
     address: EmailAddress,
+    domain: NormalizedHostname,
     hash: EmailAddressHash,
     primaryOption: Option[Boolean],
     verifiedAt: Option[DateTime] = None,
@@ -105,6 +108,10 @@ object UserEmailAddress {
       e.userId,
       e.state,
       e.address,
+      NormalizedHostname.fromHostname(EmailAddress.getHostname(e.address)).getOrElse {
+        AirbrakeNotifierStatic.notify(s"UserEmailAddress id=${e.id},address=${e.address.address} not convertible to NormalizedHostname")
+        NormalizedHostname("ERROR_IN_ADDRESS")
+      },
       e.hash,
       if (e.primary) Some(true) else None,
       e.verifiedAt,
