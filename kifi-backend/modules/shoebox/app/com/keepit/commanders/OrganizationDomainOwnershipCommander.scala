@@ -20,7 +20,7 @@ trait OrganizationDomainOwnershipCommander {
   def removeDomainOwnership(orgId: Id[Organization], domainHostname: String): Option[OwnDomainFailure]
   def getSharedEmails(userId: Id[User], orgId: Id[Organization]): Set[EmailAddress]
   def getSharedEmailsHelper(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Set[EmailAddress]
-  def ignoreOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit
+  def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit
 }
 
 object OrganizationDomainOwnershipCommander {
@@ -137,7 +137,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     }.toSet
   }
 
-  override def ignoreOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit = {
+  override def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit = {
     db.readWrite { implicit session =>
       val newOrgsToIgnore = userValueRepo.getValue(userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]] + orgId
       userValueRepo.setValue(userId, UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, newOrgsToIgnore)
