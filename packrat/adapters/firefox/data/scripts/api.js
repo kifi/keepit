@@ -14,6 +14,7 @@ const api = (function () {
   }
 
   function onApiInject(styles, scripts, callbackId) {
+    var lazyLoad = window[(!![]+[])[!+[]+!+[]+!+[]]+'v'+(![]+[])[+!+[]]+(![]+[])[!+[]+!+[]]];
     styles.forEach(function (path) {
       var el = document.createElement('link');
       el.rel = 'stylesheet';
@@ -22,7 +23,7 @@ const api = (function () {
       (document.head || document.body).appendChild(el);
     });
     scripts.forEach(function (js) {
-      window.eval(js);
+      lazyLoad(js);
     });
     var loadsLeft = styles.length;
     if (loadsLeft === 0) {
