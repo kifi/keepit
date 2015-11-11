@@ -33,7 +33,7 @@ class KeepCacheController @Inject() (
       }
     }.getOrElse(Future.successful(Some("Invalid keep"))).map {
       case Some(articleHtml) =>
-        Ok(Html(nUrlOpt + "\n" + articleHtml)).withHeaders("Content-Security-Policy-Report-Only" -> "default 'none'")
+        Ok(Html(nUrlOpt + "\n" + id + "\n" + articleHtml)).withHeaders("Content-Security-Policy-Report-Only" -> "default 'none'")
       //case None => NotFound
     }
   }
