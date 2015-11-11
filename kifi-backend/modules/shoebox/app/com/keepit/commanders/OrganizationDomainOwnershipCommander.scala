@@ -55,6 +55,8 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     domainRepo: DomainRepo,
     userValueRepo: UserValueRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
+    userEmailAddressCommander: UserEmailAddressCommander,
+    orgMembershipRepo: OrganizationMembershipRepo,
     implicit val executionContext: ScalaExecutionContext) extends OrganizationDomainOwnershipCommander with Logging {
 
   override def getDomainsOwned(orgId: Id[Organization]): Set[Domain] = {
@@ -79,7 +81,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
   override def addDomainOwnership(orgId: Id[Organization], domainName: String): Either[OwnDomainFailure, OwnDomainSuccess] = {
     db.readWrite { implicit session =>
       NormalizedHostname.fromHostname(domainName).fold[Either[OwnDomainFailure, OwnDomainSuccess]](ifEmpty = Left(InvalidDomainName(domainName))) { normalizedHostname =>
-        domainRepo.get(normalizedHostname).fold[Either[OwnDomainFailure, OwnDomainSuccess]](ifEmpty = Left(DomainDidNotExist(domainName))) { domain =>
+        domainRepo.get(normalizedHostname).filter(!_.isEmailProvider).fold[Either[OwnDomainFailure, OwnDomainSuccess]](ifEmpty = Left(DomainDidNotExist(domainName))) { domain =>
           orgDomainOwnershipRepo.getOwnershipForDomain(domain.hostname, excludeState = None).fold[Either[OwnDomainFailure, OwnDomainSuccess]](
             ifEmpty = Right(OwnDomainSuccess(domain, orgDomainOwnershipRepo.save(orgDomainOwnershipRepo.save(OrganizationDomainOwnership(organizationId = orgId, normalizedHostname = domain.hostname)))))
           ) {
@@ -90,7 +92,18 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
             }
         }
       }
+    } match {
+      case Right(success) =>
+        db.readWrite { implicit session =>
+          val orgMembers = orgMembershipRepo.getAllByOrgId(success.ownership.organizationId)
+          val usersToEmail = userEmailAddressRepo.getByDomain(success.ownership.normalizedHostname)
+            .filter(userEmail => !orgMembers.exists(_.userId == userEmail.userId))
+          usersToEmail.foreach(userEmailAddressCommander.sendVerificationEmailHelper)
+        }
+        Right(success)
+      case fail => fail
     }
+
   }
 
   override def removeDomainOwnership(orgId: Id[Organization], domainHostname: String): Option[OwnDomainFailure] = {

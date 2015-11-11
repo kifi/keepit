@@ -47,6 +47,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     pendingInviteCommander: PendingInviteCommander,
     orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
+    orgMembershipRepo: OrganizationMembershipRepo,
     heimdalClient: HeimdalServiceClient,
     emailConfirmationSender: EmailConfirmationSender,
     clock: Clock,
@@ -57,7 +58,10 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit] = {
-    val sharedOrgOpt = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailAddress.address)).flatMap(orgDomainOwnershipRepo.getOwnershipForDomain(_).map(_.organizationId))
+    val sharedOrgOpt = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailAddress.address))
+      .flatMap(orgDomainOwnershipRepo.getOwnershipForDomain(_)).map(_.organizationId)
+      .filter(orgId => !userValueRepo.getValue(emailAddress.userId, UserValues.ignoreDomainSharedOrganizations).as[Set[Id[Organization]]].contains(orgId))
+      .filter(orgId => !orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailAddress.userId))
     val emailWithCode = userEmailAddressRepo.save(emailAddress.withVerificationCode(clock.now()))
     session.onTransactionSuccess {
       emailConfirmationSender(emailWithCode, sharedOrgOpt) recoverWith {
@@ -83,6 +87,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   private def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
     NormalizedHostname.fromHostname(EmailAddress.getHostname(verifiedEmail.address))
       .flatMap(orgDomainOwnershipCommander.getOwningOrganization)
+      .filter(org => !userValueRepo.getValue(verifiedEmail.userId, UserValues.ignoreDomainSharedOrganizations).as[Set[Id[Organization]]].contains(org.id.get))
       .foreach { orgToJoin =>
         val addRequest = OrganizationMembershipAddRequest(orgToJoin.id.get, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId, adminIdOpt = None)
         organizationMembershipCommander.addMembershipHelper(addRequest) match {
@@ -239,5 +244,4 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       toRemove.foreach(deactivate(_))
     }
   }
-
 }
