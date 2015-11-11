@@ -105,7 +105,14 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         val channelId = SlackChannelId("CFAKE")
         val hook = SlackIncomingWebhook(channel, "fake_url", "fake_config_url")
         db.readWrite { implicit session =>
-          val saved = slackWebhookRepo.add(slackAccount.userId, slackAccount.slackUserId, slackAccount.slackTeamId, channelId, hook)
+          val saved = slackWebhookRepo.save(SlackIncomingWebhookInfo(
+            ownerId = slackAccount.userId,
+            slackUserId = slackAccount.slackUserId,
+            slackTeamId = slackAccount.slackTeamId,
+            slackChannelId = channelId,
+            webhook = hook,
+            lastPostedAt = None
+          ))
           slackWebhookRepo.get(saved.id.get) === saved
         }
 

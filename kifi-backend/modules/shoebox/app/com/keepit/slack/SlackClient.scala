@@ -1,22 +1,27 @@
 package com.keepit.slack
 
 import java.net.URLEncoder
-import models._
 
 import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.slack.models._
 import play.api.Mode.Mode
 import play.api.http.Status
 import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Try
+import scala.util.{ Failure, Try }
 
 trait SlackClient {
   def sendToSlack(url: String, msg: SlackMessage): Future[Unit]
+
+  // def makeState(state: JsObject): String
+  def decodeState(state: String): Try[JsObject]
   def generateAuthorizationRequest(scopes: Set[SlackAuthScope], state: JsObject): String
-  def processAuthorizationResponse(code: SlackAuthorizationCode, state: String): Future[(SlackAuthorizationResponse, JsObject)] // the JsObject is a DeepLink
+
+  def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse]
+  def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
 }
 
 class SlackClientImpl(
@@ -32,17 +37,25 @@ class SlackClientImpl(
   object Route {
     val OAuthAuthorize = "https://slack.com/oauth/authorize"
     val OAuthAccess = "https://slack.com/api/oauth.access"
+    val Identify = "https://slack.com/api/auth.test"
     val Search = "https://slack.com/api/search.messages"
   }
-  object Param {
+  private object Param {
     val CLIENT_ID = "client_id" -> SLACK_CLIENT_ID
     val CLIENT_SECRET = "client_secret" -> SLACK_CLIENT_SECRET
     val REDIRECT_URI = "redirect_uri" -> KIFI_SLACK_REDIRECT_URI
     def code(code: SlackAuthorizationCode) = "code" -> code.code
-    def state(state: JsObject) = "state" -> CryptoSupport.encodeBase64(Json.stringify(state))
+    def state(state: JsObject) = "state" -> makeState(state)
     def scope(scopes: Set[SlackAuthScope]) = "scope" -> scopes.map(_.value).mkString(",")
     def token(token: SlackAccessToken) = "token" -> token.token
     def query(query: SlackSearchQuery) = "query" -> query.queryString
+  }
+
+  def makeState(state: JsObject): String = {
+    CryptoSupport.encodeBase64(Json.stringify(state))
+  }
+  def decodeState(state: String): Try[JsObject] = {
+    Try(Json.parse(CryptoSupport.decodeBase64(state)).as[JsObject]).orElse(Failure(SlackAPIFailure.StateError(state)))
   }
 
   private def mkUrl(base: String, params: (String, String)*): String = {
@@ -80,19 +93,17 @@ class SlackClientImpl(
       }
     }
   }
-  def processAuthorizationResponse(code: SlackAuthorizationCode, state: String): Future[(SlackAuthorizationResponse, JsObject)] = {
-    val redirStateFut = Try(Json.parse(CryptoSupport.decodeBase64(state)).as[JsObject]).map(Future.successful).getOrElse(Future.failed(SlackAPIFailure.StateError(state))) // this should never fail
-    val authResponseFut = slackCall[SlackAuthorizationResponse](Route.OAuthAccess, Param.CLIENT_ID, Param.CLIENT_SECRET, Param.REDIRECT_URI, Param.code(code))
-    for {
-      authResponse <- authResponseFut
-      redirState <- redirStateFut
-    } yield (authResponse, redirState)
+  def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse] = {
+    slackCall[SlackAuthorizationResponse](Route.OAuthAccess, Param.CLIENT_ID, Param.CLIENT_SECRET, Param.REDIRECT_URI, Param.code(code))
   }
 
   private def search(token: SlackAccessToken, query: SlackSearchQuery): Future[SlackSearchResponse] = {
     slackCall[SlackSearchResponse](Route.Search, Param.token(token), Param.query(query))
   }
 
+  def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
+    slackCall[SlackIdentifyResponse](Route.Identify, Param.token(token))
+  }
   def channelId(token: SlackAccessToken, channelName: String): Future[Option[String]] = {
     search(token, SlackSearchQuery(s"in:$channelName")).map { response =>
       for {

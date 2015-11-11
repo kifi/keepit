@@ -31,7 +31,7 @@ object SlackIncomingWebhookInfoStates extends States[SlackIncomingWebhookInfo]
 
 @ImplementedBy(classOf[SlackIncomingWebhookInfoRepoImpl])
 trait SlackIncomingWebhookInfoRepo extends Repo[SlackIncomingWebhookInfo] {
-  def add(ownerId: Id[User], slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, hook: SlackIncomingWebhook, lastPostedAt: Option[DateTime] = None)(implicit session: RWSession): SlackIncomingWebhookInfo
+
 }
 
 @Singleton
