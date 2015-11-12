@@ -10,6 +10,8 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.Results.Status
+import play.api.http.Status._
 
 import scala.concurrent.Future
 
@@ -29,7 +31,9 @@ object LibraryError {
   }
 }
 
-case class LibraryFail(status: Int, message: String) extends Exception(message)
+case class LibraryFail(status: Int, message: String) extends Exception(message) {
+  def asErrorResponse = Status(status)(Json.obj("error" -> message))
+}
 
 @json
 case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo, disabled: Boolean)
