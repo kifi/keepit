@@ -15,7 +15,7 @@ import com.keepit.controllers.admin.AdminOrganizationController
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
   def allActive(implicit session: RSession): Seq[Organization]
-  def getShadowOrgs()(implicit session: RSession): Seq[Organization]
+  def getShadowOrgs()(implicit session: RSession): Seq[Id[Organization]]
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def getAllByOwnerId(ownerId: Id[User], excludeStateOpt: Option[State[Organization]] = Some(OrganizationStates.INACTIVE))(implicit session: RSession): Set[Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
@@ -75,8 +75,8 @@ class OrganizationRepoImpl @Inject() (
     q.list
   }
 
-  def getShadowOrgs()(implicit session: RSession): Seq[Organization] = {
-    val q = for { row <- rows if row.state === OrganizationStates.ACTIVE && row.ownerId === AdminOrganizationController.fakeOwnerId } yield row
+  def getShadowOrgs()(implicit session: RSession): Seq[Id[Organization]] = {
+    val q = for { row <- rows if row.state === OrganizationStates.ACTIVE && row.ownerId === AdminOrganizationController.fakeOwnerId } yield row.id
     q.list
   }
 

@@ -377,8 +377,9 @@ class AdminOrganizationController @Inject() (
     val orgs = db.readOnlyReplica { implicit s =>
       orgRepo.getShadowOrgs()
     }
-    orgs foreach { org =>
+    orgs foreach { orgId =>
       db.readWrite { implicit session =>
+        val org = orgRepo.get(orgId)
         assert(org.ownerId == fakeOwnerId)
         val origHandle = org.primaryHandle.get.original
         val newHandle = OrganizationHandle(origHandle.value + "_pre_launch")
