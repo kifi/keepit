@@ -292,6 +292,10 @@ angular.module('kifi')
       return $http.post(routeService.profileSettings, changedSettings);
     }
 
+    function hideOrgDomain(org) {
+      return net.hideOrgDomain(org.id).then(fetchMe);
+    }
+
     return {
       initLoggedOut: function () {
         updateLoginState(false);
@@ -321,7 +325,8 @@ angular.module('kifi')
       sendChangePassword: sendChangePassword,
       postDelightedAnswer: postDelightedAnswer,
       cancelDelightedSurvey: cancelDelightedSurvey,
-      closeAccountRequest: closeAccountRequest
+      closeAccountRequest: closeAccountRequest,
+      hideOrgDomain: hideOrgDomain
     };
   }
 ]);

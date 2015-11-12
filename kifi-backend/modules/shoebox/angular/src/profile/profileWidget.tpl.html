@@ -41,8 +41,9 @@
   </div>
 
   <div class="kf-pw-orgs" ng-if="organizations">
-    <div ng-repeat="org in organizations" ng-if="org.pending == null || org.notDeclined" class="kf-pw-org" ng-class="{ 'kf-pw-org-pending': org.pending }" >
-      <p ng-if="org.pending" class="kf-pw-org-pending-label">You've been invited to join this team</p>
+    <div ng-repeat="org in organizations" ng-if="(!org.potential || me.experiments.indexOf('admin') !== -1) && !org.declined" class="kf-pw-org" ng-class="{ 'kf-pw-org-pending': org.pending }" >
+      <p ng-if="org.pending" class="kf-pw-org-pending-label">You've been invited to join</p>
+      <p ng-if="org.potential && me.experiments.indexOf('admin') !== -1 && !org.declined" class="kf-pw-org-potential-label">Verify your email to join</p>
       <a ng-href="{{ org.handle }}" ng-click="registerEvent('clickedOrgFromProfile')">
         <img class="kf-pw-org-img" ng-src="{{ org | pic:200 }}" />
       </a>
@@ -96,8 +97,15 @@
           </tr>
         </table>
       </div>
-      <button class="kf-pw-org-inv-btn kf-pw-org-inv-btn-accept" ng-if="org.pending && org.notDeclined" ng-click="acceptInvite(org)">Accept</button>
-      <button class="kf-pw-org-inv-btn kf-pw-org-inv-btn-decline" ng-if="org.pending && org.notDeclined" ng-click="declineInvite(org)">Decline</button>
+      <button class="kf-pw-org-btn kf-pw-org-btn-accept" ng-if="org.pending && !org.declined" ng-click="acceptInvite(org)">Accept</button>
+      <button class="kf-pw-org-btn kf-pw-org-btn-decline" ng-if="org.pending && !org.declined" ng-click="declineInvite(org)">Decline</button>
+      <div class="kf-pw-org-email" ng-if="org.potential && org.viewer.emails && me.experiments.indexOf('admin') !== -1">
+        <div ng-repeat="email in org.viewer.emails">
+          <p class="kf-pw-org-email-txt" ng-bind="email"></p>
+          <button class="kf-pw-org-btn kf-pw-org-btn-accept kf-pw-org-btn-verify" ng-if="org.potential && !org.declined" ng-click="sendVerificationEmail(email, org)">Verify</button>
+          <button class="kf-pw-org-btn kf-pw-org-btn-decline kf-pw-org-btn-ignore" ng-if="org.potential && !org.declined" ng-click="hideOrgDomain(org)">Hide</button>
+        </div>
+      </div>
     </div>
   </div>
   <div ng-if="::shouldShowCreateTeam()" class="kf-pw-create-org" >

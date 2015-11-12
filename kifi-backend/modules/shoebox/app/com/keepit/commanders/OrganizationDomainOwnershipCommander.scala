@@ -9,6 +9,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model._
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
@@ -146,7 +147,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
   override def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit = {
     db.readWrite { implicit session =>
       val newOrgsToIgnore = userValueRepo.getValue(userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]] + orgId
-      userValueRepo.setValue(userId, UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, newOrgsToIgnore)
+      userValueRepo.setValue(userId, UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, Json.toJson(newOrgsToIgnore))
     }
   }
 }

@@ -18,9 +18,17 @@ angular.module('kifi')
         if (me.pendingOrgs) {
           me.pendingOrgs.forEach(function (o) {
             o.pending = true;
-            o.notDeclined = true;
+            o.declined = false;
           });
           scope.organizations = scope.organizations.concat(me.pendingOrgs);
+        }
+
+        if (me.potentialOrgs) {
+          me.potentialOrgs.forEach(function (o) {
+            o.potential = true;
+            o.declined = false;
+          });
+          scope.organizations = scope.organizations.concat(me.potentialOrgs);
         }
 
         scope.shouldShowCreateTeam = function () {
@@ -90,6 +98,35 @@ angular.module('kifi')
           orgProfileService.declineOrgMemberInvite(org.id);
           org.notDeclined = false;
         };
+
+        scope.sendVerificationEmail = function(email, org) {
+          orgProfileService.trackEvent('user_clicked_page', org,
+            {
+              'type': 'homeFeed',
+              'action': 'verifyOrgEmail'
+            }
+          );
+          showVerificationAlert(email);
+          profileService.resendVerificationEmail(email);
+        };
+
+        scope.hideOrgDomain = function(org) {
+          orgProfileService.trackEvent('user_clicked_page', org,
+            {
+              'type': 'homeFeed',
+              'action': 'hideOrgDomain'
+            }
+          );
+          profileService.hideOrgDomain(org);
+        };
+
+        function showVerificationAlert(email) {
+          scope.emailForVerification = email;
+          modalService.open({
+            template: 'profile/emailResendVerificationModal.tpl.html',
+            scope: scope
+          });
+        }
 
       }
     };
