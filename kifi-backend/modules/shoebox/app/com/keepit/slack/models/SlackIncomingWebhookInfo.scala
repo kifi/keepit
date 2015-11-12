@@ -18,7 +18,7 @@ case class SlackIncomingWebhookInfo(
     ownerId: Id[User],
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
-    slackChannelId: SlackChannelId,
+    slackChannelId: Option[SlackChannelId],
     webhook: SlackIncomingWebhook,
     lastPostedAt: Option[DateTime],
     lastFailedAt: Option[DateTime] = None,
@@ -55,7 +55,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     ownerId: Id[User],
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
-    slackChannelId: SlackChannelId,
+    slackChannelId: Option[SlackChannelId],
     slackChannelName: SlackChannelName,
     url: String,
     configUrl: String,
@@ -71,7 +71,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
       slackUserId,
       slackTeamId,
       slackChannelId,
-      SlackIncomingWebhook(channel = slackChannelName, url = url, configUrl = configUrl),
+      SlackIncomingWebhook(channelName = slackChannelName, url = url, configUrl = configUrl),
       lastPostedAt,
       lastFailedAt,
       lastFailure.map(_.as[SlackAPIFailure])
@@ -87,7 +87,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     info.slackUserId,
     info.slackTeamId,
     info.slackChannelId,
-    info.webhook.channel,
+    info.webhook.channelName,
     info.webhook.url,
     info.webhook.configUrl,
     info.lastPostedAt,
@@ -101,7 +101,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
-    def slackChannelId = column[SlackChannelId]("slack_channel_id", O.NotNull)
+    def slackChannelId = column[Option[SlackChannelId]]("slack_channel_id", O.Nullable)
     def slackChannelName = column[SlackChannelName]("slack_channel_name", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def configUrl = column[String]("config_url", O.NotNull)
@@ -117,7 +117,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   override def deleteCache(info: SlackIncomingWebhookInfo)(implicit session: RSession): Unit = {}
   override def invalidateCache(info: SlackIncomingWebhookInfo)(implicit session: RSession): Unit = {}
 
-  def add(ownerId: Id[User], slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: SlackChannelId, hook: SlackIncomingWebhook, lastPostedAt: Option[DateTime] = None)(implicit session: RWSession): SlackIncomingWebhookInfo = {
+  def add(ownerId: Id[User], slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: Option[SlackChannelId], hook: SlackIncomingWebhook, lastPostedAt: Option[DateTime] = None)(implicit session: RWSession): SlackIncomingWebhookInfo = {
     save(SlackIncomingWebhookInfo(
       ownerId = ownerId,
       slackUserId = slackUserId,
