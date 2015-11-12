@@ -63,11 +63,7 @@ class PaymentsController @Inject() (
           stripeClient.getCardInfo(realToken).map { cardInfo =>
             val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
             val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, cardInfo.lastFour)
-            val paymentMethodId = PaymentMethod.publicId(pm.id.get)
-            Ok(Json.obj(
-              "cardId" -> paymentMethodId,
-              "card" -> cardInfo
-            ))
+            Ok(Json.obj("card" -> CardInfo(pm.id.get, cardInfo)))
           }
         }
     }
@@ -90,7 +86,7 @@ class PaymentsController @Inject() (
                     futureCharge.imap { charge =>
                       implicit val chargeFormat = DollarAmount.formatAsCents
                       Ok(Json.obj(
-                        "card" -> cardInfo,
+                        "card" -> CardInfo(cardId, cardInfo),
                         "charge" -> charge
                       ))
                     }
@@ -105,8 +101,8 @@ class PaymentsController @Inject() (
 
   def getDefaultCreditCard(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
     planCommander.getActivePaymentMethods(request.orgId).find(_.default).map { pm =>
-      stripeClient.getCardInfo(pm.stripeToken).map { cardInfo =>
-        Ok(Json.toJson(cardInfo))
+      stripeClient.getCardInfo(pm.stripeToken).map { info =>
+        Ok(Json.toJson(CardInfo(pm.id.get, info)))
       }
     }.getOrElse(Future.successful(BadRequest(Json.obj("error" -> "no_default_payment_method"))))
   }
@@ -126,7 +122,7 @@ class PaymentsController @Inject() (
                 futureCharge.imap { charge =>
                   implicit val chargeFormat = DollarAmount.formatAsCents
                   Ok(Json.obj(
-                    "card" -> cardInfo,
+                    "card" -> CardInfo(pm.id.get, cardInfo),
                     "charge" -> charge
                   ))
                 }

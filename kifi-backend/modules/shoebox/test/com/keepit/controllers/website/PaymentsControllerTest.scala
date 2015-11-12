@@ -291,7 +291,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             val addRequest = route.addCreditCard(publicId).withBody(addPayload)
             val addResponse = controller.addCreditCard(publicId)(addRequest)
             status(addResponse) === OK
-            val newCardId = (contentAsJson(addResponse) \ "cardId").as[PublicId[PaymentMethod]]
+            val newCardId = (contentAsJson(addResponse) \ "card" \ "id").as[PublicId[PaymentMethod]]
 
             val setPayload = Json.obj("cardId" -> newCardId)
             val setRequest = route.setDefaultCreditCard(publicId).withBody(setPayload)

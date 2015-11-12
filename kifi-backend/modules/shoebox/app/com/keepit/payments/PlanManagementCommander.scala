@@ -377,7 +377,7 @@ class PlanManagementCommanderImpl @Inject() (
       (account, plan)
     }
     val cardFut = getDefaultPaymentMethod(orgId).map { method =>
-      stripe.getCardInfo(method.stripeToken).map(Some(_)).recover {
+      stripe.getCardInfo(method.stripeToken).map(info => Some(CardInfo(method.id.get, info))).recover {
         case ex: APIException => None
       }
     }.getOrElse(Future.successful(None))
@@ -392,7 +392,7 @@ class PlanManagementCommanderImpl @Inject() (
       paymentMethodRepo.get(newPaymentMethodId)
     }
 
-    val futureCardInfo = stripe.getCardInfo(newPaymentMethod.stripeToken).map(Some(_)).recover { case ex: APIException => None }
+    val futureCardInfo = stripe.getCardInfo(newPaymentMethod.stripeToken).map(info => Some(CardInfo(newPaymentMethodId, info))).recover { case ex: APIException => None }
 
     val (accountPreview, planPreview) = db.readOnlyReplica { implicit session =>
       val currentAccount = paidAccountRepo.getByOrgId(orgId)

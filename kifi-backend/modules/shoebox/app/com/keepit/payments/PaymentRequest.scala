@@ -18,8 +18,11 @@ sealed abstract class PaymentRequest
 @json
 case class SimpleAccountContactSettingRequest(id: ExternalId[User], enabled: Boolean) extends PaymentRequest
 
-@json
-case class CardInfo(lastFour: String, brand: String)
+case class CardInfo(id: PublicId[PaymentMethod], lastFour: String, brand: String)
+object CardInfo {
+  implicit val writes: Writes[CardInfo] = Writes { info => Json.obj("id" -> info.id, "lastFour" -> info.lastFour, "brand" -> info.brand) }
+  def apply(id: Id[PaymentMethod], info: StripeCardInfo)(implicit config: PublicIdConfiguration): CardInfo = CardInfo(PaymentMethod.publicId(id), brand = info.brand, lastFour = info.lastFour)
+}
 
 case class AccountStateResponse(
   users: Int,
