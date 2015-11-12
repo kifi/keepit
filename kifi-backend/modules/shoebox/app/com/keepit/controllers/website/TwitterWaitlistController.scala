@@ -28,6 +28,8 @@ class TwitterWaitlistController @Inject() (
     libraryRepo: LibraryRepo,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
+  def twitterWaitlistLandingRedirectHack() = twitterWaitlistLanding()
+
   def twitterWaitlistLanding() = MaybeUserAction { implicit request =>
     MarketingSiteRouter.marketingSite("twitter-home")
   }
@@ -75,6 +77,8 @@ class TwitterWaitlistController @Inject() (
       "length" -> commander.getFakeWaitlistLength()
     ))
   }
+
+  def requestToTwitterWaitlistRedirectHack = requestToTwitterWaitlist
 
   def requestToTwitterWaitlist = MaybeUserAction { implicit request =>
     val session = request.session
@@ -142,6 +146,8 @@ class TwitterWaitlistController @Inject() (
     }
     pollCheck()
   }
+
+  def thanksForTwitterWaitlistRedirectHack = thanksForTwitterWaitlist
 
   def thanksForTwitterWaitlist = MaybeUserAction { implicit request =>
     val session = request.session

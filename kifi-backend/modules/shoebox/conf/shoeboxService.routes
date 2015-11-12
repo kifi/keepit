@@ -81,8 +81,13 @@ POST    /up/report                  @com.keepit.controllers.tracking.EventProxyC
 # Special projects
 ##########################################
 
-GET     /twitter                    @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLanding()
 GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitlistController.getFakeWaitlistPosition()
+
+GET     /integrations/twitter         @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLandingRedirectHack()
+GET     /integrations/twitter/request @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlistRedirectHack()
+GET     /integrations/twitter/thanks  @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlistRedirectHack()
+
+GET     /twitter                    @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLanding()
 GET     /twitter/request            @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlist()
 GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlist()
 
