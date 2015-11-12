@@ -13,6 +13,7 @@ angular.module('kifi')
     var importBookmarksMessageEvent;
     var bannerMessages = {
       0: 'Welcome back!',
+      1: 'Email confirmed. Thanks!',
       2: 'Bookmark import in progress. Reload the page to update.'
     };
 

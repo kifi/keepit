@@ -17,7 +17,7 @@ import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.SlackClient
+import com.keepit.slack.{ SlackCommander, SlackClient }
 import com.keepit.slack.models.SlackAuthScope
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
@@ -77,7 +77,7 @@ class LibraryInfoCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     orgRepo: OrganizationRepo,
     libraryRepo: LibraryRepo,
-    slackClient: SlackClient,
+    slackCommander: SlackCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends LibraryInfoCommander with Logging {
 
@@ -255,6 +255,12 @@ class LibraryInfoCommanderImpl @Inject() (
       libraries.map { lib => lib.id.get -> permissionCommander.getLibraryPermissions(lib.id.get, viewerUserIdOpt) }
     }.toMap
 
+    val slackInfoByLibraryId = viewerUserIdOpt.map { viewerId =>
+      // TODO(ryan): do something with this line
+      // val slackableLibIds = permissionsByLibraryId.collect { case (libId, ps) if ps.contains(LibraryPermission.CREATE_SLACK_INTEGRATION) => libId }.toSet
+      db.readOnlyReplica { implicit s => slackCommander.getSlackIntegrationsForLibraries(viewerId, libraries.map(_.id.get).toSet) }
+    }.getOrElse(Map.empty.withDefaultValue(None))
+
     val futureFullLibraryInfos = libraries.map { lib =>
       val libId = lib.id.get
       for {
@@ -272,10 +278,6 @@ class LibraryInfoCommanderImpl @Inject() (
         val collaborators = memberInfosByLibraryId(lib.id.get).collaborators.map(usersById(_))
         val whoCanInvite = lib.whoCanInvite.getOrElse(LibraryInvitePermissions.COLLABORATOR) // todo: remove Option
         val attr = getSourceAttribution(libId)
-        val slackInfo = LibrarySlackInfo(
-          link = slackClient.generateAuthorizationRequest(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))),
-          integrations = Seq.empty[String]
-        )
 
         if (keepInfos.size > keepCount) {
           airbrake.notify(s"keep count $keepCount for library is lower then num of keeps ${keepInfos.size} for $lib")
@@ -307,7 +309,7 @@ class LibraryInfoCommanderImpl @Inject() (
           membership = membershipByLibraryId.flatMap(_.get(libId)),
           invite = inviteByLibraryId.flatMap(_.get(libId)),
           permissions = permissionsByLibraryId(libId),
-          slack = slackInfo
+          slack = slackInfoByLibraryId(libId)
         )
       }
     }

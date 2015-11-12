@@ -3,6 +3,8 @@ package com.keepit.model
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.json
 import com.keepit.common.mail.BasicContact
+import com.keepit.slack.LibrarySlackInfo
+import com.keepit.slack.models.{ SlackIntegrationStatus, SlackChannelToLibrary, LibraryToSlackChannel, SlackChannelName }
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -224,11 +226,6 @@ object MaybeLibraryMember {
   }
 }
 
-@json
-case class LibrarySlackInfo(
-  link: String,
-  integrations: Seq[String])
-
 case class FullLibraryInfo(
   id: PublicId[Library],
   name: String,
@@ -256,7 +253,7 @@ case class FullLibraryInfo(
   membership: Option[LibraryMembershipInfo],
   invite: Option[LibraryInviteInfo],
   permissions: Set[LibraryPermission],
-  slack: LibrarySlackInfo)
+  slack: Option[LibrarySlackInfo])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

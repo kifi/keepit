@@ -1,0 +1,39 @@
+package com.keepit.model
+
+import com.google.inject.Injector
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.model.LibraryToSlackChannelFactory.PartialLibraryToSlackChannel
+import com.keepit.model.SlackChannelToLibraryFactory.PartialSlackChannelToLibrary
+import com.keepit.model.SlackIncomingWebhookFactory.PartialSlackIncomingWebhook
+import com.keepit.model.SlackTeamMembershipFactory.PartialSlackTeamMembership
+import com.keepit.slack.models._
+
+object SlackTeamMembershipFactoryHelper {
+  implicit class SlackTeamMembershipPersister(partial: PartialSlackTeamMembership) {
+    def saved(implicit injector: Injector, session: RWSession): SlackTeamMembership = {
+      injector.getInstance(classOf[SlackTeamMembershipRepo]).save(partial.stm)
+    }
+  }
+}
+
+object SlackIncomingWebhookInfoFactoryHelper {
+  implicit class SlackIncomingWebhookInfoPersister(partial: PartialSlackIncomingWebhook) {
+    def saved(implicit injector: Injector, session: RWSession): SlackIncomingWebhookInfo = {
+      injector.getInstance(classOf[SlackIncomingWebhookInfoRepo]).save(partial.siw)
+    }
+  }
+}
+object SlackChannelToLibraryFactoryHelper {
+  implicit class SlackChannelToLibraryPersister(partial: PartialSlackChannelToLibrary) {
+    def saved(implicit injector: Injector, session: RWSession): SlackChannelToLibrary = {
+      injector.getInstance(classOf[SlackChannelToLibraryRepo]).save(partial.stl)
+    }
+  }
+}
+object LibraryToSlackChannelFactoryHelper {
+  implicit class LibraryToSlackChannelPersister(partial: PartialLibraryToSlackChannel) {
+    def saved(implicit injector: Injector, session: RWSession): LibraryToSlackChannel = {
+      injector.getInstance(classOf[LibraryToSlackChannelRepo]).save(partial.lts)
+    }
+  }
+}
