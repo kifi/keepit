@@ -3,10 +3,11 @@ package com.keepit.controllers.website
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.PermissionCommander
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
+import com.keepit.model.Library
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.slack.models.{ SlackAPIFailure, SlackAuthScope, SlackAuthorizationCode }
+import com.keepit.slack.models.{ SlackIntegrationRequest, SlackAPIFailure, SlackAuthScope, SlackAuthorizationCode }
 import com.keepit.slack.{ SlackClient, SlackCommander }
 
 import scala.concurrent.ExecutionContext
@@ -24,13 +25,19 @@ class SlackController @Inject() (
 
   def registerSlackAuthorization(code: String, state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
-    val redir = slackClient.decodeState(state).toOption.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
+    val redirObj = slackClient.decodeState(state).toOption
+    val redir = redirObj.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
+    val libIdOpt = redirObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
 
     val authFut = for {
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
     } yield {
       slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
+      (libIdOpt, slackAuth.incomingWebhook) match {
+        case (Some(libId), Some(webhook)) => slackCommander.setupIntegration(request.userId, libId, webhook, slackIdentity)
+        case _ =>
+      }
       Redirect(redir, OK)
     }
 

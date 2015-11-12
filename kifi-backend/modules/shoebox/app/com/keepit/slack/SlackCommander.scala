@@ -8,7 +8,9 @@ import com.keepit.slack.models._
 
 @ImplementedBy(classOf[SlackCommanderImpl])
 trait SlackCommander {
+  // Open their own DB sessions, intended to be called directly from controllers
   def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
+  def setupIntegration(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit
 }
 
 @Singleton
@@ -38,11 +40,25 @@ class SlackCommanderImpl @Inject() (
           ownerId = userId,
           slackUserId = identity.userId,
           slackTeamId = identity.teamId,
-          slackChannelId = SlackChannelId("CTOTALLYGARBAGE"), // TODO(ryan): make Léo turn this into an Option and fill in a None
+          slackChannelId = None,
           webhook = webhook,
           lastPostedAt = None
         ))
       }
     }
   }
+
+  def setupIntegration(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
+    db.readWrite { implicit s =>
+      libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationRequest(
+        userId = userId,
+        libraryId = libId,
+        slackUserId = identity.userId,
+        slackTeamId = identity.teamId,
+        slackChannelId = None,
+        slackChannel = webhook.channelName
+      ))
+    }
+  }
+
 }

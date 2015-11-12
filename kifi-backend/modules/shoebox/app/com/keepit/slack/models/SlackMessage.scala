@@ -21,7 +21,7 @@ case class SlackChannelName(value: String) // broad sense, can be channel, group
 case class SlackAccessToken(token: String)
 
 case class SlackIncomingWebhook(
-  channel: SlackChannelName,
+  channelName: SlackChannelName,
   url: String,
   configUrl: String)
 object SlackIncomingWebhook {
