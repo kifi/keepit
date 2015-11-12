@@ -25,9 +25,10 @@ class SlackController @Inject() (
 
   def registerSlackAuthorization(code: String, state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
-    val redirObj = slackClient.decodeState(state).toOption
-    val redir = redirObj.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
-    val libIdOpt = redirObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
+    val stateObj = slackClient.decodeState(state).toOption
+    val libIdOpt = stateObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
+
+    val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
 
     val authFut = for {
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
@@ -38,7 +39,7 @@ class SlackController @Inject() (
         case (Some(libId), Some(webhook)) => slackCommander.setupIntegration(request.userId, libId, webhook, slackIdentity)
         case _ =>
       }
-      Redirect(redir, OK)
+      Redirect(redir, SEE_OTHER)
     }
 
     authFut.recover {
