@@ -91,8 +91,10 @@
     justify-content: space-between
 
     .kf-pw-org-pending-label
+    .kf-pw-org-potential-label
       flex: 1 100%
       text-align: center
+      font-size: 14px
 
       &.ng-leave
         transition: all 1s
@@ -132,14 +134,15 @@
       text-transform: uppercase
       font-size: 10px
 
-    .kf-pw-org-inv-btn
+    .kf-pw-org-btn
       font-size: 11px
       border: 1px solid white
       border-radius: 6px
       width: 90px
-      margin-top: 10px
+      margin-top: 15px
 
-      &.kf-pw-org-inv-btn-decline
+      &.kf-pw-org-btn-decline
+      &.kf-pw-org-btn-ignore
         margin-right: auto
         margin-left: auto
         color: white
@@ -148,7 +151,8 @@
         &:hover:not(:active)
           background-color: gray
 
-      &.kf-pw-org-inv-btn-accept
+      &.kf-pw-org-btn-accept
+      &.kf-pw-org-btn-verify
         margin-right: auto
         margin-left: 6px
         background-color: alpha(libraryGreen, .9)
@@ -156,6 +160,11 @@
 
         &:hover:not(:active)
           background-color: libraryGreen
+
+      &.kf-pw-org-btn-verify
+      &.kf-pw-org-btn-ignore
+        margin-top: 5px
+
 
       &.ng-leave
         transition: 1.75s all
@@ -166,6 +175,14 @@
         margin-bottom: 0px
         border: 0px
         opacity: 0
+
+    .kf-pw-org-email-txt
+      font-size: 13px
+      text-align: center
+      flex: 1 100%
+      margin-bottom: 0px
+      margin-top: 10px
+      color: gray
 
 
   .kf-pw-create-org
