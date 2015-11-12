@@ -29,6 +29,8 @@ sealed trait StripeRefundResult extends StripeTransactionResult
 case class StripeRefundSuccess(amount: DollarAmount, refundId: StripeTransactionId) extends StripeRefundResult
 case class StripeRefundFailure(code: String, message: String) extends StripeRefundResult
 
+case class StripeCardInfo(lastFour: String, brand: String)
+
 trait StripeClient {
   def processCharge(amount: DollarAmount, token: StripeToken, description: String): Future[StripeChargeResult]
   def refundCharge(chargeId: StripeTransactionId): Future[StripeRefundResult]
@@ -36,7 +38,7 @@ trait StripeClient {
   def getPermanentToken(cardDetails: CardDetails, description: String): Future[StripeToken]
 
   def getLastFourDigitsOfCard(token: StripeToken): Future[String]
-  def getCardInfo(token: StripeToken): Future[CardInfo]
+  def getCardInfo(token: StripeToken): Future[StripeCardInfo]
 }
 
 class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends StripeClient with Logging {
@@ -115,9 +117,9 @@ class StripeClientImpl(mode: Mode, implicit val ec: ExecutionContext) extends St
     Customer.retrieve(token.token).getSources().getData().get(0).asInstanceOf[Card].getLast4
   }
 
-  def getCardInfo(token: StripeToken): Future[CardInfo] = lock.withLock {
+  def getCardInfo(token: StripeToken): Future[StripeCardInfo] = lock.withLock {
     val card = Customer.retrieve(token.token).getSources().getData().get(0).asInstanceOf[Card]
-    CardInfo(card.getLast4, card.getBrand)
+    StripeCardInfo(card.getLast4, card.getBrand)
   }
 
 }

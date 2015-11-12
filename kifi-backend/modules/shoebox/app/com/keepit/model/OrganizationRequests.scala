@@ -38,8 +38,7 @@ case class OrganizationMembershipAddRequest(
   orgId: Id[Organization],
   requesterId: Id[User],
   targetId: Id[User],
-  newRole: OrganizationRole = OrganizationRole.MEMBER,
-  adminIdOpt: Option[Id[User]]) extends OrganizationMembershipRequest
+  newRole: OrganizationRole = OrganizationRole.MEMBER) extends OrganizationMembershipRequest
 
 case class OrganizationMembershipModifyRequest(
   orgId: Id[Organization],
