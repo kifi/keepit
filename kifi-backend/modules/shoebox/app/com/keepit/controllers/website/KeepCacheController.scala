@@ -28,13 +28,13 @@ class KeepCacheController @Inject() (
     }
     nUrlOpt.map { nUrl =>
       roverServiceClient.getOrElseFetchRecentArticle(nUrl, 182.days)(EmbedlyArticle).map {
-        case Some(article) => Some(article.content.description.getOrElse("no desc") + article.content.content.getOrElse("no content"))
-        case None => Some("No article found")
+        case Some(article) => article.content.content
+        case None => None
       }
-    }.getOrElse(Future.successful(Some("Invalid keep"))).map {
+    }.getOrElse(Future.successful(None)).map {
       case Some(articleHtml) =>
-        Ok(Html(nUrlOpt + "\n" + id + "\n" + articleHtml)).withHeaders("Content-Security-Policy-Report-Only" -> "default 'none'")
-      //case None => NotFound
+        Ok(Html(articleHtml)).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'")
+      case None => NotFound
     }
   }
 
