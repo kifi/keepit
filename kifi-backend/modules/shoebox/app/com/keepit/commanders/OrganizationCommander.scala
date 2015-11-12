@@ -231,7 +231,7 @@ class OrganizationCommanderImpl @Inject() (
           if (orgMembershipRepo.getByOrgIdAndUserId(org.id.get, request.newOwner).isDefined) {
             orgMembershipCommander.modifyMembershipHelper(OrganizationMembershipModifyRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN))
           } else {
-            orgMembershipCommander.addMembershipHelper(OrganizationMembershipAddRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN, adminIdOpt = None))
+            orgMembershipCommander.addMembershipHelper(OrganizationMembershipAddRequest(request.orgId, request.requesterId, request.newOwner, OrganizationRole.ADMIN))
           }
           planManagementCommander.addUserAccountContactHelper(org.id.get, request.newOwner, ActionAttribution(user = Some(request.requesterId), admin = None))
           val modifiedOrg = orgRepo.save(org.withOwner(request.newOwner))

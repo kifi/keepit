@@ -89,7 +89,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       .filter(org => !userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(org.id.get))
       .filter(org => org.id.get != Id[Organization](9))
       .foreach { orgToJoin =>
-        val addRequest = OrganizationMembershipAddRequest(orgToJoin.id.get, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId, adminIdOpt = None)
+        val addRequest = OrganizationMembershipAddRequest(orgToJoin.id.get, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
         organizationMembershipCommander.addMembershipHelper(addRequest) match {
           case Left(fail: OrganizationFail) => log.info(s"[domainAutoJoin] failed to add user ${verifiedEmail.userId} to org ${orgToJoin.id.get}, error: ${fail.message}")
           case Right(success) => log.info(s"[domainAutoJoin] successfully added user ${verifiedEmail.userId} to org ${orgToJoin.id.get}")
