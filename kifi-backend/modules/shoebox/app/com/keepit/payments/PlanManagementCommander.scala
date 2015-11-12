@@ -541,7 +541,7 @@ class PlanManagementCommanderImpl @Inject() (
       val oldDefaultOpt = paymentMethodRepo.getDefault(accountId)
       if (!oldDefaultOpt.flatMap(_.id).contains(newDefaultId)) {
         val newDefault = paymentMethodRepo.get(newDefaultId)
-        if (newDefault.state == PaymentMethodStates.ACTIVE) {
+        if (newDefault.state == PaymentMethodStates.ACTIVE && newDefault.accountId == accountId) {
           oldDefaultOpt.map { oldDefault =>
             paymentMethodRepo.save(oldDefault.copy(default = false))
           }

@@ -560,6 +560,7 @@ GET           /site/user-or-org/:handle/libraries         @com.keepit.controller
 GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
 GET           /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.getAccountState(pubId: PublicId[Organization])
+POST          /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.updateAccountState(pubId: PublicId[Organization], newPlanId: PublicId[com.keepit.payments.PaidPlan], newCardId: PublicId[com.keepit.payments.PaymentMethod])
 GET           /site/admin/billing/state/preview                 @com.keepit.controllers.website.PaymentsController.previewAccountState(pubId: PublicId[Organization], newPlanId: PublicId[com.keepit.payments.PaidPlan], newCardId: PublicId[com.keepit.payments.PaymentMethod])
 GET           /site/admin/billing/plans                         @com.keepit.controllers.website.PaymentsController.getAvailablePlans(pubId: PublicId[Organization])
 GET           /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.getDefaultCreditCard(pubId: PublicId[Organization])

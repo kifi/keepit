@@ -48,11 +48,56 @@ class PaymentsController @Inject() (
     }
   }
 
+  def updateAccountState(pubId: PublicId[Organization], newPlanId: PublicId[PaidPlan], newCardId: PublicId[PaymentMethod]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
+    (PaidPlan.decodePublicId(newPlanId), PaymentMethod.decodePublicId(newCardId)) match {
+      case (Success(planId), Success(cardId)) =>
+        if (!planCommander.getActivePaymentMethods(request.orgId).flatMap(_.id).contains(cardId)) Future.successful(BadRequest(Json.obj("error" -> "invalid_card")))
+        else {
+          val attribution = ActionAttribution(request.request.userIdOpt, None)
+          planCommander.changePlan(request.orgId, planId, attribution) match {
+            case Success(_) =>
+              val futureCharge = {
+                if (planCommander.getDefaultPaymentMethod(request.orgId).flatMap(_.id).contains(cardId)) Future.successful(None)
+                else doSetDefaultCreditCardAndChargeMaybe(request.orgId, cardId, attribution).imap(_._2)
+              }
+              futureCharge.flatMap { chargeMaybe =>
+                planCommander.getAccountState(request.orgId).map { accountState =>
+                  implicit val chargeFormat = DollarAmount.formatAsCents
+                  val result = Json.obj(
+                    "account" -> accountState,
+                    "charge" -> chargeMaybe
+                  )
+                  Ok(result)
+                }
+              }
+            case Failure(error) => Future.failed(error)
+          }
+        }
+      case _ => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
+    }
+  }
+
   def getAvailablePlans(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { implicit request =>
     val (currentPlanId, availablePlans) = planCommander.getCurrentAndAvailablePlans(request.orgId)
     val sortedAvailablePlansByName = availablePlans.map(_.asInfo).groupBy(_.name).map { case (name, plans) => name -> plans.toSeq.sortBy(_.cycle.months) }
     val response = AvailablePlansResponse(PaidPlan.publicId(currentPlanId), sortedAvailablePlansByName)
     Ok(Json.toJson(response))
+  }
+
+  def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
+    PaidPlan.decodePublicId(planPubId) match {
+      case Success(planId) =>
+        if (planCommander.getActivePaymentMethods(request.orgId).nonEmpty) {
+          val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
+          planCommander.changePlan(request.orgId, planId, attribution) match {
+            case Success(_) => Ok(Json.toJson(planCommander.currentPlan(request.orgId).asInfo))
+            case Failure(ex) => BadRequest(Json.obj("error" -> ex.getMessage))
+          }
+        } else {
+          BadRequest(Json.obj("error" -> "no_payment_method"))
+        }
+      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_plan_id"))
+    }
   }
 
   def addCreditCard(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
@@ -75,26 +120,31 @@ class PaymentsController @Inject() (
       case Some(pubCardId) => PaymentMethod.decodePublicId(pubCardId) match {
         case Failure(_) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
         case Success(cardId) =>
-          planCommander.getPaymentMethod(cardId) match {
-            case card if !card.isActive => Future.successful(BadRequest(Json.obj("error" -> "invalid_card")))
-            case activeCard =>
-              stripeClient.getCardInfo(activeCard.stripeToken).flatMap { cardInfo =>
-                val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-                planCommander.changeDefaultPaymentMethod(request.orgId, activeCard.id.get, attribution, cardInfo.lastFour) match {
-                  case Success((_, lastPaymentFailed)) =>
-                    val futureCharge = if (lastPaymentFailed) paymentCommander.processAccount(request.orgId).imap { case (_, event) => event.paymentCharge } else Future.successful(None)
-                    futureCharge.imap { charge =>
-                      implicit val chargeFormat = DollarAmount.formatAsCents
-                      Ok(Json.obj(
-                        "card" -> CardInfo(cardId, cardInfo),
-                        "charge" -> charge
-                      ))
-                    }
-                  case Failure(InvalidChange(msg)) => Future.successful(BadRequest(Json.obj("error" -> msg)))
-                  case Failure(ex) => Future.failed(ex)
-                }
-              }
+          if (!planCommander.getActivePaymentMethods(request.orgId).flatMap(_.id).contains(cardId)) Future.successful(BadRequest(Json.obj("error" -> "invalid_card")))
+          else {
+            doSetDefaultCreditCardAndChargeMaybe(request.orgId, cardId, ActionAttribution(request.request.userIdOpt, None)).imap {
+              case (card, charge) =>
+                implicit val chargeFormat = DollarAmount.formatAsCents
+                Ok(Json.obj(
+                  "card" -> card,
+                  "charge" -> charge
+                ))
+            } recover {
+              case InvalidChange(msg) => BadRequest(Json.obj("error" -> msg))
+            }
           }
+      }
+    }
+  }
+
+  private def doSetDefaultCreditCardAndChargeMaybe(orgId: Id[Organization], cardId: Id[PaymentMethod], attribution: ActionAttribution): Future[(CardInfo, Option[DollarAmount])] = {
+    val card = planCommander.getPaymentMethod(cardId)
+    stripeClient.getCardInfo(card.stripeToken).flatMap { cardInfo =>
+      planCommander.changeDefaultPaymentMethod(orgId, cardId, attribution, cardInfo.lastFour) match {
+        case Success((_, lastPaymentFailed)) =>
+          val futureCharge = if (lastPaymentFailed) paymentCommander.processAccount(orgId).imap { case (_, event) => event.paymentCharge } else Future.successful(None)
+          futureCharge.imap { charge => (CardInfo(cardId, cardInfo), charge) }
+        case Failure(error) => Future.failed(error)
       }
     }
   }
@@ -166,22 +216,6 @@ class PaymentsController @Inject() (
             val config = db.readOnlyMaster { implicit session => orgInfoCommander.getExternalOrgConfigurationHelper(request.orgId) } // avoiding using replica
             Ok(Json.toJson(config))
         }
-    }
-  }
-
-  def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
-    PaidPlan.decodePublicId(planPubId) match {
-      case Success(planId) =>
-        if (planCommander.getActivePaymentMethods(request.orgId).nonEmpty) {
-          val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
-          planCommander.changePlan(request.orgId, planId, attribution) match {
-            case Success(_) => Ok(Json.toJson(planCommander.currentPlan(request.orgId).asInfo))
-            case Failure(ex) => BadRequest(Json.obj("error" -> ex.getMessage))
-          }
-        } else {
-          BadRequest(Json.obj("error" -> "no_payment_method"))
-        }
-      case Failure(ex) => BadRequest(Json.obj("error" -> "invalid_plan_id"))
     }
   }
 
