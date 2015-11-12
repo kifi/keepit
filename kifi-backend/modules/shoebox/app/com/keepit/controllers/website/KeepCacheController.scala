@@ -28,7 +28,7 @@ class KeepCacheController @Inject() (
     }
     nUrlOpt.map { nUrl =>
       roverServiceClient.getOrElseFetchRecentArticle(nUrl, 182.days)(EmbedlyArticle).map {
-        case Some(article) => article.content.content
+        case Some(article) => article.content.rawContent
         case None => None
       }
     }.getOrElse(Future.successful(None)).map {
