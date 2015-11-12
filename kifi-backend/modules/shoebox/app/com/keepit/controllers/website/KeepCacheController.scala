@@ -22,7 +22,7 @@ class KeepCacheController @Inject() (
     val userActionsHelper: UserActionsHelper,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
-  def getCachedKeep(id: ExternalId[Keep], format: String) = MaybeUserPage.async { request =>
+  def getCachedKeep(id: ExternalId[Keep]) = MaybeUserPage.async { request =>
 
     val nUrlOpt = db.readOnlyReplica { implicit session =>
       keepRepo.getOpt(id).map { keep =>
@@ -39,14 +39,14 @@ class KeepCacheController @Inject() (
         val byLine = {
           val author = {
             if (article.content.authors.nonEmpty) {
-              "By " + article.content.authors.map { a =>
+              Some("By " + article.content.authors.map { a =>
                 a.url match {
                   case Some(url) =>
-                    s"""<a href="${clean(url)}">${clean(name)}</a>"""
+                    s"""<a href="${clean(url)}">${clean(a.name)}</a>"""
                   case None =>
-                    clean(name)
+                    clean(a.name)
                 }
-              }.mkString(", ") |> Some.apply
+              }.mkString(", "))
             } else None
           }
           val date = article.content.publishedAt.map(d => d.toStandardDateString)
@@ -61,6 +61,7 @@ class KeepCacheController @Inject() (
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/assets/cached/reader.css">
 
 <title>${article.content.title.map(t => clean(t) + " • Kifi").getOrElse(s"Kifi Cache of ${clean(article.url)}")}</title>
 
