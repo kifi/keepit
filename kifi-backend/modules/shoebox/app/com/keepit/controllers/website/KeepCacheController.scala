@@ -38,7 +38,7 @@ class KeepCacheController @Inject() (
           val displayUrl = clean(if (article.url.length > 55) {
             article.url.take(30) + "…" + article.url.takeRight(15)
           } else article.url)
-          s"""<footer>Fetched on ${article.createdAt.toStandardDateString} from <a href="$fullUrl">$displayUrl</a> by Kifi for you. This is your personal page.</footer>"""
+          s"""<hr class="fin"><footer>Fetched on ${article.createdAt.toStandardDateString} from <a href="$fullUrl">$displayUrl</a> by Kifi for you. This is your personal page.</footer>"""
         }
         val titleStr = article.content.title.map { title =>
           s"""<header><h1>${clean(title)}</h1></header>"""
@@ -57,7 +57,9 @@ class KeepCacheController @Inject() (
             } else None
           }
           val date = article.content.publishedAt.map(d => d.toStandardDateString)
-          Seq(author, date).flatten.mkString(" • ")
+          val original = Some(s"""<a href="${clean(article.url)}">Original</a>""")
+          val code = Seq(author, date, original).flatten.mkString(" • ")
+          s"""<address>$code</address>"""
         }
 
         val content = article.content.rawContent.get
