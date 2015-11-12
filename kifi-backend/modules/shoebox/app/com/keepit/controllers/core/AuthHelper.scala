@@ -526,7 +526,9 @@ class AuthHelper @Inject() (
 
   private def verifyEmailForNonUser(email: UserEmailAddress)(implicit request: NonUserRequest[_]): Result = request.userAgentOpt match {
     case Some(agent) if agent.isMobile => //let it pass ...
-      userEmailAddressCommander.verifyEmailAddress(email)
+      userEmailAddressCommander.saveAsVerified(email)
+      userEmailAddressCommander.autoJoinOrgViaEmail(email)
+      Redirect(s"/?m=1")
     case _ =>
       Redirect("/login").withSession(request.session + (SecureSocial.OriginalUrlKey -> request.path))
   }
