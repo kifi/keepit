@@ -22,7 +22,8 @@ case class SlackChannelToLibrary(
     slackChannelId: Option[SlackChannelId],
     slackChannelName: SlackChannelName,
     libraryId: Id[Library],
-    status: SlackIntegrationStatus = SlackIntegrationStatus.On,
+    status: SlackIntegrationStatus = SlackIntegrationStatus.Off,
+    lastProcessingAt: Option[DateTime] = None,
     lastProcessedAt: Option[DateTime] = None,
     lastMessageAt: Option[DateTime] = None) extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with SlackIntegration {
   def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
@@ -69,6 +70,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     slackChannelName: SlackChannelName,
     libraryId: Id[Library],
     status: SlackIntegrationStatus,
+    lastProcessingAt: Option[DateTime],
     lastProcessedAt: Option[DateTime],
     lastMessageAt: Option[DateTime]) = {
     SlackChannelToLibrary(
@@ -83,6 +85,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
       slackChannelName,
       libraryId,
       status,
+      lastProcessingAt,
       lastProcessedAt,
       lastMessageAt
     )
@@ -100,6 +103,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     stl.slackChannelName,
     stl.libraryId,
     stl.status,
+    stl.lastProcessingAt,
     stl.lastProcessedAt,
     stl.lastMessageAt
   ))
@@ -114,9 +118,10 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     def slackChannelName = column[SlackChannelName]("slack_channel_name", O.NotNull)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def status = column[SlackIntegrationStatus]("status", O.NotNull)
+    def lastProcessingAt = column[Option[DateTime]]("last_processing_at", O.Nullable)
     def lastProcessedAt = column[Option[DateTime]]("last_processed_at", O.Nullable)
     def lastMessageAt = column[Option[DateTime]]("last_message_at", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, lastProcessedAt, lastMessageAt) <> ((stlFromDbRow _).tupled, stlToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, lastProcessingAt, lastProcessedAt, lastMessageAt) <> ((stlFromDbRow _).tupled, stlToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackChannelToLibraryStates.ACTIVE)
