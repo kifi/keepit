@@ -101,7 +101,7 @@
       <button class="kf-pw-org-btn kf-pw-org-btn-decline" ng-if="org.pending && !org.declined" ng-click="declineInvite(org)">Decline</button>
       <div class="kf-pw-org-email" ng-if="org.potential && org.viewer.emails && me.experiments.indexOf('admin') !== -1">
         <div ng-repeat="email in org.viewer.emails">
-          <p class="kf-pw-org-email-txt">{{ email }}</p>
+          <p class="kf-pw-org-email-txt" ng-bind="email"></p>
           <button class="kf-pw-org-btn kf-pw-org-btn-accept kf-pw-org-btn-verify" ng-if="org.potential && !org.declined" ng-click="sendVerificationEmail(email, org)">Verify</button>
           <button class="kf-pw-org-btn kf-pw-org-btn-decline kf-pw-org-btn-ignore" ng-if="org.potential && !org.declined" ng-click="hideOrgDomain(org)">Hide</button>
         </div>
