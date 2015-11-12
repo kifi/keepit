@@ -176,7 +176,7 @@ class PaymentsController @Inject() (
   def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     PaidPlan.decodePublicId(planPubId) match {
       case Success(planId) =>
-        if (planCommander.getDefaultPaymentMethod(request.orgId).isDefined) {
+        if (planCommander.getActivePaymentMethods(request.orgId).nonEmpty) {
           val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
           planCommander.changePlan(request.orgId, planId, attribution) match {
             case Success(_) => Ok(Json.toJson(planCommander.currentPlan(request.orgId).asInfo))
