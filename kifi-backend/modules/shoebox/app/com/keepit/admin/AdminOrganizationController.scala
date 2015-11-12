@@ -3,6 +3,7 @@ package com.keepit.controllers.admin
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
+import com.keepit.classify.NormalizedHostname
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller._
@@ -469,11 +470,13 @@ class AdminOrganizationController @Inject() (
     Ok.chunked(enum)
   }
 
-  def populateEmailAddressDomains() = AdminUserAction(parse.tolerantJson) { implicit request =>
-    require((request.body \ "secret").as[String] == "shhhhhh")
-    val emails = db.readOnlyMaster { implicit session => userEmailAddressRepo.all().filter(_.state == UserEmailAddressStates.ACTIVE) }
-    emails.grouped(1000).foreach { emailGroup =>
-      db.readWrite(implicit s => emailGroup.foreach(userEmailAddressRepo.save))
+  def cleanUpEmailAddresses() = AdminUserAction(parse.tolerantJson) { implicit request =>
+    require((request.body \ "secret").as[String] == "shhhhh")
+    val emails = db.readOnlyMaster { implicit session => userEmailAddressRepo.getByDomain(NormalizedHostname("ERROR_IN_ADDRESS")) }
+    db.readWrite { implicit s =>
+      emails.foreach { email =>
+        userEmailAddressRepo.save(email.sanitizedForDelete.withState(UserEmailAddressStates.INACTIVE))
+      }
     }
     Ok
   }
