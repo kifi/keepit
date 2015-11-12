@@ -76,7 +76,7 @@ class OrganizationRepoImpl @Inject() (
   }
 
   def getShadowOrgs()(implicit session: RSession): Seq[Organization] = {
-    val q = for { row <- rows if row.ownerId === AdminOrganizationController.fakeOwnerId } yield row
+    val q = for { row <- rows if row.state === OrganizationStates.ACTIVE && row.ownerId === AdminOrganizationController.fakeOwnerId } yield row
     q.list
   }
 
