@@ -3,13 +3,18 @@
     <a
       class="kf-link kf-link-underline"
       ng-if="isSegmentLink(segment)"
+      ng-class="{ 'kf-tooltip-parent': isSegmentHover(segment) }"
       ng-href="{{ segment.url }}"
-      ng-bind="segment.text"
       ng-click="trackActivityClick(descriptionSegment.url)"
-    ></a><!--
+    >
+      <span ng-bind="segment.text"></span>
+      <div ng-if="isSegmentHover(segment)" class="kf-tooltip-body">
+        <span kf-structured-text segments="segment.hover"></span>
+      </div>
+    </a><!--
     --><div
       class="kf-link kf-link-underline kf-link-black kf-structured-text-hover kf-tooltip-parent"
-      ng-if="isSegmentHover(segment)"
+      ng-if="isSegmentHover(segment) && !isSegmentLink(segment)"
     >
       <span ng-bind="segment.text"></span>
       <div class="kf-tooltip-body">
