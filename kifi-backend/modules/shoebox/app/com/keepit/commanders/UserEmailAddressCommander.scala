@@ -87,6 +87,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     NormalizedHostname.fromHostname(EmailAddress.getHostname(verifiedEmail.address))
       .flatMap(orgDomainOwnershipCommander.getOwningOrganization)
       .filter(org => !userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(org.id.get))
+      .filter(org => org.id.get != Id[Organization](9))
       .foreach { orgToJoin =>
         val addRequest = OrganizationMembershipAddRequest(orgToJoin.id.get, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId, adminIdOpt = None)
         organizationMembershipCommander.addMembershipHelper(addRequest) match {
