@@ -373,6 +373,21 @@ class AdminOrganizationController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }
 
+  def updateShadowOrgHandles() = AdminUserPage { implicit request =>
+    val orgs = db.readOnlyReplica { implicit s =>
+      orgRepo.getShadowOrgs()
+    }
+    orgs foreach { org =>
+      db.readWrite { implicit session =>
+        assert(org.ownerId == fakeOwnerId)
+        val origHandle = org.primaryHandle.get.original
+        val newHandle = OrganizationHandle(origHandle.value + "_pre_launch")
+        handleCommander.setOrganizationHandle(org, newHandle, overrideValidityCheck = true)
+      }
+    }
+    Ok(orgs.size.toString)
+  }
+
   def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>
     val description: Option[String] = request.body.asFormUrlEncoded.flatMap(_.get("description").flatMap(_.headOption)).filter(_.length > 0)
     orgCommander.unsafeModifyOrganization(request, orgId, OrganizationModifications(description = description))

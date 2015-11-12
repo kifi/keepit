@@ -10,10 +10,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{ SchedulingProperties, SequencingActor, SequencingPlugin }
 import com.keepit.common.time.Clock
+import com.keepit.controllers.admin.AdminOrganizationController
 
 @ImplementedBy(classOf[OrganizationRepoImpl])
 trait OrganizationRepo extends Repo[Organization] with SeqNumberFunction[Organization] {
   def allActive(implicit session: RSession): Seq[Organization]
+  def getShadowOrgs()(implicit session: RSession): Seq[Organization]
   def getByIds(orgIds: Set[Id[Organization]])(implicit session: RSession): Map[Id[Organization], Organization]
   def getAllByOwnerId(ownerId: Id[User], excludeStateOpt: Option[State[Organization]] = Some(OrganizationStates.INACTIVE))(implicit session: RSession): Set[Organization]
   def deactivate(model: Organization)(implicit session: RWSession): Unit
@@ -70,6 +72,11 @@ class OrganizationRepoImpl @Inject() (
 
   def allActive(implicit session: RSession): Seq[Organization] = {
     val q = for { row <- rows if row.state === OrganizationStates.ACTIVE } yield row
+    q.list
+  }
+
+  def getShadowOrgs()(implicit session: RSession): Seq[Organization] = {
+    val q = for { row <- rows if row.ownerId === AdminOrganizationController.fakeOwnerId } yield row
     q.list
   }
 
