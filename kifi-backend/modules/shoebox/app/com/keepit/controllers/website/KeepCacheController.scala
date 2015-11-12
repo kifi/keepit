@@ -33,8 +33,15 @@ class KeepCacheController @Inject() (
       roverServiceClient.getOrElseFetchRecentArticle(nUrl, 182.days)(EmbedlyArticle)
     }.getOrElse(Future.successful(None)).map {
       case Some(article) if article.content.rawContent.nonEmpty =>
+        val footer = {
+          val fullUrl = clean(article.url)
+          val displayUrl = clean(if (article.url.length > 55) {
+            article.url.take(30) + "…" + article.url.takeRight(15)
+          } else article.url)
+          s"""<footer>Fetched on ${article.createdAt.toStandardDateString} from <a href="$fullUrl">$displayUrl</a> by Kifi for you. This is your personal page.</footer>"""
+        }
         val titleStr = article.content.title.map { title =>
-          s"""<h1>$title</h1>"""
+          s"""<header><h1>${clean(title)}</h1></header>"""
         }.getOrElse("")
         val byLine = {
           val author = {
@@ -63,16 +70,18 @@ class KeepCacheController @Inject() (
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/assets/cached/reader.css">
 
-<title>${article.content.title.map(t => clean(t) + " • Kifi").getOrElse(s"Kifi Cache of ${clean(article.url)}")}</title>
-
-<h6>Fetched on ${article.createdAt.toStandardDateString} from <a href="${clean(article.url)}">${clean(article.url)}</a> by Kifi.</h6>
-
 $titleStr
 $byLine
 
 <hr>
 
-$content""")
+<div id="content">
+$content
+</div>
+
+$footer
+
+""")
         Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'")
       case _ => NotFound
     }
