@@ -60,7 +60,7 @@ class CreditRewardInfoCommanderTest extends SpecificationLike with ShoeboxTestIn
           code = code.map(c => UsedCreditCode(c, singleUse = false, owner.id.get))
         )
         val rewards = Seq(
-          makeReward(Reward(RewardKind.Coupon)(RewardKind.Coupon.Used)(None), Some(couponCode.code)) ->
+          makeReward(Reward(RewardKind.Coupon)(RewardKind.Coupon.Used)(couponCode.code), Some(couponCode.code)) ->
             "You earned $42.00 because Owner redeemed the coupon code COUPON.",
           makeReward(Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None)) ->
             "You earned $42.00 because you created a team on Kifi. Thanks for being awesome! :)",
@@ -98,6 +98,15 @@ class CreditRewardInfoCommanderTest extends SpecificationLike with ShoeboxTestIn
           val account = paidAccountRepo.getByOrgId(org.id.get)
           (org, account, owner)
         }
+
+        val Seq(couponCode, promoCode, refCode) = db.readWrite { implicit s =>
+          Seq(
+            creditCodeInfoRepo.create(CreditCodeInfo(kind = CreditCodeKind.Coupon, code = CreditCode.normalize("coupon"), credit = DollarAmount.dollars(42), status = CreditCodeStatus.Open, referrer = None)).get,
+            creditCodeInfoRepo.create(CreditCodeInfo(kind = CreditCodeKind.Promotion, code = CreditCode.normalize("promo"), credit = DollarAmount.dollars(42), status = CreditCodeStatus.Open, referrer = None)).get,
+            creditCodeInfoRepo.create(CreditCodeInfo(kind = CreditCodeKind.OrganizationReferral, code = CreditCode.normalize("ref"), credit = DollarAmount.dollars(42), status = CreditCodeStatus.Open, referrer = Some(CreditCodeReferrer(org.ownerId, org.id, DollarAmount.dollars(42))))).get
+          )
+        }
+
         val rewards = Seq(
           Reward(RewardKind.OrganizationCreation)(RewardKind.OrganizationCreation.Created)(None) ->
             ("Create a team.", "Created a team. Welcome to Kifi!"),
@@ -110,7 +119,11 @@ class CreditRewardInfoCommanderTest extends SpecificationLike with ShoeboxTestIn
           Reward(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached7)(RewardKind.OrganizationLibrariesReached.OrganizationLibrariesReached7.Achieved)(org.id.get) ->
             ("Add 7 libraries within the team.", "Added 7 libraries within the team."),
           Reward(RewardKind.OrganizationGeneralLibraryKeepsReached50)(RewardKind.OrganizationGeneralLibraryKeepsReached50.Achieved)(org.id.get) ->
-            ("Add 50 keeps into the General library.", "Added 50 keeps into the General library.")
+            ("Add 50 keeps into the General library.", "Added 50 keeps into the General library."),
+          Reward(RewardKind.Coupon)(RewardKind.Coupon.Used)(couponCode.code) ->
+            ("Apply the coupon code COUPON.", "Applied the coupon code COUPON."),
+          Reward(RewardKind.ReferralApplied)(RewardKind.ReferralApplied.Applied)(refCode.code) ->
+            ("Redeem the referral code REF.", "Redeemed the referral code REF.")
         )
 
         db.readOnlyMaster { implicit s =>

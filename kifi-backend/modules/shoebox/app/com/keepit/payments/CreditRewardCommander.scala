@@ -150,7 +150,7 @@ class CreditRewardCommanderImpl @Inject() (
   private def createRewardsFromCreditCode(creditCodeInfo: CreditCodeInfo, accountId: Id[PaidAccount], userId: Id[User], orgId: Option[Id[Organization]])(implicit session: RWSession): Try[CreditCodeRewards] = {
     val unfinalizedRewardsTry = creditCodeInfo.kind match {
       case CreditCodeKind.Coupon =>
-        val targetReward = Reward(RewardKind.Coupon)(RewardKind.Coupon.Used)(None)
+        val targetReward = Reward(RewardKind.Coupon)(RewardKind.Coupon.Used)(creditCodeInfo.code)
         for {
           targetCreditReward <- creditRewardRepo.create(CreditReward(
             accountId = accountId,

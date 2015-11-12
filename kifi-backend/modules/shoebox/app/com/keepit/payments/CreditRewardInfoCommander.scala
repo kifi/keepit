@@ -95,13 +95,13 @@ class CreditRewardInfoCommanderImpl @Inject() (
       case Reward(kind: RewardKind.OrganizationLibrariesReached, _, orgId: Id[Organization] @unchecked) =>
         val hover = Hover("Your team currently has", libraryRepo.getBySpace(LibrarySpace.fromOrganizationId(orgId)).size, "libraries")
         val librariesPage = LinkElement(pathCommander.orgLibrariesPage(orgId).absolute)
-        if (achieved) DescriptionElements("Added", kind.threshold --> hover, "libraries" --> librariesPage, "within the team.")
-        else DescriptionElements("Add", kind.threshold --> hover, "libraries" --> librariesPage, "within the team.")
+        if (achieved) DescriptionElements("Added", s"${kind.threshold} libraries" --> hover --> librariesPage, "within the team.")
+        else DescriptionElements("Add", s"${kind.threshold} libraries" --> hover --> librariesPage, "within the team.")
       case Reward(kind: RewardKind.OrganizationMembersReached, _, orgId: Id[Organization] @unchecked) =>
         val hover = Hover("Your team currently has", orgMembershipRepo.countByOrgId(orgId), "members")
         val membersPage = LinkElement(pathCommander.orgMembersPage(orgId).absolute)
-        if (achieved) DescriptionElements("Reached a total of", kind.threshold --> membersPage, "members" --> hover, ".")
-        else DescriptionElements("Reach a total of", kind.threshold --> membersPage, "members" --> hover, ".")
+        if (achieved) DescriptionElements("Reached a total of", s"${kind.threshold} members" --> membersPage --> hover, ".")
+        else DescriptionElements("Reach a total of", s"${kind.threshold} members" --> membersPage --> hover, ".")
       case Reward(kind, _, orgId: Id[Organization] @unchecked) if kind == RewardKind.OrganizationAvatarUploaded =>
         val orgAvatarPage = LinkElement(pathCommander.orgPage(orgId).absolute)
         if (achieved) DescriptionElements("Added a", "team logo" --> orgAvatarPage, ".")
@@ -122,16 +122,16 @@ class CreditRewardInfoCommanderImpl @Inject() (
         if (achieved) DescriptionElements("Created a team. Welcome to Kifi!")
         else DescriptionElements("Create a team.")
       case Reward(kind, _, code: CreditCode) if kind == RewardKind.Coupon =>
-        if (achieved) DescriptionElements("Applied the coupon code", code)
-        else DescriptionElements("Apply the coupon code", code)
+        if (achieved) DescriptionElements("Applied the coupon code", code, ".")
+        else DescriptionElements("Apply the coupon code", code, ".")
       case Reward(kind, _, code: CreditCode) if kind == RewardKind.ReferralApplied =>
         val orgDescription = for {
           codeInfo <- creditCodeInfoRepo.getByCode(code)
           referrer <- codeInfo.referrer
           org <- referrer.organizationId
         } yield getOrg(org)
-        if (achieved) DescriptionElements("Redeemed the referral code", code --> Hover("from", orgDescription))
-        else DescriptionElements("Redeem the referral code", code --> Hover("from", orgDescription))
+        if (achieved) DescriptionElements("Redeemed the referral code", code --> Hover("from", orgDescription), ".")
+        else DescriptionElements("Redeem the referral code", code --> Hover("from", orgDescription), ".")
     }
   }
 }
