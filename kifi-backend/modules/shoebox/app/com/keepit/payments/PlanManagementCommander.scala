@@ -4,7 +4,7 @@ import java.math.{ BigDecimal, MathContext, RoundingMode }
 
 import com.google.inject.{ ImplementedBy, Inject }
 import com.keepit.commanders.PermissionCommander
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
@@ -47,6 +47,7 @@ trait PlanManagementCommander {
   def getCurrentCredit(orgId: Id[Organization]): DollarAmount
 
   def getAccountState(orgId: Id[Organization]): Future[AccountStateResponse]
+  def previewAccountState(orgId: Id[Organization], newPlanId: Id[PaidPlan], newPaymentMethodId: Id[PaymentMethod]): Future[AccountStateResponse]
 
   def currentPlan(orgId: Id[Organization]): PaidPlan
   def currentPlanHelper(orgId: Id[Organization])(implicit session: RSession): PaidPlan
@@ -62,6 +63,7 @@ trait PlanManagementCommander {
   def getPlanRenewal(orgId: Id[Organization]): DateTime
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod]
+  def getPaymentMethod(paymentMethodId: Id[PaymentMethod]): PaymentMethod
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod
   def changeDefaultPaymentMethod(orgId: Id[Organization], newDefault: Id[PaymentMethod], attribution: ActionAttribution, lastFour: String): Try[(AccountEvent, Boolean)]
   def getDefaultPaymentMethod(orgId: Id[Organization]): Option[PaymentMethod]
@@ -102,7 +104,7 @@ class PlanManagementCommanderImpl @Inject() (
   }
 
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
-  def remainingBillingCycleCost(account: PaidAccount, from: DateTime)(implicit session: RSession): DollarAmount = {
+  def remainingBillingCycleCostPerUser(account: PaidAccount, from: DateTime)(implicit session: RSession): DollarAmount = {
     val plan = paidPlanRepo.get(account.planId)
     val cycleLengthMonths = plan.billingCycle.months
     val cycleStart: DateTime = account.planRenewal.minusMonths(cycleLengthMonths)
@@ -114,6 +116,8 @@ class PlanManagementCommanderImpl @Inject() (
     val remainingPrice = fullPrice.multiply(new BigDecimal(fraction, MATH_CONTEXT), MATH_CONTEXT).setScale(0, RoundingMode.HALF_DOWN)
     DollarAmount(remainingPrice.intValueExact)
   }
+
+  def remainingBillingCycleCost(account: PaidAccount, from: DateTime)(implicit session: RSession): DollarAmount = remainingBillingCycleCostPerUser(account, from) * account.activeUsers
 
   //very explicitly accepts a db session to allow account creation on org creation within the same db session
   def createAndInitializePaidAccountForOrganization(orgId: Id[Organization], planId: Id[PaidPlan], creator: Id[User], session: RWSession): Try[AccountEvent] = {
@@ -191,7 +195,7 @@ class PlanManagementCommanderImpl @Inject() (
     def doRegisterNewUser = {
       val account = paidAccountRepo.getByOrgId(orgId)
       val now = clock.now()
-      val price: DollarAmount = remainingBillingCycleCost(account, from = now)
+      val price: DollarAmount = remainingBillingCycleCostPerUser(account, from = now)
       paidAccountRepo.save(
         account.withReducedCredit(price).withMoreActiveUsers(1)
       )
@@ -216,7 +220,7 @@ class PlanManagementCommanderImpl @Inject() (
     def doRegisterRemovedUser = {
       val account = paidAccountRepo.getByOrgId(orgId)
       val now = clock.now()
-      val price: DollarAmount = remainingBillingCycleCost(account, from = now)
+      val price: DollarAmount = remainingBillingCycleCostPerUser(account, from = now)
       val newAccount = account.withIncreasedCredit(price).withFewerActiveUsers(1).withUserContacts(account.userContacts.diff(Seq(userId)))
 
       paidAccountRepo.save(newAccount)
@@ -379,16 +383,31 @@ class PlanManagementCommanderImpl @Inject() (
     }.getOrElse(Future.successful(None))
 
     cardFut.map { card =>
-      AccountStateResponse(
-        users = account.activeUsers,
-        billingDate = account.planRenewal,
-        balance = account.credit,
-        charge = plan.pricePerCyclePerUser * account.activeUsers,
-        plan.asInfo,
-        card,
-        account.paymentStatus
-      )
+      AccountStateResponse(account, plan, card)
     }
+  }
+
+  def previewAccountState(orgId: Id[Organization], newPlanId: Id[PaidPlan], newPaymentMethodId: Id[PaymentMethod]): Future[AccountStateResponse] = {
+    val newPaymentMethod = db.readOnlyMaster { implicit session =>
+      paymentMethodRepo.get(newPaymentMethodId)
+    }
+
+    val futureCardInfo = stripe.getCardInfo(newPaymentMethod.stripeToken).map(Some(_)).recover { case ex: APIException => None }
+
+    val (accountPreview, planPreview) = db.readOnlyReplica { implicit session =>
+      val currentAccount = paidAccountRepo.getByOrgId(orgId)
+      val accountPreview = if (currentAccount.planId == newPlanId) currentAccount
+      else {
+        val now = clock.now()
+        val newPlanStartDate = PlanRenewalPolicy.newPlansStartDate(now)
+        val currentPlanRefund = remainingBillingCycleCost(currentAccount, from = newPlanStartDate)
+        val paymentStatus = if (currentAccount.paymentStatus == PaymentStatus.Failed) PaymentStatus.Pending else currentAccount.paymentStatus // abusing "Pending" semantics in this API
+        currentAccount.withNewPlan(newPlanId).withIncreasedCredit(currentPlanRefund).withPlanRenewal(newPlanStartDate).withPaymentStatus(paymentStatus)
+      }
+      val planPreview = paidPlanRepo.get(newPlanId)
+      (accountPreview, planPreview)
+    }
+    futureCardInfo.map { cardInfo => AccountStateResponse(accountPreview, planPreview, cardInfo) }
   }
 
   def currentPlan(orgId: Id[Organization]): PaidPlan = db.readOnlyMaster { implicit session =>
@@ -468,7 +487,7 @@ class PlanManagementCommanderImpl @Inject() (
 
         val now = clock.now()
         val newPlanStartDate = PlanRenewalPolicy.newPlansStartDate(now)
-        val refund = remainingBillingCycleCost(account, from = newPlanStartDate) * account.activeUsers
+        val refund = remainingBillingCycleCost(account, from = newPlanStartDate)
         val updatedAccount = paidAccountRepo.save(account.withNewPlan(newPlanId).withIncreasedCredit(refund).withPlanRenewal(newPlanStartDate))
         Success(eventTrackingCommander.track(AccountEvent.simpleNonBillingEvent(
           eventTime = now,
@@ -493,6 +512,10 @@ class PlanManagementCommanderImpl @Inject() (
 
   def getActivePaymentMethods(orgId: Id[Organization]): Seq[PaymentMethod] = db.readOnlyMaster { implicit session =>
     paymentMethodRepo.getByAccountId(orgId2AccountId(orgId))
+  }
+
+  def getPaymentMethod(paymentMethodId: Id[PaymentMethod]): PaymentMethod = db.readOnlyMaster { implicit session =>
+    paymentMethodRepo.get(paymentMethodId)
   }
 
   def addPaymentMethod(orgId: Id[Organization], stripeToken: StripeToken, attribution: ActionAttribution, lastFour: String): PaymentMethod = db.readWrite { implicit session =>

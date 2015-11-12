@@ -286,24 +286,37 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
 
           for (user <- goodUsers) {
             inject[FakeUserActionsHelper].setUser(user)
-            val setPayload = Json.obj("token" -> RandomStringUtils.randomAlphanumeric(10))
-            val setRequest = route.setCreditCardToken(publicId).withBody(setPayload)
-            val setResponse = controller.setCreditCardToken(publicId)(setRequest)
+
+            val addPayload = Json.obj("token" -> RandomStringUtils.randomAlphanumeric(10))
+            val addRequest = route.addCreditCard(publicId).withBody(addPayload)
+            val addResponse = controller.addCreditCard(publicId)(addRequest)
+            status(addResponse) === OK
+            val newCardId = (contentAsJson(addResponse) \ "cardId").as[PublicId[PaymentMethod]]
+
+            val setPayload = Json.obj("cardId" -> newCardId)
+            val setRequest = route.setDefaultCreditCard(publicId).withBody(setPayload)
+            val setResponse = controller.setDefaultCreditCard(publicId)(setRequest)
             status(setResponse) === OK
 
-            val getRequest = route.getCreditCardToken(publicId)
-            val getResponse = controller.getCreditCardToken(publicId)(getRequest)
+            val getRequest = route.getDefaultCreditCard(publicId)
+            val getResponse = controller.getDefaultCreditCard(publicId)(getRequest)
             status(getResponse) === OK
           }
           for (user <- badUsers) {
             inject[FakeUserActionsHelper].setUser(user)
-            val setPayload = Json.obj("token" -> RandomStringUtils.randomAlphanumeric(10))
-            val setRequest = route.setCreditCardToken(publicId).withBody(setPayload)
-            val setResponse = controller.setCreditCardToken(publicId)(setRequest)
+
+            val addPayload = Json.obj("token" -> RandomStringUtils.randomAlphanumeric(10))
+            val addRequest = route.addCreditCard(publicId).withBody(addPayload)
+            val addResponse = controller.addCreditCard(publicId)(addRequest)
+            status(addResponse) === FORBIDDEN
+
+            val setPayload = Json.obj("cardId" -> "fake_public_id")
+            val setRequest = route.setDefaultCreditCard(publicId).withBody(setPayload)
+            val setResponse = controller.setDefaultCreditCard(publicId)(setRequest)
             status(setResponse) === FORBIDDEN
 
-            val getRequest = route.getCreditCardToken(publicId)
-            val getResponse = controller.getCreditCardToken(publicId)(getRequest)
+            val getRequest = route.getDefaultCreditCard(publicId)
+            val getResponse = controller.getDefaultCreditCard(publicId)(getRequest)
             status(getResponse) === FORBIDDEN
           }
           1 === 1

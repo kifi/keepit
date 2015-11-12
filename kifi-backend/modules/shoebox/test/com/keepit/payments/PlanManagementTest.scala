@@ -84,9 +84,9 @@ class PlanManagementTest extends SpecificationLike with ShoeboxTestInjector {
         }
         plan.pricePerCyclePerUser should beGreaterThan(DollarAmount.ZERO)
         db.readOnlyMaster { implicit session =>
-          commander.remainingBillingCycleCost(account, account.planRenewal minusDays 5) === computePartialCost(account.planRenewal minusDays 5, account.planRenewal, plan.billingCycle, plan.pricePerCyclePerUser)
-          commander.remainingBillingCycleCost(account, account.planRenewal) === DollarAmount.ZERO
-          commander.remainingBillingCycleCost(account, account.planRenewal plusDays 5) === DollarAmount.ZERO
+          commander.remainingBillingCycleCostPerUser(account, account.planRenewal minusDays 5) === computePartialCost(account.planRenewal minusDays 5, account.planRenewal, plan.billingCycle, plan.pricePerCyclePerUser)
+          commander.remainingBillingCycleCostPerUser(account, account.planRenewal) === DollarAmount.ZERO
+          commander.remainingBillingCycleCostPerUser(account, account.planRenewal plusDays 5) === DollarAmount.ZERO
         }
       }
     }
