@@ -14,9 +14,11 @@ import com.keepit.common.time._
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
-import com.keepit.notify.model.event.{ RewardCreditApplied, OrgMemberJoined }
+import com.keepit.notify.model.event.RewardCreditApplied
 import com.keepit.payments.AccountEventAction.RewardCredit
-import com.keepit.slack.{ SlackClient, SlackMessage }
+import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
+import com.keepit.slack.SlackClient
+import com.keepit.slack.models.SlackMessage
 import play.api.Mode
 
 import scala.concurrent.{ ExecutionContext, Future }

@@ -1,5 +1,7 @@
-@(toUserId: Id[User], verifyUrl: Option[String])
+@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerId: Option[Id[Organization]])
 @import com.keepit.common.mail.template.helpers._
+@orgName = @{domainOwnerId.map { orgId => organizationName(orgId) } }
+@orgLink = @{domainOwnerId.map { orgId => organizationLink(orgId, None, "domainOwnerOrg") } }
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
   <tr><td height="18" style="line-height: 1px; font-size: 1px; border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td></tr>
   <tr>
@@ -32,6 +34,9 @@
         <a href='@url' target="_blank" style="font-family:Arial,sans-serif;font-size:20px;line-height:26px;color:#ffffff;font-weight:normal;text-decoration:none;display:block;">
           @url
         </a>
+        @if(orgName.isDefined) {
+        <p>You'll become a member of <a href="@orgLink">@{orgName}'s team</a> upon confirmation.</p>
+        }
       </td>
     </tr>
   }

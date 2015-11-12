@@ -24,6 +24,7 @@ import play.twirl.api.Html
 import securesocial.core.{ Authenticator, SecureSocial }
 import play.api.libs.json.Json
 import com.keepit.common.time._
+import com.keepit.common.net.RichRequestHeader
 
 import KifiSession._
 
@@ -54,24 +55,31 @@ class HomeController @Inject() (
   clock: Clock)
     extends UserActions with ShoeboxServiceController with Logging {
 
-  private def hasSeenInstall(implicit request: UserRequest[_]): Boolean = {
-    // Sign-up flow is critical, read from master
-    db.readOnlyMaster { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
-  }
-
-  private def setHasSeenInstall()(implicit request: UserRequest[_]): Unit = {
-    db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
-  }
-
   def home = MaybeUserAction.async { implicit request =>
+    val special = specialHandler(request)
     request match {
-      case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite())
-      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request)
+      case _: NonUserRequest[_] => Future.successful(MarketingSiteRouter.marketingSite() |> special)
+      case _: UserRequest[_] => kifiSiteRouter.serveWebAppToUser(request).map(special)
     }
   }
 
-  def version = Action {
-    Ok(fortyTwoServices.currentVersion.toString)
+  private def specialHandler(request: MaybeUserRequest[_]): Result => Result = {
+    if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
+      request match {
+        case ur: UserRequest[_] =>
+          db.readWrite(attempts = 3) { implicit session =>
+            userValueRepo.setValue(ur.userId, UserValueName.STORED_CREDIT_CODE, "PRODUCTHUNT")
+          }
+          res => res
+          case nur: NonUserRequest[_] =>
+          // todo: special kcid?
+          // we technically could cookie them here for the intent, but may be kind of weird experience:
+          // res => res.withCookies(Cookie("intent", "applyCredit"), Cookie("creditCode", creditCode.value))
+          res => res
+      }
+    } else {
+      res => res
+    }
   }
 
   def get() = Action { request =>
@@ -96,12 +104,6 @@ class HomeController @Inject() (
 
   def googleWebmasterToolsSiteVerification = Action {
     Ok(Html("google-site-verification: google25ae05cb8bf5b064.html\n")) // verification for eishay@kifi.com
-  }
-
-  def getKeepsCount = Action.async {
-    keepsCommander.getKeepsCountFuture() imap { count =>
-      Ok(count.toString)
-    }
   }
 
   def route(path: String) = Action { implicit request =>
@@ -129,12 +131,6 @@ class HomeController @Inject() (
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream("public/unsupported.html").get)) as HTML
   }
 
-  private def temporaryReportLandingLoad()(implicit request: RequestHeader): Unit = SafeFuture {
-    val context = new HeimdalContextBuilder()
-    context.addRequestInfo(request)
-    heimdalServiceClient.trackEvent(AnonymousEvent(context.build, EventType("loaded_landing_page")))
-  }
-
   def agent = Action { request =>
     val res = request.headers.get("User-Agent").map { ua =>
       val parsed = UserAgent(ua)
@@ -153,14 +149,22 @@ class HomeController @Inject() (
       heimdalServiceClient.trackEvent(UserEvent(request.user.id.get, context.build, EventType("loaded_install_page")))
     }
     setHasSeenInstall()
-    request.headers.get(USER_AGENT).map { agentString =>
+    request.headers.get(USER_AGENT).flatMap { agentString =>
       val agent = UserAgent(agentString)
       log.info(s"trying to log in via $agent. orig string: $agentString")
 
       if (!agent.canRunExtensionIfUpToDate) {
         Some(Redirect("/"))
       } else None
-    }.flatten.getOrElse(Ok(views.html.authMinimal.install()))
+    }.getOrElse(Ok(views.html.authMinimal.install()))
+  }
+
+  private def hasSeenInstall(implicit request: UserRequest[_]): Boolean = {
+    db.readOnlyMaster { implicit s => userValueRepo.getValue(request.userId, UserValues.hasSeenInstall) }
+  }
+
+  private def setHasSeenInstall()(implicit request: UserRequest[_]): Unit = {
+    db.readWrite(attempts = 3) { implicit s => userValueRepo.setValue(request.userId, UserValues.hasSeenInstall.name, true) }
   }
 
   // todo: move this to UserController
@@ -187,6 +191,7 @@ class HomeController @Inject() (
 
   // Do not remove until at least 1 Mar 2014. The extension sends users to this URL after installation.
   // It's okay, comment from 21 Jan 2014. This method is safe here.
+  // Thanks for assuring me, comment from 3 Sept 2014. Definitely safe.
   def gettingStarted = Action { request =>
     MovedPermanently("/")
   }

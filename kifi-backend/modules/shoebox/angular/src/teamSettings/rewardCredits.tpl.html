@@ -21,6 +21,7 @@
           <div class="kf-reward-credits-bust-flex">
             <span kf-structured-text segments="item.description"></span>
           </div>
+          <span class="kf-reward-credits-amount" ng-if="item.credit" ng-bind="item.credit | moneyDelta"></span>
         </li>
       </ul>
       <p class="kf-reward-credits-empty" ng-if="category.items.length === 0">

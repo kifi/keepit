@@ -463,7 +463,6 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           inject[FakeUserActionsHelper].setUser(owner)
           val request = route.getRewards(publicId)
           val response = controller.getRewards(publicId)(request)
-          println(contentAsJson(response))
           status(response) === OK
         }
       }

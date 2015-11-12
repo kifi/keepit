@@ -18,9 +18,11 @@ import scala.concurrent.ExecutionContext
 @Singleton
 class OrganizationController @Inject() (
     orgCommander: OrganizationCommander,
+    orgInfoCommander: OrganizationInfoCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
+    libraryInfoCommander: LibraryInfoCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
@@ -88,18 +90,18 @@ class OrganizationController @Inject() (
   }
 
   def getOrganization(pubId: PublicId[Organization], authTokenOpt: Option[String] = None) = OrganizationAction(pubId, authTokenOpt, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    val organizationView = orgCommander.getOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt)
+    val organizationView = orgInfoCommander.getOrganizationView(request.orgId, request.request.userIdOpt, authTokenOpt)
     Ok(Json.toJson(organizationView))
   }
 
   def getOrganizationLibraries(pubId: PublicId[Organization], offset: Int, limit: Int) = OrganizationAction(pubId, authTokenOpt = None, OrganizationPermission.VIEW_ORGANIZATION) { request =>
-    Ok(Json.obj("libraries" -> Json.toJson(orgCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
+    Ok(Json.obj("libraries" -> Json.toJson(libraryInfoCommander.getOrganizationLibrariesVisibleToUser(request.orgId, request.request.userIdOpt, Offset(offset), Limit(limit)))))
   }
 
   def getOrganizationsForUser(extId: ExternalId[User]) = MaybeUserAction { request =>
     val user = userCommander.getByExternalIds(Seq(extId)).values.head
     val visibleOrgs = orgMembershipCommander.getVisibleOrganizationsForUser(user.id.get, viewerIdOpt = request.userIdOpt)
-    val orgCards = orgCommander.getOrganizationInfos(visibleOrgs.toSet, request.userIdOpt).values.toSeq
+    val orgCards = orgInfoCommander.getOrganizationInfos(visibleOrgs.toSet, request.userIdOpt).values.toSeq
 
     Ok(Json.obj("organizations" -> Json.toJson(orgCards)))
   }

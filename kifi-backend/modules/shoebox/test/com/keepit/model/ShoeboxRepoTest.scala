@@ -3,11 +3,14 @@ package com.keepit.model
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
+import com.keepit.slack.models._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.KeepFactoryHelper.KeepPersister
+
+import scala.util.Success
 
 class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
 
@@ -79,6 +82,54 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           passwordResetRepo.createNewResetToken(Id(1), EmailAddress("leo@kifi.com"))
         }
         passwordReset.id must beSome
+
+        // SlackTeamMembershipRepo
+        val slackTeamMembershipRepo = inject[SlackTeamMembershipRepo]
+        val slackAccount = SlackTeamMembershipInternRequest(
+          user.id.get,
+          SlackUserId("UFAKE"),
+          SlackUsername("@fake"),
+          SlackTeamId("TFAKE"),
+          SlackTeamName("Fake"),
+          SlackAccessToken("fake_token"),
+          Set(SlackAuthScope.SearchRead)
+        )
+        db.readWrite { implicit session =>
+          val Success(saved) = slackTeamMembershipRepo.internBySlackTeamAndUser(slackAccount)
+          slackTeamMembershipRepo.getBySlackTeamAndUser(slackAccount.slackTeamId, slackAccount.slackUserId) must beSome(saved)
+        }
+
+        // SlackIncomingWebhookInfoRepo
+        val slackWebhookRepo = inject[SlackIncomingWebhookInfoRepo]
+        val channel = SlackChannelName("#fake")
+        val channelId = SlackChannelId("CFAKE")
+        val hook = SlackIncomingWebhook(channel, "fake_url", "fake_config_url")
+        db.readWrite { implicit session =>
+          val saved = slackWebhookRepo.save(SlackIncomingWebhookInfo(
+            ownerId = slackAccount.userId,
+            slackUserId = slackAccount.slackUserId,
+            slackTeamId = slackAccount.slackTeamId,
+            slackChannelId = channelId,
+            webhook = hook,
+            lastPostedAt = None
+          ))
+          slackWebhookRepo.get(saved.id.get) === saved
+        }
+
+        // LibraryToSlackChannel
+        val integrationRequest = SlackIntegrationRequest(slackAccount.userId, slackAccount.slackUserId, slackAccount.slackTeamId, channelId, channel, lib.id.get)
+        val libraryToSlackChannelRepo = inject[LibraryToSlackChannelRepo]
+        db.readWrite { implicit session =>
+          val (saved, true) = libraryToSlackChannelRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
+          libraryToSlackChannelRepo.getBySlackTeamChannelAndLibrary(integrationRequest.slackTeamId, integrationRequest.slackChannelId, integrationRequest.libraryId) must beSome(saved)
+        }
+
+        // SlackChannelToLibrary
+        val slackChannelToLibraryRepo = inject[SlackChannelToLibraryRepo]
+        db.readWrite { implicit session =>
+          val (saved, true) = slackChannelToLibraryRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
+          slackChannelToLibraryRepo.getBySlackTeamChannelAndLibrary(integrationRequest.slackTeamId, integrationRequest.slackChannelId, integrationRequest.libraryId) must beSome(saved)
+        }
       }
     }
   }

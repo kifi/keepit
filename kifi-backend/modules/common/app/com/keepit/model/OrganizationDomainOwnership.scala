@@ -20,9 +20,8 @@ case class OrganizationDomainOwnership(
     normalizedHostname: NormalizedHostname) extends ModelWithSeqNumber[OrganizationDomainOwnership] with ModelWithState[OrganizationDomainOwnership] {
 
   override def withId(id: Id[OrganizationDomainOwnership]): OrganizationDomainOwnership = copy(id = Some(id))
-
   override def withUpdateTime(now: DateTime): OrganizationDomainOwnership = copy(updatedAt = now)
-
+  def isActive = this.state == OrganizationDomainOwnershipStates.ACTIVE
   def toIngestableOrganizationDomainOwnership(domainId: Id[Domain]) = IngestableOrganizationDomainOwnership(id.get, createdAt, state, seq, organizationId, domainId)
 
 }

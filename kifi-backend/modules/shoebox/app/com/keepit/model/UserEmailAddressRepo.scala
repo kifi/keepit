@@ -1,5 +1,6 @@
 package com.keepit.model
 
+import com.keepit.classify.NormalizedHostname
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.plugin.{ SequencingActor, SequencingPlugin, SchedulingProperties }
@@ -27,6 +28,7 @@ trait UserEmailAddressRepo extends Repo[UserEmailAddress] with RepoWithDelete[Us
   def getByCode(verificationCode: EmailVerificationCode)(implicit session: RSession): Option[UserEmailAddress]
   def getOwner(address: EmailAddress)(implicit session: RSession): Option[Id[User]]
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress]
+  def getByDomain(domain: NormalizedHostname, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Set[UserEmailAddress]
 }
 
 @Singleton
@@ -44,12 +46,13 @@ class UserEmailAddressRepoImpl @Inject() (
   class UserEmailAddressTable(tag: Tag) extends RepoTable[UserEmailAddress](db, tag, "email_address") with SeqNumberColumn[UserEmailAddress] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[EmailAddress]("address", O.NotNull)
+    def domain = column[NormalizedHostname]("domain", O.NotNull)
     def hash = column[EmailAddressHash]("hash", O.NotNull)
     def primary = column[Option[Boolean]]("primary", O.Nullable)
     def verifiedAt = column[Option[DateTime]]("verified_at", O.Nullable)
     def lastVerificationSent = column[Option[DateTime]]("last_verification_sent", O.Nullable)
     def verificationCode = column[Option[EmailVerificationCode]]("verification_code", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, userId, state, address, hash, primary, verifiedAt, lastVerificationSent,
+    def * = (id.?, createdAt, updatedAt, userId, state, address, domain, hash, primary, verifiedAt, lastVerificationSent,
       verificationCode, seq) <> ((UserEmailAddress.applyFromDbRow _).tupled, UserEmailAddress.unapplyToDbRow _)
   }
 
@@ -116,6 +119,10 @@ class UserEmailAddressRepoImpl @Inject() (
 
   def getUnverified(from: DateTime, to: DateTime)(implicit session: RSession): Seq[UserEmailAddress] = {
     (for (e <- rows if e.state =!= UserEmailAddressStates.INACTIVE && e.verifiedAt.isEmpty && e.createdAt > from && e.createdAt < to) yield e).list
+  }
+
+  def getByDomain(domain: NormalizedHostname, excludeState: Option[State[UserEmailAddress]] = Some(UserEmailAddressStates.INACTIVE))(implicit session: RSession): Set[UserEmailAddress] = {
+    rows.filter(r => r.domain === domain && r.state =!= excludeState.orNull).list.toSet
   }
 }
 

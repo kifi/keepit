@@ -30,7 +30,7 @@ class UserInboxCommanderImpl @Inject() (
     orgInviteRepo: OrganizationInviteRepo,
     basicUserRepo: BasicUserRepo,
     libraryCardCommander: LibraryCardCommander,
-    organizationCommander: OrganizationCommander) extends UserInboxCommander with Logging {
+    organizationInfoCommander: OrganizationInfoCommander) extends UserInboxCommander with Logging {
 
   import UserInboxCommander._
 
@@ -61,7 +61,7 @@ class UserInboxCommanderImpl @Inject() (
       val fromJson = request match {
         case PendingConnectionRequest(friendRequest) => Json.toJson(basicUsersById(friendRequest.senderId))
         case PendingLibraryInvite(_, library) => Json.toJson(libraryCardCommander.createLibraryCardInfo(library, basicUsersById(library.ownerId), Some(userId), false, ProcessedImageSize.Medium.idealSize))
-        case PendingOrganizationInvite(invite) => Json.toJson(organizationCommander.getBasicOrganizationView(invite.organizationId, Some(userId), None))
+        case PendingOrganizationInvite(invite) => Json.toJson(organizationInfoCommander.getBasicOrganizationView(invite.organizationId, Some(userId), None))
       }
       Json.obj("kind" -> request.kind, "sentAt" -> request.sentAt, "from" -> fromJson)
     }

@@ -504,6 +504,7 @@ k.keepBox = k.keepBox || (function () {
     });
 
     var experiments = $box.data('experiments');
+    var organizations = $box.data('organizations');
 
     $view.hoverfu('.kifi-keep-box-new-lib-visibility-item-disabled', function (configureHover) {
       var $this = $(this);
@@ -514,7 +515,7 @@ k.keepBox = k.keepBox || (function () {
       .removeClass('kifi-keep-box-new-lib-visibility-item-no-orgs')
       .removeClass('kifi-keep-box-new-lib-visibility-item-link-to-create-team');
 
-      if ($box.data('organizations').length === 0) {
+      if (organizations.length === 0) {
         $this.addClass('kifi-keep-box-new-lib-visibility-item-linked');
 
         if (~experiments.indexOf('create_team') || ~experiments.indexOf('admin')) {
@@ -534,7 +535,7 @@ k.keepBox = k.keepBox || (function () {
         title = 'Not applicable';
         message = teamName + ' has disabled creation of<br />publicly visible libraries.';
       } else if ($this.find('[disabled][value="organization"]').length === 1) {
-        if (~experiments.indexOf('create_team') || ~experiments.indexOf('admin')) {
+        if (organizations.length <= 1 && (~experiments.indexOf('create_team') || ~experiments.indexOf('admin'))) {
           $this
           .addClass('kifi-keep-box-new-lib-visibility-item-linked')
           .addClass('kifi-keep-box-new-lib-visibility-item-link-to-create-team');

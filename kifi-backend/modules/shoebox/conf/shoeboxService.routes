@@ -14,6 +14,7 @@ GET     /contacts/refresh           @com.keepit.controllers.core.OAuth2Controlle
 GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
+GET     /oauth2/slack               @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: String, state: String)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
@@ -85,8 +86,9 @@ GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitl
 GET     /twitter/request            @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlist()
 GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlist()
 
-
 GET     /i/:id                      @com.keepit.controllers.website.InviteController.userInvite(id: ExternalId[User])
+GET     /join/:creditCodeStr        @com.keepit.controllers.website.InviteController.creditInvite(creditCodeStr: String)
+GET     /k/cached                   @com.keepit.controllers.website.KeepCacheController.getCachedKeep(id: ExternalId[Keep])
 
 ##########################################
 # Extension API
@@ -498,6 +500,8 @@ POST    /site/user/:id/include      @com.keepit.controllers.website.UserControll
 GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 
+POST    /site/user/hideOrgDomain   @com.keepit.controllers.website.UserController.hideOrganizationDomain(orgId: PublicId[Organization])
+
 GET     /site/user/friends          @com.keepit.controllers.website.UserController.friends(page: Int ?= 0, pageSize: Int ?= 1000)
 GET     /site/user/friends/recommended   @com.keepit.controllers.website.PeopleRecommendationController.getFriendRecommendations(offset: Int ?= 0, limit: Int ?= 5)
 GET     /site/user/friends/recommended/cards @com.keepit.controllers.website.UserProfileController.getFriendRecommendations(n: Int ?= 12, ids: Int ?= 12)
@@ -519,7 +523,6 @@ POST    /site/user/pic/upload       @com.keepit.controllers.website.UserControll
 POST    /site/user/pic              @com.keepit.controllers.website.UserController.setUserPicture()
 POST    /site/user/resend-verification @com.keepit.controllers.website.UserController.resendVerificationEmail(email: EmailAddress)
 
-GET     /site/keeps/global/count    @com.keepit.controllers.website.HomeController.getKeepsCount
 POST    /site/sms                   @com.keepit.controllers.website.HomeController.sendSmsToGetKifi()
 
 POST          /site/organizations/create                        @com.keepit.controllers.website.OrganizationController.createOrganization()
@@ -560,8 +563,6 @@ GET           /site/admin/billing/featureSettings               @com.keepit.cont
 POST          /site/admin/billing/featureSettings               @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(pubId: PublicId[Organization])
 POST          /site/admin/billing/plan                          @com.keepit.controllers.website.PaymentsController.updatePlan(pubId: PublicId[Organization], planPubId: PublicId[com.keepit.payments.PaidPlan])
 GET           /site/admin/billing/events                        @com.keepit.controllers.website.PaymentsController.getEvents(pubId: PublicId[Organization], limit: Int, fromId: Option[String] ?= None, inclusive: Boolean ?= false)
-
-GET       /site/slackAuth @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: String, state: String)
 ##########################################
 # Email-Link API
 ##########################################
@@ -704,6 +705,7 @@ POST    /admin/user/:id/deactivate  @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id/mixpanel/reset    @com.keepit.controllers.admin.AdminUserController.resetMixpanelProfile(id: Id[User])
 POST    /admin/user/:id/uservalue   @com.keepit.controllers.admin.AdminUserController.userValue(id: Id[User])
 POST    /admin/user/:id/username   @com.keepit.controllers.admin.AdminUserController.setUsername(id: Id[User])
+GET     /admin/user/:id/clientFlush @com.keepit.controllers.admin.AdminUserController.flushClients(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
 GET    /admin/users/bumpSeq          @com.keepit.controllers.admin.AdminUserController.bumpUserSeq()
 GET     /admin/users/bumpConnSeq     @com.keepit.controllers.admin.AdminUserController.bumpUpSeqNumForConnections()
@@ -744,6 +746,7 @@ POST    /admin/organizations/create                          @com.keepit.control
 POST    /admin/organizations/addOrCreateByUser/:userId       @com.keepit.controllers.admin.AdminOrganizationController.addCandidateOrCreateByName(userId: Id[User])
 POST    /admin/organizations/importOrgsFromLinkedIn          @com.keepit.controllers.admin.AdminOrganizationController.importOrgsFromLinkedIn()
 POST    /admin/organizations/applyDefaultSettingsToOrgConfigs           @com.keepit.controllers.admin.AdminOrganizationController.applyDefaultSettingsToOrgConfigs()
+POST    /admin/organizations/populateEmailAddressDomains     @com.keepit.controllers.admin.AdminOrganizationController.populateEmailAddressDomains()
 
 
 GET     /admin/topKeepersNotInOrg   @com.keepit.controllers.admin.AdminUserController.topKeepersNotInOrg
@@ -920,8 +923,6 @@ GET     /admin/healthcheck/resetErrorCount     @com.keepit.controllers.admin.Adm
 ##########################################
 #INTERNAL ROUTES/Shoebox
 ##########################################
-
-GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
 
 GET     /internal/shoebox/auth/getUserIdentity                         @com.keepit.controllers.internal.ShoeboxController.getUserIdentity(providerId: String, id: String)
 GET     /internal/shoebox/auth/getUserIdentityByUserId                 @com.keepit.controllers.internal.ShoeboxController.getUserIdentityByUserId(userId: Id[User])
