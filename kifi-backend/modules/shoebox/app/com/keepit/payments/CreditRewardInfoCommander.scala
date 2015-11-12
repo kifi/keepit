@@ -122,16 +122,16 @@ class CreditRewardInfoCommanderImpl @Inject() (
         if (achieved) DescriptionElements("Created a team. Welcome to Kifi!")
         else DescriptionElements("Create a team.")
       case Reward(kind, _, code: CreditCode) if kind == RewardKind.Coupon =>
-        if (achieved) DescriptionElements("Applied the coupon code", code)
-        else DescriptionElements("Apply the coupon code", code)
+        if (achieved) DescriptionElements("Applied the coupon code", code, ".")
+        else DescriptionElements("Apply the coupon code", code, ".")
       case Reward(kind, _, code: CreditCode) if kind == RewardKind.ReferralApplied =>
         val orgDescription = for {
           codeInfo <- creditCodeInfoRepo.getByCode(code)
           referrer <- codeInfo.referrer
           org <- referrer.organizationId
         } yield getOrg(org)
-        if (achieved) DescriptionElements("Redeemed the referral code", code --> Hover("from", orgDescription))
-        else DescriptionElements("Redeem the referral code", code --> Hover("from", orgDescription))
+        if (achieved) DescriptionElements("Redeemed the referral code", code --> Hover("from", orgDescription), ".")
+        else DescriptionElements("Redeem the referral code", code --> Hover("from", orgDescription), ".")
     }
   }
 }

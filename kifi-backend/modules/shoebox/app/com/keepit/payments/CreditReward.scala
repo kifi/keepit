@@ -104,7 +104,8 @@ object RewardKind extends Enumerator[RewardKind] {
     )
   }
 
-  case object Coupon extends RewardKind("coupon") with WithEmptyInfo {
+  case object Coupon extends RewardKind("coupon") with WithIndependentInfo[CreditCode] {
+    lazy val infoFormat = CreditCode.format
     case object Used extends Status("used")
     protected lazy val allStatus: Set[S] = Set(Used)
     lazy val applicable: Used.type = Used
