@@ -35,7 +35,7 @@ import play.api.mvc.DiscardingCookie
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.{ MaybeUserRequest, UserRequest }
+import com.keepit.common.controller.{NonUserRequest, MaybeUserRequest, UserRequest}
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -510,39 +510,56 @@ class AuthHelper @Inject() (
   def doVerifyEmail(code: EmailVerificationCode)(implicit request: MaybeUserRequest[_]): Result = {
     db.readOnlyMaster { implicit session => userEmailAddressRepo.getByCode(code) } match {
       case Some(email) =>
-        val isVerifiedForTheFirstTime = userEmailAddressCommander.verifyEmailAddress(code)
-        db.readOnlyMaster { implicit s =>
-          if (userRepo.get(email.userId).state == UserStates.PENDING)
-            Redirect(s"/?m=1")
-          if (isVerifiedForTheFirstTime) {
-            if (request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == email.userId)) {
-              // first time being used, not logged in OR logged in as correct user
-              authenticateUser(email.userId,
-                error => throw error,
-                authenticator => {
-                  val resp = if (request.userAgentOpt.exists(_.isMobile)) {
-                    Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
-                  } else if (kifiInstallationRepo.all(email.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) {
-                    // todo: factor out
-                    // user has no installations
-                    Redirect("/install")
-                  } else {
-                    Redirect(s"/?m=1")
-                  }
-                  resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                    .withCookies(authenticator.toCookie)
-                }
-              )
-            } else if (request.userIdOpt.isDefined && request.userIdOpt.get.id == email.userId) {
-              Redirect(s"/?m=1")
-            }
-            case (address, _) =>
-              val user = userRepo.get(address.userId)
-              Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
-          }
-        }
+        doVerifyEmail(email)
       case None =>
         BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
+    }
+  }
+
+  private def verifyEmail(email: UserEmailAddress)(implicit request: MaybeUserRequest[_]): Result = request match {
+    case userRequest: UserRequest => verifyEmailForUser(email)
+    case nonUserRequest: NonUserRequest => verifyEmailForNonUser(email)
+  }
+
+  private def verifyEmailForUser(email: UserEmailAddress)(implicit request: UserRequest[_]): Result = {
+  }
+
+  private def verifyEmailForNonUser(email: UserEmailAddress)(implicit request: NonUserRequest[_]): Result = request.userAgentOpt match {
+    case Some(agent) if agent.isMobile => //let it pass ...
+      userEmailAddressCommander.verifyEmailAddress(email)
+    case _ =>
+      Redirect("/login").withSession(request.session + (SecureSocial.OriginalUrlKey -> request.path))
+  }
+
+  private def doVerifyEmail(email: UserEmailAddress)(implicit request: MaybeUserRequest[_]): Result = {
+    val isVerifiedForTheFirstTime = userEmailAddressCommander.verifyEmailAddress(email)
+    db.readOnlyMaster { implicit s =>
+      if (userRepo.get(email.userId).state == UserStates.PENDING)
+        Redirect(s"/?m=1")
+      if (isVerifiedForTheFirstTime && (request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == email.userId))) {
+        // first time being used, not logged in OR logged in as correct user
+        authenticateUser(email.userId,
+          error => throw error,
+          authenticator => {
+            val resp = if (request.userAgentOpt.exists(_.isMobile)) {
+              Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
+            } else if (kifiInstallationRepo.all(email.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) {
+              // todo: factor out
+              // user has no installations
+              Redirect("/install")
+            } else {
+              Redirect(s"/?m=1")
+            }
+            resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+              .withCookies(authenticator.toCookie)
+          }
+        )
+      } else if (!isVerifiedForTheFirstTime && request.userIdOpt.isDefined && request.userIdOpt.get.id == email.userId) {
+        Redirect(s"/?m=1")
+      } else {
+        val user = userRepo.get(email.userId)
+        Ok(views.html.website.verifyEmailThanks(email.address.address, user.firstName, secureSocialClientIds))
+      }
     }
   }
 
