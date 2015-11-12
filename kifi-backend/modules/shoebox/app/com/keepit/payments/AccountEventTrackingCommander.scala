@@ -10,7 +10,11 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.net.HttpClient
+import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.{ RewardCreditApplied, OrgMemberJoined }
 import com.keepit.payments.AccountEventAction.RewardCredit
 import com.keepit.slack.{ SlackClient, SlackMessage }
 import play.api.Mode
@@ -41,6 +45,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     activityCommander: ActivityLogCommander,
     creditRewardRepo: CreditRewardRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
+    eliza: ElizaServiceClient,
     creditRewardInfoCommander: CreditRewardInfoCommander,
     implicit val defaultContext: ExecutionContext) extends AccountEventTrackingCommander {
 
@@ -85,22 +91,26 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def sendNotificationToMembers(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[User[Id]]] = {
+  private def sendNotificationToMembers(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[Id[User]]] = {
     checkingParameters(event) {
       event.action match {
         case RewardCredit(id) =>
-          val description = db.readOnlyMaster { implicit s =>
-            creditRewardInfoCommander.getDescription(creditRewardRepo.get(id))
+          val (description, members) = db.readOnlyMaster { implicit s =>
+            val description = creditRewardInfoCommander.getDescription(creditRewardRepo.get(id))
+            val members = orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId)
+            (description, members)
           }
-          lazy val msg = {
-            val info = activityCommander.buildSimpleEventInfo(event)
-            val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${SlackMessage.escapeSegment(org.name)}>"
-            s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
+          val sent = members.toSeq.map { member =>
+            eliza.sendNotificationEvent(
+              RewardCreditApplied(
+                recipient = Recipient(member),
+                time = currentDateTime,
+                description = DescriptionElements.formatPlain(description),
+                org.id.get)).map(_ => member)
           }
-          Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
-            reportToSlack(msg, channel).imap(_ => channel)
-          })
-        case None => Future.successful(Seq.empty)
+          Future.sequence(sent)
+        case _ =>
+          Future.successful(Seq.empty)
       }
     }
   }

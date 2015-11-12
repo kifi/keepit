@@ -41,6 +41,7 @@ class NotificationJsonFormat @Inject() (
 
   private def resolveImage(image: NotificationImage): String = image match {
     case UserImage(user) => elizaS3ExternalIdImageStore.avatarUrlByUser(user)
+    case OrganizationImage(org) => org.avatarPath.getUrl
     case PublicImage(url) => url
   }
 

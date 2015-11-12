@@ -1,6 +1,6 @@
 package com.keepit.notify.info
 
-import com.keepit.model.{ User, NotificationCategory }
+import com.keepit.model.{ BasicOrganization, User, NotificationCategory }
 import com.keepit.social.BasicUser
 import play.api.libs.json.JsObject
 import play.api.libs.json._
@@ -55,5 +55,6 @@ case class LegacyNotificationInfo(json: JsValue) extends NotificationInfo
 sealed trait NotificationImage
 
 case class UserImage(user: BasicUser) extends NotificationImage
+case class OrganizationImage(organization: BasicOrganization) extends NotificationImage
 
 case class PublicImage(url: String) extends NotificationImage
