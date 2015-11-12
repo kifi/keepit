@@ -54,7 +54,9 @@ class PaymentsController @Inject() (
         if (!planCommander.getActivePaymentMethods(request.orgId).flatMap(_.id).contains(cardId)) Future.successful(BadRequest(Json.obj("error" -> "invalid_card")))
         else {
           val attribution = ActionAttribution(request.request.userIdOpt, None)
-          planCommander.changePlan(request.orgId, planId, attribution) match {
+          val (currentPlanId, _) = planCommander.getCurrentAndAvailablePlans(request.orgId)
+          val updatedPlan = if (planId == currentPlanId) Success(()) else planCommander.changePlan(request.orgId, planId, attribution).map(_ => ())
+          updatedPlan match {
             case Success(_) =>
               val futureCharge = {
                 if (planCommander.getDefaultPaymentMethod(request.orgId).flatMap(_.id).contains(cardId)) Future.successful(None)
