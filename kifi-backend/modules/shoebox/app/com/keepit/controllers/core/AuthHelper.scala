@@ -63,7 +63,7 @@ class AuthHelper @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     userCredRepo: UserCredRepo,
     socialRepo: SocialUserInfoRepo,
-    emailAddressRepo: UserEmailAddressRepo,
+    userEmailAddressRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,
     passwordResetRepo: PasswordResetRepo,
     kifiInstallationRepo: KifiInstallationRepo, // todo: factor out
@@ -245,7 +245,7 @@ class AuthHelper @Inject() (
       case JoinTwitterWaitlist => // Nothing for now
       case _ => // Anything BUT twitter waitlist
         db.readWrite(attempts = 3) { implicit session =>
-          emailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
+          userEmailAddressRepo.getByAddressAndUser(user.id.get, emailAddress) foreach { emailAddr =>
             userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
           }
         }
@@ -331,7 +331,7 @@ class AuthHelper @Inject() (
   private val socialFinalizeAccountForm = Form[SocialFinalizeInfo](
     mapping(
       "email" -> EmailAddress.formMapping.verifying("known_email_address", email => db.readOnlyMaster { implicit s =>
-        val existing = emailAddressRepo.getByAddress(email) // todo(Léo / Andrew): only enforce this for verified emails?
+        val existing = userEmailAddressRepo.getByAddress(email) // todo(Léo / Andrew): only enforce this for verified emails?
         if (existing.nonEmpty) {
           log.warn("[social-finalize] Can't finalize because email is known: " + existing)
         }
@@ -437,7 +437,7 @@ class AuthHelper @Inject() (
           db.readWrite(attempts = 3) { implicit session =>
             libraryInviteRepo.getByLibraryIdAndAuthToken(libId, authToken).exists { libraryInvite =>
               libraryInvite.emailAddress.exists { sentTo =>
-                (sentTo == email) && emailAddressRepo.getByAddressAndUser(userId, email).exists { emailRecord =>
+                (sentTo == email) && userEmailAddressRepo.getByAddressAndUser(userId, email).exists { emailRecord =>
                   userEmailAddressCommander.saveAsVerified(emailRecord)
                   true
                 }
@@ -451,8 +451,8 @@ class AuthHelper @Inject() (
 
   private def getResetEmailAddresses(email: EmailAddress): Option[(Id[User], Option[EmailAddress])] = {
     db.readOnlyMaster { implicit s =>
-      emailAddressRepo.getByAddress(email).map(_.userId) map { userId =>
-        (userId, Try(emailAddressRepo.getByUser(userId)).toOption)
+      userEmailAddressRepo.getByAddress(email).map(_.userId) map { userId =>
+        (userId, Try(userEmailAddressRepo.getByUser(userId)).toOption)
       }
     }
   }
@@ -501,42 +501,48 @@ class AuthHelper @Inject() (
 
   private def authenticateUser[T](userId: Id[User], onError: Error => T, onSuccess: Authenticator => T)(implicit session: RSession) = {
     val user = userRepo.get(userId)
-    val emailAddress = emailAddressRepo.getByUser(userId)
+    val emailAddress = userEmailAddressRepo.getByUser(userId)
     val userCred = userCredRepo.findByUserIdOpt(userId)
     val identity = UserIdentity(user, emailAddress, userCred)
     Authenticator.create(identity).fold(onError, onSuccess)
   }
 
   def doVerifyEmail(code: EmailVerificationCode)(implicit request: MaybeUserRequest[_]): Result = {
-    db.readWrite(attempts = 3) { implicit s =>
-      userEmailAddressCommander.verifyEmailAddress(code) map {
-        case (address, _) if userRepo.get(address.userId).state == UserStates.PENDING =>
-          Redirect(s"/?m=1")
-        case (address, true) if request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId) =>
-          // first time being used, not logged in OR logged in as correct user
-          authenticateUser(address.userId,
-            error => throw error,
-            authenticator => {
-              val resp = if (request.userAgentOpt.exists(_.isMobile)) {
-                Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
-              } else if (kifiInstallationRepo.all(address.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) { // todo: factor out
-                // user has no installations
-                Redirect("/install")
-              } else {
-                Redirect(s"/?m=1")
-              }
-              resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-                .withCookies(authenticator.toCookie)
+    db.readOnlyMaster { implicit session => userEmailAddressRepo.getByCode(code) } match {
+      case Some(email) =>
+        val isVerifiedForTheFirstTime = userEmailAddressCommander.verifyEmailAddress(code)
+        db.readOnlyMaster { implicit s =>
+          if (userRepo.get(email.userId).state == UserStates.PENDING)
+            Redirect(s"/?m=1")
+          if (isVerifiedForTheFirstTime) {
+            if (request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == email.userId)) {
+              // first time being used, not logged in OR logged in as correct user
+              authenticateUser(email.userId,
+                error => throw error,
+                authenticator => {
+                  val resp = if (request.userAgentOpt.exists(_.isMobile)) {
+                    Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
+                  } else if (kifiInstallationRepo.all(email.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) {
+                    // todo: factor out
+                    // user has no installations
+                    Redirect("/install")
+                  } else {
+                    Redirect(s"/?m=1")
+                  }
+                  resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+                    .withCookies(authenticator.toCookie)
+                }
+              )
+            } else if (request.userIdOpt.isDefined && request.userIdOpt.get.id == email.userId) {
+              Redirect(s"/?m=1")
             }
-          )
-        case (address, false) if request.userIdOpt.isDefined && request.userIdOpt.get.id == address.userId =>
-          Redirect(s"/?m=1")
-        case (address, _) =>
-          val user = userRepo.get(address.userId)
-          Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
-      }
-    }.getOrElse {
-      BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
+            case (address, _) =>
+              val user = userRepo.get(address.userId)
+              Ok(views.html.website.verifyEmailThanks(address.address.address, user.firstName, secureSocialClientIds))
+          }
+        }
+      case None =>
+        BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
     }
   }
 
@@ -584,7 +590,7 @@ class AuthHelper @Inject() (
           val filledUser = SecureSocialAdaptor.toSocialUser(profileInfo, AuthenticationMethod.OAuth2)
           val longTermTokenInfoF = provider.exchangeLongTermToken(oauth2InfoOrig) recover {
             case t: Throwable =>
-              airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+              airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during token exchange; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
               OAuth2TokenInfo.fromOAuth2Info(oauth2InfoOrig)
           }
           longTermTokenInfoF map { oauth2InfoNew =>
@@ -592,7 +598,7 @@ class AuthHelper @Inject() (
           }
         } recover {
           case t: Throwable =>
-            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth2InfoOrig}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth2InfoOrig; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -609,7 +615,7 @@ class AuthHelper @Inject() (
           authCommander.signupWithTrustedSocialUser(providerName, filledUser.copy(oAuth1Info = Some(oauth1Info)), signUpUrl)
         } recover {
           case t: Throwable =>
-            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            airbrake.notify(s"[accessTokenSignup($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -625,7 +631,7 @@ class AuthHelper @Inject() (
           authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
         } recover {
           case t: Throwable =>
-            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oAuth2Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            log.error(s"[accessTokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oAuth2Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
     }
@@ -641,7 +647,7 @@ class AuthHelper @Inject() (
           authCommander.loginWithTrustedSocialIdentity(socialUser.identityId)
         } recover {
           case t: Throwable =>
-            log.error(s"[doOAuth1TokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=${oauth1Info}; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
+            log.error(s"[doOAuth1TokenLogin($providerName)] Caught Exception($t) during getUserProfileInfo; token=$oauth1Info; Cause:${t.getCause}; StackTrace: ${t.getStackTrace.mkString("", "\n", "\n")}")
             BadRequest(Json.obj("error" -> "invalid_token"))
         }
 
