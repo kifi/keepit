@@ -26,6 +26,8 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
+  def getByLibraryFromIdAndTime(libraryId: Id[Library], fromOpt: Option[(Id[KeepToLibrary], DateTime)])(implicit session: RSession): Seq[KeepToLibrary]
+
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
   def deactivate(model: KeepToLibrary)(implicit session: RWSession): Unit
@@ -70,6 +72,8 @@ class KeepToLibraryRepoImpl @Inject() (
 
   def table(tag: Tag) = new KeepToLibraryTable(tag)
   initTable()
+
+  private def activeRows = rows.filter(_.state === KeepToLibraryStates.ACTIVE)
 
   private def getByKeepIdsHelper(keepIds: Set[Id[Keep]], excludeStateOpt: Option[State[KeepToLibrary]])(implicit session: RSession) = {
     for (row <- rows if row.keepId.inSet(keepIds) && row.state =!= excludeStateOpt.orNull) yield row
@@ -135,6 +139,15 @@ class KeepToLibraryRepoImpl @Inject() (
   }
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
     getByUserIdAndLibraryIdHelper(userId, libraryId, excludeStateOpt).list
+  }
+
+  def getByLibraryFromIdAndTime(libraryId: Id[Library], fromOpt: Option[(Id[KeepToLibrary], DateTime)])(implicit session: RSession): Seq[KeepToLibrary] = {
+    val inLibrary = activeRows.filter(row => row.libraryId === libraryId)
+    val filtered = fromOpt match {
+      case None => inLibrary
+      case Some((ktlId, fromDate)) => inLibrary.filter(ktl => ktl.addedAt > fromDate || (ktl.addedAt === fromDate && ktl.id > ktlId))
+    }
+    filtered.sortBy(_.addedAt asc).list
   }
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary] = {
