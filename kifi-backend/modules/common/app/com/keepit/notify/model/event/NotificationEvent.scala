@@ -324,6 +324,28 @@ object OrgMemberJoined extends NonGroupingNotificationKind[OrgMemberJoined] {
     )(OrgMemberJoined.apply, unlift(OrgMemberJoined.unapply))
 }
 
+case class RewardCreditApplied(
+  recipient: Recipient,
+  time: DateTime,
+  description: String,
+  orgId: Id[Organization]) extends NotificationEvent {
+
+  type N = RewardCreditApplied
+  val kind = RewardCreditApplied
+}
+
+object RewardCreditApplied extends NonGroupingNotificationKind[RewardCreditApplied] {
+
+  override val name: String = "reward_credit_applied"
+
+  override implicit val format = (
+    (__ \ "recipient").format[Recipient] and
+      (__ \ "time").format[DateTime] and
+      (__ \ "description").format[String] and
+      (__ \ "orgId").format[Id[Organization]]
+    )(RewardCreditApplied.apply, unlift(RewardCreditApplied.unapply))
+}
+
 case class OwnedLibraryNewCollabInvite(
   recipient: Recipient,
   time: DateTime,

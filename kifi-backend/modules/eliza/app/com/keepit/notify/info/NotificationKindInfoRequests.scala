@@ -40,6 +40,7 @@ class NotificationKindInfoRequests @Inject()() {
       case OrgNewInvite => genericInfoFn(infoForOrgNewInvite)
       case OrgInviteAccepted => genericInfoFn(infoForOrgInviteAccepted)
       case OrgMemberJoined => genericInfoFn(infoForOrgMemberJoined)
+      case RewardCreditApplied => genericInfoFn(infoForRewardCreditApplied)
       case OwnedLibraryNewCollabInvite => genericInfoFn(infoForOwnedLibraryNewCollabInvite)
       case OwnedLibraryNewFollowInvite => genericInfoFn(infoForOwnedLibraryNewFollowInvite)
       case OwnedLibraryNewFollower => genericInfoFn(infoForOwnedLibraryNewFollower)
@@ -307,6 +308,26 @@ class NotificationKindInfoRequests @Inject()() {
           "organization" -> Json.toJson(acceptedOrg)
         )),
         category = NotificationCategory.User.ORGANIZATION_JOINED
+      )
+    }
+  }
+
+  def infoForRewardCreditApplied(events: Set[RewardCreditApplied]): RequestingNotificationInfos[StandardNotificationInfo] = {
+    val event = requireOne(events)
+    RequestingNotificationInfos(Requests(
+      RequestOrganization(event.orgId)
+    )) { batched =>
+      val org = RequestOrganization(event.orgId).lookup(batched)
+      StandardNotificationInfo(
+        url = Path(org.handle.value + "/settings/credits#rewards").absolute,
+        image = OrganizationImage(org),
+        title = s"Reward credit applied to ${org.abbreviatedName}",
+        body = event.description,
+        linkText = "View details",
+        extraJson = Some(Json.obj(
+          "organization" -> Json.toJson(org)
+        )),
+        category = NotificationCategory.User.REWARD_CREDIT_APPLIED
       )
     }
   }

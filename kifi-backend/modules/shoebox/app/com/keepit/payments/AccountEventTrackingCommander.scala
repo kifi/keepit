@@ -10,6 +10,12 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.net.HttpClient
+import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
+import com.keepit.model._
+import com.keepit.notify.model.Recipient
+import com.keepit.notify.model.event.RewardCreditApplied
+import com.keepit.payments.AccountEventAction.RewardCredit
 import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
 import com.keepit.slack.SlackClient
 import com.keepit.slack.models.SlackMessage
@@ -40,6 +46,10 @@ class AccountEventTrackingCommanderImpl @Inject() (
     mode: play.api.Mode.Mode,
     airbrake: AirbrakeNotifier,
     activityCommander: ActivityLogCommander,
+    creditRewardRepo: CreditRewardRepo,
+    orgMembershipRepo: OrganizationMembershipRepo,
+    eliza: ElizaServiceClient,
+    creditRewardInfoCommander: CreditRewardInfoCommander,
     implicit val defaultContext: ExecutionContext) extends AccountEventTrackingCommander {
 
   def track(event: AccountEvent)(implicit session: RWSession): AccountEvent = {
@@ -60,7 +70,13 @@ class AccountEventTrackingCommanderImpl @Inject() (
     implicit val org = o
     implicit val paymentMethod = m
 
-    Future.sequence(Seq(notifyOfTransaction(event).imap(_ => ()), notifyOfFailedCharge(event).imap(_ => ()), notifyOfError(event).imap(_ => ()), reportToSlack(event).imap(_ => ()))).imap(_ => ())
+    Future.sequence(Seq(
+      notifyOfTransaction(event).imap(_ => ()),
+      notifyOfFailedCharge(event).imap(_ => ()),
+      notifyOfError(event).imap(_ => ()),
+      reportToSlack(event).imap(_ => ()),
+      sendNotificationToMembers(event).imap(_ => ())
+    )).imap(_ => ())
   } else Future.successful(())
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
@@ -74,6 +90,30 @@ class AccountEventTrackingCommanderImpl @Inject() (
         channel = Some(channel)
       )
       slackClient.sendToSlack(slackChannelUrl, fullMsg).imap(_ => ())
+    }
+  }
+
+  private def sendNotificationToMembers(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[Id[User]]] = {
+    checkingParameters(event) {
+      event.action match {
+        case RewardCredit(id) =>
+          val (description, members) = db.readOnlyMaster { implicit s =>
+            val description = creditRewardInfoCommander.getDescription(creditRewardRepo.get(id))
+            val members = orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId)
+            (description, members)
+          }
+          val sent = members.toSeq.map { member =>
+            eliza.sendNotificationEvent(
+              RewardCreditApplied(
+                recipient = Recipient(member),
+                time = currentDateTime,
+                description = DescriptionElements.formatPlain(description),
+                org.id.get)).map(_ => member)
+          }
+          Future.sequence(sent)
+        case _ =>
+          Future.successful(Seq.empty)
+      }
     }
   }
 

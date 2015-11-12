@@ -45,6 +45,7 @@ object NotificationCategory {
 
     val ORGANIZATION_INVITATION = NotificationCategory("organization_invitation")
     val ORGANIZATION_JOINED = NotificationCategory("organization_joined")
+    val REWARD_CREDIT_APPLIED = NotificationCategory("reward_credit_applied")
     val CREATE_TEAM = NotificationCategory("create_team")
 
     val DIGEST = NotificationCategory("digest")
