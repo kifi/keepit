@@ -8,17 +8,16 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.mvc.Results.Status
 
-case class SlackUserId(value: String)
-case class SlackUsername(value: String)
+@json case class SlackUserId(value: String)
+@json case class SlackUsername(value: String)
 
-case class SlackTeamId(value: String)
-case class SlackTeamName(value: String)
+@json case class SlackTeamId(value: String)
+@json case class SlackTeamName(value: String)
 
-case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
-case class SlackChannelName(value: String) // broad sense, can be channel, group or DM
+@json case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
+@json case class SlackChannelName(value: String) // broad sense, can be channel, group or DM
 
-@json
-case class SlackAccessToken(token: String)
+@json case class SlackAccessToken(token: String)
 
 case class SlackIncomingWebhook(
   channelName: SlackChannelName,
