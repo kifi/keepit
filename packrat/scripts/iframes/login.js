@@ -38,59 +38,9 @@ document.addEventListener('keydown', function (e) {
     FB.init({appId: appIds.facebook, status: true, version: 'v2.0'});
   };
 
-  window.onLoadLinkedInApi = function () {
-    IN.Event.on(IN, 'auth', function (o) {
-      IN.API.Profile('me').fields(['id','picture-url;secure=true']).result(function (o) {
-        var r = o && o.values && o.values[0];
-        if (r.pictureUrl) {
-          pics.show('linkedin', r.pictureUrl);
-        } else {
-          pics.hide('linkedin');
-        }
-        var cookieName = 'linkedin_oauth_' + appIds.linkedin;
-        var cookie = readCookie(cookieName);
-        if (cookie) {
-          on.creds('linkedin', creds.linkedin = JSON.parse(cookie));
-        }
-        clearCookie(cookieName);
-        clearCookie(cookieName + '_crc');
-      });
-    });
-
-    function readCookie(name) {
-      var v = new RegExp('(?:^|; )' + name + '=([^;]*)').exec(document.cookie);
-      return v && decodeURIComponent(v[1]);
-    }
-
-    function clearCookie(name) {
-      document.cookie = name + '=; expires=' + new Date(0).toUTCString();
-    }
-  };
-
-  var pics = {
-    show: function (nw, url) {
-      var img = new Image;
-      img.onload = function () {
-        var parEl = document.querySelector('.' + nw + '>.form-network-icon');
-        parEl.innerHTML = '';
-        parEl.appendChild(this);
-      };
-      img.className = 'form-network-pic';
-      img.src = url;
-    },
-    hide: function (nw) {
-      document.querySelector('.' + nw + '>.form-network-icon').innerHTML = '';
-    }
-  };
-
   var s = document.createElement('SCRIPT');
   s.src = '//connect.facebook.net/en_US/sdk.js';
   s.id = 'facebook-jssdk';
-  document.head.appendChild(s);
-
-  s = document.createElement('SCRIPT');
-  s.src = '//platform.linkedin.com/in.js';
-  s.textContent = ['api_key:' + appIds.linkedin, 'onLoad:onLoadLinkedInApi', 'authorize:true', 'credentials_cookie:true'].join('\n');
   document.head.appendChild(s);
 
   var proceed = withJQuery.bind(null, creds, pics, on);
@@ -310,7 +260,9 @@ document.addEventListener('keydown', function (e) {
             return $('<li class=reset-password-address>').text(addr);
           }));
           $dialog.addClass('reset-password-sent');
-          setTimeout($.fn.focus.bind($dialog.find('.reset-password-cancel')), 100);
+          setTimeout(function () {
+            $dialog.find('.reset-password-cancel').focus();
+          }, 100);
         })
         .fail(function (xhr) {
           var o = xhr.responseJSON;

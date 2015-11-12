@@ -148,14 +148,18 @@ k.pane = k.pane || function () {  // idempotent for Chrome
             onPaneShown();
           } else {
             ms = Math.min(200, (ms || 5) * 2);
-            setTimeout(f.bind(null, ms), ms);
+            setTimeout(function () {
+              f(ms);
+            }, ms);
           }
         });
       }
       $('html').attr('kifi-with-pane', '');
       var $box = $pane.find(".kifi-pane-box");
       populatePane($box, name, locator);
-      setTimeout(attachPaneBindings);
+      setTimeout(function () {
+        attachPaneBindings();
+      });
     }
   }
 
@@ -231,9 +235,11 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         $(this).siblings('.kifi-checked').removeClass('kifi-checked');
         var min = $(this).data('min');
         api.port.emit('silence', min);
-        setTimeout(api.require.bind(api, 'scripts/silenced.js', function () {
-          showSilenced(min);
-        }), 150);
+        setTimeout(function () {
+          api.require('scripts/silenced.js', function () {
+            showSilenced(min);
+          });
+        }, 150);
       })
       .on("mouseup", ".kifi-hide-on-site", function (e) {
         if (e.originalEvent.isTrusted === false) return;
@@ -394,7 +400,9 @@ k.pane = k.pane || function () {  // idempotent for Chrome
   function notifyPageOfResize(preventUnload) {
     if (preventUnload) {
       window.addEventListener('beforeunload', beforeUnload, true);
-      setTimeout(window.removeEventListener.bind(window, 'beforeunload', beforeUnload, true), 50);
+      setTimeout(function () {
+        window.removeEventListener('beforeunload', beforeUnload, true);
+      }, 50);
     }
     window.dispatchEvent(new Event('resize'));
   }

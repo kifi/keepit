@@ -69,7 +69,9 @@ k.panes.thread = k.panes.thread || function () {
         $redirected.fadeOut(800, $.fn.remove.bind($redirected));
       });
       if ($redirected.length) {
-        setTimeout($.fn.triggerHandler.bind($redirected, 'click'), 5000);
+        setTimeout(function () {
+          $redirected.triggerHandler('click');
+        }, 5000);
       }
     }
   };

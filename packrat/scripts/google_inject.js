@@ -52,7 +52,9 @@ if (searchUrlRe.test(document.URL)) !function () {
   });
   function onInput() {
     clearTimeout(keyTimer);
-    keyTimer = setTimeout(search, 250);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
+    keyTimer = setTimeout(function () {
+      search();
+    }, 250);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
   }
   function onSubmit() {
     clearTimeout(keyTimer);
@@ -272,7 +274,12 @@ if (searchUrlRe.test(document.URL)) !function () {
         time.kifi.shown = now;
       }
       if (document.readyState !== 'loading') {  // avoid searching for input value if not yet updated to URL hash
-        $(setTimeout.bind(null, search));  // prediction may have changed
+        $(function () {
+          // prediction may have changed
+          setTimeout(function () {
+            search();
+          }, 0);
+        });
       }
     }
     if (!$q.length || !document.contains($q[0])) {  // for #lst-ib (e.g. google.co.il)
@@ -298,7 +305,9 @@ if (searchUrlRe.test(document.URL)) !function () {
           $res.find('.kifi-res-why:not(.kifi-fitted)').each(makeWhyFit);
         }
         if (!boundResHandlers) {
-          setTimeout(bindResHandlers);
+          setTimeout(function () {
+            bindResHandlers()
+          });
           boundResHandlers = true;
         }
         return 1; // just attached
@@ -308,9 +317,19 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   if (!api.mutationsFirePromptly) {
-    setTimeout(function tryAttach() {
-      attachKifiRes() || setTimeout(tryAttach, 1);
-    }, 1);
+    var retryMs = 1;
+    function tryAttach() {
+      var success = attachKifiRes();
+      if (!success) {
+        setTimeout(function () {
+          tryAttach();
+        }, retryMs);
+      }
+    });
+
+    setTimeout(function () {
+      tryAttach();
+    }, retryMs);
   }
 
   // TODO: also detect result selection via keyboard
@@ -507,7 +526,9 @@ if (searchUrlRe.test(document.URL)) !function () {
       }
       function hide() {
         if (this && this.classList && this.classList.contains('kifi-checkable')) {
-          setTimeout(hide, 150);
+          setTimeout(function () {
+            hide();
+          }, 150);
           return;
         }
         document.removeEventListener('mousedown', docMouseDown, true);
@@ -619,7 +640,9 @@ if (searchUrlRe.test(document.URL)) !function () {
             $card.find('.kifi-lc-footer').toggleClass('kifi-mine', lib.mine).toggleClass('kifi-not-mine', !lib.mine);
           } else if ((retryMs || (retryMs = 100)) < 2000) {
             log('[detailLibrary] will retry after %ims', retryMs);
-            setTimeout(detail.bind(null, lib, retryMs * 2), retryMs);
+            setTimeout(function () {
+              detail(lib, retryMs * 2);
+            }, retryMs);
           } else {
             log('[detailLibrary] will not retry');
           }
@@ -1010,14 +1033,22 @@ if (searchUrlRe.test(document.URL)) !function () {
   function progress(parent, cssClass, finished) {
     var $el = $('<div>').addClass(cssClass).appendTo(parent);
     var frac = 0, ms = 10;
-    var timeout = setTimeout(function update() {
+
+    var timeout;
+    function update() {
       var left = .9 - frac;
       frac += .06 * left;
       $el[0].style.width = Math.min(frac * 100, 100) + '%';
       if (left > .0001) {
-        timeout = setTimeout(update, ms);
+        timeout = setTimeout(function () {
+          update()
+        }, ms);
       }
+    }
+    timeout = setTimeout(function () {
+      update();
     }, ms);
+
     return function (success) {
       if (success) {
         log('[progress:done]');

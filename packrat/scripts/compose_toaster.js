@@ -255,7 +255,9 @@ k.toaster = k.toaster || (function () {
 
     $sent
     .removeClass('kifi-hidden')
-    .data('timeout', setTimeout(hideSent, 3600));
+    .data('timeout', setTimeout(function () {
+      hideSent()
+    }, 3600));
 
     $(k.tile).on('kifi:keeper:add', hideSent);
   }
@@ -273,13 +275,20 @@ k.toaster = k.toaster || (function () {
   function progress(parent, promise) {
     var $el = $('<div class="kifi-toast-progress"/>').appendTo(parent);
     var frac = 0, ms = 10, deferred = Q.defer();
-    var timeout = setTimeout(function update() {
+
+    var timeout;
+    function update() {
       var left = .9 - frac;
       frac += .06 * left;
       $el[0].style.width = Math.min(frac * 100, 100) + '%';
       if (left > .0001) {
-        timeout = setTimeout(update, ms);
+        timeout = setTimeout(function () {
+          update();
+        }, ms);
       }
+    }
+    timeout = setTimeout(function () {
+      update();
     }, ms);
 
     promise.done(function (val) {

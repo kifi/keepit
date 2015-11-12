@@ -313,7 +313,9 @@ k.compose = k.compose || (function() {
         .on('transitionend', function () {
           var $this = $(this);
           if ($this.hasClass('kifi-showing')) {
-            setTimeout($.fn.removeClass.bind($this, 'kifi-showing'), 1800);
+            setTimeout(function () {
+              $this.removeClass('kifi-showing');
+            }, 1800);
           } else {
             $this.remove();
           }
