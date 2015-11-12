@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, UserActionsHelper }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.model._
@@ -40,6 +41,13 @@ class PaymentsController @Inject() (
     planCommander.getAccountState(request.orgId).map { response => Ok(Json.toJson(response)) }
   }
 
+  def previewAccountState(pubId: PublicId[Organization], newPlanId: PublicId[PaidPlan], newCardId: PublicId[PaymentMethod]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
+    (PaidPlan.decodePublicId(newPlanId), PaymentMethod.decodePublicId(newCardId)) match {
+      case (Success(planId), Success(cardId)) => planCommander.previewAccountState(request.orgId, planId, cardId).map { response => Ok(Json.toJson(response)) }
+      case _ => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
+    }
+  }
+
   def getAvailablePlans(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { implicit request =>
     val (currentPlanId, availablePlans) = planCommander.getCurrentAndAvailablePlans(request.orgId)
     val sortedAvailablePlansByName = availablePlans.map(_.asInfo).groupBy(_.name).map { case (name, plans) => name -> plans.toSeq.sortBy(_.cycle.months) }
@@ -47,7 +55,55 @@ class PaymentsController @Inject() (
     Ok(Json.toJson(response))
   }
 
-  def getCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
+  def addCreditCard(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
+    (request.body \ "token").asOpt[String] match {
+      case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
+      case Some(token) =>
+        stripeClient.getPermanentToken(token, s"Card for Org ${request.orgId} added by user ${request.request.userId} with admin ${request.request.adminUserId}").flatMap { realToken =>
+          stripeClient.getCardInfo(realToken).map { cardInfo =>
+            val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
+            val pm = planCommander.addPaymentMethod(request.orgId, realToken, attribution, cardInfo.lastFour)
+            val paymentMethodId = PaymentMethod.publicId(pm.id.get)
+            Ok(Json.obj(
+              "cardId" -> paymentMethodId,
+              "card" -> cardInfo
+            ))
+          }
+        }
+    }
+  }
+
+  def setDefaultCreditCard(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
+    (request.body \ "cardId").asOpt[PublicId[PaymentMethod]] match {
+      case None => Future.successful(BadRequest(Json.obj("error" -> "default_card_missing")))
+      case Some(pubCardId) => PaymentMethod.decodePublicId(pubCardId) match {
+        case Failure(_) => Future.successful(OrganizationFail.INVALID_PUBLIC_ID.asErrorResponse)
+        case Success(cardId) =>
+          planCommander.getPaymentMethod(cardId) match {
+            case card if !card.isActive => Future.successful(BadRequest(Json.obj("error" -> "invalid_card")))
+            case activeCard =>
+              stripeClient.getCardInfo(activeCard.stripeToken).flatMap { cardInfo =>
+                val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
+                planCommander.changeDefaultPaymentMethod(request.orgId, activeCard.id.get, attribution, cardInfo.lastFour) match {
+                  case Success((_, lastPaymentFailed)) =>
+                    val futureCharge = if (lastPaymentFailed) paymentCommander.processAccount(request.orgId).imap { case (_, event) => event.paymentCharge } else Future.successful(None)
+                    futureCharge.imap { charge =>
+                      implicit val chargeFormat = DollarAmount.formatAsCents
+                      Ok(Json.obj(
+                        "card" -> cardInfo,
+                        "charge" -> charge
+                      ))
+                    }
+                  case Failure(InvalidChange(msg)) => Future.successful(BadRequest(Json.obj("error" -> msg)))
+                  case Failure(ex) => Future.failed(ex)
+                }
+              }
+          }
+      }
+    }
+  }
+
+  def getDefaultCreditCard(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async { request =>
     planCommander.getActivePaymentMethods(request.orgId).find(_.default).map { pm =>
       stripeClient.getCardInfo(pm.stripeToken).map { cardInfo =>
         Ok(Json.toJson(cardInfo))
@@ -55,6 +111,7 @@ class PaymentsController @Inject() (
     }.getOrElse(Future.successful(BadRequest(Json.obj("error" -> "no_default_payment_method"))))
   }
 
+  // deprecated
   def setCreditCardToken(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN).async(parse.tolerantJson) { request =>
     (request.body \ "token").asOpt[String] match {
       case None => Future.successful(BadRequest(Json.obj("error" -> "token_missing")))
@@ -119,7 +176,7 @@ class PaymentsController @Inject() (
   def updatePlan(pubId: PublicId[Organization], planPubId: PublicId[PaidPlan]) = OrganizationUserAction(pubId, OrganizationPermission.MANAGE_PLAN) { request =>
     PaidPlan.decodePublicId(planPubId) match {
       case Success(planId) =>
-        if (planCommander.getDefaultPaymentMethod(request.orgId).isDefined) {
+        if (planCommander.getActivePaymentMethods(request.orgId).nonEmpty) {
           val attribution = ActionAttribution(user = Some(request.request.userId), admin = request.request.adminUserId)
           planCommander.changePlan(request.orgId, planId, attribution) match {
             case Success(_) => Ok(Json.toJson(planCommander.currentPlan(request.orgId).asInfo))

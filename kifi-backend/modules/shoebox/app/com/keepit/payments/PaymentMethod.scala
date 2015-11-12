@@ -30,6 +30,7 @@ case class PaymentMethod(
   def withId(id: Id[PaymentMethod]): PaymentMethod = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): PaymentMethod = this.copy(updatedAt = now)
   def withState(state: State[PaymentMethod]): PaymentMethod = this.copy(state = state)
+  def isActive: Boolean = state == PaymentMethodStates.ACTIVE
 }
 
 object PaymentMethod extends ModelWithPublicIdCompanion[PaymentMethod] {

@@ -1,6 +1,6 @@
 package com.keepit.payments
 
-import com.keepit.common.crypto.PublicId
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model._
 import com.kifi.macros.json
@@ -9,6 +9,7 @@ import play.api.libs.json._
 import play.api.mvc.Results.Status
 import play.api.http.Status._
 import play.api.libs.functional.syntax._
+import com.keepit.common.time._
 
 import scala.util.control.NoStackTrace
 
@@ -22,22 +23,39 @@ case class CardInfo(lastFour: String, brand: String)
 
 case class AccountStateResponse(
   users: Int,
-  billingDate: DateTime,
-  balance: DollarAmount,
-  charge: DollarAmount,
   plan: PaidPlanInfo,
+  planRenewal: DateTime,
+  planRenewalCost: DollarAmount,
+  balance: DollarAmount,
   card: Option[CardInfo],
   payment: PaymentStatus)
 object AccountStateResponse {
-  implicit val writes = (
+  val writes = (
     (__ \ 'users).write[Int] and
-    (__ \ 'billingDate).write[DateTime] and
-    (__ \ 'balance).write(DollarAmount.formatAsCents) and
-    (__ \ 'charge).write(DollarAmount.formatAsCents) and
     (__ \ 'plan).write[PaidPlanInfo] and
+    (__ \ 'planRenewal).write[DateTime] and
+    (__ \ 'planRenewalCost).write(DollarAmount.formatAsCents) and
+    (__ \ 'balance).write(DollarAmount.formatAsCents) and
     (__ \ 'card).writeNullable[CardInfo] and
     (__ \ 'payment).write[PaymentStatus]
   )(unlift(AccountStateResponse.unapply))
+
+  implicit val deprecatedWrites: Writes[AccountStateResponse] = Writes { state =>
+    writes.writes(state) ++ Json.obj("charge" -> DollarAmount.formatAsCents.writes(state.planRenewalCost), ("billingDate" -> state.planRenewal))
+  }
+
+  def apply(account: PaidAccount, plan: PaidPlan, cardInfo: Option[CardInfo])(implicit config: PublicIdConfiguration): AccountStateResponse = {
+    require(account.planId == plan.id.get, s"Plan ${plan.id.get} doesn't match account ${account.id.get}'s plan ${account.planId}")
+    AccountStateResponse(
+      users = account.activeUsers,
+      plan.asInfo,
+      planRenewal = account.planRenewal,
+      planRenewalCost = plan.pricePerCyclePerUser * account.activeUsers,
+      balance = account.credit,
+      cardInfo,
+      account.paymentStatus
+    )
+  }
 }
 
 case class AvailablePlansResponse(
