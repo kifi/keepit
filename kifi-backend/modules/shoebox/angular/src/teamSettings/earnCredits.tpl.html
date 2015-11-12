@@ -6,16 +6,20 @@
     </div>
     <div class="kf-main-pane-earn-credits">
       <p>
-        Share Kifi with other teams and they'll receive a $100 credit.
-        We'll credit your team with $100 for the referral when they upgrade
-        after joining with your referral code.
+        Share Kifi with other teams and they’ll receive a $100 credit.
+        We’ll credit your team with $100 for the referral when they upgrade
+        after joining with your referral code or link.
       </p>
       <div class="kf-main-pane-earn-credits-inputs">
-        <input class="kf-textbox kf-textbox-auto kf-earn-credits-referral" readonly clipboard text="referralCode" ng-model="referralCode" ng-click="showCopied()">
-        <button clipboard text="referralCode" ng-click="showCopied()" class="kf-button kf-button-large kf-button-cta-green">Copy Code</button>
-        <span class="kf-referral-copy-msg" ng-if="copied">Copied!</span>
+        <input type="text" class="kf-textbox kf-earn-credits-referral kf-earn-credits-referral-link" clipboard readonly text="referralUrl" ng-model="referralUrl" ng-click="showCopied('link')">
+        <button clipboard text="referralUrl" ng-click="showCopied('link')" class="kf-button kf-button-large kf-button-cta-green kf-referral-link-btn"><div ng-if="copiedLink">Copied!</div><div ng-if="!copiedLink">Copy Link</div></button>
+        <button clipboard text="referralCode" ng-click="showCopied('code')" class="kf-button kf-button-large kf-referral-link-btn"><div ng-if="copiedCode">Copied!</div><div ng-if="!copiedCode">Copy Code</div></button>
       </div>
-    </div>
+      <div class="kf-main-pane-earn-credits-social">
+        <a class="kf-button kf-button-large kf-earn-credits-share-twitter" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet">Share on Twitter</a>
+        <button class="kf-button kf-button-large kf-earn-credits-share-fb" ng-click="shareFB($event)">Share on Facebook</button>
+        <a class="kf-button kf-button-large kf-earn-credits-share-email" ng-href="mailto:?subject=Invitation%20to%20join%20Kifi&amp;body=I%20created%20a%20team%20on%20Kifi%20to%20collect%20and%20organize%20my%20company%E2%80%99s%20web%20content.%20If%20you%20use%20this%20link%20to%20sign%20up,%20you%20can%20create%20a%20team%20for%20free%20and%20receive%20a%20$100%20credit%20that%20can%20be%20used%20if%20you%20choose%20to%20upgrade%20the%20team.%20{{referralUrlEncoded}}">Share with Email</a>
+      </div>
   </section>
   <div kf-redeem-credits profile="profile" standalone="true" on-apply="trackApplyCodeClick" autofocus="true"></div>
   <div ng-if="isKifiAdmin && hasPermission(ORG_PERMISSION.MANAGE_PLAN)" kf-reward-credits profile="profile"></div>
