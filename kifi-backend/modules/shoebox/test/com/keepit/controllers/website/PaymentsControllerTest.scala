@@ -246,7 +246,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val result1 = contentAsJson(response1)
           (result1 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === initialBalance
 
-          orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get, adminIdOpt = None))
+          orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get))
 
           val addedBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
           addedBalance must beLessThan(initialBalance) // simple sanity check, actual logic should be tested in the commander
@@ -337,7 +337,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           // Populate the activity log with a ton of dumb events
           val n = 5
           (1 to n).foreach { _ =>
-            orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get, adminIdOpt = None))
+            orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get))
             orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(org.id.get, owner.id.get, rando.id.get))
           }
 

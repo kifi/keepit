@@ -110,11 +110,11 @@ class OrganizationMembershipCommanderTest extends TestKitSupport with Specificat
         }
         val orgMembershipCommander = inject[OrganizationMembershipCommander]
 
-        val ownerAddUser = OrganizationMembershipAddRequest(org.id.get, owner.id.get, user1.id.get, OrganizationRole.MEMBER, None)
+        val ownerAddUser = OrganizationMembershipAddRequest(org.id.get, owner.id.get, user1.id.get, OrganizationRole.MEMBER)
         orgMembershipCommander.addMembership(ownerAddUser).isRight === true
 
         // can't add someone who is already a member
-        val memberAddMember = OrganizationMembershipAddRequest(org.id.get, user1.id.get, owner.id.get, OrganizationRole.MEMBER, None)
+        val memberAddMember = OrganizationMembershipAddRequest(org.id.get, user1.id.get, owner.id.get, OrganizationRole.MEMBER)
         orgMembershipCommander.addMembership(memberAddMember) === Left(OrganizationFail.ALREADY_A_MEMBER)
       }
     }
