@@ -331,6 +331,8 @@ angular.module('kifi')
       return message;
     }
 
+    // Doesn't change the select box values, it just tells the form
+    // to say it's pristine again while keeping the same values.
     function resetForm() {
       $scope.planSelectsForm.$setPristine();
       $scope.plan.newCard = null;
@@ -363,6 +365,7 @@ angular.module('kifi')
     $timeout(function () {
       if ($state.params.upgrade) {
         $scope.changePlanToStandard();
+        resetForm();
       }
 
       $scope.$emit('trackOrgProfileEvent', 'view', {
