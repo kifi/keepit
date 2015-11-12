@@ -78,6 +78,8 @@ object SlackChannelToLibraryFactory {
   }
   case class PartialSlackChannelToLibrary(stl: SlackChannelToLibrary) {
     def withMembership(stm: SlackTeamMembership) = this.copy(stl = stl.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
+    def withLibrary(lib: Library) = this.copy(stl = stl.copy(libraryId = lib.id.get))
+    def withChannel(cn: String) = this.copy(stl = stl.copy(slackChannelName = SlackChannelName(cn)))
   }
   def stls(count: Int) = List.fill(count)(stl())
 }
@@ -98,6 +100,7 @@ object LibraryToSlackChannelFactory {
   case class PartialLibraryToSlackChannel(lts: LibraryToSlackChannel) {
     def withMembership(stm: SlackTeamMembership) = this.copy(lts = lts.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withLibrary(lib: Library) = this.copy(lts = lts.copy(libraryId = lib.id.get))
+    def withChannel(cn: String) = this.copy(lts = lts.copy(slackChannelName = SlackChannelName(cn)))
   }
 
   def ltss(count: Int) = List.fill(count)(lts())
