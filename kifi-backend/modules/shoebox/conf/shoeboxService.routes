@@ -725,7 +725,6 @@ GET     /admin/organization/:id                              @com.keepit.control
 GET     /admin/organization/id/:id                           @com.keepit.controllers.admin.AdminOrganizationController.organizationViewBy(id: Id[Organization], numMemberRecos: Int ?= 60)
 POST    /admin/organization/:id/setName                      @com.keepit.controllers.admin.AdminOrganizationController.setName(id: Id[Organization])
 POST    /admin/organization/:id/setHandle                    @com.keepit.controllers.admin.AdminOrganizationController.setHandle(id: Id[Organization])
-POST    /admin/organization/updateShadowOrgHandles           @com.keepit.controllers.admin.AdminOrganizationController.updateShadowOrgHandles()
 POST    /admin/organization/:id/setDescription               @com.keepit.controllers.admin.AdminOrganizationController.setDescription(id: Id[Organization])
 POST    /admin/organization/:id/addCandidate                 @com.keepit.controllers.admin.AdminOrganizationController.addCandidate(id: Id[Organization])
 POST    /admin/organization/:id/removeCandidate              @com.keepit.controllers.admin.AdminOrganizationController.removeCandidate(id: Id[Organization])
