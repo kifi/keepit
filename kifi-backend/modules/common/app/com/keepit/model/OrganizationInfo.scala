@@ -63,15 +63,17 @@ object OrganizationViewerInfo {
 
 case class OrganizationInviteInfo(
   inviter: BasicUser,
+  email: Option[EmailAddress],
   lastInvited: DateTime)
 object OrganizationInviteInfo {
   implicit val internalFormat: Format[OrganizationInviteInfo] = (
     (__ \ 'inviter).format[BasicUser] and
+    (__ \ 'email).formatNullable[EmailAddress] and
     (__ \ 'lastInvited).format[DateTime]
   )(OrganizationInviteInfo.apply, unlift(OrganizationInviteInfo.unapply))
 
   def fromInvite(invite: OrganizationInvite, inviter: BasicUser): OrganizationInviteInfo = {
-    OrganizationInviteInfo(inviter, invite.createdAt)
+    OrganizationInviteInfo(inviter, invite.emailAddress, invite.createdAt)
   }
 }
 
