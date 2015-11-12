@@ -44,6 +44,7 @@ object SlackTeamMembershipStates extends States[SlackTeamMembership]
 
 @ImplementedBy(classOf[SlackTeamMembershipRepoImpl])
 trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
+  def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership]
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
   def internBySlackTeamAndUser(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): Try[SlackTeamMembership]
 }
@@ -123,6 +124,9 @@ class SlackTeamMembershipRepoImpl @Inject() (
   override def deleteCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = {}
   override def invalidateCache(membership: SlackTeamMembership)(implicit session: RSession): Unit = {}
 
+  def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership] = {
+    activeRows.filter(row => row.slackTeamId === slackTeamId).list.toSet
+  }
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership] = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackUserId === slackUserId && row.state =!= excludeState.orNull).firstOption
   }

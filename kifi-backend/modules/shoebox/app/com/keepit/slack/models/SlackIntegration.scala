@@ -2,14 +2,22 @@ package com.keepit.slack.models
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DataBaseComponent
+import com.keepit.common.json.EnumFormat
 import com.keepit.common.reflection.Enumerator
 import com.keepit.model.{ Library, User }
+import play.api.libs.json.{ Writes, JsString, Format }
 
 abstract class SlackIntegrationStatus(val status: String)
 object SlackIntegrationStatus extends Enumerator[SlackIntegrationStatus] {
   case object On extends SlackIntegrationStatus("on")
   case object Off extends SlackIntegrationStatus("off")
   def all = _all
+  def get(str: String) = all.find(_.status == str)
+
+  implicit val format: Format[SlackIntegrationStatus] = Format(
+    EnumFormat.reads(get),
+    Writes { o => JsString(o.status) }
+  )
 
   def columnType(db: DataBaseComponent) = {
     import db.Driver.simple._
