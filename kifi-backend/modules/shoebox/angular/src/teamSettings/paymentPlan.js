@@ -301,6 +301,7 @@ angular.module('kifi')
         savePromise = billingService
         .setDefaultCard($scope.profile.id, $scope.plan.newCard.id)
         .then(function () {
+          $scope.card = $scope.plan.newCard; // prevent flash while we load the new plan
           messageTicker({
             text: 'You successfully changed your card.',
             type: 'green'
