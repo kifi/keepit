@@ -4,11 +4,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-<<<<<<< HEAD
-import com.keepit.common.db.{ ExternalId }
-=======
-import com.keepit.common.db.{ ExternalId, Id }
->>>>>>> fb6d2ae1a64a76e2b32170ac7f9e9aa1f65f777a
+import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -20,21 +16,13 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-<<<<<<< HEAD
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
-=======
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication, ShoeboxTestInjector }
->>>>>>> fb6d2ae1a64a76e2b32170ac7f9e9aa1f65f777a
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import com.keepit.model.UserFactoryHelper._
-<<<<<<< HEAD
-import com.keepit.model.OrganizationFactoryHelper._
-=======
->>>>>>> fb6d2ae1a64a76e2b32170ac7f9e9aa1f65f777a
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
