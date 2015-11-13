@@ -145,8 +145,9 @@ class AuthControllerTest extends Specification with ShoeboxApplicationInjector {
         header("Location", result) === Some("/install")
         status(result) === SEE_OTHER
         db.readOnlyMaster { implicit s =>
-          val address2 = inject[UserEmailAddressRepo].getAllByUser(user.id.get).head
-          address2.verified === true
+          val addresses = inject[UserEmailAddressRepo].getAllByUser(user.id.get)
+          addresses.size === 1
+          addresses.head.verified === true
         }
       }
     }
