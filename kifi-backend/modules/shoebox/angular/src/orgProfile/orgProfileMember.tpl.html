@@ -18,28 +18,28 @@
   </div>
   <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
     <div class="kf-org-member-lower-left">
-      <button ng-if="shouldShowMakeOwner()" class="kf-button kf-button-small" ng-click="triggerMakeOwner(member)">
+      <button ng-if="shouldShowMakeOwner()" class="kf-button" ng-click="triggerMakeOwner(member)">
         <span class="kf-org-member-action-title">Make owner</span>
       </button>
-      <button ng-if="shouldShowDemote()" class="kf-button kf-button-small" ng-click="triggerDemote(member)">
+      <button ng-if="shouldShowDemote()" class="kf-button" ng-click="triggerDemote(member)">
         <span class="kf-org-member-action-title">Remove admin privileges</span>
       </button>
-      <button ng-if="shouldShowPromote()" class="kf-button kf-button-small" ng-click="triggerPromote(member)">
+      <button ng-if="shouldShowPromote()" class="kf-button" ng-click="triggerPromote(member)">
         <span class="kf-org-member-action-title">Make admin</span>
       </button>
-      <button ng-if="shouldShowInvite() && !getResentInvite()" class="kf-button kf-button-small" ng-click="triggerInvite(member)">
+      <button ng-if="shouldShowInvite() && !getResentInvite()" class="kf-button" ng-click="triggerInvite(member)">
         <span class="kf-org-member-action-title">Resend invite</span>
       </button>
       <span ng-if="shouldShowInvite() && getResentInvite()" class="kf-org-member-invite-sent">Sent!</span>
     </div>
     <div class="kf-org-member-lower-right">
-      <button ng-if="shouldShowAcceptInvite()" class="kf-button kf-button-small" ng-click="triggerAcceptInvite(member)">
+      <button ng-if="shouldShowAcceptInvite()" class="kf-button" ng-click="triggerAcceptInvite(member)">
         <span class="kf-org-member-action-title">Accept invite</span>
       </button>
-      <button ng-if="shouldShowInvite()" class="kf-button kf-button-small" ng-click="triggerCancelInvite(member)">
+      <button ng-if="shouldShowInvite()" class="kf-button" ng-click="triggerCancelInvite(member)">
         <span class="kf-org-member-action-title">Cancel invite</span>
       </button>
-      <button ng-if="shouldShowRemove()" class="kf-button kf-button-small" ng-click="triggerRemove(member)">
+      <button ng-if="shouldShowRemove()" class="kf-button" ng-click="triggerRemove(member)">
         <span class="kf-org-member-action-title" ng-bind="(isMe() ? 'Leave team' : 'Remove member')"></span>
       </button>
     </div>
