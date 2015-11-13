@@ -46,7 +46,7 @@ object EmbedlyMedia {
     (__ \ 'url).readNullable[String]
   )(EmbedlyMedia.apply _)
 
-  implicit def toRoverMedia(media: EmbedlyMedia): RoverMedia = {
+  def toRoverMedia(media: EmbedlyMedia): RoverMedia = {
     RoverMedia(
       media.mediaType,
       media.html,
