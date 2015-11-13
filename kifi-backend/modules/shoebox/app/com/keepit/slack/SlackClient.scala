@@ -83,11 +83,11 @@ object SlackAPI {
     val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
     val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
     val REDIRECT_URI = Param("redirect_uri", KifiSlackApp.KIFI_SLACK_REDIRECT_URI)
-    implicit def fromCode(code: SlackAuthorizationCode) = Param("code", code.code)
-    implicit def formState(state: SlackState) = Param("state", state.state)
-    implicit def fromScope(scopes: Set[SlackAuthScope]) = Param("scope", scopes.map(_.value).mkString(","))
-    implicit def fromToken(token: SlackAccessToken) = Param("token", token.token)
-    implicit def fromSearchParam(searchParam: SlackSearchParams) = Param(searchParam.name, searchParam.value)
+    implicit def fromCode(code: SlackAuthorizationCode): Param = Param("code", code.code)
+    implicit def formState(state: SlackState): Param = Param("state", state.state)
+    implicit def fromScope(scopes: Set[SlackAuthScope]): Param = Param("scope", scopes.map(_.value).mkString(","))
+    implicit def fromToken(token: SlackAccessToken): Param = Param("token", token.token)
+    implicit def fromSearchParam(searchParam: SlackSearchParams): Param = Param(searchParam.name, searchParam.value)
   }
 
   import SlackParams._
