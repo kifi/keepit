@@ -131,7 +131,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def status = column[SlackIntegrationStatus]("status", O.NotNull)
     def lastProcessedAt = column[Option[DateTime]]("last_processed_at", O.Nullable)
-    def lastProcessedKeep = column[Option[Id[KeepToLibrary]]]("last_ktl_id", O.Nullable)
+    def lastProcessedKeep = column[Option[Id[KeepToLibrary]]]("last_processed_ktl", O.Nullable)
     def startedProcessingAt = column[Option[DateTime]]("started_processing_at", O.Nullable)
     def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, lastProcessedAt, lastProcessedKeep, startedProcessingAt) <> ((ltsFromDbRow _).tupled, ltsToDbRow _)
 
