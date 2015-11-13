@@ -5,6 +5,7 @@ import com.keepit.commanders.PathCommander
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.model._
@@ -35,7 +36,7 @@ class LibraryToSlackChannelProcessorImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   implicit val executionContext: ExecutionContext)
-    extends LibraryToSlackChannelProcessor {
+    extends LibraryToSlackChannelProcessor with Logging {
 
   private val gracePeriod = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
   private val MAX_KEEPS_TO_SEND = 4
@@ -62,27 +63,30 @@ class LibraryToSlackChannelProcessorImpl @Inject() (
       val integrations = libToChannelRepo.getForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now.minus(gracePeriod))
       (lib, integrations)
     }
+    log.info(s"[LTSC] Processing library $libId, pushing to ${integrationsToProcess.length} integrations")
     integrationsToProcess.foreach { lts =>
-      val (webhook, msgs, lastKtlOpt) = db.readOnlyReplica { implicit s =>
+      val (webhook, msg, lastKtlOpt) = db.readOnlyReplica { implicit s =>
         val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
 
         val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
         val keepsById = keepRepo.getByIds(ktls.map(_.keepId).toSet)
-        val messages = if (ktls.length > MAX_KEEPS_TO_SEND) {
-          Seq(DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "has", ktls.length, "new keeps."))
+        log.info(s"[LTSC] For integration ${lts.id.get}, need to push info about ${ktls.length} keeps")
+        val message = if (ktls.length > MAX_KEEPS_TO_SEND) {
+          DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "has", ktls.length, "new keeps.")
         } else {
-          ktls.flatMap(ktl => keepsById.get(ktl.keepId)).map(k => describeKeep(k, lib))
+          val msgs = ktls.flatMap(ktl => keepsById.get(ktl.keepId)).map(k => describeKeep(k, lib))
+          DescriptionElements.unlines(msgs)
         }
-        (webhook, messages, ktls.lastOption)
+        (webhook, message, ktls.lastOption)
       }
       webhook.foreach { wh =>
-        Future.sequence {
-          msgs.map(msg => slackClient.sendToSlack(wh.webhook.url, SlackMessage(DescriptionElements.formatForSlack(msg), Some(lts.slackChannelName.value))))
-        }.onSuccess {
-          case _ => db.readWrite { implicit s =>
-            libToChannelRepo.finishProcessing(lts.withLastProcessedAt(clock.now).withLastProcessedKeep(lastKtlOpt.map(_.id.get)))
+        slackClient.sendToSlack(wh.webhook.url, SlackMessage(DescriptionElements.formatForSlack(msg), Some(lts.slackChannelName.value)))
+          .onComplete { res =>
+            db.readWrite { implicit s =>
+              libToChannelRepo.finishProcessing(lts.withLastProcessedAt(clock.now).withLastProcessedKeep(lastKtlOpt.map(_.id.get)))
+            }
+            if (res.isFailure) log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get}")
           }
-        }
       }
     }
   }
