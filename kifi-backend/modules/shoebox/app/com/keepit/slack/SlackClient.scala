@@ -1,8 +1,5 @@
 package com.keepit.slack
 
-import java.net.URLEncoder
-
-import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient }
 import com.keepit.slack.models._
@@ -11,17 +8,18 @@ import play.api.http.Status
 import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Try }
+
+object KifiSlackApp {
+  val SLACK_CLIENT_ID = "2348051170.12884760868"
+  val SLACK_CLIENT_SECRET = "3cfeb40c29a06272bbb159fc1d9d4fb3"
+  val KIFI_SLACK_REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
+}
 
 trait SlackClient {
   def sendToSlack(url: String, msg: SlackMessage): Future[Unit]
-
-  // def makeState(state: JsObject): String
-  def decodeState(state: String): Try[JsObject]
-  def generateAuthorizationRequest(scopes: Set[SlackAuthScope], state: JsObject): String
-
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
+  def searchMessages(token: SlackAccessToken, query: SlackSearchQuery, optional: SlackSearchParams*): Future[SlackSearchResponse]
 }
 
 class SlackClientImpl(
@@ -29,38 +27,7 @@ class SlackClientImpl(
   mode: Mode,
   implicit val ec: ExecutionContext)
     extends SlackClient with Logging {
-  // Kifi Slack app properties
-  private val SLACK_CLIENT_ID = "2348051170.12884760868"
-  private val SLACK_CLIENT_SECRET = "3cfeb40c29a06272bbb159fc1d9d4fb3"
-  private val KIFI_SLACK_REDIRECT_URI = URLEncoder.encode("https://www.kifi.com/oauth2/slack", "ascii")
 
-  object Route {
-    val OAuthAuthorize = "https://slack.com/oauth/authorize"
-    val OAuthAccess = "https://slack.com/api/oauth.access"
-    val Identify = "https://slack.com/api/auth.test"
-    val Search = "https://slack.com/api/search.messages"
-  }
-  private object Param {
-    val CLIENT_ID = "client_id" -> SLACK_CLIENT_ID
-    val CLIENT_SECRET = "client_secret" -> SLACK_CLIENT_SECRET
-    val REDIRECT_URI = "redirect_uri" -> KIFI_SLACK_REDIRECT_URI
-    def code(code: SlackAuthorizationCode) = "code" -> code.code
-    def state(state: JsObject) = "state" -> makeState(state)
-    def scope(scopes: Set[SlackAuthScope]) = "scope" -> scopes.map(_.value).mkString(",")
-    def token(token: SlackAccessToken) = "token" -> token.token
-    def query(query: SlackSearchQuery) = "query" -> query.queryString
-  }
-
-  def makeState(state: JsObject): String = {
-    CryptoSupport.encodeBase64(Json.stringify(state))
-  }
-  def decodeState(state: String): Try[JsObject] = {
-    Try(Json.parse(CryptoSupport.decodeBase64(state)).as[JsObject]).orElse(Failure(SlackAPIFailure.StateError(state)))
-  }
-
-  private def mkUrl(base: String, params: (String, String)*): String = {
-    base + "?" + params.map { case (k, v) => s"$k=$v" }.mkString("&")
-  }
   def sendToSlack(url: String, msg: SlackMessage): Future[Unit] = {
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
@@ -70,17 +37,8 @@ class SlackClientImpl(
     }
   }
 
-  def generateAuthorizationRequest(scopes: Set[SlackAuthScope], state: JsObject): String = {
-    mkUrl(Route.OAuthAuthorize,
-      Param.CLIENT_ID,
-      Param.REDIRECT_URI,
-      Param.scope(scopes),
-      Param.state(state)
-    )
-  }
-
-  private def slackCall[T](route: String, params: (String, String)*)(implicit reads: Reads[T]): Future[T] = {
-    httpClient.getFuture(DirectUrl(mkUrl(route, params: _*))).flatMap { clientResponse =>
+  private def slackCall[T](route: SlackAPI.Route)(implicit reads: Reads[T]): Future[T] = {
+    httpClient.getFuture(DirectUrl(route.url)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, payload) if (payload \ "ok").asOpt[Boolean].contains(true) =>
           reads.reads(payload) match {
@@ -94,23 +52,51 @@ class SlackClientImpl(
     }
   }
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse] = {
-    slackCall[SlackAuthorizationResponse](Route.OAuthAccess, Param.CLIENT_ID, Param.CLIENT_SECRET, Param.REDIRECT_URI, Param.code(code))
+    slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code))
   }
 
-  private def search(token: SlackAccessToken, query: SlackSearchQuery): Future[SlackSearchResponse] = {
-    slackCall[SlackSearchResponse](Route.Search, Param.token(token), Param.query(query))
+  def searchMessages(token: SlackAccessToken, query: SlackSearchQuery, optional: SlackSearchParams*): Future[SlackSearchResponse] = {
+    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, query, optional: _*))
   }
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
-    slackCall[SlackIdentifyResponse](Route.Identify, Param.token(token))
+    slackCall[SlackIdentifyResponse](SlackAPI.Identify(token))
   }
-  def channelId(token: SlackAccessToken, channelName: String): Future[Option[String]] = {
-    search(token, SlackSearchQuery(s"in:$channelName")).map { response =>
+  def channelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[String]] = {
+    searchMessages(token, SlackSearchQuery.in(channelName), SlackSearchParams.PageSize(1)).map { response =>
       for {
         matches <- (response.messages \ "matches").asOpt[Seq[JsObject]]
         firstMsg <- matches.headOption
         channelId <- (firstMsg \ "channel" \ "id").asOpt[String]
       } yield channelId
     }
+  }
+}
+
+object SlackAPI {
+  import com.keepit.common.routes.{ GET, ServiceRoute, Param, Method }
+
+  case class Route(method: Method, path: String, params: Param*)
+  implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
+
+  object SlackParams {
+    val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
+    val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
+    val REDIRECT_URI = Param("redirect_uri", KifiSlackApp.KIFI_SLACK_REDIRECT_URI)
+    implicit def fromCode(code: SlackAuthorizationCode) = Param("code", code.code)
+    implicit def formState(state: SlackState) = Param("state", state.state)
+    implicit def fromScope(scopes: Set[SlackAuthScope]) = Param("scope", scopes.map(_.value).mkString(","))
+    implicit def fromToken(token: SlackAccessToken) = Param("token", token.token)
+    implicit def fromSearchParam(searchParam: SlackSearchParams) = Param(searchParam.name, searchParam.value)
+  }
+
+  import SlackParams._
+
+  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state)
+  def OAuthAccess(code: SlackAuthorizationCode) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, code)
+  def Identify(token: SlackAccessToken) = Route(GET, "https://slack.com/api/auth.test", token)
+  def SearchMessages(token: SlackAccessToken, query: SlackSearchQuery, optional: SlackSearchParams*) = {
+    val params = Seq[Param](token, query) ++ optional.map(fromSearchParam)
+    Route(GET, "https://slack.com/api/search.messages", params: _*)
   }
 }

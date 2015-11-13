@@ -75,11 +75,7 @@ object NormalizedHostname extends Logging {
 
   def fromHostname(hostname: String): Option[NormalizedHostname] = {
     Try(NormalizedHostname(IDN.toASCII(hostname).toLowerCase)).toOption
-      .filter { hostname =>
-        val isValidHostname = isValid(hostname.value)
-        if (!isValidHostname && hostname.value != "localhost") AirbrakeNotifierStatic.notify(s"found an invalid hostname $hostname, make sure this isn't stored in the DB as normalized", new Exception)
-        isValidHostname
-      }
+      .filter(hostname => isValid(hostname.value))
   }
 
   implicit val format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
