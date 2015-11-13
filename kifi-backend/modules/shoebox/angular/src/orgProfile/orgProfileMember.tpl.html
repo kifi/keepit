@@ -2,11 +2,11 @@
   <div class="kf-org-member-upper clearfix">
     <div class="kf-org-member-upper-left">
       <a href="{{ member.id ? (member|profileUrl) : '#' }}" class="kf-org-member-link" kf-track-origin="{{currentPageOrigin}}/member" ng-click="member.id ? triggerClickedAvatar() : null">
-        <img ng-src="{{member | pic:100}}" alt="{{member|name}}" class="kf-org-member-pic" ng-if="member.id">
+        <img ng-src="{{member | pic:100}}" ng-attr-alt="{{ member | name }}" class="kf-org-member-pic" ng-if="member.id">
         <div class="kf-org-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
         <div class="kf-org-member-info">
-          <p class="kf-org-member-info-name">{{ member.firstName ? member.firstName + ' ' + member.lastName : member.email }}</p>
-          <p class="kf-org-member-info-role">{{ role() }}</p>
+          <p class="kf-org-member-info-name" ng-bind="member.firstName ? member.firstName + ' ' + member.lastName : member.email"></p>
+          <p class="kf-org-member-info-role" ng-bind="role()"></p>
         </div>
       </a>
     </div>
@@ -18,30 +18,16 @@
   </div>
   <div class="kf-org-member-lower clearfix" ng-show="isOpen()">
     <div class="kf-org-member-lower-left">
-      <button ng-if="shouldShowMakeOwner()" class="kf-button kf-button-small" ng-click="triggerMakeOwner(member)">
-        <span class="kf-org-member-action-title">Make owner</span>
-      </button>
-      <button ng-if="shouldShowDemote()" class="kf-button kf-button-small" ng-click="triggerDemote(member)">
-        <span class="kf-org-member-action-title">Remove admin privileges</span>
-      </button>
-      <button ng-if="shouldShowPromote()" class="kf-button kf-button-small" ng-click="triggerPromote(member)">
-        <span class="kf-org-member-action-title">Make admin</span>
-      </button>
-      <button ng-if="shouldShowInvite() && !getResentInvite()" class="kf-button kf-button-small" ng-click="triggerInvite(member)">
-        <span class="kf-org-member-action-title">Resend invite</span>
-      </button>
+      <button ng-if="shouldShowMakeOwner()" class="kf-button" ng-click="triggerMakeOwner(member)">Make owner</button>
+      <button ng-if="shouldShowDemote()" class="kf-button" ng-click="triggerDemote(member)">Remove admin privileges</button>
+      <button ng-if="shouldShowPromote()" class="kf-button" ng-click="triggerPromote(member)">Make admin</button>
+      <button ng-if="shouldShowInvite() && !getResentInvite()" class="kf-button" ng-click="triggerInvite(member)">Resend invite</button>
       <span ng-if="shouldShowInvite() && getResentInvite()" class="kf-org-member-invite-sent">Sent!</span>
     </div>
     <div class="kf-org-member-lower-right">
-      <button ng-if="shouldShowAcceptInvite()" class="kf-button kf-button-small" ng-click="triggerAcceptInvite(member)">
-        <span class="kf-org-member-action-title">Accept invite</span>
-      </button>
-      <button ng-if="shouldShowInvite()" class="kf-button kf-button-small" ng-click="triggerCancelInvite(member)">
-        <span class="kf-org-member-action-title">Cancel invite</span>
-      </button>
-      <button ng-if="shouldShowRemove()" class="kf-button kf-button-small" ng-click="triggerRemove(member)">
-        <span class="kf-org-member-action-title" ng-bind="(isMe() ? 'Leave team' : 'Remove member')"></span>
-      </button>
+      <button ng-if="shouldShowAcceptInvite()" class="kf-button" ng-click="triggerAcceptInvite(member)">Accept invite</button>
+      <button ng-if="shouldShowInvite()" class="kf-button" ng-click="triggerCancelInvite(member)">Cancel invite</button>
+      <button ng-if="shouldShowRemove()" class="kf-button" ng-click="triggerRemove(member)" ng-bind="isMe() ? 'Leave team' : 'Remove member'"></button>
     </div>
   </div>
 </li>
