@@ -45,8 +45,11 @@ angular.module('kifi')
       hideOrgDomain: post(shoebox, '/user/hideOrgDomain?orgId=:orgId'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId', 30),
-      getBillingCCToken: get(shoebox, '/admin/billing/ccToken?pubId=:pubId'),
-      setBillingCCToken: post(shoebox, '/admin/billing/ccToken?pubId=:pubId'),
+      updateAccountState: post(shoebox, '/admin/billing/state?pubId=:pubId&newPlanId=:newPlanId&newCardId=:newCardId'),
+      getBillingStatePreview: get(shoebox, '/admin/billing/state/preview?pubId=:pubId&newPlanId=:newPlanId&newCardId=:newCardId'),
+      createNewCard: post(shoebox, '/admin/billing/card/add?pubId=:pubId'),
+      getDefaultCard: get(shoebox, '/admin/billing/card/default?pubId=:pubId'),
+      setDefaultCard: post(shoebox, '/admin/billing/card/default?pubId=:pubId'),
       getBillingContacts: get(shoebox, '/admin/billing/contacts?pubId=:pubId', 30),
       setBillingContacts: post(shoebox, '/admin/billing/contacts?pubId=:pubId'),
       getBillingEvents: get(shoebox, '/admin/billing/events?pubId=:pubId&limit=:limit&fromId=:fromId', 30),

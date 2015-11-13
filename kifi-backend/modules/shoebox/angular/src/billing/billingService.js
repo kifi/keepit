@@ -28,14 +28,33 @@ angular.module('kifi')
         .getBillingState(pubId)
         .then(getResponseData);
       },
-      getBillingCCToken: function (pubId) {
+      updateAccountState: function (pubId, newPlanId, newCardId) {
         return net
-        .getBillingCCToken(pubId)
+        .updateAccountState(pubId, newPlanId, newCardId)
         .then(getResponseData);
       },
-      setBillingCCToken: function (pubId, token) {
+      getBillingStatePreview: function (pubId, newPlanId, newCardId) {
         return net
-        .setBillingCCToken(pubId, { token: token })
+        .getBillingStatePreview(pubId, newPlanId, newCardId)
+        .then(getResponseData);
+      },
+      createNewCard: function (pubId, stripeToken) {
+        return net
+        .createNewCard(pubId, { token: stripeToken })
+        .then(getResponseData)
+        .then(function (cardData) {
+          invalidateCache();
+          return cardData.card;
+        });
+      },
+      getDefaultCard: function (pubId) {
+        return net
+        .getDefaultCard(pubId)
+        .then(getResponseData);
+      },
+      setDefaultCard: function (pubId, cardId) {
+        return net
+        .setDefaultCard(pubId, { cardId: cardId })
         .then(function (response) {
           invalidateCache();
           orgProfileService.invalidateOrgProfileCache();
