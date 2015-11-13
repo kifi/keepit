@@ -19,7 +19,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.matcher.{ Expectable, Matcher, Delta }
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsValue, Json, JsObject }
+import play.api.libs.json._
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -226,6 +226,54 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         }
       }
 
+      "when updating plan and credit card" in {
+        withDb(controllerTestModules: _*) { implicit injector =>
+          val (org, owner, curPlan, newPlan) = db.readWrite { implicit session =>
+            val curPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle.months(1)).withPricePerCyclePerUser(DollarAmount.ZERO).saved
+            val newPlan = PaidPlanFactory.paidPlan().withBillingCycle(BillingCycle.months(1)).withPricePerCyclePerUser(DollarAmount.dollars(42)).saved
+            val owner = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withPlan(curPlan.id.get.id).saved
+            (org, owner, curPlan, newPlan)
+          }
+          val orgId = Organization.publicId(org.id.get)
+          val newPlanId = PaidPlan.publicId(newPlan.id.get)
+
+          val newCard = db.readWrite { implicit session =>
+            inject[PaymentMethodRepo].save(PaymentMethod(
+              accountId = paidAccountRepo.getByOrgId(org.id.get).id.get,
+              default = false,
+              stripeToken = Await.result(inject[StripeClient].getPermanentToken("fake_temporary_token", ""), Duration.Inf)
+            ))
+          }
+
+          val newCardId = PaymentMethod.publicId(newCard.id.get)
+
+          inject[FakeUserActionsHelper].setUser(owner)
+
+          val initialBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
+          val response1 = controller.getAccountState(orgId)(route.getAccountState(orgId))
+          status(response1) === OK
+          val result1 = contentAsJson(response1)
+          (result1 \ "plan" \ "pricePerUser").as[DollarAmount](DollarAmount.formatAsCents) === curPlan.pricePerCyclePerUser
+          (result1 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === initialBalance
+          (result1 \ "card") should beAnInstanceOf[JsUndefined]
+
+          val setRequest = route.updateAccountState(orgId, newPlanId, newCardId)
+
+          val validSetResponse = controller.updateAccountState(orgId, newPlanId, newCardId)(setRequest)
+          status(validSetResponse) === OK
+
+          val finalBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
+
+          val response2 = controller.getAccountState(orgId)(route.getAccountState(orgId))
+          status(response2) === OK
+          val result2 = contentAsJson(response2)
+          (result2 \ "plan" \ "pricePerUser").as[DollarAmount](DollarAmount.formatAsCents) === newPlan.pricePerCyclePerUser
+          (result2 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === finalBalance
+          (result2 \ "card" \ "id").as[PublicId[PaymentMethod]] === newCardId
+        }
+      }
+
       "when adding/removing members" in {
         withDb(controllerTestModules: _*) { implicit injector =>
           val (org, owner, rando, plan) = db.readWrite { implicit session =>
@@ -246,7 +294,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           val result1 = contentAsJson(response1)
           (result1 \ "balance").as[DollarAmount](DollarAmount.formatAsCents) === initialBalance
 
-          orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get, adminIdOpt = None))
+          orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get))
 
           val addedBalance = db.readOnlyMaster { implicit s => paidAccountRepo.getByOrgId(org.id.get).credit }
           addedBalance must beLessThan(initialBalance) // simple sanity check, actual logic should be tested in the commander
@@ -268,6 +316,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
     "get and set a credit card token" in {
       "handle permissions correctly" in {
         withDb(controllerTestModules: _*) { implicit injector =>
@@ -291,7 +340,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
             val addRequest = route.addCreditCard(publicId).withBody(addPayload)
             val addResponse = controller.addCreditCard(publicId)(addRequest)
             status(addResponse) === OK
-            val newCardId = (contentAsJson(addResponse) \ "cardId").as[PublicId[PaymentMethod]]
+            val newCardId = (contentAsJson(addResponse) \ "card" \ "id").as[PublicId[PaymentMethod]]
 
             val setPayload = Json.obj("cardId" -> newCardId)
             val setRequest = route.setDefaultCreditCard(publicId).withBody(setPayload)
@@ -337,7 +386,7 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
           // Populate the activity log with a ton of dumb events
           val n = 5
           (1 to n).foreach { _ =>
-            orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get, adminIdOpt = None))
+            orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(org.id.get, owner.id.get, rando.id.get))
             orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(org.id.get, owner.id.get, rando.id.get))
           }
 

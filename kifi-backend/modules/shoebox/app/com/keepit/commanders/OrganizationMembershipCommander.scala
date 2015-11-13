@@ -49,6 +49,9 @@ trait OrganizationMembershipCommander {
 
   def addMembershipHelper(request: OrganizationMembershipAddRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipAddResponse]
   def modifyMembershipHelper(request: OrganizationMembershipModifyRequest)(implicit session: RWSession): Either[OrganizationFail, OrganizationMembershipModifyResponse]
+
+  def unsafeAddMembership(request: OrganizationMembershipAddRequest, isAdmin: Boolean = false)(implicit session: RWSession): OrganizationMembershipAddResponse
+  def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest, isAdmin: Boolean = false): OrganizationMembershipRemoveResponse
 }
 
 @Singleton
@@ -211,13 +214,14 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  private def unsafeAddMembership(request: OrganizationMembershipAddRequest)(implicit session: RWSession): OrganizationMembershipAddResponse = {
+  def unsafeAddMembership(request: OrganizationMembershipAddRequest, isAdmin: Boolean = false)(implicit session: RWSession): OrganizationMembershipAddResponse = {
     val newMembership = {
       orgMembershipCandidateRepo.getByUserAndOrg(request.targetId, request.orgId).foreach(orgMembershipCandidateRepo.deactivate)
       val inactiveMembershipOpt = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId, excludeState = None)
       assert(inactiveMembershipOpt.forall(_.isInactive))
       val membership = OrganizationMembership(organizationId = request.orgId, userId = request.targetId, role = request.newRole)
-      planCommander.registerNewUser(request.orgId, request.targetId, request.newRole, ActionAttribution(user = Some(request.requesterId), admin = request.adminIdOpt))
+      val attribution = ActionAttribution(user = if (isAdmin) None else Some(request.requesterId), admin = if (isAdmin) Some(request.requesterId) else None)
+      planCommander.registerNewUser(request.orgId, request.targetId, request.newRole, attribution)
       orgMembershipRepo.save(membership.copy(id = inactiveMembershipOpt.map(_.id.get)))
     }
     creditRewardCommander.registerRewardTrigger(RewardTrigger.OrganizationMemberAdded(request.orgId, orgMembershipRepo.countByOrgId(request.orgId)))
@@ -251,10 +255,11 @@ class OrganizationMembershipCommanderImpl @Inject() (
     }
   }
 
-  private def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest): OrganizationMembershipRemoveResponse = {
+  def unsafeRemoveMembership(request: OrganizationMembershipRemoveRequest, isAdmin: Boolean = false): OrganizationMembershipRemoveResponse = {
     db.readWrite { implicit session =>
       val membership = orgMembershipRepo.getByOrgIdAndUserId(request.orgId, request.targetId).get
-      planCommander.registerRemovedUser(request.orgId, request.targetId, membership.role, ActionAttribution(user = Some(request.requesterId), admin = None))
+      val attribution = ActionAttribution(user = if (isAdmin) None else Some(request.requesterId), admin = if (isAdmin) Some(request.requesterId) else None)
+      planCommander.registerRemovedUser(request.orgId, request.targetId, membership.role, attribution)
       orgMembershipRepo.deactivate(membership)
     }
     val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }

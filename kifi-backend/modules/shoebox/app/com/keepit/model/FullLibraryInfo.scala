@@ -3,11 +3,15 @@ package com.keepit.model
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.json
 import com.keepit.common.mail.BasicContact
+import com.keepit.slack.LibrarySlackInfo
+import com.keepit.slack.models.{ SlackIntegrationStatus, SlackChannelToLibrary, LibraryToSlackChannel, SlackChannelName }
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.Results.Status
+import play.api.http.Status._
 
 import scala.concurrent.Future
 
@@ -27,7 +31,9 @@ object LibraryError {
   }
 }
 
-case class LibraryFail(status: Int, message: String) extends Exception(message)
+case class LibraryFail(status: Int, message: String) extends Exception(message) {
+  def asErrorResponse = Status(status)(Json.obj("error" -> message))
+}
 
 @json
 case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo, disabled: Boolean)
@@ -224,11 +230,6 @@ object MaybeLibraryMember {
   }
 }
 
-@json
-case class LibrarySlackInfo(
-  link: String,
-  integrations: Seq[String])
-
 case class FullLibraryInfo(
   id: PublicId[Library],
   name: String,
@@ -256,7 +257,7 @@ case class FullLibraryInfo(
   membership: Option[LibraryMembershipInfo],
   invite: Option[LibraryInviteInfo],
   permissions: Set[LibraryPermission],
-  slack: LibrarySlackInfo)
+  slack: Option[LibrarySlackInfo])
 
 object FullLibraryInfo {
   implicit val sourceWrites = LibrarySourceAttribution.writes

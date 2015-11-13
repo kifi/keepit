@@ -308,7 +308,7 @@ class AdminOrganizationController @Inject() (
          * Once we make a real user own the org there is no longer a need for that fake user and we're taking them out.
          */
         if (oldOwnerId == fakeOwnerId) {
-          orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = newOwnerId, targetId = oldOwnerId))
+          orgMembershipCommander.unsafeRemoveMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = request.adminUserId.get, targetId = oldOwnerId), isAdmin = true)
         }
         db.readWrite { implicit s =>
           orgMembershipCandidateRepo.getByUserAndOrg(newOwnerId, orgId) match {
@@ -329,12 +329,8 @@ class AdminOrganizationController @Inject() (
   def removeMember(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
     val userId = Id[User](request.body.get("user-id").flatMap(_.headOption).get.toLong)
     val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-    orgMembershipCommander.removeMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = org.ownerId, targetId = userId)) match {
-      case Right(res) =>
-        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
-      case Left(fail) =>
-        fail.asErrorResponse
-    }
+    orgMembershipCommander.unsafeRemoveMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = request.adminUserId.get, targetId = userId), isAdmin = true)
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }
 
   def removeCandidate(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
@@ -345,13 +341,10 @@ class AdminOrganizationController @Inject() (
 
   def addMember(orgId: Id[Organization]) = AdminUserPage { implicit request =>
     val userId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
-    val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-    orgMembershipCommander.addMembership(OrganizationMembershipAddRequest(orgId, requesterId = org.ownerId, targetId = userId, OrganizationRole.MEMBER, adminIdOpt = request.adminUserId)) match {
-      case Right(res) =>
-        Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
-      case Left(fail) =>
-        fail.asErrorResponse
+    db.readWrite { implicit s =>
+      orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, requesterId = request.adminUserId.get, targetId = userId, OrganizationRole.MEMBER), isAdmin = true)
     }
+    Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }
 
   def inviteCandidateToOrg(orgId: Id[Organization]) = AdminUserPage { implicit request =>
@@ -372,22 +365,6 @@ class AdminOrganizationController @Inject() (
       handleCommander.setOrganizationHandle(orgRepo.get(orgId), handle, overrideValidityCheck = true)
     }
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
-  }
-
-  def updateShadowOrgHandles() = AdminUserPage { implicit request =>
-    val orgs = db.readOnlyReplica { implicit s =>
-      orgRepo.getShadowOrgs()
-    }
-    orgs foreach { orgId =>
-      db.readWrite { implicit session =>
-        val org = orgRepo.get(orgId)
-        assert(org.ownerId == fakeOwnerId)
-        val origHandle = org.primaryHandle.get.original
-        val newHandle = OrganizationHandle(origHandle.value + "_pre_launch")
-        handleCommander.setOrganizationHandle(org, newHandle, overrideValidityCheck = true)
-      }
-    }
-    Ok(orgs.size.toString)
   }
 
   def setDescription(orgId: Id[Organization]) = AdminUserPage { request =>

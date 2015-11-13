@@ -290,7 +290,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
       case Some(membership) => Right(membership) // already a member
       case None => // new membership
         val addRequests = invitations.sortBy(_.role).reverse.map { currentInvitation =>
-          OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role, adminIdOpt = None)
+          OrganizationMembershipAddRequest(orgId, currentInvitation.inviterId, userId, currentInvitation.role)
         }
 
         val firstSuccess = addRequests.toStream.map(organizationMembershipCommander.addMembership).find(_.isRight)
