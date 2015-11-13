@@ -5,10 +5,12 @@ import com.keepit.commanders.PermissionCommander
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
-import com.keepit.model.Library
+import com.keepit.common.json.EitherFormat
+import com.keepit.model.{ LibraryFail, Library }
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.slack.models.{ SlackIntegrationRequest, SlackAPIFailure, SlackAuthScope, SlackAuthorizationCode }
+import com.keepit.slack.models._
 import com.keepit.slack.{ SlackClient, SlackCommander }
+import play.api.libs.json.{ JsSuccess, Json, JsError }
 
 import scala.concurrent.ExecutionContext
 
@@ -44,6 +46,39 @@ class SlackController @Inject() (
 
     authFut.recover {
       case fail: SlackAPIFailure => fail.asResponse
+    }
+  }
+
+  // TODO(ryan): account for permissions!
+  def modifyIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
+    (request.body \ "modify").validate[Seq[SlackIntegrationModification]] match {
+      case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
+      case JsSuccess(mods, _) =>
+        val libToSlackMods = mods.collect {
+          case SlackIntegrationModification(Left(ltsId), status) => LibraryToSlackChannel.decodePublicId(ltsId).get -> status
+        }.toMap
+        val slackToLibMods = mods.collect {
+          case SlackIntegrationModification(Right(stlId), status) => SlackChannelToLibrary.decodePublicId(stlId).get -> status
+        }.toMap
+        slackCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
+          Ok(Json.toJson(response))
+        }.recover {
+          case fail: LibraryFail => fail.asErrorResponse
+        }.get
+    }
+  }
+  def deleteIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
+    implicit val eitherIdFormat = EitherFormat(PublicId.format[LibraryToSlackChannel], PublicId.format[SlackChannelToLibrary])
+    (request.body \ "delete").validate[Seq[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]]] match {
+      case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
+      case JsSuccess(dels, _) =>
+        val libToSlackDels = dels.collect { case Left(ltsId) => LibraryToSlackChannel.decodePublicId(ltsId).get }.toSet
+        val slackToLibDels = dels.collect { case Right(stlId) => SlackChannelToLibrary.decodePublicId(stlId).get }.toSet
+        slackCommander.deleteIntegrations(SlackIntegrationDeleteRequest(request.userId, libToSlackDels, slackToLibDels)).map { response =>
+          Ok(Json.toJson(response))
+        }.recover {
+          case fail: LibraryFail => fail.asErrorResponse
+        }.get
     }
   }
 }

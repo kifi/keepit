@@ -28,6 +28,8 @@ case class LibraryToSlackChannel(
   def withId(id: Id[LibraryToSlackChannel]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = (state == LibraryToSlackChannelStates.ACTIVE)
+  def withStatus(newStatus: SlackIntegrationStatus) = this.copy(status = newStatus)
+  def sanitizeForDelete = this.copy(state = LibraryToSlackChannelStates.INACTIVE, status = SlackIntegrationStatus.Off)
 }
 
 object LibraryToSlackChannelStates extends States[LibraryToSlackChannel]
@@ -38,9 +40,12 @@ object LibraryToSlackChannel extends ModelWithPublicIdCompanion[LibraryToSlackCh
 
 @ImplementedBy(classOf[LibraryToSlackChannelRepoImpl])
 trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
+  def getActiveByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Set[LibraryToSlackChannel]
   def getActiveByOwnerAndLibrary(ownerId: Id[User], libraryId: Id[Library])(implicit session: RSession): Set[LibraryToSlackChannel]
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelId: Option[SlackChannelId], libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel]
-  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationRequest)(implicit session: RWSession): (LibraryToSlackChannel, Boolean)
+  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): (LibraryToSlackChannel, Boolean)
+
+  def deactivate(model: LibraryToSlackChannel)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -125,6 +130,10 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   override def deleteCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {}
   override def invalidateCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {}
 
+  def getActiveByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Set[LibraryToSlackChannel] = {
+    activeRows.filter(_.id.inSet(ids)).list.toSet
+  }
+
   def getActiveByOwnerAndLibrary(ownerId: Id[User], libraryId: Id[Library])(implicit session: RSession): Set[LibraryToSlackChannel] = {
     activeRows.filter(row => row.ownerId === ownerId && row.libraryId === libraryId).list.toSet
   }
@@ -133,7 +142,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelId === slackChannelId.orNull && row.libraryId === libraryId && row.state =!= excludeState.orNull).firstOption
   }
 
-  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationRequest)(implicit session: RWSession): (LibraryToSlackChannel, Boolean) = {
+  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): (LibraryToSlackChannel, Boolean) = {
     getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelId, request.libraryId, excludeState = None) match {
       case Some(integration) if integration.isActive =>
         val isIntegrationOwner = (integration.ownerId == request.userId && integration.slackUserId == request.slackUserId)
@@ -152,6 +161,9 @@ class LibraryToSlackChannelRepoImpl @Inject() (
         )
         (save(newIntegration), true)
     }
+  }
+  def deactivate(model: LibraryToSlackChannel)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 
 }
