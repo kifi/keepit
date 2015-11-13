@@ -93,9 +93,9 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
             ltss.map(_.id.get) === Set(libToSlack.id.get)
             stls.map(_.id.get) === Set(slackToLib.id.get)
             ltss.foreach { lts => lts.status === SlackIntegrationStatus.On }
-            stls.foreach { stl => stl.status === SlackIntegrationStatus.On }
+            stls.foreach { stl => stl.status === SlackIntegrationStatus.Off }
           }
-          val modRequest = SlackIntegrationModifyRequest(user.id.get, libToSlack = Map(libToSlack.id.get -> SlackIntegrationStatus.Off), slackToLib = Map.empty)
+          val modRequest = SlackIntegrationModifyRequest(user.id.get, libToSlack = Map(libToSlack.id.get -> SlackIntegrationStatus.Off), slackToLib = Map(slackToLib.id.get -> SlackIntegrationStatus.On))
           slackCommander.modifyIntegrations(modRequest) must beSuccessfulTry
           db.readOnlyMaster { implicit s =>
             val ltss = inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
