@@ -4,15 +4,16 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.time._
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.mail.{ FakeOutbox, EmailAddress, FakeMailModule }
-import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.net.{ UserAgent, FakeHttpClientModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.model.{ EmailVerificationCode, UserEmailAddress, UserEmailAddressRepo, UserFactory }
+import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication, ShoeboxTestInjector }
@@ -143,6 +144,34 @@ class AuthControllerTest extends Specification with ShoeboxApplicationInjector {
         val call = com.keepit.controllers.core.routes.AuthController.verifyEmail(code)
         val result = ctrl.verifyEmail(code)(FakeRequest(call))
         header("Location", result) === Some("/install")
+        status(result) === SEE_OTHER
+        db.readOnlyMaster { implicit s =>
+          val addresses = inject[UserEmailAddressRepo].getAllByUser(user.id.get)
+          addresses.size === 1
+          addresses.head.verified === true
+        }
+      }
+    }
+    "verify email good code good user yes installation" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val ctrl = inject[AuthController]
+        val (address, user) = db.readWrite { implicit s =>
+          val user = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
+          inject[KifiInstallationRepo].save(KifiInstallation(
+            userId = user.id.get,
+            version = KifiExtVersion("1.1.1"),
+            externalId = ExternalId[KifiInstallation](),
+            userAgent = UserAgent("my ext"),
+            platform = KifiInstallationPlatform.Extension))
+          val address = inject[UserEmailAddressRepo].save(UserEmailAddress.create(user.id.get, EmailAddress("eishay@kifi.com")).withVerificationCode(currentDateTime))
+          address.verified === false
+          (address, user)
+        }
+        inject[FakeUserActionsHelper].setUser(user)
+        val code = address.verificationCode.get
+        val call = com.keepit.controllers.core.routes.AuthController.verifyEmail(code)
+        val result = ctrl.verifyEmail(code)(FakeRequest(call))
+        header("Location", result) === Some("/?m=1")
         status(result) === SEE_OTHER
         db.readOnlyMaster { implicit s =>
           val addresses = inject[UserEmailAddressRepo].getAllByUser(user.id.get)
