@@ -14,6 +14,9 @@ sealed trait DescriptionElements {
 case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
   def flatten = elements.flatMap(_.flatten).filter(_.text.nonEmpty)
 }
+object SequenceOfElements {
+  val empty = SequenceOfElements(Seq.empty)
+}
 case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElements {
   def flatten = Seq(simplify)
   def withText(newText: String) = this.copy(text = newText)
@@ -64,7 +67,8 @@ object DescriptionElements {
     }
   }
   def unlines(els: Seq[DescriptionElements]): DescriptionElements = {
-    SequenceOfElements(intersperse(els, Seq.fill(els.length - 1)("\n")))
+    if (els.isEmpty) SequenceOfElements.empty
+    else SequenceOfElements(intersperse(els, Seq.fill(els.length - 1)("\n")))
   }
   private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
     val words = els.map(_.text)
