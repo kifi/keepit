@@ -74,7 +74,7 @@ object NormalizedHostname extends Logging {
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
 
   def fromHostname(hostname: String): Option[NormalizedHostname] = {
-    Try(NormalizedHostname(IDN.toASCII(hostname).toLowerCase)).toOption
+    Try(NormalizedHostname(IDN.toASCII(hostname.trim).toLowerCase)).toOption
       .filter(hostname => isValid(hostname.value))
   }
 

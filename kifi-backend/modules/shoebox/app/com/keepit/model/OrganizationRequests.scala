@@ -1,11 +1,10 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.common.json.EitherFormat
+import com.keepit.classify.NormalizedHostname
+import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import play.api.http.Status._
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
 import play.api.mvc.Results.Status
 
 import scala.concurrent.Future
@@ -27,6 +26,9 @@ case class OrganizationDeleteResponse(request: OrganizationDeleteRequest, return
 
 case class OrganizationTransferRequest(requesterId: Id[User], orgId: Id[Organization], newOwner: Id[User]) extends OrganizationRequest
 case class OrganizationTransferResponse(request: OrganizationTransferRequest, modifiedOrg: Organization)
+
+case class OrganizationDomainRequest(requesterId: Id[User], orgId: Id[Organization], domain: String) extends OrganizationRequest
+case class OrganizationDomainResponse(request: OrganizationDomainRequest, domain: NormalizedHostname)
 
 sealed abstract class OrganizationMembershipRequest {
   def orgId: Id[Organization]
@@ -86,6 +88,9 @@ object OrganizationFail {
   case object ALREADY_A_MEMBER extends OrganizationFail(BAD_REQUEST, "already_a_member")
   case object INVALID_AUTHTOKEN extends OrganizationFail(UNAUTHORIZED, "invalid_authtoken")
   case object MODIFYING_UNEDITABLE_SETTINGS extends OrganizationFail(FORBIDDEN, "modifying_uneditable_settings")
+  case object INVALID_DOMAIN_NAME extends OrganizationFail(BAD_REQUEST, "invalid_domain_name")
+  case object DOMAIN_IS_EMAIL_PROVIDER extends OrganizationFail(FORBIDDEN, "domain_is_email_provider")
+  case object DOMAIN_OWNERSHIP_NOT_FOUND extends OrganizationFail(NOT_FOUND, "domain_ownership_not_found")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -103,6 +108,8 @@ object OrganizationFail {
       case ALREADY_A_MEMBER.message => ALREADY_A_MEMBER
       case INVALID_AUTHTOKEN.message => INVALID_AUTHTOKEN
       case MODIFYING_UNEDITABLE_SETTINGS.message => MODIFYING_UNEDITABLE_SETTINGS
+      case INVALID_DOMAIN_NAME.message => INVALID_DOMAIN_NAME
+      case DOMAIN_IS_EMAIL_PROVIDER.message => DOMAIN_IS_EMAIL_PROVIDER
     }
   }
 }

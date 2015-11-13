@@ -380,23 +380,20 @@ class UrlController @Inject() (
     Ok(html.admin.domainFind())
   }
 
-  def findDomainByHostname = AdminUserPage(parse.urlFormEncoded) { implicit request =>
-    val hostname = request.body.get("hostname").get.head
-    val domain = NormalizedHostname.fromHostname(hostname).flatMap { hostname =>
-      db.readOnlyReplica { implicit s =>
-        domainRepo.get(hostname, None)
+  def getDomain(domainName: String) = AdminUserPage { implicit request =>
+    NormalizedHostname.fromHostname(domainName) match {
+      case None => BadRequest("invalid_domain_name")
+      case Some(hostname) => {
+        val domain = db.readOnlyReplica { implicit s =>
+          domainRepo.get(hostname)
+        }
+        val owningOrgs = orgDomainOwnCommander.getOwningOrganizations(hostname)
+        domain match {
+          case None => NotFound("domain_not_found")
+          case Some(foundDomain) => Ok(html.admin.domain(foundDomain, owningOrgs))
+        }
       }
     }
-
-    domain.map { domain => Redirect(routes.UrlController.getDomain(domain.id.get)) }.getOrElse(NotFound)
-  }
-
-  def getDomain(id: Id[Domain]) = AdminUserPage { implicit request =>
-    val domain = db.readOnlyReplica { implicit s =>
-      domainRepo.get(id)
-    }
-    val owningOrgs = orgDomainOwnCommander.getOwningOrganizations(domain.hostname)
-    Ok(html.admin.domain(domain, owningOrgs))
   }
 
   def domainToggleEmailProvider(id: Id[Domain]) = AdminUserPage { implicit request =>
@@ -405,7 +402,7 @@ class UrlController @Inject() (
       val domainToggled = domain.copy(isEmailProvider = !domain.isEmailProvider) //domain
       domainRepo.save(domainToggled)
     }
-    Redirect(routes.UrlController.getDomain(id))
+    Redirect(routes.UrlController.getDomain(domain.hostname.value))
   }
 
   def getDomainTags = AdminUserPage { implicit request =>

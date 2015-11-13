@@ -57,6 +57,7 @@ sealed trait FeatureWithPermissions {
   val permission: OrganizationPermission
 
   def affectedRoles(setting: FeatureSetting): Set[Option[OrganizationRole]] = setting match {
+    case FeatureSetting.NONMEMBERS => OrganizationRole.nonMemberSet
     case FeatureSetting.MEMBERS => OrganizationRole.memberSet
     case FeatureSetting.ADMINS => OrganizationRole.adminSet
     case FeatureSetting.ANYONE => OrganizationRole.totalSet
@@ -73,6 +74,7 @@ object FeatureSetting {
   case object MEMBERS extends FeatureSetting("members")
   case object ADMINS extends FeatureSetting("admins")
   case object ANYONE extends FeatureSetting("anyone")
+  case object NONMEMBERS extends FeatureSetting("nonmembers")
 }
 
 object Feature extends Enumerator[Feature] {
@@ -163,6 +165,6 @@ object Feature extends Enumerator[Feature] {
   case object VerifyToJoin extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.VERIFY_TO_JOIN.value
     val permission = OrganizationPermission.VERIFY_TO_JOIN
-    val settings: Set[FeatureSetting] = Set(DISABLED, ANYONE)
+    val settings: Set[FeatureSetting] = Set(DISABLED, NONMEMBERS)
   }
 }

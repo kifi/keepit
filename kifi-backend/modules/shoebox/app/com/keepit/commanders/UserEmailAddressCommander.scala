@@ -57,7 +57,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit] = {
-    val domainOwnerIds = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailAddress.address))
+    val domainOwnerIds = NormalizedHostname.fromHostname(emailAddress.address.hostname)
       .map(orgDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
       .diff(userValueRepo.getValue(emailAddress.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
       .filter(orgId => !orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailAddress.userId))
@@ -75,7 +75,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
-    NormalizedHostname.fromHostname(EmailAddress.getHostname(verifiedEmail.address))
+    NormalizedHostname.fromHostname(verifiedEmail.address.hostname)
       .map(domain => orgDomainOwnershipCommander.getOwningOrganizations(domain)).getOrElse(Set.empty)
       .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
       .foreach { orgId =>

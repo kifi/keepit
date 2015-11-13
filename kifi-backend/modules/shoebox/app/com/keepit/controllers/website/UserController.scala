@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 import com.google.inject.Inject
 import com.keepit.abook.{ ABookServiceClient, ABookUploadConf }
+import com.keepit.classify.{ NormalizedHostname, DomainRepo }
 import com.keepit.commanders.emails.EmailSenderProvider
 import com.keepit.commanders.{ ConnectionInfo, _ }
 import com.keepit.common.controller._
@@ -54,6 +55,7 @@ class UserController @Inject() (
     userValueRepo: UserValueRepo,
     socialUserRepo: SocialUserInfoRepo,
     invitationRepo: InvitationRepo,
+    domainRepo: DomainRepo,
     networkInfoLoader: NetworkInfoLoader,
     val userActionsHelper: UserActionsHelper,
     friendRequestRepo: FriendRequestRepo,
@@ -218,11 +220,13 @@ class UserController @Inject() (
         case Some(emailRecord) if (emailRecord.userId != request.userId) && emailRecord.verified => Forbidden(Json.obj("error" -> "email_belongs_to_other_user"))
         case Some(emailRecord) if (emailRecord.userId == request.userId) => {
           val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
+          val isFreeMail = NormalizedHostname.fromHostname(emailRecord.address.hostname).exists(hostname => domainRepo.get(hostname).exists(_.isEmailProvider))
           Ok(Json.toJson(EmailInfo(
             address = emailRecord.address,
             isVerified = emailRecord.verified,
             isPrimary = emailRecord.primary,
-            isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(emailRecord.address))
+            isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(emailRecord.address)),
+            isFreeMail = isFreeMail
           )))
         }
         case _ => Ok(Json.obj("status" -> "available"))
