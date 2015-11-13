@@ -49,6 +49,7 @@ angular.module('kifi')
     // Shared data across several modals
 
     $scope.userData = $scope.userData || {};
+    $scope.userData.email = $scope.userData.email || $scope.userData.invite.email;
 
     function setModalScope($modalScope, onClose) {
       $modalScope.close = modalService.close;
