@@ -55,7 +55,7 @@ class EmailTestController @Inject() (
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
-      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, verificationCode = Some(verificationCode), domainOwnerId = orgId)
+      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, verificationCode = Some(verificationCode), domainOwnerIds = orgId.toSet)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
         val sender = emailSenderProvider.waitList
@@ -74,7 +74,7 @@ class EmailTestController @Inject() (
         implicit val config = PublicIdConfiguration("secret key")
         val invite = LibraryInvite(libraryId = libraryId, inviterId = userId, emailAddress = Some(sendTo), userId = None, access = LibraryAccess.READ_ONLY, message = msg)
         emailSenderProvider.libraryInvite.sendInvite(invite).map(_.get)
-      case "confirm" => emailSenderProvider.confirmation.sendToUser(userId, sendTo, verificationCode, orgId)
+      case "confirm" => emailSenderProvider.confirmation.sendToUser(userId, sendTo, verificationCode, orgId.toSet)
       case "tip" if tip.isDefined =>
         val emailTip = EmailTip(tip.get).get
         testEmailTip(Left(userId), emailTip)
