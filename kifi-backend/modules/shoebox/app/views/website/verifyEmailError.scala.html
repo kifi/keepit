@@ -8,7 +8,7 @@
   <section>
     @error match {
       case "invalid_user" => {
-        <p>Sorry, this is email address verification link belongs to another user. Please sign out and log in as that user.</p>
+        <p>Sorry, this is email address verification link belongs to another user. Please <a href="/logout">sign out</a> and log in as that user.</p>
       }
       case "invalid_code" => {
         <p>Sorry, this is not a valid email address verification link.</p>
