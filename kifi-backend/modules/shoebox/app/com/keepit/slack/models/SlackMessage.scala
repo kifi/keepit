@@ -23,6 +23,10 @@ import scala.util.{ Failure, Try }
 
 @json case class SlackAccessToken(token: String)
 
+@json case class SlackMessageTimestamp(value: String) extends Ordered[SlackMessageTimestamp] { // channel-specific timestamp
+  def compare(that: SlackMessageTimestamp) = value compare that.value
+}
+
 case class SlackIncomingWebhook(
   channelName: SlackChannelName,
   url: String,
@@ -59,6 +63,11 @@ object SlackDbColumnTypes {
   def channel(db: DataBaseComponent) = {
     import db.Driver.simple._
     MappedColumnType.base[SlackChannelName, String](_.value, SlackChannelName(_))
+  }
+
+  def timestamp(db: DataBaseComponent) = {
+    import db.Driver.simple._
+    MappedColumnType.base[SlackMessageTimestamp, String](_.value, SlackMessageTimestamp(_))
   }
 }
 

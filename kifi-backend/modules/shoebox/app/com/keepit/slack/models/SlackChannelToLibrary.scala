@@ -25,7 +25,8 @@ case class SlackChannelToLibrary(
     status: SlackIntegrationStatus = SlackIntegrationStatus.Off,
     lastProcessingAt: Option[DateTime] = None,
     lastProcessedAt: Option[DateTime] = None,
-    lastMessageAt: Option[DateTime] = None) extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with SlackIntegration {
+    lastMessageAt: Option[DateTime] = None,
+    lastMessageTimestamp: Option[SlackMessageTimestamp] = None) extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with SlackIntegration {
   def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = (state == SlackChannelToLibraryStates.ACTIVE)
@@ -56,6 +57,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val slackChannelIdColumnType = SlackDbColumnTypes.channelId(db)
   implicit val slackChannelColumnType = SlackDbColumnTypes.channel(db)
+  implicit val slackMessageTimestampColumnType = SlackDbColumnTypes.timestamp(db)
   implicit val statusColumnType = SlackIntegrationStatus.columnType(db)
 
   private def stlFromDbRow(
@@ -72,7 +74,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     status: SlackIntegrationStatus,
     lastProcessingAt: Option[DateTime],
     lastProcessedAt: Option[DateTime],
-    lastMessageAt: Option[DateTime]) = {
+    lastMessageAt: Option[DateTime],
+    lastMessageTimestamp: Option[SlackMessageTimestamp]) = {
     SlackChannelToLibrary(
       id,
       createdAt,
@@ -87,7 +90,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
       status,
       lastProcessingAt,
       lastProcessedAt,
-      lastMessageAt
+      lastMessageAt,
+      lastMessageTimestamp
     )
   }
 
@@ -105,7 +109,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     stl.status,
     stl.lastProcessingAt,
     stl.lastProcessedAt,
-    stl.lastMessageAt
+    stl.lastMessageAt,
+    stl.lastMessageTimestamp
   ))
 
   type RepoImpl = SlackChannelToLibraryTable
@@ -121,7 +126,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     def lastProcessingAt = column[Option[DateTime]]("last_processing_at", O.Nullable)
     def lastProcessedAt = column[Option[DateTime]]("last_processed_at", O.Nullable)
     def lastMessageAt = column[Option[DateTime]]("last_message_at", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, lastProcessingAt, lastProcessedAt, lastMessageAt) <> ((stlFromDbRow _).tupled, stlToDbRow _)
+    def lastMessageTimestamp = column[Option[SlackMessageTimestamp]]("last_message_timestamp", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, lastProcessingAt, lastProcessedAt, lastMessageAt, lastMessageTimestamp) <> ((stlFromDbRow _).tupled, stlToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackChannelToLibraryStates.ACTIVE)
