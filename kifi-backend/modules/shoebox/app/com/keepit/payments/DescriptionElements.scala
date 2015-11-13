@@ -63,11 +63,17 @@ object DescriptionElements {
       case _ => throw new IllegalArgumentException(s"intersperse expects lists with length (n, n-1). it got (${xs.length}, ${ins.length})")
     }
   }
+  def unlines(els: Seq[DescriptionElements]): DescriptionElements = {
+    SequenceOfElements(intersperse(els, Seq.fill(els.length - 1)("\n")))
+  }
   private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
     val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
+
+    val leftEnds = Set("'", "\n")
+    val rightStarts = Set(".", "'", "\n")
     val interpolatedPunctuation = wordPairs.map {
-      case (l, r) if l.endsWith("'") || r.startsWith(".") || r.startsWith("'") => ""
+      case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
       case _ => " "
     }.map(BasicElement(_, None, None))
     intersperse(els, interpolatedPunctuation).filter(_.text.nonEmpty)
