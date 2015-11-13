@@ -159,4 +159,10 @@ object Feature extends Enumerator[Feature] {
     val permission = OrganizationPermission.VIEW_SETTINGS
     val settings: Set[FeatureSetting] = Set(ADMINS, MEMBERS)
   }
+
+  case object VerifyToJoin extends Feature with FeatureWithPermissions {
+    val value = OrganizationPermission.VERIFY_TO_JOIN.value
+    val permission = OrganizationPermission.VERIFY_TO_JOIN
+    val settings: Set[FeatureSetting] = Set(DISABLED, ANYONE)
+  }
 }
