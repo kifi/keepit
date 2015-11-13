@@ -26,7 +26,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
-  def getByLibraryFromIdAndTime(libraryId: Id[Library], fromOpt: Option[(Id[KeepToLibrary], DateTime)])(implicit session: RSession): Seq[KeepToLibrary]
+  def getByLibraryFromTimeAndId(libraryId: Id[Library], fromDateOpt: Option[DateTime], fromIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
@@ -141,11 +141,12 @@ class KeepToLibraryRepoImpl @Inject() (
     getByUserIdAndLibraryIdHelper(userId, libraryId, excludeStateOpt).list
   }
 
-  def getByLibraryFromIdAndTime(libraryId: Id[Library], fromOpt: Option[(Id[KeepToLibrary], DateTime)])(implicit session: RSession): Seq[KeepToLibrary] = {
+  def getByLibraryFromTimeAndId(libraryId: Id[Library], fromDateOpt: Option[DateTime], fromIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary] = {
     val inLibrary = activeRows.filter(row => row.libraryId === libraryId)
-    val filtered = fromOpt match {
-      case None => inLibrary
-      case Some((ktlId, fromDate)) => inLibrary.filter(ktl => ktl.addedAt > fromDate || (ktl.addedAt === fromDate && ktl.id > ktlId))
+    val filtered = (fromDateOpt, fromIdOpt) match {
+      case (None, _) => inLibrary
+      case (Some(fromDate), None) => inLibrary.filter(ktl => ktl.addedAt > fromDate)
+      case (Some(fromDate), Some(fromId)) => inLibrary.filter(ktl => ktl.addedAt > fromDate || (ktl.addedAt === fromDate && ktl.id > fromId))
     }
     filtered.sortBy(_.addedAt asc).list
   }
