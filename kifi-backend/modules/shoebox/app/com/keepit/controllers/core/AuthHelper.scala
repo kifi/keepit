@@ -522,11 +522,12 @@ class AuthHelper @Inject() (
   }
 
   private def verifyEmailForUser(email: UserEmailAddress, request: UserRequest[_]): Result = {
-    if (request.userId == email.userId) {
+    val mobile = request.userAgentOpt.exists(_.isMobile)
+    if (request.userId == email.userId || mobile) {
       unsafeVerifyEmail(email)
       val userId = email.userId
       val installations = db.readOnlyReplica { implicit s => kifiInstallationRepo.all(userId) }
-      if (!installations.exists { installation => installation.platform == KifiInstallationPlatform.Extension }) {
+      if (!mobile && !installations.exists { installation => installation.platform == KifiInstallationPlatform.Extension }) {
         Redirect("/install") //#verifymail case 2
       } else {
         Redirect(s"/?m=1") //#verifymail case 3
