@@ -544,8 +544,10 @@ class AuthHelper @Inject() (
   }
 
   private def unsafeVerifyEmail(email: UserEmailAddress): Unit = {
-    db.readWrite(attempts = 3) { implicit s => userEmailAddressCommander.saveAsVerified(email) }
-    userEmailAddressCommander.autoJoinOrgViaEmail(email)
+    db.readWrite(attempts = 3) { implicit s =>
+      userEmailAddressCommander.saveAsVerified(email)
+      userEmailAddressCommander.autoJoinOrgViaEmail(email)
+    }
   }
 
   def doUploadBinaryPicture(implicit request: MaybeUserRequest[play.api.libs.Files.TemporaryFile]): Result = {
