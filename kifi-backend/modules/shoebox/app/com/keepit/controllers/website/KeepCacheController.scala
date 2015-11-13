@@ -96,7 +96,7 @@ $footer
 $article
 
 """)
-        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'")
+        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *")
       case _ => NotFound
     }
   }
