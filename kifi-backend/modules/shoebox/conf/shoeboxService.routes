@@ -478,6 +478,9 @@ POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.Libr
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
 
+POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
+POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])
+
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 POST    /site/user/me/username      @com.keepit.controllers.website.UserController.updateUsername()

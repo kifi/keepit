@@ -35,7 +35,7 @@ import play.api.mvc.DiscardingCookie
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
 import com.keepit.social.SocialId
-import com.keepit.common.controller.{NonUserRequest, MaybeUserRequest, UserRequest}
+import com.keepit.common.controller.{ NonUserRequest, MaybeUserRequest, UserRequest }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
 import com.keepit.common.akka.SafeFuture
@@ -271,7 +271,7 @@ class AuthHelper @Inject() (
 
     val performPrimaryIntentAction: IntentAction = {
       case ApplyCreditCode(creditCode) =>
-        db.readWrite { implicit session =>
+        db.readWrite(attempts = 3) { implicit session =>
           userValueRepo.setValue(user.id.get, UserValueName.STORED_CREDIT_CODE, creditCode.value)
         }
       case AutoFollowLibrary(libId, authTokenOpt) =>
@@ -510,59 +510,42 @@ class AuthHelper @Inject() (
   def doVerifyEmail(code: EmailVerificationCode)(implicit request: MaybeUserRequest[_]): Result = {
     db.readOnlyMaster { implicit session => userEmailAddressRepo.getByCode(code) } match {
       case Some(email) =>
-        doVerifyEmail(email)
+        verifyEmailForMaybeUser(email)
       case None =>
-        BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds))
+        BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds)) //#verifymail case 1
     }
   }
 
-  private def verifyEmail(email: UserEmailAddress)(implicit request: MaybeUserRequest[_]): Result = request match {
-    case userRequest: UserRequest => verifyEmailForUser(email)
-    case nonUserRequest: NonUserRequest => verifyEmailForNonUser(email)
+  private def verifyEmailForMaybeUser(email: UserEmailAddress)(implicit request: MaybeUserRequest[_]): Result = request match {
+    case userRequest: UserRequest[_] => verifyEmailForUser(email, userRequest)
+    case nonUserRequest: NonUserRequest[_] => verifyEmailForNonUser(email, nonUserRequest)
   }
 
-  private def verifyEmailForUser(email: UserEmailAddress)(implicit request: UserRequest[_]): Result = {
-  }
-
-  private def verifyEmailForNonUser(email: UserEmailAddress)(implicit request: NonUserRequest[_]): Result = request.userAgentOpt match {
-    case Some(agent) if agent.isMobile => //let it pass ...
-      userEmailAddressCommander.saveAsVerified(email)
-      userEmailAddressCommander.autoJoinOrgViaEmail(email)
-      Redirect(s"/?m=1")
-    case _ =>
-      Redirect("/login").withSession(request.session + (SecureSocial.OriginalUrlKey -> request.path))
-  }
-
-  private def doVerifyEmail(email: UserEmailAddress)(implicit request: MaybeUserRequest[_]): Result = {
-    val isVerifiedForTheFirstTime = userEmailAddressCommander.verifyEmailAddress(email)
-    db.readOnlyMaster { implicit s =>
-      if (userRepo.get(email.userId).state == UserStates.PENDING)
-        Redirect(s"/?m=1")
-      if (isVerifiedForTheFirstTime && (request.userIdOpt.isEmpty || (request.userIdOpt.isDefined && request.userIdOpt.get.id == email.userId))) {
-        // first time being used, not logged in OR logged in as correct user
-        authenticateUser(email.userId,
-          error => throw error,
-          authenticator => {
-            val resp = if (request.userAgentOpt.exists(_.isMobile)) {
-              Ok(views.html.mobile.mobileAppRedirect("/email/verified"))
-            } else if (kifiInstallationRepo.all(email.userId, Some(KifiInstallationStates.INACTIVE)).isEmpty) {
-              // todo: factor out
-              // user has no installations
-              Redirect("/install")
-            } else {
-              Redirect(s"/?m=1")
-            }
-            resp.withSession(request.session - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-              .withCookies(authenticator.toCookie)
-          }
-        )
-      } else if (!isVerifiedForTheFirstTime && request.userIdOpt.isDefined && request.userIdOpt.get.id == email.userId) {
-        Redirect(s"/?m=1")
+  private def verifyEmailForUser(email: UserEmailAddress, request: UserRequest[_]): Result = {
+    if (request.userId == email.userId) {
+      unsafeVerifyEmail(email)
+      val userId = email.userId
+      val installations = db.readOnlyReplica { implicit s => kifiInstallationRepo.all(userId) }
+      if (!installations.exists { installation => installation.platform == KifiInstallationPlatform.Extension }) {
+        Redirect("/install") //#verifymail case 2
       } else {
-        val user = userRepo.get(email.userId)
-        Ok(views.html.website.verifyEmailThanks(email.address.address, user.firstName, secureSocialClientIds))
+        Redirect(s"/?m=1") //#verifymail case 3
       }
-    }
+    } else BadRequest(views.html.website.verifyEmailError(error = "invalid_user", secureSocialClientIds)) //#verifymail case 4
+  }
+
+  private def verifyEmailForNonUser(email: UserEmailAddress, request: NonUserRequest[_]): Result = request.userAgentOpt match {
+    case Some(agent) if agent.isMobile => //let it pass ...
+      unsafeVerifyEmail(email)
+      Ok(views.html.mobile.mobileAppRedirect("/email/verified")) //#verifymail case 5
+    case _ =>
+      val newSession = request.session + (SecureSocial.OriginalUrlKey -> request.path)
+      Redirect("/login").withSession(newSession) //#verifymail case 6
+  }
+
+  private def unsafeVerifyEmail(email: UserEmailAddress): Unit = {
+    db.readWrite(attempts = 3) { implicit s => userEmailAddressCommander.saveAsVerified(email) }
+    userEmailAddressCommander.autoJoinOrgViaEmail(email)
   }
 
   def doUploadBinaryPicture(implicit request: MaybeUserRequest[play.api.libs.Files.TemporaryFile]): Result = {
