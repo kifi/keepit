@@ -18,8 +18,8 @@ import scala.concurrent.duration.Duration
 trait OrganizationDomainOwnershipRepo extends Repo[OrganizationDomainOwnership] with SeqNumberFunction[OrganizationDomainOwnership] {
   def getDomainOwnershipBetween(organization: Id[Organization], domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
   def getOwnershipsForOrganization(organization: Id[Organization], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationDomainOwnership]
-  def getOwnershipForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership]
-  def getOwnershipsByDomains(domainHostnames: Set[NormalizedHostname], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Map[NormalizedHostname, OrganizationDomainOwnership]
+  def getOwnershipsForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Set[OrganizationDomainOwnership]
+  def getOwnershipsByDomains(domainHostnames: Set[NormalizedHostname], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Map[NormalizedHostname, Seq[OrganizationDomainOwnership]]
 }
 
 @Singleton
@@ -63,14 +63,12 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
     (for { row <- rows if row.organizationId === organization && row.state =!= excludeState.orNull } yield row).list
   }
 
-  override def getOwnershipForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationDomainOwnership] = {
-    (for { row <- rows if row.domainHostname === domainHostname && row.state =!= excludeState.orNull } yield row).firstOption
+  override def getOwnershipsForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Set[OrganizationDomainOwnership] = {
+    (for { row <- rows if row.domainHostname === domainHostname && row.state =!= excludeState.orNull } yield row).list.toSet
   }
 
-  override def getOwnershipsByDomains(domainHostnames: Set[NormalizedHostname], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Map[NormalizedHostname, OrganizationDomainOwnership] = {
-    rows.filter(r => r.domainHostname.inSet(domainHostnames) && r.state =!= excludeState.orNull).list.groupBy(_.normalizedHostname).collect {
-      case (hostname, ownerships) if ownerships.size == 1 => hostname -> ownerships.head
-    }
+  override def getOwnershipsByDomains(domainHostnames: Set[NormalizedHostname], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Map[NormalizedHostname, Seq[OrganizationDomainOwnership]] = {
+    rows.filter(r => r.domainHostname.inSet(domainHostnames) && r.state =!= excludeState.orNull).list.groupBy(_.normalizedHostname)
   }
 }
 

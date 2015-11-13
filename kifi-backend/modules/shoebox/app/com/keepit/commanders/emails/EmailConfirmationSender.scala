@@ -16,10 +16,10 @@ class EmailConfirmationSender @Inject() (
     protected val airbrake: AirbrakeNotifier,
     fortytwoConfig: FortyTwoConfig) extends Logging {
 
-  def apply(emailAddr: UserEmailAddress, sharedDomainOrgOpt: Option[Id[Organization]]): Future[ElectronicMail] =
-    sendToUser(emailAddr.userId, emailAddr.address, emailAddr.verificationCode.get, sharedDomainOrgOpt)
+  def apply(emailAddr: UserEmailAddress, domainOwnerIds: Set[Id[Organization]]): Future[ElectronicMail] =
+    sendToUser(emailAddr.userId, emailAddr.address, emailAddr.verificationCode.get, domainOwnerIds)
 
-  def sendToUser(toUserId: Id[User], address: EmailAddress, verificationCode: EmailVerificationCode, domainOwnerId: Option[Id[Organization]]): Future[ElectronicMail] = {
+  def sendToUser(toUserId: Id[User], address: EmailAddress, verificationCode: EmailVerificationCode, domainOwnerIds: Set[Id[Organization]]): Future[ElectronicMail] = {
 
     val siteUrl = fortytwoConfig.applicationBaseUrl
     val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(verificationCode)}"
@@ -30,8 +30,8 @@ class EmailConfirmationSender @Inject() (
       subject = "Kifi.com | Please confirm your email address",
       to = Right(address),
       category = NotificationCategory.User.EMAIL_CONFIRMATION,
-      htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl, domainOwnerId),
-      textTemplate = Some(views.html.email.verifyEmailText(toUserId, verifyUrl, domainOwnerId))
+      htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl, domainOwnerIds),
+      textTemplate = Some(views.html.email.verifyEmailText(toUserId, verifyUrl, domainOwnerIds))
     )
     emailTemplateSender.send(emailToSend)
   }
