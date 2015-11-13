@@ -96,7 +96,7 @@ $footer
 $article
 
 """)
-        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *")
+        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *; style-src 'unsafe-inline' *.kifi.com")
       case _ => NotFound
     }
   }
