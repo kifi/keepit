@@ -6,7 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, ImagePath }
 import com.keepit.model._
-import com.keepit.rover.article.content.{ PageAuthor, EmbedlyMedia }
+import com.keepit.rover.article.content.{ArticleContent, EmbedlyContent, PageAuthor, EmbedlyMedia}
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -25,9 +25,10 @@ case class RoverArticleSummary(
     wordCount: Option[Int],
     publishedAt: Option[DateTime],
     authors: Seq[PageAuthor],
-    media: Option[RoverMedia]) {
+    media: Option[RoverMedia],
+    hasContent: Boolean) {
 
-  lazy val readTime: Option[Duration] = wordCount.flatMap(TimeToReadCommander.wordCountToReadTimeMinutes(_).map(_ minutes))
+  lazy val readTime: Option[Duration] = wordCount.flatMap(TimeToReadCommander.wordCountToReadTimeMinutes(_).map(_.minutes))
 
 }
 
@@ -39,8 +40,17 @@ object RoverArticleSummary {
       wordCount = getWordCount(article),
       publishedAt = article.content.publishedAt,
       authors = article.content.authors,
-      media = getMedia(article)
+      media = getMedia(article),
+      hasContent = hasUsefulContent(article.content)
     )
+  }
+
+  private def hasUsefulContent[T <: Article](content: ArticleContent[T]): Boolean = {
+    // Used for cached viewer. Just a heuristic if we should show a cached version or not.
+    content.content.exists(_.length > 180) || (content match {
+        case ec: EmbedlyContent => ec.media.isDefined
+        case _ => false
+      })
   }
 
   private def getWordCount(article: Article): Option[Int] = {
@@ -52,7 +62,7 @@ object RoverArticleSummary {
     case _ => None
   }
 
-  val empty = RoverArticleSummary(None, None, None, None, Seq.empty, None)
+  val empty = RoverArticleSummary(None, None, None, None, Seq.empty, None, false)
 }
 
 @json
@@ -94,7 +104,8 @@ case class RoverUriSummary(article: RoverArticleSummary, images: BasicImages) {
       description = article.description,
       imageWidth = image.map(_.size.width),
       imageHeight = image.map(_.size.height),
-      wordCount = article.wordCount
+      wordCount = article.wordCount,
+      hasContent = article.hasContent
     )
   }
 }
