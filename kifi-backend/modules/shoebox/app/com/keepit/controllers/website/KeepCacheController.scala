@@ -32,7 +32,7 @@ class KeepCacheController @Inject() (
     nUrlOpt.map { nUrl =>
       roverServiceClient.getOrElseFetchRecentArticle(nUrl, 182.days)(EmbedlyArticle)
     }.getOrElse(Future.successful(None)).map {
-      case Some(article) if article.content.rawContent.nonEmpty =>
+      case Some(article) =>
 
         val displayUrl = clean(if (article.url.length > 55) {
           article.url.take(30) + "…" + article.url.takeRight(15)
@@ -93,7 +93,21 @@ $footer
 
 <br><hr><br>Full fetch article:<br>
 
-$article
+${article.content.contentType}
+
+${article.content.description}
+
+${article.content.embedlyKeywords}
+
+${article.content.entities.map(_.name)}
+
+${article.content.images}
+
+${article.content.keywords}
+
+${article.content.language}
+
+${article.content.media}
 
 """)
         Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *; style-src 'unsafe-inline' *.kifi.com")
