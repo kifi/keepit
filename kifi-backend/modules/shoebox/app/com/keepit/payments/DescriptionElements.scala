@@ -3,6 +3,7 @@ package com.keepit.payments
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.model.{ OrganizationRole, OrganizationHandle, BasicOrganization }
+import com.keepit.slack.models.SlackMessage
 import com.keepit.social.BasicUser
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -87,7 +88,7 @@ object DescriptionElements {
   def formatForSlack(description: DescriptionElements): String = {
     interpolatePunctuation(description.flatten).map { be =>
       be.url
-        .map(u => s"<$u|${be.text}>")
+        .map(u => s"<$u|${SlackMessage.escapeSegment(be.text)}>")
         .getOrElse(be.text)
     }.mkString
   }
