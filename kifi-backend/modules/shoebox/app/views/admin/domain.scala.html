@@ -1,5 +1,4 @@
-@import com.keepit.model.Organization
-@(domain: com.keepit.classify.Domain, org: Option[Organization])(implicit request: com.keepit.common.controller.UserRequest[_])
+@(domain: com.keepit.classify.Domain, orgs: Set[Id[Organization]])(implicit request: com.keepit.common.controller.UserRequest[_])
 
 @admin("View Domain", stylesheets = List("admin_slider")) {
     <table class="table table-bordered">
@@ -39,14 +38,7 @@
         </tr>
         <tr>
             <th>Owned by</th>
-            @if(org.isDefined) {
-                <td>
-                    @adminHelper.orgDisplay(org.get)
-                </td>
-            } else {
-                <td><em>No organization</em></td>
-            }
-
+            @{orgs.mkString(", ")}
         </tr>
     </table>
 

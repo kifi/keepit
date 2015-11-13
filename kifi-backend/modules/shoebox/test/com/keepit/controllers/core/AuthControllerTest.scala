@@ -11,7 +11,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.cortex.FakeCortexServiceClientModule
-import com.keepit.model.{ UserEmailAddress, UserEmailAddressRepo }
+import com.keepit.model.{ OrganizationMembershipRepo, OrganizationFactory, UserFactory }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
@@ -21,7 +21,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory
+import com.keepit.model.OrganizationFactoryHelper._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -87,6 +87,40 @@ class AuthControllerTest extends Specification with ShoeboxTestInjector {
         val result = ctrl.forgotPassword()(FakeRequest(call).withBody(body))
         Json.parse(contentAsString(result)) === Json.obj("error" -> "no_account")
         status(result) === BAD_REQUEST
+      }
+    }
+
+    "auto-join org upon shared email verification" in {
+      withDb(modules: _*) { implicit injector =>
+        val (org, org2, user) = db.readWrite { implicit s =>
+          val owner = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(owner).withDomain("primate.org").saved
+          val org2 = OrganizationFactory.organization().withOwner(owner).withDomain("primate.org").saved
+          val userToJoin = UserFactory.user().saved
+          (org, org2, userToJoin)
+        }
+
+        userEmailAddressCommander.addEmail(user.id.get, EmailAddress("orangutan@primate.org"))
+
+        val userEmail = db.readOnlyMaster { implicit s => userEmailAddressRepo.getByAddress(EmailAddress("orangutan@primate.org")).get }
+        userEmail.verified === false
+
+        inject[FakeUserActionsHelper].setUser(user)
+        val request = FakeRequest(com.keepit.controllers.core.routes.AuthController.verifyEmail(userEmail.verificationCode.get))
+        val response = inject[AuthController].verifyEmail(userEmail.verificationCode.get)(request)
+        Await.ready(response, Duration(5, "seconds"))
+
+        val membershipRepo = inject[OrganizationMembershipRepo]
+        val (newUserEmail, membershipOpt, membershipOpt2) = db.readOnlyMaster { implicit s =>
+          val userEmail = userEmailAddressRepo.getByAddress(EmailAddress("orangutan@primate.org")).get
+          val orgMembership = membershipRepo.getByOrgIdAndUserId(org.id.get, user.id.get)
+          val orgMembership2 = membershipRepo.getByOrgIdAndUserId(org2.id.get, user.id.get)
+          (userEmail, orgMembership, orgMembership2)
+        }
+
+        newUserEmail.verified === true
+        membershipOpt.isDefined === true
+        membershipOpt2.isDefined === true
       }
     }
   }
