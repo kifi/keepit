@@ -274,17 +274,5 @@ class UserAgentTest extends Specification {
       agent.isOldIE === false
       agent.possiblyBot === true
     }
-    "detect eishay's android browser" in {
-      val str = "Mozilla/5.0 (Linux; Android 5.1.1; SM-G925V Build/LMY47X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.76 Mobile Safari/537.36"
-      val agent = UserAgent(str)
-      agent.isMobile === true
-      agent.canRunExtensionIfUpToDate === false
-      agent.isKifiIphoneApp === false
-      agent.isKifiAndroidApp === false
-      agent.isIphone === false
-      agent.isAndroid === true
-      agent.isOldIE === false
-      agent.possiblyBot === false
-    }
   }
 }
