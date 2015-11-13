@@ -120,7 +120,7 @@ class SlackCommanderImpl @Inject() (
           )
       }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value))
       libId -> Some(LibrarySlackInfo(
-        link = slackClient.generateAuthorizationRequest(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))),
+        link = SlackAPI.OAuthAuthorize(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))).url,
         integrations = integrations
       ))
     }.toMap

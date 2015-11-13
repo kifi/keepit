@@ -1,12 +1,16 @@
 package com.keepit.slack.models
 
+import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.strings.StringWithReplacements
+import com.keepit.common.strings._
 import com.kifi.macros.json
+import org.joda.time.LocalDate
 import play.api.http.Status._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import play.api.mvc.Results.Status
+
+import scala.util.{ Failure, Try }
 
 @json case class SlackUserId(value: String)
 @json case class SlackUsername(value: String)
@@ -95,7 +99,7 @@ object SlackAPIFailure {
   }
   def Generic(status: Int, payload: JsValue) = SlackAPIFailure(status, Error.generic, payload)
   def ParseError(payload: JsValue) = SlackAPIFailure(OK, Error.parse, payload)
-  def StateError(state: String) = SlackAPIFailure(OK, Error.state, JsString(state))
+  def StateError(state: SlackState) = SlackAPIFailure(OK, Error.state, JsString(state.state))
 }
 
 case class SlackAuthScope(value: String)
@@ -142,6 +146,12 @@ object SlackAuthScope {
 @json
 case class SlackAuthorizationCode(code: String)
 
+case class SlackState(state: String)
+object SlackState {
+  implicit def fromJson(value: JsValue): SlackState = SlackState(CryptoSupport.encodeBase64(Json.stringify(value)))
+  def toJson(state: SlackState): Try[JsValue] = Try(Json.parse(CryptoSupport.decodeBase64(state.state))).orElse(Failure(SlackAPIFailure.StateError(state)))
+}
+
 case class SlackAuthorizationRequest(
   url: String,
   scopes: Set[SlackAuthScope],
@@ -180,7 +190,38 @@ object SlackIdentifyResponse {
   )(SlackIdentifyResponse.apply _)
 }
 
-case class SlackSearchQuery(queryString: String)
+sealed abstract class SlackSearchParams(val name: String, val value: Option[String])
+
+case class SlackSearchQuery(query: String) extends SlackSearchParams("query", Some(query))
+object SlackSearchQuery {
+  def apply(queries: SlackSearchQuery*): SlackSearchQuery = SlackSearchQuery(queries.map(_.query).mkString(" "))
+
+  implicit def fromString(query: String): SlackSearchQuery = SlackSearchQuery(query)
+  def in(channelName: SlackChannelName) = SlackSearchQuery(s"in:${channelName.value}")
+  def from(username: SlackUsername) = SlackSearchQuery(s"from:${username.value}")
+  def before(date: LocalDate) = SlackSearchQuery(s"before:$date")
+  def after(date: LocalDate) = SlackSearchQuery(s"after:$date")
+  val hasLink = SlackSearchQuery(s"has:link")
+}
+
+object SlackSearchParams {
+  sealed abstract class Sort(sort: String) extends SlackSearchParams("sort", Some(sort))
+  object Sort {
+    case object ByScore extends Sort("score")
+    case object ByTimestamp extends Sort("timestamp")
+  }
+
+  sealed abstract class SortDirection(dir: String) extends SlackSearchParams("sort_dir", Some(dir))
+  object SortDirection {
+    case object Descending extends SortDirection("desc")
+    case object Ascending extends SortDirection("asc")
+  }
+
+  object Highlight extends SlackSearchParams("highlight", Some("1"))
+
+  case class Page(n: Int) extends SlackSearchParams("page", Some(n.toString))
+  case class PageSize(size: Int) extends SlackSearchParams("count", Some(size.toString))
+}
 
 case class SlackSearchResponse(query: String, messages: JsObject)
 object SlackSearchResponse {

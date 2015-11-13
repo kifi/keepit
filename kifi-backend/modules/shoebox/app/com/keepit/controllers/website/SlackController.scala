@@ -7,8 +7,9 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.model.Library
 import com.keepit.shoebox.controllers.OrganizationAccessActions
-import com.keepit.slack.models.{ SlackIntegrationRequest, SlackAPIFailure, SlackAuthScope, SlackAuthorizationCode }
+import com.keepit.slack.models._
 import com.keepit.slack.{ SlackClient, SlackCommander }
+import play.api.libs.json.{ JsObject, JsValue }
 
 import scala.concurrent.ExecutionContext
 
@@ -25,7 +26,7 @@ class SlackController @Inject() (
 
   def registerSlackAuthorization(code: String, state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
-    val stateObj = slackClient.decodeState(state).toOption
+    val stateObj = SlackState.toJson(SlackState(state)).toOption.flatMap(_.asOpt[JsObject])
     val libIdOpt = stateObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
 
     val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
