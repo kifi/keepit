@@ -31,6 +31,25 @@ angular.module('kifi')
           scope.organizations = scope.organizations.concat(me.potentialOrgs);
         }
 
+        if (!profileService.prefs.company_name) {
+          profileService.fetchPrefs().then(function (prefs) {
+            if (prefs.company_name && !orgNameExists(prefs.company_name)) {
+              scope.companyName = prefs.company_name;
+            }
+          });
+        } else {
+          scope.companyName = (!orgNameExists(profileService.prefs.company_name) && profileService.prefs.company_name);
+        }
+
+        function orgNameExists(companyName) {
+          var orgNames = profileService.me.orgs.map(
+            function(org) {
+              return org.name.toLowerCase();
+            }
+          );
+          return orgNames.indexOf(companyName.toLowerCase()) !== -1;
+        }
+
         scope.shouldShowCreateTeam = function () {
           return scope.me.experiments.indexOf('admin') !== -1 || (scope.me.experiments.indexOf('create_team') !== -1 && scope.me.orgs.length <= 1);
         };
@@ -75,6 +94,7 @@ angular.module('kifi')
           modalService.open({
             template: 'profile/learnMoreModal.tpl.html',
             modalData: {
+              companyName: scope.companyName,
               triggerCreateTeam: function () {
                 $analytics.eventTrack('user_clicked_page', {
                   'type' : 'homeFeed',

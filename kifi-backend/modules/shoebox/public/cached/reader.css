@@ -27,12 +27,6 @@ blockquote, q { quotes: "" ""; }
 /* Remove annoying border on linked images. */
 a img { border: none; }
 
-
-body {
-
-  margin: 10px;
-}
-
 body {
 font:1em/1.625em "PT Serif","lucida grande","lucida sans unicode", sans-serif; background-color:#F0F0ED;
 font-size-adjust:none;
@@ -43,7 +37,7 @@ width: 36em;
 margin: 1em auto;
 }
 
-p { padding:0 0 1em 0; color:#111; font-weight:300;}
+p { padding:0 0 1em 0; color:#111; font-weight:300; display: inline-block;}
 
 p img       { float: left; margin: 0.5em 0.8125em 0.8125em 0; padding: 0; }
 p img.right { float: right; margin: 0.5em  0 0.8125em 0.8125em }

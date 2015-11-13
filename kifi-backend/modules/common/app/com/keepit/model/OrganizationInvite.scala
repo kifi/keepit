@@ -25,7 +25,7 @@ case class OrganizationInvite(
     emailAddress: Option[EmailAddress] = None,
     role: OrganizationRole = OrganizationRole.MEMBER,
     message: Option[String] = None,
-    authToken: String = RandomStringUtils.randomAlphanumeric(9)) extends ModelWithPublicId[OrganizationInvite] with ModelWithState[OrganizationInvite] {
+    authToken: String = RandomStringUtils.randomAlphanumeric(16)) extends ModelWithPublicId[OrganizationInvite] with ModelWithState[OrganizationInvite] {
 
   def withId(id: Id[OrganizationInvite]): OrganizationInvite = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime): OrganizationInvite = this.copy(updatedAt = now)

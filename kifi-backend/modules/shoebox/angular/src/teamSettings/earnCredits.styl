@@ -8,6 +8,12 @@
 .kf-earn-credits-referral
   cursor: pointer
 
+.kf-main-pane-earn-credits .kf-earn-credits-referral-link // to have higher specificity than kf-textbox
+  width: 300px
+
+.kf-referral-link-btn
+  width: 70px
+
 .kf-referral-code-txt
   color: black
   border-color: lightGrey
@@ -17,11 +23,35 @@
   padding: 10px 10px 10px
   margin-right: 20px
 
-.kf-main-pane-earn-credits-inputs
-  display: flex
-  align-items: center
+.kf-main-pane-earn-credits-social
+  text-align: center
+  margin: 15px 0
 
-  > * + *
+  .kf-earn-credits-share-twitter
+    background: #24c5f6
+
+    &:not([disabled]):hover
+      background: lighten(#24c5f6, 20%)
+
+  .kf-earn-credits-share-fb
+    background: #3a57a1
+
+    &:not([disabled]):hover
+      background: lighten(#3a57a1, 20%)
+
+  .kf-earn-credits-share-email
+    background: #5a9
+
+    &:not([disabled]):hover
+      background: lighten(#5a9, 20%)
+
+  a, button
+    color: #fff
+    white-space: nowrap
+    display: inline-block
+    border: 1px solid #eee
+
+  button + button
     margin-left: 10px
 
 .kf-earn-credits-activity

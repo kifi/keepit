@@ -81,8 +81,13 @@ POST    /up/report                  @com.keepit.controllers.tracking.EventProxyC
 # Special projects
 ##########################################
 
-GET     /twitter                    @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLanding()
 GET     /site/twitterQueuePosition  @com.keepit.controllers.website.TwitterWaitlistController.getFakeWaitlistPosition()
+
+GET     /integrations/twitter         @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLandingRedirectHack()
+GET     /integrations/twitter/request @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlistRedirectHack()
+GET     /integrations/twitter/thanks  @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlistRedirectHack()
+
+GET     /twitter                    @com.keepit.controllers.website.TwitterWaitlistController.twitterWaitlistLanding()
 GET     /twitter/request            @com.keepit.controllers.website.TwitterWaitlistController.requestToTwitterWaitlist()
 GET     /twitter/thanks             @com.keepit.controllers.website.TwitterWaitlistController.thanksForTwitterWaitlist()
 
@@ -338,6 +343,7 @@ GET     /about/join_us              @com.keepit.controllers.website.HomeControll
 GET     /about/join_us.html         @com.keepit.controllers.website.HomeController.moved(uri = "/about/join_us")
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
+GET     /integrations/slack         @com.keepit.controllers.website.HomeController.route(path = "slack")
 GET     /imports/pinboard           @com.keepit.controllers.website.HomeController.route(path = "imports/pinboard")
 GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
 GET     /imports/instapaper         @com.keepit.controllers.website.HomeController.route(path = "imports/instapaper")
@@ -472,6 +478,11 @@ POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.Libr
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
 
+# TODO(ryan): remove this trigger endpoint, it is just for testing
+GET   /site/libraries/:id/slack/trigger     @com.keepit.controllers.website.SlackController.triggerIntegrations(id: PublicId[Library])
+POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
+POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])
+
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 POST    /site/user/me/username      @com.keepit.controllers.website.UserController.updateUsername()
@@ -554,6 +565,7 @@ GET           /site/user-or-org/:handle/libraries         @com.keepit.controller
 GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
 GET           /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.getAccountState(pubId: PublicId[Organization])
+POST          /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.updateAccountState(pubId: PublicId[Organization], newPlanId: PublicId[com.keepit.payments.PaidPlan], newCardId: PublicId[com.keepit.payments.PaymentMethod])
 GET           /site/admin/billing/state/preview                 @com.keepit.controllers.website.PaymentsController.previewAccountState(pubId: PublicId[Organization], newPlanId: PublicId[com.keepit.payments.PaidPlan], newCardId: PublicId[com.keepit.payments.PaymentMethod])
 GET           /site/admin/billing/plans                         @com.keepit.controllers.website.PaymentsController.getAvailablePlans(pubId: PublicId[Organization])
 GET           /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.getDefaultCreditCard(pubId: PublicId[Organization])

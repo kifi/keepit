@@ -3,12 +3,15 @@ package com.keepit.slack
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.kifi.macros.json
+import play.api.http.Status._
+
+import scala.util.{ Success, Failure, Try }
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -37,6 +40,8 @@ trait SlackCommander {
   // Open their own DB sessions, intended to be called directly from controllers
   def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
   def setupIntegration(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit
+  def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
+  def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
 
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[LibrarySlackInfo]]
@@ -80,7 +85,7 @@ class SlackCommanderImpl @Inject() (
 
   def setupIntegration(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
     db.readWrite { implicit s =>
-      libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationRequest(
+      libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         userId = userId,
         libraryId = libId,
         slackUserId = identity.userId,
@@ -89,6 +94,54 @@ class SlackCommanderImpl @Inject() (
         slackChannel = webhook.channelName
       ))
     }
+  }
+
+  private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {
+    request match {
+      case r: SlackIntegrationCreateRequest =>
+        None
+
+      case r: SlackIntegrationModifyRequest =>
+        val owners = libToChannelRepo.getActiveByIds(r.libToSlack.keySet).map(_.ownerId) ++ channelToLibRepo.getActiveByIds(r.slackToLib.keySet).map(_.ownerId)
+        if (owners != Set(r.requesterId)) Some(LibraryFail(FORBIDDEN, "cannot_modify_integration"))
+        else None
+
+      case r: SlackIntegrationDeleteRequest =>
+        None
+        val owners = libToChannelRepo.getActiveByIds(r.libToSlack).map(_.ownerId) ++ channelToLibRepo.getActiveByIds(r.slackToLib).map(_.ownerId)
+        if (owners != Set(r.requesterId)) Some(LibraryFail(FORBIDDEN, "cannot_delete_integration"))
+        else None
+    }
+  }
+
+  def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse] = db.readWrite { implicit s =>
+    validateRequest(request) match {
+      case Some(fail) => Failure(fail)
+      case None =>
+        Success(unsafeModifyIntegrations(request))
+    }
+  }
+  private def unsafeModifyIntegrations(request: SlackIntegrationModifyRequest)(implicit session: RWSession): SlackIntegrationModifyResponse = {
+    request.libToSlack.foreach {
+      case (ltsId, status) => libToChannelRepo.save(libToChannelRepo.get(ltsId).withStatus(status))
+    }
+    request.slackToLib.foreach {
+      case (stlId, status) => channelToLibRepo.save(channelToLibRepo.get(stlId).withStatus(status))
+    }
+    SlackIntegrationModifyResponse(request.libToSlack.size + request.slackToLib.size)
+  }
+
+  def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse] = db.readWrite { implicit s =>
+    validateRequest(request) match {
+      case Some(fail) => Failure(fail)
+      case None =>
+        Success(unsafeDeleteIntegrations(request))
+    }
+  }
+  private def unsafeDeleteIntegrations(request: SlackIntegrationDeleteRequest)(implicit session: RWSession): SlackIntegrationDeleteResponse = {
+    request.libToSlack.foreach { ltsId => libToChannelRepo.deactivate(libToChannelRepo.get(ltsId)) }
+    request.slackToLib.foreach { stlId => channelToLibRepo.deactivate(channelToLibRepo.get(stlId)) }
+    SlackIntegrationDeleteResponse(request.libToSlack.size + request.slackToLib.size)
   }
 
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[LibrarySlackInfo]] = {
@@ -120,7 +173,7 @@ class SlackCommanderImpl @Inject() (
           )
       }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value))
       libId -> Some(LibrarySlackInfo(
-        link = slackClient.generateAuthorizationRequest(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))),
+        link = SlackAPI.OAuthAuthorize(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))).url,
         integrations = integrations
       ))
     }.toMap
