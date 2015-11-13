@@ -4,7 +4,7 @@ import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
 import com.keepit.commanders.OrganizationDomainOwnershipCommander.{ DomainIsEmailProvider, InvalidDomainName, DomainAlreadyOwned, DomainDidNotExist, OwnDomainSuccess, OwnDomainFailure }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
@@ -53,6 +53,7 @@ object OrganizationDomainOwnershipCommander {
 class OrganizationDomainOwnershipCommanderImpl @Inject() (
     db: Database,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+    orgConfigurationRepo: OrganizationConfigurationRepo,
     domainRepo: DomainRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
     userEmailAddressCommander: UserEmailAddressCommander,
@@ -87,7 +88,10 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
                 case Some(activeOwnership) if activeOwnership.isActive => activeOwnership
                 case inactiveOpt => orgDomainOwnershipRepo.save(OrganizationDomainOwnership(id = inactiveOpt.map(_.id.get), organizationId = orgId, normalizedHostname = normalizedHostname))
               }
-              sendVerificationEmailsToAllPotentialMembers(ownership)
+              db.readWrite { implicit session =>
+                val canVerifyToJoin = !orgConfigurationRepo.getByOrgId(ownership.organizationId).settings.settingFor(Feature.VerifyToJoin).contains(FeatureSetting.DISABLED)
+                if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
+              }
               Right(OwnDomainSuccess(domain, ownership))
             }
           }
@@ -96,7 +100,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     }
   }
 
-  private def sendVerificationEmailsToAllPotentialMembers(ownership: OrganizationDomainOwnership): Unit = db.readWrite { implicit session =>
+  private def sendVerificationEmailsToAllPotentialMembers(ownership: OrganizationDomainOwnership)(implicit session: RWSession): Unit = {
     val orgMembers = orgMembershipRepo.getAllByOrgId(ownership.organizationId)
     val usersToEmail = userEmailAddressRepo.getByDomain(ownership.normalizedHostname)
       .filter(userEmail => !orgMembers.exists(_.userId == userEmail.userId))

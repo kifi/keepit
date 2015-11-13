@@ -49,6 +49,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     orgMembershipRepo: OrganizationMembershipRepo,
     heimdalClient: HeimdalServiceClient,
     emailConfirmationSender: EmailConfirmationSender,
+    permissionCommander: PermissionCommander,
     clock: Clock,
     implicit val executionContext: ExecutionContext) extends UserEmailAddressCommander with Logging {
 
@@ -57,10 +58,12 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit] = {
+    val userId = emailAddress.userId
     val domainOwnerIds = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailAddress.address))
       .map(orgDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
-      .diff(userValueRepo.getValue(emailAddress.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
-      .filter(orgId => !orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailAddress.userId))
+      .diff(userValueRepo.getValue(userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
+      .filter(orgId => !orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId))
+      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.VERIFY_TO_JOIN))
     val emailWithCode = userEmailAddressRepo.save(emailAddress.withVerificationCode(clock.now()))
     session.onTransactionSuccess {
       emailConfirmationSender(emailWithCode, domainOwnerIds) recoverWith {
@@ -75,9 +78,11 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
+    val userId = verifiedEmail.userId
     NormalizedHostname.fromHostname(EmailAddress.getHostname(verifiedEmail.address))
       .map(domain => orgDomainOwnershipCommander.getOwningOrganizations(domain)).getOrElse(Set.empty)
       .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
+      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.VERIFY_TO_JOIN))
       .foreach { orgId =>
         val addRequest = OrganizationMembershipAddRequest(orgId, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
         organizationMembershipCommander.addMembershipHelper(addRequest)

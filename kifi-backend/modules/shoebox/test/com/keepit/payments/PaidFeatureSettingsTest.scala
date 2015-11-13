@@ -6,6 +6,8 @@ import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.EmailAddress
+import com.keepit.controllers.core.AuthController
 import com.keepit.controllers.ext.ExtUserController
 import com.keepit.controllers.mobile.{ MobileContactsController, MobileUserController, MobileOrganizationMembershipController }
 import com.keepit.controllers.website.{ LibraryController, OrganizationMembershipController }
@@ -384,21 +386,21 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(owner)
-        val ownerExtRequest1 = FakeRequest("GET", mobileRoute)
+        val ownerExtRequest1 = FakeRequest("GET", extRoute)
         val ownerExtResult1 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest1)
         contentAsJson(ownerExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
-        val adminExtRequest1 = FakeRequest("GET", mobileRoute)
+        val adminExtRequest1 = FakeRequest("GET", extRoute)
         val adminExtResult1 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest1)
         contentAsJson(adminExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(member)
-        val memberExtRequest1 = FakeRequest("GET", mobileRoute)
+        val memberExtRequest1 = FakeRequest("GET", extRoute)
         val memberExtResult1 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest1)
         contentAsJson(memberExtResult1).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] != Organization.publicId(org.id.get))
@@ -430,21 +432,21 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(owner)
-        val ownerExtRequest2 = FakeRequest("GET", mobileRoute)
+        val ownerExtRequest2 = FakeRequest("GET", extRoute)
         val ownerExtResult2 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest2)
         contentAsJson(ownerExtResult2).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
-        val adminExtRequest2 = FakeRequest("GET", mobileRoute)
+        val adminExtRequest2 = FakeRequest("GET", extRoute)
         val adminExtResult2 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest2)
         contentAsJson(adminExtResult2).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(member)
-        val memberExtRequest2 = FakeRequest("GET", mobileRoute)
+        val memberExtRequest2 = FakeRequest("GET", extRoute)
         val memberExtResult2 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest2)
         contentAsJson(memberExtResult2).as[Seq[JsObject]].forall { obj =>
           !((obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get))
@@ -476,25 +478,72 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(owner)
-        val ownerExtRequest3 = FakeRequest("GET", mobileRoute)
+        val ownerExtRequest3 = FakeRequest("GET", extRoute)
         val ownerExtResult3 = extUserController.searchForContacts(query = None, limit = None)(ownerExtRequest3)
         contentAsJson(ownerExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(admin)
-        val adminExtRequest3 = FakeRequest("GET", mobileRoute)
+        val adminExtRequest3 = FakeRequest("GET", extRoute)
         val adminExtResult3 = extUserController.searchForContacts(query = None, limit = None)(adminExtRequest3)
         contentAsJson(adminExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
 
         inject[FakeUserActionsHelper].setUser(member)
-        val memberExtRequest3 = FakeRequest("GET", mobileRoute)
+        val memberExtRequest3 = FakeRequest("GET", extRoute)
         val memberExtResult3 = extUserController.searchForContacts(query = None, limit = None)(memberExtRequest3)
         contentAsJson(memberExtResult3).as[Seq[JsObject]].exists { obj =>
           (obj \ "kind").as[String] == "org" && (obj \ "id").as[PublicId[Organization]] == Organization.publicId(org.id.get)
         } must beTrue
+      }
+    }
+  }
+
+  "verify to join permission" should {
+    "auto-join org upon shared email verification" in {
+      withDb(modules: _*) { implicit injector =>
+        val (org, owner, user) = db.readWrite { implicit s =>
+          val owner = UserFactory.user().saved
+          val org = OrganizationFactory.organization().withOwner(owner).withDomain("primate.org").saved
+          val user = UserFactory.user().saved
+          (org, owner, user)
+        }
+
+        val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.VerifyToJoin -> FeatureSetting.DISABLED) }
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, initOrgSettings)) must beRight
+
+        userEmailAddressCommander.addEmail(user.id.get, EmailAddress("orangutan@primate.org"))
+
+        val userEmail = db.readOnlyMaster { implicit s => userEmailAddressRepo.getByAddress(EmailAddress("orangutan@primate.org")).get }
+        userEmail.verified === false
+
+        val authController = inject[AuthController]
+        inject[FakeUserActionsHelper].setUser(user)
+        val request = FakeRequest(com.keepit.controllers.core.routes.AuthController.verifyEmail(userEmail.verificationCode.get))
+        val response = authController.verifyEmail(userEmail.verificationCode.get)(request)
+        Await.ready(response, Duration(5, "seconds"))
+
+        val membershipRepo = inject[OrganizationMembershipRepo]
+        val (newUserEmail, noMembership) = db.readOnlyMaster { implicit s =>
+          val userEmail = userEmailAddressRepo.getByAddress(EmailAddress("orangutan@primate.org")).get
+          val orgMembership = membershipRepo.getByOrgIdAndUserId(org.id.get, user.id.get)
+          (userEmail, orgMembership)
+        }
+
+        newUserEmail.verified === true
+        noMembership.isDefined === false
+
+        val newOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.VerifyToJoin -> FeatureSetting.ANYONE) }
+        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, newOrgSettings)) must beRight
+
+        val response2 = authController.verifyEmail(userEmail.verificationCode.get)(request)
+        Await.ready(response2, Duration(5, "seconds"))
+
+        val someMembership = db.readOnlyMaster { implicit s => membershipRepo.getByOrgIdAndUserId(org.id.get, user.id.get) }
+
+        someMembership.isDefined === true
       }
     }
   }
