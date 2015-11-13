@@ -1,5 +1,4 @@
-<div class="kf-billing-summary kf-container">
-  <div class="kf-container-header"><span>Overview</span></div>
+<div class="kf-billing-summary">
   <ul class="kf-list">
     <li>
       <p>
@@ -29,9 +28,9 @@
     <li ng-if="isPaidPlan()">
       <p>
         As of today, your plan will renew on
-        <b ng-bind="billingState.billingDate | date:'yyyy-MM-dd'"></b>
+        <b ng-bind="billingState.planRenewal | date:'yyyy-MM-dd'"></b>
         for
-        <b ng-bind="billingState.charge | money"></b>.
+        <b ng-bind="billingState.planRenewalCost | money"></b>.
       </p>
       <ul ng-if="billingState.balance | isNegativeMoney">
         <li>
@@ -64,6 +63,12 @@
           </a>
           is charged.
         </span>
+      </p>
+    </li>
+    <li ng-if="billingState.paymentStatus === 'pending'">
+      <p>
+        Your <a class="kf-link kf-link-black kf-link-underline" ui-sref="orgProfile.settings.activity">previous payment</a>
+        failed to process, so your balance will be charged when you save.
       </p>
     </li>
   </ul>
