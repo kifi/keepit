@@ -68,7 +68,7 @@
         </span>
       </p>
     </li>
-    <li ng-if="preview && billingState.paymentStatus === 'pending'">
+    <li ng-if="preview && billingState.paymentStatus === 'pending' && (billingState.balance | isNegativeMoney)">
       <p>
         Your
         <a
