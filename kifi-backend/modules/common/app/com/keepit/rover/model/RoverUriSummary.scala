@@ -25,8 +25,9 @@ case class RoverArticleSummary(
     wordCount: Option[Int],
     publishedAt: Option[DateTime],
     authors: Seq[PageAuthor],
-    media: Option[RoverMedia],
-    hasContent: Boolean) {
+    media: Option[RoverMedia]) {
+
+  def hasContent: Boolean = wordCount.exists(_ > 180) || media.isDefined
 
   lazy val readTime: Option[Duration] = wordCount.flatMap(TimeToReadCommander.wordCountToReadTimeMinutes(_).map(_.minutes))
 
@@ -40,17 +41,8 @@ object RoverArticleSummary {
       wordCount = getWordCount(article),
       publishedAt = article.content.publishedAt,
       authors = article.content.authors,
-      media = getMedia(article),
-      hasContent = hasUsefulContent(article.content)
+      media = getMedia(article)
     )
-  }
-
-  private def hasUsefulContent[T <: Article](content: ArticleContent[T]): Boolean = {
-    // Used for cached viewer. Just a heuristic if we should show a cached version or not.
-    content.content.exists(_.length > 180) || (content match {
-        case ec: EmbedlyContent => ec.media.isDefined
-        case _ => false
-      })
   }
 
   private def getWordCount(article: Article): Option[Int] = {
@@ -62,7 +54,7 @@ object RoverArticleSummary {
     case _ => None
   }
 
-  val empty = RoverArticleSummary(None, None, None, None, Seq.empty, None, false)
+  val empty = RoverArticleSummary(None, None, None, None, Seq.empty, None)
 }
 
 @json
@@ -116,7 +108,7 @@ object RoverUriSummary {
 }
 
 case class RoverArticleSummaryKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[RoverArticleSummary] {
-  override val version = 1
+  override val version = 2
   val namespace = "best_article_summary_by_uri_id_and_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
