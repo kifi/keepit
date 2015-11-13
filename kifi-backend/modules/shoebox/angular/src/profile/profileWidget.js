@@ -111,6 +111,7 @@ angular.module('kifi')
         };
 
         scope.hideOrgDomain = function(org) {
+          org.declined = true;
           orgProfileService.trackEvent('user_clicked_page', org,
             {
               'type': 'homeFeed',

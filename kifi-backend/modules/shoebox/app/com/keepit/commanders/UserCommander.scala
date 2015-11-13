@@ -290,7 +290,7 @@ class UserCommanderImpl @Inject() (
 
       val emailHostnames = emails.flatMap(email => NormalizedHostname.fromHostname(EmailAddress.getHostname(email.address)))
       val potentialOrgsToHide = userValueRepo.getValue(user.id.get, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]]
-      val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values
+      val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values.flatten
         .collect {
           case ownership if !orgs.contains(ownership.organizationId) && !pendingOrgs.contains(ownership.organizationId) && !potentialOrgsToHide.contains(ownership.organizationId) =>
             ownership.organizationId
@@ -380,20 +380,20 @@ class UserCommanderImpl @Inject() (
 
   def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
     if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(userId, UserValues.welcomeEmailSent) }) {
-      val (verificationCode, domainOwnerId): (Option[EmailVerificationCode], Option[Id[Organization]]) = db.readWrite { implicit session =>
+      val (verificationCode, domainOwnerIds): (Option[EmailVerificationCode], Set[Id[Organization]]) = db.readWrite { implicit session =>
         for {
           emailAddress <- targetEmailOpt if withVerification
           emailRecord <- emailRepo.getByAddressAndUser(userId, emailAddress)
           code <- emailRecord.verificationCode orElse emailRepo.save(emailRecord.withVerificationCode(clock.now())).verificationCode
         } yield {
-          val domainOwnerIdOpt = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailRecord.address))
-            .flatMap(organizationDomainOwnershipRepo.getOwnershipForDomain(_)).map(_.organizationId)
-            .filter(orgId => !userValueRepo.getValue(emailRecord.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(orgId))
+          val domainOwnerIds = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailRecord.address))
+            .map(organizationDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
+            .diff(userValueRepo.getValue(emailRecord.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
             .filter(orgId => !organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailRecord.userId))
-          (code, domainOwnerIdOpt)
+          (code, domainOwnerIds)
         }
-      }.map { x: (EmailVerificationCode, Option[Id[Organization]]) => (Some(x._1), x._2) }.getOrElse(None, None)
-      val emailF = welcomeEmailSender.get.apply(userId, targetEmailOpt, isPlainEmail, verificationCode, domainOwnerId)
+      }.map { x: (EmailVerificationCode, Set[Id[Organization]]) => (Some(x._1), x._2) }.getOrElse(None, Set.empty[Id[Organization]])
+      val emailF = welcomeEmailSender.get.apply(userId, targetEmailOpt, isPlainEmail, verificationCode, domainOwnerIds)
       emailF.map { email =>
         db.readWrite { implicit rw => userValueRepo.setValue(userId, UserValues.welcomeEmailSent.name, true) }
         ()

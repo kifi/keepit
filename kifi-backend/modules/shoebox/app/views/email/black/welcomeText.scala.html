@@ -1,15 +1,18 @@
-@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerId: Option[Id[Organization]])
+@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]])
 @import com.keepit.common.mail.template.helpers._
-@orgName = @{domainOwnerId.map { orgId => organizationName(orgId) } }
-@orgLink = @{domainOwnerId.map { orgId => organizationLink(orgId, None, "domainOwnerOrg") } }
+@orgNames = @{domainOwnerIds.map { orgId => organizationName(orgId) } }
 
 Dear @firstName(toUserId),
 
 @verifyUrl.map { url =>
 To protect your privacy and security, please confirm your email address by clicking the following link:
 @url
-@if(orgName.isDefined) {
-You'll become a member of @{orgName}'s Kifi team upon confirmation.
+@if(orgNames.nonEmpty) {
+Upon confirmation, you'll become a member of these teams:
+@for(orgName <- orgNames) {
+  orgName
+
+}
 }
 }
 
