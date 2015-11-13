@@ -117,7 +117,8 @@
     </div>
     <div ng-if="billingPreview && isPaidPlanName(plan.name)" class="kf-container-section">
       <h2>Preview</h2>
-      <div kf-billing-summary billing-state="billingPreview"></div>
+      <p>Upon saving:</p>
+      <div kf-billing-summary billing-state="billingPreview" preview="true"></div>
     </div>
     <div class="kf-container-section kf-payment-plan-save-container" ng-if="currentPlan.id !== getSelectedPlan(plan).id || plan.newCard">
       <button

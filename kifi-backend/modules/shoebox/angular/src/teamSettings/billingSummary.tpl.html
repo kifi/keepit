@@ -2,7 +2,8 @@
   <ul class="kf-list">
     <li>
       <p>
-        <span>You currently have</span>
+        <span ng-if="!preview">You currently have</span>
+        <span ng-if="preview">You will have</span>
         <a class="kf-link kf-link-black kf-link-underline" ui-sref="orgProfile.members" ng-click="trackOverviewClick('overview:team_members')">
           <span ng-bind="billingState.users"></span>
           team
@@ -27,9 +28,11 @@
     </li>
     <li ng-if="isPaidPlan()">
       <p>
-        As of today, your plan will renew on
+        <span ng-if="!preview">As of today, your</span>
+        <span ng-if="preview">Your</span>
+        <span>plan will renew on</span>
         <b ng-bind="billingState.planRenewal | date:'yyyy-MM-dd'"></b>
-        for
+        <span>for</span>
         <b ng-bind="billingState.planRenewalCost | money"></b>.
       </p>
       <ul ng-if="billingState.balance | isNegativeMoney">
@@ -65,10 +68,20 @@
         </span>
       </p>
     </li>
-    <li ng-if="billingState.paymentStatus === 'pending'">
+    <li ng-if="preview && billingState.paymentStatus === 'pending'">
       <p>
-        Your <a class="kf-link kf-link-black kf-link-underline" ui-sref="orgProfile.settings.activity">previous payment</a>
-        failed to process, so your balance will be charged when you save.
+        Your
+        <a
+          class="kf-link kf-link-black kf-link-underline"
+          ui-sref="orgProfile.settings.plan"
+          ng-click="trackOverviewClick('overview:card_ending')"
+        >
+          credit card ending in
+          <b ng-bind="'' + billingState.card.lastFour"></b>
+        </a>
+        will immediately be charged for
+        <b ng-bind="((billingState.balance | moneyUnwrap) * -1) | money"></b>
+        from previous invoices.
       </p>
     </li>
   </ul>

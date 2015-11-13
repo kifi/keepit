@@ -12,9 +12,12 @@ angular.module('kifi')
       templateUrl: 'teamSettings/billingSummary.tpl.html',
       scope: {
         billingState: '=',
+        preview: '@',
         parentTrackingType: '='
       },
       link: function ($scope) {
+        $scope.preview = !!$scope.preview;
+        $scope.billingState.paymentStatus = 'pending';
         $scope.isPaidPlan = function () {
           return !isZeroMoneyFilter($scope.billingState.plan.pricePerUser); // TODO(carlos): switch to server-side isPaid flag
         };
