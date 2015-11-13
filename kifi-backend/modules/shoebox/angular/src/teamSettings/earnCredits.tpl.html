@@ -13,7 +13,7 @@
       <div class="kf-main-pane-earn-credits-inputs">
         <input type="text" class="kf-textbox kf-earn-credits-referral kf-earn-credits-referral-link" clipboard readonly text="referralUrl" ng-model="referralUrl" ng-click="showCopied('link')">
         <button clipboard text="referralUrl" ng-click="showCopied('link')" class="kf-button kf-button-large kf-button-cta-green kf-referral-link-btn"><div ng-if="copiedLink">Copied!</div><div ng-if="!copiedLink">Copy Link</div></button>
-        <button clipboard text="referralCode" ng-click="showCopied('code')" class="kf-button kf-button-large kf-referral-link-btn"><div ng-if="copiedCode">Copied!</div><div ng-if="!copiedCode">Copy Code</div></button>
+        <button clipboard text="referralCode" ng-click="showCopied('code')" class="kf-button kf-button-large kf-referral-link-btn"><span ng-if="copiedCode">Copied!</span><span ng-if="!copiedCode">Copy Code</span></button>
       </div>
       <div class="kf-main-pane-earn-credits-social">
         <a class="kf-button kf-button-large kf-earn-credits-share-twitter" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet">Share on Twitter</a>
