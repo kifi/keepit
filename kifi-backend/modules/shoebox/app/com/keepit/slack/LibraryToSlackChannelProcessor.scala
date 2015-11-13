@@ -72,7 +72,6 @@ class LibraryToSlackChannelProcessorImpl @Inject() (
 
         val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
         val keepsById = keepRepo.getByIds(ktls.map(_.keepId).toSet)
-        log.info(s"[LTSCP] For integration ${lts.id.get}, need to push info about ${ktls.length} keeps")
         val message = ktls.length match {
           case noKeeps if noKeeps == 0 => None
           case justAFewKeeps if justAFewKeeps <= MAX_KEEPS_TO_SEND =>
