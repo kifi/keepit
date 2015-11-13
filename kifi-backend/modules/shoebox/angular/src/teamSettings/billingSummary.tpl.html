@@ -44,7 +44,8 @@
     </li>
     <li>
       <p>
-        <span>You have a</span>
+        <span ng-if="!preview">You have a</span>
+        <span ng-if="preview">You will have a</span>
         <a
           class="kf-link kf-link-black kf-link-underline"
           ui-sref="orgProfile.settings.plan"
