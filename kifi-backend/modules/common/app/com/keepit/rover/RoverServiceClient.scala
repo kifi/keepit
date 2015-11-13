@@ -131,7 +131,7 @@ class RoverServiceClientImpl(
         )
         call(Rover.internal.getBestArticleSummaryByUris, payload, callTimeouts = longTimeout).map { r =>
           implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], RoverArticleSummary]
-          val missingSummariesByUriId = (r.json).as[Seq[(Id[NormalizedURI], RoverArticleSummary)]].toMap
+          val missingSummariesByUriId = r.json.as[Seq[(Id[NormalizedURI], RoverArticleSummary)]].toMap
           missingKeys.map { key => key -> missingSummariesByUriId.get(key.uriId) }.toMap
         }
       } imap {
@@ -153,7 +153,7 @@ class RoverServiceClientImpl(
         )
         call(Rover.internal.getImagesByUris, payload, callTimeouts = longTimeout).map { r =>
           implicit val reads = TupleFormat.tuple2Reads[Id[NormalizedURI], BasicImages]
-          val missingImagesByUriId = (r.json).as[Seq[(Id[NormalizedURI], BasicImages)]].toMap
+          val missingImagesByUriId = r.json.as[Seq[(Id[NormalizedURI], BasicImages)]].toMap
           missingKeys.map { key => key -> missingImagesByUriId.getOrElse(key.uriId, BasicImages.empty) }.toMap
         }
       } imap {
