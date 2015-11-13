@@ -22,7 +22,7 @@ object PaidPlanFactory {
     Feature.EditOrganization -> FeatureSetting.ADMINS,
     Feature.ExportKeeps -> FeatureSetting.ADMINS,
     Feature.ViewSettings -> FeatureSetting.MEMBERS,
-    Feature.VerifyToJoin -> FeatureSetting.NONMEMBERS
+    Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS
   ))
 
   def paidPlan(): PartialPaidPlan = {

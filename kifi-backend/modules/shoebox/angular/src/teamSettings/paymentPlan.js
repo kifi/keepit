@@ -36,10 +36,12 @@ angular.module('kifi')
     });
 
     $scope.openStripeCheckout = function () {
+      $scope.addCardPending = true;
       $scope.trackClick('credit_card:add_card');
       var me = profileService.me;
       var emailObject = (me.primaryEmail || me.emails[0] || {}); // extra defensive
       var emailAddress = emailObject.address;
+
 
       // Open Checkout with further options
       handler
@@ -52,8 +54,17 @@ angular.module('kifi')
         panelLabel: 'Save My Card'
       })
       .then(function (response) {
-        $scope.plan.newCard = response[0];
+        var token = response[0];
+
+        return billingService
+        .createNewCard($scope.profile.id, token.id);
+      })
+      .then(function (kifiCardData) {
+        $scope.plan.newCard = kifiCardData;
         $scope.cardError = false;
+      })
+      ['finally'](function () {
+        $scope.addCardPending = false;
       });
     };
 
@@ -125,6 +136,9 @@ angular.module('kifi')
       newCard: null
     };
 
+    $scope.billingPreview = null;
+    $scope.addCardPending = false;
+
     $scope.isNoPlanName = function (planName) {
       return !planName;
     };
@@ -137,11 +151,11 @@ angular.module('kifi')
       return planName && planName.toLowerCase().indexOf('free') > -1;
     };
 
-    $scope.getSelectedPlan = function() {
+    $scope.getSelectedPlan = function (planView) {
       return flatPlans.filter(function (p) {
         return (
-          p.name === $scope.plan.name &&
-          p.cycle === $scope.plan.cycle
+          p.name === planView.name &&
+          p.cycle === planView.cycle
         );
       }).pop();
     };
@@ -149,7 +163,8 @@ angular.module('kifi')
     $scope.$watch('plan', function (newPlan, oldPlan) {
       var initializing = (
         newPlan.name === oldPlan.name &&
-        newPlan.cycle === oldPlan.cycle
+        newPlan.cycle === oldPlan.cycle &&
+        newPlan.newCard === oldPlan.newCard
       );
 
       if (initializing || newPlan.name !== oldPlan.name) {
@@ -175,6 +190,20 @@ angular.module('kifi')
       // Set pristine if the user moves back to the initial values
       if (!initializing && !$scope.plan.newCard && (newPlan.name === $scope.currentPlan.name && newPlan.cycle === $scope.currentPlan.cycle)) {
         resetForm();
+        $scope.billingPreview = null; // outside resetForm because we want preview on ?upgrade=true
+      } else {
+        var selectedPlan = $scope.getSelectedPlan($scope.plan);
+        var card = $scope.plan.newCard || $scope.billingState.card;
+        if (!initializing && card) {
+          billingService
+          .getBillingStatePreview($scope.profile.id, selectedPlan.id, card.id)
+          .then(function (billingPreview) {
+            $scope.billingPreview = billingPreview;
+          })
+          ['catch'](function () {
+            $scope.billingPreview = null;
+          });
+        }
       }
 
       $scope.disableSaveButton = false;
@@ -243,15 +272,12 @@ angular.module('kifi')
     }
 
     $scope.save = function () {
-      var saveSeriesDeferred = $q.defer();
-      var saveSeriesPromise = saveSeriesDeferred.promise;
-      var selectedPlan = $scope.getSelectedPlan();
-
-      $scope.disableSaveButton = true;
-      $window.addEventListener('beforeunload', onBeforeUnload);
+      var savePromise;
+      var selectedPlan = $scope.getSelectedPlan($scope.plan);
+      var hasNewPlan = ($scope.currentPlan.id !== selectedPlan.id);
 
       // If nothing changed, pretend we saved it.
-      if (!$scope.plan.newCard && ($scope.currentPlan.id === selectedPlan.id) && $scope.planSelectsForm.$pristine) {
+      if (!$scope.plan.newCard && !hasNewPlan && $scope.planSelectsForm.$pristine) {
         messageTicker({
           text: 'Saved Successfully',
           type: 'green'
@@ -259,49 +285,47 @@ angular.module('kifi')
         return;
       }
 
-      if ($scope.plan.newCard) {
-        saveSeriesPromise = (
-          saveSeriesPromise
-          .then(function () {
-            return billingService
-            .setBillingCCToken($scope.profile.id, $scope.plan.newCard.id);
-          })
-          .then(function (setCardData) {
-            $scope.card = setCardData.card;
-            $scope.plan.newCard = null;
-          })
-        );
+      $scope.disableSaveButton = true;
+      $window.addEventListener('beforeunload', onBeforeUnload);
+
+      if ($scope.plan.newCard && hasNewPlan) { // both plan and card
+        savePromise = billingService
+        .updateAccountState($scope.profile.id, selectedPlan.id, $scope.plan.newCard.id)
+        .then(function () {
+          messageTicker({
+            text: 'You successfully updated your plan and card.',
+            type: 'green'
+          });
+        });
+      } else if ($scope.plan.newCard) { // just card
+        savePromise = billingService
+        .setDefaultCard($scope.profile.id, $scope.plan.newCard.id)
+        .then(function () {
+          $scope.card = $scope.plan.newCard; // prevent flash while we load the new plan
+          messageTicker({
+            text: 'You successfully changed your card.',
+            type: 'green'
+          });
+        });
+      } else if (hasNewPlan) { // just plan
+        savePromise = billingService
+        .setBillingPlan($scope.profile.id, selectedPlan.id)
+        .then(function () {
+          var upgraded = $scope.isPaidPlanName(selectedPlan.name);
+          messageTicker({
+            text: upgraded ? 'You successfully upgraded your team\'s plan.' : 'You downgraded your team\'s plan.',
+            type: 'green'
+          });
+        });
       }
 
-      if (selectedPlan && selectedPlan.id !== $scope.currentPlan.id) {
-        saveSeriesPromise = (
-          saveSeriesPromise
-          .then(function () {
-            return billingService
-            .setBillingPlan($scope.profile.id, selectedPlan.id);
-          })
-          .then(function () {
-            var successMessage;
-
-            if ($scope.isPaidPlanName(selectedPlan.name)) {
-              successMessage = 'You successfully upgraded your team\'s plan.';
-            } else {
-              successMessage = 'You downgraded your team\'s plan';
-            }
-            messageTicker({
-              text: successMessage,
-              type: 'green'
-            });
-          })
-        );
-      }
-
-      saveSeriesPromise = (
-        saveSeriesPromise
+      if (savePromise) { // defensive
+        savePromise
         .then(function () {
           resetForm();
           $state.reload('orgProfile');
-        })['catch'](function (error) {
+        })
+        ['catch'](function (error) {
           switch (error) {
             default:
               modalService.openGenericErrorModal();
@@ -310,11 +334,8 @@ angular.module('kifi')
         })
         ['finally'](function () {
           $window.removeEventListener('beforeunload', onBeforeUnload);
-        })
-      );
-
-      // Start the promise chain
-      saveSeriesDeferred.resolve();
+        });
+      }
     };
 
     $scope.trackClick = function(action) {
@@ -347,9 +368,9 @@ angular.module('kifi')
 
         if (!$scope.planSelectsForm.$pristine || $scope.plan.newCard) {
           var confirmText = (
-            'Are you sure you want to leave?' +
-            ' You haven\'t saved your payment information.' +
-            ' Click cancel to return and save.'
+            'Are you sure you want to leave?\n' +
+            'You haven\'t saved your payment information.\n' +
+            'Click cancel to return and save.'
           );
 
           var confirmedLeave = !$window.confirm(confirmText);
@@ -369,7 +390,7 @@ angular.module('kifi')
       }
 
       $scope.$emit('trackOrgProfileEvent', 'view', {
-          type: 'org_profile:settings:payment_plan'
+        type: 'org_profile:settings:payment_plan'
       });
     });
   }

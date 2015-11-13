@@ -33,14 +33,15 @@ class KeepCacheController @Inject() (
       roverServiceClient.getOrElseFetchRecentArticle(nUrl, 182.days)(EmbedlyArticle)
     }.getOrElse(Future.successful(None)).map {
       case Some(article) if article.content.rawContent.nonEmpty =>
-        val footer = {
-          val fullUrl = clean(article.url)
-          val displayUrl = clean(if (article.url.length > 55) {
-            article.url.take(30) + "…" + article.url.takeRight(15)
-          } else article.url)
-          s"""<hr class="fin"><footer>Fetched on ${article.createdAt.toStandardDateString} from <a href="$fullUrl">$displayUrl</a> by Kifi for you. This is your personal page.</footer>"""
-        }
+
+        val displayUrl = clean(if (article.url.length > 55) {
+          article.url.take(30) + "…" + article.url.takeRight(15)
+        } else article.url)
+
         val titleStr = article.content.title.map { title =>
+          s"""<title>$title • Kifi</title>"""
+        }.getOrElse(s"""<title>$displayUrl • Kifi</title>""")
+        val headerStr = article.content.title.map { title =>
           s"""<header><h1>${clean(title)}</h1></header>"""
         }.getOrElse("")
         val byLine = {
@@ -64,6 +65,11 @@ class KeepCacheController @Inject() (
 
         val content = article.content.rawContent.get
 
+        val footer = {
+          val fullUrl = clean(article.url)
+          s"""<hr class="fin"><footer>Fetched on ${article.createdAt.toStandardDateString} from <a href="$fullUrl">$displayUrl</a> by Kifi for you. This is your personal page.</footer>"""
+        }
+
         val page = Html(
           s"""
 <!doctype html>
@@ -73,6 +79,8 @@ class KeepCacheController @Inject() (
 <link rel="stylesheet" href="/assets/cached/reader.css">
 
 $titleStr
+
+$headerStr
 $byLine
 
 <hr>
@@ -83,8 +91,12 @@ $content
 
 $footer
 
+<br><hr><br>Full fetch article:<br>
+
+$article
+
 """)
-        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'")
+        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *; style-src 'unsafe-inline' *.kifi.com")
       case _ => NotFound
     }
   }

@@ -74,7 +74,7 @@ object AngularApp extends Controller with Logging {
       case _ =>
         Future.successful("<title>Kifi</title>")
     }
-    val nonce = CryptoSupport.generateHexSha256("Kifi nonce s@lt" + request.id)
+    val nonce = CryptoSupport.generateHexSha256("Kifi nonce s@lt" + request.id).take(16)
     Ok.chunked(augmentPage(nonce, head)).as(HTML).withHeaders("X-Nonce" -> nonce)
   }
 

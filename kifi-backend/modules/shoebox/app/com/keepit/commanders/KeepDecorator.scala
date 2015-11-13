@@ -206,7 +206,7 @@ class KeepDecoratorImpl @Inject() (
     val keepImagesByKeepId = keepImageCommander.getBestImagesForKeeps(keeps.map(_.id.get).toSet, ScaleImageRequest(idealImageSize))
     futureSummariesByUriId.map { summariesByUriId =>
       keeps.map { keep =>
-        val summary = summariesByUriId.get(keep.uriId).map(_.toUriSummary(idealImageSize)) getOrElse URISummary()
+        val summary = summariesByUriId.get(keep.uriId).map(_.toUriSummary(idealImageSize)) getOrElse URISummary.empty
         keepImagesByKeepId.get(keep.id.get) match {
           case None => summary
           case Some(keepImage) =>

@@ -51,8 +51,9 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
 
   def deactivate(model: LibraryToSlackChannel)(implicit session: RWSession): Unit
 
-  def getRipeForProcessing(limit: Limit, overrideProcessesOlderThan: DateTime)(implicit session: RSession): Seq[Id[Library]]
-  def getForProcessingByLibrary(libraryId: Id[Library], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Seq[LibraryToSlackChannel]
+  def getLibrariesRipeForProcessing(limit: Limit, overrideProcessesOlderThan: DateTime)(implicit session: RSession): Seq[Id[Library]]
+  def getIntegrationsRipeForProcessingByLibrary(libraryId: Id[Library], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Seq[Id[LibraryToSlackChannel]]
+  def markAsProcessing(id: Id[LibraryToSlackChannel])(implicit session: RWSession): Option[LibraryToSlackChannel]
   def finishProcessing(model: LibraryToSlackChannel)(implicit session: RWSession): Unit
 }
 
@@ -182,14 +183,17 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     save(model.sanitizeForDelete)
   }
 
-  def getRipeForProcessing(limit: Limit, overrideProcessesOlderThan: DateTime)(implicit session: RSession): Seq[Id[Library]] = {
+  def getLibrariesRipeForProcessing(limit: Limit, overrideProcessesOlderThan: DateTime)(implicit session: RSession): Seq[Id[Library]] = {
     workingRows.filter(row => row.availableForProcessing(overrideProcessesOlderThan)).groupBy(_.libraryId).map(_._1).take(limit.value).list
   }
-  def getForProcessingByLibrary(libraryId: Id[Library], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Seq[LibraryToSlackChannel] = {
+  def getIntegrationsRipeForProcessingByLibrary(libraryId: Id[Library], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Seq[Id[LibraryToSlackChannel]] = {
+    workingRows.filter(row => row.libraryId === libraryId && row.availableForProcessing(overrideProcessesOlderThan)).map(_.id).list
+  }
+  def markAsProcessing(id: Id[LibraryToSlackChannel])(implicit session: RWSession): Option[LibraryToSlackChannel] = {
     val now = clock.now
-    val q = workingRows.filter(row => row.libraryId === libraryId && row.availableForProcessing(overrideProcessesOlderThan))
-    q.map(lts => (lts.updatedAt, lts.startedProcessingAt)).update((now, Some(now)))
-    q.list
+    if (workingRows.filter(_.id === id).map(r => (r.updatedAt, r.startedProcessingAt)).update((now, Some(now))) > 0) {
+      Some(workingRows.filter(_.id === id).first)
+    } else None
   }
   def finishProcessing(model: LibraryToSlackChannel)(implicit session: RWSession): Unit = {
     save(model.finishedProcessing)

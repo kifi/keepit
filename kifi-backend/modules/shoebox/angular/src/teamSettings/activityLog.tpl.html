@@ -1,6 +1,9 @@
 <div class="kf-team-activity-log">
   <h1 class="kf-team-activity-top-header">Activity Log</h1>
-  <div kf-billing-summary billing-state="billingState" parent-tracking-type="trackingType"></div>
+  <div class="kf-container">
+    <div class="kf-container-header"><span>Overview</span></div>
+    <div kf-billing-summary billing-state="billingState" parent-tracking-type="trackingType"></div>
+  </div>
   <div class="kf-container">
     <div class="kf-container-header"><span>Activity</span></div>
     <table class="kf-team-activity-table" smart-scroll scroll-distance="'100%'" scroll-disabled="billingEvents === null || !hasMore()" scroll-next="fetch()">
