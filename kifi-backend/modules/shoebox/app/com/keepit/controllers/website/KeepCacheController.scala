@@ -63,7 +63,7 @@ class KeepCacheController @Inject() (
           s"""<address>$code</address>"""
         }
 
-        val content = article.content.rawContent.get
+        val content = article.content.rawContent.getOrElse("")
 
         val footer = {
           val fullUrl = clean(article.url)
