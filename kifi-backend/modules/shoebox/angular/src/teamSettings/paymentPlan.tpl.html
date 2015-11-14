@@ -1,6 +1,9 @@
 <div class="kf-payment-plan">
   <h1 class="kf-payment-plan-top-header">Payment Plan</h1>
-  <div kf-billing-summary billing-state="billingState" parent-tracking-type="trackingType"></div>
+  <div class="kf-container">
+    <div class="kf-container-header"><span>Overview</span></div>
+    <div kf-billing-summary billing-state="billingState" parent-tracking-type="trackingType"></div>
+  </div>
   <div class="kf-container">
     <div class="kf-container-header"><h3>Select your plan</h3></div>
     <div class="kf-payment-plan-cards-container">
@@ -33,8 +36,11 @@
               class="kf-payment-plan-card-cta"
               ng-if="!isPaidPlanName(currentPlan.name) && !isPaidPlanName(plan.name)"
               ng-click="changePlanToStandard()"
-              ng-bind="(isFreePlanName(currentPlan.name) ? 'Upgrade now' :
-                (isNoPlanName(currentPlan.name) ? 'Choose Plan' : 'Downgrade'))"
+              ng-bind="(
+                isFreePlanName(currentPlan.name) ? 'Upgrade now' :
+                isNoPlanName(currentPlan.name) ? 'Choose Plan' :
+                'Downgrade'
+              )"
             ></button>
           </div>
         </div>
@@ -79,9 +85,9 @@
       <form name="creditCardForm">
         <h2>Manage your Credit Card Information</h2>
         <p>
-          <span ng-if="!card">You haven't added a card yet, and you'll need to add a card to upgrade your plan.</span>
-          <span ng-if="card">
-            Your current card is <b ng-bind="card.brand"></b> ****<b ng-bind="card.lastFour"></b>.
+          <span ng-if="!(plan.newCard || card)">You haven't added a card yet, and you'll need to add a card to upgrade your plan.</span>
+          <span ng-if="plan.newCard || card">
+            Your current card is <b ng-bind="(plan.newCard || card).brand"></b> ****<b ng-bind="(plan.newCard || card).lastFour"></b>.
           </span>
           <span>Available credits will always be applied before charging your team's credit card.</span>
         </p>
@@ -92,10 +98,10 @@
               'kf-button-error': cardError
             }"
             ng-click="openStripeCheckout()"
-            ng-disabled="plan.newCard"
-            ng-bind="plan.newCard ? 'Card Added' :
-              ((card ? 'Change' : 'Add') + ' credit card')"
+            ng-disabled="addCardPending || plan.newCard"
+            ng-bind="plan.newCard ? 'Card Added' : ((card ? 'Change' : 'Add') + ' credit card')"
           ></button>
+          <span ng-if="addCardPending" kf-simple-loading-spinner hide="!addCardPending"></span>
           <span class="kf-text-accent kf-payment-plan-card-ready" ng-if="plan.newCard">That worked! Click below to save and update your plan.</span>
         </div>
         <p class="kf-payment-plan-error-text" ng-if="cardError && (billingState.balance | isPositiveMoney)">
@@ -109,7 +115,11 @@
         </p>
       </form>
     </div>
-    <div class="kf-container-section kf-payment-plan-save-container" ng-if="currentPlan.id != getSelectedPlan().id || plan.newCard">
+    <div ng-if="billingPreview && isPaidPlanName(plan.name)" class="kf-container-section">
+      <h2>Billing Summary</h2>
+      <div class="kf-payment-plan-preview" kf-billing-summary billing-state="billingPreview" preview="true"></div>
+    </div>
+    <div class="kf-container-section kf-payment-plan-save-container" ng-if="currentPlan.id !== getSelectedPlan(plan).id || plan.newCard">
       <button
         class="kf-button kf-button-large kf-button-cta-blue kf-payment-plan-save"
         ng-click="warningModalOrSave()"

@@ -3,6 +3,7 @@ package com.keepit.payments
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.model.{ OrganizationRole, OrganizationHandle, BasicOrganization }
+import com.keepit.slack.models.{ OutgoingSlackMessage, SlackMessage }
 import com.keepit.social.BasicUser
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -13,6 +14,9 @@ sealed trait DescriptionElements {
 }
 case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
   def flatten = elements.flatMap(_.flatten).filter(_.text.nonEmpty)
+}
+object SequenceOfElements {
+  val empty = SequenceOfElements(Seq.empty)
 }
 case class BasicElement(text: String, url: Option[String], hover: Option[DescriptionElements]) extends DescriptionElements {
   def flatten = Seq(simplify)
@@ -63,11 +67,18 @@ object DescriptionElements {
       case _ => throw new IllegalArgumentException(s"intersperse expects lists with length (n, n-1). it got (${xs.length}, ${ins.length})")
     }
   }
+  def unlines(els: Seq[DescriptionElements]): DescriptionElements = {
+    if (els.isEmpty) SequenceOfElements.empty
+    else SequenceOfElements(intersperse(els, Seq.fill(els.length - 1)("\n")))
+  }
   private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
     val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
+
+    val leftEnds = Set("'", "\n")
+    val rightStarts = Set(".", "'", "\n")
     val interpolatedPunctuation = wordPairs.map {
-      case (l, r) if l.endsWith("'") || r.startsWith(".") || r.startsWith("'") => ""
+      case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
       case _ => " "
     }.map(BasicElement(_, None, None))
     intersperse(els, interpolatedPunctuation).filter(_.text.nonEmpty)
@@ -77,7 +88,7 @@ object DescriptionElements {
   def formatForSlack(description: DescriptionElements): String = {
     interpolatePunctuation(description.flatten).map { be =>
       be.url
-        .map(u => s"<$u|${be.text}>")
+        .map(u => s"<$u|${OutgoingSlackMessage.escapeSegment(be.text)}>")
         .getOrElse(be.text)
     }.mkString
   }

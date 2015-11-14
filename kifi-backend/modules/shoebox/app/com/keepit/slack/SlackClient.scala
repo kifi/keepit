@@ -9,6 +9,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Failure
 
 object KifiSlackApp {
   val SLACK_CLIENT_ID = "2348051170.12884760868"
@@ -58,11 +59,14 @@ class SlackClientImpl(
     extends SlackClient with Logging {
 
   def sendToSlack(url: String, msg: OutgoingSlackMessage): Future[Unit] = {
+    log.info(s"About to post $msg to the Slack webhook at $url")
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, json) if json.asOpt[String].contains("ok") => Future.successful(())
         case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
       }
+    } andThen {
+      case Failure(f: SlackAPIFailure) => log.info(s"Failed to post $msg to the Slack webhook $url because: ${Json.stringify(Json.toJson(f))}")
     }
   }
 

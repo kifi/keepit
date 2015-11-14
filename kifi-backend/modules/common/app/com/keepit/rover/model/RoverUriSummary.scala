@@ -6,7 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.{ S3ImageConfig, ImageSize, ImagePath }
 import com.keepit.model._
-import com.keepit.rover.article.content.{ PageAuthor, EmbedlyMedia }
+import com.keepit.rover.article.content.{ArticleContent, EmbedlyContent, PageAuthor, EmbedlyMedia}
 import com.keepit.rover.article.{ EmbedlyArticle, Article, ArticleKind }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -27,7 +27,9 @@ case class RoverArticleSummary(
     authors: Seq[PageAuthor],
     media: Option[RoverMedia]) {
 
-  lazy val readTime: Option[Duration] = wordCount.flatMap(TimeToReadCommander.wordCountToReadTimeMinutes(_).map(_ minutes))
+  def hasContent: Boolean = wordCount.exists(_ > 180) || media.isDefined
+
+  lazy val readTime: Option[Duration] = wordCount.flatMap(TimeToReadCommander.wordCountToReadTimeMinutes(_).map(_.minutes))
 
 }
 
@@ -94,7 +96,8 @@ case class RoverUriSummary(article: RoverArticleSummary, images: BasicImages) {
       description = article.description,
       imageWidth = image.map(_.size.width),
       imageHeight = image.map(_.size.height),
-      wordCount = article.wordCount
+      wordCount = article.wordCount,
+      hasContent = article.hasContent
     )
   }
 }
@@ -105,7 +108,7 @@ object RoverUriSummary {
 }
 
 case class RoverArticleSummaryKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[RoverArticleSummary] {
-  override val version = 1
+  override val version = 2
   val namespace = "best_article_summary_by_uri_id_and_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
