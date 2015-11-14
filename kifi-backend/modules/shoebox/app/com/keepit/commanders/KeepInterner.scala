@@ -19,6 +19,7 @@ import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.rover.RoverServiceClient
+import com.keepit.slack.LibraryToSlackChannelProcessor
 import org.joda.time.DateTime
 import play.api.libs.json.Json
 
@@ -62,6 +63,7 @@ class KeepInternerImpl @Inject() (
   subscriptionCommander: LibrarySubscriptionCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
+  libToSlackProcessor: LibraryToSlackChannelProcessor,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends KeepInterner with Logging {
@@ -198,6 +200,7 @@ class KeepInternerImpl @Inject() (
 
       if (KeepSource.discrete.contains(source)) {
         session.onTransactionSuccess {
+          Seq(library.id.get).foreach(libToSlackProcessor.processLibrary) // TODO(ryan): at some point this whole method needs to take in a set of library ids
           roverClient.fetchAsap(uri.id.get, uri.url)
         }
       }
