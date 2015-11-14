@@ -1,16 +1,10 @@
 package com.keepit.slack.models
 
-import com.keepit.common.crypto.CryptoSupport
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.strings._
-import com.kifi.macros.json
-import org.joda.time.LocalDate
-import play.api.http.Status._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import play.api.mvc.Results.Status
-
-import scala.util.{ Failure, Try }
+import com.kifi.macros.json
 
 @json case class SlackUserId(value: String)
 @json case class SlackUsername(value: String)
@@ -20,6 +14,7 @@ import scala.util.{ Failure, Try }
 
 @json case class SlackChannelId(value: String) // broad sense, can be channel, group or DM
 @json case class SlackChannelName(value: String) // broad sense, can be channel, group or DM
+@json case class SlackChannel(id: SlackChannelId, name: SlackChannelName)
 
 @json case class SlackAccessToken(token: String)
 
@@ -27,17 +22,7 @@ import scala.util.{ Failure, Try }
   def compare(that: SlackMessageTimestamp) = value compare that.value
 }
 
-case class SlackIncomingWebhook(
-  channelName: SlackChannelName,
-  url: String,
-  configUrl: String)
-object SlackIncomingWebhook {
-  implicit val reads: Reads[SlackIncomingWebhook] = (
-    (__ \ 'channel).read[String].map(SlackChannelName(_)) and
-    (__ \ 'url).read[String] and
-    (__ \ 'configuration_url).read[String]
-  )(SlackIncomingWebhook.apply _)
-}
+@json case class SlackMessageType(value: String)
 
 object SlackDbColumnTypes {
   def userId(db: DataBaseComponent) = {
@@ -71,168 +56,144 @@ object SlackDbColumnTypes {
   }
 }
 
-@json
-case class SlackAttachment(fallback: String, text: String)
+case class SlackAttachment(
+  fallback: String,
+  color: Option[String],
+  pretext: Option[String],
+  service: Option[String],
+  author: Option[SlackAttachment.Author],
+  title: Option[SlackAttachment.Title],
+  text: Option[String],
+  fields: Seq[SlackAttachment.Field],
+  imageUrl: Option[String],
+  thumbUrl: Option[String])
 
-case class SlackMessage( // https://api.slack.com/incoming-webhooks
+object SlackAttachment {
+  case class Author(name: String, link: Option[String], icon: Option[String])
+  case class Title(value: String, link: Option[String])
+  @json case class Field(title: String, value: String, short: Boolean)
+
+  def minimal(fallback: String, text: String) = SlackAttachment(
+    fallback = fallback,
+    color = None,
+    pretext = None,
+    service = None,
+    author = None,
+    title = None,
+    text = None,
+    fields = Seq.empty,
+    imageUrl = None,
+    thumbUrl = None
+  )
+
+  def applyFromSlack(
+    fallback: String,
+    color: Option[String],
+    pretext: Option[String],
+    service: Option[String],
+    authorName: Option[String],
+    authorLink: Option[String],
+    authorIcon: Option[String],
+    titleValue: Option[String],
+    titleLink: Option[String],
+    text: Option[String],
+    fields: Option[Seq[SlackAttachment.Field]],
+    imageUrl: Option[String],
+    thumbUrl: Option[String]): SlackAttachment = {
+    val author = authorName.map(Author(_, authorLink, authorIcon))
+    val title = titleValue.map(Title(_, titleLink))
+    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), imageUrl, thumbUrl)
+  }
+
+  def unapplyToSlack(attachment: SlackAttachment) = Some((
+    attachment.fallback: String,
+    attachment.color: Option[String],
+    attachment.pretext: Option[String],
+    attachment.service: Option[String],
+    attachment.author.map(_.name): Option[String],
+    attachment.author.flatMap(_.link): Option[String],
+    attachment.author.flatMap(_.icon): Option[String],
+    attachment.title.map(_.value): Option[String],
+    attachment.title.flatMap(_.link): Option[String],
+    attachment.text: Option[String],
+    Some(attachment.fields).filter(_.nonEmpty): Option[Seq[SlackAttachment.Field]],
+    attachment.imageUrl: Option[String],
+    attachment.thumbUrl: Option[String]
+  ))
+
+  implicit val format: Format[SlackAttachment] = (
+    (__ \ "fallback").format[String] and
+    (__ \ "color").formatNullable[String] and
+    (__ \ "pretext").formatNullable[String] and
+    (__ \ "service_name").formatNullable[String] and
+    (__ \ "author_name").formatNullable[String] and
+    (__ \ "author_link").formatNullable[String] and
+    (__ \ "author_icon").formatNullable[String] and
+    (__ \ "title").formatNullable[String] and
+    (__ \ "title_link").formatNullable[String] and
+    (__ \ "text").formatNullable[String] and
+    (__ \ "fields").formatNullable[Seq[SlackAttachment.Field]] and
+    (__ \ "image_url").formatNullable[String] and
+    (__ \ "image_thumb").formatNullable[String]
+  )(applyFromSlack, unlift(unapplyToSlack))
+}
+
+case class OutgoingSlackMessage( // https://api.slack.com/incoming-webhooks
   text: String,
-  channel: Option[String] = None,
-  username: String = "Kifi",
-  iconUrl: String = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png",
-  attachments: Seq[SlackAttachment] = Seq.empty)
+  channel: Option[SlackChannelName],
+  username: String,
+  iconUrl: String,
+  attachments: Seq[SlackAttachment],
+  unfurlLinks: Boolean,
+  unfurlMedia: Boolean)
 
-object SlackMessage {
-  implicit val writes: Writes[SlackMessage] = Writes { o =>
+object OutgoingSlackMessage {
+
+  val kifiIconUrl = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
+
+  def fromKifi(text: String, channel: Option[SlackChannelName] = None, attachments: Seq[SlackAttachment] = Seq.empty) = OutgoingSlackMessage(
+    text,
+    channel = channel,
+    username = "Kifi",
+    iconUrl = kifiIconUrl,
+    attachments = attachments,
+    unfurlLinks = true,
+    unfurlMedia = true
+  )
+
+  implicit val writes: Writes[OutgoingSlackMessage] = Writes { o =>
     Json.obj(
       "text" -> o.text,
       "channel" -> o.channel,
       "username" -> o.username,
       "icon_url" -> o.iconUrl,
-      "attachments" -> o.attachments
+      "attachments" -> o.attachments,
+      "unfurl_links" -> o.unfurlLinks,
+      "unfurl_media" -> o.unfurlMedia
     )
   }
 
   def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }
 
-case class SlackAPIFailure(status: Int, error: String, payload: JsValue) extends Exception(s"$status response: $error ($payload)") {
-  def asResponse = Status(status)(Json.toJson(this)(SlackAPIFailure.format))
-}
-object SlackAPIFailure {
-  implicit val format: Format[SlackAPIFailure] = Json.format[SlackAPIFailure]
+case class SlackMessage(
+  messageType: SlackMessageType,
+  userId: SlackUserId,
+  timestamp: SlackMessageTimestamp,
+  channel: SlackChannel,
+  text: String,
+  attachments: Seq[SlackAttachment],
+  permalink: String)
 
-  object Error {
-    val generic = "api_error"
-    val parse = "unparseable_payload"
-    val state = "broken_state"
-  }
-  def Generic(status: Int, payload: JsValue) = SlackAPIFailure(status, Error.generic, payload)
-  def ParseError(payload: JsValue) = SlackAPIFailure(OK, Error.parse, payload)
-  def StateError(state: SlackState) = SlackAPIFailure(OK, Error.state, JsString(state.state))
-}
+object SlackMessage {
+  implicit val slackFormat = (
+    (__ \ "type").format[SlackMessageType] and
+    (__ \ "user").format[SlackUserId] and
+    (__ \ "ts").format[SlackMessageTimestamp] and
+    (__ \ "channel").format[SlackChannel] and
+    (__ \ "text").format[String] and
+    (__ \ "attachments").formatNullable[Seq[SlackAttachment]].inmap[Seq[SlackAttachment]](_.getOrElse(Seq.empty), Some(_).filter(_.nonEmpty)) and
+    (__ \ "permalink").format[String]
+  )(apply, unlift(unapply))
 
-case class SlackAuthScope(value: String)
-object SlackAuthScope {
-  val ChannelsWrite = SlackAuthScope("channels:write")
-  val ChannelsHistory = SlackAuthScope("channels:history")
-  val ChannelsRead = SlackAuthScope("channels:read")
-  val ChatWrite = SlackAuthScope("chat:write")
-  val ChatWriteBot = SlackAuthScope("chat:write:bot")
-  val ChatWriteUser = SlackAuthScope("chat:write:user")
-  val EmojiRead = SlackAuthScope("emoji:read")
-  val FilesWriteUser = SlackAuthScope("files:write:user")
-  val FilesRead = SlackAuthScope("files:read")
-  val GroupsWrite = SlackAuthScope("groups:write")
-  val GroupsHistory = SlackAuthScope("groups:history")
-  val GroupsRead = SlackAuthScope("groups:read")
-  val IncomingWebhook = SlackAuthScope("incoming-webhook")
-  val ImWrite = SlackAuthScope("im:write")
-  val ImHistory = SlackAuthScope("im:history")
-  val ImRead = SlackAuthScope("im:read")
-  val MpimWrite = SlackAuthScope("mpim:write")
-  val MpimHistory = SlackAuthScope("mpim:history")
-  val MpimRead = SlackAuthScope("mpim:read")
-  val PinsWrite = SlackAuthScope("pins:write")
-  val PinsRead = SlackAuthScope("pins:read")
-  val ReactionsWrite = SlackAuthScope("reactions:write")
-  val ReactionsRead = SlackAuthScope("reactions:read")
-  val SearchRead = SlackAuthScope("search:read")
-  val StarsWrite = SlackAuthScope("stars:write")
-  val StarsRead = SlackAuthScope("stars:read")
-  val TeamRead = SlackAuthScope("team:read")
-  val UsersRead = SlackAuthScope("users:read")
-  val UsersWrite = SlackAuthScope("users:write")
-
-  val library: Set[SlackAuthScope] = Set(IncomingWebhook, SearchRead)
-  val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
-
-  val dbFormat: Format[SlackAuthScope] = Format(
-    Reads { j => j.validate[String].map(SlackAuthScope.apply) },
-    Writes { sas => JsString(sas.value) }
-  )
-}
-
-@json
-case class SlackAuthorizationCode(code: String)
-
-case class SlackState(state: String)
-object SlackState {
-  implicit def fromJson(value: JsValue): SlackState = SlackState(CryptoSupport.encodeBase64(Json.stringify(value)))
-  def toJson(state: SlackState): Try[JsValue] = Try(Json.parse(CryptoSupport.decodeBase64(state.state))).orElse(Failure(SlackAPIFailure.StateError(state)))
-}
-
-case class SlackAuthorizationRequest(
-  url: String,
-  scopes: Set[SlackAuthScope],
-  uniqueToken: String,
-  redirectUri: Option[String])
-
-case class SlackAuthorizationResponse(
-  accessToken: SlackAccessToken,
-  scopes: Set[SlackAuthScope],
-  teamName: SlackTeamName,
-  teamId: SlackTeamId,
-  incomingWebhook: Option[SlackIncomingWebhook])
-object SlackAuthorizationResponse {
-  implicit val reads: Reads[SlackAuthorizationResponse] = (
-    (__ \ 'access_token).read[SlackAccessToken] and
-    (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackReads) and
-    (__ \ 'team_name).read[String].map(SlackTeamName(_)) and
-    (__ \ 'team_id).read[String].map(SlackTeamId(_)) and
-    (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook]
-  )(SlackAuthorizationResponse.apply _)
-}
-
-case class SlackIdentifyResponse(
-  url: String,
-  teamName: SlackTeamName,
-  userName: SlackUsername,
-  teamId: SlackTeamId,
-  userId: SlackUserId)
-object SlackIdentifyResponse {
-  implicit val reads: Reads[SlackIdentifyResponse] = (
-    (__ \ 'url).read[String] and
-    (__ \ 'team).read[String].map(SlackTeamName(_)) and
-    (__ \ 'user).read[String].map(SlackUsername(_)) and
-    (__ \ 'team_id).read[String].map(SlackTeamId(_)) and
-    (__ \ 'user_id).read[String].map(SlackUserId(_))
-  )(SlackIdentifyResponse.apply _)
-}
-
-sealed abstract class SlackSearchParams(val name: String, val value: Option[String])
-
-case class SlackSearchQuery(query: String) extends SlackSearchParams("query", Some(query))
-object SlackSearchQuery {
-  def apply(queries: SlackSearchQuery*): SlackSearchQuery = SlackSearchQuery(queries.map(_.query).mkString(" "))
-
-  implicit def fromString(query: String): SlackSearchQuery = SlackSearchQuery(query)
-  def in(channelName: SlackChannelName) = SlackSearchQuery(s"in:${channelName.value}")
-  def from(username: SlackUsername) = SlackSearchQuery(s"from:${username.value}")
-  def before(date: LocalDate) = SlackSearchQuery(s"before:$date")
-  def after(date: LocalDate) = SlackSearchQuery(s"after:$date")
-  val hasLink = SlackSearchQuery(s"has:link")
-}
-
-object SlackSearchParams {
-  sealed abstract class Sort(sort: String) extends SlackSearchParams("sort", Some(sort))
-  object Sort {
-    case object ByScore extends Sort("score")
-    case object ByTimestamp extends Sort("timestamp")
-  }
-
-  sealed abstract class SortDirection(dir: String) extends SlackSearchParams("sort_dir", Some(dir))
-  object SortDirection {
-    case object Descending extends SortDirection("desc")
-    case object Ascending extends SortDirection("asc")
-  }
-
-  object Highlight extends SlackSearchParams("highlight", Some("1"))
-
-  case class Page(n: Int) extends SlackSearchParams("page", Some(n.toString))
-  case class PageSize(size: Int) extends SlackSearchParams("count", Some(size.toString))
-}
-
-case class SlackSearchResponse(query: String, messages: JsObject)
-object SlackSearchResponse {
-  implicit val reads = Json.reads[SlackSearchResponse]
 }

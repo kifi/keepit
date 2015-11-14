@@ -8,6 +8,7 @@ import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
+import com.keepit.slack.models.SlackChannelName
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 
@@ -98,7 +99,7 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
             val keep = KeepFactory.keep().withUser(user).withLibrary(lib).saved
             (user, lib, keep)
           }
-          val message = libSubCommander.slackMessageForNewKeep(user, keep, lib, "testChannel")
+          val message = libSubCommander.slackMessageForNewKeep(user, keep, lib, SlackChannelName("testChannel"))
 
           val userRedir = URLEncoder.encode(s"""{"t":"us","uid":"${user.externalId.id}"}""", "ascii")
           val libRedir = URLEncoder.encode(s"""{"t":"lv","lid":"${Library.publicId(lib.id.get).id}"}""", "ascii")

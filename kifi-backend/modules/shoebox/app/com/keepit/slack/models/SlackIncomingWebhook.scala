@@ -1,13 +1,25 @@
 package com.keepit.slack.models
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.time._
 import com.keepit.model.User
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsNull, Json, JsValue }
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
+case class SlackIncomingWebhook(
+  channelName: SlackChannelName,
+  url: String,
+  configUrl: String)
+object SlackIncomingWebhook {
+  implicit val reads: Reads[SlackIncomingWebhook] = (
+    (__ \ 'channel).read[SlackChannelName] and
+    (__ \ 'url).read[String] and
+    (__ \ 'configuration_url).read[String]
+  )(SlackIncomingWebhook.apply _)
+}
 
 // track revokedSince
 case class SlackIncomingWebhookInfo(
