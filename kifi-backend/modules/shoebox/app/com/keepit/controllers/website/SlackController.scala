@@ -39,7 +39,7 @@ class SlackController @Inject() (
     } yield {
       slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
       (libIdOpt, slackAuth.incomingWebhook) match {
-        case (Some(libId), Some(webhook)) => slackCommander.setupIntegration(request.userId, libId, webhook, slackIdentity)
+        case (Some(libId), Some(webhook)) => slackCommander.setupIntegrations(request.userId, libId, webhook, slackIdentity)
         case _ =>
       }
       Redirect(redir, SEE_OTHER)
