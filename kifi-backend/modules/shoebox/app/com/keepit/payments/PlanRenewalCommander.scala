@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import com.keepit.slack.models.SlackChannelName
 import play.api.libs.json.JsNull
 
 import scala.concurrent.{ ExecutionContext }
@@ -33,14 +34,14 @@ class PlanRenewalCommanderImpl @Inject() (
   def processDueRenewals(): Unit = synchronized {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getRenewable() }
     if (relevantAccounts.length > 0) {
-      eventCommander.reportToSlack(s"Renewing plans for ${relevantAccounts.length} accounts.", "#billing-alerts")
+      eventCommander.reportToSlack(s"Renewing plans for ${relevantAccounts.length} accounts.", SlackChannelName("#billing-alerts"))
       val renewed = relevantAccounts.count(renewPlan(_) match {
         case Success(_) => true
         case Failure(error) =>
           airbrake.notify(error)
           false
       })
-      eventCommander.reportToSlack(s"$renewed/${relevantAccounts.length} plans were successfully renewed.", "#billing-alerts")
+      eventCommander.reportToSlack(s"$renewed/${relevantAccounts.length} plans were successfully renewed.", SlackChannelName("#billing-alerts"))
     }
   }
 
