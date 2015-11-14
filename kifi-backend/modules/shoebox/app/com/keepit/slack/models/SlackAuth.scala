@@ -72,8 +72,8 @@ object SlackAuthorizationResponse {
   implicit val reads: Reads[SlackAuthorizationResponse] = (
     (__ \ 'access_token).read[SlackAccessToken] and
     (__ \ 'scope).read[Set[SlackAuthScope]](SlackAuthScope.slackReads) and
-    (__ \ 'team_name).read[String].map(SlackTeamName(_)) and
-    (__ \ 'team_id).read[String].map(SlackTeamId(_)) and
+    (__ \ 'team_name).read[SlackTeamName] and
+    (__ \ 'team_id).read[SlackTeamId] and
     (__ \ 'incoming_webhook).readNullable[SlackIncomingWebhook]
   )(SlackAuthorizationResponse.apply _)
 }

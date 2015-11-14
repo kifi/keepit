@@ -87,7 +87,6 @@ class LibrarySubscriptionCommanderTest extends Specification with ShoeboxTestInj
         newSubs.exists {
           _.info == SlackInfo("http://www.fakewebhook3.com")
         } === true
-
       }
     }
     "format new-keep messages properly" in {
