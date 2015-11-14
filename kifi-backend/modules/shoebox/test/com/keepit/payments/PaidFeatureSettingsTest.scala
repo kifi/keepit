@@ -511,7 +511,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
           (org, owner, user)
         }
 
-        val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.VerifyToJoin -> FeatureSetting.DISABLED) }
+        val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.JoinByVerifying -> FeatureSetting.DISABLED) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, initOrgSettings)) must beRight
 
         userEmailAddressCommander.addEmail(user.id.get, EmailAddress("orangutan@primate.org"))
@@ -535,7 +535,7 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         newUserEmail.verified === true
         noMembership.isDefined === false
 
-        val newOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.VerifyToJoin -> FeatureSetting.ANYONE) }
+        val newOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, newOrgSettings)) must beRight
 
         val response2 = authController.verifyEmail(userEmail.verificationCode.get)(request)

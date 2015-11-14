@@ -106,9 +106,11 @@ class AuthControllerTest extends Specification with ShoeboxApplicationInjector {
     "verify email good code bad user" in {
       running(new ShoeboxApplication(modules: _*)) {
         val ctrl = inject[AuthController]
-        val address = db.readWrite { implicit s =>
+        val (address, user) = db.readWrite { implicit s =>
           val user = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
-          inject[UserEmailAddressRepo].save(UserEmailAddress.create(user.id.get, EmailAddress("eishay@kifi.com")).withVerificationCode(currentDateTime))
+          val address = inject[UserEmailAddressRepo].save(UserEmailAddress.create(user.id.get, EmailAddress("eishay@kifi.com")).withVerificationCode(currentDateTime))
+          address.verified === false
+          (address, user)
         }
         val code = address.verificationCode.get
         val call = com.keepit.controllers.core.routes.AuthController.verifyEmail(code)
@@ -120,15 +122,45 @@ class AuthControllerTest extends Specification with ShoeboxApplicationInjector {
     "verify email good code bad user yes mobile" in {
       running(new ShoeboxApplication(modules: _*)) {
         val ctrl = inject[AuthController]
-        val address = db.readWrite { implicit s =>
+        val (address, user) = db.readWrite { implicit s =>
           val user = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
-          inject[UserEmailAddressRepo].save(UserEmailAddress.create(user.id.get, EmailAddress("eishay@kifi.com")).withVerificationCode(currentDateTime))
+          val address = inject[UserEmailAddressRepo].save(UserEmailAddress.create(user.id.get, EmailAddress("eishay@kifi.com")).withVerificationCode(currentDateTime))
+          address.verified === false
+          (address, user)
         }
         val code = address.verificationCode.get
         val call = com.keepit.controllers.core.routes.AuthController.verifyEmail(code)
         val result = ctrl.verifyEmail(code)(FakeRequest(call).withHeaders("user-agent" -> "Mozilla/5.0 (iPhone; U; CPU iPhone OS 5_1_1 like Mac OS X; en) AppleWebKit/534.46.0 (KHTML, like Gecko) CriOS/19.0.1084.60 Mobile/9B206 Safari/7534.48.3"))
         header("Location", result) === None
         status(result) === OK
+        db.readOnlyMaster { implicit s =>
+          val addresses = inject[UserEmailAddressRepo].getAllByUser(user.id.get)
+          addresses.size === 1
+          addresses.head.verified === true
+        }
+      }
+    }
+    "verify email good code wrong user yes eishay's android" in {
+      running(new ShoeboxApplication(modules: _*)) {
+        val ctrl = inject[AuthController]
+        val (address, user1, user2) = db.readWrite { implicit s =>
+          val user1 = UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
+          val user2 = UserFactory.user().withName("Joe", "Smith").withUsername("joe").saved
+          val address = inject[UserEmailAddressRepo].save(UserEmailAddress.create(user1.id.get, EmailAddress("eishay@kifi.com")).withVerificationCode(currentDateTime))
+          address.verified === false
+          (address, user1, user2)
+        }
+        inject[FakeUserActionsHelper].setUser(user2)
+        val code = address.verificationCode.get
+        val call = com.keepit.controllers.core.routes.AuthController.verifyEmail(code)
+        val result = ctrl.verifyEmail(code)(FakeRequest(call).withHeaders("user-agent" -> "Mozilla/5.0 (Linux; Android 5.1.1; SM-G925V Build/LMY47X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.76 Mobile Safari/537.36"))
+        header("Location", result) === Some("/?m=1")
+        status(result) === SEE_OTHER
+        db.readOnlyMaster { implicit s =>
+          val addresses = inject[UserEmailAddressRepo].getAllByUser(user1.id.get)
+          addresses.size === 1
+          addresses.head.verified === true
+        }
       }
     }
     "verify email good code good user no installation" in {

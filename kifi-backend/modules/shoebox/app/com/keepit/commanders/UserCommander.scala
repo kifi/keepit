@@ -314,7 +314,7 @@ class UserCommanderImpl @Inject() (
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs)
   }
 
-  private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = !orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.VerifyToJoin).contains(FeatureSetting.DISABLED)
+  private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
 
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
     heimdalClient.getKeepAttributionInfo(userId)

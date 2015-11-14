@@ -89,7 +89,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
                 case inactiveOpt => orgDomainOwnershipRepo.save(OrganizationDomainOwnership(id = inactiveOpt.map(_.id.get), organizationId = orgId, normalizedHostname = normalizedHostname))
               }
               db.readWrite { implicit session =>
-                val canVerifyToJoin = !orgConfigurationRepo.getByOrgId(ownership.organizationId).settings.settingFor(Feature.VerifyToJoin).contains(FeatureSetting.DISABLED)
+                val canVerifyToJoin = orgConfigurationRepo.getByOrgId(ownership.organizationId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
                 if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
               }
               Right(OwnDomainSuccess(domain, ownership))

@@ -63,7 +63,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       .map(orgDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
       .diff(userValueRepo.getValue(userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
       .filter(orgId => !orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId))
-      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.VERIFY_TO_JOIN))
+      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
     val emailWithCode = userEmailAddressRepo.save(emailAddress.withVerificationCode(clock.now()))
     session.onTransactionSuccess {
       emailConfirmationSender(emailWithCode, domainOwnerIds) recoverWith {
@@ -82,7 +82,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     NormalizedHostname.fromHostname(EmailAddress.getHostname(verifiedEmail.address))
       .map(domain => orgDomainOwnershipCommander.getOwningOrganizations(domain)).getOrElse(Set.empty)
       .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
-      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.VERIFY_TO_JOIN))
+      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
       .foreach { orgId =>
         val addRequest = OrganizationMembershipAddRequest(orgId, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
         organizationMembershipCommander.addMembershipHelper(addRequest)

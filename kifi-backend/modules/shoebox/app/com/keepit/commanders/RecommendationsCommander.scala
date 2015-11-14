@@ -101,7 +101,7 @@ class RecommendationsCommander @Inject() (
     val uriIds = recosWithUris.map { _._2.id.get }
     val userAttrsF = getUserAttributions(userId, uriIds)
     val uriSummariesF = rover.getUriSummaryByUris(uriIds.toSet).map { summaries =>
-      uriIds.map { uriId => summaries.get(uriId).map(_.toUriSummary(ProcessedImageSize.Large.idealSize)) getOrElse URISummary() }
+      uriIds.map { uriId => summaries.get(uriId).map(_.toUriSummary(ProcessedImageSize.Large.idealSize)) getOrElse URISummary.empty }
     }
 
     for {
