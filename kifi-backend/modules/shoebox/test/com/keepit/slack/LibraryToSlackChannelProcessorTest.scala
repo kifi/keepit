@@ -20,7 +20,7 @@ import org.specs2.mutable.SpecificationLike
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
+class LibraryToSlackChannelProcessorTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
   implicit val context = HeimdalContext.empty
   val modules = Seq(
     FakeExecutionContextModule(),
@@ -28,7 +28,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
     FakeClockModule()
   )
 
-  "LibraryToSlackChannelPusher" should {
+  "LibraryToSlackChannelProcessorTestSlackCommander" should {
     "identify and process integrations" in {
       "unmark integrations when finished processing" in {
         withDb(modules: _*) { implicit injector =>
@@ -40,14 +40,14 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
             (user, lib, lts)
           }
-          db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).lastProcessingAt must beNone }
+          db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).startedProcessingAt must beNone }
 
-          val resFut = inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get)
+          val resFut = inject[LibraryToSlackChannelProcessor].processLibrary(lib.id.get)
           val res = Await.result(resFut, Duration.Inf)
           res.size === 1
           res.values.toList === List(false) // integration failed because there is no webhook!
 
-          db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).lastProcessingAt must beNone }
+          db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).startedProcessingAt must beNone }
         }
       }
       "push the right message depending on the number of new keeps" in {
@@ -69,26 +69,24 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           // First, no keeps => no message
           curTime = curTime.plusDays(1)
           inject[FakeClock].setTimeValue(curTime)
-          Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
+          Await.result(inject[LibraryToSlackChannelProcessor].processLibrary(lib.id.get), Duration.Inf)
           slackClient.messagesByWebhook(webhook.url) must beEmpty
 
-          // 2 keeps => 1 msg, 2 attachments
+          // 2 keeps => 1 msg
           curTime = curTime.plusDays(1)
           inject[FakeClock].setTimeValue(curTime)
           db.readWrite { implicit s => KeepFactory.keeps(2).map(_.withUser(user).withLibrary(lib).withKeptAt(curTime).withTitle(titles.next())).saved }
-          Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
+          Await.result(inject[LibraryToSlackChannelProcessor].processLibrary(lib.id.get), Duration.Inf)
           slackClient.messagesByWebhook(webhook.url) must haveSize(1)
-          slackClient.messagesByWebhook(webhook.url).head.text.lines.size === 1
-          slackClient.messagesByWebhook(webhook.url).head.attachments.length === 2
+          slackClient.messagesByWebhook(webhook.url).head.text.lines.size === 2
 
-          // hella keeps => 1 msg, no attachments
+          // hella keeps => 1 msg
           curTime = curTime.plusDays(1)
           inject[FakeClock].setTimeValue(curTime)
           db.readWrite { implicit s => KeepFactory.keeps(20).map(_.withUser(user).withLibrary(lib).withKeptAt(curTime).withTitle(titles.next())).saved }
-          Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
+          Await.result(inject[LibraryToSlackChannelProcessor].processLibrary(lib.id.get), Duration.Inf)
           slackClient.messagesByWebhook(webhook.url) must haveSize(2)
           slackClient.messagesByWebhook(webhook.url).head.text.lines.size === 1
-          slackClient.messagesByWebhook(webhook.url).head.attachments.length === 0
 
           slackClient.messagesByWebhook(webhook.url).foreach(println)
           1 === 1

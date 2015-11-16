@@ -55,7 +55,7 @@ CREATE TABLE library_to_slack_channel (
   status VARCHAR(32) NOT NULL,
   last_processed_at DATETIME DEFAULT NULL,
   last_processed_ktl BIGINT(20) DEFAULT NULL,
-  last_processing_at DATETIME DEFAULT NULL,
+  started_processing_at DATETIME DEFAULT NULL,
 
   PRIMARY KEY(id),
   UNIQUE KEY library_to_slack_channel_u_team_id_channel_id_library_id (slack_team_id, slack_channel_id, library_id),
