@@ -1,5 +1,5 @@
 <div kf-modal kf-width="700px">
-    <div kf-basic-modal-content >
+  <div kf-basic-modal-content>
     <div class="kf-library-slack-integration-modal">
 
       <span class="kf-title">Slack Integration</span>
@@ -8,8 +8,8 @@
       <div class="kf-divider"></div>
       <div kf-set-height-px ng-repeat="si in slackIntegrations" class="kf-item-content">
         <div>
-          <div class="kf-divider"
-               ng-style="{'position': 'relative', 'width': '50%', 'opacity': ($index > 0) ? '0.5' : '0.0', 'margin-top':'10px', 'margin-bottom': '10px'}"></div>
+          <div class="kf-divider-half"
+               ng-style="{'opacity': ($index > 0) ? '0.5' : '0.0', 'margin-top':'10px', 'margin-bottom': '10px'}"></div>
         </div>
 
         <div class="kf-item-title-wrap">
@@ -33,13 +33,14 @@
           </div>
 
           <div>
-            Send Keeps from&nbsp
-            <div class="kf-item-lib-card"
-                 ng-attr-style="background-color:{{library.color}}"></div>
-            <span>{{si.library.name}}</span>&nbsp&nbsp<img class="kf-item-arrow"
-                                                           src="/img/lined-right-arrow.png"/>&nbsp&nbsp<span><nobr>
-            {{si.data.channelName}}
-          </nobr></span>
+            Send Keeps from
+            <div class="kf-item-lib-card kf-item-left-space"
+                 ng-style="background-color:{{library.color}}"></div>
+            <span>{{si.library.name}}</span>
+            <img class="kf-item-arrow kf-item-left-space kf-item-right-space" src="/img/lined-right-arrow.png"/>
+            <span class="kf-nowrap">
+              {{si.data.channelName}}
+            </span>
           </div>
         </div>
         <div class="kf-item-content-text">
@@ -58,8 +59,8 @@
 
           <div>
             Keep links from
-            <span><nobr>{{si.data.channelName}}</nobr></span>&nbsp&nbsp<img class="kf-item-arrow"
-                                                                       src="/img/lined-right-arrow.png"/>&nbsp&nbsp
+            <span class="kf-nowrap kf-item-left-space">{{si.data.channelName}}</span>
+            <img class="kf-item-arrow kf-item-left-space kf-item-right-space" src="/img/lined-right-arrow.png"/>
             <div class="kf-item-lib-card"
                  ng-attr-style="background-color:{{library.color}}"></div>
             <span>{{si.library.name}}</span>
