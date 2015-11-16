@@ -14,7 +14,7 @@ import com.keepit.payments.RewardKind.RewardChecklistKind
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.libs.json.JsNull
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[CreditRewardCommanderImpl])
@@ -98,7 +98,7 @@ class CreditRewardCommanderImpl @Inject() (
     } yield {
       (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo) match {
         case (Some(referrerOrgId), Some(referredOrgId), creditInfo: CreditCodeInfo) =>
-          sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId, creditInfo)
+          session.onTransactionSuccess { sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId, creditInfo) }
         case _ =>
       }
       rewards
@@ -111,36 +111,6 @@ class CreditRewardCommanderImpl @Inject() (
       _ <- if (creditCodeInfo.referrer.exists(r => r.organizationId.isDefined && r.organizationId == req.orgId)) Failure(CreditCodeAbuseException(req)) else Success(true)
       _ <- if (creditCodeInfo.isSingleUse && creditRewardRepo.getByCreditCode(creditCodeInfo.code).nonEmpty) Failure(CreditCodeAlreadyBurnedException(req.code)) else Success(true)
     } yield creditCodeInfo
-  }
-
-  private def sendReferralCodeAppliedEmail(referrerOrgId: Id[Organization], referredOrgId: Id[Organization], creditInfo: CreditCodeInfo)(implicit session: RWSession): Unit = {
-    val referredOrg = orgRepo.get(referredOrgId)
-    val referrerOrg = orgRepo.get(referrerOrgId)
-    val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
-    val subject = s"Your team's referral code was used by ${referredOrg.name} on Kifi"
-    val htmlBody =
-      s"""
-         |Your <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a> team's referral code was used by <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>. If they upgrade to a standard plan on Kifi,
-         |you'll earn a ${orgReferrerCredit.toDollarString} credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
-         |<br><br>
-         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/credits">${creditInfo.code.value}</a>
-       """.stripMargin
-    val textBody =
-      s"""
-         |Your ${referrerOrg.name} team's referral code was used by ${referredOrg.name}. If they upgrade to a standard plan on Kifi,
-         |you'll earn a ${orgReferrerCredit.toDollarString} credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
-         |<br><br>
-         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: ${creditInfo.code.value}
-       """.stripMargin
-    postOffice.sendMail(ElectronicMail(
-      from = SystemEmailAddress.NOTIFICATIONS,
-      fromName = Some("Kifi"),
-      to = adminEmails,
-      subject = subject,
-      htmlBody = htmlBody,
-      textBody = Some(textBody),
-      category = NotificationCategory.NonUser.BILLING
-    ))
   }
 
   def createCreditReward(cr: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): Try[CreditReward] = {
@@ -239,42 +209,12 @@ class CreditRewardCommanderImpl @Inject() (
     crs.headOption.foreach { crToEvolve =>
       val referrerOrgId = accountRepo.get(crToEvolve.accountId).orgId
       crToEvolve.code match {
-        case Some(usedCode) => sendReferredAccountUpgradedEmail(orgId, referrerOrgId, crToEvolve)
+        case Some(usedCode) =>
+          session.onTransactionSuccess { sendReferredAccountUpgradedEmail(orgId, referrerOrgId, crToEvolve) }
         case None => airbrake.notify(s"OrganizationReferral ${crToEvolve.id.get} was applied, but crToEvolve.code=None. not sending email.")
       }
     }
     rewards
-  }
-
-  private def sendReferredAccountUpgradedEmail(referredOrgId: Id[Organization], referrerOrgId: Id[Organization], reward: CreditReward)(implicit session: RWSession): ElectronicMail = {
-    val referredOrg = orgRepo.get(referredOrgId)
-    val referrerOrg = orgRepo.get(referrerOrgId)
-    val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
-    val subject = s"You earned a ${orgReferrerCredit.toDollarString} credit for ${referrerOrg.name} on Kifi"
-    val htmlBody =
-      s"""
-         |Your team, <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a>, earned a ${orgReferrerCredit.toDollarString} credit from <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>.
-         |We've added it to your <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/plan">team balance</a>. Thank you so much for spreading the word
-         |about Kifi with great teams like ${referredOrg.name}!
-         |<br><br>
-         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/credits">${reward.code.get.code.value}</a>
-       """.stripMargin
-    val textBody =
-      s"""
-         |Your team, ${referrerOrg.name}, earned a ${orgReferrerCredit.toDollarString} credit from ${referredOrg.name}. We've added it to your team balance.
-         |Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
-         |<br><br>
-         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: ${reward.code.get.code.value}
-       """.stripMargin
-    postOffice.sendMail(ElectronicMail(
-      from = SystemEmailAddress.NOTIFICATIONS,
-      fromName = Some("Kifi"),
-      to = adminEmails,
-      subject = subject,
-      htmlBody = htmlBody,
-      textBody = Some(textBody),
-      category = NotificationCategory.NonUser.BILLING
-    ))
   }
 
   private def finalizeCreditReward(creditReward: CreditReward, userAttribution: Option[Id[User]])(implicit session: RWSession): CreditReward = {
@@ -346,4 +286,64 @@ class CreditRewardCommanderImpl @Inject() (
     initialChecklistRewards + orgCreationReward
   }
 
+  private def sendReferralCodeAppliedEmail(referrerOrgId: Id[Organization], referredOrgId: Id[Organization], creditInfo: CreditCodeInfo): Future[ElectronicMail] = db.readWriteAsync { implicit s =>
+    val referredOrg = orgRepo.get(referredOrgId)
+    val referrerOrg = orgRepo.get(referrerOrgId)
+    val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
+    val subject = s"Your team's referral code was used by ${referredOrg.name} on Kifi"
+    val htmlBody =
+      s"""
+         |Your <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a> team's referral code was used by <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>. If they upgrade to a standard plan on Kifi,
+         |you'll earn a ${orgReferrerCredit.toDollarString} credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+         |<br><br>
+         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/credits">${creditInfo.code.value}</a>
+       """.stripMargin
+    val textBody =
+      s"""
+         |Your ${referrerOrg.name} team's referral code was used by ${referredOrg.name}. If they upgrade to a standard plan on Kifi,
+         |you'll earn a ${orgReferrerCredit.toDollarString} credit for your team. Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+         |<br><br>
+         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: ${creditInfo.code.value}
+       """.stripMargin
+    postOffice.sendMail(ElectronicMail(
+      from = SystemEmailAddress.NOTIFICATIONS,
+      fromName = Some("Kifi"),
+      to = adminEmails,
+      subject = subject,
+      htmlBody = htmlBody,
+      textBody = Some(textBody),
+      category = NotificationCategory.NonUser.BILLING
+    ))
+  }
+
+  private def sendReferredAccountUpgradedEmail(referredOrgId: Id[Organization], referrerOrgId: Id[Organization], reward: CreditReward): Future[ElectronicMail] = db.readWriteAsync { implicit s =>
+    val referredOrg = orgRepo.get(referredOrgId)
+    val referrerOrg = orgRepo.get(referrerOrgId)
+    val adminEmails = orgMembershipRepo.getByRole(referrerOrgId, OrganizationRole.ADMIN).flatMap(adminId => Try(emailAddressRepo.getByUser(adminId)).toOption)
+    val subject = s"You earned a ${orgReferrerCredit.toDollarString} credit for ${referrerOrg.name} on Kifi"
+    val htmlBody =
+      s"""
+         |Your team, <a href="https://www.kifi.com/${referrerOrg.handle.value}">${referrerOrg.name}</a>, earned a ${orgReferrerCredit.toDollarString} credit from <a href="https://www.kifi.com/${referredOrg.handle.value}">${referredOrg.name}</a>.
+         |We've added it to your <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/plan">team balance</a>. Thank you so much for spreading the word
+         |about Kifi with great teams like ${referredOrg.name}!
+         |<br><br>
+         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: <a href="https://www.kifi.com/${referrerOrg.handle.value}/settings/credits">${reward.code.get.code.value}</a>
+       """.stripMargin
+    val textBody =
+      s"""
+         |Your team, ${referrerOrg.name}, earned a ${orgReferrerCredit.toDollarString} credit from ${referredOrg.name}. We've added it to your team balance.
+         |Thank you so much for spreading the word about Kifi with great teams like ${referredOrg.name}!
+         |<br><br>
+         |Continue sharing your team's referral code to earn ${orgReferrerCredit.toDollarString} for each team that upgrades: ${reward.code.get.code.value}
+       """.stripMargin
+    postOffice.sendMail(ElectronicMail(
+      from = SystemEmailAddress.NOTIFICATIONS,
+      fromName = Some("Kifi"),
+      to = adminEmails,
+      subject = subject,
+      htmlBody = htmlBody,
+      textBody = Some(textBody),
+      category = NotificationCategory.NonUser.BILLING
+    ))
+  }
 }
