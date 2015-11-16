@@ -9,7 +9,7 @@ import com.keepit.common.json.EitherFormat
 import com.keepit.model.{ LibraryFail, Library }
 import com.keepit.shoebox.controllers.{ LibraryAccessActions, OrganizationAccessActions }
 import com.keepit.slack.models._
-import com.keepit.slack.{ LibraryToSlackChannelProcessor, SlackClient, SlackCommander }
+import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackClient, SlackCommander }
 import play.api.libs.json.{ JsObject, JsSuccess, Json, JsError }
 
 import scala.concurrent.ExecutionContext
@@ -19,7 +19,7 @@ class SlackController @Inject() (
     slackClient: SlackClient,
     slackCommander: SlackCommander,
     deepLinkRouter: DeepLinkRouter,
-    libraryToSlackChannelProcessor: LibraryToSlackChannelProcessor,
+    libraryToSlackChannelProcessor: LibraryToSlackChannelPusher,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
     val permissionCommander: PermissionCommander,
@@ -87,7 +87,7 @@ class SlackController @Inject() (
   def triggerIntegrations(pubId: PublicId[Library]) = UserAction { implicit request =>
     val libId = Library.decodePublicId(pubId).get
     val userId = request.userId
-    libraryToSlackChannelProcessor.processLibrary(libId)
+    libraryToSlackChannelProcessor.pushToLibrary(libId)
     Ok
   }
 }
