@@ -166,7 +166,7 @@ class UserIpAddressEventLogger @Inject() (
       case (user, email, candidateOrgs, orgs) => formatUser(user, email, candidateOrgs, orgs, user.id == newUserId)
     }
 
-    SlackMessageRequest.fromKifi((clusterDeclaration ++ userDeclarations).mkString("\n"))
+    SlackMessageRequest.fromKifi((clusterDeclaration ++ userDeclarations).mkString("\n")).quiet
   }
 
   private def heuristicsSayThisClusterIsRelevant(ipInfo: RichIpAddress): Boolean = {
