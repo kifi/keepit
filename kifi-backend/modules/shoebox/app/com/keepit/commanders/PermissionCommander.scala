@@ -104,19 +104,21 @@ class PermissionCommanderImpl @Inject() (
       if (library.isPublished) Set(LibraryPermission.VIEW_LIBRARY) else Set.empty
     case Some(LibraryAccess.READ_ONLY) => Set(
       LibraryPermission.VIEW_LIBRARY
-    ) ++ (if (!library.isSecret) Set(LibraryPermission.INVITE_FOLLOWERS) else Set.empty)
+    ) ++ (if (!library.isSecret) Set(LibraryPermission.INVITE_FOLLOWERS, LibraryPermission.CREATE_SLACK_INTEGRATION) else Set.empty)
 
     case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) if library.isSystemLibrary => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
+      LibraryPermission.REMOVE_OWN_KEEPS,
+      LibraryPermission.CREATE_SLACK_INTEGRATION
     )
 
     case Some(LibraryAccess.READ_WRITE) if library.canBeModified => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.INVITE_FOLLOWERS,
       LibraryPermission.ADD_KEEPS,
+      LibraryPermission.CREATE_SLACK_INTEGRATION,
       LibraryPermission.EDIT_OWN_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS
     ) ++ (if (!library.whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
@@ -126,6 +128,7 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.EDIT_LIBRARY,
       LibraryPermission.MOVE_LIBRARY,
       LibraryPermission.DELETE_LIBRARY,
+      LibraryPermission.CREATE_SLACK_INTEGRATION,
       LibraryPermission.REMOVE_MEMBERS,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
@@ -140,10 +143,8 @@ class PermissionCommanderImpl @Inject() (
     val addedPermissions: Set[LibraryPermission] = {
       val canModifyLibrary = lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY)
       val canForceEdit = canModifyLibrary && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
-      val canCreateSlackIntegration = canModifyLibrary && orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)
       Set(
-        canForceEdit -> Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY),
-        canCreateSlackIntegration -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
+        canForceEdit -> Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
       ).collect { case (true, ps) => ps }.flatten
     }
 
@@ -183,7 +184,7 @@ class OrganizationPermissionsNamespaceCache(stats: CacheStatistics, accessLog: A
   extends PrimitiveCacheImpl[OrganizationPermissionsNamespaceKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class OrganizationPermissionsKey(orgId: Id[Organization], opn: Int, userIdOpt: Option[Id[User]]) extends Key[Set[OrganizationPermission]] {
-  override val version = 1
+  override val version = 2
   val namespace = "org_permissions"
   def toKey(): String = orgId.id.toString + "_" + opn.toString + "_" + userIdOpt.map(x => x.id.toString).getOrElse("none")
 }
