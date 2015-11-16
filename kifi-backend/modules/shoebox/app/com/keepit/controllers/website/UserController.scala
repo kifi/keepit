@@ -441,12 +441,12 @@ class UserController @Inject() (
 
   def resendVerificationEmail(email: EmailAddress) = UserAction.async(parse.tolerantJson) { implicit request =>
     EmailAddress.validate(email.address) match {
-      case Failure(err) => Future.successful(BadRequest("invalid_email_format"))
+      case Failure(err) => Future.successful(BadRequest(Json.obj("error" -> "invalid_email_format")))
       case Success(validEmail) =>
         db.readWrite { implicit s =>
           emailRepo.getByAddressAndUser(request.userId, email) match {
-            case Some(emailAddr) => userEmailAddressCommander.sendVerificationEmailHelper(emailAddr).imap(_ => Ok("success"))
-            case _ => Future.successful(Forbidden("email_not_found"))
+            case Some(emailAddr) => userEmailAddressCommander.sendVerificationEmailHelper(emailAddr).imap(_ => Ok)
+            case _ => Future.successful(Forbidden(Json.obj("error" -> "email_not_found")))
           }
         }
     }

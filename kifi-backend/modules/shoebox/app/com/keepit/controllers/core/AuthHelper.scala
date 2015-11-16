@@ -547,10 +547,8 @@ class AuthHelper @Inject() (
     db.readWrite(attempts = 3) { implicit s =>
       userEmailAddressCommander.saveAsVerified(email)
       orgDomainOwnershipCommander.autoJoinOrgViaEmail(email)
-      s.onTransactionSuccess {
-        orgDomainOwnershipCommander.addOwnershipsForPendingOrganizations(email.userId, email.address)
-      }
     }
+    orgDomainOwnershipCommander.addOwnershipsForPendingOrganizations(email.userId, email.address).map(_ => ())
   }
 
   def doUploadBinaryPicture(implicit request: MaybeUserRequest[play.api.libs.Files.TemporaryFile]): Result = {

@@ -10,7 +10,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.EmailAddress._
 import com.keepit.model._
-import play.api.libs.json.Json._
 import play.api.libs.json._
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
@@ -18,8 +17,8 @@ import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 @ImplementedBy(classOf[OrganizationDomainOwnershipCommanderImpl])
 trait OrganizationDomainOwnershipCommander {
   def getDomainsOwned(orgId: Id[Organization]): Set[NormalizedHostname]
-  def addDomainOwnership(request: OrganizationDomainRequest): Either[OrganizationFail, OrganizationDomainResponse]
-  def removeDomainOwnership(request: OrganizationDomainRequest): Option[OrganizationFail]
+  def addDomainOwnership(request: OrganizationDomainAddRequest): Either[OrganizationFail, OrganizationDomainAddResponse]
+  def removeDomainOwnership(request: OrganizationDomainAddRequest): Option[OrganizationFail]
   def getSharedEmails(userId: Id[User], orgId: Id[Organization]): Set[EmailAddress]
   def getSharedEmailsHelper(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Set[EmailAddress]
   def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit
@@ -47,17 +46,13 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ScalaExecutionContext) extends OrganizationDomainOwnershipCommander with Logging {
 
-  override def getDomainsOwned(orgId: Id[Organization]): Set[NormalizedHostname] = db.readOnlyReplica { implicit session =>
+  def getDomainsOwned(orgId: Id[Organization]): Set[NormalizedHostname] = db.readOnlyReplica { implicit session =>
     orgDomainOwnershipRepo.getOwnershipsForOrganization(orgId).map(_.normalizedHostname).toSet
   }
 
   private def getValidationError(request: OrganizationDomainRequest)(implicit session: RSession): Option[OrganizationFail] = {
-    val OrganizationDomainRequest(requesterId, orgId, domainName) = request
-    lazy val permissionFailOpt = {
-      Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        .filter(_ => !permissionCommander.getOrganizationPermissions(orgId, Some(requesterId)).contains(OrganizationPermission.MANAGE_PLAN))
-    }
-    lazy val domainFailOpt = NormalizedHostname.fromHostname(domainName) match {
+    val (requesterId, orgId, domainName) = (request.requesterId, request.orgId, request.domain)
+    val domainFailOpt = NormalizedHostname.fromHostname(domainName) match {
       case None => Some(OrganizationFail.INVALID_DOMAIN_NAME)
       case Some(validDomain) => {
         domainRepo.get(validDomain).collect {
@@ -65,15 +60,27 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
         }
       }
     }
-    domainFailOpt.orElse(permissionFailOpt)
+    lazy val permissionFailOpt = {
+      Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
+        .filter(_ => !permissionCommander.getOrganizationPermissions(orgId, Some(requesterId)).contains(OrganizationPermission.MANAGE_PLAN))
+    }
+    lazy val verifiedEmailOpt = {
+      Some(OrganizationFail.UNVERIFIED_EMAIL_DOMAIN).filter { _ =>
+        !userEmailAddressRepo.getAllByUser(requesterId).exists(email => email.address.hostname.trim.toLowerCase == domainName.trim.toLowerCase && email.verified)
+      }
+    }
+    request match {
+      case _: OrganizationDomainAddRequest => domainFailOpt.orElse(permissionFailOpt).orElse(verifiedEmailOpt)
+      case _ => domainFailOpt.orElse(permissionFailOpt)
+    }
   }
 
-  def addDomainOwnership(request: OrganizationDomainRequest): Either[OrganizationFail, OrganizationDomainResponse] = {
+  def addDomainOwnership(request: OrganizationDomainAddRequest): Either[OrganizationFail, OrganizationDomainAddResponse] = {
     db.readOnlyReplica(implicit session => getValidationError(request)) match {
       case Some(fail) => Left(fail)
       case None => {
         val ownership = unsafeAddDomainOwnership(request.orgId, request.domain)
-        Right(OrganizationDomainResponse(request, ownership.normalizedHostname))
+        Right(OrganizationDomainAddResponse(request, ownership.normalizedHostname))
       }
     }
   }
@@ -104,7 +111,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     usersToEmail.foreach(userEmailAddressCommander.sendVerificationEmailHelper)
   }
 
-  override def removeDomainOwnership(request: OrganizationDomainRequest): Option[OrganizationFail] = {
+  def removeDomainOwnership(request: OrganizationDomainAddRequest): Option[OrganizationFail] = {
     db.readOnlyReplica(implicit session => getValidationError(request)) match {
       case Some(fail) => Some(fail)
       case None => {
@@ -123,11 +130,11 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     }
   }
 
-  override def getSharedEmails(userId: Id[User], orgId: Id[Organization]): Set[EmailAddress] = db.readOnlyReplica { implicit session =>
+  def getSharedEmails(userId: Id[User], orgId: Id[Organization]): Set[EmailAddress] = db.readOnlyReplica { implicit session =>
     getSharedEmailsHelper(userId, orgId)
   }
 
-  override def getSharedEmailsHelper(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Set[EmailAddress] = {
+  def getSharedEmailsHelper(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Set[EmailAddress] = {
     val emails = userEmailAddressRepo.getAllByUser(userId).map(_.address)
     val orgDomains = orgDomainOwnershipRepo.getOwnershipsForOrganization(orgId).map(_.normalizedHostname).toSet
     emails.filter { email =>
@@ -136,18 +143,18 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     }.toSet
   }
 
-  override def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit = {
+  def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit = {
     db.readWrite { implicit session =>
       val newOrgsToIgnore = userValueRepo.getValue(userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]] + orgId
       userValueRepo.setValue(userId, UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, Json.toJson(newOrgsToIgnore))
     }
   }
 
-  override def addPendingOwnershipByEmail(orgId: Id[Organization], userId: Id[User], emailAddress: EmailAddress): Option[OrganizationFail] = {
+  def addPendingOwnershipByEmail(orgId: Id[Organization], userId: Id[User], emailAddress: EmailAddress): Option[OrganizationFail] = {
     db.readWrite { implicit session =>
-      getValidationError(OrganizationDomainRequest(userId, orgId, emailAddress.hostname)) match {
+      getValidationError(OrganizationDomainPendingAddRequest(userId, orgId, emailAddress.hostname)) match {
         case Some(fail) => Some(fail)
-        case _ =>
+        case None =>
           val orgsToAddByEmail = userValueRepo.getValue(userId, UserValues.pendingOrgDomainOwnershipByEmail).as[Map[String, Seq[Id[Organization]]]]
           val newOrgsToAdd = orgsToAddByEmail.getOrElse(emailAddress.address, Seq.empty) :+ orgId
           val newOrgsToAddByEmail = orgsToAddByEmail + (emailAddress.address -> newOrgsToAdd)
@@ -157,11 +164,11 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     }
   }
 
-  override def addOwnershipsForPendingOrganizations(userId: Id[User], emailAddress: EmailAddress): Map[Id[Organization], Option[OrganizationFail]] = {
+  def addOwnershipsForPendingOrganizations(userId: Id[User], emailAddress: EmailAddress): Map[Id[Organization], Option[OrganizationFail]] = {
     val orgsToAddByEmail = db.readOnlyReplica(implicit s => userValueRepo.getValue(userId, UserValues.pendingOrgDomainOwnershipByEmail)).as[Map[String, Seq[Id[Organization]]]]
     val orgsToAdd = orgsToAddByEmail.getOrElse(emailAddress.address, Set.empty)
     orgsToAdd.map { orgId =>
-      addDomainOwnership(OrganizationDomainRequest(userId, orgId, emailAddress.hostname)) match {
+      addDomainOwnership(OrganizationDomainAddRequest(userId, orgId, emailAddress.hostname)) match {
         case Left(fail) =>
           if (fail == OrganizationFail.DOMAIN_IS_EMAIL_PROVIDER || fail == OrganizationFail.INVALID_DOMAIN_NAME) {
             throw new Exception(s"invalid domain pending ownership upon validation of user ${userId.id}'s email ${emailAddress.address}. domains should be validated before storing.")
@@ -172,7 +179,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     }.toMap
   }
 
-  override def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
+  def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
     NormalizedHostname.fromHostname(verifiedEmail.address.hostname)
       .map(domain => orgDomainOwnershipRepo.getOwnershipsForDomain(domain).map(_.organizationId)).getOrElse(Set.empty)
       .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
