@@ -200,18 +200,21 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   def unmarkAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit = updateLastIngestingAt(ids.toSet, None)
 
   private def updateLastIngestingAt(ids: Set[Id[SlackChannelToLibrary]], lastIngestingAt: Option[DateTime])(implicit session: RWSession): Unit = {
-    (for (r <- rows if r.id.inSet(ids.toSet)) yield r.lastIngestingAt).update(lastIngestingAt)
+    val now = clock.now()
+    (for (r <- rows if r.id.inSet(ids.toSet)) yield (r.updatedAt, r.lastIngestingAt)).update((now, lastIngestingAt))
   }
 
   def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackMessageTimestamp)(implicit session: RWSession): Unit = {
-    (for (r <- rows if r.id === id) yield r.lastMessageTimestamp).update(Some(lastMessageTimestamp))
+    val now = clock.now()
+    (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastMessageTimestamp)).update((now, Some(lastMessageTimestamp)))
   }
 
   def updateAfterIngestion(id: Id[SlackChannelToLibrary], lastIngestedAt: Option[DateTime], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit = {
+    val now = clock.now()
     if (lastIngestedAt.isDefined) {
-      (for (r <- rows if r.id === id) yield (r.lastIngestingAt, r.lastIngestedAt, r.nextIngestionAt, r.status)).update((None, lastIngestedAt, nextIngestionAt, status))
+      (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastIngestingAt, r.lastIngestedAt, r.nextIngestionAt, r.status)).update((now, None, lastIngestedAt, nextIngestionAt, status))
     } else {
-      (for (r <- rows if r.id === id) yield (r.lastIngestingAt, r.nextIngestionAt, r.status)).update((None, nextIngestionAt, status))
+      (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastIngestingAt, r.nextIngestionAt, r.status)).update((now, None, nextIngestionAt, status))
     }
   }
 
