@@ -84,7 +84,7 @@ del {color:#000;}
 
 
 blockquote { padding:1em 1em 1.625em 1em; font-family:georgia,serif;font-style: italic;  }
-blockquote:before { content:"\201C";font-size:3em;margin-left:-.625em; font-family:georgia,serif;color:#aaa;line-height:0;}/* From Tripoli  */
+blockquote:before { content:"\201C";font-size:3em;margin-left:-.625em; font-family:georgia,serif;color:#aaa;line-height:0;padding-right: .2em;}/* From Tripoli  */
 blockquote > p {padding:0; margin:0; }
 
 strong { font-weight: bold; }
