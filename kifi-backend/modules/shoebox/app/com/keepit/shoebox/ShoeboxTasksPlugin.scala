@@ -5,16 +5,12 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.shoebox.rover.ShoeboxArticleIngestionActor
+import com.keepit.slack.SlackIngestionCommander
 import us.theatr.akka.quartz.QuartzActor
 import com.keepit.commanders.TwitterSyncCommander
 import com.keepit.payments.{ PlanRenewalCommander, PaymentProcessingCommander }
 
 import scala.concurrent.duration._
-
-object ShoeboxTasks {
-  val twitterSync = "complete data ingestion"
-  val paymentsProcessing = "payments processing"
-}
 
 @Singleton
 class ShoeboxTasksPlugin @Inject() (
@@ -24,17 +20,20 @@ class ShoeboxTasksPlugin @Inject() (
     articleIngestionActor: ActorInstance[ShoeboxArticleIngestionActor],
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
+    slackIngestionCommander: SlackIngestionCommander,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
-
-  import ShoeboxTasks._
 
   override def onStart() {
     log.info("ShoeboxTasksPlugin onStart")
-    scheduleTaskOnOneMachine(system, 3 minute, 1 minutes, twitterSync) {
+    scheduleTaskOnOneMachine(system, 3 minute, 1 minutes, "twitter sync") {
       twitterSyncCommander.syncAll()
     }
 
-    scheduleTaskOnLeader(system, 30 minutes, 30 minutes, paymentsProcessing) {
+    scheduleTaskOnOneMachine(system, 5 minute, 1 minutes, "slack ingestion") {
+      slackIngestionCommander.ingestAll()
+    }
+
+    scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {
       planRenewalCommander.processDueRenewals()
       paymentProcessingCommander.processDuePayments()
     }

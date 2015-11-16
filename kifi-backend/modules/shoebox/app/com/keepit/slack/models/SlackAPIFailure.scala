@@ -14,6 +14,7 @@ object SlackAPIFailure {
     val generic = "api_error"
     val parse = "unparseable_payload"
     val state = "broken_state"
+    val invalidAuth = "invalid_auth"
   }
   def Generic(status: Int, payload: JsValue) = SlackAPIFailure(status, Error.generic, payload)
   def ParseError(payload: JsValue) = SlackAPIFailure(OK, Error.parse, payload)

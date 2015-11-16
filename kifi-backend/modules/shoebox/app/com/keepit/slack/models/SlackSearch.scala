@@ -40,7 +40,14 @@ object SlackSearchRequest {
   object Highlight extends Param("highlight", Some("1"))
 
   case class Page(page: Int) extends Param("page", Some(page.toString))
+  object Page {
+    val max = 100
+  }
+
   case class PageSize(count: Int) extends Param("count", Some(count.toString))
+  object PageSize {
+    val max = 1000
+  }
 }
 
 case class SlackSearchResponse(query: SlackSearchRequest.Query, messages: SlackSearchResponse.Messages)

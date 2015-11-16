@@ -7,6 +7,12 @@ import com.kifi.macros.json
 @json case class SlackUserId(value: String)
 @json case class SlackUsername(value: String)
 
+object SlackUsername {
+  val slackbot = SlackUsername("slackbot")
+  val kifibot = SlackUsername("kifi-bot")
+  val doNotIngest = Set(slackbot, kifibot)
+}
+
 @json case class SlackTeamId(value: String)
 @json case class SlackTeamName(value: String)
 
@@ -31,6 +37,7 @@ case class SlackAttachment(
   title: Option[SlackAttachment.Title],
   text: Option[String],
   fields: Seq[SlackAttachment.Field],
+  fromUrl: Option[String],
   imageUrl: Option[String],
   thumbUrl: Option[String])
 
@@ -48,6 +55,7 @@ object SlackAttachment {
     title = None,
     text = None,
     fields = Seq.empty,
+    fromUrl = None,
     imageUrl = None,
     thumbUrl = None
   )
@@ -64,11 +72,12 @@ object SlackAttachment {
     titleLink: Option[String],
     text: Option[String],
     fields: Option[Seq[SlackAttachment.Field]],
+    fromUrl: Option[String],
     imageUrl: Option[String],
     thumbUrl: Option[String]): SlackAttachment = {
     val author = authorName.map(Author(_, authorLink, authorIcon))
     val title = titleValue.map(Title(_, titleLink))
-    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), imageUrl, thumbUrl)
+    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), fromUrl, imageUrl, thumbUrl)
   }
 
   def unapplyToSlack(attachment: SlackAttachment) = Some((
@@ -83,6 +92,7 @@ object SlackAttachment {
     attachment.title.flatMap(_.link): Option[String],
     attachment.text: Option[String],
     Some(attachment.fields).filter(_.nonEmpty): Option[Seq[SlackAttachment.Field]],
+    attachment.fromUrl: Option[String],
     attachment.imageUrl: Option[String],
     attachment.thumbUrl: Option[String]
   ))
@@ -99,6 +109,7 @@ object SlackAttachment {
     (__ \ "title_link").formatNullable[String] and
     (__ \ "text").formatNullable[String] and
     (__ \ "fields").formatNullable[Seq[SlackAttachment.Field]] and
+    (__ \ "from_url").formatNullable[String] and
     (__ \ "image_url").formatNullable[String] and
     (__ \ "image_thumb").formatNullable[String]
   )(applyFromSlack, unlift(unapplyToSlack))
@@ -107,6 +118,7 @@ object SlackAttachment {
 case class SlackMessage(
   messageType: SlackMessageType,
   userId: SlackUserId,
+  username: SlackUsername,
   timestamp: SlackMessageTimestamp,
   channel: SlackChannel,
   text: String,
@@ -117,6 +129,7 @@ object SlackMessage {
   implicit val slackFormat = (
     (__ \ "type").format[SlackMessageType] and
     (__ \ "user").format[SlackUserId] and
+    (__ \ "username").format[SlackUsername] and
     (__ \ "ts").format[SlackMessageTimestamp] and
     (__ \ "channel").format[SlackChannel] and
     (__ \ "text").format[String] and

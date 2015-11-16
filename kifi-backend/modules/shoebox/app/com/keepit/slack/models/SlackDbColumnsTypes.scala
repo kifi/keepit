@@ -25,7 +25,7 @@ object SlackDbColumnTypes {
     import db.Driver.simple._
     MappedColumnType.base[SlackChannelId, String](_.value, SlackChannelId(_))
   }
-  def channel(db: DataBaseComponent) = {
+  def channelName(db: DataBaseComponent) = {
     import db.Driver.simple._
     MappedColumnType.base[SlackChannelName, String](_.value, SlackChannelName(_))
   }

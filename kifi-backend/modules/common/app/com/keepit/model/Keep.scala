@@ -292,6 +292,7 @@ object KeepSource {
   val systemCopied = KeepSource("systemCopied")
   val twitterFileImport = KeepSource("twitterFileImport")
   val twitterSync = KeepSource("twitterSync")
+  val slack = KeepSource("slack")
 
   val imports = Set(bookmarkImport, kippt, pocket, instapaper, evernote, diigo, bookmarkFileImport, twitterFileImport)
 

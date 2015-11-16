@@ -59,7 +59,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   implicit val slackUserIdColumnType = SlackDbColumnTypes.userId(db)
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val slackChannelColumnIdType = SlackDbColumnTypes.channelId(db)
-  implicit val slackChannelColumnType = SlackDbColumnTypes.channel(db)
+  implicit val slackChannelColumnType = SlackDbColumnTypes.channelName(db)
 
   private def infoFromDbRow(
     id: Option[Id[SlackIncomingWebhookInfo]],
