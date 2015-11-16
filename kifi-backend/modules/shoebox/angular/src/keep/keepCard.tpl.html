@@ -15,6 +15,7 @@
           <span ng-if="::currentPageOrigin !== 'libraryPage' && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
             in <a class="kf-keep-lib-name" href="{{::keep.library.path}}">{{::keep.library.name}}</a>
           </span>
+          <span ng-if="showSaved && keep.summary.hasContent"><a ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
           <span ng-if="::keep.sourceAttribution.twitter.screenName">
             <a class="kf-keep-tweet-link" href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
               <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
