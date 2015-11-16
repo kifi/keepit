@@ -43,6 +43,9 @@ angular.module('kifi')
       getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 30),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
       hideOrgDomain: post(shoebox, '/user/hideOrgDomain?orgId=:orgId'),
+      addDomain: post(shoebox, '/organizations/:id/addDomain'),
+      removeDomain: post(shoebox, '/organizations/:id/removeDomain'),
+      addDomainAfterVerification: post(shoebox, '/organizations/:id/addDomainAfterVerification'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId', 30),
       updateAccountState: post(shoebox, '/admin/billing/state?pubId=:pubId&newPlanId=:newPlanId&newCardId=:newCardId'),

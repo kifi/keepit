@@ -24,7 +24,6 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.time._
-import play.api.Play._
 import play.api.data._
 import play.api.data.Forms._
 import com.keepit.common.healthcheck.{ AirbrakeNotifier, AirbrakeError }
@@ -34,7 +33,6 @@ import play.api.libs.json.{ Json, JsNumber, JsValue }
 import play.api.mvc.DiscardingCookie
 import play.api.mvc.Cookie
 import com.keepit.common.mail.EmailAddress
-import com.keepit.social.SocialId
 import com.keepit.common.controller.{ NonUserRequest, MaybeUserRequest, UserRequest }
 import com.keepit.model.Invitation
 import com.keepit.social.UserIdentity
@@ -76,6 +74,7 @@ class AuthHelper @Inject() (
     libraryInviteCommander: LibraryInviteCommander,
     userEmailAddressCommander: UserEmailAddressCommander,
     userCommander: UserCommander,
+    orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     twitterWaitlistCommander: TwitterWaitlistCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient,
@@ -547,7 +546,10 @@ class AuthHelper @Inject() (
   private def unsafeVerifyEmail(email: UserEmailAddress): Unit = {
     db.readWrite(attempts = 3) { implicit s =>
       userEmailAddressCommander.saveAsVerified(email)
-      userEmailAddressCommander.autoJoinOrgViaEmail(email)
+      orgDomainOwnershipCommander.autoJoinOrgViaEmail(email)
+      s.onTransactionSuccess {
+        orgDomainOwnershipCommander.addOwnershipsForPendingOrganizations(email.userId, email.address)
+      }
     }
   }
 

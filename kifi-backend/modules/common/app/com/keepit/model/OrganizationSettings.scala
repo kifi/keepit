@@ -75,7 +75,6 @@ object FeatureSetting {
   case object MEMBERS extends FeatureSetting("members")
   case object ADMINS extends FeatureSetting("admins")
   case object ANYONE extends FeatureSetting("anyone")
-  case object NONMEMBERS extends FeatureSetting("nonmembers")
 }
 
 object Feature extends Enumerator[Feature] {

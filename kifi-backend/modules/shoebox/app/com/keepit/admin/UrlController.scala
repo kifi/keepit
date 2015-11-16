@@ -51,7 +51,7 @@ class UrlController @Inject() (
     airbrake: AirbrakeNotifier,
     uriIntegrityHelpers: UriIntegrityHelpers,
     roverServiceClient: RoverServiceClient,
-    orgDomainOwnCommander: OrganizationDomainOwnershipCommander) extends AdminUserActions {
+    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo) extends AdminUserActions {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -384,10 +384,9 @@ class UrlController @Inject() (
     NormalizedHostname.fromHostname(domainName) match {
       case None => BadRequest("invalid_domain_name")
       case Some(hostname) => {
-        val domain = db.readOnlyReplica { implicit s =>
-          domainRepo.get(hostname)
+        val (domain, owningOrgs) = db.readOnlyReplica { implicit s =>
+          (domainRepo.get(hostname), orgDomainOwnershipRepo.getOwnershipsForDomain(hostname).map(_.organizationId))
         }
-        val owningOrgs = orgDomainOwnCommander.getOwningOrganizations(hostname)
         domain match {
           case None => NotFound("domain_not_found")
           case Some(foundDomain) => Ok(html.admin.domain(foundDomain, owningOrgs))

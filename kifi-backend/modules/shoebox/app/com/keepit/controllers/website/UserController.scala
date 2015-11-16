@@ -1,21 +1,17 @@
 package com.keepit.controllers.website
 
-import java.util.concurrent.atomic.AtomicBoolean
-
 import com.google.inject.Inject
 import com.keepit.abook.{ ABookServiceClient, ABookUploadConf }
 import com.keepit.classify.{ NormalizedHostname, DomainRepo }
 import com.keepit.commanders.emails.EmailSenderProvider
-import com.keepit.commanders.{ ConnectionInfo, _ }
+import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
-import com.keepit.common.mail.{ EmailAddress, _ }
-import com.keepit.common.social.NewConnections
+import com.keepit.common.mail._
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.controllers.core.NetworkInfoLoader
@@ -25,25 +21,18 @@ import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.NewConnectionInvite
-import com.keepit.search.SearchServiceClient
 import com.keepit.social.BasicUser
 import com.keepit.common.core._
 
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.libs.Comet
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.concurrent.{ Promise => PlayPromise }
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json.toJson
-import play.api.libs.json.{ JsBoolean, JsNumber, _ }
 import play.api.mvc.{ MaxSizeExceeded, Request }
-import play.twirl.api.Html
 import play.api.libs.json._
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 
 class UserController @Inject() (
     db: Database,
@@ -450,12 +439,16 @@ class UserController @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
-  def resendVerificationEmail(email: EmailAddress) = UserAction.async { implicit request =>
-    db.readWrite { implicit s =>
-      emailRepo.getByAddressAndUser(request.userId, email) match {
-        case Some(emailAddr) => userEmailAddressCommander.sendVerificationEmailHelper(emailAddr).imap(_ => Ok("0"))
-        case _ => Future.successful(Forbidden("0"))
-      }
+  def resendVerificationEmail(email: EmailAddress) = UserAction.async(parse.tolerantJson) { implicit request =>
+    EmailAddress.validate(email.address) match {
+      case Failure(err) => Future.successful(BadRequest("invalid_email_format"))
+      case Success(validEmail) =>
+        db.readWrite { implicit s =>
+          emailRepo.getByAddressAndUser(request.userId, email) match {
+            case Some(emailAddr) => userEmailAddressCommander.sendVerificationEmailHelper(emailAddr).imap(_ => Ok("success"))
+            case _ => Future.successful(Forbidden("email_not_found"))
+          }
+        }
     }
   }
 

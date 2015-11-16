@@ -558,6 +558,7 @@ POST          /site/organizations/:id/featureSettings           @com.keepit.cont
 GET           /site/organizations/:id/getDomains                @com.keepit.controllers.website.OrganizationDomainOwnershipController.getDomains(id: PublicId[Organization])
 POST          /site/organizations/:id/addDomain                 @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomain(id: PublicId[Organization])
 POST          /site/organizations/:id/removeDomain              @com.keepit.controllers.website.OrganizationDomainOwnershipController.removeDomain(id: PublicId[Organization])
+POST          /site/organizations/:id/addDomainAfterVerification  @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomainOwnershipAfterVerification(id: PublicId[Organization])
 
 GET           /site/organizations/:id/referralCode              @com.keepit.controllers.website.PaymentsController.getReferralCode(id: PublicId[Organization])
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
