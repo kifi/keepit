@@ -37,13 +37,16 @@ object SlackDbColumnTypes {
 }
 
 case class SlackMessageRequest( // https://api.slack.com/incoming-webhooks
-  text: String,
-  channel: Option[SlackChannelName],
-  username: String,
-  iconUrl: String,
-  attachments: Seq[SlackAttachment],
-  unfurlLinks: Boolean,
-  unfurlMedia: Boolean)
+    text: String,
+    channel: Option[SlackChannelName],
+    username: String,
+    iconUrl: String,
+    attachments: Seq[SlackAttachment],
+    unfurlLinks: Boolean,
+    unfurlMedia: Boolean) {
+  def quiet = this.copy(unfurlLinks = false, unfurlMedia = false)
+  def withAttachments(newAttachments: Seq[SlackAttachment]) = this.copy(attachments = newAttachments)
+}
 
 object SlackMessageRequest {
 
