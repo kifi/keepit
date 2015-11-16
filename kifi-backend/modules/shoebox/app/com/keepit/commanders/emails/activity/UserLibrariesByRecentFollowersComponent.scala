@@ -27,7 +27,7 @@ class UserLibrariesByRecentFollowersComponent @Inject() (
 
   private def librariesToMembers(toUserId: Id[User], since: DateTime) = db.readOnlyReplica { implicit session =>
     val mostMembersLibraries = membershipRepo.mostMembersSinceForUser(10, since, toUserId).toMap
-    val libraries = libraryRepo.getLibraries(mostMembersLibraries.map(_._1).toSet)
+    val libraries = libraryRepo.getActiveByIds(mostMembersLibraries.keySet)
     val libToMembers = libraryInfoCommander.sortAndSelectLibrariesWithTopGrowthSince(mostMembersLibraries, since, (id: Id[Library]) => libraries(id).memberCount)
     (libToMembers, libraries)
   }
