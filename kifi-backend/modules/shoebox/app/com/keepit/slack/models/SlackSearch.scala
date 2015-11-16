@@ -12,8 +12,9 @@ object SlackSearchRequest {
 
   case class Query(query: String) extends Param("query", Some(query))
   object Query {
-    def apply(queries: Query*): Query = Query(queries.map(_.query).mkString(" "))
+    def apply(queries: Option[Query]*): Query = Query(queries.flatten.map(_.query).mkString(" "))
 
+    implicit def toOption(q: Query): Option[Query] = Some(q)
     implicit def fromString(query: String): Query = Query(query)
     def in(channelName: SlackChannelName) = Query(s"in:${channelName.value}")
     def from(username: SlackUsername) = Query(s"from:${username.value}")
@@ -39,7 +40,14 @@ object SlackSearchRequest {
   object Highlight extends Param("highlight", Some("1"))
 
   case class Page(page: Int) extends Param("page", Some(page.toString))
+  object Page {
+    val max = 100
+  }
+
   case class PageSize(count: Int) extends Param("count", Some(count.toString))
+  object PageSize {
+    val max = 1000
+  }
 }
 
 case class SlackSearchResponse(query: SlackSearchRequest.Query, messages: SlackSearchResponse.Messages)

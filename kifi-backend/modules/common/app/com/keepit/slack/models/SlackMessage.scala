@@ -1,13 +1,17 @@
 package com.keepit.slack.models
 
-import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.strings._
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import com.kifi.macros.json
 
 @json case class SlackUserId(value: String)
 @json case class SlackUsername(value: String)
+
+object SlackUsername {
+  val slackbot = SlackUsername("slackbot")
+  val kifibot = SlackUsername("kifi-bot")
+  val doNotIngest = Set(slackbot, kifibot)
+}
 
 @json case class SlackTeamId(value: String)
 @json case class SlackTeamName(value: String)
@@ -24,38 +28,6 @@ import com.kifi.macros.json
 
 @json case class SlackMessageType(value: String)
 
-object SlackDbColumnTypes {
-  def userId(db: DataBaseComponent) = {
-    import db.Driver.simple._
-    MappedColumnType.base[SlackUserId, String](_.value, SlackUserId(_))
-  }
-  def username(db: DataBaseComponent) = {
-    import db.Driver.simple._
-    MappedColumnType.base[SlackUsername, String](_.value, SlackUsername(_))
-  }
-  def teamId(db: DataBaseComponent) = {
-    import db.Driver.simple._
-    MappedColumnType.base[SlackTeamId, String](_.value, SlackTeamId(_))
-  }
-  def teamName(db: DataBaseComponent) = {
-    import db.Driver.simple._
-    MappedColumnType.base[SlackTeamName, String](_.value, SlackTeamName(_))
-  }
-  def channelId(db: DataBaseComponent) = {
-    import db.Driver.simple._
-    MappedColumnType.base[SlackChannelId, String](_.value, SlackChannelId(_))
-  }
-  def channel(db: DataBaseComponent) = {
-    import db.Driver.simple._
-    MappedColumnType.base[SlackChannelName, String](_.value, SlackChannelName(_))
-  }
-
-  def timestamp(db: DataBaseComponent) = {
-    import db.Driver.simple._
-    MappedColumnType.base[SlackMessageTimestamp, String](_.value, SlackMessageTimestamp(_))
-  }
-}
-
 case class SlackAttachment(
   fallback: String,
   color: Option[String],
@@ -65,6 +37,7 @@ case class SlackAttachment(
   title: Option[SlackAttachment.Title],
   text: Option[String],
   fields: Seq[SlackAttachment.Field],
+  fromUrl: Option[String],
   imageUrl: Option[String],
   thumbUrl: Option[String])
 
@@ -82,6 +55,7 @@ object SlackAttachment {
     title = None,
     text = None,
     fields = Seq.empty,
+    fromUrl = None,
     imageUrl = None,
     thumbUrl = None
   )
@@ -98,11 +72,12 @@ object SlackAttachment {
     titleLink: Option[String],
     text: Option[String],
     fields: Option[Seq[SlackAttachment.Field]],
+    fromUrl: Option[String],
     imageUrl: Option[String],
     thumbUrl: Option[String]): SlackAttachment = {
     val author = authorName.map(Author(_, authorLink, authorIcon))
     val title = titleValue.map(Title(_, titleLink))
-    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), imageUrl, thumbUrl)
+    SlackAttachment(fallback, color, pretext, service, author, title, text, fields.getOrElse(Seq.empty), fromUrl, imageUrl, thumbUrl)
   }
 
   def unapplyToSlack(attachment: SlackAttachment) = Some((
@@ -117,6 +92,7 @@ object SlackAttachment {
     attachment.title.flatMap(_.link): Option[String],
     attachment.text: Option[String],
     Some(attachment.fields).filter(_.nonEmpty): Option[Seq[SlackAttachment.Field]],
+    attachment.fromUrl: Option[String],
     attachment.imageUrl: Option[String],
     attachment.thumbUrl: Option[String]
   ))
@@ -133,52 +109,16 @@ object SlackAttachment {
     (__ \ "title_link").formatNullable[String] and
     (__ \ "text").formatNullable[String] and
     (__ \ "fields").formatNullable[Seq[SlackAttachment.Field]] and
+    (__ \ "from_url").formatNullable[String] and
     (__ \ "image_url").formatNullable[String] and
     (__ \ "image_thumb").formatNullable[String]
   )(applyFromSlack, unlift(unapplyToSlack))
 }
 
-case class OutgoingSlackMessage( // https://api.slack.com/incoming-webhooks
-  text: String,
-  channel: Option[SlackChannelName],
-  username: String,
-  iconUrl: String,
-  attachments: Seq[SlackAttachment],
-  unfurlLinks: Boolean,
-  unfurlMedia: Boolean)
-
-object OutgoingSlackMessage {
-
-  val kifiIconUrl = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
-
-  def fromKifi(text: String, channel: Option[SlackChannelName] = None, attachments: Seq[SlackAttachment] = Seq.empty) = OutgoingSlackMessage(
-    text,
-    channel = channel,
-    username = "Kifi",
-    iconUrl = kifiIconUrl,
-    attachments = attachments,
-    unfurlLinks = true,
-    unfurlMedia = true
-  )
-
-  implicit val writes: Writes[OutgoingSlackMessage] = Writes { o =>
-    Json.obj(
-      "text" -> o.text,
-      "channel" -> o.channel,
-      "username" -> o.username,
-      "icon_url" -> o.iconUrl,
-      "attachments" -> o.attachments,
-      "unfurl_links" -> o.unfurlLinks,
-      "unfurl_media" -> o.unfurlMedia
-    )
-  }
-
-  def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
-}
-
 case class SlackMessage(
   messageType: SlackMessageType,
   userId: SlackUserId,
+  username: SlackUsername,
   timestamp: SlackMessageTimestamp,
   channel: SlackChannel,
   text: String,
@@ -189,6 +129,7 @@ object SlackMessage {
   implicit val slackFormat = (
     (__ \ "type").format[SlackMessageType] and
     (__ \ "user").format[SlackUserId] and
+    (__ \ "username").format[SlackUsername] and
     (__ \ "ts").format[SlackMessageTimestamp] and
     (__ \ "channel").format[SlackChannel] and
     (__ \ "text").format[String] and

@@ -65,7 +65,7 @@ class TweetImportCommanderImpl @Inject() (urlClassifier: UrlClassifier) extends 
 
   private def rawTweetToBookmarks(tweet: RawTweet): Seq[Bookmark] = {
     val tags = tweet.entities.hashtags.map(_.text).toList
-    tweet.entities.urls.filterNot(url => urlClassifier.socialActivityUrl(url.expandedUrl)).map { url =>
+    tweet.entities.urls.filterNot(url => urlClassifier.isSocialActivity(url.expandedUrl)).map { url =>
       Bookmark(title = None, href = url.expandedUrl, tags = tags, createdDate = Some(tweet.createdAt), originalJson = Some(tweet.originalJson))
     }
   }
