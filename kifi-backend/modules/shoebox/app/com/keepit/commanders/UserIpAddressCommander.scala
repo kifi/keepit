@@ -16,7 +16,7 @@ import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.slack.SlackClient
-import com.keepit.slack.models.{ OutgoingSlackMessage, OutgoingSlackMessage$ }
+import com.keepit.slack.models.SlackMessageRequest
 import org.joda.time.{ DateTime, Period }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -152,7 +152,7 @@ class UserIpAddressEventLogger @Inject() (
 
   private val GenericISP = Seq("comcast", "at&t", "verizon", "level 3", "communication", "mobile", "internet", "wifi", "broadband", "telecom", "orange", "network")
 
-  private def formatCluster(ip: RichIpAddress, users: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): OutgoingSlackMessage = {
+  private def formatCluster(ip: RichIpAddress, users: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): SlackMessageRequest = {
     val clusterDeclaration = Seq(
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
       s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
@@ -166,7 +166,7 @@ class UserIpAddressEventLogger @Inject() (
       case (user, email, candidateOrgs, orgs) => formatUser(user, email, candidateOrgs, orgs, user.id == newUserId)
     }
 
-    OutgoingSlackMessage.fromKifi((clusterDeclaration ++ userDeclarations).mkString("\n"))
+    SlackMessageRequest.fromKifi((clusterDeclaration ++ userDeclarations).mkString("\n"))
   }
 
   private def heuristicsSayThisClusterIsRelevant(ipInfo: RichIpAddress): Boolean = {

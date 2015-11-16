@@ -46,7 +46,7 @@ object SlackAPI {
 }
 
 trait SlackClient {
-  def sendToSlack(url: String, msg: OutgoingSlackMessage): Future[Unit]
+  def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit]
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
@@ -58,7 +58,7 @@ class SlackClientImpl(
   implicit val ec: ExecutionContext)
     extends SlackClient with Logging {
 
-  def sendToSlack(url: String, msg: OutgoingSlackMessage): Future[Unit] = {
+  def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit] = {
     log.info(s"About to post $msg to the Slack webhook at $url")
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {

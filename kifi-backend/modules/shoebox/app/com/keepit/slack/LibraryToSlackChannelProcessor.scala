@@ -88,7 +88,7 @@ class LibraryToSlackChannelProcessorImpl @Inject() (
           log.info(s"[LTSCP] No new keeps to push to integration ${lts.id.get}")
           Future.successful(true)
         case (Some(wh), Some(msg)) =>
-          slackClient.sendToSlack(wh.webhook.url, OutgoingSlackMessage.fromKifi(DescriptionElements.formatForSlack(msg)))
+          slackClient.sendToSlack(wh.webhook.url, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(msg)))
             .map { _ => true }
             .recover {
               case f: SlackAPIFailure =>
