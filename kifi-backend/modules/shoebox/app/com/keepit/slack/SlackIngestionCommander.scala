@@ -133,7 +133,7 @@ class SlackIngestionCommanderImpl @Inject() (
             isPrivate = None,
             canonical = None,
             openGraph = None,
-            keptAt = Some(message.timestamp.toDateTime), // todo(Léo): not the best, should be the message timestamp, we do not get it back from Slack
+            keptAt = Some(message.timestamp.toDateTime),
             sourceAttribution = Some(SlackAttribution(message)),
             note = None
           )
