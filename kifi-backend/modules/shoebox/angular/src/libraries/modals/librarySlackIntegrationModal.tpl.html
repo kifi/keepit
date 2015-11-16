@@ -20,14 +20,14 @@
         <div class="kf-item-content-text">
           <div class="kf-checkbox-wrap">
 
-            <input class="kf-checkbox" id="cb-1-{{$index}}" type="checkbox" ng-model="si.slackToKeep"
-                   ng-checked="si.slackToKeep" ng-change="si.onSlackToKeepChanged(si.slackToKeep)"/>
-            <label ng-mouseenter="si.slackToKeepHover = true"
-                   ng-mouseleave="si.slackToKeepHover = false" for="cb-1-{{$index}}"
-                   ng-class="{'svg-checkbox_checked': si.slackToKeep && !si.slackToKeepHover,
-               'svg-checkbox_checked_active': si.slackToKeep && si.slackToKeepHover,
-               'svg-checkbox_unchecked': !si.slackToKeep && !si.slackToKeepHover,
-               'svg-checkbox_unchecked_active': !si.slackToKeep && si.slackToKeepHover,
+            <input class="kf-checkbox" id="cb-1-{{$index}}" type="checkbox" ng-model="si.keepToSlack"
+                   ng-checked="si.keepToSlack" ng-change="si.onkeepToSlackChanged(si.keepToSlack)"/>
+            <label ng-mouseenter="si.keepToSlackHover = true"
+                   ng-mouseleave="si.keepToSlackHover = false" for="cb-1-{{$index}}"
+                   ng-class="{'svg-checkbox_checked': si.keepToSlack && !si.keepToSlackHover,
+               'svg-checkbox_checked_active': si.keepToSlack && si.keepToSlackHover,
+               'svg-checkbox_unchecked': !si.keepToSlack && !si.keepToSlackHover,
+               'svg-checkbox_unchecked_active': !si.keepToSlack && si.keepToSlackHover,
                'kf-checkbox-bg': true}"></label>
 
           </div>
@@ -44,14 +44,14 @@
         </div>
         <div class="kf-item-content-text">
           <div class="kf-checkbox-wrap">
-            <input class="kf-checkbox" id="cb-2-{{$index}}" type="checkbox" ng-model="si.keepToSlack"
-                   ng-checked="si.keepToSlack" ng-change="si.onKeepToSlackChanged(si.keepToSlack)"/>
-            <label ng-mouseenter="si.keepToSlackHover = true"
-                   ng-mouseleave="si.keepToSlackHover = false" for="cb-2-{{$index}}"
-                   ng-class="{'svg-checkbox_checked': si.keepToSlack && !si.keepToSlackHover,
-					   'svg-checkbox_checked_active': si.keepToSlack && si.keepToSlackHover,
-					   'svg-checkbox_unchecked': !si.keepToSlack && !si.keepToSlackHover,
-					   'svg-checkbox_unchecked_active': !si.keepToSlack && si.keepToSlackHover,
+            <input class="kf-checkbox" id="cb-2-{{$index}}" type="checkbox" ng-model="si.slackToKeep"
+                   ng-checked="si.slackToKeep" ng-change="si.onSlackToKeepChanged(si.slackToKeep)"/>
+            <label ng-mouseenter="si.slackToKeepHover = true"
+                   ng-mouseleave="si.slackToKeepHover = false" for="cb-2-{{$index}}"
+                   ng-class="{'svg-checkbox_checked': si.slackToKeep && !si.slackToKeepHover,
+					   'svg-checkbox_checked_active': si.slackToKeep && si.slackToKeepHover,
+					   'svg-checkbox_unchecked': !si.slackToKeep && !si.slackToKeepHover,
+					   'svg-checkbox_unchecked_active': !si.slackToKeep && si.slackToKeepHover,
 					   'kf-checkbox-bg': true}"></label>
 
           </div>
