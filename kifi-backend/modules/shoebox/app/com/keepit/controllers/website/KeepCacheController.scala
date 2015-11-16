@@ -73,7 +73,7 @@ class KeepCacheController @Inject() (
             }
           }
           val formattedContentOpt = article.content.rawContent.orElse(article.content.description)
-          Seq(embedOpt, formattedContentOpt).mkString("\n\n<hr>\n\n")
+          Seq(embedOpt, formattedContentOpt).flatten.mkString("\n\n<hr>\n\n")
         }
 
         val footer = {
