@@ -52,7 +52,7 @@ case class SlackIntegrationModification(
   id: Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]],
   status: SlackIntegrationStatus)
 object SlackIntegrationModification {
-  private implicit val eitherIdFormat = EitherFormat(PublicId.format[LibraryToSlackChannel], PublicId.format[SlackChannelToLibrary])
+  private implicit val eitherIdFormat = EitherFormat(LibraryToSlackChannel.formatPublicId, SlackChannelToLibrary.formatPublicId)
   implicit val format: Format[SlackIntegrationModification] = (
     (__ \ 'id).format[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]] and
     (__ \ 'status).format[SlackIntegrationStatus]

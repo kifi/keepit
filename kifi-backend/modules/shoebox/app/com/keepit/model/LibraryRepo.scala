@@ -32,7 +32,6 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def getBySpaceAndSlug(space: LibrarySpace, slug: LibrarySlug, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Option[Library]
   def getBySpaceAndKind(space: LibrarySpace, kind: LibraryKind, excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Set[Library]
   def updateLastKept(libraryId: Id[Library])(implicit session: RWSession): Unit
-  def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library]
   def hasKindsByOwner(ownerId: Id[User], kinds: Set[LibraryKind], excludeState: Option[State[Library]] = Some(LibraryStates.INACTIVE))(implicit session: RSession): Boolean
   def countLibrariesForOrgByVisibility(orgId: Id[Organization], excludeState: State[Library] = LibraryStates.INACTIVE)(implicit session: RSession): Map[LibraryVisibility, Int]
 
@@ -292,16 +291,6 @@ class LibraryRepoImpl @Inject() (
 
   def countLibrariesForOrgByVisibility(orgId: Id[Organization], excludeState: State[Library] = LibraryStates.INACTIVE)(implicit session: RSession): Map[LibraryVisibility, Int] = {
     countLibrariesForOrgByVisibilityCompiled(orgId, excludeState).list.toMap.withDefaultValue(0)
-  }
-
-  def getLibraries(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Library] = {
-    if (libraryIds.isEmpty) {
-      Map.empty
-    } else {
-      idCache.bulkGetOrElse(libraryIds.map(LibraryIdKey(_))) { missingKeys =>
-        (for (r <- rows if r.id.inSet(libraryIds) && r.state =!= LibraryStates.INACTIVE) yield r).list.map(library => LibraryIdKey(library.id.get) -> library).toMap
-      }.map { case (libraryKey, library) => libraryKey.id -> library }
-    }
   }
 
   //

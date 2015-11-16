@@ -39,7 +39,7 @@ class SlackController @Inject() (
     } yield {
       slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
       (libIdOpt, slackAuth.incomingWebhook) match {
-        case (Some(libId), Some(webhook)) => slackCommander.setupIntegration(request.userId, libId, webhook, slackIdentity)
+        case (Some(libId), Some(webhook)) => slackCommander.setupIntegrations(request.userId, libId, webhook, slackIdentity)
         case _ =>
       }
       Redirect(redir, SEE_OTHER)
@@ -69,7 +69,7 @@ class SlackController @Inject() (
     }
   }
   def deleteIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
-    implicit val eitherIdFormat = EitherFormat(PublicId.format[LibraryToSlackChannel], PublicId.format[SlackChannelToLibrary])
+    implicit val eitherIdFormat = EitherFormat(LibraryToSlackChannel.formatPublicId, SlackChannelToLibrary.formatPublicId)
     (request.body \ "integrations").validate[Seq[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]]] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
       case JsSuccess(dels, _) =>
