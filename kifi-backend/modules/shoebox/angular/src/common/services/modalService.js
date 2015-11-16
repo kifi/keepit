@@ -20,6 +20,10 @@ angular.module('kifi')
         scope.modalData = opts.modalData;
       }
 
+      if (opts.modalDefaults) {
+        scope.modalDefaults = opts.modalDefaults;
+      }
+
       scope.close = close;
 
       $compile($modal)(scope);

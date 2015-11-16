@@ -137,11 +137,11 @@ class AdminLibraryController @Inject() (
         val allLibraryIds = pagedLibrariesById.keySet ++ topDailyFollower.map(_._1) ++ topDailyKeeps.map(_._1) ++ hotToday.map(_._1)
         val librariesById = {
           val missingLibraryIds = allLibraryIds -- pagedLibrariesById.keys
-          val missingLibraries = if (missingLibraryIds.nonEmpty) libraryRepo.getLibraries(missingLibraryIds) else Map.empty
+          val missingLibraries = if (missingLibraryIds.nonEmpty) libraryRepo.getActiveByIds(missingLibraryIds) else Map.empty
           pagedLibrariesById ++ missingLibraries
         }
         val usersById = userRepo.getAllUsers(librariesById.values.map(_.ownerId).toSeq)
-        librariesById.mapValues(lib => buildLibStatistic(lib, usersById(lib.ownerId)))
+        librariesById.map { case (libId, lib) => libId -> buildLibStatistic(lib, usersById(lib.ownerId)) }
       }
 
       val hotTodayWithStats = hotToday.map { case (libId, _, _, growth) => (growth, statsByLibraryId(libId)) }

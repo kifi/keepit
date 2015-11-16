@@ -1,0 +1,117 @@
+.kf-library-slack-integration-modal
+  display: flex
+  flex-direction: column
+  text-align: left
+
+  .kf-title
+    font-size: 24px
+    font-weight: bold
+    color: #333
+
+  .kf-subtitle
+    margin-top: 2px
+    font-size: 16px
+    color: #999
+
+  .kf-divider
+    margin-top: 10px
+    margin-bottom: 10px
+    width: 100%
+    height: 1px
+    background-color: #DDD
+
+  .kf-item-title-wrap
+    display: flex
+    flex-direction: row
+    align-items: flex-end
+    margin-bottom: 3px
+
+  .kf-item-title
+    font-size: 18px
+    color: #333
+    margin-right: 10px
+    font-weight: bold
+
+  .kf-item-delete
+    font-size: 14px
+    color: #CCC
+    text-decoration: underline
+    cursor: pointer
+    margin-bottom: 1px
+
+  .kf-item-delete:hover
+    color: #999
+
+  .kf-item-content
+    font-size: 16px
+    color: #999
+    word-wrap: normal
+
+    .kf-item-content-text
+      margin-left: 20px
+      margin-top: 7px
+      display: flex
+      flex-direction: row
+
+      .kf-checkbox-wrap
+        margin-right: 10px
+        display: inline-block
+        display-self: flex-start
+        margin-top: 2px
+
+      .kf-checkbox
+        display: none
+
+      .kf-checkbox + label
+        height: 16px
+        width: 16px
+        display: inline-block
+        align-self: center
+
+      .kf-checkbox-bg
+        background-size: contain
+        background-repeat: no-repeat
+
+      .kf-item-lib-card
+        border-style: none
+        display: inline-block
+        border: 0
+        height: 18px
+        width: 14px
+        margin-right: 2px
+        border-radius: 3px
+        background-color: libraryGray
+        box-shadow: 0 1px #fff, 0 2px #c9ccc0, 0 3px #fff, 0 4px #c9ccc0
+
+      span
+        color: #333
+        font-weight: bold
+
+
+  .kf-item-content.ng-leave
+    opacity: 1.0
+    transition: .3s
+
+  .kf-item-content.ng-leave-active
+    opacity: 0.0
+    height: 0 !important
+
+  .kf-item-arrow
+    width: 22px
+    height: 22px
+    margin-top: -3px
+
+  .kf-add-channel
+    margin-top: 20px
+    font-size: 14px
+    opacity: 0.5
+    cursor: pointer
+    width: intrinsic
+  
+    &:hover
+      opacity: 1.0
+  
+    span
+      text-decoration: underline
+
+

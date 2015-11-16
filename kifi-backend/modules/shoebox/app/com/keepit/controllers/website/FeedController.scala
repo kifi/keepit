@@ -50,7 +50,7 @@ class FeedController @Inject() (
           db.readOnlyMaster { implicit ro => keepRepo.getCountByLibrary(libId) >= 3 } // if needed, can also filter by memberCount
       } map (_._1)
       val libMap = db.readOnlyReplica { implicit ro =>
-        libraryRepo.getLibraries(libIds.toSet)
+        libraryRepo.getActiveByIds(libIds.toSet)
       }
 
       val libs = libIds.map(libMap(_))

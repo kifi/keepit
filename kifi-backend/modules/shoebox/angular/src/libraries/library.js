@@ -5,11 +5,11 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
-  'platformService', 'profileService', 'originTrackingService', 'installService', 'libraryImageLoaded',
+  'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService', 'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService, libraryImageLoaded) {
+    platformService, profileService, originTrackingService, installService, signupService, libraryImageLoaded) {
 
     //
     // Internal functions
@@ -69,6 +69,64 @@ angular.module('kifi')
       $state.transitionTo($state.current, $stateParams, {reload: true, inherit: false, notify: true});
     }
 
+
+    var SlackIntegration = function(serverSlackIntegration) {
+      this.data = serverSlackIntegration;
+      this.library = library;
+
+      this.keepToSlack = this.data.toSlack && this.data.toSlack.status === 'on';
+
+      this.slackToKeep = this.data.fromSlack && this.data.fromSlack.status === 'on';
+
+      this.onKeepToSlackChanged = function(on) {
+        // make request
+        // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
+        this.data.toSlack.status = on ? 'on' : 'off';
+        libraryService.modifySlackIntegrations(this.library.id, [this.data.toSlack]);
+      };
+
+      this.onSlackToKeepChanged = function(on) {
+        // make request
+        // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
+        this.data.fromSlack.status = on ? 'on' : 'off';
+        libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack]);
+      };
+
+      this.guardDeleteIntegration = function() {
+        var self = this;
+        modalService.open({
+          template: 'common/modal/simpleModal.tpl.html',
+          modalDefaults: {  
+            title: 'Delete Integration?',
+            content: 'Are you sure you\'d like to delete this integration?',
+            centered: true,
+            withCancel: true,
+            actionText: 'Yes',
+            action: function() {
+              self.deleteIntegration();
+            }
+          }
+        });
+      };
+
+      this.deleteIntegration = function() {
+        var ids = [];
+        if (this.data.toSlack) {
+          ids.push(this.data.toSlack.id);
+        }
+        if (this.data.fromSlack) {
+          ids.push(this.data.fromSlack.id);
+        }
+        libraryService.deleteSlackIntegrations(this.library.id, ids);
+        $scope.slackIntegrations.splice($scope.slackIntegrations.indexOf(this), 1);
+      };
+
+      this.deleteUrl = function() {
+        return '/';
+      };
+
+    };
+
     //
     // Scope data.
     //
@@ -85,6 +143,18 @@ angular.module('kifi')
     $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === profileService.me.id;
+    $scope.isAdminExperiment = (profileService.me.experiments || []).indexOf('admin') !== -1;
+    $scope.canCreateSlackIntegration = (library.permissions || []).indexOf('create_slack_integration') !== -1;
+
+    // slack stuff
+    $scope.slackIntegrations = [];
+
+    if (library.slack && library.slack.integrations) {
+      for (var i = 0; i < library.slack.integrations.length; i++) {
+        $scope.slackIntegrations.push(new SlackIntegration(library.slack.integrations[i]));
+      }
+    }
+
     $scope.edit = {
       enabled: false,
       actions: {
@@ -101,6 +171,10 @@ angular.module('kifi')
     //
     // Scope methods.
     //
+
+    $scope.getSlackLink = function() {
+      return library.slack && (library.slack.link || '');
+    };
 
     $scope.getNextKeeps = function (offset) {
       if ($scope.loading || $scope.keeps.length === 0) {
@@ -201,6 +275,48 @@ angular.module('kifi')
       });
     };
 
+    $scope.slackDelegate = {
+      title: 'Join Kifi or log in to add this Slack integration'
+    };
+
+
+    $scope.openSlackIntegrations = function() {
+      modalService.open({
+        template: 'libraries/modals/librarySlackIntegrationModal.tpl.html',
+        scope: $scope
+      });
+    };
+
+    $scope.processSlackRequest = function() {
+      libraryService.trackEvent('user_clicked_page', $scope.library, { type: 'slack', action: 'clicked_slack_button'});
+      // queue random logic
+      if (!$rootScope.userLoggedIn) {
+        // handle user needs to log in
+        signupService.register({});
+      } else if (profileService.me && profileService.me.orgs.length > 0) {
+
+        if ($scope.canCreateSlackIntegration) {
+          if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
+            $scope.openSlackIntegrations();
+          } else {
+            window.location = $scope.getSlackLink();
+          }
+        } else {
+          // show ask for more info modal
+          modalService.open({
+            template: 'libraries/modals/librarySlackNoSlackIntegrationPermissionFoundModal.tpl.html',
+            scope: $scope
+          });
+        }
+      } else {
+        modalService.open({
+          template: 'libraries/modals/librarySlackCreateTeamNeededModal.tpl.html',
+          scope: $scope
+        });
+      }
+
+    };
+
     $scope.showFeedModal = function () {
       libraryService.trackEvent('user_clicked_page', $scope.library, { type: 'rss', action: 'clicked_subscribe_button'});
       modalService.open({
@@ -230,7 +346,7 @@ angular.module('kifi')
             existingKeep = keep;
           }
 
-          // add the new keep to the keep card's "my keeps" array
+          // add the new keep to the keep card's 'my keeps' array
           if (existingKeep && !_.find($scope.keeps, {id: keep.id})) {
             existingKeep.keeps.push({
               id: keep.id,
@@ -321,5 +437,10 @@ angular.module('kifi')
         keepView: $scope.galleryView ? 'gallery' : 'list'
       });
     });
+
+    // query param handling
+    if ($location.search() && $location.search().showSlackDialog) {
+      $scope.openSlackIntegrations();
+    }
   }
 ]);
