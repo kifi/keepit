@@ -91,7 +91,7 @@ class SlackCommanderImpl @Inject() (
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
         slackChannelId = None,
-        slackChannel = webhook.channelName
+        slackChannelName = webhook.channelName
       ))
       channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         userId = userId,
@@ -99,7 +99,7 @@ class SlackCommanderImpl @Inject() (
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
         slackChannelId = None,
-        slackChannel = webhook.channelName
+        slackChannelName = webhook.channelName
       ))
     }
   }

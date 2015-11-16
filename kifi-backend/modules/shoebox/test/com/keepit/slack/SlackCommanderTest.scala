@@ -9,6 +9,7 @@ import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
 import com.keepit.model.LibraryToSlackChannelFactoryHelper._
 import com.keepit.model.SlackChannelToLibraryFactoryHelper._
+import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
@@ -23,6 +24,35 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
   )
 
   "SlackCommander" should {
+    "create new integrations" in {
+      "handle multiple integrations for a single library" in {
+        withDb(modules: _*) { implicit injector =>
+          val (user, lib, stm, siw1, siw2) = db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val lib = LibraryFactory.library().saved
+
+            val slackTeam = SlackTeamFactory.team()
+            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
+            val Seq(siw1, siw2) = SlackIncomingWebhookFactory.webhooks(2).map(_.withMembership(stm).saved)
+            (user, lib, stm, siw1, siw2)
+          }
+          val ident = SlackIdentifyResponse(
+            url = "https://www.whatever.com",
+            teamName = stm.slackTeamName,
+            userName = stm.slackUsername,
+            teamId = stm.slackTeamId,
+            userId = stm.slackUserId
+          )
+          slackCommander.setupIntegrations(user.id.get, lib.id.get, siw1.webhook, ident)
+          slackCommander.setupIntegrations(user.id.get, lib.id.get, siw2.webhook, ident)
+
+          val slackInfo = db.readOnlyMaster { implicit s =>
+            slackCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
+          }
+          slackInfo(lib.id.get).map(_.integrations.length) must beSome(2)
+        }
+      }
+    }
     "serve up a user's library integrations" in {
       "group integrations by channel" in {
         withDb(modules: _*) { implicit injector =>
