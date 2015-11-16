@@ -1,11 +1,10 @@
-@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerId: Option[Id[Organization]])
+@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]])
 @import com.keepit.common.mail.template.helpers._
 @import play.api.libs.json._
 
 @homeUrl = @{kifiUrl("kifiHome")}
 @kifiGuideUrl = @{htmlUrl("https://www.kifi.com/kifi/kifi-tutorials?", "kifiTutorials", false)}
-@orgName = @{domainOwnerId.map { orgId => organizationName(orgId) } }
-@orgLink = @{domainOwnerId.map { orgId => organizationLink(orgId, None, "domainOwnerOrg") } }
+@orgNamesAndLinks = @{domainOwnerIds.map { orgId => (organizationName(orgId), organizationLink(orgId, None, "domainOwnerOrg")) } }
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -19,8 +18,11 @@
     @verifyUrl.map { url =>
       <br>To protect your privacy and security, please <a href="@url">confirm your email address</a> by clicking the following link:<br/>
       <a href="@url">@url</a></p>
-    @if(orgName.isDefined) {
-      <p>You'll become a member of <a href="@orgLink">@{orgName}'s team</a> upon confirmation.</p>
+    @if(orgNamesAndLinks.nonEmpty) {
+    <p>Upon confirmation, you'll be added to these teams:</p>
+    @for(org <- orgNamesAndLinks) {
+      <p><a href="@{org._2}">@{org._1}</a></p>
+    }
     }
     }
 

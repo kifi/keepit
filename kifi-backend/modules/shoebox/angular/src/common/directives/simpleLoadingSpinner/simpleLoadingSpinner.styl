@@ -1,19 +1,11 @@
 .kf-simple-loading-spinner
   display: inline-block
+  width: 24px
+  height: 24px
   vertical-align: middle
 
   svg
     width: auto
     height: auto
     fill: accentGreen
-    animation: pulse 1.1s infinite linear
-
-@keyframes pulse
-
-  50%
-    transform: scale(.8) rotate(180deg)
-  100%
-    transform: scale(1) rotate(360deg)
-
-
-
+    animation: pulse-spin 2s infinite linear

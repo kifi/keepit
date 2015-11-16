@@ -201,7 +201,7 @@ class LibraryCardCommanderImpl @Inject() (
 
       val libIds = systemValueLibraries.keySet
       val libs = db.readOnlyReplica { implicit s =>
-        libraryRepo.getLibraries(libIds).values.toSeq.filter(_.visibility == LibraryVisibility.PUBLISHED)
+        libraryRepo.getActiveByIds(libIds).values.toSeq.filter(_.visibility == LibraryVisibility.PUBLISHED)
       }
       val infos: ParSeq[LibraryCardInfo] = db.readOnlyMaster { implicit s =>
         val owners = basicUserRepo.loadAll(libs.map(_.ownerId).toSet)

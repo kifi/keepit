@@ -74,6 +74,7 @@ object OrganizationRole extends Enumerator[OrganizationRole] {
   val allOpts: Set[Option[OrganizationRole]] = all.map(Option(_)) + None
 
   val emptySet: Set[Option[OrganizationRole]] = Set.empty[Option[OrganizationRole]]
+  val nonMemberSet: Set[Option[OrganizationRole]] = Set(None)
   val adminSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN))
   val memberSet: Set[Option[OrganizationRole]] = Set(Some(ADMIN), Some(MEMBER))
   val totalSet: Set[Option[OrganizationRole]] = allOpts

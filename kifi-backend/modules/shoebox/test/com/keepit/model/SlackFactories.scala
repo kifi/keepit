@@ -60,6 +60,7 @@ object SlackIncomingWebhookFactory {
   }
   case class PartialSlackIncomingWebhook(siw: SlackIncomingWebhookInfo) {
     def withMembership(stm: SlackTeamMembership) = this.copy(siw = siw.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
+    def withChannelName(cn: String) = this.copy(siw = siw.copy(webhook = siw.webhook.copy(channelName = SlackChannelName(cn))))
   }
   def webhooks(count: Int) = List.fill(count)(webhook())
 }

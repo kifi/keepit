@@ -101,7 +101,7 @@ class KeepExportCommanderImpl @Inject() (
 
     val libIdsByKeep = ktlRepo.getAllByKeepIds(keeps.map(_.id.get).toSet).mapValues(ktls => ktls.map(_.libraryId))
     val idToLib = libraryRepo.getActiveByIds(libIdsByKeep.values.flatten.toSet)
-    val libsByKeepId = keeps.map { keep => keep.id.get -> libIdsByKeep(keep.id.get).map(idToLib(_)) }.toMap
+    val libsByKeepId = keeps.map { keep => keep.id.get -> libIdsByKeep(keep.id.get).flatMap(idToLib.get) }.toMap
     KeepExportResponse(keeps.sortBy(_.keptAt), tagsByKeepId, libsByKeepId)
   }
 }

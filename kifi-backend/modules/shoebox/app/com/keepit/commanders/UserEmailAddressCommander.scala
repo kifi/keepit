@@ -57,13 +57,13 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit] = {
-    val domainOwnerId = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailAddress.address))
-      .flatMap(orgDomainOwnershipRepo.getOwnershipForDomain(_)).map(_.organizationId)
-      .filter(orgId => !userValueRepo.getValue(emailAddress.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(orgId))
+    val domainOwnerIds = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailAddress.address))
+      .map(orgDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
+      .diff(userValueRepo.getValue(emailAddress.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
       .filter(orgId => !orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailAddress.userId))
     val emailWithCode = userEmailAddressRepo.save(emailAddress.withVerificationCode(clock.now()))
     session.onTransactionSuccess {
-      emailConfirmationSender(emailWithCode, domainOwnerId) recoverWith {
+      emailConfirmationSender(emailWithCode, domainOwnerIds) recoverWith {
         case error => {
           db.readWrite { implicit session => userEmailAddressRepo.save(emailWithCode.clearVerificationCode) }
           Future.failed(error)
@@ -76,15 +76,11 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
 
   def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
     NormalizedHostname.fromHostname(EmailAddress.getHostname(verifiedEmail.address))
-      .flatMap(orgDomainOwnershipCommander.getOwningOrganization)
-      .filter(org => !userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(org.id.get))
-      .filter(org => org.id.get != Id[Organization](9))
-      .foreach { orgToJoin =>
-        val addRequest = OrganizationMembershipAddRequest(orgToJoin.id.get, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
-        organizationMembershipCommander.addMembershipHelper(addRequest) match {
-          case Left(fail: OrganizationFail) => log.info(s"[domainAutoJoin] failed to add user ${verifiedEmail.userId} to org ${orgToJoin.id.get}, error: ${fail.message}")
-          case Right(success) => log.info(s"[domainAutoJoin] successfully added user ${verifiedEmail.userId} to org ${orgToJoin.id.get}")
-        }
+      .map(domain => orgDomainOwnershipCommander.getOwningOrganizations(domain)).getOrElse(Set.empty)
+      .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
+      .foreach { orgId =>
+        val addRequest = OrganizationMembershipAddRequest(orgId, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
+        organizationMembershipCommander.addMembershipHelper(addRequest)
       }
   }
 

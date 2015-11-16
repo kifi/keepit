@@ -7,10 +7,10 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
 import com.keepit.model.{ LibraryFail, Library }
-import com.keepit.shoebox.controllers.OrganizationAccessActions
+import com.keepit.shoebox.controllers.{ LibraryAccessActions, OrganizationAccessActions }
 import com.keepit.slack.models._
-import com.keepit.slack.{ SlackClient, SlackCommander }
-import play.api.libs.json.{ JsSuccess, Json, JsError }
+import com.keepit.slack.{ LibraryToSlackChannelProcessor, SlackClient, SlackCommander }
+import play.api.libs.json.{ JsObject, JsSuccess, Json, JsError }
 
 import scala.concurrent.ExecutionContext
 
@@ -19,15 +19,16 @@ class SlackController @Inject() (
     slackClient: SlackClient,
     slackCommander: SlackCommander,
     deepLinkRouter: DeepLinkRouter,
+    libraryToSlackChannelProcessor: LibraryToSlackChannelProcessor,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
     val permissionCommander: PermissionCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
-    implicit val ec: ExecutionContext) extends UserActions with OrganizationAccessActions with ShoeboxServiceController {
+    implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
   def registerSlackAuthorization(code: String, state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
-    val stateObj = slackClient.decodeState(state).toOption
+    val stateObj = SlackState.toJson(SlackState(state)).toOption.flatMap(_.asOpt[JsObject])
     val libIdOpt = stateObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
 
     val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
@@ -38,7 +39,7 @@ class SlackController @Inject() (
     } yield {
       slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
       (libIdOpt, slackAuth.incomingWebhook) match {
-        case (Some(libId), Some(webhook)) => slackCommander.setupIntegration(request.userId, libId, webhook, slackIdentity)
+        case (Some(libId), Some(webhook)) => slackCommander.setupIntegrations(request.userId, libId, webhook, slackIdentity)
         case _ =>
       }
       Redirect(redir, SEE_OTHER)
@@ -51,7 +52,7 @@ class SlackController @Inject() (
 
   // TODO(ryan): account for permissions!
   def modifyIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
-    (request.body \ "modify").validate[Seq[SlackIntegrationModification]] match {
+    (request.body \ "integrations").validate[Seq[SlackIntegrationModification]] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
       case JsSuccess(mods, _) =>
         val libToSlackMods = mods.collect {
@@ -68,8 +69,8 @@ class SlackController @Inject() (
     }
   }
   def deleteIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
-    implicit val eitherIdFormat = EitherFormat(PublicId.format[LibraryToSlackChannel], PublicId.format[SlackChannelToLibrary])
-    (request.body \ "delete").validate[Seq[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]]] match {
+    implicit val eitherIdFormat = EitherFormat(LibraryToSlackChannel.formatPublicId, SlackChannelToLibrary.formatPublicId)
+    (request.body \ "integrations").validate[Seq[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]]] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
       case JsSuccess(dels, _) =>
         val libToSlackDels = dels.collect { case Left(ltsId) => LibraryToSlackChannel.decodePublicId(ltsId).get }.toSet
@@ -80,5 +81,13 @@ class SlackController @Inject() (
           case fail: LibraryFail => fail.asErrorResponse
         }.get
     }
+  }
+
+  // TODO(ryan): this is for testing only, remove it
+  def triggerIntegrations(pubId: PublicId[Library]) = UserAction { implicit request =>
+    val libId = Library.decodePublicId(pubId).get
+    val userId = request.userId
+    libraryToSlackChannelProcessor.processLibrary(libId)
+    Ok
   }
 }

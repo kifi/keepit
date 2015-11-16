@@ -4,7 +4,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsHelper
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
 
 import com.keepit.common.healthcheck.FakeAirbrakeModule
@@ -16,9 +16,9 @@ import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication, ShoeboxTestInjector }
+import com.keepit.test.{ ShoeboxApplicationInjector, ShoeboxApplication }
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsArray, Json }
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
