@@ -105,7 +105,7 @@ angular.module('kifi')
           scope.defaultDescLines = 4;
           scope.me = profileService.me;
           // Don't change until the link is updated to be a bit more secure:
-          scope.showSaved = profileService.me.experiments.indexOf('admin') !== -1;
+          scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1;
 
           var setImage = function(galleryView) {
             scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
