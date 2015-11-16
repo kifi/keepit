@@ -123,7 +123,7 @@ ${article.content.media}
 -->
 
 """)
-        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *; style-src 'unsafe-inline' *.kifi.com")
+        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *; style-src 'unsafe-inline' *.kifi.com; frame-src cdn.embedly.com")
       case _ => NotFound
     }
   }
