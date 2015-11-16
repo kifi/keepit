@@ -152,7 +152,9 @@ angular.module('kifi')
     };
 
     $scope.shouldShowCreateTeam = function () {
-      return $scope.me.experiments.indexOf('admin') !== -1 || ($scope.me.experiments.indexOf('create_team') !== -1 && $scope.me.orgs.length <= 1);
+      var experiments = $scope.me.experiments || [];
+      var numOrgs = ($scope.me.orgs || []).length;
+      return experiments.indexOf('admin') !== -1 || (experiments.indexOf('create_team') !== -1 && numOrgs <= 1);
     };
 
     $scope.addKeeps = function () {

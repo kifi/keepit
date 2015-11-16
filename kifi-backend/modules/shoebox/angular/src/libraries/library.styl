@@ -91,12 +91,37 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   border: 0
   padding: 0
   background-color: #ff8000
-  margin-bottom: 2.5em
+  margin-bottom: .75em
 
   &::after
     content: 'Subscribe'
     vertical-align: middle
     margin-left: .6em
+
+.kf-lib-slack
+  width: 100%
+  display: flex
+  flex-direction: column
+  justify-content: flex-start
+  align-items: center
+  margin-bottom: 1em
+  text-align: center
+  cursor: pointer
+  vertical-align: top
+  position: relative
+
+.kf-lib-slack-integration-text
+  margin-top: 5px
+  font-weight: bold
+  font-size: 14px
+  color: #333
+  
+  &:hover
+    text-decoration: underline
+
+.kf-lib-slack-btn
+  height: 40px
+  width: 139px
 
 .kf-lib-tweet-icon
 .kf-lib-fpost-icon

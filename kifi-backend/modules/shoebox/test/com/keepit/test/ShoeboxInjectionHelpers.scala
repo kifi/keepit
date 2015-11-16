@@ -11,6 +11,7 @@ import com.keepit.integrity.{ KeepChecker, LibraryChecker, OrganizationChecker }
 import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationService, NormalizedURIInterner }
 import com.keepit.payments._
+import com.keepit.slack.{ SlackClient, FakeSlackClientImpl, SlackCommanderImpl, SlackCommander }
 
 trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
 
@@ -87,4 +88,7 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
   def creditRewardCommander(implicit injector: Injector) = inject[CreditRewardCommander]
   def creditRewardInfoCommander(implicit injector: Injector) = inject[CreditRewardInfoCommander].asInstanceOf[CreditRewardInfoCommanderImpl]
   def activityLogCommander(implicit injector: Injector) = inject[ActivityLogCommander]
+
+  def slackCommander(implicit injector: Injector) = inject[SlackCommander].asInstanceOf[SlackCommanderImpl]
+  def slackClient(implicit injector: Injector) = inject[SlackClient].asInstanceOf[FakeSlackClientImpl]
 }

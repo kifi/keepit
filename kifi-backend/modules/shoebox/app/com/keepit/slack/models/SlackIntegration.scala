@@ -1,11 +1,14 @@
 package com.keepit.slack.models
 
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.json.EnumFormat
+import com.keepit.common.json.{ EitherFormat, EnumFormat }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.model.{ Library, User }
-import play.api.libs.json.{ Writes, JsString, Format }
+import com.kifi.macros.json
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 abstract class SlackIntegrationStatus(val status: String)
 object SlackIntegrationStatus extends Enumerator[SlackIntegrationStatus] {
@@ -35,11 +38,34 @@ trait SlackIntegration {
   def status: SlackIntegrationStatus
 }
 
-case class SlackIntegrationRequest(
+sealed abstract class SlackIntegrationRequest
+case class SlackIntegrationCreateRequest(
   userId: Id[User],
   slackUserId: SlackUserId,
   slackTeamId: SlackTeamId,
   slackChannelId: Option[SlackChannelId],
   slackChannel: SlackChannelName,
-  libraryId: Id[Library])
+  libraryId: Id[Library]) extends SlackIntegrationRequest
 
+case class SlackIntegrationModification(
+  id: Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]],
+  status: SlackIntegrationStatus)
+object SlackIntegrationModification {
+  private implicit val eitherIdFormat = EitherFormat(LibraryToSlackChannel.formatPublicId, SlackChannelToLibrary.formatPublicId)
+  implicit val format: Format[SlackIntegrationModification] = (
+    (__ \ 'id).format[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]] and
+    (__ \ 'status).format[SlackIntegrationStatus]
+  )(SlackIntegrationModification.apply, unlift(SlackIntegrationModification.unapply))
+}
+
+case class SlackIntegrationModifyRequest(
+  requesterId: Id[User],
+  libToSlack: Map[Id[LibraryToSlackChannel], SlackIntegrationStatus],
+  slackToLib: Map[Id[SlackChannelToLibrary], SlackIntegrationStatus]) extends SlackIntegrationRequest
+@json case class SlackIntegrationModifyResponse(modified: Int)
+
+case class SlackIntegrationDeleteRequest(
+  requesterId: Id[User],
+  libToSlack: Set[Id[LibraryToSlackChannel]],
+  slackToLib: Set[Id[SlackChannelToLibrary]]) extends SlackIntegrationRequest
+@json case class SlackIntegrationDeleteResponse(deleted: Int)

@@ -351,6 +351,7 @@ GET     /imports/evernote           @com.keepit.controllers.website.HomeControll
 GET     /imports/diigo              @com.keepit.controllers.website.HomeController.route(path = "imports/diigo")
 GET     /imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
 GET     /imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
+GET     /getting-started            @com.keepit.controllers.website.HomeController.route(path = "getting-started/users")
 GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
 GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
@@ -478,6 +479,11 @@ POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.Libr
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
 
+# TODO(ryan): remove this trigger endpoint, it is just for testing
+GET   /site/libraries/:id/slack/trigger     @com.keepit.controllers.website.SlackController.triggerIntegrations(id: PublicId[Library])
+POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
+POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])
+
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 POST    /site/user/me/username      @com.keepit.controllers.website.UserController.updateUsername()
@@ -560,6 +566,7 @@ GET           /site/user-or-org/:handle/libraries         @com.keepit.controller
 GET           /site/user-or-org/:handle/libraries/:slug   @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
 
 GET           /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.getAccountState(pubId: PublicId[Organization])
+POST          /site/admin/billing/state                         @com.keepit.controllers.website.PaymentsController.updateAccountState(pubId: PublicId[Organization], newPlanId: PublicId[com.keepit.payments.PaidPlan], newCardId: PublicId[com.keepit.payments.PaymentMethod])
 GET           /site/admin/billing/state/preview                 @com.keepit.controllers.website.PaymentsController.previewAccountState(pubId: PublicId[Organization], newPlanId: PublicId[com.keepit.payments.PaidPlan], newCardId: PublicId[com.keepit.payments.PaymentMethod])
 GET           /site/admin/billing/plans                         @com.keepit.controllers.website.PaymentsController.getAvailablePlans(pubId: PublicId[Organization])
 GET           /site/admin/billing/ccToken                       @com.keepit.controllers.website.PaymentsController.getDefaultCreditCard(pubId: PublicId[Organization])

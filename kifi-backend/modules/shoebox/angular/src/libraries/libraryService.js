@@ -320,6 +320,16 @@ angular.module('kifi')
         return net.joinLibraries(libraryIds);
       },
 
+      // integrationsToModify => [{"id": "integration-id", "status": "off|on"}]
+      modifySlackIntegrations: function(libraryId, integrationsToModify) {
+        return net.modifyLibrarySlackIntegrations(libraryId, {'integrations': integrationsToModify});
+      },
+
+      // integrationsToDelete => ["integration-id", ...]
+      deleteSlackIntegrations: function(libraryId, integrationsToDelete) {
+        return net.deleteLibrarySlackIntegrations(libraryId, {'integrations': integrationsToDelete});
+      },
+
       trackEvent: function (eventName, library, attributes) {
         var defaultAttributes = api.getCommonTrackingAttributes(library);
         attributes = _.extend(defaultAttributes, attributes || {});

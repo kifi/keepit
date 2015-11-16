@@ -23,6 +23,7 @@ object OrganizationPermission extends Enumerator[OrganizationPermission] {
   case object VIEW_MEMBERS extends OrganizationPermission("view_members")
   case object VIEW_ORGANIZATION extends OrganizationPermission("view_organization")
   case object VIEW_SETTINGS extends OrganizationPermission("view_settings")
+  case object JOIN_BY_VERIFYING extends OrganizationPermission("join_by_verifying")
 
   def all: Set[OrganizationPermission] = _all.toSet
 

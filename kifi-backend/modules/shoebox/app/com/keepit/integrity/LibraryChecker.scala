@@ -148,7 +148,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
       val newLibraryKeepCount = keepRepo.getCountsByLibrary(libraryIds)
       val latestKeptAtMap = keepRepo.latestKeptAtByLibraryIds(libraryIds)
-      val librariesNeedingUpdate = libraryRepo.getLibraries(libraryIds)
+      val librariesNeedingUpdate = libraryRepo.getActiveByIds(libraryIds)
       (nextSeqNum, librariesNeedingUpdate, newLibraryKeepCount, latestKeptAtMap)
     }
     // sync library lastKept with most recent keep.lastKept
@@ -192,7 +192,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
       val nextSeqNum = if (members.isEmpty) None else Some(members.map(_.seq).max)
       val libraryIds = members.map(_.libraryId).toSet
 
-      val libraries = libraryRepo.getLibraries(libraryIds)
+      val libraries = libraryRepo.getActiveByIds(libraryIds)
       val libraryMemberCounts = libraryMembershipRepo.countByLibraryId(libraryIds)
       (nextSeqNum, libraries, libraryMemberCounts)
     }
