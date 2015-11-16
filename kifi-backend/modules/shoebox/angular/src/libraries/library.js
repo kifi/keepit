@@ -113,8 +113,12 @@ angular.module('kifi')
 
       this.deleteIntegration = function() {
         var ids = [];
-        this.data.toSlack && ids.push(this.data.toSlack.id);
-        this.data.fromSlack && ids.push(this.data.fromSlack.id);
+        if (this.data.toSlack) {
+          ids.push(this.data.toSlack.id);
+        }
+        if (this.data.fromSlack) {
+          ids.push(this.data.fromSlack.id);
+        }
         libraryService.deleteSlackIntegrations(this.library.id, ids);
         $scope.slackIntegrations.splice($scope.slackIntegrations.indexOf(this), 1);
       };
