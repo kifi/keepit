@@ -73,8 +73,31 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     case 3 => "Three keeps were"
     case 4 => "Four keeps were"
   }
+  private def describeKeeps(keeps: KeepsToPush): Option[Future[SlackMessage]] = keeps match {
+    case NoKeeps =>
+      None
+    case OneKeep(k) =>
+      val msg = DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "has", ktls.length, "new keepsToPush.")
+      Some(Future.successful(Some(SlackMessageRequest.fromKifi()msg), Future.successful(Seq.empty))
+    case SomeKeeps(ks) =>
+      val msg = DescriptionElements(numberToWords(ktls.length), "added to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.")
+      val summariesFut = keepDecorator.getKeepSummaries(keepsToPush, ProcessedImageSize.Small.idealSize)
+      val attachments = summariesFut.map { summaries =>
+        (keepsToPush zip summaries).map {
+          case (keep, summary) => describeKeep(keep, summary)
+        }
+      }
+      (Some(msg), attachments)
+    case ManyKeeps(ks) =>
+  }
+
+  sealed abstract class KeepsToPush(keeps: Seq[Keep])
+  case object NoKeeps extends KeepsToPush(Seq.empty)
+  case class OneKeep(keep: Keep) extends KeepsToPush(Seq(keep))
+  case class SomeKeeps(keeps: Seq[Keep]) extends KeepsToPush(keep)
+  case class ManyKeeps(keeps: Seq[Keep]) extends KeepsToPush(keeps)
+
   def pushToLibrary(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
-    import com.keepit.payments.DescriptionElements._
     val (lib, integrationsToProcess) = db.readWrite { implicit s =>
       val lib = libRepo.get(libId)
       val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now.minus(gracePeriod))
@@ -82,42 +105,32 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       (lib, integrationsToProcess)
     }
     val slackPushes = integrationsToProcess.map { lts =>
-      val (webhookOpt, ktls, keeps) = db.readOnlyReplica { implicit s =>
+      val (webhookOpt, ktls, keepsToPush) = db.readOnlyReplica { implicit s =>
         val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
-
         val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
         val keepsById = keepRepo.getByIds(ktls.map(_.keepId).toSet)
-        (webhook, ktls, ktls.flatMap(ktl => keepsById.get(ktl.keepId)))
-      }
-      val (messageOpt, attachmentsFut) = ktls.length match {
-        case noKeeps if noKeeps == 0 =>
-          (None, Future.successful(Seq.empty))
-        case lotsOfKeeps if lotsOfKeeps > MAX_KEEPS_TO_SEND =>
-          val msg = DescriptionElements(lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "has", ktls.length, "new keeps.")
-          (Some(msg), Future.successful(Seq.empty))
-        case justAFewKeeps if 1 <= justAFewKeeps && justAFewKeeps <= MAX_KEEPS_TO_SEND =>
-          val msg = DescriptionElements(numberToWords(ktls.length), "added to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.")
-          val summariesFut = keepDecorator.getKeepSummaries(keeps, ProcessedImageSize.Small.idealSize)
-          val attachments = summariesFut.map { summaries =>
-            (keeps zip summaries).map {
-              case (keep, summary) => describeKeep(keep, summary)
-            }
-          }
-          (Some(msg), attachments)
+        val keeps = ktls.flatMap(ktl => keepsById.get(ktl.keepId))
+        val keepsToPush: KeepsToPush = keeps match {
+          case Seq() => NoKeeps
+          case Seq(k) => OneKeep(k)
+          case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks)
+          case ks => ManyKeeps(ks)
+        }
+        (webhook, ktls, keepsToPush)
       }
 
-      val slackPush = (webhookOpt, messageOpt) match {
-        case (None, _) => Future.successful(false)
-        case (Some(wh), None) => Future.successful(true)
-        case (Some(wh), Some(msg)) =>
-          attachmentsFut.flatMap { attachments =>
-            slackClient.sendToSlack(wh.webhook.url, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(msg)).quiet.withAttachments(attachments))
-              .imap { _ => true }
-              .recover {
-                case f: SlackAPIFailure =>
-                  log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
-                  false
-              }
+      val slackPush = webhookOpt match {
+        case None => Future.successful(false)
+        case Some(wh) =>
+          describeKeeps(keepDecorator).flatMap {
+            case None => Future.successful(true)
+            case Some(msg) =>
+              slackClient.sendToSlack(wh.webhook.url, msg).imap { _ => true }
+                .recover {
+                  case f: SlackAPIFailure =>
+                    log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
+                    false
+                }
           }
       }
       slackPush.andThen {
