@@ -95,7 +95,7 @@ class SlackIngestionCommanderImpl @Inject() (
     } andThen {
       case result =>
         val (lastIngestedAt, nextIngestionAt, status) = result match {
-          case Success(_) => (Some(ingestionStartedAt), Some(ingestionStartedAt plus delayBetweenIngestions), integration.status)
+          case Success(_) => (Some(ingestionStartedAt), Some(ingestionStartedAt plus delayBetweenIngestions), integration.status) // ingestionStartedAt is what we want so that we don't miss messages next time
           case Failure(error) =>
             airbrake.notify(s"Slack ingestion failed: $integration", error)
             val (nextIngestionAt, status) = error match {
