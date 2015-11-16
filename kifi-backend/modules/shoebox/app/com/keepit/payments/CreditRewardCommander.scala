@@ -89,20 +89,28 @@ class CreditRewardCommanderImpl @Inject() (
       creditCodeInfo.code
     }
   }
-  def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards] = db.readWrite { implicit session =>
-    userValueRepo.clearValue(req.applierId, UserValueName.STORED_CREDIT_CODE)
-    for {
-      creditCodeInfo <- getCreditCodeInfo(req)
-      accountId <- req.orgId.map(accountRepo.getAccountId(_)).map(Success(_)).getOrElse(Failure(NoPaidAccountException(req.applierId, req.orgId)))
-      rewards <- createRewardsFromCreditCode(creditCodeInfo, accountId, req.applierId, req.orgId)
-    } yield {
-      (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo) match {
-        case (Some(referrerOrgId), Some(referredOrgId), creditInfo: CreditCodeInfo) =>
-          sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId, creditInfo)
-        case _ =>
-      }
-      rewards
+  def applyCreditCode(req: CreditCodeApplyRequest): Try[CreditCodeRewards] = {
+    val rewardResult = db.readWrite(attempts = 3) { implicit session =>
+      userValueRepo.clearValue(req.applierId, UserValueName.STORED_CREDIT_CODE)
+      for {
+        creditCodeInfo <- getCreditCodeInfo(req)
+        accountId <- req.orgId.map(accountRepo.getAccountId(_)).map(Success(_)).getOrElse(Failure(NoPaidAccountException(req.applierId, req.orgId)))
+        rewards <- createRewardsFromCreditCode(creditCodeInfo, accountId, req.applierId, req.orgId)
+      } yield (creditCodeInfo, rewards)
     }
+
+    rewardResult.map {
+      case ((creditCodeInfo, _)) =>
+        (creditCodeInfo.referrer.flatMap(_.organizationId), req.orgId, creditCodeInfo) match {
+          case (Some(referrerOrgId), Some(referredOrgId), creditInfo: CreditCodeInfo) =>
+            db.readWrite { implicit session =>
+              sendReferralCodeAppliedEmail(referrerOrgId, referredOrgId, creditInfo)
+            }
+          case _ =>
+        }
+    }
+
+    rewardResult.map(_._2)
   }
 
   def getCreditCodeInfo(req: CreditCodeApplyRequest)(implicit session: RSession): Try[CreditCodeInfo] = {
