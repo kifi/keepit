@@ -30,7 +30,7 @@ case class SlackChannelToLibrary(
   def withId(id: Id[SlackChannelToLibrary]) = copy(id = Some(id))
   def withUpdateTime(now: DateTime) = copy(updatedAt = now)
   def isActive: Boolean = (state == SlackChannelToLibraryStates.ACTIVE)
-  def withStatus(newStatus: SlackIntegrationStatus) = copy(status = newStatus, nextIngestionAt = if (status == SlackIntegrationStatus.On) Some(currentDateTime) else None)
+  def withStatus(newStatus: SlackIntegrationStatus) = copy(status = newStatus, nextIngestionAt = if (newStatus == SlackIntegrationStatus.On) Some(currentDateTime) else None)
   def sanitizeForDelete = copy(state = SlackChannelToLibraryStates.INACTIVE, status = SlackIntegrationStatus.Off)
 }
 
