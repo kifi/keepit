@@ -6,12 +6,10 @@ angular.module('kifi')
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
   'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService', 'libraryImageLoaded',
-  'ORG_PERMISSION',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService, signupService, libraryImageLoaded,
-    ORG_PERMISSION) {
+    platformService, profileService, originTrackingService, installService, signupService, libraryImageLoaded) {
 
     //
     // Internal functions
@@ -146,7 +144,7 @@ angular.module('kifi')
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === profileService.me.id;
     $scope.isAdminExperiment = (profileService.me.experiments || []).indexOf('admin') !== -1;
-
+    $scope.canCreateSlackIntegration = (library.permissions || []).indexOf('create_slack_integration') !== -1;
 
     // slack stuff
     $scope.slackIntegrations = [];
@@ -295,16 +293,9 @@ angular.module('kifi')
       if (!$rootScope.userLoggedIn) {
         // handle user needs to log in
         signupService.register({});
-      } else if (profileService.me && profileService.me.orgs.length > 0){
-        var canCreateSlackIntegration = false;
-        var orgs = profileService.me.orgs;
-        for (var i in orgs) {
-          if (orgs[i].viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) > -1) {
-            canCreateSlackIntegration = true;
-            break;
-          }
-        }
-        if (canCreateSlackIntegration) {
+      } else if (profileService.me && profileService.me.orgs.length > 0) {
+
+        if ($scope.canCreateSlackIntegration) {
           if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
             $scope.openSlackIntegrations();
           } else {
