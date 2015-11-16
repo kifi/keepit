@@ -68,14 +68,14 @@ class SlackIngestionCommanderImpl @Inject() (
             case _ =>
               airbrake.notify(s"Found broken Slack integration: $integration")
               db.readWrite { implicit session =>
-                integrationRepo.updateAfterIngestion(integration.id.get, None, None, SlackIntegrationStatus.Broken) // disable ingestion, todo(Léo): perhaps this should be handled in doIngest
+                integrationRepo.updateAfterIngestion(integration.id.get, None, SlackIntegrationStatus.Broken) // disable ingestion, todo(Léo): perhaps this should be handled in doIngest
               }
               Future.successful(())
           }
         case forbiddenIntegration =>
           airbrake.notify(s"Turning off forbidden Slack integration: $forbiddenIntegration")
           db.readWrite { implicit session =>
-            integrationRepo.updateAfterIngestion(forbiddenIntegration.id.get, None, None, SlackIntegrationStatus.Off) // disable ingestion, todo(Léo): perhaps this should be handled in doIngest
+            integrationRepo.updateAfterIngestion(forbiddenIntegration.id.get, None, SlackIntegrationStatus.Off) // disable ingestion, todo(Léo): perhaps this should be handled in doIngest
           }
           Future.successful(())
       }
@@ -88,23 +88,23 @@ class SlackIngestionCommanderImpl @Inject() (
     val batchSize = 25
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, _) =>
-        getLatestMessagesWithLinks(token, integration.slackChannelName, integration.lastIngestedAt, lastMessageTimestamp, Some(batchSize)).map { messages =>
+        getLatestMessagesWithLinks(token, integration.slackChannelName, lastMessageTimestamp, Some(batchSize)).map { messages =>
           val newLastMessageTimestamp = ingestMessages(integration, messages)
           (newLastMessageTimestamp, newLastMessageTimestamp.isEmpty)
         }
     } andThen {
       case result =>
-        val (lastIngestedAt, nextIngestionAt, status) = result match {
-          case Success(_) => (Some(ingestionStartedAt), Some(ingestionStartedAt plus delayBetweenIngestions), integration.status) // ingestionStartedAt is what we want so that we don't miss messages next time
+        val (nextIngestionAt, status) = result match {
+          case Success(_) => (Some(ingestionStartedAt plus delayBetweenIngestions), integration.status)
           case Failure(error) =>
             airbrake.notify(s"Slack ingestion failed: $integration", error)
             val (nextIngestionAt, status) = error match {
               case SlackAPIFailure(_, SlackAPIFailure.Error.invalidAuth, _) => (None, SlackIntegrationStatus.Broken)
               case _ => (Some(ingestionStartedAt plus retryDelay), integration.status)
             }
-            (None, nextIngestionAt, status)
+            (nextIngestionAt, status)
         }
-        db.readWrite { implicit session => integrationRepo.updateAfterIngestion(integration.id.get, lastIngestedAt, nextIngestionAt, status) }
+        db.readWrite { implicit session => integrationRepo.updateAfterIngestion(integration.id.get, nextIngestionAt, status) }
     }
   }
 
@@ -133,7 +133,7 @@ class SlackIngestionCommanderImpl @Inject() (
             isPrivate = None,
             canonical = None,
             openGraph = None,
-            keptAt = Some(clock.now()), // todo(Léo): not the best, should be the message timestamp, we do not get it back from Slack
+            keptAt = Some(message.timestamp.toDatetime), // todo(Léo): not the best, should be the message timestamp, we do not get it back from Slack
             sourceAttribution = Some(SlackAttribution(message)),
             note = None
           )
@@ -141,9 +141,9 @@ class SlackIngestionCommanderImpl @Inject() (
     }
   }
 
-  private def getLatestMessagesWithLinks(token: SlackAccessToken, channelName: SlackChannelName, lastIngestedAt: Option[DateTime], lastMessageTimestamp: Option[SlackMessageTimestamp], limit: Option[Int]): Future[Seq[SlackMessage]] = {
+  private def getLatestMessagesWithLinks(token: SlackAccessToken, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackMessageTimestamp], limit: Option[Int]): Future[Seq[SlackMessage]] = {
     import SlackSearchRequest._
-    val query = Query(Query.in(channelName), Query.hasLink, lastIngestedAt.map(t => Query.after(t.toLocalDate.minusDays(1))))
+    val query = Query(Query.in(channelName), Query.hasLink, lastMessageTimestamp.map(t => Query.after(t.toDatetime.toLocalDate.minusDays(1))))
     val pageSize = PageSize((limit getOrElse 100) max PageSize.max)
     FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
       case (previousMessages, nextPage) =>

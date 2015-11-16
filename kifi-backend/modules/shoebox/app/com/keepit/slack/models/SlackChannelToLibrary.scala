@@ -51,7 +51,7 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def markAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
   def unmarkAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
   def updateLastMessageTimestamp(id: Id[SlackChannelToLibrary], lastMessageTimestamp: SlackMessageTimestamp)(implicit session: RWSession): Unit
-  def updateAfterIngestion(id: Id[SlackChannelToLibrary], lastIngestedAt: Option[DateTime], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit
+  def updateAfterIngestion(id: Id[SlackChannelToLibrary], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit
   def deactivate(model: SlackChannelToLibrary)(implicit session: RWSession): Unit
 }
 
@@ -209,13 +209,9 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastMessageTimestamp)).update((now, Some(lastMessageTimestamp)))
   }
 
-  def updateAfterIngestion(id: Id[SlackChannelToLibrary], lastIngestedAt: Option[DateTime], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit = {
+  def updateAfterIngestion(id: Id[SlackChannelToLibrary], nextIngestionAt: Option[DateTime], status: SlackIntegrationStatus)(implicit session: RWSession): Unit = {
     val now = clock.now()
-    if (lastIngestedAt.isDefined) {
-      (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastIngestingAt, r.lastIngestedAt, r.nextIngestionAt, r.status)).update((now, None, lastIngestedAt, nextIngestionAt, status))
-    } else {
-      (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastIngestingAt, r.nextIngestionAt, r.status)).update((now, None, nextIngestionAt, status))
-    }
+    (for (r <- rows if r.id === id) yield (r.updatedAt, r.lastIngestingAt, r.lastIngestedAt, r.nextIngestionAt, r.status)).update((now, None, Some(now), nextIngestionAt, status))
   }
 
   def deactivate(model: SlackChannelToLibrary)(implicit session: RWSession): Unit = {

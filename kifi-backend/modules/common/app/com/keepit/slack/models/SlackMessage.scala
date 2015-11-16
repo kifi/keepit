@@ -1,5 +1,6 @@
 package com.keepit.slack.models
 
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.kifi.macros.json
@@ -24,6 +25,7 @@ object SlackUsername {
 
 @json case class SlackMessageTimestamp(value: String) extends Ordered[SlackMessageTimestamp] { // channel-specific timestamp
   def compare(that: SlackMessageTimestamp) = value compare that.value
+  def toDatetime: DateTime = new DateTime(value.split(".").head.toLong * 1000) // "The bit before the . is a unix timestamp, the bit after is a sequence to guarantee uniqueness."
 }
 
 @json case class SlackMessageType(value: String)
