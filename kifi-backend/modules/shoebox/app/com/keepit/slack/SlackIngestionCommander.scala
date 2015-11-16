@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ RawBookmarkRepresentation, KeepInterner }
+import com.keepit.commanders.{ PermissionCommander, RawBookmarkRepresentation, KeepInterner }
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -22,7 +22,7 @@ import scala.util.{ Failure, Success }
 object SlackIngestionCommander {
   val ingestionPeriod = Period.minutes(10)
   val retryPeriod = Period.minutes(1)
-  val recoveryPeriod = Period.minutes(30)
+  val ingestionGracePeriod = Period.minutes(30)
   val maxConcurrency = 10
 }
 
@@ -36,35 +36,48 @@ class SlackIngestionCommanderImpl @Inject() (
     db: Database,
     integrationRepo: SlackChannelToLibraryRepo,
     slackRepo: SlackTeamMembershipRepo,
+    permissionCommander: PermissionCommander,
     libraryRepo: LibraryRepo,
     slackClient: SlackClient,
     urlClassifier: UrlClassifier,
     keepInterner: KeepInterner,
     clock: Clock,
     airbrake: AirbrakeNotifier,
-    implicit val ec: ExecutionContext) {
+    implicit val ec: ExecutionContext) extends SlackIngestionCommander {
 
   import SlackIngestionCommander._
 
   def ingestAll(): Future[Unit] = {
     FutureHelpers.doUntil {
-      val (integrations, memberships) = db.readWrite { implicit session =>
-        val integrationIds = integrationRepo.getRipeForIngestion(maxConcurrency, recoveryPeriod)
+      val (integrations, slackMemberships, isAllowed) = db.readWrite { implicit session =>
+        val integrationIds = integrationRepo.getRipeForIngestion(maxConcurrency, ingestionGracePeriod)
         integrationRepo.markAsIngesting(integrationIds: _*)
         val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
         val integrations = integrationIds.map(integrationsByIds(_))
-        val memberships = slackRepo.getBySlackUserIds(integrations.map(_.slackUserId).toSet)
-        (integrations, memberships)
+        val slackMemberships = slackRepo.getBySlackUserIds(integrations.map(_.slackUserId).toSet)
+        val isAllowed = integrations.map { integration =>
+          integration.id.get -> permissionCommander.getLibraryPermissions(integration.libraryId, Some(integration.ownerId)).contains(LibraryPermission.ADD_KEEPS)
+        }.toMap
+        (integrations, slackMemberships, isAllowed)
+
       }
-      val futureIngestions: Seq[Future[Unit]] = integrations.map { integration =>
-        memberships.get(integration.slackUserId).flatMap(m => m.token.map((_, m.scopes))) match {
-          case Some((token, scopes)) if scopes.contains(SlackAuthScope.SearchRead) => doIngest(token, integration).imap(_ => ()) recover { case _ => () }
-          case _ =>
-            db.readWrite { implicit session =>
-              integrationRepo.markIngestionComplete(integration.id.get, None, None) // disable ingestion, todo(Léo): perhaps this should be handled in doIngest
-            }
-            Future.successful(())
-        }
+      val futureIngestions: Seq[Future[Unit]] = integrations.map {
+        case integration if isAllowed(integration.id.get) =>
+          slackMemberships.get(integration.slackUserId).flatMap(m => m.token.map((_, m.scopes))) match {
+            case Some((token, scopes)) if scopes.contains(SlackAuthScope.SearchRead) => doIngest(token, integration).imap(_ => ()) recover { case _ => () }
+            case _ =>
+              airbrake.notify(s"Found broken Slack integration: $integration")
+              db.readWrite { implicit session =>
+                integrationRepo.updateAfterIngestion(integration.id.get, None, None, SlackIntegrationStatus.Broken) // disable ingestion, todo(Léo): perhaps this should be handled in doIngest
+              }
+              Future.successful(())
+          }
+        case forbiddenIntegration =>
+          airbrake.notify(s"Turning off forbidden Slack integration: $forbiddenIntegration")
+          db.readWrite { implicit session =>
+            integrationRepo.updateAfterIngestion(forbiddenIntegration.id.get, None, None, SlackIntegrationStatus.Off) // disable ingestion, todo(Léo): perhaps this should be handled in doIngest
+          }
+          Future.successful(())
       }
       Future.sequence(futureIngestions).imap(_.isEmpty)
     }
@@ -81,17 +94,17 @@ class SlackIngestionCommanderImpl @Inject() (
         }
     } andThen {
       case result =>
-        val (lastIngestedAt, nextIngestionAt) = result match {
-          case Success(_) => (Some(ingestionStartedAt), Some(ingestionStartedAt plus ingestionPeriod))
+        val (lastIngestedAt, nextIngestionAt, status) = result match {
+          case Success(_) => (Some(ingestionStartedAt), Some(ingestionStartedAt plus ingestionPeriod), integration.status)
           case Failure(error) =>
             airbrake.notify(s"Slack ingestion failed: $integration", error)
-            val nextIngestionAt = error match {
-              case SlackAPIFailure(_, SlackAPIFailure.Error.invalidAuth, _) => None
-              case _ => Some(ingestionStartedAt plus retryPeriod)
+            val (nextIngestionAt, status) = error match {
+              case SlackAPIFailure(_, SlackAPIFailure.Error.invalidAuth, _) => (None, SlackIntegrationStatus.Broken)
+              case _ => (Some(ingestionStartedAt plus retryPeriod), integration.status)
             }
-            (None, nextIngestionAt)
+            (None, nextIngestionAt, status)
         }
-        db.readWrite { implicit session => integrationRepo.markIngestionComplete(integration.id.get, lastIngestedAt, nextIngestionAt) }
+        db.readWrite { implicit session => integrationRepo.updateAfterIngestion(integration.id.get, lastIngestedAt, nextIngestionAt, status) }
     }
   }
 
