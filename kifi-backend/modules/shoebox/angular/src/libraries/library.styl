@@ -1,14 +1,14 @@
 // Note: The structure of this page is very similar to the general search results page.
 //       When editing values and styles near the top of this file, consider updating search.styl too.
 
-leftColWidth = 538px  // chosen so that inner keep card width (youtube video, specifically) comes out to exactly 496px
+leftColWidth = 538px // chosen so that inner keep card width (youtube video, specifically) comes out to exactly 496px
 rightColWidth = 210px // chosen to match related library card width
 colGapWidth = 24px
 twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appSidePad1 // = 796px
 
 .kf-lib-content
   margin: 0 auto
-  min-height: 100vh  // for auto-scrolling down to search results
+  min-height: 100vh // for auto-scrolling down to search results
   max-width: twoColMinWidth
   padding: 10px appSidePad1 0
 
@@ -100,6 +100,7 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
 
 .kf-lib-slack
   width: 100%
+  height: 40px
   display: flex
   flex-direction: column
   justify-content: flex-start
@@ -109,15 +110,15 @@ twoColMinWidth = appSidePad1 + leftColWidth + colGapWidth + rightColWidth + appS
   cursor: pointer
   vertical-align: top
   position: relative
+  background: white
+  border: 1px solid #C7CACD
+  border-radius: 5px
 
 .kf-lib-slack-integration-text
   margin-top: 5px
   font-weight: bold
   font-size: 14px
   color: #333
-  
-  &:hover
-    text-decoration: underline
 
 .kf-lib-slack-btn
   height: 40px

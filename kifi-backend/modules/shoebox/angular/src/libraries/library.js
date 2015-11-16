@@ -149,10 +149,12 @@ angular.module('kifi')
     // slack stuff
     $scope.slackIntegrations = [];
 
+
+
     if (library.slack && library.slack.integrations) {
-      for (var i = 0; i < library.slack.integrations.length; i++) {
-        $scope.slackIntegrations.push(new SlackIntegration(library.slack.integrations[i]));
-      }
+      $scope.slackIntegrations = library.slack.integrations.map(function (integration) {
+        return new SlackIntegration(integration);
+      });
     }
 
     $scope.edit = {
@@ -299,7 +301,7 @@ angular.module('kifi')
           if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
             $scope.openSlackIntegrations();
           } else {
-            window.location = $scope.getSlackLink();
+            $window.location = $scope.getSlackLink();
           }
         } else {
           // show ask for more info modal
