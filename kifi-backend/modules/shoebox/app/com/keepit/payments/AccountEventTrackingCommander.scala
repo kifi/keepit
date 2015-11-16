@@ -90,8 +90,8 @@ class AccountEventTrackingCommanderImpl @Inject() (
         iconUrl = SlackMessageRequest.kifiIconUrl,
         channel = Some(channel),
         attachments = Seq.empty,
-        unfurlLinks = false,
-        unfurlMedia = false
+        unfurlLinks = true,
+        unfurlMedia = true
       )
       slackClient.sendToSlack(slackChannelUrl, fullMsg).imap(_ => ())
     }
