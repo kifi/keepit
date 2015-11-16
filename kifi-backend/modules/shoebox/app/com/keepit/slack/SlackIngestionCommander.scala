@@ -123,7 +123,7 @@ class SlackIngestionCommanderImpl @Inject() (
   }
 
   private def toRawBookmarks(message: SlackMessage): Seq[RawBookmarkRepresentation] = {
-    if (SlackUsername.doNotIngest.contains(message.username)) Seq.empty[RawBookmarkRepresentation]
+    if (message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)) Seq.empty[RawBookmarkRepresentation]
     else message.attachments.flatMap { attachment => // todo(Léo): messages can have links but no attachment
       (attachment.title.flatMap(_.link) orElse attachment.fromUrl).collect {
         case url if !urlClassifier.isSocialActivity(url) =>
