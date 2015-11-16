@@ -20,8 +20,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object SlackIngestionCommander {
-  val ingestionPeriod = Period.minutes(10)
-  val retryPeriod = Period.minutes(1)
+  val delayBetweenIngestions = Period.minutes(10)
+  val retryDelay = Period.minutes(1)
   val ingestionGracePeriod = Period.minutes(30)
   val maxConcurrency = 10
 }
@@ -95,12 +95,12 @@ class SlackIngestionCommanderImpl @Inject() (
     } andThen {
       case result =>
         val (lastIngestedAt, nextIngestionAt, status) = result match {
-          case Success(_) => (Some(ingestionStartedAt), Some(ingestionStartedAt plus ingestionPeriod), integration.status)
+          case Success(_) => (Some(ingestionStartedAt), Some(ingestionStartedAt plus delayBetweenIngestions), integration.status)
           case Failure(error) =>
             airbrake.notify(s"Slack ingestion failed: $integration", error)
             val (nextIngestionAt, status) = error match {
               case SlackAPIFailure(_, SlackAPIFailure.Error.invalidAuth, _) => (None, SlackIntegrationStatus.Broken)
-              case _ => (Some(ingestionStartedAt plus retryPeriod), integration.status)
+              case _ => (Some(ingestionStartedAt plus retryDelay), integration.status)
             }
             (None, nextIngestionAt, status)
         }
