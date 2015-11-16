@@ -117,7 +117,7 @@ color: #66C;
 }
 
 img {
-max-width: 90%;
+max-width: 75%;
 margin: 1em;
 }
 
@@ -137,5 +137,10 @@ font-size: 18px;
 -webkit-transform: rotate(60deg);
 -moz-transform: rotate(60deg);
 transform: rotate(60deg);
+}
+
+iframe.embedly-embed {
+  width: 36em;
+  height: 21em;
 }
 
