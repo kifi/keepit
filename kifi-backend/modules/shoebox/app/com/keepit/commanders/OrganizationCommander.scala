@@ -73,6 +73,7 @@ class OrganizationCommanderImpl @Inject() (
       case OrganizationTransferRequest(requesterId, orgId, _) =>
         if (requesterId != orgRepo.get(orgId).ownerId) Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
         else None
+      case _ => None
     }
   }
 

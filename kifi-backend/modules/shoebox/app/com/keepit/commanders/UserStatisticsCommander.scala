@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.OrganizationInviteRecommendation
-import com.keepit.classify.{ DomainRepo, Domain }
+import com.keepit.classify.{ NormalizedHostname, DomainRepo, Domain }
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -53,7 +53,7 @@ case class OrganizationStatisticsOverview(
   numKeeps: Int,
   members: Set[OrganizationMembership],
   candidates: Set[OrganizationMembershipCandidate],
-  domains: Set[Domain],
+  domains: Set[NormalizedHostname],
   internalMemberChatStats: Int,
   allMemberChatStats: Int)
 
@@ -95,7 +95,7 @@ case class OrganizationStatistics(
   membersStatistics: Map[Id[User], MemberStatistics],
   memberRecommendations: Seq[OrganizationMemberRecommendationInfo],
   experiments: Set[OrganizationExperimentType],
-  domains: Set[Domain],
+  domains: Set[NormalizedHostname],
   internalMemberChatStats: Seq[SummaryByYearWeek],
   allMemberChatStats: Seq[SummaryByYearWeek],
   credit: DollarAmount,
