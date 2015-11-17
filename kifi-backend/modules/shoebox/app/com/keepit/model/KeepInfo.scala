@@ -38,7 +38,7 @@ case class KeepInfo(
   libraryId: Option[PublicId[Library]] = None, // deprecated, use .library.id instead
   library: Option[LibraryCardInfo] = None,
   organization: Option[BasicOrganization] = None,
-  sourceAttribution: Option[KeepSourceAttribution] = None,
+  sourceAttribution: Option[KeepSourceAttribution],
   note: Option[String] = None)
 
 object KeepInfo {
@@ -81,6 +81,6 @@ object KeepInfo {
   // Are you looking for a decorated keep (with tags, rekeepers, etc)?
   // Use KeepsCommander#decorateKeepsIntoKeepInfos(userId, keeps)
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId))
+    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId), sourceAttribution = None)
   }
 }
