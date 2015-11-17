@@ -110,8 +110,10 @@ class SlackIngestionCommanderImpl @Inject() (
   }
 
   private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): Option[SlackMessageTimestamp] = {
+    log.info(s"[SLACK-INGEST] Ingesting links from ${messages.length} messages from ${integration.slackChannelName.value}")
     val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     val rawBookmarks = messages.flatMap(toRawBookmarks).distinctBy(_.url)
+    log.info(s"[SLACK-INGEST] Extracted these urls from those messages: ${rawBookmarks.map(_.url)}")
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
     val library = db.readOnlyMaster { implicit session => libraryRepo.get(integration.libraryId) }
     keepInterner.internRawBookmarks(rawBookmarks, integration.ownerId, library, KeepSource.slack)(HeimdalContext.empty)
