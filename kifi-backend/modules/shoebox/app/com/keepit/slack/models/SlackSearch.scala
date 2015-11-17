@@ -12,6 +12,7 @@ object SlackSearchRequest {
 
   case class Query(query: String) extends Param("query", Some(query))
   object Query {
+    val trivial = Query("")
     def apply(queries: Option[Query]*): Query = Query(queries.flatten.map(_.query).mkString(" "))
 
     implicit def toOption(q: Query): Option[Query] = Some(q)
@@ -53,9 +54,16 @@ object SlackSearchRequest {
 case class SlackSearchResponse(query: SlackSearchRequest.Query, messages: SlackSearchResponse.Messages)
 
 object SlackSearchResponse {
+  val trivial = SlackSearchResponse(SlackSearchRequest.Query.trivial, SlackSearchResponse.Messages.empty)
 
   @json case class Paging(count: Int, total: Int, page: Int, pages: Int)
+  object Paging {
+    val empty = Paging(0, 0, 0, 0)
+  }
   @json case class Messages(total: Int, paging: Paging, matches: Seq[SlackMessage])
+  object Messages {
+    val empty = Messages(0, Paging.empty, Seq.empty)
+  }
 
   implicit val reads = Json.reads[SlackSearchResponse]
 }
