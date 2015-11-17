@@ -26,6 +26,7 @@ angular.module('kifi')
       joinLibraries: post(shoebox, '/libraries/joinMultiple'),
 
       user: get(shoebox, '/user/:id', 30),
+      getEmailInfo: get(shoebox, '/user/email'),
       userOrOrg: get(shoebox, '/user-or-org/:handle?authToken=:authToken', 30),
       createOrg: post(shoebox, '/organizations/create'),
       updateOrgProfile: post(shoebox, '/organizations/:id/modify'),
@@ -43,9 +44,6 @@ angular.module('kifi')
       getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 30),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
       hideOrgDomain: post(shoebox, '/user/hideOrgDomain?orgId=:orgId'),
-      addDomain: post(shoebox, '/organizations/:id/addDomain'),
-      removeDomain: post(shoebox, '/organizations/:id/removeDomain'),
-      addDomainAfterVerification: post(shoebox, '/organizations/:id/addDomainAfterVerification'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId', 30),
       updateAccountState: post(shoebox, '/admin/billing/state?pubId=:pubId&newPlanId=:newPlanId&newCardId=:newCardId'),
@@ -61,6 +59,11 @@ angular.module('kifi')
       getReferralCode: get(shoebox, '/organizations/:id/referralCode', 30),
       applyReferralCode: post(shoebox, '/organizations/:id/redeemCode'),
       getRewards: get(shoebox, '/organizations/:id/rewards', 30),
+
+      getOrgDomains: get(shoebox, '/organizations/:id/getDomains', 30),
+      addOrgDomain: post(shoebox, '/organizations/:id/addDomain'),
+      addDomainAfterVerification: post(shoebox, '/organizations/:id/addDomainAfterVerification'),
+      removeOrgDomain: post(shoebox, '/organizations/:id/removeDomain'),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
 
@@ -92,6 +95,10 @@ angular.module('kifi')
     };
 
     function get(base, pathSpec, cacheSec) {
+      if (!pathSpec) {
+        throw new Error('You forgot to add a microservice name in net.js!');
+      }
+
       var pathParts = pathSpec.split(pathParamRe);
       var cache = cacheSec && createExpiringCache(pathSpec, cacheSec);
       function doGet() {  // caller should pass any path params and then, optionally, a query params object

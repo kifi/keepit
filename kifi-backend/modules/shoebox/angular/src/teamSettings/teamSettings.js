@@ -3,13 +3,12 @@
 angular.module('kifi')
 
 .controller('TeamSettingsCtrl', [
-  '$window', '$rootScope', '$scope', '$state', '$sce', '$analytics', '$timeout', 'billingState',
+  '$window', '$rootScope', '$scope', '$state', '$analytics', '$timeout', 'billingState',
   'orgProfileService', 'profileService', 'billingService', 'messageTicker',
   'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function ($window, $rootScope, $scope, $state, $sce, $analytics, $timeout, billingState,
+  function ($window, $rootScope, $scope, $state, $analytics, $timeout, billingState,
             orgProfileService, profileService, billingService, messageTicker,
             ORG_PERMISSION, ORG_SETTING_VALUE) {
-
     $scope.ORG_PERMISSION = ORG_PERMISSION;
     $scope.settingsSectionTemplateData = [
       {
@@ -102,13 +101,27 @@ angular.module('kifi')
           {
             title: 'Who can see the settings page?',
             description: (
-              'Select who is able to view the settings for this team. This does not allow them to edit the settings.'
+              'Select who is able to view the settings for this team.' +
+              ' This does not allow them to edit the settings.'
             ),
             fieldKey: 'view_settings',
             selectOptions: getOptions(ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
             trackingValue: 'view_settings_dropdown'
+          },
+          {
+            title: 'Can users join your team by verifying one of your team\'s email addresses?',
+            description: (
+              'When a user verifies an email from one of your email domains,' +
+              ' add them to your team.'
+            ),
+            fieldKey: 'join_by_verifying',
+            selectOptions: getOptions(
+              { label: 'No', value: ORG_SETTING_VALUE.DISABLED },
+              { label: 'Yes', value: ORG_SETTING_VALUE.NONMEMBERS }
+            )
           }
-        ]
+        ],
+        subComponent: 'kf-team-email-mapping'
       },
       {
         heading: 'Integrations',
@@ -180,6 +193,7 @@ angular.module('kifi')
         { label: 'No one', value: ORG_SETTING_VALUE.DISABLED },
         { label: 'Admins only', value: ORG_SETTING_VALUE.ADMIN },
         { label: 'Team members', value: ORG_SETTING_VALUE.MEMBER },
+        { label: 'Non-members', value: ORG_SETTING_VALUE.NONMEMBERS },
         { label: 'Anyone', value: ORG_SETTING_VALUE.ANYONE }
       ];
 
