@@ -7,7 +7,6 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
 import com.keepit.model.{ LibraryFail, Library }
-import com.keepit.shoebox.controllers.{ LibraryAccessActions, OrganizationAccessActions }
 import com.keepit.slack.models._
 import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackClient, SlackCommander }
 import play.api.libs.json.{ JsObject, JsSuccess, Json, JsError }

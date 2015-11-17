@@ -157,6 +157,7 @@ class UserCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    orgConfigurationRepo: OrganizationConfigurationRepo,
     domainRepo: DomainRepo,
     organizationInfoCommander: OrganizationInfoCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
@@ -295,7 +296,8 @@ class UserCommanderImpl @Inject() (
       val potentialOrgsToHide = userValueRepo.getValue(user.id.get, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]]
       val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values.flatten
         .collect {
-          case ownership if !orgs.contains(ownership.organizationId) && !pendingOrgs.contains(ownership.organizationId) && !potentialOrgsToHide.contains(ownership.organizationId) =>
+          case ownership if !orgs.contains(ownership.organizationId) && !pendingOrgs.contains(ownership.organizationId) &&
+            !potentialOrgsToHide.contains(ownership.organizationId) && canVerifyToJoin(ownership.organizationId) =>
             ownership.organizationId
         }
       val potentialOrgViews = potentialOrgIds.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
@@ -318,6 +320,7 @@ class UserCommanderImpl @Inject() (
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs)
   }
 
+  private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
   private def isFreeMail(email: UserEmailAddress)(implicit session: RSession): Boolean = {
     val hostnameOpt = NormalizedHostname.fromHostname(email.address.hostname)
     hostnameOpt match {
@@ -345,7 +348,7 @@ class UserCommanderImpl @Inject() (
     require(newUser.id.isDefined, "UserCommander.tellUsersWithContactOfNewUserImmediate: newUser.id is required")
 
     val newUserId = newUser.id.get
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).contains("true") }) {
 
       val verifiedEmailAddresses = db.readOnlyMaster { implicit session =>
         val allAddresses = emailRepo.getAllByUser(newUserId)
@@ -409,6 +412,7 @@ class UserCommanderImpl @Inject() (
             .map(organizationDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
             .diff(userValueRepo.getValue(emailRecord.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
             .filter(orgId => !organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailRecord.userId))
+            .filter(orgId => canVerifyToJoin(orgId))
           (code, domainOwnerIds)
         }
 

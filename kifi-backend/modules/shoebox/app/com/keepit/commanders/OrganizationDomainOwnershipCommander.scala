@@ -36,9 +36,9 @@ object OrganizationDomainOwnershipCommander {
 class OrganizationDomainOwnershipCommanderImpl @Inject() (
     db: Database,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+    orgConfigurationRepo: OrganizationConfigurationRepo,
     domainRepo: DomainRepo,
     orgExperimentRepo: OrganizationExperimentRepo,
-    orgConfigurationRepo: OrganizationConfigurationRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
     userEmailAddressCommander: UserEmailAddressCommander,
     permissionCommander: PermissionCommander,

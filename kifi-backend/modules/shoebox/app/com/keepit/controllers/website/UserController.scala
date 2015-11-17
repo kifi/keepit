@@ -28,6 +28,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json.toJson
+import play.api.libs.json.JsNumber
 import play.api.mvc.{ MaxSizeExceeded, Request }
 import play.api.libs.json._
 
@@ -436,8 +437,6 @@ class UserController @Inject() (
       s <- cropSize
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
-
-  private val url = fortytwoConfig.applicationBaseUrl
 
   def resendVerificationEmail(email: EmailAddress) = UserAction.async { implicit request =>
     EmailAddress.validate(email.address) match {
