@@ -37,7 +37,7 @@ object SlackIngestionCommander {
 
 @ImplementedBy(classOf[SlackIngestionCommanderImpl])
 trait SlackIngestionCommander {
-  def ingestAll(): Future[Unit]
+  def ingestAllDue(): Future[Unit]
 }
 
 @Singleton
@@ -56,7 +56,7 @@ class SlackIngestionCommanderImpl @Inject() (
 
   import SlackIngestionCommander._
 
-  def ingestAll(): Future[Unit] = {
+  def ingestAllDue(): Future[Unit] = {
     FutureHelpers.doUntil {
       val (integrations, isAllowed, getToken) = db.readWrite { implicit session =>
         val integrationIds = integrationRepo.getRipeForIngestion(integrationBatchSize, ingestionTimeout)

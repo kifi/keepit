@@ -49,7 +49,7 @@ class SlackIngestionCommanderTest extends TestKitSupport with SpecificationLike 
 
           val ch = SlackChannel(SlackChannelId("C123123"), integration.slackChannelName)
           slackClient.sayInChannel(stm, ch)("<http://www.google.com|Google>")
-          val resFut = inject[SlackIngestionCommander].ingestAll()
+          val resFut = inject[SlackIngestionCommander].ingestAllDue()
           val res = Await.result(resFut, Duration.Inf)
 
           db.readOnlyMaster { implicit s =>
@@ -88,7 +88,7 @@ class SlackIngestionCommanderTest extends TestKitSupport with SpecificationLike 
             inject[FakeClock].setTimeValue(now)
             val preIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
             slackClient.sayInChannel(stm, ch)(msg)
-            Await.result(inject[SlackIngestionCommander].ingestAll(), Duration.Inf)
+            Await.result(inject[SlackIngestionCommander].ingestAllDue(), Duration.Inf)
             val postIngestCount = db.readOnlyMaster { implicit s => ktlRepo.getCountByLibraryId(lib.id.get) }
             (postIngestCount === preIngestCount + expectedLinkCount).setMessage(s"got ${postIngestCount - preIngestCount} links out of $msg")
           }

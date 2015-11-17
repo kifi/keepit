@@ -30,7 +30,7 @@ class ShoeboxTasksPlugin @Inject() (
     }
 
     scheduleTaskOnOneMachine(system, 5 minute, 1 minutes, "slack ingestion") {
-      slackIngestionCommander.ingestAll()
+      slackIngestionCommander.ingestAllDue()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {
