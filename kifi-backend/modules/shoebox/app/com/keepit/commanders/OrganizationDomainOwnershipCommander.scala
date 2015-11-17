@@ -12,6 +12,7 @@ import com.keepit.common.mail.EmailAddress._
 import com.keepit.model._
 import play.api.libs.json._
 
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipCommanderImpl])
@@ -36,6 +37,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     db: Database,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     domainRepo: DomainRepo,
+    orgExperimentRepo: OrganizationExperimentRepo,
     orgConfigurationRepo: OrganizationConfigurationRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
     userEmailAddressCommander: UserEmailAddressCommander,
@@ -95,10 +97,10 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
       }
     }
 
-    db.readWriteAsync { implicit session =>
-      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
-      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
-    }
+//    db.readWriteAsync { implicit session =>
+//      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
+//      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
+//    }
 
     ownership
   }
