@@ -97,10 +97,10 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
       }
     }
 
-//    db.readWriteAsync { implicit session =>
-//      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
-//      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
-//    }
+    //    db.readWriteAsync { implicit session =>
+    //      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
+    //      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
+    //    }
 
     ownership
   }
