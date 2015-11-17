@@ -61,7 +61,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
 
         (resultJson \ "id").as[ExternalId[User]] === user.externalId
         (resultJson \ "firstName").as[String] === "Shanee"
-        (resultJson \ "experiments").as[Seq[String]] === Seq("admin")
+        (resultJson \ "experiments").as[Seq[String]] === Seq("admin", "create_team")
 
         (resultJson \ "orgs").as[Seq[JsObject]].length === 1
         (resultJson \ "pendingOrgs").as[Seq[JsObject]].length === 0
