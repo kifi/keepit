@@ -4,16 +4,18 @@
       <span ng-if="!open">+</span>
       <span ng-if="open">-</span>
     </span>
-    <span
-      class="kf-link"
-      ng-pluralize
-      count="emailDomains.length"
-      when="{
-        '0': 'Add email domains',
-        '1': '1 enabled domain (edit)',
-        'other': '{} enabled domains (edit)'
-      }"
-    ></span>
+    <span class="kf-link">
+      <span
+        ng-pluralize
+        count="emailDomains.length"
+        when="{
+          '0': 'Add email domains',
+          '1': '1 enabled domain',
+          'other': '{} enabled domains'
+        }"
+      ></span>
+      <span ng-if="enabled && emailDomains.length > 0">(edit)</span>
+    </span>
   </button>
   <div ng-show="open">
     <p class="kf-team-settings-desc">
@@ -48,7 +50,7 @@
     </div>
     <div class="kf-flex-row kf-team-email-mapping-new">
       <input class="kf-textbox kf-textbox-auto" ng-model="model.email" placeholder="name@company.com"/>
-      <button class="kf-button kf-button-large kf-button-cta-green" ng-click="addEmailAccount(model.email)">New address</button>
+      <button class="kf-button kf-button-large kf-button-cta-green" ng-click="addNewEmailAccount(model.email)">New address</button>
     </div>
     <p class="kf-team-email-mapping-verify" ng-if="verificationMessage" ng-bind="verificationMessage"></p>
   </div>

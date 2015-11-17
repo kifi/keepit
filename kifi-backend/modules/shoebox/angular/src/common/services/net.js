@@ -26,6 +26,7 @@ angular.module('kifi')
       joinLibraries: post(shoebox, '/libraries/joinMultiple'),
 
       user: get(shoebox, '/user/:id', 30),
+      getEmailInfo: get(shoebox, '/user/email'),
       userOrOrg: get(shoebox, '/user-or-org/:handle?authToken=:authToken', 30),
       createOrg: post(shoebox, '/organizations/create'),
       updateOrgProfile: post(shoebox, '/organizations/:id/modify'),

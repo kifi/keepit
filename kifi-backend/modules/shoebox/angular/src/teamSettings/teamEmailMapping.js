@@ -3,9 +3,9 @@
 angular.module('kifi')
 
 .directive('kfTeamEmailMapping', [
-  '$stateParams', 'profileService', 'orgProfileService', 'modalService',
+  '$stateParams', 'profileService', 'net', 'orgProfileService', 'modalService',
   'ORG_PERMISSION', 'ORG_SETTING_VALUE',
-  function ($stateParams, profileService, orgProfileService, modalService,
+  function ($stateParams, profileService, net, orgProfileService, modalService,
             ORG_PERMISSION, ORG_SETTING_VALUE) {
     return {
       restrict: 'A',
@@ -68,12 +68,6 @@ angular.module('kifi')
           var address = email.address;
           var domain = address.slice(address.lastIndexOf('@') + 1);
 
-          if (!email.isVerified) {
-            $scope.verificationMessage = getVerifyMessage(email.address);
-          } else {
-            $scope.verificationMessage = '';
-          }
-
           return orgProfileService
           .addOrgDomain($scope.getOrg().id, domain)
           .then(function (domainData) {
@@ -105,21 +99,44 @@ angular.module('kifi')
           ['catch'](modalService.openGenericErrorModal);
         };
 
-        $scope.addEmailAccount = function (address) {
-          return profileService
-          .addEmailAccount(address)
+        $scope.addNewEmailAccount = function (address) {
+          return net
+          .getEmailInfo({ email: address })
+          .then(function (response) {
+            var emailInfo = response.data;
+
+            if (emailInfo.status === 'available') {
+              return profileService
+              .addEmailAccount(address);
+            } else if (emailInfo.isVerified === false) {
+              return; // go to the next piece of the promise chain
+            } else {
+              throw 'already_added';
+            }
+          })
           .then(function () {
             $scope.verificationMessage = getVerifyMessage(address);
             $scope.model.email = '';
 
             // stub it instead of looking for it in the me object
-            $scope.addOrgDomain({
-               address: address,
-               isVerified: false
-             });
+            $scope.addUnverifiedOrgDomain({
+              address: address,
+              isVerified: false
+            });
           })
           ['catch'](function (err) {
-            $scope.verificationMessage = err;
+            var message;
+            if (typeof err === 'string') {
+              switch(err) {
+                case 'already_added':
+                  message = 'You have already added and verified this email.';
+                  break;
+                case 'email_belongs_to_other_user':
+                  message = 'Another use already owns this email address.';
+                  break;
+              }
+            }
+            $scope.verificationMessage = message || 'Something went wrong. Try again?';
           });
         };
 
