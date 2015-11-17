@@ -240,7 +240,7 @@ angular.module('kifi')
       $scope.billingState = billingState;
     }
 
-    $scope.kifiAdmin = (profileService.me.experiments.indexOf('admin') !== -1);
+    $scope.kifiAdmin = ((profileService.me.experiments || []).indexOf('admin') !== -1);
 
     $timeout(function () {
       $scope.$emit('trackOrgProfileEvent', 'view', {
