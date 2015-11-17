@@ -325,7 +325,7 @@ if (searchUrlRe.test(document.URL)) !function () {
           tryAttach();
         }, retryMs);
       }
-    });
+    };
 
     setTimeout(function () {
       tryAttach();
