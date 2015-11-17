@@ -52,6 +52,7 @@ class UserController @Inject() (
     postOffice: LocalPostOffice,
     userConnectionsCommander: UserConnectionsCommander,
     organizationDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
+    organizationDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     userCommander: UserCommander,
     clock: Clock,
     s3ImageStore: S3ImageStore,
@@ -211,12 +212,14 @@ class UserController @Inject() (
         case Some(emailRecord) if (emailRecord.userId == request.userId) => {
           val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
           val isFreeMail = NormalizedHostname.fromHostname(emailRecord.address.hostname).exists(hostname => domainRepo.get(hostname).exists(_.isEmailProvider))
+          val isOwned = NormalizedHostname.fromHostname(emailRecord.address.hostname).exists(hostname => organizationDomainOwnershipRepo.getOwnershipsForDomain(hostname).nonEmpty)
           Ok(Json.toJson(EmailInfo(
             address = emailRecord.address,
             isVerified = emailRecord.verified,
             isPrimary = emailRecord.primary,
             isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(emailRecord.address)),
-            isFreeMail = isFreeMail
+            isFreeMail = isFreeMail,
+            isOwned = isOwned
           )))
         }
         case _ => Ok(Json.obj("status" -> "available"))

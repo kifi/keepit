@@ -337,6 +337,7 @@ class UserCommanderImpl @Inject() (
         airbrake.notify(s"email ${email.address} owned by user ${email.userId} does not have a valid hostname")
         false
       case Some(hostname) => organizationDomainOwnershipRepo.getOwnershipsForDomain(hostname).nonEmpty
+    }
   }
 
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
