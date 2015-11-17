@@ -50,7 +50,7 @@ function createPage(tab) {
   return page;
 }
 
-exports.bookmarks = require("./bookmarks");
+exports.bookmarks = require('./bookmarks');
 
 exports.errors = {
   init: function (handler) {
