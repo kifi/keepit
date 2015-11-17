@@ -439,7 +439,7 @@ class UserController @Inject() (
 
   private val url = fortytwoConfig.applicationBaseUrl
 
-  def resendVerificationEmail(email: EmailAddress) = UserAction.async(parse.tolerantJson) { implicit request =>
+  def resendVerificationEmail(email: EmailAddress) = UserAction.async { implicit request =>
     EmailAddress.validate(email.address) match {
       case Failure(err) => Future.successful(BadRequest(Json.obj("error" -> "invalid_email_format")))
       case Success(validEmail) =>
