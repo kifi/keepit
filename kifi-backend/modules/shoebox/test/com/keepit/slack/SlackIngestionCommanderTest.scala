@@ -46,7 +46,7 @@ class SlackIngestionCommanderTest extends TestKitSupport with SpecificationLike 
             val x = inject[SlackChannelToLibraryRepo].get(integration.id.get)
             x.lastIngestingAt must beNone
             x.lastIngestedAt must beNone
-            ktlRepo.getCountByLibraryId(lib.id.get) === 1
+            ktlRepo.getCountByLibraryId(lib.id.get) === 0
           }
 
           val query = Query(Query.in(integration.slackChannelName), Query.hasLink)

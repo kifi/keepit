@@ -352,12 +352,13 @@ GET     /imports/diigo              @com.keepit.controllers.website.HomeControll
 GET     /imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
 GET     /imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
 GET     /getting-started            @com.keepit.controllers.website.HomeController.route(path = "getting-started/users")
-GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
+GET     /teams                      @com.keepit.controllers.website.HomeController.teams
+#GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
 GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 GET     /terms                      @com.keepit.controllers.website.HomeController.route(path = "terms")
-GET     /about/pricing              @com.keepit.controllers.website.HomeController.route(path = "pricing")
+GET     /about/pricing              @com.keepit.controllers.website.HomeController.route(path = "about/pricing")
 GET     /privacy                    @com.keepit.controllers.website.HomeController.route(path = "privacy")
 GET     /parenting                  @com.keepit.controllers.website.HomeController.route(path = "parenting")
 GET     /iphone                     @com.keepit.controllers.website.HomeController.iPhoneAppStoreRedirect

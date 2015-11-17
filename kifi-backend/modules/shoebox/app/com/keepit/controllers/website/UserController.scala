@@ -438,7 +438,7 @@ class UserController @Inject() (
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  def resendVerificationEmail(email: EmailAddress) = UserAction.async(parse.tolerantJson) { implicit request =>
+  def resendVerificationEmail(email: EmailAddress) = UserAction.async { implicit request =>
     EmailAddress.validate(email.address) match {
       case Failure(err) => Future.successful(BadRequest(Json.obj("error" -> "invalid_email_format")))
       case Success(validEmail) =>

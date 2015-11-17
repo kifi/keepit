@@ -131,7 +131,7 @@ angular.module('kifi')
         activetab: 'libraries'
       })
       .state('orgProfile.settings', {
-        url: '/settings',
+        url: '/settings?openDomains',
         controller: 'OrgProfileSettingsCtrl',
         templateUrl: 'orgProfile/orgProfileSettings.tpl.html',
         activetab: 'settings',

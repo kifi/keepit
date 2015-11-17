@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfOrgInviteMany', [
-  'util', 'orgProfileService', '$timeout',
-  function (util, orgProfileService, $timeout) {
+  '$rootScope', 'util', 'orgProfileService', '$timeout',
+  function ($rootScope, util, orgProfileService, $timeout) {
     return {
       restrict: 'A',
       require: '^kfModal',
@@ -58,6 +58,14 @@ angular.module('kifi')
           scope.modalData.addMany = false;
           orgProfileService.trackEvent('user_clicked_page', scope.organization, { type: trackingType, action: 'WTI' });
         };
+
+        [
+          $rootScope.$on('$stateChangeStart', function () {
+            scope.close();
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
+        });
 
         scope.$emit('trackOrgProfileEvent', 'view', { type: trackingType });
         $timeout(function () {

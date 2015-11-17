@@ -5,6 +5,7 @@ import com.keepit.commanders.{ PermissionCommander, RawBookmarkRepresentation, K
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.common.util.UrlClassifier
 import com.keepit.heimdal.HeimdalContext
@@ -44,7 +45,7 @@ class SlackIngestionCommanderImpl @Inject() (
     keepInterner: KeepInterner,
     clock: Clock,
     airbrake: AirbrakeNotifier,
-    implicit val ec: ExecutionContext) extends SlackIngestionCommander {
+    implicit val ec: ExecutionContext) extends SlackIngestionCommander with Logging {
 
   import SlackIngestionCommander._
 
@@ -110,8 +111,10 @@ class SlackIngestionCommanderImpl @Inject() (
   }
 
   private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): Option[SlackMessageTimestamp] = {
+    log.info(s"[SLACK-INGEST] Ingesting links from ${messages.length} messages from ${integration.slackChannelName.value}")
     val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     val rawBookmarks = messages.flatMap(toRawBookmarks).distinctBy(_.url)
+    log.info(s"[SLACK-INGEST] Extracted these urls from those messages: ${rawBookmarks.map(_.url)}")
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
     val library = db.readOnlyMaster { implicit session => libraryRepo.get(integration.libraryId) }
     keepInterner.internRawBookmarks(rawBookmarks, integration.ownerId, library, KeepSource.slack)(HeimdalContext.empty)
