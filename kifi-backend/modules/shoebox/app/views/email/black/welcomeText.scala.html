@@ -37,7 +37,7 @@ Thank you for signing up for Kifi. We built Kifi to make keeping and sharing web
 
 You can check out our getting started page (https://www.kifi.com/getting-started), or you can view your profile at: @profileUrl(toUserId). If you would like to have a different profile URL, please reply and let me know.
 @verifyUrl.map { url =>
-To protect your privacy and security, please confirm your email address by clicking the following link: @url.@if(orgNames.nonEmpty) { @if(orgNames.size == 1) { You’ll be added to the $orgs team. } else { You’ll be added to the $orgs teams. } }
+To protect your privacy and security, please confirm your email address by clicking the following link: @url.@if(orgNames.nonEmpty) { @if(orgNames.size == 1) { You’ll be added to the @orgs team. } else { You’ll be added to the @orgs teams. } }
 }
 Eishay Smith, CEO
 http://www.kifi.com/eishay
