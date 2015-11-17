@@ -8,7 +8,7 @@ angular.module('kifi')
     $scope.redeemCode = '';
     $scope.trackingType = 'org_settings:earn_credits';
     $scope.ORG_PERMISSION = ORG_PERMISSION;
-    $scope.isKifiAdmin = (profileService.me.experiments.indexOf('admin') > -1);
+    
     $scope.hasPermission = function () {
       return $scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) > -1;
     };
