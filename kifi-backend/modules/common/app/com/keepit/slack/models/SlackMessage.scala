@@ -25,7 +25,7 @@ object SlackUsername {
 
 @json case class SlackMessageTimestamp(value: String) extends Ordered[SlackMessageTimestamp] { // channel-specific timestamp
   def compare(that: SlackMessageTimestamp) = value compare that.value
-  def toDateTime: DateTime = new DateTime(value.split(".").head.toLong * 1000) // "The bit before the . is a unix timestamp, the bit after is a sequence to guarantee uniqueness."
+  def toDateTime: DateTime = new DateTime(value.split('.').head.toLong * 1000) // "The bit before the . is a unix timestamp, the bit after is a sequence to guarantee uniqueness."
 }
 
 @json case class SlackMessageType(value: String)

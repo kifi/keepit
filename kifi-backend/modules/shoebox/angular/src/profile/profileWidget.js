@@ -50,10 +50,6 @@ angular.module('kifi')
           return orgNames.indexOf(companyName.toLowerCase()) !== -1;
         }
 
-        scope.shouldShowCreateTeam = function () {
-          return scope.me.experiments.indexOf('admin') !== -1 || (scope.me.experiments.indexOf('create_team') !== -1 && scope.me.orgs.length <= 1);
-        };
-
         scope.registerEvent = function (action) {
           $analytics.eventTrack('user_clicked_page', {
             'action': 'clickedProfile' + action,

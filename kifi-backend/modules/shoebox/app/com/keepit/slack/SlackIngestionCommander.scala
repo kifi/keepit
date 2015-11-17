@@ -16,7 +16,7 @@ import com.keepit.common.time._
 import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.{ Try, Failure, Success }
 
 object SlackIngestionCommander {
   val delayBetweenIngestions = Period.minutes(10)
@@ -64,7 +64,8 @@ class SlackIngestionCommanderImpl @Inject() (
       val futureIngestions: Seq[Future[Unit]] = integrations.map {
         case integration if isAllowed(integration.id.get) =>
           slackMemberships.get(integration.slackUserId).flatMap(m => m.token.map((_, m.scopes))) match {
-            case Some((token, scopes)) if scopes.contains(SlackAuthScope.SearchRead) => doIngest(token, integration).imap(_ => ()) recover { case _ => () }
+            case Some((token, scopes)) if scopes.contains(SlackAuthScope.SearchRead) =>
+              doIngest(token, integration).imap(_ => ()) recover { case _ => () }
             case _ =>
               airbrake.notify(s"Found broken Slack integration: $integration")
               db.readWrite { implicit session =>
