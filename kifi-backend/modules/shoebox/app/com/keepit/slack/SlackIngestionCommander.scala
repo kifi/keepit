@@ -162,7 +162,8 @@ class SlackIngestionCommanderImpl @Inject() (
 
   private def getLatestMessagesWithLinks(token: SlackAccessToken, channelName: SlackChannelName, lastMessageTimestamp: Option[SlackMessageTimestamp], limit: Option[Int]): Future[Seq[SlackMessage]] = {
     import SlackSearchRequest._
-    val query = Query(Query.in(channelName), Query.hasLink, lastMessageTimestamp.map(t => Query.after(t.toDateTime.toLocalDate.minusDays(1))))
+    val after = lastMessageTimestamp.map(t => Query.after(t.toDateTime.toLocalDate.minusDays(2))) // 2 days buffer because UTC vs PST and strict after behavior
+    val query = Query(Query.in(channelName), Query.hasLink, after)
     val pageSize = PageSize((limit getOrElse 100) max PageSize.max)
     FutureHelpers.foldLeftUntil(Stream.from(1).map(Page(_)))(Seq.empty[SlackMessage]) {
       case (previousMessages, nextPage) =>
