@@ -70,7 +70,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
   private object Version12 extends LandingVersion { val version = 12 }
   private object Version13 extends LandingVersion { val version = 13 }
   private val versions = Seq(Version1, Version2, Version3, Version4, Version5, Version6, Version7, Version8, Version9, Version10, Version11, Version12, Version13)
-  private val defaultVersion = Version12
+  private val defaultVersion = Version13
 
   def landing(implicit request: Request[_]): String = {
     val possiblyBot = request.userAgentOpt.map(_.possiblyBot).getOrElse(true)
@@ -83,7 +83,7 @@ object MarketingSiteRouter extends AssetsBuilder with Controller with Logging {
         //        val ip = IpAddress.fromRequest(request).ip
         //        val hash = Math.abs(ip.hashCode) % 100
         //        (if (hash < 50) Version10 else Version9) tap { w => log.info(s"[landing] remoteAddr=${request.remoteAddress} ip=$ip winner=$w") }
-        Version12
+        defaultVersion
       }
     }
     s"index.${version.version}"
