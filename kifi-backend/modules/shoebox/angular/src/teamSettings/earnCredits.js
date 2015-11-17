@@ -42,8 +42,13 @@ angular.module('kifi')
 
     $scope.shareFB = function () {
       $FB.ui({
-        method: 'share',
-        href: $scope.referralUrl
+        method: 'feed',
+        link: $scope.referralUrl,
+        caption: 'Kifi.com',
+        description: 'Try Kifi for Teams for free. Using this link, you’ll get $100 credit towards upgrading your team account.',
+        ref: 'team_credit',
+        name: 'Kifi: Knowledge Management for Teams',
+        picture: 'https://djty7jcqog9qu.cloudfront.net/oa/235945e972d48f7a96254e36c50f143b_200x200_c.png'
       });
     };
 
