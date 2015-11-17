@@ -25,6 +25,7 @@ angular.module('kifi')
   DISABLED: 'disabled',
   ADMIN: 'admins',
   MEMBER: 'members',
+  NONMEMBERS: 'nonmembers',
   ANYONE: 'anyone'
 })
 

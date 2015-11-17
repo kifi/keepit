@@ -1,0 +1,70 @@
+.kf-team-email-mapping
+  margin-top: 10px
+  padding: 0 10px
+  font-size: 14px
+
+.kf-team-email-mapping-toggle
+  position: relative
+  display: inline-block
+  width: 12px
+  height: 12px
+  line-height: 12px
+  margin-right: 3px
+  padding-left: 1px
+  border: 1px solid #aaa
+  border-radius: 3px
+  text-align: center
+  color: #aaa
+  box-shadow: 1px 1px 0px rgba(0, 0, 0, .2)
+
+.kf-team-email-mapping-addresses
+.kf-team-email-mapping-domains
+  margin: 5px 10px
+
+  p
+    height: 25px
+    line-height: 25px
+    margin: 0
+
+.kf-team-email-mapping-check
+  display: inline-block
+  flex-shrink: 0
+  width: 23px
+  height: 23px
+  border: 1px solid #bbb
+  border-radius: 50%
+  background-position: center
+  background-size: 14px 14px
+  background-repeat: no-repeat
+  cursor: pointer
+
+.kf-team-email-mapping-domain
+  .kf-team-email-mapping-check
+    border-color: accentGreen
+
+.kf-team-email-mapping-address
+  cursor: pointer
+
+.kf-team-email-mapping-address .kf-team-email-mapping-check
+  background-size: 0 0
+
+.kf-team-email-mapping-address:hover .kf-team-email-mapping-check
+  background-size: 14px 14px
+
+.kf-team-email-mapping-domain:hover .kf-team-email-mapping-check
+  background: 0
+  position: relative
+
+  &:before
+    content: '✘'
+    font-size: 16px
+    margin: auto
+    position: absolute
+    left: 0
+    top: 0
+    right: 0
+    bottom: 0
+    text-align: center
+    width: 23px
+    height: 21px
+    color: textSoftBlackColor

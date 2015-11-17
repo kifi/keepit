@@ -62,6 +62,10 @@ angular.module('kifi')
       applyReferralCode: post(shoebox, '/organizations/:id/redeemCode'),
       getRewards: get(shoebox, '/organizations/:id/rewards', 30),
 
+      getOrgDomains: get(shoebox, '/organizations/:id/getDomains'),
+      addOrgDomain: post(shoebox, '/organizations/:id/addDomain'),
+      removeOrgDomain: post(shoebox, '/organizations/:id/removeDomain'),
+
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
 
       getKeep: get(shoebox, '/keeps/:id'),
@@ -92,6 +96,10 @@ angular.module('kifi')
     };
 
     function get(base, pathSpec, cacheSec) {
+      if (!pathSpec) {
+        throw new Error('You forgot to add a microservice name in net.js!');
+      }
+
       var pathParts = pathSpec.split(pathParamRe);
       var cache = cacheSec && createExpiringCache(pathSpec, cacheSec);
       function doGet() {  // caller should pass any path params and then, optionally, a query params object

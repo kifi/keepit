@@ -1,0 +1,43 @@
+<div class="kf-team-email-mapping">
+  <button class="kf-button-textonly" ng-click="toggleOpen()">
+    <span class="kf-team-email-mapping-toggle">
+      <span ng-if="!open">+</span>
+      <span ng-if="open">-</span>
+    </span>
+    <span class="kf-link">Add email domains</span>
+  </button>
+  <div ng-show="open">
+    <p class="kf-team-settings-desc">
+      Add company email domains that will enable your coworkers to automatically join this team.
+      When a user vertifies their email address with Kifi, they will automatically be added to the team.
+    </p>
+    <h3>Enabled email domains</h3>
+    <div class="kf-team-email-mapping-domains">
+      <ul ng-if="emailDomains.length > 0">
+        <li class="kf-flex-row kf-team-email-mapping-domain kf-link-parent" ng-repeat="domain in emailDomains" ng-click="removeOrgDomain(domain, $index)">
+          <span class="kf-team-email-mapping-check svg-checkmark-green"></span>
+          <span class="kf-link kf-link-black" ng-bind="domain"></span>
+        </li>
+      </ul>
+      <p ng-if="emailDomains.length === 0">Your team owns no domains</p>
+    </div>
+    <h3>Your email domains <a class="kf-link kf-link-black kf-link-underline" ui-sref="settings">(manage)</a></h3>
+    <div class="kf-team-email-mapping-addresses">
+      <ul ng-if="getClaimableEmails(me.emails).length > 0">
+        <li
+          class="kf-flex-row kf-team-email-mapping-address"
+          ng-repeat="email in getClaimableEmails(me.emails)"
+        >
+          <div class="kf-flex-row kf-link-parent" ng-click="email.isVerified ? addOrgDomain(email.address, $index) : resendVerificationEmail(email.address)">
+            <span class="kf-team-email-mapping-check svg-checkmark-green"></span>
+            <button class="kf-link kf-link-black" ng-bind="email.address"></button>
+          </div>
+          <span ng-if="!email.isVerified">
+            <button class="kf-link kf-link-black kf-link-underline" ng-click="resendVerificationEmail(email.address)">(unverified)</button>
+          </span>
+        </li>
+      </ul>
+      <p ng-if="getClaimableEmails(me.emails).length === 0">You have no domains for your team to own</p>
+    </div>
+  </div>
+</div>
