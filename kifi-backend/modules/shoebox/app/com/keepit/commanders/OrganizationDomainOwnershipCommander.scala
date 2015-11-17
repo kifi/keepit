@@ -89,7 +89,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     val normalizedHostname = NormalizedHostname.fromHostname(domainName).get
     val ownership = db.readWrite { implicit session =>
       val domain = domainRepo.intern(normalizedHostname)
-      orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, normalizedHostname) match {
+      orgDomainOwnershipRepo.getDomainOwnershipBetween(orgId, normalizedHostname, excludeState = None) match {
         case Some(ownership) if ownership.isActive => ownership
         case inactiveOpt => orgDomainOwnershipRepo.save(OrganizationDomainOwnership(id = inactiveOpt.flatMap(_.id), state = OrganizationDomainOwnershipStates.ACTIVE, organizationId = orgId, normalizedHostname = domain.hostname))
       }
