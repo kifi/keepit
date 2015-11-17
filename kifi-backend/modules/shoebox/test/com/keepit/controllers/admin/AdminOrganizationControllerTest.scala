@@ -98,7 +98,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           }
           val newPlan1 = db.readWrite { implicit session =>
             val oldPlan = paidPlanRepo.get(Id[PaidPlan](1))
-            val newFeatureSet = oldPlan.defaultSettings.kvs.keySet -- Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
+            val newFeatureSet = oldPlan.defaultSettings.kvs.keySet -- Set(Feature.EditOrganization)
             val newFeatureSettings = newFeatureSet.map { feature => feature -> oldPlan.defaultSettings.kvs(feature) }.toMap
             paidPlanRepo.save(oldPlan.copy(editableFeatures = newFeatureSet, defaultSettings = OrganizationSettings(newFeatureSettings))) // mock db migration, remove features
           }
@@ -129,7 +129,7 @@ class AdminOrganizationControllerTest extends Specification with ShoeboxTestInje
           val newConfig2 = db.readOnlyMaster(implicit s => orgConfigRepo.getByOrgId(org.id.get))
           newConfig2.settings === newPlan2.defaultSettings
 
-          newConfig2.settings.kvs.keySet.diff(newConfig1.settings.kvs.keySet) === Set(Feature.CreateSlackIntegration, Feature.EditOrganization)
+          newConfig2.settings.kvs.keySet.diff(newConfig1.settings.kvs.keySet) === Set(Feature.EditOrganization)
         }
       }
     }

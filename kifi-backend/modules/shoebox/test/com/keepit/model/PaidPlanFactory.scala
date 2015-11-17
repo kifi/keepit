@@ -18,7 +18,6 @@ object PaidPlanFactory {
     Feature.ViewOrganization -> FeatureSetting.ANYONE,
     Feature.ViewMembers -> FeatureSetting.ANYONE,
     Feature.RemoveLibraries -> FeatureSetting.MEMBERS,
-    Feature.CreateSlackIntegration -> FeatureSetting.DISABLED,
     Feature.EditOrganization -> FeatureSetting.ADMINS,
     Feature.ExportKeeps -> FeatureSetting.ADMINS,
     Feature.ViewSettings -> FeatureSetting.MEMBERS,

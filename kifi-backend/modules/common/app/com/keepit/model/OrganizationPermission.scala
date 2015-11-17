@@ -8,7 +8,6 @@ sealed abstract class OrganizationPermission(val value: String)
 
 object OrganizationPermission extends Enumerator[OrganizationPermission] {
   case object ADD_LIBRARIES extends OrganizationPermission("add_libraries")
-  case object CREATE_SLACK_INTEGRATION extends OrganizationPermission("create_slack_integration")
   case object EDIT_ORGANIZATION extends OrganizationPermission("edit_organization")
   case object EXPORT_KEEPS extends OrganizationPermission("export_keeps")
   case object FORCE_EDIT_LIBRARIES extends OrganizationPermission("force_edit_libraries")

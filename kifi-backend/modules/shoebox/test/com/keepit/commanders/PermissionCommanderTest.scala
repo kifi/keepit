@@ -52,6 +52,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
               permissionCommander.getLibraryPermissions(lib.id.get, Some(owner.id.get)) === Set(
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
+                LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.EDIT_OWN_KEEPS,
                 LibraryPermission.REMOVE_OWN_KEEPS
               )
@@ -78,12 +79,14 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.REMOVE_OWN_KEEPS
               )
               permissionCommander.getLibraryPermissions(lib.id.get, Some(member.id.get)) === Set(
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.REMOVE_OWN_KEEPS
               )
               permissionCommander.getLibraryPermissions(lib.id.get, Some(rando.id.get)) === Set.empty

@@ -250,8 +250,6 @@ class LibraryCommanderImpl @Inject() (
       (newSubscriptions.exists(_.nonEmpty), areSubKeysValidOpt, oldSpace, newSpace) match {
         case (true, Some(false), _, _) => Some(LibraryFail(BAD_REQUEST, "subscription_key_format"))
         case (true, _, oldSpace: UserSpace, newSpace: OrganizationSpace) => None // allow members with existing subscriptions to transfer them to orgs sans permissions (grandfathered feature)
-        case (true, _, _, newSpace: OrganizationSpace) if db.readOnlyReplica { implicit session => !permissionCommander.getOrganizationPermissions(newSpace.id, Some(userId)).contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) } =>
-          Some(LibraryFail(FORBIDDEN, "create_slack_integration_permission"))
         case _ => None
       }
     }
