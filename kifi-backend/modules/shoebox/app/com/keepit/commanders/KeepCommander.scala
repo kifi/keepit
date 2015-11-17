@@ -771,7 +771,7 @@ class KeepCommanderImpl @Inject() (
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (keep.isInactive) {
-      val newKeep = keepRepo.save(keep.withNormUriId(newUri.id.get))
+      val newKeep = keepRepo.save(keep.withNormUriId(newUri.id.get).withPrimary(false))
       ktlCommander.syncKeep(newKeep)
       ktuCommander.syncKeep(newKeep)
     } else {
