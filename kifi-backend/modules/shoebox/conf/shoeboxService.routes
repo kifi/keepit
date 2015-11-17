@@ -352,7 +352,8 @@ GET     /imports/diigo              @com.keepit.controllers.website.HomeControll
 GET     /imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
 GET     /imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
 GET     /getting-started            @com.keepit.controllers.website.HomeController.route(path = "getting-started/users")
-GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
+GET     /teams                      @com.keepit.controllers.website.HomeController.teams
+#GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
 GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
