@@ -65,7 +65,7 @@ angular.module('kifi')
       $scope.$on('$destroy', deregister);
     });
 
-    $scope.$on('$viewContentLoaded', function () {
+    $timeout(function () {
       if ($window.location.hash !== '') {
         onHashChange();
       }
