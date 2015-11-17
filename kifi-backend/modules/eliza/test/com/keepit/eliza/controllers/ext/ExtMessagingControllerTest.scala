@@ -61,7 +61,6 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         val path = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageAction().toString
         path === "/eliza/messages"
 
-        val controller = inject[ExtMessagingController]
         inject[FakeUserActionsHelper].setUser(shanee)
         val input = Json.parse(s"""
           {
@@ -79,11 +78,9 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         val messages = db.readOnlyMaster { implicit s => inject[MessageRepo].all }
         messages.size === 1
         val message = messages.head
-        // println(s"message = $message") // can be removed?
         val threads = db.readOnlyMaster { implicit s => inject[MessageThreadRepo].all }
         threads.size === 1
         val thread = threads.head
-        // println(s"thread = $thread") // can be removed?
 
         val expected = Json.parse(s"""
           {
