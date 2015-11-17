@@ -97,13 +97,10 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain(WELCOME_SALUTATION(toUser.firstName))
 
-        val trackingCode = EmailTrackingParam(
-          subAction = Some("findMoreFriendsBtn")).encode
-
-        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=findMoreFriendsBtn&amp;kcid=welcome-email-fromKifi")
+        html must contain("https://play.google.com/store/apps/details")
 
         val text = email.textBody.get.value
-        text must contain("Dear Billy,")
+        text must contain("Hey Billy,")
 
         val scalaWords = Seq("homeUrl", "installExtUrl", "firstName", "iOsAppStoreUrl", "googlePlayStoreUrl", "howKifiWorksUrl", "eishayKifiUrl")
         scalaWords foreach { word => html must not contain word }
@@ -114,7 +111,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
 
     "sends html-plain email" in {
       val WELCOME_EMAIL_SUBJECT = "Let's get started with Kifi"
-      def WELCOME_SALUTATION(firstName: String) = "Dear " + firstName + ","
+      def WELCOME_SALUTATION(firstName: String) = "Hey " + firstName + ","
       val WELCOME_SENDER = "Eishay Smith"
       val WELCOME_SENDER_EMAIL = SystemEmailAddress.EISHAY_PUBLIC
 
@@ -137,14 +134,9 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val html = email.htmlBody.value
         html must contain(WELCOME_SALUTATION(toUser.firstName))
 
-        val trackingCode = EmailTrackingParam(
-          subAction = Some("kifiHome")).encode
-        html must contain("utm_source=fromKifi&amp;utm_medium=email&amp;utm_campaign=welcome&amp;utm_content=kifiHome&amp;kcid=welcome-email-fromKifi"
-          + s"&amp;${EmailTrackingParam.paramName}=$trackingCode")
-
         val text = email.textBody.get.value
         text must not contain ("firstName")
-        text must contain("Dear Billy,")
+        text must contain("Hey Billy,")
 
         val scalaWords = Seq("homeUrl", "installExtUrl", "firstName", "iOsAppStoreUrl", "googlePlayStoreUrl", "howKifiWorksUrl", "eishayKifiUrl")
         scalaWords foreach { word => html must not contain word }
