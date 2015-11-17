@@ -141,7 +141,7 @@ object Feature extends Enumerator[Feature] {
   case object CreateSlackIntegration extends Feature with FeatureWithPermissions {
     val value = OrganizationPermission.CREATE_SLACK_INTEGRATION.value
     val permission = OrganizationPermission.CREATE_SLACK_INTEGRATION
-    val settings: Set[FeatureSetting] = Set(DISABLED, ADMINS, MEMBERS)
+    val settings: Set[FeatureSetting] = Set(DISABLED, ANYONE, ADMINS, MEMBERS)
   }
 
   case object EditOrganization extends Feature with FeatureWithPermissions {

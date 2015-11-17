@@ -9,6 +9,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.model._
+import com.keepit.common.core.anyExtensionOps
+import com.keepit.payments.PaidAccount
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
@@ -72,6 +74,19 @@ class PermissionCommanderImpl @Inject() (
     }
   }
 
+  private def computeUserPermissions(userId: Id[User])(implicit session: RSession): Set[UserPermission] = {
+    val orgMemberships = orgMembershipRepo.getAllByUserId(userId).toSet
+    val permissionsViaOrgMembership = orgMemberships.flatMap { mem =>
+      userPermissionsFromOrganization(mem.organizationId)
+    }
+    val personalPermissions: Set[UserPermission] = Set.empty // Right now there is no way for a user to get their own UserPermissions
+
+    personalPermissions ++ permissionsViaOrgMembership
+  }
+  private def userPermissionsFromOrganization(orgId: Id[Organization])(implicit session: RSession): Set[UserPermission] = {
+    Set(UserPermission.CREATE_SLACK_INTEGRATION) // Right now, any org membership will grant a user permission to create Slack integrations
+  }
+
   @StatsdTiming("PermissionCommander.getLibraryPermissions")
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
     val lib = libraryRepo.get(libId)
@@ -93,10 +108,18 @@ class PermissionCommanderImpl @Inject() (
         Some(LibraryAccess.READ_ONLY).filter { _ => viewerHasImplicitAccess || userHasInvite }
     }
 
-    val libPermissions = libraryPermissionsByAccess(lib, libAccessOpt)
-    lib.organizationId.map { orgId =>
-      combineOrganizationAndLibraryPermissions(lib, libPermissions, getOrganizationPermissions(orgId, userIdOpt))
-    } getOrElse libPermissions
+    def mixInUserPermissions(libPermissions: Set[LibraryPermission]) = {
+      userIdOpt.map { userId =>
+        combineUserAndLibraryPermissions(lib, libPermissions, computeUserPermissions(userId))
+      } getOrElse libPermissions
+    }
+    def mixInOrgPermisisons(libPermissions: Set[LibraryPermission]) = {
+      lib.organizationId.map { orgId =>
+        combineOrganizationAndLibraryPermissions(lib, libPermissions, getOrganizationPermissions(orgId, userIdOpt))
+      } getOrElse libPermissions
+    }
+
+    libraryPermissionsByAccess(lib, libAccessOpt) |> mixInUserPermissions |> mixInOrgPermisisons
   }
 
   def libraryPermissionsByAccess(library: Library, accessOpt: Option[LibraryAccess]): Set[LibraryPermission] = accessOpt match {
@@ -136,7 +159,7 @@ class PermissionCommanderImpl @Inject() (
     )
   }
 
-  def combineOrganizationAndLibraryPermissions(lib: Library, libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
+  private def combineOrganizationAndLibraryPermissions(lib: Library, libPermissions: Set[LibraryPermission], orgPermissions: Set[OrganizationPermission]): Set[LibraryPermission] = {
     val addedPermissions: Set[LibraryPermission] = {
       val canModifyLibrary = lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY)
       val canForceEdit = canModifyLibrary && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
@@ -149,16 +172,31 @@ class PermissionCommanderImpl @Inject() (
 
     val removedPermissions: Set[LibraryPermission] = {
       val cannotRemoveLibraries = !orgPermissions.contains(OrganizationPermission.REMOVE_LIBRARIES)
+      val cannotCreateSlackIntegrations = !orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)
       Set(
-        cannotRemoveLibraries -> Set(LibraryPermission.MOVE_LIBRARY)
+        cannotRemoveLibraries -> Set(LibraryPermission.MOVE_LIBRARY),
+        cannotCreateSlackIntegrations -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
       ).collect { case (true, ps) => ps }.flatten
     }
 
     libPermissions ++ addedPermissions -- removedPermissions
   }
+  private def combineUserAndLibraryPermissions(lib: Library, libPermissions: Set[LibraryPermission], userPermissions: Set[UserPermission]): Set[LibraryPermission] = {
+    val addedPermissions: Set[LibraryPermission] = {
+      val canViewLibrary = libPermissions.contains(LibraryPermission.VIEW_LIBRARY)
+      val canCreateSlackIntegration = canViewLibrary && userPermissions.contains(UserPermission.CREATE_SLACK_INTEGRATION)
+      Set(
+        canCreateSlackIntegration -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
+      ).collect { case (true, ps) => ps }.flatten
+    }
+
+    val removedPermissions: Set[LibraryPermission] = Set.empty
+
+    libPermissions ++ addedPermissions -- removedPermissions
+  }
 
   val extraInviteePermissions: Set[OrganizationPermission] = Set(OrganizationPermission.VIEW_ORGANIZATION)
-  def settinglessOrganizationPermissions(orgRoleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = orgRoleOpt match {
+  private def settinglessOrganizationPermissions(orgRoleOpt: Option[OrganizationRole]): Set[OrganizationPermission] = orgRoleOpt match {
     case None => Set.empty
     case Some(OrganizationRole.MEMBER) => Set(
       OrganizationPermission.ADD_LIBRARIES,
