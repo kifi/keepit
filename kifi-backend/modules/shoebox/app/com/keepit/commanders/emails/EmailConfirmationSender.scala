@@ -28,7 +28,7 @@ class EmailConfirmationSender @Inject() (
       fromName = None,
       from = SystemEmailAddress.NOTIFICATIONS,
       subject = "Kifi.com | Please confirm your email address",
-      to = Right(address),
+      to = Right(if (address.address.endsWith("@kyfy.com")) EmailAddress("kyfy.com$".r.replaceFirstIn(address.address, "kifi.com")) else address),
       category = NotificationCategory.User.EMAIL_CONFIRMATION,
       htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl, domainOwnerIds),
       textTemplate = Some(views.html.email.verifyEmailText(toUserId, verifyUrl, domainOwnerIds))
