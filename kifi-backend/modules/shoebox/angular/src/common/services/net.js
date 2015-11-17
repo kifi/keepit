@@ -43,9 +43,6 @@ angular.module('kifi')
       getOrgSettings: get(shoebox, '/organizations/:id/featureSettings', 30),
       setOrgSettings: post(shoebox, '/organizations/:id/featureSettings'),
       hideOrgDomain: post(shoebox, '/user/hideOrgDomain?orgId=:orgId'),
-      addDomain: post(shoebox, '/organizations/:id/addDomain'),
-      removeDomain: post(shoebox, '/organizations/:id/removeDomain'),
-      addDomainAfterVerification: post(shoebox, '/organizations/:id/addDomainAfterVerification'),
 
       getBillingState: get(shoebox, '/admin/billing/state?pubId=:pubId', 30),
       updateAccountState: post(shoebox, '/admin/billing/state?pubId=:pubId&newPlanId=:newPlanId&newCardId=:newCardId'),
@@ -62,8 +59,9 @@ angular.module('kifi')
       applyReferralCode: post(shoebox, '/organizations/:id/redeemCode'),
       getRewards: get(shoebox, '/organizations/:id/rewards', 30),
 
-      getOrgDomains: get(shoebox, '/organizations/:id/getDomains'),
+      getOrgDomains: get(shoebox, '/organizations/:id/getDomains', 30),
       addOrgDomain: post(shoebox, '/organizations/:id/addDomain'),
+      addDomainAfterVerification: post(shoebox, '/organizations/:id/addDomainAfterVerification'),
       removeOrgDomain: post(shoebox, '/organizations/:id/removeDomain'),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),

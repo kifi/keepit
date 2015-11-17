@@ -3,7 +3,13 @@
   padding: 0 10px
   font-size: 14px
 
-.kf-team-email-mapping-toggle
+.kf-team-email-mapping-toggle[disabled]
+  .kf-link.kf-link.kf-link
+    color: #999
+    cursor: no-drop
+    text-decoration: none
+
+.kf-team-email-mapping-toggle-sign
   position: relative
   display: inline-block
   width: 12px
@@ -68,3 +74,9 @@
     width: 23px
     height: 21px
     color: textSoftBlackColor
+
+.kf-team-email-mapping-new
+  margin-top: 10px
+
+.kf-team-email-mapping-verify
+  color: lighten(errorRed, 30%)

@@ -113,22 +113,6 @@ angular.module('kifi')
         .then(getResponseData);
       },
 
-      getOrgDomains: function (pubId) {
-        return net
-        .getOrgDomains(pubId)
-        .then(getResponseData);
-      },
-      addOrgDomain: function (pubId, domain) {
-        return net
-        .addOrgDomain(pubId, { domain: domain })
-        .then(getResponseData);
-      },
-      removeOrgDomain: function (pubId, domain) {
-        return net
-        .removeOrgDomain(pubId, { domain: domain })
-        .then(getResponseData);
-      },
-
       invalidateCache: invalidateCache
     };
 

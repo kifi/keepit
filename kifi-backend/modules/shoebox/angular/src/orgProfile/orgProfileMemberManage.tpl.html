@@ -1,21 +1,31 @@
-<div class="kf-org-member-manage kf-container" smart-scroll scroll-distance="'100%'" scroll-disabled="members === null || !hasMoreMembers()" scroll-next="fetchMembers()">
-  <header class="kf-container-header">
-    <h1>Members</h1>
-  </header>
-  <main class="kf-container-main">
-    <ul class="kf-org-members">
-      <li ng-if="(hasLoaded() || members) && canInvite" class="kf-org-member kf-link-parent" ng-click="openInviteModal()">
-        <div class="kf-org-member-invite-row kf-button">
-          <svg
-            class="kf-org-member-invite-icon"
-            kf-symbol-sprite
-            icon="add-member"
-          ></svg>
-          <span class="kf-org-member-invite-text kf-link kf-link-black">Invite new member</span>
-      </li>
-      <li ng-repeat="member in members" kf-org-member member="member" myMembership="myMembership" organization="organization"></li>
-      <li class="kf-opl-empty" ng-if="members.length === 0">{{ profile | name }} has no publicly viewable members.</li>
-    </ul>
-  </main>
-  <div class="kf-loading-spinner-center" kf-loading-spinner hide="hasLoaded()"></div>
+<div>
+  <p class="kf-org-members-autojoin">
+    <svg kf-symbol-sprite icon="add-collaborators"></svg>
+    Enable coworkers to join automatically using their company email.
+    <a
+      class="kf-link kf-link-underline"
+      ui-sref="orgProfile.settings.team({ openDomains: true, '#': 'team-email-mapping-' })"
+    >View settings</a>
+  </p>
+  <div class="kf-org-member-manage kf-container" smart-scroll scroll-distance="'100%'" scroll-disabled="members === null || !hasMoreMembers()" scroll-next="fetchMembers()">
+    <header class="kf-container-header">
+      <h1>Members</h1>
+    </header>
+    <main class="kf-container-main">
+      <ul class="kf-org-members">
+        <li ng-if="(hasLoaded() || members) && canInvite" class="kf-org-member kf-link-parent" ng-click="openInviteModal()">
+          <div class="kf-org-member-invite-row kf-button">
+            <svg
+              class="kf-org-member-invite-icon"
+              kf-symbol-sprite
+              icon="add-member"
+            ></svg>
+            <span class="kf-org-member-invite-text kf-link kf-link-black">Invite new member</span>
+        </li>
+        <li ng-repeat="member in members" kf-org-member member="member" myMembership="myMembership" organization="organization"></li>
+        <li class="kf-opl-empty" ng-if="members.length === 0">{{ profile | name }} has no publicly viewable members.</li>
+      </ul>
+    </main>
+    <div class="kf-loading-spinner-center" kf-loading-spinner hide="hasLoaded()"></div>
+  </div>
 </div>

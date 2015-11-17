@@ -13,6 +13,7 @@ angular.module('kifi')
     $scope.canManagePlan = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1);
     $scope.canRedeemCredit = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.REDEEM_CREDIT_CODE) !== -1);
     $scope.isAdminExperiment = (profileService.me.experiments.indexOf('admin') !== -1);
+
     function onHashChange() {
       var anchor = angular.element($window.location.hash.slice(0, -1))[0];
       var headingTop;
@@ -21,13 +22,11 @@ angular.module('kifi')
       if (anchor) {
         headingTop = anchor.getBoundingClientRect().top - $window.document.body.getBoundingClientRect().top;
         scrollDestination = headingTop - 70; // make room for header
-      } else {
-        scrollDestination = 0;
-      }
 
-      angular.element('html, body').animate({
-        scrollTop: scrollDestination
-      });
+        angular.element('html, body').animate({
+          scrollTop: scrollDestination
+        });
+      }
     }
 
     $window.addEventListener('hashchange', onHashChange, false);
@@ -55,5 +54,21 @@ angular.module('kifi')
         orgProfileService.trackEvent('user_clicked_page', $scope.profile, { action: action, type: type });
       }
     };
+
+    [
+      $rootScope.$on('$stateChangeSuccess', function (event, fromState, fromParams, toState) {
+        if (fromState === toState) {
+          $state.go($state.current, { '#': 'n-' }); // clear the hash. setting it to empty scrolls to the top
+        }
+      })
+    ].forEach(function (deregister) {
+      $scope.$on('$destroy', deregister);
+    });
+
+    $scope.$on('$viewContentLoaded', function () {
+      if ($window.location.hash !== '') {
+        onHashChange();
+      }
+    });
   }
 ]);

@@ -3,25 +3,41 @@
 angular.module('kifi')
 
 .directive('kfTeamEmailMapping', [
-  '$compile', 'profileService', 'billingService', 'modalService',
-  function ($compile, profileService, billingService, modalService) {
+  '$stateParams', 'profileService', 'orgProfileService', 'modalService',
+  'ORG_PERMISSION', 'ORG_SETTING_VALUE',
+  function ($stateParams, profileService, orgProfileService, modalService,
+            ORG_PERMISSION, ORG_SETTING_VALUE) {
     return {
       restrict: 'A',
       replace: true,
       scope: {
-        getOrgId: '&orgId'
+        getOrg: '&org',
+        getViewer: '&viewer'
       },
       templateUrl: 'teamSettings/teamEmailMapping.tpl.html',
       link: function ($scope) {
-        $scope.open = false;
+        $scope.enabled = (
+          $scope.getViewer().permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1 &&
+          $scope.getOrg().config.settings.join_by_verifying.setting !== ORG_SETTING_VALUE.DISABLED
+        );
+        $scope.open = $scope.enabled && !!$stateParams.openDomains; // initial
         $scope.me = profileService.me;
         $scope.emailDomains = null;
+        $scope.verificationMessage = '';
         $scope.model = {
           email: ''
         };
 
         function getEmailDomain(address) {
           return address.slice(address.lastIndexOf('@') + 1);
+        }
+
+        function getVerifyMessage(address) {
+          return (
+            'A verification email was sent to ' + address + '.' +
+            ' Click the verification link in the email ' +
+            'to claim your team\'s domain.'
+          );
         }
 
         $scope.toggleOpen = function () {
@@ -49,28 +65,66 @@ angular.module('kifi')
         };
 
         $scope.addOrgDomain = function (email) {
-          var domain = email.slice(email.lastIndexOf('@') + 1);
+          var address = email.address;
+          var domain = address.slice(address.lastIndexOf('@') + 1);
 
-          billingService
-          .addOrgDomain($scope.getOrgId(), domain)
+          if (!email.isVerified) {
+            $scope.verificationMessage = getVerifyMessage(email.address);
+          } else {
+            $scope.verificationMessage = '';
+          }
+
+          return orgProfileService
+          .addOrgDomain($scope.getOrg().id, domain)
           .then(function (domainData) {
             profileService.fetchMe();
             $scope.emailDomains.push(domainData.domain);
           })
-          ['catch'](modalService.openGenericErrorModal);
+          ['catch'](function () {
+            $scope.verificationMessage = '';
+            modalService.openGenericErrorModal();
+          });
         };
 
         $scope.removeOrgDomain = function (email, index) {
-          billingService
-          .removeOrgDomain($scope.getOrgId(), email)
+          orgProfileService
+          .removeOrgDomain($scope.getOrg().id, email)
           .then(function () {
             $scope.emailDomains.splice(index, 1);
           })
           ['catch'](modalService.openGenericErrorModal);
         };
 
-        billingService
-        .getOrgDomains($scope.getOrgId())
+        $scope.addUnverifiedOrgDomain = function (email) {
+          return orgProfileService
+          .addDomainAfterVerification($scope.getOrg().id, email.address)
+          .then(function () {
+            $scope.verificationMessage = getVerifyMessage(email.address);
+            return profileService.resendVerificationEmail(email.address);
+          })
+          ['catch'](modalService.openGenericErrorModal);
+        };
+
+        $scope.addEmailAccount = function (address) {
+          return profileService
+          .addEmailAccount(address)
+          .then(function () {
+            $scope.verificationMessage = getVerifyMessage(address);
+            $scope.model.email = '';
+
+            // stub it instead of looking for it in the me object
+            $scope.addOrgDomain({
+               address: address,
+               isVerified: false
+             });
+          })
+          ['catch'](function (err) {
+            $scope.verificationMessage = err;
+          });
+        };
+
+        orgProfileService
+        .getOrgDomains($scope.getOrg().id)
         .then(function (emailDomainData) {
           $scope.emailDomains = emailDomainData;
         })
