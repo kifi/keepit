@@ -144,7 +144,7 @@ angular.module('kifi')
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === profileService.me.id;
     $scope.isAdminExperiment = (profileService.me.experiments || []).indexOf('admin') !== -1;
-    $scope.canCreateSlackIntegration = (library.permissions || []).indexOf('create_slack_integration') !== -1;
+    $scope.canCreateSlackIntegration = (profileService.me.experiments || []).indexOf('slack') !== -1;
 
     // slack stuff
     $scope.slackIntegrations = [];
@@ -297,7 +297,7 @@ angular.module('kifi')
         signupService.register({});
       } else if (profileService.me && profileService.me.orgs.length > 0) {
 
-        if ($scope.canCreateSlackIntegration) {
+        if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
           if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
             $scope.openSlackIntegrations();
           } else {
