@@ -70,27 +70,27 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           curTime = curTime.plusDays(1)
           inject[FakeClock].setTimeValue(curTime)
           Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
-          slackClient.messagesByWebhook(webhook.url) must beEmpty
+          slackClient.pushedMessagesByWebhook(webhook.url) must beEmpty
 
           // 2 keeps => 1 msg, 2 lines
           curTime = curTime.plusDays(1)
           inject[FakeClock].setTimeValue(curTime)
           db.readWrite { implicit s => KeepFactory.keeps(2).map(_.withUser(user).withLibrary(lib).withKeptAt(curTime).withTitle(titles.next())).saved }
           Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
-          slackClient.messagesByWebhook(webhook.url) must haveSize(1)
-          slackClient.messagesByWebhook(webhook.url).head.text.lines.size === 2
-          slackClient.messagesByWebhook(webhook.url).head.attachments.length === 0 // TODO(ryan): write a test for the attachments-style
+          slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
+          slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 2
+          slackClient.pushedMessagesByWebhook(webhook.url).head.attachments.length === 0 // TODO(ryan): write a test for the attachments-style
 
           // hella keeps => 1 msg, 1 line (a summary)
           curTime = curTime.plusDays(1)
           inject[FakeClock].setTimeValue(curTime)
           db.readWrite { implicit s => KeepFactory.keeps(20).map(_.withUser(user).withLibrary(lib).withKeptAt(curTime).withTitle(titles.next())).saved }
           Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
-          slackClient.messagesByWebhook(webhook.url) must haveSize(2)
-          slackClient.messagesByWebhook(webhook.url).head.text.lines.size === 1
-          slackClient.messagesByWebhook(webhook.url).head.attachments.length === 0
+          slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
+          slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 1
+          slackClient.pushedMessagesByWebhook(webhook.url).head.attachments.length === 0
 
-          slackClient.messagesByWebhook(webhook.url).foreach(println)
+          slackClient.pushedMessagesByWebhook(webhook.url).foreach(println)
           1 === 1
         }
       }
