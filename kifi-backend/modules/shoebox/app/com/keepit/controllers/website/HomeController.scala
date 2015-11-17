@@ -150,14 +150,14 @@ class HomeController @Inject() (
     }
     setHasSeenInstall()
     request.userAgentOpt.flatMap { agent =>
-      if (agent.canRunExtensionIfUpToDate) {
-        Some(Ok(views.html.authMinimal.install()))
-      } else if (agent.isAndroid) {
+      if (agent.isAndroid) {
         Some(Redirect("https://play.google.com/store/apps/details?id=com.kifi&hl=en"))
       } else if (agent.isIphone) {
         Some(Redirect("https://itunes.apple.com/us/app/kifi/id740232575"))
+      } else if (!agent.canRunExtensionIfUpToDate) {
+        Some(Redirect("/"))
       } else None
-    }.getOrElse(Redirect("/"))
+    }.getOrElse(Ok(views.html.authMinimal.install()))
   }
 
   private def hasSeenInstall(implicit request: UserRequest[_]): Boolean = {
