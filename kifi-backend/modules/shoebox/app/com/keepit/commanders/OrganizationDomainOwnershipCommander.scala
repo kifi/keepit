@@ -186,6 +186,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
   def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
     NormalizedHostname.fromHostname(verifiedEmail.address.hostname)
       .map(domain => orgDomainOwnershipRepo.getOwnershipsForDomain(domain).map(_.organizationId)).getOrElse(Set.empty)
+      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(verifiedEmail.userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
       .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
       .foreach { orgId =>
         val addRequest = OrganizationMembershipAddRequest(orgId, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
