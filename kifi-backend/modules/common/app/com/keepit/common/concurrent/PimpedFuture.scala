@@ -94,12 +94,16 @@ object FutureHelpers {
     if (items.isEmpty) { promised.success(acc) }
     else {
       val item = items.head
-      fMap(acc, item).onComplete {
-        case Success((updatedAcc, done)) =>
-          if (done)
-            promised.success(updatedAcc)
-          else
-            foldLeftUntil(items.tail, promised)(updatedAcc)(fMap)
+      Try(fMap(acc, item)) match {
+        case Success(f) => f.onComplete {
+          case Success((updatedAcc, done)) =>
+            if (done)
+              promised.success(updatedAcc)
+            else
+              foldLeftUntil(items.tail, promised)(updatedAcc)(fMap)
+          case Failure(ex) =>
+            promised.failure(ex)
+        }
         case Failure(ex) =>
           promised.failure(ex)
       }
