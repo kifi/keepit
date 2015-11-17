@@ -23,7 +23,8 @@ object SlackIngestionCommander {
   val delayBetweenIngestions = Period.minutes(10)
   val retryDelay = Period.minutes(1)
   val ingestionGracePeriod = Period.minutes(30)
-  val maxConcurrency = 10
+  val integrationBatchSize = 10
+  val messageBatchSize = 25
 
   val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
 }
@@ -52,7 +53,7 @@ class SlackIngestionCommanderImpl @Inject() (
   def ingestAll(): Future[Unit] = {
     FutureHelpers.doUntil {
       val (integrations, slackMemberships, isAllowed) = db.readWrite { implicit session =>
-        val integrationIds = integrationRepo.getRipeForIngestion(maxConcurrency, ingestionGracePeriod)
+        val integrationIds = integrationRepo.getRipeForIngestion(integrationBatchSize, ingestionGracePeriod)
         integrationRepo.markAsIngesting(integrationIds: _*)
         val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
         val integrations = integrationIds.map(integrationsByIds(_))
@@ -62,7 +63,7 @@ class SlackIngestionCommanderImpl @Inject() (
         }.toMap
         (integrations, slackMemberships, isAllowed)
       }
-      val futureIngestions: Seq[Future[Unit]] = integrations.map {
+      val futureIngestionComplete = FutureHelpers.sequentialExec(integrations) {
         case integration if isAllowed(integration.id.get) =>
           slackMemberships.get(integration.slackUserId).flatMap(m => m.token.map((_, m.scopes))) match {
             case Some((token, scopes)) if scopes.contains(SlackAuthScope.SearchRead) =>
@@ -81,16 +82,15 @@ class SlackIngestionCommanderImpl @Inject() (
           }
           Future.successful(())
       }
-      Future.sequence(futureIngestions).imap(_.isEmpty)
+      futureIngestionComplete.imap(_ => integrations.isEmpty)
     }
   }
 
   private def doIngest(token: SlackAccessToken, integration: SlackChannelToLibrary): Future[Option[SlackMessageTimestamp]] = {
     val ingestionStartedAt = clock.now()
-    val batchSize = 25
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
-      case (lastMessageTimestamp, _) =>
-        getLatestMessagesWithLinks(token, integration.slackChannelName, lastMessageTimestamp, Some(batchSize)).map { messages =>
+      case (lastMessageTimestamp, ()) =>
+        getLatestMessagesWithLinks(token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).map { messages =>
           val newLastMessageTimestamp = ingestMessages(integration, messages)
           (newLastMessageTimestamp, newLastMessageTimestamp.isEmpty)
         }
