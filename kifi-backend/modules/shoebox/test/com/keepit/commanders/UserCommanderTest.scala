@@ -99,7 +99,7 @@ class UserCommanderTest extends Specification with ShoeboxTestInjector {
 
     "welcome a joinee with a html-plain email" in {
       val WELCOME_SUBJECT = "Let's get started with Kifi"
-      def WELCOME_SALUTATION(firstName: String) = "Dear " + firstName + ","
+      def WELCOME_SALUTATION(firstName: String) = "Hey " + firstName + ","
       val WELCOME_SENDER = "Eishay Smith"
       val WELCOME_SENDER_EMAIL = SystemEmailAddress.EISHAY_PUBLIC
 
