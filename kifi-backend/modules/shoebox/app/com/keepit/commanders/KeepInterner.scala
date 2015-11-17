@@ -56,7 +56,6 @@ class KeepInternerImpl @Inject() (
   userValueRepo: UserValueRepo,
   rawKeepRepo: RawKeepRepo,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
-  elizaClient: ElizaServiceClient,
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
   libraryNewFollowersCommander: LibraryNewFollowersCommander,
