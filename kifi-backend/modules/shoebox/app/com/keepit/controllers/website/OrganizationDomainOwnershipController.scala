@@ -6,7 +6,7 @@ import com.keepit.common.controller.{ UserActionsHelper, ShoeboxServiceControlle
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ OrganizationDomainAddRequest, OrganizationPermission, Organization }
+import com.keepit.model.{ OrganizationDomainRemoveRequest, OrganizationDomainAddRequest, OrganizationPermission, Organization }
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json.{ JsSuccess, Json, JsError }
 
@@ -40,7 +40,7 @@ class OrganizationDomainOwnershipController @Inject() (
     (request.body \ "domain").validate[String] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "badly_formatted_request"))
       case JsSuccess(domain, _) =>
-        val domainRequest = OrganizationDomainAddRequest(request.request.userId, request.orgId, domain)
+        val domainRequest = OrganizationDomainRemoveRequest(request.request.userId, request.orgId, domain)
         orgDomainOwnershipCommander.removeDomainOwnership(domainRequest) match {
           case Some(fail) => fail.asErrorResponse
           case None => Ok
