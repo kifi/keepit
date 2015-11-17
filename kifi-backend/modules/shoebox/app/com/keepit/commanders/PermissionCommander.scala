@@ -163,10 +163,8 @@ class PermissionCommanderImpl @Inject() (
     val addedPermissions: Set[LibraryPermission] = {
       val canModifyLibrary = lib.canBeModified && libPermissions.contains(LibraryPermission.VIEW_LIBRARY)
       val canForceEdit = canModifyLibrary && orgPermissions.contains(OrganizationPermission.FORCE_EDIT_LIBRARIES)
-      val canCreateSlackIntegration = canModifyLibrary && orgPermissions.contains(OrganizationPermission.CREATE_SLACK_INTEGRATION)
       Set(
-        canForceEdit -> Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY),
-        canCreateSlackIntegration -> Set(LibraryPermission.CREATE_SLACK_INTEGRATION)
+        canForceEdit -> Set(LibraryPermission.EDIT_LIBRARY, LibraryPermission.MOVE_LIBRARY, LibraryPermission.DELETE_LIBRARY)
       ).collect { case (true, ps) => ps }.flatten
     }
 
