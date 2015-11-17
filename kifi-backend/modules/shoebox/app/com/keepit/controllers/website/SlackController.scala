@@ -31,7 +31,7 @@ class SlackController @Inject() (
     val stateObj = SlackState.toJson(SlackState(state)).toOption.flatMap(_.asOpt[JsObject])
     val libIdOpt = stateObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
 
-    val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
+    val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(r => r.url + "?showSlackDialog").getOrElse("/")
 
     val authFut = for {
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
