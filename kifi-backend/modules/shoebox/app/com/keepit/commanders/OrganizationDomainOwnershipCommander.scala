@@ -18,7 +18,7 @@ import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 trait OrganizationDomainOwnershipCommander {
   def getDomainsOwned(orgId: Id[Organization]): Set[NormalizedHostname]
   def addDomainOwnership(request: OrganizationDomainAddRequest): Either[OrganizationFail, OrganizationDomainAddResponse]
-  def removeDomainOwnership(request: OrganizationDomainAddRequest): Option[OrganizationFail]
+  def removeDomainOwnership(request: OrganizationDomainRemoveRequest): Option[OrganizationFail]
   def getSharedEmails(userId: Id[User], orgId: Id[Organization]): Set[EmailAddress]
   def getSharedEmailsHelper(userId: Id[User], orgId: Id[Organization])(implicit session: RSession): Set[EmailAddress]
   def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit
@@ -108,10 +108,11 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     val usersToEmail = userEmailAddressRepo.getByDomain(ownership.normalizedHostname)
       .filter(userEmail => !orgMembers.exists(_.userId == userEmail.userId))
       .filter(userEmail => !userValueRepo.getValue(userEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(ownership.organizationId))
+      .filter(userEmail => !userEmail.address.address.contains("+test@kifi.com"))
     usersToEmail.foreach(userEmailAddressCommander.sendVerificationEmailHelper)
   }
 
-  def removeDomainOwnership(request: OrganizationDomainAddRequest): Option[OrganizationFail] = {
+  def removeDomainOwnership(request: OrganizationDomainRemoveRequest): Option[OrganizationFail] = {
     db.readOnlyReplica(implicit session => getValidationError(request)) match {
       case Some(fail) => Some(fail)
       case None => {
