@@ -51,11 +51,12 @@ class EmailTestController @Inject() (
     def orgId: Option[Id[Organization]] = request.getQueryString("organizationId").map(orgId => Id[Organization](orgId.toLong))
     def msg = request.getQueryString("msg")
     def tip = request.getQueryString("tip")
+    def installs = request.getQueryString("installs").map(_.split(",").toSeq).getOrElse(Seq.empty).map(k => KifiInstallationPlatform(k))
     def verificationCode = EmailVerificationCode(request.getQueryString("code") getOrElse s"fake_verification_code_${currentDateTime.getMillis}")
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
-      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, verificationCode = Some(verificationCode), domainOwnerIds = orgId.toSet)
+      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, None, verificationCode = Some(verificationCode), domainOwnerIds = orgId.toSet, installs = installs.toSet)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
         val sender = emailSenderProvider.waitList

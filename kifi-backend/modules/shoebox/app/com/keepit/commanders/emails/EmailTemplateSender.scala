@@ -71,7 +71,7 @@ class EmailTemplateSenderImpl @Inject() (
         cc = emailToSend.cc,
         subject = result.subject,
         htmlBody = result.htmlBody,
-        textBody = result.textBody,
+        textBody = result.textBody.map(_.trim),
         fromName = result.fromName,
         category = emailToSend.category,
         extraHeaders = headers

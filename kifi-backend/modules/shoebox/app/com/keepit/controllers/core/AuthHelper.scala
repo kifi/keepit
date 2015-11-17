@@ -248,7 +248,7 @@ class AuthHelper @Inject() (
             userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
           }
         }
-        if (mode == Prod) {
+        if (mode == Prod || true) {
           // Do not sent the email in dev
           SafeFuture { userCommander.sendWelcomeEmail(user.id.get, withVerification = !emailConfirmedAlready, Some(emailAddress)) }
         }

@@ -1,10 +1,40 @@
-@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]])
+@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]], installs: Set[KifiInstallationPlatform])
 @import com.keepit.common.mail.template.helpers._
 @import play.api.libs.json._
+@import com.keepit.model.KifiInstallationPlatform
 
 @homeUrl = @{kifiUrl("kifiHome")}
-@kifiGuideUrl = @{htmlUrl("https://www.kifi.com/kifi/kifi-tutorials?", "kifiTutorials", false)}
+@kifiGuideUrl = @{htmlUrl("https://www.kifi.com/getting-started?", "kifiTutorials", false)}
 @orgNamesAndLinks = @{domainOwnerIds.map { orgId => (organizationName(orgId), organizationLink(orgId, None, "domainOwnerOrg")) } }
+@platformSpiel = @{
+  val hasExt = installs.contains(KifiInstallationPlatform.Extension)
+  val hasMobile = installs.contains(KifiInstallationPlatform.IPhone) || installs.contains(KifiInstallationPlatform.Android)
+  val spiel = if (hasExt && !hasMobile) {
+    s""" In addition to our browser extensions, we’ve made our platform available on <a href="$iOsAppStoreUrl">iOS</a> and <a href="$googlePlayStoreUrl">Android</a>. """
+  } else if (hasMobile && !hasExt) {
+    s""" In addition to mobile, we’ve made our platform available on web with must-have <a href="https://www.kifi.com/install">Chrome and Firefox extensions</a>. """
+  } else if (!hasMobile && !hasExt) {
+    s""" We’ve made our platform available on web (with must-have <a href="https://www.kifi.com/install">Chrome and Firefox extensions</a>), <a href="$iOsAppStoreUrl">iOS</a>, and <a href="$googlePlayStoreUrl">Android</a>. """
+  } else {
+    ""
+  }
+  Html(spiel)
+}
+@orgs = @{
+  val links = orgNamesAndLinks.toList.map(org => s"""<a href="${org._2}">${org._1}</a>""")
+  val orgStr = if (links.length > 2) {
+    val pre = links.take(links.length - 2)
+    val last = links.last
+    pre.mkString(", ") + ", and " + last
+  } else if (links.length == 2) {
+    links.head + " and " + links.last
+  } else if (links.length == 1) {
+    links.head
+  } else {
+    ""
+  }
+  Html(orgStr)
+}
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -14,23 +44,28 @@
     <body>
     Dear @firstName(toUserId),<br>
 
-    <p>Thank you for signing up for Kifi.</p>
-    @verifyUrl.map { url =>
-      <br>To protect your privacy and security, please <a href="@url">confirm your email address</a> by clicking the following link:<br/>
-      <a href="@url">@url</a></p>
-    @if(orgNamesAndLinks.nonEmpty) {
-    <p>Upon confirmation, you'll be added to these teams:</p>
-    @for(org <- orgNamesAndLinks) {
-      <p><a href="@{org._2}">@{org._1}</a></p>
-    }
-    }
-    }
+    <p>Thank you for signing up for Kifi. We built Kifi to make keeping and sharing web pages from any device a snap.
+    @platformSpiel
 
-    <p>We built Kifi to make keeping and sharing web pages from any device a snap, and to that end we’ve made
-    our platform available on <a href="@homeUrl">web</a> (with must-have <a href="@kifiChromeExtensionUrl">Chrome</a> and <a href="@kifiFirefoxExtensionUrl">Firefox</a> extensions), <a href="@iOsAppStoreUrl">iOS</a> and <a href="@googlePlayStoreUrl">Android</a>.
-    You can learn more by browsing the <a href="@kifiGuideUrl">Kifi Tutorials Library</a>, or you
-        can view your profile here: <a href="@profileUrl(toUserId)">@profileUrl(toUserId)</a>.
-        If you would like to have a different profile URL, please reach out to me and let me know.</p>
+    You can check out our <a href="https://www.kifi.com/getting-started">getting started page</a>,
+    or you can view your profile here: <a href="@profileUrl(toUserId)">@profileUrl(toUserId)</a>
+
+    If you would like to have a different profile URL, please reply and let me know.
+
+    </p>
+
+
+    @verifyUrl.map { url =>
+      <p>To protect your privacy and security, please confirm your email address by clicking the following link: <a href="@url">@url</a>.
+      @if(orgNamesAndLinks.nonEmpty) {
+        @if(orgNamesAndLinks.size == 1) {
+          You’ll be added to the @orgs team.
+        } else {
+          You’ll be added to the @orgs teams.
+        }
+      }
+      </p>
+    }
 
     <p>Eishay Smith, CEO<br>
     <a href="https://www.kifi.com/eishay">https://www.kifi.com/eishay</a></p>
