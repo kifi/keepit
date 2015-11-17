@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.google.inject.Inject
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.controller.{ UserActionsHelper, ShoeboxServiceController, UserActions }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -14,6 +14,7 @@ import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+@Singleton
 class KeepCacheController @Inject() (
     roverServiceClient: RoverServiceClient,
     db: Database,
@@ -21,6 +22,8 @@ class KeepCacheController @Inject() (
     normalizedUriRepo: NormalizedURIRepo,
     val userActionsHelper: UserActionsHelper,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
+
+  private val iframeSizeRe = """width="(\d+)" height="(\d+)"""".r
 
   def getCachedKeep(id: ExternalId[Keep]) = MaybeUserPage.async { request =>
 
@@ -63,7 +66,15 @@ class KeepCacheController @Inject() (
           s"""<address>$code</address>"""
         }
 
-        val content = article.content.rawContent.get
+        val content = {
+          val embedOpt = {
+            article.content.media.map { media =>
+              iframeSizeRe.replaceFirstIn(media.html, "").replaceAllLiterally("media.html?", "media.html?p=1&")
+            }
+          }
+          val formattedContentOpt = article.content.rawContent.orElse(article.content.description)
+          Seq(embedOpt, formattedContentOpt).flatten.mkString("\n\n<hr>\n\n")
+        }
 
         val footer = {
           val fullUrl = clean(article.url)
@@ -91,7 +102,7 @@ $content
 
 $footer
 
-<br><hr><br>Full fetch article:<br>
+<!--
 
 ${article.content.contentType}
 
@@ -109,8 +120,10 @@ ${article.content.language}
 
 ${article.content.media}
 
+-->
+
 """)
-        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *; style-src 'unsafe-inline' *.kifi.com")
+        Ok(page).withHeaders("Content-Security-Policy-Report-Only" -> "default-src 'none'; img-src *; style-src 'unsafe-inline' *.kifi.com; frame-src cdn.embedly.com")
       case _ => NotFound
     }
   }

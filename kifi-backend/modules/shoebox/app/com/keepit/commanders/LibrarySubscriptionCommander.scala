@@ -13,7 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ CallTimeouts, ClientResponse, DirectUrl, HttpClient, NonOKResponseException }
 import com.keepit.common.path.Path
 import com.keepit.model._
-import com.keepit.slack.models.{ SlackAttachment, SlackMessage }
+import com.keepit.slack.models.{ SlackChannelName, SlackMessageRequest, SlackAttachment }
 import play.api.http.Status._
 import play.api.libs.json._
 
@@ -41,15 +41,15 @@ class LibrarySubscriptionCommanderImpl @Inject() (
 
   val client = httpClient.withTimeout(CallTimeouts(responseTimeout = Some(2 * 60 * 1000), maxJsonParseTime = Some(20000)))
 
-  def slackMessageForNewKeep(user: User, keep: Keep, library: Library, channel: String): SlackMessage = {
+  def slackMessageForNewKeep(user: User, keep: Keep, library: Library, channel: SlackChannelName): SlackMessageRequest = {
     val keepTitle = if (keep.title.exists(_.nonEmpty)) { keep.title.get } else { "a keep" }
     val userRedir = URLEncoder.encode(Json.obj("t" -> "us", "uid" -> user.externalId).toString(), "ascii")
     val libRedir = URLEncoder.encode(Json.obj("t" -> "lv", "lid" -> Library.publicId(library.id.get).id).toString(), "ascii")
     val userLink = Path(s"redir?data=$userRedir&kma=1").absolute
     val libLink = Path(s"redir?data=$libRedir&kma=1").absolute
     val text = s"<$userLink|${user.fullName}> just added <${keep.url}|$keepTitle> to the <$libLink|${library.name}> library."
-    val attachments: Seq[SlackAttachment] = keep.note.toSeq.collect { case content if content.nonEmpty => SlackAttachment(fallback = "Check out this keep", text = s"${content} - ${user.firstName}") }
-    SlackMessage(text = text, channel = Some(channel), attachments = attachments)
+    val attachments: Seq[SlackAttachment] = keep.note.toSeq.collect { case content if content.nonEmpty => SlackAttachment.minimal(fallback = "Check out this keep", text = s"${content} - ${user.firstName}") }
+    SlackMessageRequest.fromKifi(text, Some(channel), attachments)
   }
 
   def sendNewKeepMessage(keep: Keep, library: Library): Seq[Future[ClientResponse]] = {
@@ -63,7 +63,7 @@ class LibrarySubscriptionCommanderImpl @Inject() (
     subscriptions.map { subscription =>
       subscription.info match {
         case info: SlackInfo =>
-          val message = slackMessageForNewKeep(keeper, keep, library, subscription.name.toLowerCase)
+          val message = slackMessageForNewKeep(keeper, keep, library, SlackChannelName(subscription.name.toLowerCase))
 
           val response = httpLock.withLockFuture(client.postFuture(DirectUrl(info.url), Json.toJson(message)))
 

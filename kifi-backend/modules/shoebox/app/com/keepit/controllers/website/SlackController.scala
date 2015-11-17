@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
 import com.keepit.model.{ LibraryFail, Library }
 import com.keepit.slack.models._
-import com.keepit.slack.{ LibraryToSlackChannelProcessor, SlackClient, SlackCommander }
+import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackClient, SlackCommander }
 import play.api.libs.json.{ JsObject, JsSuccess, Json, JsError }
 
 import scala.concurrent.ExecutionContext
@@ -18,7 +18,7 @@ class SlackController @Inject() (
     slackClient: SlackClient,
     slackCommander: SlackCommander,
     deepLinkRouter: DeepLinkRouter,
-    libraryToSlackChannelProcessor: LibraryToSlackChannelProcessor,
+    libraryToSlackChannelProcessor: LibraryToSlackChannelPusher,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
     val permissionCommander: PermissionCommander,
@@ -30,7 +30,7 @@ class SlackController @Inject() (
     val stateObj = SlackState.toJson(SlackState(state)).toOption.flatMap(_.asOpt[JsObject])
     val libIdOpt = stateObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
 
-    val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(_.url).getOrElse("/")
+    val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(r => r.url + "?showSlackDialog").getOrElse("/")
 
     val authFut = for {
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
@@ -38,7 +38,7 @@ class SlackController @Inject() (
     } yield {
       slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
       (libIdOpt, slackAuth.incomingWebhook) match {
-        case (Some(libId), Some(webhook)) => slackCommander.setupIntegration(request.userId, libId, webhook, slackIdentity)
+        case (Some(libId), Some(webhook)) => slackCommander.setupIntegrations(request.userId, libId, webhook, slackIdentity)
         case _ =>
       }
       Redirect(redir, SEE_OTHER)
@@ -68,7 +68,7 @@ class SlackController @Inject() (
     }
   }
   def deleteIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
-    implicit val eitherIdFormat = EitherFormat(PublicId.format[LibraryToSlackChannel], PublicId.format[SlackChannelToLibrary])
+    implicit val eitherIdFormat = EitherFormat(LibraryToSlackChannel.formatPublicId, SlackChannelToLibrary.formatPublicId)
     (request.body \ "integrations").validate[Seq[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]]] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
       case JsSuccess(dels, _) =>
@@ -86,7 +86,7 @@ class SlackController @Inject() (
   def triggerIntegrations(pubId: PublicId[Library]) = UserAction { implicit request =>
     val libId = Library.decodePublicId(pubId).get
     val userId = request.userId
-    libraryToSlackChannelProcessor.processLibrary(libId)
+    libraryToSlackChannelProcessor.pushToLibrary(libId)
     Ok
   }
 }

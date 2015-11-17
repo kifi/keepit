@@ -92,6 +92,7 @@ object UserValueName {
 
   val IGNORE_FOR_POTENTIAL_ORGANIZATIONS = UserValueName("ignore_for_potential_organizations")
   val HIDE_EMAIL_DOMAIN_ORGANIZATIONS = UserValueName("hide_email_domain_organizations")
+  val PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL = UserValueName("pending_org_domain_ownership_by_email")
 
   // Please use lower_underscore_case for new value names (and not lowerCamelCase)
 
@@ -181,6 +182,8 @@ object UserValues {
   val ignoreForPotentialOrganizations = UserValueBooleanHandler(UserValueName.IGNORE_FOR_POTENTIAL_ORGANIZATIONS, default = false)
 
   val hideEmailDomainOrganizations = UserValueJsValueHandler(UserValueName.HIDE_EMAIL_DOMAIN_ORGANIZATIONS, default = JsArray())
+
+  val pendingOrgDomainOwnershipByEmail = UserValueJsValueHandler(UserValueName.PENDING_ORG_DOMAIN_OWNERSHIP_BY_EMAIL, default = Json.obj())
 }
 
 @json case class UserValueSettings(showFollowedLibraries: Boolean)

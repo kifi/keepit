@@ -5,13 +5,12 @@
   <button type="button" class="add-keep-to-library-dropdown"
     kf-keep-to-library-widget widget-action-text="Add keep" library-select-action="onLibrarySelected(selectedLibrary)"
     lib-select-down-offset="0" lib-select-max-up-offset="110" lib-select-left-offset="0">
-    <span ng-switch="selectedLibrary.kind" class="keep-to-library-lib-icon-container">
-      <div class="kf-klw-library-card" ng-style="{'background-color': selectedLibrary.color}">
-        <div ng-if="selectedLibrary.kind === 'system_main'" class="kf-klw-star-icon svg-card-star"></div>
-        <div ng-if="selectedLibrary.visibility === 'secret'" class="kf-klw-lock-icon svg-card-lock"></div>
-      </div>
+    <span class="keep-to-library-lib-icon-container">
+      <div class="kf-klw-library-card" ng-style="{'background-color': selectedLibrary.color}"></div>
     </span>
-    {{selectedLibrary.name}}
+    <svg class="kf-klw-star-icon" ng-if="selectedLibrary.kind === 'system_main'" kf-symbol-sprite icon="star"></svg>
+    <svg class="kf-klw-lock-icon" ng-if="selectedLibrary.visibility === 'secret'" kf-symbol-sprite icon="lock"></svg>
+    <span ng-bind="selectedLibrary.name"></span>
     <span class="add-keep-to-library-dropdown-arrow"></span>
   </button>
   <button class="kf-button kf-create-keep-button" ng-click="keepToLibrary()">Keep it</button>

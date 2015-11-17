@@ -10,6 +10,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.core._
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.slack.models.SlackChannelName
 import org.joda.time.DateTime
 
 import play.api.libs.json.{ JsNull }
@@ -69,7 +70,7 @@ class PaymentProcessingCommanderImpl @Inject() (
   def processDuePayments(): Future[Unit] = processingLock.withLockFuture {
     val relevantAccounts = db.readOnlyMaster { implicit session => paidAccountRepo.getPayable(MAX_BALANCE) }
     if (relevantAccounts.length > 0) {
-      eventCommander.reportToSlack(s"Processing payments for ${relevantAccounts.length} accounts.", "#billing-alerts")
+      eventCommander.reportToSlack(s"Processing payments for ${relevantAccounts.length} accounts.", SlackChannelName("#billing-alerts"))
       FutureHelpers.foldLeft(relevantAccounts)(0) {
         case (processed, account) =>
           processAccount(account).imap(_ => processed + 1) recover {
@@ -81,7 +82,7 @@ class PaymentProcessingCommanderImpl @Inject() (
             }
           }
       } imap { processed =>
-        eventCommander.reportToSlack(s"Processed $processed/${relevantAccounts.length} due payments.", "#billing-alerts")
+        eventCommander.reportToSlack(s"Processed $processed/${relevantAccounts.length} due payments.", SlackChannelName("#billing-alerts"))
       }
     } else Future.successful(())
   }

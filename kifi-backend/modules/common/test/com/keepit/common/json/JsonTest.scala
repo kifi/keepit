@@ -20,7 +20,7 @@ class JsonTest extends Specification {
       "robustly handle complex js objects" in {
         def settingsReads(f: Feature): Reads[FeatureSetting] = f.settingReads
         val myFormat = TraversableFormat.safeConditionalObjectReads[Feature, FeatureSetting](Feature.reads, settingsReads)
-        val input = Json.obj("view_organization" -> "members", "create_slack_integration" -> "anyone")
+        val input = Json.obj("view_organization" -> "members", "force_edit_libraries" -> "anyone")
         val expected = Map(Feature.ViewOrganization -> FeatureSetting.MEMBERS)
         input.as[Map[Feature, FeatureSetting]](myFormat) === expected
       }

@@ -1,24 +1,43 @@
-@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]])
+@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]], installs: Set[KifiInstallationPlatform])
 @import com.keepit.common.mail.template.helpers._
+@import com.keepit.model.KifiInstallationPlatform
 @orgNames = @{domainOwnerIds.map { orgId => organizationName(orgId) } }
+@platformSpiel = @{
+  val hasExt = installs.contains(KifiInstallationPlatform.Extension)
+  val hasMobile = installs.contains(KifiInstallationPlatform.IPhone) || installs.contains(KifiInstallationPlatform.Android)
+  val spiel = if (hasExt && !hasMobile) {
+    s""" In addition to our browser extensions, we’ve made our platform available on iOS and Android. """
+  } else if (hasMobile && !hasExt) {
+    s""" In addition to mobile, we’ve made our platform available on web with must-have Chrome and Firefox extensions (https://www.kifi.com/install). """
+  } else if (!hasMobile && !hasExt) {
+    s""" We’ve made our platform available on web (with must-have Chrome and Firefox extensions — https://www.kifi.com/install), iOS, and Android. """
+  } else {
+    ""
+  }
+  Html(spiel)
+}
+@orgs = @{
+  val links = orgNames.toList.map(_.toString)
+  val orgStr = if (links.length > 2) {
+    val pre = links.take(links.length - 2)
+    val last = links.last
+    pre.mkString(", ") + ", and " + last
+  } else if (links.length == 2) {
+    links.head + " and " + links.last
+  } else if (links.length == 1) {
+    links.head
+  } else {
+    ""
+  }
+  Html(orgStr)
+}
+Hey @firstName(toUserId),
 
-Dear @firstName(toUserId),
+Thank you for signing up for Kifi. We built Kifi to make keeping and sharing web pages from any device a snap. @platformSpiel
 
+You can check out our getting started page (https://www.kifi.com/getting-started), or you can view your profile at: @profileUrl(toUserId). If you would like to have a different profile URL, please reply and let me know.
 @verifyUrl.map { url =>
-To protect your privacy and security, please confirm your email address by clicking the following link:
-@url
-@if(orgNames.nonEmpty) {
-Upon confirmation, you'll become a member of these teams:
-@for(orgName <- orgNames) {
-  @orgName
-
+To protect your privacy and security, please confirm your email address by clicking the following link: @url.@if(orgNames.nonEmpty) { @if(orgNames.size == 1) { You’ll be added to the @orgs team. } else { You’ll be added to the @orgs teams. } }
 }
-}
-}
-
-I’m Kifi’s co-founder and CEO. I would like to personally welcome you to our vibrant community discovering, organizing, and sharing knowledge. We built Kifi (www.kifi.com) to make keeping and sharing web pages from any device a snap, and to that end we’ve made our platform available on web, iOS and Android.
-
-You can learn more by reading our high level overview of how Kifi works (www.kifi.com/how_it_works), and if you have any questions or feedback, please don’t hesitate to contact me directly by responding to this message or connecting with me on Kifi. I would love to hear what you think.
-
 Eishay Smith, CEO
 http://www.kifi.com/eishay

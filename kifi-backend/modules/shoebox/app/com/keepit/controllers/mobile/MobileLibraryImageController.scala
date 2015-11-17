@@ -91,7 +91,7 @@ class MobileLibraryImageController @Inject() (
     val libIds = idStrings.split('.').flatMap(id => Library.decodePublicId(PublicId[Library](id)).toOption)
     if (libIds.nonEmpty) {
       val accessibleLibIds = db.readOnlyReplica { implicit session =>
-        libraryRepo.getLibraries(libIds.toSet)
+        libraryRepo.getActiveByIds(libIds.toSet)
       } filter {
         case (_, lib) => libraryAccessCommander.canViewLibrary(request.userIdOpt, lib)
       } keySet

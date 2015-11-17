@@ -351,6 +351,7 @@ GET     /imports/evernote           @com.keepit.controllers.website.HomeControll
 GET     /imports/diigo              @com.keepit.controllers.website.HomeController.route(path = "imports/diigo")
 GET     /imports/pocket             @com.keepit.controllers.website.HomeController.route(path = "imports/pocket")
 GET     /imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
+GET     /getting-started            @com.keepit.controllers.website.HomeController.route(path = "getting-started/users")
 GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
 GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
@@ -555,6 +556,10 @@ GET           /site/organizations/:id/libraries                 @com.keepit.cont
 POST          /site/organizations/:id/avatar/upload             @com.keepit.controllers.website.OrganizationAvatarController.uploadAvatar(id: PublicId[Organization], x: Int, y: Int, s: Int)
 GET           /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.getAccountFeatureSettings(id: PublicId[Organization])
 POST          /site/organizations/:id/featureSettings           @com.keepit.controllers.website.PaymentsController.setAccountFeatureSettings(id: PublicId[Organization])
+GET           /site/organizations/:id/getDomains                @com.keepit.controllers.website.OrganizationDomainOwnershipController.getDomains(id: PublicId[Organization])
+POST          /site/organizations/:id/addDomain                 @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomain(id: PublicId[Organization])
+POST          /site/organizations/:id/removeDomain              @com.keepit.controllers.website.OrganizationDomainOwnershipController.removeDomain(id: PublicId[Organization])
+POST          /site/organizations/:id/addDomainAfterVerification  @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomainOwnershipAfterVerification(id: PublicId[Organization])
 
 GET           /site/organizations/:id/referralCode              @com.keepit.controllers.website.PaymentsController.getReferralCode(id: PublicId[Organization])
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
@@ -631,8 +636,7 @@ GET     /admin/uri/:uriId/article/:kind @com.keepit.controllers.admin.UrlControl
 GET     /admin/uri/:uriId/fetchAsap @com.keepit.controllers.admin.UrlController.fetchAsap(uriId: Id[NormalizedURI])
 
 GET     /admin/domains/find            @com.keepit.controllers.admin.UrlController.searchDomain
-POST    /admin/domains/find            @com.keepit.controllers.admin.UrlController.findDomainByHostname
-GET     /admin/domains/:id             @com.keepit.controllers.admin.UrlController.getDomain(id: Id[com.keepit.classify.Domain])
+GET     /admin/domains/:name             @com.keepit.controllers.admin.UrlController.getDomain(name: String)
 POST    /admin/domains/:id/toggleEmailProvider @com.keepit.controllers.admin.UrlController.domainToggleEmailProvider(id: Id[com.keepit.classify.Domain])
 GET     /admin/domains/tags            @com.keepit.controllers.admin.UrlController.getDomainTags
 POST    /admin/domains/tags            @com.keepit.controllers.admin.UrlController.saveDomainTags

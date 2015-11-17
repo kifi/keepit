@@ -108,7 +108,7 @@ object UserEmailAddress {
       e.userId,
       e.state,
       e.address,
-      NormalizedHostname.fromHostname(EmailAddress.getHostname(e.address)).getOrElse {
+      NormalizedHostname.fromHostname(e.address.hostname).getOrElse {
         AirbrakeNotifierStatic.notify(s"UserEmailAddress id=${e.id},address=${e.address.address} not convertible to NormalizedHostname")
         NormalizedHostname("ERROR_IN_ADDRESS")
       },

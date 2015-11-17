@@ -9,7 +9,7 @@ import com.keepit.common.mail.template.EmailLayout.CustomLayout
 import com.keepit.common.mail.template.{ EmailTip, EmailToSend }
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, SystemEmailAddress }
 import com.keepit.inject.FortyTwoConfig
-import com.keepit.model.{ Organization, EmailVerificationCode, UserExperimentType, NotificationCategory, User }
+import com.keepit.model._
 
 import scala.concurrent.Future
 
@@ -19,11 +19,8 @@ class WelcomeEmailSender @Inject() (
     fortytwoConfig: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def apply(userId: Id[User], toAddress: Option[EmailAddress], isPlainEmail: Boolean = true, verificationCode: Option[EmailVerificationCode], domainOwnerIds: Set[Id[Organization]]) = sendToUser(userId, toAddress, isPlainEmail, verificationCode, domainOwnerIds)
+  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress], verificationCode: Option[EmailVerificationCode], domainOwnerIds: Set[Id[Organization]], installs: Set[KifiInstallationPlatform]): Future[ElectronicMail] = {
 
-  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress] = None, isPlainEmail: Boolean = true, verificationCode: Option[EmailVerificationCode] = None, domainOwnerIds: Set[Id[Organization]]): Future[ElectronicMail] = {
-
-    val usePlainEmail = isPlainEmail || localUserExperimentCommander.userHasExperiment(userId, UserExperimentType.PLAIN_EMAIL)
     val verifyUrl = verificationCode.map(code => s"${fortytwoConfig.applicationBaseUrl}${EmailVerificationCode.verifyPath(code)}")
 
     val emailToSend = EmailToSend(
@@ -33,11 +30,10 @@ class WelcomeEmailSender @Inject() (
       subject = "Let's get started with Kifi",
       to = toAddress.map(Right.apply).getOrElse(Left(userId)),
       category = NotificationCategory.User.WELCOME,
-      htmlTemplate = if (usePlainEmail) { views.html.email.black.welcomePlain(userId, verifyUrl, domainOwnerIds) } else { views.html.email.black.welcome(userId, verifyUrl, domainOwnerIds) },
-      textTemplate = Some(views.html.email.black.welcomeText(userId, verifyUrl, domainOwnerIds)),
-      templateOptions = if (usePlainEmail) { Map("layout" -> CustomLayout) } else { Map.empty },
-      tips = if (usePlainEmail) { Seq.empty } else { Seq(EmailTip.ConnectFacebook) }
-    // TODO(josh) add EmailTip.InstallExtension when it's complete
+      htmlTemplate = views.html.email.black.welcomePlain(userId, verifyUrl, domainOwnerIds, installs),
+      textTemplate = Some(views.html.email.black.welcomeText(userId, verifyUrl, domainOwnerIds, installs)),
+      templateOptions = Map("layout" -> CustomLayout),
+      tips = Seq.empty
     )
     emailTemplateSender.send(emailToSend)
   }

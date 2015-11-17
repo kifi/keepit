@@ -7,7 +7,20 @@ import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.time._
 import com.keepit.model.User
 import org.joda.time.DateTime
-import play.api.libs.json.{ JsNull, Json, JsValue }
+import play.api.libs.json._
+import play.api.libs.functional.syntax._
+
+case class SlackIncomingWebhook(
+  channelName: SlackChannelName,
+  url: String,
+  configUrl: String)
+object SlackIncomingWebhook {
+  implicit val reads: Reads[SlackIncomingWebhook] = (
+    (__ \ 'channel).read[SlackChannelName] and
+    (__ \ 'url).read[String] and
+    (__ \ 'configuration_url).read[String]
+  )(SlackIncomingWebhook.apply _)
+}
 
 // track revokedSince
 case class SlackIncomingWebhookInfo(
@@ -46,7 +59,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   implicit val slackUserIdColumnType = SlackDbColumnTypes.userId(db)
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val slackChannelColumnIdType = SlackDbColumnTypes.channelId(db)
-  implicit val slackChannelColumnType = SlackDbColumnTypes.channel(db)
+  implicit val slackChannelColumnType = SlackDbColumnTypes.channelName(db)
 
   private def infoFromDbRow(
     id: Option[Id[SlackIncomingWebhookInfo]],

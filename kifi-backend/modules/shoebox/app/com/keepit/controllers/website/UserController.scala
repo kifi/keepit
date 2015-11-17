@@ -2,15 +2,16 @@ package com.keepit.controllers.website
 
 import com.google.inject.Inject
 import com.keepit.abook.{ ABookServiceClient, ABookUploadConf }
+import com.keepit.classify.{ NormalizedHostname, DomainRepo }
 import com.keepit.commanders.emails.EmailSenderProvider
-import com.keepit.commanders.{ ConnectionInfo, _ }
+import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.http._
-import com.keepit.common.mail.{ EmailAddress, _ }
+import com.keepit.common.mail._
 import com.keepit.common.store.{ ImageCropAttributes, S3ImageStore }
 import com.keepit.common.time._
 import com.keepit.controllers.core.NetworkInfoLoader
@@ -44,6 +45,7 @@ class UserController @Inject() (
     userValueRepo: UserValueRepo,
     socialUserRepo: SocialUserInfoRepo,
     invitationRepo: InvitationRepo,
+    domainRepo: DomainRepo,
     networkInfoLoader: NetworkInfoLoader,
     val userActionsHelper: UserActionsHelper,
     friendRequestRepo: FriendRequestRepo,
@@ -208,11 +210,13 @@ class UserController @Inject() (
         case Some(emailRecord) if (emailRecord.userId != request.userId) && emailRecord.verified => Forbidden(Json.obj("error" -> "email_belongs_to_other_user"))
         case Some(emailRecord) if (emailRecord.userId == request.userId) => {
           val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
+          val isFreeMail = NormalizedHostname.fromHostname(emailRecord.address.hostname).exists(hostname => domainRepo.get(hostname).exists(_.isEmailProvider))
           Ok(Json.toJson(EmailInfo(
             address = emailRecord.address,
             isVerified = emailRecord.verified,
             isPrimary = emailRecord.primary,
-            isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(emailRecord.address))
+            isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(emailRecord.address)),
+            isFreeMail = isFreeMail
           )))
         }
         case _ => Ok(Json.obj("status" -> "available"))
@@ -434,21 +438,16 @@ class UserController @Inject() (
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  private val url = fortytwoConfig.applicationBaseUrl
-
-  def resendVerificationEmail(email: EmailAddress) = UserAction.async { implicit request =>
+  def resendVerificationEmail(email: EmailAddress) = UserAction.async(parse.tolerantJson) { implicit request =>
     EmailAddress.validate(email.address) match {
-      case Failure(err) => Future(BadRequest("invalid_email_format"))
-      case Success(validEmail) => {
+      case Failure(err) => Future.successful(BadRequest(Json.obj("error" -> "invalid_email_format")))
+      case Success(validEmail) =>
         db.readWrite { implicit s =>
-          emailRepo.getByAddressAndUser(request.userId, validEmail) match {
-            case Some(emailAddr) => userEmailAddressCommander.sendVerificationEmailHelper(emailAddr).imap(_ => Ok("0"))
-            case None =>
-              userEmailAddressCommander.addEmail(request.userId, email)
-              Future(Ok)
+          emailRepo.getByAddressAndUser(request.userId, email) match {
+            case Some(emailAddr) => userEmailAddressCommander.sendVerificationEmailHelper(emailAddr).imap(_ => Ok)
+            case _ => Future.successful(Forbidden(Json.obj("error" -> "email_not_found")))
           }
         }
-      }
     }
   }
 

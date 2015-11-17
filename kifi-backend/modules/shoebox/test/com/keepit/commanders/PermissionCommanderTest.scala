@@ -78,12 +78,14 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.REMOVE_OWN_KEEPS
               )
               permissionCommander.getLibraryPermissions(lib.id.get, Some(member.id.get)) === Set(
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
+                LibraryPermission.CREATE_SLACK_INTEGRATION,
                 LibraryPermission.REMOVE_OWN_KEEPS
               )
               permissionCommander.getLibraryPermissions(lib.id.get, Some(rando.id.get)) === Set.empty
@@ -260,6 +262,32 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
               val whoCanEdit = all.filter { x => permissionCommander.getLibraryPermissions(lib.id.get, x).contains(LibraryPermission.EDIT_LIBRARY) }
               whoCanEdit === Set(libOwner)
             }
+            1 === 1
+          }
+        }
+      }
+    }
+    "propagate user permissions into libraries" in {
+      "let pro users create slack integrations (unless prohibited)" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val member = UserFactory.user().saved
+            val rando = UserFactory.user().saved
+            val org = OrganizationFactory.organization().withOwner(owner).withMembers(Seq(member)).withSlackProhibited().saved
+
+            val privateLib = LibraryFactory.library().withOwner(owner).secret().saved
+            val publicLib = LibraryFactory.library().withOwner(owner).published().saved
+            val orgLib = LibraryFactory.library().withOwner(owner).withOrganization(org).orgVisible().saved
+
+            val users = Set(owner.id, member.id, rando.id, None)
+            val whoCanIntegratePrivate = users.filter { x => permissionCommander.getLibraryPermissions(privateLib.id.get, x).contains(LibraryPermission.CREATE_SLACK_INTEGRATION) }
+            whoCanIntegratePrivate === Set(owner.id)
+            val whoCanIntegratePublic = users.filter { x => permissionCommander.getLibraryPermissions(publicLib.id.get, x).contains(LibraryPermission.CREATE_SLACK_INTEGRATION) }
+            whoCanIntegratePublic === Set(owner.id, member.id)
+            val whoCanIntegrateOrg = users.filter { x => permissionCommander.getLibraryPermissions(orgLib.id.get, x).contains(LibraryPermission.CREATE_SLACK_INTEGRATION) }
+            whoCanIntegrateOrg === Set.empty
+
             1 === 1
           }
         }

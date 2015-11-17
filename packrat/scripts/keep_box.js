@@ -520,15 +520,9 @@ k.keepBox = k.keepBox || (function () {
       if (organizations.length === 0) {
         $this.addClass('kifi-keep-box-new-lib-visibility-item-linked');
 
-        if (~experiments.indexOf('create_team') || ~experiments.indexOf('admin')) {
-          title = 'Kifi for teams';
-          message = 'Curious? Click to form a team<br />and create team visible libraries.';
-          $this.addClass('kifi-keep-box-new-lib-visibility-item-link-to-create-team');
-        } else {
-          title = 'Curious?';
-          message = 'Click to get early access<br />to the Kifi for Teams beta';
-          $this.addClass('kifi-keep-box-new-lib-visibility-item-no-orgs');
-        }
+        title = 'Kifi for teams';
+        message = 'Curious? Click to form a team<br />and create team visible libraries.';
+        $this.addClass('kifi-keep-box-new-lib-visibility-item-link-to-create-team');
       } else if ($this.find('[disabled][value="published"]').length === 1) {
         var teamId = $box.find('[name="kifi-location"]:checked').val();
         var team = $box.data('organizations').filter(idIs(teamId)).pop();
@@ -537,17 +531,12 @@ k.keepBox = k.keepBox || (function () {
         title = 'Not applicable';
         message = teamName + ' has disabled creation of<br />publicly visible libraries.';
       } else if ($this.find('[disabled][value="organization"]').length === 1) {
-        if (organizations.length <= 1 && (~experiments.indexOf('create_team') || ~experiments.indexOf('admin'))) {
-          $this
-          .addClass('kifi-keep-box-new-lib-visibility-item-linked')
-          .addClass('kifi-keep-box-new-lib-visibility-item-link-to-create-team');
+        $this
+        .addClass('kifi-keep-box-new-lib-visibility-item-linked')
+        .addClass('kifi-keep-box-new-lib-visibility-item-link-to-create-team');
 
-          title = 'Select or create a team';
-          message = 'Click to form a team and<br />create team visible libraries.';
-        } else {
-          title = 'Not applicable';
-          message = 'Select a team to create<br />a team visible library.';
-        }
+        title = 'Select or create a team';
+        message = 'Click to form a team and<br />create team visible libraries.';
       } else {
         return;
       }

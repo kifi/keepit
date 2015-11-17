@@ -292,7 +292,7 @@ class LibraryMembershipCommanderImpl @Inject() (
   private def notifyOwnerOfNewFollowerOrCollaborator(newFollowerId: Id[User], lib: Library, access: LibraryAccess): Unit = SafeFuture {
     val (follower, lotsOfFollowers) = db.readOnlyReplica { implicit session =>
       val follower = userRepo.get(newFollowerId)
-      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(1)) > 2
+      val lotsOfFollowers = libraryMembershipRepo.countMembersForLibrarySince(lib.id.get, DateTime.now().minusDays(4)) > 2
       (follower, lotsOfFollowers)
     }
     val (category, message) = if (access == LibraryAccess.READ_WRITE) {

@@ -30,14 +30,14 @@ class LocalUserExperimentCommander @Inject() (
 
   def getExperimentsByUser(userId: Id[User]): Set[UserExperimentType] = {
     val staticExperiments = db.readOnlyMaster { implicit session => userExperimentRepo.getUserExperiments(userId) }
-    addDynamicExperiments(userId, staticExperiments)
+    addDynamicExperiments(userId, staticExperiments) + UserExperimentType.CREATE_TEAM // Slap Andrew around with a large trout if this is here for, like, a while.
   }
 
   def addExperimentForUser(userId: Id[User], experiment: UserExperimentType): UserExperiment = {
     db.readWrite(attempts = 3) { implicit session =>
       userExperimentRepo.get(userId, experiment, excludeState = None) match {
         case None => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = experiment))
-        case Some(existing) if existing.isActive == false => userExperimentRepo.save(existing.copy(state = UserExperimentStates.ACTIVE))
+        case Some(existing) if !existing.isActive => userExperimentRepo.save(existing.copy(state = UserExperimentStates.ACTIVE))
         case Some(existing) => existing
       }
 

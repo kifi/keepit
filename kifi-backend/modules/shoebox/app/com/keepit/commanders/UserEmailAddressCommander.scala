@@ -1,8 +1,8 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.classify.NormalizedHostname
-import com.keepit.commanders.emails.{ EmailSenderProvider, EmailConfirmationSender }
+import com.keepit.commanders.emails.EmailConfirmationSender
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
@@ -24,7 +24,6 @@ class PrimaryEmailAddressException(email: UserEmailAddress) extends Exception(s"
 trait UserEmailAddressCommander {
   def sendVerificationEmail(emailAddress: UserEmailAddress): Future[Unit]
   def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit]
-  def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit
   def intern(userId: Id[User], address: EmailAddress, verified: Boolean = false)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)]
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress
   def setAsPrimaryEmail(emailAddress: UserEmailAddress)(implicit session: RWSession): Unit
@@ -59,7 +58,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
 
   def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit] = {
     val userId = emailAddress.userId
-    val domainOwnerIds = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailAddress.address))
+    val domainOwnerIds = NormalizedHostname.fromHostname(emailAddress.address.hostname)
       .map(orgDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
       .diff(userValueRepo.getValue(userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
       .filter(orgId => !orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId))
@@ -75,18 +74,6 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
       Future.successful(())
     }
     Future.successful(())
-  }
-
-  def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
-    val userId = verifiedEmail.userId
-    NormalizedHostname.fromHostname(EmailAddress.getHostname(verifiedEmail.address))
-      .map(domain => orgDomainOwnershipCommander.getOwningOrganizations(domain)).getOrElse(Set.empty)
-      .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
-      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
-      .foreach { orgId =>
-        val addRequest = OrganizationMembershipAddRequest(orgId, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
-        organizationMembershipCommander.addMembershipHelper(addRequest)
-      }
   }
 
   def intern(userId: Id[User], address: EmailAddress, verified: Boolean = false)(implicit session: RWSession): Try[(UserEmailAddress, Boolean)] = {

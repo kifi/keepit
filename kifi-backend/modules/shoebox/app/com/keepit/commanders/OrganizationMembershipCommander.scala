@@ -70,6 +70,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipCommander: LibraryMembershipCommander,
+    orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     basicUserRepo: BasicUserRepo,
     kifiUserTypeahead: KifiUserTypeahead,
     planCommander: PlanManagementCommander,
@@ -262,6 +263,7 @@ class OrganizationMembershipCommanderImpl @Inject() (
       planCommander.registerRemovedUser(request.orgId, request.targetId, membership.role, attribution)
       orgMembershipRepo.deactivate(membership)
     }
+    orgDomainOwnershipCommander.hideOrganizationForUser(request.targetId, request.orgId)
     val orgGeneralLibrary = db.readOnlyReplica { implicit session => libraryRepo.getBySpaceAndKind(LibrarySpace.fromOrganizationId(request.orgId), LibraryKind.SYSTEM_ORG_GENERAL) }
     orgGeneralLibrary.foreach { lib =>
       implicit val context = HeimdalContext.empty // TODO(ryan): find someone to make this more helpful

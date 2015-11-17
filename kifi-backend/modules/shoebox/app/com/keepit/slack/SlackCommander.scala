@@ -39,7 +39,7 @@ case class LibrarySlackInfo(
 trait SlackCommander {
   // Open their own DB sessions, intended to be called directly from controllers
   def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
-  def setupIntegration(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit
+  def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit
   def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
 
@@ -55,6 +55,7 @@ class SlackCommanderImpl @Inject() (
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClient,
+  libToSlackPusher: LibraryToSlackChannelPusher,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackCommander {
 
@@ -83,7 +84,7 @@ class SlackCommanderImpl @Inject() (
     }
   }
 
-  def setupIntegration(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
+  def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
     db.readWrite { implicit s =>
       libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         userId = userId,
@@ -91,9 +92,18 @@ class SlackCommanderImpl @Inject() (
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
         slackChannelId = None,
-        slackChannel = webhook.channelName
+        slackChannelName = webhook.channelName
+      ))
+      channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
+        userId = userId,
+        libraryId = libId,
+        slackUserId = identity.userId,
+        slackTeamId = identity.teamId,
+        slackChannelId = None,
+        slackChannelName = webhook.channelName
       ))
     }
+    libToSlackPusher.pushToLibrary(libId)
   }
 
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {

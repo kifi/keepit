@@ -50,7 +50,7 @@ class AdminOrganizationController @Inject() (
     orgMembershipCandidateCommander: OrganizationMembershipCandidateCommander,
     organizationInviteCommander: OrganizationInviteCommander,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
-    orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
+    orgDomainOwnershipCommander: OrganizationDomainOwnershipCommanderImpl,
     handleCommander: HandleCommander,
     statsCommander: UserStatisticsCommander,
     orgExperimentRepo: OrganizationExperimentRepo,
@@ -411,18 +411,16 @@ class AdminOrganizationController @Inject() (
     val body = request.body
     val domainName = body.get("domainName").flatMap(_.headOption).get
     val orgView = com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId)
-    orgDomainOwnershipCommander.addDomainOwnership(orgId, domainName) match {
-      case Left(failure) =>
-        Redirect(orgView).flashing(
-          "error" -> failure.humanString
-        )
-      case Right(success) =>
+    NormalizedHostname.fromHostname(domainName) match {
+      case Some(hostname) =>
+        orgDomainOwnershipCommander.unsafeAddDomainOwnership(orgId, hostname.value)
         Redirect(orgView)
+      case None => Redirect(orgView).flashing("error" -> "invalid domain format")
     }
   }
 
   def removeDomainOwnership(orgId: Id[Organization], domainHostname: String) = AdminUserAction { implicit request =>
-    orgDomainOwnershipCommander.removeDomainOwnership(orgId, domainHostname)
+    orgDomainOwnershipCommander.unsafeRemoveDomainOwnership(orgId, domainHostname)
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }
 

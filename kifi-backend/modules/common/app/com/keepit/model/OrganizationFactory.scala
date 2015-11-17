@@ -41,6 +41,7 @@ object OrganizationFactory {
     def withWeakMembers() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.InviteMembers -> FeatureSetting.ADMINS))
     // admins can force-edit
     def withStrongAdmins() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ForceEditLibraries -> FeatureSetting.ADMINS))
+    def withSlackProhibited() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.CreateSlackIntegration -> FeatureSetting.DISABLED))
     def secret() = this.copy(nonstandardSettings = nonstandardSettings + (Feature.ViewOrganization -> FeatureSetting.MEMBERS) + (Feature.ViewMembers -> FeatureSetting.MEMBERS))
 
     def withPlan(planId: Long) = this.copy(planOpt = Some(planId))

@@ -18,11 +18,6 @@ case class PublicIdConfiguration(key: String) {
 case class PublicId[T <: ModelWithPublicId[T]](id: String)
 
 object PublicId {
-  implicit def format[T <: ModelWithPublicId[T]]: Format[PublicId[T]] = Format(
-    __.read[String].map(PublicId[T]),
-    new Writes[PublicId[T]] { def writes(o: PublicId[T]) = JsString(o.id) }
-  )
-
   implicit def queryStringBinder[T <: ModelWithPublicId[T]](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[PublicId[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, PublicId[T]]] = {
       stringBinder.bind(key, params) map {
@@ -91,6 +86,12 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
       Failure(new IllegalArgumentException(s"Expected $publicId to start with $publicIdPrefix"))
     }
   }
+
+  implicit val formatPublicId: Format[PublicId[T]] = Format(
+    Reads { j => j.validate[String].filter(_.startsWith(publicIdPrefix)).map(PublicId[T]) },
+    Writes { o => JsString(o.id) }
+  )
+
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {
     PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id)))

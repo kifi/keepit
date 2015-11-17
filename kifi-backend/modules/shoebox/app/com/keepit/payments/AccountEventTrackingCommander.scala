@@ -18,7 +18,7 @@ import com.keepit.notify.model.event.RewardCreditApplied
 import com.keepit.payments.AccountEventAction.RewardCredit
 import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
 import com.keepit.slack.SlackClient
-import com.keepit.slack.models.SlackMessage
+import com.keepit.slack.models.{ SlackChannelName, SlackMessageRequest }
 import play.api.Mode
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -27,7 +27,7 @@ import scala.util.{ Failure, Try }
 @ImplementedBy(classOf[AccountEventTrackingCommanderImpl])
 trait AccountEventTrackingCommander {
   def track(event: AccountEvent)(implicit session: RWSession): AccountEvent
-  def reportToSlack(msg: String, channel: String): Future[Unit] // todo(Léo): *temporary* :)
+  def reportToSlack(msg: String, channel: SlackChannelName): Future[Unit] // todo(Léo): *temporary* :)
 }
 
 @Singleton
@@ -82,12 +82,16 @@ class AccountEventTrackingCommanderImpl @Inject() (
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
   private val slackChannelUrl = "https://hooks.slack.com/services/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"
   private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
-  def reportToSlack(msg: String, channel: String): Future[Unit] = {
+  def reportToSlack(msg: String, channel: SlackChannelName): Future[Unit] = {
     reportingLock.withLockFuture {
-      val fullMsg = SlackMessage(
+      val fullMsg = SlackMessageRequest(
         text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
         username = "Activity",
-        channel = Some(channel)
+        iconUrl = SlackMessageRequest.kifiIconUrl,
+        channel = Some(channel),
+        attachments = Seq.empty,
+        unfurlLinks = false,
+        unfurlMedia = false
       )
       slackClient.sendToSlack(slackChannelUrl, fullMsg).imap(_ => ())
     }
@@ -117,11 +121,11 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def reportToSlack(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[String]] = {
+  private def reportToSlack(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[SlackChannelName]] = {
     checkingParameters(event) {
       lazy val msg = {
         val info = activityCommander.buildSimpleEventInfo(event)
-        val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${SlackMessage.escapeSegment(org.name)}>"
+        val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${SlackMessageRequest.escapeSegment(org.name)}>"
         s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
       }
       Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
@@ -130,12 +134,12 @@ class AccountEventTrackingCommanderImpl @Inject() (
     }
   }
 
-  private def toSlackChannels(eventType: AccountEventKind): Seq[String] = {
+  private def toSlackChannels(eventType: AccountEventKind): Seq[SlackChannelName] = {
     import AccountEventKind._
     Seq(
       billing.contains(eventType) -> "#billing-alerts",
       orgGrowth.contains(eventType) -> "#org-members"
-    ).collect { case (true, ch) => ch }
+    ).collect { case (true, ch) => SlackChannelName(ch) }
   }
 
   private def notifyOfError(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Boolean] = {

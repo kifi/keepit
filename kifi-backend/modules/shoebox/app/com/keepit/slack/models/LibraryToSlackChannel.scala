@@ -25,7 +25,7 @@ case class LibraryToSlackChannel(
     status: SlackIntegrationStatus = SlackIntegrationStatus.On,
     lastProcessedAt: Option[DateTime] = None,
     lastProcessedKeep: Option[Id[KeepToLibrary]] = None,
-    startedProcessingAt: Option[DateTime] = None) extends ModelWithState[LibraryToSlackChannel] with ModelWithPublicId[LibraryToSlackChannel] with SlackIntegration {
+    lastProcessingAt: Option[DateTime] = None) extends ModelWithState[LibraryToSlackChannel] with ModelWithPublicId[LibraryToSlackChannel] with SlackIntegration {
   def withId(id: Id[LibraryToSlackChannel]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == LibraryToSlackChannelStates.ACTIVE
@@ -33,7 +33,7 @@ case class LibraryToSlackChannel(
   def sanitizeForDelete = this.copy(state = LibraryToSlackChannelStates.INACTIVE, status = SlackIntegrationStatus.Off)
   def withLastProcessedAt(time: DateTime) = this.copy(lastProcessedAt = Some(time))
   def withLastProcessedKeep(ktlId: Option[Id[KeepToLibrary]]) = this.copy(lastProcessedKeep = ktlId)
-  def finishedProcessing: LibraryToSlackChannel = this.copy(startedProcessingAt = None)
+  def finishedProcessing: LibraryToSlackChannel = this.copy(lastProcessedAt = lastProcessingAt, lastProcessingAt = None)
 }
 
 object LibraryToSlackChannelStates extends States[LibraryToSlackChannel]
@@ -46,7 +46,7 @@ object LibraryToSlackChannel extends ModelWithPublicIdCompanion[LibraryToSlackCh
 trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
   def getActiveByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Set[LibraryToSlackChannel]
   def getActiveByOwnerAndLibrary(ownerId: Id[User], libraryId: Id[Library])(implicit session: RSession): Set[LibraryToSlackChannel]
-  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelId: Option[SlackChannelId], libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel]
+  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel]
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): (LibraryToSlackChannel, Boolean)
 
   def deactivate(model: LibraryToSlackChannel)(implicit session: RWSession): Unit
@@ -68,7 +68,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   implicit val slackUserIdColumnType = SlackDbColumnTypes.userId(db)
   implicit val slackTeamIdColumnType = SlackDbColumnTypes.teamId(db)
   implicit val slackChannelIdColumnType = SlackDbColumnTypes.channelId(db)
-  implicit val slackChannelColumnType = SlackDbColumnTypes.channel(db)
+  implicit val slackChannelColumnType = SlackDbColumnTypes.channelName(db)
   implicit val statusColumnType = SlackIntegrationStatus.columnType(db)
 
   private def ltsFromDbRow(
@@ -118,7 +118,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     lts.status,
     lts.lastProcessedAt,
     lts.lastProcessedKeep,
-    lts.startedProcessingAt
+    lts.lastProcessingAt
   ))
 
   type RepoImpl = LibraryToSlackChannelTable
@@ -133,10 +133,10 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     def status = column[SlackIntegrationStatus]("status", O.NotNull)
     def lastProcessedAt = column[Option[DateTime]]("last_processed_at", O.Nullable)
     def lastProcessedKeep = column[Option[Id[KeepToLibrary]]]("last_processed_ktl", O.Nullable)
-    def startedProcessingAt = column[Option[DateTime]]("started_processing_at", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, lastProcessedAt, lastProcessedKeep, startedProcessingAt) <> ((ltsFromDbRow _).tupled, ltsToDbRow _)
+    def lastProcessingAt = column[Option[DateTime]]("last_processing_at", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, lastProcessedAt, lastProcessedKeep, lastProcessingAt) <> ((ltsFromDbRow _).tupled, ltsToDbRow _)
 
-    def availableForProcessing(overrideDate: DateTime) = startedProcessingAt.isEmpty || startedProcessingAt < overrideDate
+    def availableForProcessing(overrideDate: DateTime) = lastProcessingAt.isEmpty || lastProcessingAt < overrideDate
   }
 
   def table(tag: Tag) = new LibraryToSlackChannelTable(tag)
@@ -155,25 +155,25 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     activeRows.filter(row => row.ownerId === ownerId && row.libraryId === libraryId).list.toSet
   }
 
-  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelId: Option[SlackChannelId], libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel] = {
-    rows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelId === slackChannelId.orNull && row.libraryId === libraryId && row.state =!= excludeState.orNull).firstOption
+  def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel] = {
+    rows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelName === slackChannelName && row.libraryId === libraryId && row.state =!= excludeState.orNull).firstOption
   }
 
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): (LibraryToSlackChannel, Boolean) = {
-    getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelId, request.libraryId, excludeState = None) match {
+    getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelName, request.libraryId, excludeState = None) match {
       case Some(integration) if integration.isActive =>
         val isIntegrationOwner = integration.ownerId == request.userId && integration.slackUserId == request.slackUserId
-        val updated = integration.copy(slackChannelName = request.slackChannel)
+        val updated = integration.copy(slackChannelName = request.slackChannelName)
         val saved = if (updated == integration) integration else save(updated)
         (saved, isIntegrationOwner)
       case inactiveIntegrationOpt =>
         val newIntegration = LibraryToSlackChannel(
-          id = inactiveIntegrationOpt.flatMap(_.id),
+          id = inactiveIntegrationOpt.map(_.id.get),
           ownerId = request.userId,
           slackUserId = request.slackUserId,
           slackTeamId = request.slackTeamId,
           slackChannelId = request.slackChannelId,
-          slackChannelName = request.slackChannel,
+          slackChannelName = request.slackChannelName,
           libraryId = request.libraryId
         )
         (save(newIntegration), true)
@@ -191,7 +191,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   }
   def markAsProcessing(id: Id[LibraryToSlackChannel])(implicit session: RWSession): Option[LibraryToSlackChannel] = {
     val now = clock.now
-    if (workingRows.filter(_.id === id).map(r => (r.updatedAt, r.startedProcessingAt)).update((now, Some(now))) > 0) {
+    if (workingRows.filter(_.id === id).map(r => (r.updatedAt, r.lastProcessingAt)).update((now, Some(now))) > 0) {
       Some(workingRows.filter(_.id === id).first)
     } else None
   }

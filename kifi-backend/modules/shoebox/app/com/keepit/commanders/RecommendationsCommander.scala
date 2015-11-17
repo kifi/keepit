@@ -68,14 +68,8 @@ class RecommendationsCommander @Inject() (
       val json = systemValueRepo.getValue(MarketingSuggestedLibrarySystemValue.systemValueName).get
       Json.fromJson[Seq[MarketingSuggestedLibrarySystemValue]](Json.parse(json)).get.map(lib => lib.id)
     }
-
-    val curatedLibraries = {
-      val libraryById = db.readOnlyReplica { implicit session => libRepo.getLibraries(curatedLibIds.toSet) }
-      curatedLibIds.map(libraryById)
-    }.filter { lib =>
-      lib.visibility == LibraryVisibility.PUBLISHED
-    }
-    curatedLibraries
+    val libraryById = db.readOnlyReplica { implicit session => libRepo.getActiveByIds(curatedLibIds.toSet) }
+    curatedLibIds.flatMap(libraryById.get).filter(_.visibility == LibraryVisibility.PUBLISHED)
   }
 
   def curatedPublicLibraryRecos(userId: Id[User]): Future[Seq[(Id[Library], FullLibRecoInfo)]] = {

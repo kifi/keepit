@@ -11,7 +11,6 @@
 <div class="kf-lib-content">
   <div class="kf-lib-content-1" ui-view></div>
   <section class="kf-lib-content-2">
-    <input class="kf-lib-public-share-link" title="share link" ng-if="library.visibility === 'published'" onclick="this.select();" readonly="readonly" value="{{ 'http://www.kifi.com' + library.path }}" />
     <a class="kf-lib-tweet" ng-focus="preloadTwitter()" ng-mouseenter="preloadTwitter()" ng-click="shareTwitter($event)" href="https://twitter.com/intent/tweet" target="_blank" ng-if="library.visibility === 'published'">
       <span class="kf-lib-tweet-icon svg-twitter-white"></span>
     </a>
@@ -21,6 +20,23 @@
     <button class="kf-lib-rss" ng-click="showFeedModal()" ng-if="library.visibility === 'published'">
       <span class="kf-lib-rss-icon svg-rss-feed"></span>
     </button>
+
+    <div class="kf-lib-slack"   ng-if="canCreateSlackIntegration">
+      <div kf-cta-hover delegate="slackDelegate" ng-if="!isMobile && !$root.userLoggedIn"></div>
+      <div ng-click="processSlackRequest()" class="kf-cta-hover-element kf-lib-slack-btn-bg">
+        <img  ng-src="{{slackIntegrations.length == 0 ? '/img/add-to-slack.png' : '/img/edit-slack-sync.png'}}"
+              class="kf-lib-slack-btn">
+      </div>
+
+      <span class="kf-lib-slack-integration-text" ng-if="slackIntegrations.length > 0">
+        <ng-pluralize count="slackIntegrations.length"
+                      when="{'0': '',
+                     'one': '1 Slack Integration',
+                     'other': '{} Slack Integrations'}">
+        </ng-pluralize>
+      </span>
+    </div>
+
     <div kf-suggested-searches library="library" ng-if="library.suggestedSearches.length"></div>
     <div kf-related-libraries related-libraries="::relatedLibraries" library-id="{{::library.id}}" ng-if="::relatedLibraries"></div>
   </section>

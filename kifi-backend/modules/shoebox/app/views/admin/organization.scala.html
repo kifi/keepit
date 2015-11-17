@@ -99,8 +99,8 @@ orgStats: OrganizationStatistics
     </tr>
     @for(domain <- orgStats.domains) {
     <tr>
-        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.id.get)">@{domain.hostname.value}</a><td>
-        <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.hostname.value)"
+        <td><a href="@com.keepit.controllers.admin.routes.UrlController.getDomain(domain.value)">@{domain.value}</a><td>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminOrganizationController.removeDomainOwnership(orgStats.orgId, domain.value)"
                class="btn btn-small">Remove </a></td>
     </tr>
     }

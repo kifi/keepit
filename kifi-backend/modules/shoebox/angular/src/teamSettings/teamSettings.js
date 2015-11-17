@@ -121,7 +121,7 @@ angular.module('kifi')
               ' a particular library to a Slack channel.'
             ),
             fieldKey: 'create_slack_integration',
-            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER),
+            selectOptions: getOptions(ORG_SETTING_VALUE.DISABLED, ORG_SETTING_VALUE.ADMIN, ORG_SETTING_VALUE.MEMBER, ORG_SETTING_VALUE.ANYONE),
             trackingValue: 'slack_integration_dropdown'
           },
           {

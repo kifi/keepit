@@ -6,6 +6,7 @@ import com.keepit.slack.models._
 import play.api.Mode.Mode
 import play.api.http.Status
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Failure
@@ -16,11 +17,39 @@ object KifiSlackApp {
   val KIFI_SLACK_REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
 }
 
+object SlackAPI {
+  import com.keepit.common.routes.{ GET, ServiceRoute, Param, Method }
+
+  case class Route(method: Method, path: String, params: Param*)
+  implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
+
+  object SlackParams {
+    val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
+    val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
+    val REDIRECT_URI = Param("redirect_uri", KifiSlackApp.KIFI_SLACK_REDIRECT_URI)
+    implicit def fromCode(code: SlackAuthorizationCode) = Param("code", code.code)
+    implicit def formState(state: SlackState) = Param("state", state.state)
+    implicit def fromScope(scopes: Set[SlackAuthScope]) = Param("scope", scopes.map(_.value).mkString(","))
+    implicit def fromToken(token: SlackAccessToken) = Param("token", token.token)
+    implicit def fromSearchParam(searchParam: SlackSearchRequest.Param) = Param(searchParam.name, searchParam.value)
+  }
+
+  import SlackParams._
+
+  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state)
+  def OAuthAccess(code: SlackAuthorizationCode) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, code)
+  def Identify(token: SlackAccessToken) = Route(GET, "https://slack.com/api/auth.test", token)
+  def SearchMessages(token: SlackAccessToken, request: SlackSearchRequest) = {
+    val params = Seq[Param](token, request.query) ++ request.optional.map(fromSearchParam)
+    Route(GET, "https://slack.com/api/search.messages", params: _*)
+  }
+}
+
 trait SlackClient {
-  def sendToSlack(url: String, msg: SlackMessage): Future[Unit]
+  def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit]
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
-  def searchMessages(token: SlackAccessToken, query: SlackSearchQuery, optional: SlackSearchParams*): Future[SlackSearchResponse]
+  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
 }
 
 class SlackClientImpl(
@@ -29,7 +58,7 @@ class SlackClientImpl(
   implicit val ec: ExecutionContext)
     extends SlackClient with Logging {
 
-  def sendToSlack(url: String, msg: SlackMessage): Future[Unit] = {
+  def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit] = {
     log.info(s"About to post $msg to the Slack webhook at $url")
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
@@ -59,48 +88,18 @@ class SlackClientImpl(
     slackCall[SlackAuthorizationResponse](SlackAPI.OAuthAccess(code))
   }
 
-  def searchMessages(token: SlackAccessToken, query: SlackSearchQuery, optional: SlackSearchParams*): Future[SlackSearchResponse] = {
-    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, query, optional: _*))
+  def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
+    slackCall[SlackSearchResponse](SlackAPI.SearchMessages(token, request))
   }
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
     slackCall[SlackIdentifyResponse](SlackAPI.Identify(token))
   }
-  def channelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[String]] = {
-    searchMessages(token, SlackSearchQuery.in(channelName), SlackSearchParams.PageSize(1)).map { response =>
-      for {
-        matches <- (response.messages \ "matches").asOpt[Seq[JsObject]]
-        firstMsg <- matches.headOption
-        channelId <- (firstMsg \ "channel" \ "id").asOpt[String]
-      } yield channelId
+
+  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
+    val searchRequest = SlackSearchRequest(SlackSearchRequest.Query.in(channelName), SlackSearchRequest.PageSize(1))
+    searchMessages(token, searchRequest).map { response =>
+      response.messages.matches.map(_.channel).collectFirst { case SlackChannel(id, `channelName`) => id }
     }
-  }
-}
-
-object SlackAPI {
-  import com.keepit.common.routes.{ GET, ServiceRoute, Param, Method }
-
-  case class Route(method: Method, path: String, params: Param*)
-  implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
-
-  object SlackParams {
-    val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
-    val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
-    val REDIRECT_URI = Param("redirect_uri", KifiSlackApp.KIFI_SLACK_REDIRECT_URI)
-    implicit def fromCode(code: SlackAuthorizationCode): Param = Param("code", code.code)
-    implicit def formState(state: SlackState): Param = Param("state", state.state)
-    implicit def fromScope(scopes: Set[SlackAuthScope]): Param = Param("scope", scopes.map(_.value).mkString(","))
-    implicit def fromToken(token: SlackAccessToken): Param = Param("token", token.token)
-    implicit def fromSearchParam(searchParam: SlackSearchParams): Param = Param(searchParam.name, searchParam.value)
-  }
-
-  import SlackParams._
-
-  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state)
-  def OAuthAccess(code: SlackAuthorizationCode) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, code)
-  def Identify(token: SlackAccessToken) = Route(GET, "https://slack.com/api/auth.test", token)
-  def SearchMessages(token: SlackAccessToken, query: SlackSearchQuery, optional: SlackSearchParams*) = {
-    val params = Seq[Param](token, query) ++ optional.map(fromSearchParam)
-    Route(GET, "https://slack.com/api/search.messages", params: _*)
   }
 }

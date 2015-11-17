@@ -300,15 +300,32 @@ function shouldConvertValueToSnakeCase(field, value) {
       isCamelCase(value);
 }
 
+function isPropertyToKeep(key, value) {
+  if (_.contains(defaultUserPropertyKeys, key)) {
+    return false;
+  }
+  if (isDeletedProperty(key, value)) {
+    return false;
+  }
+  if (_.isNull(value) || _.isUndefined(value)) {
+    return false;
+  }
+  if (_.isArray(value)) {
+    unsupportedPropertyKeys[key] = value;
+    return false;
+  }
+
+  return true;
+}
+
+var propertiesDropped = {};
+
 function getUserAndEventProperties(mixpanelEvent) {
   var userProperties = {}, eventProperties = {};
 
   _.each(mixpanelEvent.properties, function(value, key) {
-    if (_.contains(defaultUserPropertyKeys, key)) return;
-    if (isDeletedProperty(key, value)) return;
-    if (_.isEmpty(value)) return;
-    if (_.isArray(value)) {
-      unsupportedPropertyKeys[key] = value;
+    if (!isPropertyToKeep(key, value)) {
+      propertiesDropped[key] = true;
       return;
     }
 
@@ -317,6 +334,8 @@ function getUserAndEventProperties(mixpanelEvent) {
 
     if (shouldConvertValueToSnakeCase(newKey, value)) {
       propertiesObj[newKey] = _.snakeCase(value);
+    } else {
+      propertiesObj[newKey] = value;
     }
   });
 
@@ -499,6 +518,8 @@ function printFailedEvents() {
       logger.info(arr[1]);
     });
   }
+
+  logger.info('************ properties dropped:', _.keys(propertiesDropped).join(', '));
 }
 
 process.on('SIGINT', function() {
