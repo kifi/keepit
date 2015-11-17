@@ -11,8 +11,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.EmailAddress._
 import com.keepit.model._
 import play.api.libs.json._
+import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipCommanderImpl])
@@ -97,20 +97,21 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
       }
     }
 
-    //    db.readWriteAsync { implicit session =>
-    //      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
-    //      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
-    //    }
+    db.readWriteAsync { implicit session =>
+      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
+      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
+    }
 
     ownership
   }
 
   private def sendVerificationEmailsToAllPotentialMembers(ownership: OrganizationDomainOwnership)(implicit session: RWSession): Unit = {
-    val orgMembers = orgMembershipRepo.getAllByOrgId(ownership.organizationId)
+    lazy val orgMembers = orgMembershipRepo.getAllByOrgId(ownership.organizationId)
     val usersToEmail = userEmailAddressRepo.getByDomain(ownership.normalizedHostname)
-      .filter(userEmail => !orgMembers.exists(_.userId == userEmail.userId))
-      .filter(userEmail => !userValueRepo.getValue(userEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(ownership.organizationId))
-      .filter(userEmail => !userEmail.address.address.contains("+test@kifi.com"))
+      .filter { userEmail =>
+        !userEmail.address.address.contains("+test@kifi.com") && userEmail.lastVerificationSent.forall(lastSent => lastSent.plusDays(1).isBefore(currentDateTime)) &&
+          !orgMembers.exists(_.userId == userEmail.userId) && !userValueRepo.getValue(userEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(ownership.organizationId)
+      }
     usersToEmail.foreach(userEmailAddressCommander.sendVerificationEmailHelper)
   }
 
