@@ -295,7 +295,7 @@ class UserCommanderImpl @Inject() (
 
       val emailHostnames = emails.flatMap(email => NormalizedHostname.fromHostname(email.address.hostname))
       val potentialOrgsToHide = userValueRepo.getValue(user.id.get, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]]
-      val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values.flatten
+      val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values.flatten.distinctBy(_.organizationId)
         .collect {
           case ownership if !orgs.contains(ownership.organizationId) && !pendingOrgs.contains(ownership.organizationId) &&
             !potentialOrgsToHide.contains(ownership.organizationId) && canVerifyToJoin(ownership.organizationId) =>
