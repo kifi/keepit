@@ -46,12 +46,12 @@ angular.module('kifi')
 
         $scope.getClaimableEmails = function (emails) {
           return emails.filter(function (email) {
-            return $scope.emailCanBeClaimed(email.address);
+            return $scope.emailCanBeClaimed(email);
           });
         };
 
         $scope.emailCanBeClaimed = function (email) {
-          return !email.isFreeEmail && ($scope.emailDomains || []).indexOf(getEmailDomain(email)) === -1;
+          return !email.isFreeMail && ($scope.emailDomains || []).indexOf(getEmailDomain(email.address)) === -1;
         };
 
         $scope.resendVerificationEmail = function (email) {
