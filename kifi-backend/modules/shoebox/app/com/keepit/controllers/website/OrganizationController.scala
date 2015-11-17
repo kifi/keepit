@@ -5,10 +5,10 @@ import com.keepit.commanders._
 import com.keepit.common.controller._
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.store.S3ImageConfig
-import com.keepit.heimdal.{ HeimdalContextBuilder, HeimdalContextBuilderFactory }
+import com.keepit.heimdal.HeimdalContextBuilderFactory
 import com.keepit.model._
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json._

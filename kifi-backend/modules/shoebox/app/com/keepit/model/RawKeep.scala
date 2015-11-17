@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
+import com.keepit.slack.models.SlackMessage
 import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
@@ -34,6 +35,7 @@ object RawKeep extends Logging {
         val attrOpt = keep.originalJson.flatMap(js => TwitterAttribution.fromRawTweetJson(js))
         if (attrOpt.isEmpty) log.warn(s"empty KeepSourceAttribtuion extracted. rawKeep id: ${keep.id.get}")
         attrOpt
+      case KeepSource.slack => keep.originalJson.map(value => SlackAttribution(value.as[SlackMessage]))
       case _ => None
     }
   }

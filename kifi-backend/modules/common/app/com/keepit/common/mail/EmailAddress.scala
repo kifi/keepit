@@ -14,6 +14,7 @@ case class EmailAddress(address: String) {
   override def toString = address
   def equalsIgnoreCase(other: EmailAddress): Boolean = compareToIgnoreCase(other) == 0
   def compareToIgnoreCase(other: EmailAddress): Int = address.compareToIgnoreCase(other.address)
+  def hostname: String = this.address.drop(this.address.lastIndexOf('@') + 1)
 }
 
 object EmailAddress {
@@ -53,8 +54,6 @@ object EmailAddress {
     val (localAt, host) = address.trim.splitAt(address.lastIndexOf('@') + 1)
     localAt + host.toLowerCase
   }
-
-  def getHostname(email: EmailAddress): String = email.address.drop(email.address.lastIndexOf('@') + 1)
 
   def validate(address: String): Try[EmailAddress] = {
     val trimmed = address.trim

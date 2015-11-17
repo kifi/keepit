@@ -55,7 +55,7 @@
                         <td>@orgStats.numKeeps</td>
                         <td>@orgStats.internalMemberChatStats</td>
                         <td>@orgStats.allMemberChatStats</td>
-                        <td>@orgStats.domains.map(_.hostname.value).mkString(", ")</td>
+                        <td>@orgStats.domains.map(_.value).mkString(", ")</td>
                         <td>@adminHelper.dateTimeDisplay(orgStats.org.createdAt)</td>
                     </tr>
                 }

@@ -22,7 +22,7 @@ object UrlClassifier {
 }
 
 class UrlClassifier extends Logging {
-  def socialActivityUrl(url: String): Boolean = {
+  def isSocialActivity(url: String): Boolean = {
     val found = UrlClassifier.SocialActivityUrls.findFirstIn(url)
     found foreach { surl =>
       log.info(s"url [$url] is a social activity matching: $url")

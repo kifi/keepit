@@ -55,6 +55,7 @@ class SlackCommanderImpl @Inject() (
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClient,
+  libToSlackPusher: LibraryToSlackChannelPusher,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackCommander {
 
@@ -91,7 +92,7 @@ class SlackCommanderImpl @Inject() (
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
         slackChannelId = None,
-        slackChannel = webhook.channelName
+        slackChannelName = webhook.channelName
       ))
       channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         userId = userId,
@@ -99,9 +100,10 @@ class SlackCommanderImpl @Inject() (
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
         slackChannelId = None,
-        slackChannel = webhook.channelName
+        slackChannelName = webhook.channelName
       ))
     }
+    libToSlackPusher.pushToLibrary(libId)
   }
 
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {

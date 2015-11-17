@@ -3,7 +3,7 @@ package com.keepit.commanders
 import akka.actor.Scheduler
 import com.google.inject.{ ImplementedBy, Singleton, Provider, Inject }
 import com.keepit.abook.ABookServiceClient
-import com.keepit.classify.NormalizedHostname
+import com.keepit.classify.{ DomainRepo, NormalizedHostname }
 import com.keepit.commanders.HandleCommander.{ UnavailableHandleException, InvalidHandleException }
 import com.keepit.commanders.emails.{ ContactJoinedEmailSender, WelcomeEmailSender }
 import com.keepit.common.akka.SafeFuture
@@ -46,7 +46,7 @@ object BasicSocialUser {
     BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
 }
 
-case class EmailInfo(address: EmailAddress, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean)
+case class EmailInfo(address: EmailAddress, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean, isFreeMail: Boolean)
 object EmailInfo {
   implicit val format = new Format[EmailInfo] {
     def reads(json: JsValue): JsResult[EmailInfo] = {
@@ -54,7 +54,8 @@ object EmailInfo {
         (json \ "address").as[EmailAddress],
         (json \ "isPrimary").asOpt[Boolean].getOrElse(false),
         (json \ "isVerified").asOpt[Boolean].getOrElse(false),
-        (json \ "isPendingPrimary").asOpt[Boolean].getOrElse(false)
+        (json \ "isPendingPrimary").asOpt[Boolean].getOrElse(false),
+        (json \ "isFreeMail").asOpt[Boolean].getOrElse(false)
       )).toOption match {
         case Some(ei) => JsSuccess(ei)
         case None => JsError()
@@ -62,7 +63,7 @@ object EmailInfo {
     }
 
     def writes(ei: EmailInfo): JsValue = {
-      Json.obj("address" -> ei.address, "isPrimary" -> ei.isPrimary, "isVerified" -> ei.isVerified, "isPendingPrimary" -> ei.isPendingPrimary)
+      Json.obj("address" -> ei.address, "isPrimary" -> ei.isPrimary, "isVerified" -> ei.isVerified, "isPendingPrimary" -> ei.isPendingPrimary, "canBeClaimed" -> ei.isFreeMail)
     }
   }
 }
@@ -156,6 +157,7 @@ class UserCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    domainRepo: DomainRepo,
     organizationInfoCommander: OrganizationInfoCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
     organizationInviteCommander: OrganizationInviteCommander,
@@ -289,7 +291,7 @@ class UserCommanderImpl @Inject() (
       val pendingOrgs = organizationInviteRepo.getByInviteeIdAndDecision(user.id.get, InvitationDecision.PENDING).map(_.organizationId)
       val pendingOrgViews = pendingOrgs.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
 
-      val emailHostnames = emails.flatMap(email => NormalizedHostname.fromHostname(EmailAddress.getHostname(email.address)))
+      val emailHostnames = emails.flatMap(email => NormalizedHostname.fromHostname(email.address.hostname))
       val potentialOrgsToHide = userValueRepo.getValue(user.id.get, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]]
       val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values.flatten
         .collect {
@@ -301,16 +303,29 @@ class UserCommanderImpl @Inject() (
       (basicUser, biography, emails, pendingPrimary, notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews, potentialOrgViews.toSeq)
     }
 
-    val emailInfos = emails.sortBy { e => (e.primary, !e.verified, e.id.get.id) }.reverse.map {
-      email =>
-        EmailInfo(
-          address = email.address,
-          isVerified = email.verified,
-          isPrimary = email.primary,
-          isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(email.address))
-        )
+    val emailInfos = db.readOnlyReplica { implicit session =>
+      emails.sortBy { e => (e.primary, !e.verified, e.id.get.id) }.reverse.map {
+        email =>
+          EmailInfo(
+            address = email.address,
+            isVerified = email.verified,
+            isPrimary = email.primary,
+            isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(email.address)),
+            isFreeMail = isFreeMail(email)
+          )
+      }
     }
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs)
+  }
+
+  private def isFreeMail(email: UserEmailAddress)(implicit session: RSession): Boolean = {
+    val hostnameOpt = NormalizedHostname.fromHostname(email.address.hostname)
+    hostnameOpt match {
+      case None =>
+        airbrake.notify(s"email ${email.address} owned by user ${email.userId} does not have a valid hostname")
+        false
+      case Some(hostname) => domainRepo.get(hostname).exists(_.isEmailProvider)
+    }
   }
 
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo] = {
@@ -390,7 +405,7 @@ class UserCommanderImpl @Inject() (
           emailRecord <- emailRepo.getByAddressAndUser(userId, emailAddress)
           code <- emailRecord.verificationCode orElse emailRepo.save(emailRecord.withVerificationCode(clock.now())).verificationCode
         } yield {
-          val domainOwnerIds = NormalizedHostname.fromHostname(EmailAddress.getHostname(emailRecord.address))
+          val domainOwnerIds = NormalizedHostname.fromHostname(emailRecord.address.hostname)
             .map(organizationDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
             .diff(userValueRepo.getValue(emailRecord.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
             .filter(orgId => !organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailRecord.userId))

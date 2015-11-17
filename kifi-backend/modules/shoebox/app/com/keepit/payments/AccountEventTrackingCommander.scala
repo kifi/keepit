@@ -18,7 +18,7 @@ import com.keepit.notify.model.event.RewardCreditApplied
 import com.keepit.payments.AccountEventAction.RewardCredit
 import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
 import com.keepit.slack.SlackClient
-import com.keepit.slack.models.{ SlackChannelName, OutgoingSlackMessage, OutgoingSlackMessage$ }
+import com.keepit.slack.models.{ SlackChannelName, SlackMessageRequest }
 import play.api.Mode
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -84,14 +84,14 @@ class AccountEventTrackingCommanderImpl @Inject() (
   private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
   def reportToSlack(msg: String, channel: SlackChannelName): Future[Unit] = {
     reportingLock.withLockFuture {
-      val fullMsg = OutgoingSlackMessage(
+      val fullMsg = SlackMessageRequest(
         text = if (mode == Mode.Prod) msg else "[TEST]" + msg,
         username = "Activity",
-        iconUrl = OutgoingSlackMessage.kifiIconUrl,
+        iconUrl = SlackMessageRequest.kifiIconUrl,
         channel = Some(channel),
         attachments = Seq.empty,
-        unfurlLinks = true,
-        unfurlMedia = true
+        unfurlLinks = false,
+        unfurlMedia = false
       )
       slackClient.sendToSlack(slackChannelUrl, fullMsg).imap(_ => ())
     }
@@ -125,7 +125,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     checkingParameters(event) {
       lazy val msg = {
         val info = activityCommander.buildSimpleEventInfo(event)
-        val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${OutgoingSlackMessage.escapeSegment(org.name)}>"
+        val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${SlackMessageRequest.escapeSegment(org.name)}>"
         s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
       }
       Future.sequence(toSlackChannels(event.action.eventType).map { channel =>

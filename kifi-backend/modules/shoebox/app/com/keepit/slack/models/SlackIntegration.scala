@@ -14,6 +14,7 @@ abstract class SlackIntegrationStatus(val status: String)
 object SlackIntegrationStatus extends Enumerator[SlackIntegrationStatus] {
   case object On extends SlackIntegrationStatus("on")
   case object Off extends SlackIntegrationStatus("off")
+  case object Broken extends SlackIntegrationStatus("broken")
   def all = _all
   def get(str: String) = all.find(_.status == str)
 
@@ -44,7 +45,7 @@ case class SlackIntegrationCreateRequest(
   slackUserId: SlackUserId,
   slackTeamId: SlackTeamId,
   slackChannelId: Option[SlackChannelId],
-  slackChannel: SlackChannelName,
+  slackChannelName: SlackChannelName,
   libraryId: Id[Library]) extends SlackIntegrationRequest
 
 case class SlackIntegrationModification(

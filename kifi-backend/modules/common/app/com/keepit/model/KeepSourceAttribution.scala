@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.time._
+import com.keepit.slack.models.SlackMessage
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -34,12 +35,14 @@ object KeepSourceAttribution {
   private def toJsValue(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
     attr match {
       case x: TwitterAttribution => (Twitter, TwitterAttribution.format.writes(x))
+      case s: SlackAttribution => (Slack, SlackAttribution.format.writes(s))
     }
   }
 
   private def fromJsValue(attrType: KeepAttributionType, attrJson: JsValue): SourceAttribution = {
     attrType match {
       case Twitter => TwitterAttribution.format.reads(attrJson).get
+      case Slack => SlackAttribution.format.reads(attrJson).get
       case x => throw new UnknownAttributionTypeException(x.name)
     }
   }
@@ -64,6 +67,7 @@ case class KeepAttributionType(name: String)
 
 object KeepAttributionType {
   val Twitter = KeepAttributionType("twitter")
+  val Slack = KeepAttributionType("slack")
 }
 
 sealed trait SourceAttribution
@@ -84,4 +88,9 @@ object TwitterAttribution {
       screenName <- screenNameOpt
     } yield TwitterAttribution(idString, screenName)
   }
+}
+
+case class SlackAttribution(message: SlackMessage) extends SourceAttribution
+object SlackAttribution {
+  implicit val format = Json.format[SlackAttribution]
 }

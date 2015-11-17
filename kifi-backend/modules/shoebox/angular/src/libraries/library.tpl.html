@@ -21,10 +21,13 @@
       <span class="kf-lib-rss-icon svg-rss-feed"></span>
     </button>
 
-    <div class="kf-lib-slack"  ng-if="canCreateSlackIntegration && isAdminExperiment">
+    <div class="kf-lib-slack"   ng-if="canCreateSlackIntegration">
       <div kf-cta-hover delegate="slackDelegate" ng-if="!isMobile && !$root.userLoggedIn"></div>
-      <img ng-click="processSlackRequest()" ng-src="{{slackIntegrations.length == 0 ? '/img/add-to-slack.png' : '/img/edit-slack-sync.png'}}"
-           class="kf-cta-hover-element kf-lib-slack-btn">
+      <div ng-click="processSlackRequest()" class="kf-cta-hover-element kf-lib-slack-btn-bg">
+        <img  ng-src="{{slackIntegrations.length == 0 ? '/img/add-to-slack.png' : '/img/edit-slack-sync.png'}}"
+              class="kf-lib-slack-btn">
+      </div>
+
       <span class="kf-lib-slack-integration-text" ng-if="slackIntegrations.length > 0">
         <ng-pluralize count="slackIntegrations.length"
                       when="{'0': '',

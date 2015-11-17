@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicLong
 import com.keepit.common.db.Id
 import com.keepit.slack.models._
 import org.apache.commons.lang3.RandomStringUtils
+import org.joda.time.DateTime
 
 // Random AlphaNumeric
 object ran { def apply(n: Int) = RandomStringUtils.randomAlphanumeric(n) }
@@ -81,7 +82,10 @@ object SlackChannelToLibraryFactory {
     def withMembership(stm: SlackTeamMembership) = this.copy(stl = stl.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withLibrary(lib: Library) = this.copy(stl = stl.copy(libraryId = lib.id.get))
     def withChannel(cn: String) = this.copy(stl = stl.copy(slackChannelName = SlackChannelName(cn)))
+    def withNextIngestionAt(time: DateTime) = this.copy(stl = stl.copy(nextIngestionAt = Some(time)))
+    def on() = this.copy(stl = stl.withStatus(SlackIntegrationStatus.On))
   }
+
   def stls(count: Int) = List.fill(count)(stl())
 }
 

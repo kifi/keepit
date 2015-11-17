@@ -315,7 +315,7 @@ class ShoeboxServiceClientImpl @Inject() (
     val payload = Json.toJson(userIds)
     call(Shoebox.internal.getEmailAddressesForUsers(), payload, callTimeouts = extraLongTimeout, routingStrategy = offlinePriority).map { res =>
       log.debug(s"[res.request.trackingId] getEmailAddressesForUsers for users $userIds returns json ${res.json}")
-      res.json.as[Map[String, Seq[EmailAddress]]].map { case (id, emails) => Id[User](id.toLong) -> emails }.toMap
+      res.json.as[Map[String, Seq[EmailAddress]]].map { case (id, emails) => Id[User](id.toLong) -> emails }
     }
   }
 

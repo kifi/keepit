@@ -3,6 +3,15 @@
   flex-direction: column
   text-align: left
 
+  .kf-item-left-space
+    margin-left: 5px
+
+  .kf-item-right-space
+    margin-right: 5px
+
+  .kf-nowrap
+    white-space: nowrap
+
   .kf-title
     font-size: 24px
     font-weight: bold
@@ -14,11 +23,14 @@
     color: #999
 
   .kf-divider
-    margin-top: 10px
+    position: relative
     margin-bottom: 10px
-    width: 100%
     height: 1px
     background-color: #DDD
+
+  .kf-divider-half
+    margin-top: 10px
+    width: 100%
 
   .kf-item-title-wrap
     display: flex
@@ -78,7 +90,7 @@
         border: 0
         height: 18px
         width: 14px
-        margin-right: 2px
+        margin-right: 5px
         border-radius: 3px
         background-color: libraryGray
         box-shadow: 0 1px #fff, 0 2px #c9ccc0, 0 3px #fff, 0 4px #c9ccc0

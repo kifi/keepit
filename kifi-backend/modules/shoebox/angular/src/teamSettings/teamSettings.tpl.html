@@ -9,31 +9,74 @@
       ng-if="viewer.membership.role === 'member'"
     ></svg>
   </div>
-  <h4 class="kf-team-settings-sub-header" ng-if="viewer.membership.role === 'member'">You have access to view these settings. Contact your <a class="kf-link" ui-sref="orgProfile.members">team admins</a> to edit them.</h4>
+  <h4 class="kf-team-settings-sub-header" ng-if="viewer.membership.role === 'member'">
+    You have access to view these settings.
+    Contact your <a class="kf-link" ui-sref="orgProfile.members">team admins</a>
+    to edit them.
+  </h4>
   <section ng-repeat="section in settingsSectionTemplateData" class="kf-container">
     <div ng-show="section.heading" class="kf-container-header">
-      <h2 id="{{ getHeadingAnchor(section.heading) }}">{{ section.heading }}</h2>
+      <h2 ng-attr-id="{{ getHeadingAnchor(section.heading) }}" ng-bind="section.heading"></h2>
     </div>
     <div class="kf-row kf-team-settings-field" ng-repeat="field in section.fields">
       <div class="kf-main-pane">
-        <h3 class="kf-team-settings-heading" id="{{ field.fieldKey }}" ng-bind-html="field.title"></h3>
-        <p class="kf-team-settings-desc">{{ field.description }}</p>
+        <h3
+          class="kf-team-settings-heading"
+          ng-attr-id="{{ field.fieldKey }}"
+          ng-bind="field.title"
+        ></h3>
+        <p class="kf-team-settings-desc" ng-bind="field.description"></p>
       </div>
       <div class="kf-side-pane">
-        <div ng-class="{ 'kf-tooltip-parent kf-tooltip-parent-noclose' : !settings[field.fieldKey].editable && viewer.membership.role === 'admin' && billingState.plan.name.toLowerCase() === 'free'}" data-kf-tooltip-position="top">
-          <div class="custom-select kf-button" ng-class="{ 'disabled' : viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable }">
-          <select
-            class="kf-team-settings-select"
-            ng-model="settings[field.fieldKey].setting"
-            ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
-            ng-options="option.value as option.label for option in field.selectOptions"
-            ng-change="updateSettings()"
-            ng-click="onClickTrack(field.trackingValue)"
-          ></select>
+        <div
+          ng-class="{
+            'kf-tooltip-parent kf-tooltip-parent-noclose': (
+              !settings[field.fieldKey].editable &&
+              viewer.membership.role === 'admin' &&
+              billingState.plan.name.toLowerCase() === 'free'
+            )
+          }"
+          data-kf-tooltip-position="top"
+        >
+          <div
+            class="custom-select kf-button"
+            ng-class="{
+              'disabled': (
+                viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 ||
+                !settings[field.fieldKey].editable
+              )
+            }"
+          >
+            <select
+              class="kf-team-settings-select"
+              ng-model="settings[field.fieldKey].setting"
+              ng-disabled="viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) === -1 || !settings[field.fieldKey].editable"
+              ng-options="option.value as option.label for option in field.selectOptions"
+              ng-change="updateSettings()"
+              ng-click="onClickTrack(field.trackingValue)"
+            ></select>
           </div>
-          <div class="kf-tooltip-body" ng-mouseenter="onHoverUpsellPrivileges()" ng-if="!settings[field.fieldKey].editable && viewer.membership.role === 'admin' && billingState.plan.name.toLowerCase() === 'free'">You can edit this setting by <a class="kf-link" ng-click="onClickUpsellPrivileges()" ui-sref="orgProfile.settings.plan({ handle: profile.handle, upgrade: true })">upgrading your plan</a>.</div>
+          <div
+            class="kf-tooltip-body"
+            ng-if="(
+              !settings[field.fieldKey].editable &&
+              viewer.membership.role === 'admin' &&
+              billingState.plan.name.toLowerCase() === 'free'
+            )"
+            ng-mouseenter="onHoverUpsellPrivileges()"
+          >
+            You can edit this setting by
+            <a
+              class="kf-link"
+              ng-click="onClickUpsellPrivileges()"
+              ui-sref="orgProfile.settings.plan({ handle: profile.handle, upgrade: true })"
+            >upgrading your plan</a>.
+          </div>
         </div>
       </div>
+    </div>
+    <div ng-if="section.subComponent">
+      <div proxy="section.subComponent" viewer="viewer" org="profile"></div>
     </div>
   </section>
 </div>
