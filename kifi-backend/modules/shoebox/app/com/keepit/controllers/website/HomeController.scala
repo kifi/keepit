@@ -17,7 +17,6 @@ import com.keepit.model._
 import com.keepit.social.SocialGraphPlugin
 import play.api.Play
 import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import play.twirl.api.Html
@@ -28,7 +27,7 @@ import com.keepit.common.net.RichRequestHeader
 
 import KifiSession._
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext, Future }
 
 class HomeController @Inject() (
   db: Database,
@@ -52,6 +51,7 @@ class HomeController @Inject() (
   keepsCommander: KeepCommander,
   smsCommander: SmsCommander,
   kifiSiteRouter: KifiSiteRouter,
+  implicit val executionContext: ExecutionContext,
   clock: Clock)
     extends UserActions with ShoeboxServiceController with Logging {
 
@@ -149,14 +149,15 @@ class HomeController @Inject() (
       heimdalServiceClient.trackEvent(UserEvent(request.user.id.get, context.build, EventType("loaded_install_page")))
     }
     setHasSeenInstall()
-    request.headers.get(USER_AGENT).flatMap { agentString =>
-      val agent = UserAgent(agentString)
-      log.info(s"trying to log in via $agent. orig string: $agentString")
-
-      if (!agent.canRunExtensionIfUpToDate) {
-        Some(Redirect("/"))
+    request.userAgentOpt.flatMap { agent =>
+      if (agent.canRunExtensionIfUpToDate) {
+        Some(Ok(views.html.authMinimal.install()))
+      } else if (agent.isAndroid) {
+        Some(Redirect("https://play.google.com/store/apps/details?id=com.kifi&hl=en"))
+      } else if (agent.isIphone) {
+        Some(Redirect("https://itunes.apple.com/us/app/kifi/id740232575"))
       } else None
-    }.getOrElse(Ok(views.html.authMinimal.install()))
+    }.getOrElse(Redirect("/"))
   }
 
   private def hasSeenInstall(implicit request: UserRequest[_]): Boolean = {
