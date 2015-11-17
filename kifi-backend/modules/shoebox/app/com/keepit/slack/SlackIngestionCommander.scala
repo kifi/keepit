@@ -5,6 +5,7 @@ import com.keepit.commanders.{ PermissionCommander, RawBookmarkRepresentation, K
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
 import com.keepit.common.util.UrlClassifier
 import com.keepit.heimdal.HeimdalContext
@@ -44,7 +45,7 @@ class SlackIngestionCommanderImpl @Inject() (
     keepInterner: KeepInterner,
     clock: Clock,
     airbrake: AirbrakeNotifier,
-    implicit val ec: ExecutionContext) extends SlackIngestionCommander {
+    implicit val ec: ExecutionContext) extends SlackIngestionCommander with Logging {
 
   import SlackIngestionCommander._
 
