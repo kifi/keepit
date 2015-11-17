@@ -124,7 +124,7 @@ trait UserCommander {
   def getHelpRankInfo(userId: Id[User]): Future[UserKeepAttributionInfo]
   def getUserSegment(userId: Id[User]): UserSegment
   def tellUsersWithContactOfNewUserImmediate(newUser: User): Option[Future[Set[Id[User]]]]
-  def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit]
+  def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Future[Unit]
   def changePassword(userId: Id[User], newPassword: String, oldPassword: Option[String]): Try[Unit]
   def resetPassword(code: String, ip: IpAddress, password: String): Either[String, Id[User]]
   def sendCloseAccountEmail(userId: Id[User], comment: String): ElectronicMail
@@ -184,6 +184,7 @@ class UserCommanderImpl @Inject() (
     userExperimentRepo: UserExperimentRepo,
     allFakeUsersCache: AllFakeUsersCache,
     kifiInstallationCommander: KifiInstallationCommander,
+    kifiInstallationRepo: KifiInstallationRepo,
     implicit val executionContext: ExecutionContext,
     experimentRepo: UserExperimentRepo,
     airbrake: AirbrakeNotifier) extends UserCommander with Logging { self =>
@@ -378,10 +379,13 @@ class UserCommanderImpl @Inject() (
     } else Option(Future.successful(Set.empty))
   }
 
-  def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None, isPlainEmail: Boolean = true): Future[Unit] = {
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValue(userId, UserValues.welcomeEmailSent) }) {
-      val (verificationCode, domainOwnerIds): (Option[EmailVerificationCode], Set[Id[Organization]]) = db.readWrite { implicit session =>
-        for {
+  def sendWelcomeEmail(userId: Id[User], withVerification: Boolean = false, targetEmailOpt: Option[EmailAddress] = None): Future[Unit] = {
+    val welcomeEmailAlreadySent = db.readOnlyMaster { implicit session =>
+      userValueRepo.getValue(userId, UserValues.welcomeEmailSent)
+    }
+    if (!welcomeEmailAlreadySent) {
+      val (verificationCode, domainOwnerIds, installs) = db.readWrite { implicit session =>
+        val verifyCodeWithOrganizations = for {
           emailAddress <- targetEmailOpt if withVerification
           emailRecord <- emailRepo.getByAddressAndUser(userId, emailAddress)
           code <- emailRecord.verificationCode orElse emailRepo.save(emailRecord.withVerificationCode(clock.now())).verificationCode
@@ -392,8 +396,16 @@ class UserCommanderImpl @Inject() (
             .filter(orgId => !organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailRecord.userId))
           (code, domainOwnerIds)
         }
-      }.map { x: (EmailVerificationCode, Set[Id[Organization]]) => (Some(x._1), x._2) }.getOrElse(None, Set.empty[Id[Organization]])
-      val emailF = welcomeEmailSender.get.apply(userId, targetEmailOpt, isPlainEmail, verificationCode, domainOwnerIds)
+
+        val installs = kifiInstallationRepo.all(userId).groupBy(_.platform).keys.toSet
+
+        verifyCodeWithOrganizations match {
+          case Some(v) => (Some(v._1), v._2, installs)
+          case None => (None, Set.empty[Id[Organization]], installs)
+        }
+      }
+
+      val emailF = welcomeEmailSender.get.sendToUser(userId, targetEmailOpt, verificationCode, domainOwnerIds, installs)
       emailF.map { email =>
         db.readWrite { implicit rw => userValueRepo.setValue(userId, UserValues.welcomeEmailSent.name, true) }
         ()
