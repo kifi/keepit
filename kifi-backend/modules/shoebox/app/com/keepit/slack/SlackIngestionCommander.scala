@@ -24,6 +24,8 @@ object SlackIngestionCommander {
   val retryDelay = Period.minutes(1)
   val ingestionGracePeriod = Period.minutes(30)
   val maxConcurrency = 10
+
+  val slackLinkPattern = """<(.*?)(?:\|(.*?))?>""".r
 }
 
 @ImplementedBy(classOf[SlackIngestionCommanderImpl])
@@ -122,13 +124,28 @@ class SlackIngestionCommanderImpl @Inject() (
     lastMessageTimestamp
   }
 
-  private def toRawBookmarks(message: SlackMessage): Seq[RawBookmarkRepresentation] = {
-    if (message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)) Seq.empty[RawBookmarkRepresentation]
-    else message.attachments.flatMap { attachment => // todo(Léo): messages can have links but no attachment
-      (attachment.title.flatMap(_.link) orElse attachment.fromUrl).collect {
+  private def doNotIngest(message: SlackMessage): Boolean = message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)
+  private def toRawBookmarks(message: SlackMessage): Set[RawBookmarkRepresentation] = {
+    if (doNotIngest(message)) Set.empty[RawBookmarkRepresentation]
+    else {
+      val linksFromText = slackLinkPattern.findAllMatchIn(message.text).flatMap { m =>
+        m.subgroups.map(Option(_).map(_.trim).filter(_.nonEmpty)) match {
+          case List(Some(url), titleOpt) => Some(url -> titleOpt)
+          case _ => None
+        }
+      }.toMap
+
+      val linksFromAttachments = message.attachments.flatMap { attachment =>
+        (attachment.title.flatMap(_.link) orElse attachment.fromUrl).map { url =>
+          url -> attachment
+        }
+      }.toMap
+
+      (linksFromText.keySet ++ linksFromAttachments.keySet).collect {
         case url if !urlClassifier.isSocialActivity(url) =>
+          val title = linksFromText.get(url).flatten orElse linksFromAttachments.get(url).flatMap(_.title.map(_.value))
           RawBookmarkRepresentation(
-            title = attachment.title.map(_.value),
+            title = title,
             url = url,
             isPrivate = None,
             canonical = None,
