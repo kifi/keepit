@@ -63,7 +63,7 @@ object EmailInfo {
     }
 
     def writes(ei: EmailInfo): JsValue = {
-      Json.obj("address" -> ei.address, "isPrimary" -> ei.isPrimary, "isVerified" -> ei.isVerified, "isPendingPrimary" -> ei.isPendingPrimary, "canBeClaimed" -> ei.isFreeMail)
+      Json.obj("address" -> ei.address, "isPrimary" -> ei.isPrimary, "isVerified" -> ei.isVerified, "isPendingPrimary" -> ei.isPendingPrimary, "isFreeMail" -> ei.isFreeMail)
     }
   }
 }
