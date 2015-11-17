@@ -5,7 +5,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
 import com.keepit.shoebox.rover.ShoeboxArticleIngestionActor
-import com.keepit.slack.SlackIngestionCommander
+import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackIngestionCommander }
 import us.theatr.akka.quartz.QuartzActor
 import com.keepit.commanders.TwitterSyncCommander
 import com.keepit.payments.{ PlanRenewalCommander, PaymentProcessingCommander }
@@ -21,6 +21,7 @@ class ShoeboxTasksPlugin @Inject() (
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     slackIngestionCommander: SlackIngestionCommander,
+    libToSlackPusher: LibraryToSlackChannelPusher,
     val scheduling: SchedulingProperties) extends SchedulerPlugin {
 
   override def onStart() {
@@ -31,6 +32,10 @@ class ShoeboxTasksPlugin @Inject() (
 
     scheduleTaskOnOneMachine(system, 5 minute, 1 minutes, "slack ingestion") {
       slackIngestionCommander.ingestAll()
+    }
+
+    scheduleTaskOnOneMachine(system, 10 minute, 10 minutes, "slack pushing") {
+      libToSlackPusher.findAndPushToLibraries()
     }
 
     scheduleTaskOnLeader(system, 30 minutes, 30 minutes, "payments processing") {

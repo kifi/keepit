@@ -1,12 +1,14 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.keepit.commanders.PathCommander
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.model._
+import com.keepit.payments.{ LinkElement, DescriptionElements }
 import com.keepit.slack.models._
 import com.kifi.macros.json
 import play.api.http.Status._
@@ -56,6 +58,8 @@ class SlackCommanderImpl @Inject() (
   libToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClient,
   libToSlackPusher: LibraryToSlackChannelPusher,
+  pathCommander: PathCommander,
+  libRepo: LibraryRepo,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends SlackCommander {
 
@@ -103,6 +107,15 @@ class SlackCommanderImpl @Inject() (
         slackChannelName = webhook.channelName
       ))
     }
+    val welcomeMsg = db.readOnlyMaster { implicit s =>
+      import DescriptionElements._
+      val lib = libRepo.get(libId)
+      DescriptionElements(
+        "A new Kifi integration was just set up.",
+        "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
+      )
+    }
+    slackClient.sendToSlack(webhook.url, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
     libToSlackPusher.pushToLibrary(libId)
   }
 
