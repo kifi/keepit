@@ -10,7 +10,6 @@ import com.keepit.common.util.UrlClassifier
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.slack.models._
-import org.joda.time.DateTime
 import org.joda.time.Period
 import com.keepit.common.time._
 
@@ -61,7 +60,6 @@ class SlackIngestionCommanderImpl @Inject() (
           integration.id.get -> permissionCommander.getLibraryPermissions(integration.libraryId, Some(integration.ownerId)).contains(LibraryPermission.ADD_KEEPS)
         }.toMap
         (integrations, slackMemberships, isAllowed)
-
       }
       val futureIngestions: Seq[Future[Unit]] = integrations.map {
         case integration if isAllowed(integration.id.get) =>
@@ -128,7 +126,7 @@ class SlackIngestionCommanderImpl @Inject() (
   private def toRawBookmarks(message: SlackMessage): Set[RawBookmarkRepresentation] = {
     if (doNotIngest(message)) Set.empty[RawBookmarkRepresentation]
     else {
-      val linksFromText = slackLinkPattern.findAllMatchIn(message.text).flatMap { m =>
+      val linksFromText = slackLinkPattern.findAllMatchIn(message.text).toList.flatMap { m =>
         m.subgroups.map(Option(_).map(_.trim).filter(_.nonEmpty)) match {
           case List(Some(url), titleOpt) => Some(url -> titleOpt)
           case _ => None
