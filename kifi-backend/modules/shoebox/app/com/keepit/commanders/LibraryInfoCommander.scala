@@ -186,6 +186,7 @@ class LibraryInfoCommanderImpl @Inject() (
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
     idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, sanitizeUrls: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
     libraries.groupBy(l => l.id.get).foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
+    val libIds = libraries.map(_.id.get).toSet
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
@@ -261,12 +262,12 @@ class LibraryInfoCommanderImpl @Inject() (
       } toMap
     }
 
-    val permissionsByLibraryId = db.readOnlyMaster { implicit s => permissionCommander.getLibrariesPermissions(lib.id.get, viewerUserIdOpt) }.toMap
+    val permissionsByLibraryId = db.readOnlyMaster { implicit s => permissionCommander.getLibrariesPermissions(libIds, viewerUserIdOpt) }.toMap
 
     val slackInfoByLibraryId = viewerUserIdOpt.map { viewerId =>
       // TODO(ryan): do something with this line
       // val slackableLibIds = permissionsByLibraryId.collect { case (libId, ps) if ps.contains(LibraryPermission.CREATE_SLACK_INTEGRATION) => libId }.toSet
-      db.readOnlyReplica { implicit s => slackCommander.getSlackIntegrationsForLibraries(viewerId, libraries.map(_.id.get).toSet) }
+      db.readOnlyReplica { implicit s => slackCommander.getSlackIntegrationsForLibraries(viewerId, libIds) }
     }.getOrElse(Map.empty.withDefaultValue(None))
 
     val futureFullLibraryInfos = libraries.map { lib =>
