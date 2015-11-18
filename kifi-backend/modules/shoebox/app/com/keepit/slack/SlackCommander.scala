@@ -165,14 +165,24 @@ class SlackCommanderImpl @Inject() (
         else None
 
       case r: SlackIntegrationModifyRequest =>
-        val owners = libToChannelRepo.getActiveByIds(r.libToSlack.keySet).map(_.ownerId) ++ channelToLibRepo.getActiveByIds(r.slackToLib.keySet).map(_.ownerId)
-        if (owners != Set(r.requesterId)) Some(LibraryFail(FORBIDDEN, "cannot_modify_integration"))
-        else None
+        val fromSpaces = libToChannelRepo.getActiveByIds(r.libToSlack.keySet).map(_.space) ++ channelToLibRepo.getActiveByIds(r.slackToLib.keySet).map(_.space)
+        val toSpaces = r.libToSlack.values.flatMap(_.space) ++ r.slackToLib.values.flatMap(_.space)
+        val spacesUserCannotModify = (fromSpaces ++ toSpaces).filter {
+          case UserSpace(uid) => r.requesterId != uid
+          case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.requesterId).isEmpty
+        }
+        if (spacesUserCannotModify.nonEmpty) {
+          println(s"user ${r.requesterId} does not have permission to modify ${spacesUserCannotModify}")
+          Some(LibraryFail(FORBIDDEN, "permission_denied"))
+        } else None
 
       case r: SlackIntegrationDeleteRequest =>
-        None
-        val owners = libToChannelRepo.getActiveByIds(r.libToSlack).map(_.ownerId) ++ channelToLibRepo.getActiveByIds(r.slackToLib).map(_.ownerId)
-        if (owners != Set(r.requesterId)) Some(LibraryFail(FORBIDDEN, "cannot_delete_integration"))
+        val spaces = libToChannelRepo.getActiveByIds(r.libToSlack).map(_.space) ++ channelToLibRepo.getActiveByIds(r.slackToLib).map(_.space)
+        val spacesUserCannotModify = spaces.filter {
+          case UserSpace(uid) => r.requesterId != uid
+          case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.requesterId).isEmpty
+        }
+        if (spacesUserCannotModify.nonEmpty) Some(LibraryFail(FORBIDDEN, "permission_denied"))
         else None
     }
   }
@@ -186,10 +196,10 @@ class SlackCommanderImpl @Inject() (
   }
   private def unsafeModifyIntegrations(request: SlackIntegrationModifyRequest)(implicit session: RWSession): SlackIntegrationModifyResponse = {
     request.libToSlack.foreach {
-      case (ltsId, status) => libToChannelRepo.save(libToChannelRepo.get(ltsId).withStatus(status))
+      case (ltsId, mods) => libToChannelRepo.save(libToChannelRepo.get(ltsId).withModifications(mods))
     }
     request.slackToLib.foreach {
-      case (stlId, status) => channelToLibRepo.save(channelToLibRepo.get(stlId).withStatus(status))
+      case (stlId, mods) => channelToLibRepo.save(channelToLibRepo.get(stlId).withModifications(mods))
     }
     SlackIntegrationModifyResponse(request.libToSlack.size + request.slackToLib.size)
   }
