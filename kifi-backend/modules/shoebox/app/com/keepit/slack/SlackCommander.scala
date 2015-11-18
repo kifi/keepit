@@ -13,6 +13,7 @@ import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.model._
 import com.keepit.payments.{ LinkElement, DescriptionElements }
 import com.keepit.slack.models._
+import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.http.Status._
 
@@ -31,8 +32,11 @@ case class SlackToLibraryIntegrationInfo(
 
 @json
 case class LibrarySlackIntegrationInfo(
+  creator: BasicUser,
   teamName: SlackTeamName,
   channelName: SlackChannelName,
+  creatorName: SlackUsername,
+  space: ExternalLibrarySpace,
   toSlack: Option[LibraryToSlackIntegrationInfo],
   fromSlack: Option[SlackToLibraryIntegrationInfo])
 
@@ -99,6 +103,7 @@ class SlackCommanderImpl @Inject() (
     db.readWrite { implicit s =>
       libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         userId = userId,
+        space = LibrarySpace.fromUserId(userId), // TODO(ryan): maybe find a different default?
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
@@ -107,6 +112,7 @@ class SlackCommanderImpl @Inject() (
       ))
       channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         userId = userId,
+        space = LibrarySpace.fromUserId(userId), // TODO(ryan): maybe find a different default?
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
@@ -213,8 +219,11 @@ class SlackCommanderImpl @Inject() (
       val integrations = (fromSlacksGrouped.keySet ++ toSlacksGrouped.keySet).map {
         case (teamId, channelName) =>
           LibrarySlackIntegrationInfo(
+            creator = ???,
             teamName = teamNamesByTeamId(teamId),
             channelName = channelName,
+            creatorName = ???,
+            space = ???,
             toSlack = toSlacksGrouped.get((teamId, channelName)).flatMap(_.headOption),
             fromSlack = fromSlacksGrouped.get((teamId, channelName)).flatMap(_.headOption)
           )

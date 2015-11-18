@@ -6,8 +6,8 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.json.EitherFormat
 import com.keepit.common.strings._
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import play.api.mvc.{ QueryStringBindable, PathBindable }
 
 case class Handle(value: String) extends AnyVal {
@@ -39,7 +39,7 @@ object Handle {
   implicit def format = Format(__.read[String].map(Handle(_)), new Writes[Handle] { def writes(o: Handle) = JsString(o.value) })
 }
 
-sealed trait LibrarySpace // todo(Léo): *Currently* equivalent to HandleOwner, unsure whether they should be merged.
+sealed trait LibrarySpace
 
 object LibrarySpace {
   case class UserSpace(id: Id[User]) extends LibrarySpace
@@ -68,13 +68,18 @@ object ExternalLibrarySpace {
   case class ExternalUserSpace(userId: ExternalId[User]) extends ExternalLibrarySpace
   case class ExternalOrganizationSpace(orgId: PublicId[Organization]) extends ExternalLibrarySpace
 
+  def fromEither(either: Either[ExternalId[User], PublicId[Organization]]): ExternalLibrarySpace = either match {
+    case Left(userId) => ExternalUserSpace(userId)
+    case Right(orgId) => ExternalOrganizationSpace(orgId)
+  }
+  def toEither(space: ExternalLibrarySpace): Either[ExternalId[User], PublicId[Organization]] = space match {
+    case ExternalUserSpace(userId) => Left(userId)
+    case ExternalOrganizationSpace(orgId) => Right(orgId)
+  }
+
   implicit def fromUserId(userId: ExternalId[User]): ExternalUserSpace = ExternalUserSpace(userId)
   implicit def fromOrganizationId(organizationId: PublicId[Organization]): ExternalOrganizationSpace = ExternalOrganizationSpace(organizationId)
 
-  implicit val reads: Reads[ExternalLibrarySpace] = Reads[ExternalLibrarySpace] { payload =>
-    payload.validate[Either[ExternalId[User], PublicId[Organization]]](EitherFormat.keyedReads("user", "org")).map {
-      case Left(userId) => ExternalUserSpace(userId)
-      case Right(orgId) => ExternalOrganizationSpace(orgId)
-    }
-  }
+  private val eitherFormat = EitherFormat.keyedFormat[ExternalId[User], PublicId[Organization]]("user", "org")
+  implicit val format: Format[ExternalLibrarySpace] = eitherFormat.inmap(fromEither, toEither)
 }

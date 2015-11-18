@@ -8,7 +8,8 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db.{ ModelWithState, Id, State, States }
 import com.keepit.common.time._
-import com.keepit.model.{ User, Library }
+import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
+import com.keepit.model.{ Organization, LibrarySpace, User, Library }
 import org.joda.time.{ Period, DateTime }
 
 case class SlackChannelToLibrary(
@@ -17,6 +18,7 @@ case class SlackChannelToLibrary(
     updatedAt: DateTime = currentDateTime,
     state: State[SlackChannelToLibrary] = SlackChannelToLibraryStates.ACTIVE,
     ownerId: Id[User],
+    space: LibrarySpace,
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: Option[SlackChannelId],
@@ -76,6 +78,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     updatedAt: DateTime,
     state: State[SlackChannelToLibrary],
     ownerId: Id[User],
+    organizationId: Option[Id[Organization]],
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: Option[SlackChannelId],
@@ -92,6 +95,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
       updatedAt,
       state,
       ownerId,
+      LibrarySpace(ownerId, organizationId),
       slackUserId,
       slackTeamId,
       slackChannelId,
@@ -111,6 +115,10 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     stl.updatedAt,
     stl.state,
     stl.ownerId,
+    stl.space match {
+      case OrganizationSpace(orgId) => Some(orgId)
+      case UserSpace(_) => None
+    },
     stl.slackUserId,
     stl.slackTeamId,
     stl.slackChannelId,
@@ -127,6 +135,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
 
   class SlackChannelToLibraryTable(tag: Tag) extends RepoTable[SlackChannelToLibrary](db, tag, "slack_channel_to_library") {
     def ownerId = column[Id[User]]("owner_id", O.NotNull)
+    def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def slackChannelId = column[Option[SlackChannelId]]("slack_channel_id", O.Nullable)
@@ -137,7 +146,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     def lastIngestingAt = column[Option[DateTime]]("last_ingesting_at", O.Nullable)
     def lastIngestedAt = column[Option[DateTime]]("last_ingested_at", O.Nullable)
     def lastMessageTimestamp = column[Option[SlackMessageTimestamp]]("last_message_timestamp", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, nextIngestionAt, lastIngestingAt, lastIngestedAt, lastMessageTimestamp) <> ((stlFromDbRow _).tupled, stlToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, ownerId, organizationId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, nextIngestionAt, lastIngestingAt, lastIngestedAt, lastMessageTimestamp) <> ((stlFromDbRow _).tupled, stlToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackChannelToLibraryStates.ACTIVE)
@@ -173,6 +182,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
         val newIntegration = SlackChannelToLibrary(
           id = inactiveIntegrationOpt.flatMap(_.id),
           ownerId = request.userId,
+          space = request.space,
           slackUserId = request.slackUserId,
           slackTeamId = request.slackTeamId,
           slackChannelId = request.slackChannelId,
