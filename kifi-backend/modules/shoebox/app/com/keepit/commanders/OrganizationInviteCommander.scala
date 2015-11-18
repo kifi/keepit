@@ -448,7 +448,7 @@ class OrganizationInviteCommanderImpl @Inject() (db: Database,
           users <- usersFut
           emails <- emailsFut
         } yield {
-          (users.map(_.userId), emails.map(_.info))
+          (users.collect { case hit if hit.userId != userId => hit.userId }, emails.collect { case hit if !hit.info.userId.contains(userId) => hit.info })
         }
     }
 
