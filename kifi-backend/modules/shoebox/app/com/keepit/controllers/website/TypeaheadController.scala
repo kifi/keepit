@@ -18,8 +18,8 @@ class TypeaheadController @Inject() (
     commander: TypeaheadCommander,
     val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController with Logging {
 
-  def searchWithInviteStatus(query: Option[String], limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean) = UserAction.async { request =>
-    commander.searchWithInviteStatus(request.userId, query.getOrElse(""), limit, pictureUrl, dedupEmail) map { res =>
+  def searchWithInviteStatus(query: Option[String], limit: Option[Int], pictureUrl: Boolean) = UserAction.async { request =>
+    commander.searchWithInviteStatus(request.userId, query.getOrElse(""), limit, pictureUrl) map { res =>
       Ok(Json.toJson(res))
     }
   }
