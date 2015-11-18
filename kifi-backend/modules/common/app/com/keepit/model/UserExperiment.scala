@@ -101,7 +101,7 @@ object UserExperimentType {
   }
 
   private val kifiDomains = Set("kifi.com", "42go.com")
-  private val testDomains = Set("tfbnw.net", "mailinator.com") // tfbnw.net is for fake facebook accounts
+  private val testDomains = Set("tfbnw.net", "mailinator.com", "kyfy.com") // tfbnw.net is for fake facebook accounts
   private val tagRe = """(?<=\+)[^@+]*(?=(?:\+|$))""".r
 
   def getExperimentForEmail(email: EmailAddress): Set[UserExperimentType] = {

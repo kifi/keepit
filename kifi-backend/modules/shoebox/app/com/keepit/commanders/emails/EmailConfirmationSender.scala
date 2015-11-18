@@ -24,11 +24,16 @@ class EmailConfirmationSender @Inject() (
     val siteUrl = fortytwoConfig.applicationBaseUrl
     val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(verificationCode)}"
 
+    val toAddr = { // used to test a fake kyfy.com email domain without having access to it, and not spamming @kifi.com
+      if (address.address.endsWith("@kyfy.com")) EmailAddress("kyfy.com$".r.replaceFirstIn(address.address, "kifi.com"))
+      else address
+    }
+
     val emailToSend = EmailToSend(
       fromName = None,
       from = SystemEmailAddress.NOTIFICATIONS,
       subject = "Kifi.com | Please confirm your email address",
-      to = Right(if (address.address.endsWith("@kyfy.com")) EmailAddress("kyfy.com$".r.replaceFirstIn(address.address, "kifi.com")) else address),
+      to = Right(toAddr),
       category = NotificationCategory.User.EMAIL_CONFIRMATION,
       htmlTemplate = views.html.email.verifyEmail(toUserId, verifyUrl, domainOwnerIds),
       textTemplate = Some(views.html.email.verifyEmailText(toUserId, verifyUrl, domainOwnerIds))
