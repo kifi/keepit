@@ -25,6 +25,7 @@ trait OrganizationMembershipRepo extends Repo[OrganizationMembership] with SeqNu
   def getAllByUserIds(userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[User], Set[OrganizationMembership]]
   def getByOrgIdAndUserId(orgId: Id[Organization], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Option[OrganizationMembership]
   def getByOrgIdAndUserIds(orgId: Id[Organization], userIds: Set[Id[User]], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationMembership]
+  def getByOrgIdsAndUserId(orgIds: Set[Id[Organization]], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Option[OrganizationMembership]]
   def countByOrgId(orgId: Id[Organization], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Int
   def deactivate(model: OrganizationMembership)(implicit session: RWSession): OrganizationMembership
   def getTeammates(userId: Id[User])(implicit session: RSession): Set[Id[User]]
@@ -181,6 +182,10 @@ class OrganizationMembershipRepoImpl @Inject() (
       case None => (for { row <- rows if row.organizationId === orgId && row.userId.inSet(userIds) } yield row).list
       case Some(exclude) => (for { row <- rows if row.organizationId === orgId && row.userId.inSet(userIds) && row.state =!= excludeState } yield row).list
     }
+  }
+  def getByOrgIdsAndUserId(orgIds: Set[Id[Organization]], userId: Id[User], excludeState: Option[State[OrganizationMembership]] = Some(OrganizationMembershipStates.INACTIVE))(implicit session: RSession): Map[Id[Organization], Option[OrganizationMembership]] = {
+    val found = rows.filter(r => r.userId === userId && r.organizationId.inSet(orgIds) && r.state =!= excludeState.orNull).map(r => (r.organizationId, r)).list.toMap
+    orgIds.map { orgId => orgId -> found.get(orgId) }.toMap
   }
 
   def deactivate(membership: OrganizationMembership)(implicit session: RWSession): OrganizationMembership = {
