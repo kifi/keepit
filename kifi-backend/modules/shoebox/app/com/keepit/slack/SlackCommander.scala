@@ -6,6 +6,9 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
+import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.model._
 import com.keepit.payments.{ LinkElement, DescriptionElements }
@@ -13,6 +16,7 @@ import com.keepit.slack.models._
 import com.kifi.macros.json
 import play.api.http.Status._
 
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Success, Failure, Try }
 
 @json
@@ -60,8 +64,11 @@ class SlackCommanderImpl @Inject() (
   libToSlackPusher: LibraryToSlackChannelPusher,
   pathCommander: PathCommander,
   libRepo: LibraryRepo,
+  clock: Clock,
+  airbrake: AirbrakeNotifier,
+  implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
-    extends SlackCommander {
+    extends SlackCommander with Logging {
 
   def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
@@ -116,9 +123,26 @@ class SlackCommanderImpl @Inject() (
       )
     }
     slackClient.sendToSlack(webhook.url, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
-    libToSlackPusher.pushToLibrary(libId)
+      .andThen { case Failure(f: SlackAPIFailure) => db.readWrite { implicit s => markAsBroken(webhook, f) } }
+      .andThen { case Success(()) => libToSlackPusher.pushToLibrary(libId) }
   }
 
+  def registerSuccessfulPush(webhook: SlackIncomingWebhook)(implicit session: RWSession): Unit = {
+    val now = clock.now
+    slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
+      if (whi.lastFailedAt.isDefined) {
+        log.info(s"[SLACK-WEBHOOK] The webhook at ${webhook.url} recovered at $now")
+      }
+      slackIncomingWebhookInfoRepo.save(whi.withCleanSlate.withLastPostedAt(now))
+    }
+  }
+  def markAsBroken(webhook: SlackIncomingWebhook, failure: SlackAPIFailure)(implicit session: RWSession): Unit = {
+    val now = clock.now
+    slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
+      log.info(s"[SLACK-WEBHOOK] The webhook at ${webhook.url} recovered at $now")
+      slackIncomingWebhookInfoRepo.save(whi.withLastFailure(failure).withLastFailedAt(now))
+    }
+  }
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {
     request match {
       case r: SlackIntegrationCreateRequest =>

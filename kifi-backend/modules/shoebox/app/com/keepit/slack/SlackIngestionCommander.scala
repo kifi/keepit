@@ -47,7 +47,7 @@ class SlackIngestionCommanderImpl @Inject() (
     slackRepo: SlackTeamMembershipRepo,
     permissionCommander: PermissionCommander,
     libraryRepo: LibraryRepo,
-    slackClient: SlackClient,
+    slackClient: SlackClientWrapper,
     urlClassifier: UrlClassifier,
     keepInterner: KeepInterner,
     clock: Clock,
@@ -98,24 +98,25 @@ class SlackIngestionCommanderImpl @Inject() (
       }
     }
 
-    futureIngestionMaybe andThen { case result =>
-      val now = clock.now()
-      val (nextIngestionAt, updatedStatus) = result match {
-        case Success(Some(_)) => (Some(now plus nextIngestionDelayAfterNewMessages), None)
-        case Success(None) => (Some(now plus nextIngestionDelayWithoutNewMessages), None)
-        case Failure(forbidden: ForbiddenSlackIntegration) =>
-          airbrake.notify(s"Turning off forbidden Slack integration ${integration.id.get}.", forbidden)
-          (None, Some(SlackIntegrationStatus.Off))
-        case Failure(broken: BrokenSlackIntegration) =>
-          airbrake.notify(s"Marking Slack integration ${integration.id.get} as broken.", broken)
-          (None, Some(SlackIntegrationStatus.Broken))
-        case Failure(error) =>
-          airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error)
-          (Some(now plus nextIngestionDelayAfterFailure), None)
-      }
-      db.readWrite { implicit session =>
-        integrationRepo.updateAfterIngestion(integration.id.get, nextIngestionAt, updatedStatus getOrElse integration.status)
-      }
+    futureIngestionMaybe andThen {
+      case result =>
+        val now = clock.now()
+        val (nextIngestionAt, updatedStatus) = result match {
+          case Success(Some(_)) => (Some(now plus nextIngestionDelayAfterNewMessages), None)
+          case Success(None) => (Some(now plus nextIngestionDelayWithoutNewMessages), None)
+          case Failure(forbidden: ForbiddenSlackIntegration) =>
+            airbrake.notify(s"Turning off forbidden Slack integration ${integration.id.get}.", forbidden)
+            (None, Some(SlackIntegrationStatus.Off))
+          case Failure(broken: BrokenSlackIntegration) =>
+            airbrake.notify(s"Marking Slack integration ${integration.id.get} as broken.", broken)
+            (None, Some(SlackIntegrationStatus.Broken))
+          case Failure(error) =>
+            airbrake.notify(s"Failed to ingest from Slack via integration ${integration.id.get}", error)
+            (Some(now plus nextIngestionDelayAfterFailure), None)
+        }
+        db.readWrite { implicit session =>
+          integrationRepo.updateAfterIngestion(integration.id.get, nextIngestionAt, updatedStatus getOrElse integration.status)
+        }
     }
   }
 

@@ -17,7 +17,7 @@ import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.{ SlackCommander, SlackClient }
+import com.keepit.slack.SlackCommander
 import com.keepit.slack.models.SlackAuthScope
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
