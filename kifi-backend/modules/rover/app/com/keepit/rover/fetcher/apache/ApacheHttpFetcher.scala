@@ -38,7 +38,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     httpClientBuilder.setConnectionManager(cm)
     httpClientBuilder.setUserAgent(userAgent)
     httpClientBuilder.setRequestExecutor(new ContentAwareHttpRequestExecutor())
-    httpClientBuilder.addInterceptorFirst(new RequestSecurityInterceptor()) // blocks localhost/private scrapes
+    httpClientBuilder.addInterceptorLast(new RequestSecurityInterceptor())
     httpClientBuilder.addInterceptorFirst(new ResponseSecurityInterceptor()) // blocks localhost/private scrapes
     httpClientBuilder.addInterceptorFirst(new RedirectInterceptor()) // track redirects
     httpClientBuilder.addInterceptorFirst(new EncodingInterceptor()) // transfer encoding
