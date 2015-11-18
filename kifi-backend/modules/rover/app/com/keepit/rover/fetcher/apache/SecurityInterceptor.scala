@@ -7,14 +7,15 @@ import org.apache.http.{ HttpException, HttpRequest, HttpRequestInterceptor }
 
 class SecurityInterceptor extends HttpRequestInterceptor with Logging {
   def process(request: HttpRequest, context: HttpContext): Unit = {
-    URI.parse(request.getRequestLine.getUri).toOption.flatMap { uri =>
-      uri.host.map { host =>
-        if (SecurityInterceptor.bannedHosts.exists(host.toString.startsWith)) {
-          //throw new HttpException(s"Tried to scrape banned domain ${host.toString}")
-          log.error(s"[SecurityInterceptor] Blocking ${request.getRequestLine.getUri}.")
-        }
-        true
+    Option(request.getFirstHeader("Host")).map { hostHeader =>
+      val host = hostHeader.getValue.trim
+      if (SecurityInterceptor.bannedHosts.exists(host.startsWith)) {
+        //throw new HttpException(s"Tried to scrape banned domain ${host.toString}")
+        log.error(s"[SecurityInterceptor] Blocking $host ${request.getRequestLine.getUri}")
+      } else {
+        log.info(s"[SecurityInterceptr] Allowing $host ${request.getRequestLine.getUri}")
       }
+      true
     }.getOrElse {
       log.warn(s"[SecurityInterceptor] Couldn't parse ${request.getRequestLine.getUri}. Allowing.")
     }
