@@ -12,11 +12,26 @@ trait SecurityInterceptor extends Logging {
     val trimmed = host.trim
     if (SecurityInterceptor.bannedHosts.exists(trimmed.startsWith)) {
       //throw new HttpException(s"Tried to scrape banned domain ${host.toString}")
-      log.error(s"[SecurityInterceptor] Blocking $trimmed")
+      log.error(s"[SI] Blocking $trimmed")
       true
     } else {
-      log.info(s"[SecurityInterceptor] Allowing $trimmed")
+      log.info(s"[SI] Allowing $trimmed")
       false
+    }
+  }
+}
+
+class RequestSecurityInterceptor extends HttpRequestInterceptor with SecurityInterceptor {
+  def process(request: HttpRequest, context: HttpContext): Unit = {
+    request match {
+      case uriRequest: HttpUriRequest =>
+        Option(uriRequest.getURI).flatMap(u => Option(u.getHost)).map(throwIfBannedHost).getOrElse {
+          val deets = {
+            uriRequest.getClass.getCanonicalName + "  " + uriRequest.getURI.toString + " " + uriRequest.getAllHeaders.map(h => h.getName -> h.getValue).toList.mkString(", ")
+          }
+          log.warn(s"[SI-2] Couldn't parse ${request.toString} Allowing. $deets")
+        }
+      case _ =>
     }
   }
 }
@@ -30,7 +45,7 @@ class ResponseSecurityInterceptor extends HttpResponseInterceptor with SecurityI
         response.getClass.getCanonicalName + "  " + response.getAllHeaders.map(h => h.getName -> h.getValue).toList.mkString(", ")
       }
 
-      log.warn(s"[SecurityInterceptor-1] Couldn't parse ${response.toString} Allowing. $deets")
+      log.warn(s"[SI-1] Couldn't parse ${response.toString} Allowing. $deets")
     }
   }
 }
