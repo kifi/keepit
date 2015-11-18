@@ -103,6 +103,7 @@ angular.module('kifi')
     $scope.canInvite = $scope.thisViewer.permissions.indexOf(ORG_PERMISSION.INVITE_MEMBERS) > -1;
     $scope.canViewMembers = $scope.thisViewer.permissions.indexOf(ORG_PERMISSION.VIEW_MEMBERS) > -1;
     $scope.me = profileService.me;
+    $scope.hasManagePermission = $scope.thisViewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) > -1;
 
     function resetAndFetch() {
       memberLazyLoader.reset();
