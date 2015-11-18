@@ -9,14 +9,14 @@
       <li class="kifi-keep-box-new-lib-location-item">
         <span
           class="kifi-keep-box-new-lib-location-avatar kifi-keep-box-new-lib-location-avatar-personal"
-          style="background-image: url({{{cdnBase}}}/users/{{id}}/pics/100/{{pictureName}})"
+          style="background-image: url({{cdnBase}}/users/{{id}}/pics/100/{{pictureName}})"
         ></span>
         <label><input name="kifi-location" type="radio" value="{{ id }}"/><span></span>Your Profile</label>
       </li>
       {{/me}}
       {{#organizations}}
       <li class="kifi-keep-box-new-lib-location-item">
-        <span class="kifi-keep-box-new-lib-location-avatar" style="background-image: url({{#avatarPath}}{{{cdnBase}}}/{{avatarPath}}{{/avatarPath}}{{^avatarPath}}//www.kifi.com/assets/img/ghost.200.png{{/avatarPath}})"></span>
+        <span class="kifi-keep-box-new-lib-location-avatar" style="background-image: url({{#avatarPath}}{{cdnBase}}/{{avatarPath}}{{/avatarPath}}{{^avatarPath}}//www.kifi.com/assets/img/ghost.200.png{{/avatarPath}})"></span>
         <label><input name="kifi-location" type="radio" value="{{ id }}"/>{{name}}</label>
       </li>
       {{/organizations}}
