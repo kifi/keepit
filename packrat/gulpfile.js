@@ -8,6 +8,7 @@ var clone = require('gulp-clone');
 var css = require('css');
 var es = require('event-stream');
 var fs = require('fs');
+var jsvalidate = require('gulp-jsvalidate');
 var jeditor = require('gulp-json-editor');
 var lazypipe = require('lazypipe');
 var zip = require('gulp-zip');
@@ -35,11 +36,13 @@ var backgroundScripts = [
   'scorefilter.js',
   'contact_search_cache.js'
 ];
-var localBackgroundScripts = ['livereload.js']
+var localBackgroundScripts = ['livereload.js'];
 var tabScripts = ['scripts/**'];
 var htmlFiles = 'html/**/*.html';
 var styleFiles = 'styles/**/*.*';
 var distFiles = outDir + '/**';
+
+var validateScripts = ['scripts/**', './*.js'];
 
 var contentScripts = {};
 var styleDeps = {};
@@ -226,6 +229,13 @@ gulp.task('styles', function () {
     .pipe(gulp.dest(outDir + '/chrome'))
     .pipe(mainStylesOnly(firefoxify)) // order is important! firefoxify operates on chromified styles (makes code simpler - one unique stream)
     .pipe(gulp.dest(outDir + '/firefox/data'));
+});
+
+
+gulp.task('jsvalidate', function () {
+  return gulp.src(validateScripts)
+    .pipe(cache('jsvalidate'))
+    .pipe(jsvalidate());
 });
 
 // Creates meta.js
@@ -433,15 +443,15 @@ gulp.task('watch', function () {
       backgroundScripts,
       localBackgroundScripts,
       htmlFiles),
-    ['scripts']);
+    ['jsvalidate', 'scripts']);
   gulp.watch(styleFiles, ['styles']);
-  gulp.watch(tabScripts, ['meta']);
+  gulp.watch(validateScripts, ['jsvalidate', 'meta']);
   gulp.watch(distFiles).on('change', reload);
 });
 
 gulp.task('package', function () {
   target = 'prod';
-  runSequence('clean', ['zip-chrome', 'xpi-firefox']);
+  runSequence('clean', 'jsvalidate', ['zip-chrome', 'xpi-firefox']);
 });
 
 gulp.task('package-dev', function () {
@@ -450,5 +460,5 @@ gulp.task('package-dev', function () {
 });
 
 gulp.task('default', function () {
-  runSequence('clean', 'build', 'watch');
+  runSequence('clean', 'jsvalidate', 'build', 'watch');
 });

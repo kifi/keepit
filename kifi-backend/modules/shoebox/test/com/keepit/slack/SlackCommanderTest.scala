@@ -29,7 +29,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
         withDb(modules: _*) { implicit injector =>
           val (user, lib, stm, siw1, siw2) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val lib = LibraryFactory.library().saved
+            val lib = LibraryFactory.library().withOwner(user).saved
 
             val slackTeam = SlackTeamFactory.team()
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
@@ -58,7 +58,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
         withDb(modules: _*) { implicit injector =>
           val (user, lib1, lib2) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val Seq(lib1, lib2) = LibraryFactory.libraries(2).saved
+            val Seq(lib1, lib2) = LibraryFactory.libraries(2).map(_.withOwner(user)).saved
             val slackTeam = SlackTeamFactory.team()
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
 
@@ -84,7 +84,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           // you subscribe a library to both of these channels
           val (user, lib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val lib = LibraryFactory.library().saved
+            val lib = LibraryFactory.library().withOwner(user).saved
             val slackTeam1 = SlackTeamFactory.team().copy(teamName = SlackTeamName("kifi"))
             val slackTeam2 = SlackTeamFactory.team().copy(teamName = SlackTeamName("kifi"))
 
@@ -108,7 +108,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
         withDb(modules: _*) { implicit injector =>
           val (user, lib, libToSlack, slackToLib) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val lib = LibraryFactory.library().saved
+            val lib = LibraryFactory.library().withOwner(user).saved
             val slackTeam = SlackTeamFactory.team()
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
@@ -151,7 +151,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           val (user, rando, lib, libToSlack) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val rando = UserFactory.user().saved
-            val lib = LibraryFactory.library().saved
+            val lib = LibraryFactory.library().withOwner(user).saved
             val slackTeam = SlackTeamFactory.team()
 
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved

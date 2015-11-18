@@ -290,7 +290,7 @@ class MessagingCommander @Inject() (
         threadExtId = thread.externalId,
         messageText = messageText,
         source = source,
-        sentOnUrl = urlOpt.map(_.toString()).orElse(thread.url),
+        sentOnUrl = urlOpt.flatMap(_.raw).orElse(thread.url),
         sentOnUriId = thread.uriId
       ))
     }

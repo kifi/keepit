@@ -14,8 +14,8 @@ case class ProdSlackClientModule() extends SlackClientModule {
 
   @Singleton
   @Provides
-  def slackClient(httpClient: HttpClient, mode: Mode, ec: ExecutionContext): SlackClient = {
-    new SlackClientImpl(httpClient, mode, ec)
+  def slackClient(httpClient: HttpClient, ec: ExecutionContext): SlackClient = {
+    new SlackClientImpl(httpClient, ec)
   }
 }
 

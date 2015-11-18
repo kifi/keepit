@@ -37,7 +37,8 @@ case class SlackTeamMembership(
     scopes: Set[SlackAuthScope]) extends ModelWithState[SlackTeamMembership] {
   def withId(id: Id[SlackTeamMembership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def isActive: Boolean = (state == SlackTeamMembershipStates.ACTIVE)
+  def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
+  def revoked = this.copy(state = SlackTeamMembershipStates.INACTIVE)
 }
 
 object SlackTeamMembershipStates extends States[SlackTeamMembership]
@@ -48,6 +49,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
   def internBySlackTeamAndUser(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): Try[SlackTeamMembership]
   def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership]
+  def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
 }
 
 @Singleton
@@ -165,6 +167,9 @@ class SlackTeamMembershipRepoImpl @Inject() (
 
   def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership] = {
     activeRows.filter(_.slackUserId.inSet(ids)).map(r => (r.slackUserId, r)).list.toMap
+  }
+  def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership] = {
+    activeRows.filter(_.token === token).firstOption
   }
 }
 
