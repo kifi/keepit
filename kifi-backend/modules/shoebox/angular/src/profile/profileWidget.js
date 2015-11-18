@@ -31,9 +31,11 @@ angular.module('kifi')
           scope.organizations = scope.organizations.concat(me.potentialOrgs);
         }
 
-        if (!profileService.prefs.company_name) {
+        if (!profileService.prefs.hide_company_name && !profileService.prefs.company_name) {
           profileService.fetchPrefs().then(function (prefs) {
-            if (prefs.company_name && !orgNameExists(prefs.company_name)) {
+            if (prefs.hide_company_name) {
+              scope.companyName = null;
+            } else if (prefs.company_name && !orgNameExists(prefs.company_name)) {
               scope.companyName = prefs.company_name;
             } else {
               var potentialEmails = potentialCompanyEmails(me.emails);
@@ -41,7 +43,8 @@ angular.module('kifi')
             }
           });
         } else {
-          scope.companyName = (!orgNameExists(profileService.prefs.company_name) && profileService.prefs.company_name);
+          scope.companyName = profileService.prefs.hide_company_name ? null :
+            (!orgNameExists(profileService.prefs.company_name) && profileService.prefs.company_name);
         }
 
         function orgNameExists(companyName) {
@@ -94,6 +97,11 @@ angular.module('kifi')
             'type' : 'homeFeed',
             'action' : 'clickedCreateTeamRighthandRail'
           });
+
+          if (!profileService.prefs.hide_company_name) {
+            profileService.savePrefs({ hide_company_name: true });
+          }
+          
           $state.go('teams.new');
         };
 
