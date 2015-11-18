@@ -28,9 +28,9 @@ trait LibraryToSlackChannelPusher {
 class LibraryToSlackChannelPusherImpl @Inject() (
   db: Database,
   libRepo: LibraryRepo,
+  slackClient: SlackClient,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
-  slackClient: SlackClient,
   libToChannelRepo: LibraryToSlackChannelRepo,
   clock: Clock,
   ktlRepo: KeepToLibraryRepo,

@@ -184,7 +184,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   }
 
   def getLibrariesRipeForProcessing(limit: Limit, overrideProcessesOlderThan: DateTime)(implicit session: RSession): Seq[Id[Library]] = {
-    workingRows.filter(row => row.availableForProcessing(overrideProcessesOlderThan)).groupBy(_.libraryId).map(_._1).take(limit.value).list
+    workingRows.filter(row => row.availableForProcessing(overrideProcessesOlderThan)).sortBy(_.lastProcessedAt).groupBy(_.libraryId).map(_._1).take(limit.value).list
   }
   def getIntegrationsRipeForProcessingByLibrary(libraryId: Id[Library], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Seq[Id[LibraryToSlackChannel]] = {
     workingRows.filter(row => row.libraryId === libraryId && row.availableForProcessing(overrideProcessesOlderThan)).map(_.id).list
