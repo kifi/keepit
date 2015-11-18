@@ -113,7 +113,6 @@ class LibraryInfoCommanderImpl @Inject() (
         libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, id)
       } getOrElse Map.empty
 
-      val permissionsById = permissionCommander.getLibrariesPermissions(libraryIds, viewerId)
       libraryRepo.getActiveByIds(libraryIds).map {
         case (libId, lib) =>
           val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
@@ -122,20 +121,8 @@ class LibraryInfoCommanderImpl @Inject() (
           val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
           val membershipOpt = membershipsByLibraryId.get(libId).flatten
           val path = libPathCommander.pathForLibrary(lib)
-          libId -> BasicLibraryDetails(
-            lib.name,
-            lib.slug,
-            lib.color,
-            imageOpt,
-            lib.description,
-            numFollowers,
-            numCollaborators,
-            lib.keepCount,
-            membershipOpt.map(libraryMembershipCommander.createMembershipInfo),
-            lib.ownerId,
-            path,
-            permissionsById(libId)
-          )
+          val permissions = permissionCommander.getLibraryPermissions(libId, viewerId)
+          libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(libraryMembershipCommander.createMembershipInfo), lib.ownerId, path, permissions)
       }
     }
   }
@@ -262,7 +249,9 @@ class LibraryInfoCommanderImpl @Inject() (
       } toMap
     }
 
-    val permissionsByLibraryId = db.readOnlyMaster { implicit s => permissionCommander.getLibrariesPermissions(libIds, viewerUserIdOpt) }.toMap
+    val permissionsByLibraryId = db.readOnlyMaster { implicit s =>
+      libraries.map { lib => lib.id.get -> permissionCommander.getLibraryPermissions(lib.id.get, viewerUserIdOpt) }
+    }.toMap
 
     val slackInfoByLibraryId = viewerUserIdOpt.map { viewerId =>
       // TODO(ryan): do something with this line

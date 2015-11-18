@@ -57,7 +57,6 @@ class LibraryCardCommanderImpl @Inject() (
       libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, viewerId)
     } getOrElse Map.empty
     val orgViews = organizationInfoCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, viewerIdOpt = viewerIdOpt, authTokenOpt = None)
-    val libPermissionsById = permissionCommander.getLibrariesPermissions(libIds, viewerIdOpt)
     libs.par map { lib => // may want to optimize queries below into bulk queries
       val image = ProcessedImageSize.pickBestImage(idealSize, libraryImageRepo.getActiveForLibraryId(lib.id.get), strictAspectRatio = false)
       val (numFollowers, followersSample, numCollaborators, collabsSample) = {
@@ -89,7 +88,9 @@ class LibraryCardCommanderImpl @Inject() (
         None
       }
 
-      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, libPermissionsById(lib.id.get), path, orgViewOpt)
+      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, viewerIdOpt)
+
+      createLibraryCardInfo(lib, image, owner, numFollowers, followersSample, numCollaborators, collabsSample, isFollowing, membershipInfoOpt, inviteInfoOpt, permissions, path, orgViewOpt)
     }
   }
 
@@ -100,7 +101,6 @@ class LibraryCardCommanderImpl @Inject() (
     val allBasicUsers = basicUserRepo.loadAll(userIds)
 
     val basicOrgViewById = organizationInfoCommander.getBasicOrganizationViewsHelper(libs.flatMap(_.organizationId).toSet, Some(viewerId), authTokenOpt = None)
-    val permissionsById = permissionCommander.getLibrariesPermissions(libs.map(_.id.get).toSet, Some(viewerId))
 
     libs.par map { lib =>
       val libMems = memberships(lib.id.get)
@@ -124,7 +124,8 @@ class LibraryCardCommanderImpl @Inject() (
         airbrake.notify(s"owner of lib $lib is not part of the membership list: $userIds - data integrity issue? does the owner has a library membership object?")
       }
 
-      val viewerMemInfoOpt = viewerMemOpt.map(miniMem => LibraryMembershipInfo(miniMem.access, miniMem.listed, miniMem.subscribed, permissionsById(lib.id.get)))
+      val permissions = permissionCommander.getLibraryPermissions(lib.id.get, Some(viewerId))
+      val viewerMemInfoOpt = viewerMemOpt.map(miniMem => LibraryMembershipInfo(miniMem.access, miniMem.listed, miniMem.subscribed, permissions))
 
       val info = LibraryCardInfo(
         id = Library.publicId(lib.id.get),
@@ -145,7 +146,7 @@ class LibraryCardCommanderImpl @Inject() (
         following = None, // not needed
         membership = viewerMemInfoOpt,
         invite = None, // not needed
-        permissions = permissionsById(lib.id.get),
+        permissions = permissions,
         path = path,
         modifiedAt = lib.updatedAt,
         org = basicOrgViewOpt,
