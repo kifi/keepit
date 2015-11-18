@@ -20,8 +20,10 @@ import scala.util.Random
 
 @ImplementedBy(classOf[PermissionCommanderImpl])
 trait PermissionCommander {
+  def getOrganizationsPermissions(orgIds: Set[Id[Organization]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Organization], Set[OrganizationPermission]]
   def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission]
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission]
+  def getLibrariesPermissions(libIds: Set[Id[Library]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Library], Set[LibraryPermission]]
 }
 
 @Singleton
@@ -42,8 +44,8 @@ class PermissionCommanderImpl @Inject() (
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 
-  @StatsdTiming("PermissionCommander.getOrganizationPermissions")
-  def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
+  @StatsdTiming("PermissionCommander.getOrganizationsPermissions")
+  def getOrganizationsPermissions(orgIds: Set[Id[Organization]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Organization], Set[OrganizationPermission]] = {
     /*
     PSA regarding these caches:
     We want to have a cache from (Id[Organization], Option[Id[User]]) => Set[OrganizationPermission]
@@ -53,10 +55,18 @@ class PermissionCommanderImpl @Inject() (
         2. (Id[Organization, Int, Option[Id[User]]) => Set[OrganizationPermission]
     With two caches, we can invalidate an entire organization by changing its value in cache 1
     */
-    val orgPermissionsNamespace = orgPermissionsNamespaceCache.getOrElse(OrganizationPermissionsNamespaceKey(orgId))(Random.nextInt())
-    orgPermissionsCache.getOrElse(OrganizationPermissionsKey(orgId, orgPermissionsNamespace, userIdOpt)) {
-      computeOrganizationPermissions(orgId, userIdOpt)
-    }
+    val orgPermissionsNamespace = orgPermissionsNamespaceCache.bulkGetOrElse(orgIds.map(OrganizationPermissionsNamespaceKey)) { missingKeys =>
+      missingKeys.map { mk => mk -> Random.nextInt() }.toMap
+    }.map { case (key, value) => key.orgId -> value }
+
+    orgPermissionsCache.bulkGetOrElse(orgIds.map(orgId => OrganizationPermissionsKey(orgId, orgPermissionsNamespace(orgId), userIdOpt))) { missingKeys =>
+      missingKeys.map { mk => mk -> computeOrganizationPermissions(mk.orgId, userIdOpt) }.toMap
+    }.map { case (key, value) => key.orgId -> value }
+  }
+
+  @StatsdTiming("PermissionCommander.getOrganizationPermissions")
+  def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
+    getOrganizationsPermissions(Set(orgId), userIdOpt).get(orgId).get
   }
 
   private def computeOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission] = {
@@ -89,37 +99,64 @@ class PermissionCommanderImpl @Inject() (
 
   @StatsdTiming("PermissionCommander.getLibraryPermissions")
   def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission] = {
-    val lib = libraryRepo.get(libId)
-    val libMembershipOpt = userIdOpt.flatMap { userId => libraryMembershipRepo.getWithLibraryIdAndUserId(libId, userId) }
+    getLibrariesPermissions(Set(libId), userIdOpt).get(libId).get
+  }
 
-    val libAccessOpt = libMembershipOpt match {
-      case Some(libMembership) => Some(libMembership.access)
-      case None =>
-        val viewerHasImplicitAccess = lib.visibility match {
-          case LibraryVisibility.DISCOVERABLE =>
-            val isOwner = userIdOpt.contains(lib.ownerId) // this would be a really bad sign, since they should have a LibraryMembership
-            if (isOwner) airbrake.notify(s"found a library owner without a library membership! (libId=$libId, userId=$userIdOpt)")
-            isOwner
-          case LibraryVisibility.ORGANIZATION =>
-            userIdOpt.exists(orgMembershipRepo.getByOrgIdAndUserId(lib.organizationId.get, _).isDefined)
-          case _ => false
-        }
-        val userHasInvite = userIdOpt.exists { userId => libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).nonEmpty }
-        Some(LibraryAccess.READ_ONLY).filter { _ => viewerHasImplicitAccess || userHasInvite }
+  @StatsdTiming("PermissionCommander.getLibrariesPermissions")
+  def getLibrariesPermissions(libIds: Set[Id[Library]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Library], Set[LibraryPermission]] = {
+    val libsById = libraryRepo.getActiveByIds(libIds)
+    val libMembershipsById = userIdOpt.map { userId =>
+      libraryMembershipRepo.getWithLibraryIdsAndUserId(libIds, userId)
+    }.getOrElse(libIds.map(_ -> None).toMap)
+    val invitesById = userIdOpt.map { userId =>
+      libraryInviteRepo.getWithLibraryIdsAndUserId(libIds, userId)
+    }.getOrElse(libIds.map(_ -> Seq.empty).toMap)
+    val orgIdsByLibraryId = libsById.map { case (libId, lib) => libId -> lib.organizationId }
+    val orgIds = orgIdsByLibraryId.values.flatten.toSet
+    val orgMembershipsById = userIdOpt.map { userId =>
+      orgMembershipRepo.getByOrgIdsAndUserId(orgIds, userId)
+    }.getOrElse(orgIds.map(_ -> None).toMap)
+
+    val libAccessById = libMembershipsById.map {
+      case (libId, memOpt) => memOpt match {
+        case Some(libMembership) => libId -> Some(libMembership.access)
+        case None =>
+          val lib = libsById(libId)
+          val viewerHasImplicitAccess = lib.visibility match {
+            case LibraryVisibility.DISCOVERABLE =>
+              val isOwner = userIdOpt.contains(lib.ownerId) // this would be a really bad sign, since they should have a LibraryMembership
+              if (isOwner) airbrake.notify(s"found a library owner without a library membership! (libId=$libId, userId=$userIdOpt)")
+              isOwner
+            case LibraryVisibility.ORGANIZATION =>
+              lib.organizationId.exists(orgId => orgMembershipsById(orgId).isDefined)
+            case _ => false
+          }
+          val userHasInvite = invitesById(libId).nonEmpty
+          libId -> Some(LibraryAccess.READ_ONLY).filter { _ => viewerHasImplicitAccess || userHasInvite }
+      }
     }
 
-    def mixInUserPermissions(libPermissions: Set[LibraryPermission]) = {
+    val userPermissions = userIdOpt.map(computeUserPermissions).getOrElse(Set.empty)
+    val orgPermissionsById = getOrganizationsPermissions(orgIds, userIdOpt)
+
+    def mixInUserPermissions(lib: Library, libPermissions: Set[LibraryPermission]) = {
       userIdOpt.map { userId =>
-        combineUserAndLibraryPermissions(lib, libPermissions, computeUserPermissions(userId))
+        combineUserAndLibraryPermissions(lib, libPermissions, userPermissions)
       } getOrElse libPermissions
     }
-    def mixInOrgPermisisons(libPermissions: Set[LibraryPermission]) = {
+    def mixInOrgPermisisons(lib: Library, libPermissions: Set[LibraryPermission]) = {
       lib.organizationId.map { orgId =>
-        combineOrganizationAndLibraryPermissions(lib, libPermissions, getOrganizationPermissions(orgId, userIdOpt))
+        combineOrganizationAndLibraryPermissions(lib, libPermissions, orgPermissionsById(orgId))
       } getOrElse libPermissions
     }
 
-    libraryPermissionsByAccess(lib, libAccessOpt) |> mixInUserPermissions |> mixInOrgPermisisons
+    libsById.map {
+      case (libId, lib) =>
+        val basePermissions = libraryPermissionsByAccess(lib, libAccessById.getOrElse(libId, None))
+        val withUser = mixInUserPermissions(lib, basePermissions)
+        val withOrg = mixInOrgPermisisons(lib, withUser)
+        libId -> withOrg
+    }
   }
 
   def libraryPermissionsByAccess(library: Library, accessOpt: Option[LibraryAccess]): Set[LibraryPermission] = accessOpt match {
