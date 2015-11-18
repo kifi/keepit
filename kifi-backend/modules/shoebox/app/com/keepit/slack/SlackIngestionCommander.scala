@@ -47,7 +47,7 @@ class SlackIngestionCommanderImpl @Inject() (
     slackRepo: SlackTeamMembershipRepo,
     permissionCommander: PermissionCommander,
     libraryRepo: LibraryRepo,
-    slackClient: SlackClient,
+    slackClient: SlackClientWrapper,
     urlClassifier: UrlClassifier,
     keepInterner: KeepInterner,
     clock: Clock,

@@ -28,7 +28,7 @@ trait LibraryToSlackChannelPusher {
 class LibraryToSlackChannelPusherImpl @Inject() (
   db: Database,
   libRepo: LibraryRepo,
-  slackClient: SlackClient,
+  slackClient: SlackClientWrapper,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
@@ -134,7 +134,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             case None => Future.successful(true)
             case Some(msgFut) =>
               msgFut.flatMap { msg =>
-                slackClient.sendToSlack(wh.webhook.url, msg.quiet).imap { _ => true }
+                slackClient.sendToSlack(wh.webhook, msg.quiet).imap { _ => true }
                   .recover {
                     case f: SlackAPIFailure =>
                       log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")

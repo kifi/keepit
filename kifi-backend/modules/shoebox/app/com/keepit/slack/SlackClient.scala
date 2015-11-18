@@ -62,7 +62,7 @@ class SlackClientImpl(
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, json) if json.asOpt[String].contains("ok") => Future.successful(())
-        case (Status.NOT_FOUND, JsString(SlackAPIFailure.Message.REVOKED_WEBHOOK)) => Future.failed(SlackAPIFailure.RevokedWebhook)
+        case (Status.NOT_FOUND, SlackAPIFailure.Message.REVOKED_WEBHOOK) => Future.failed(SlackAPIFailure.RevokedWebhook)
         case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
       }
     }.andThen {
@@ -81,6 +81,7 @@ class SlackClientImpl(
             case errs: JsError =>
               Future.failed(SlackAPIFailure.ParseError(payload))
           }
+        case (Status.OK, SlackAPIFailure.Message.REVOKED_TOKEN) => Future.failed(SlackAPIFailure.RevokedWebhook)
         case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
       }
     }

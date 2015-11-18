@@ -11,7 +11,8 @@ object SlackAPIFailure {
   implicit val format: Format[SlackAPIFailure] = Json.format[SlackAPIFailure]
 
   object Message {
-    val REVOKED_WEBHOOK = "No service"
+    val REVOKED_WEBHOOK: JsValue = JsString("No service")
+    val REVOKED_TOKEN: JsValue = Json.obj("ok" -> false, "error" -> "token_revoked")
   }
 
   object Error {
@@ -20,10 +21,12 @@ object SlackAPIFailure {
     val state = "broken_state"
     val invalidAuth = "invalid_auth"
     val revokedWebhook = "revoked_webhook"
+    val revokedToken = "revoked_webhook"
   }
   def Generic(status: Int, payload: JsValue) = SlackAPIFailure(status, Error.generic, payload)
   def ParseError(payload: JsValue) = SlackAPIFailure(OK, Error.parse, payload)
   def StateError(state: SlackState) = SlackAPIFailure(OK, Error.state, JsString(state.state))
-  def RevokedWebhook = SlackAPIFailure(NOT_FOUND, Error.revokedWebhook, JsNull)
+  val RevokedWebhook = SlackAPIFailure(NOT_FOUND, Error.revokedWebhook, JsNull)
+  val RevokedToken = SlackAPIFailure(OK, Error.revokedToken, JsNull)
 }
 

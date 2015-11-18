@@ -131,6 +131,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   }
 
   private def activeRows = rows.filter(row => row.state === SlackIncomingWebhookInfoStates.ACTIVE)
+  private def workingRows = activeRows.filter(row => row.lastFailure.isEmpty)
   def table(tag: Tag) = new SlackIncomingWebhookInfoTable(tag)
   initTable()
   override def deleteCache(info: SlackIncomingWebhookInfo)(implicit session: RSession): Unit = {}
@@ -148,12 +149,12 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   }
 
   def getByOwnerAndTeamAndChannelName(ownerId: Id[User], teamId: SlackTeamId, channelName: SlackChannelName)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
-    rows.filter(whi => whi.ownerId === ownerId && whi.slackTeamId === teamId && whi.slackChannelName === channelName).firstOption
+    workingRows.filter(whi => whi.ownerId === ownerId && whi.slackTeamId === teamId && whi.slackChannelName === channelName).firstOption
   }
   def getByIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
     getByOwnerAndTeamAndChannelName(int.ownerId, int.slackTeamId, int.slackChannelName)
   }
   def getByWebhook(wh: SlackIncomingWebhook)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
-    rows.filter(whi => whi.slackChannelName === wh.channelName && whi.configUrl === wh.configUrl && whi.url === wh.url).firstOption
+    workingRows.filter(whi => whi.slackChannelName === wh.channelName && whi.configUrl === wh.configUrl && whi.url === wh.url).firstOption
   }
 }
