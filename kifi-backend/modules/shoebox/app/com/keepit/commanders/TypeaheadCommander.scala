@@ -325,6 +325,8 @@ class TypeaheadCommander @Inject() (
           val frOpt = frMap.get(bu.userId)
           Some(ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", frOpt.map(_ => "requested").getOrElse("joined"), None, frOpt.map(_.createdAt)))
 
+        case _: RichContact | SocialUserBasicInfo | User | TypeaheadUserHit => None
+
         case _ =>
           airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
           None
