@@ -25,7 +25,7 @@ class RequestSecurityInterceptor extends HttpRequestInterceptor with SecurityInt
   def process(request: HttpRequest, context: HttpContext): Unit = {
     request match {
       case uriRequest: HttpUriRequest =>
-        Option(uriRequest.getURI).flatMap(u => Option(u.getHost)).map(throwIfBannedHost).getOrElse {
+        Option(uriRequest.getFirstHeader("Host")).map(_.getValue).map(throwIfBannedHost).getOrElse {
           val deets = {
             uriRequest.getClass.getCanonicalName + "  " + uriRequest.getURI.toString + " " + uriRequest.getAllHeaders.map(h => h.getName -> h.getValue).toList.mkString(", ")
           }
@@ -40,13 +40,7 @@ class ResponseSecurityInterceptor extends HttpResponseInterceptor with SecurityI
   def process(response: HttpResponse, context: HttpContext): Unit = {
     val loc = Option(response.getFirstHeader(LOCATION)).flatMap(l => URI.parse(l.getValue).toOption).flatMap(_.host).map(_.name)
     val host = Option(response.getFirstHeader(HOST)).map(_.getValue)
-    loc.orElse(host).map(throwIfBannedHost).getOrElse {
-      val deets = {
-        response.getClass.getCanonicalName + "  " + response.getAllHeaders.map(h => h.getName -> h.getValue).toList.mkString(", ")
-      }
-
-      log.warn(s"[SI-1] Couldn't parse ${response.toString} Allowing. $deets")
-    }
+    loc.orElse(host).map(throwIfBannedHost)
   }
 }
 
