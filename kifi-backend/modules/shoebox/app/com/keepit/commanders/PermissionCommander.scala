@@ -131,7 +131,7 @@ class PermissionCommanderImpl @Inject() (
               lib.organizationId.exists(orgId => orgMembershipsById(orgId).isDefined)
             case _ => false
           }
-          val userHasInvite = invitesById(libId).nonEmpty
+          val userHasInvite = invitesById.get(libId).exists(_.nonEmpty)
           libId -> Some(LibraryAccess.READ_ONLY).filter { _ => viewerHasImplicitAccess || userHasInvite }
       }
     }

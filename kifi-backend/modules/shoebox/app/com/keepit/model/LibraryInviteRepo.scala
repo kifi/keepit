@@ -91,7 +91,8 @@ class LibraryInviteRepoImpl @Inject() (
     (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state.inSet(includeSet)) yield b).sortBy(_.createdAt).list
   }
   def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Map[Id[Library], Seq[LibraryInvite]] = {
-    (for (b <- rows if b.libraryId.inSet(libraryIds) && b.userId === userId && b.state.inSet(includeSet)) yield b).sortBy(_.createdAt).list.groupBy(_.libraryId)
+    val ans = (for (b <- rows if b.libraryId.inSet(libraryIds) && b.userId === userId && b.state.inSet(includeSet)) yield b).sortBy(_.createdAt).list.groupBy(_.libraryId)
+    libraryIds.map { libId => libId -> ans.getOrElse(libId, Seq.empty) }.toMap
   }
 
   def countWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int = {
