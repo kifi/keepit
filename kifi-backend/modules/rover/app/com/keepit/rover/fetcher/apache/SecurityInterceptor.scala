@@ -17,7 +17,7 @@ class SecurityInterceptor extends HttpRequestInterceptor with Logging {
       }
       true
     }.getOrElse {
-      log.warn(s"[SecurityInterceptor] Couldn't parse ${request.getRequestLine.getUri}. Allowing.")
+      log.warn(s"[SecurityInterceptor] Couldn't parse ${Option(request.getFirstHeader("Host")).map(_.getValue).getOrElse("NA")} ${request.getRequestLine.getUri}. Allowing. ${request.getAllHeaders.map(h => h.getName -> h.getValue).toList.mkString(", ")}")
     }
   }
 }
