@@ -47,7 +47,7 @@ angular.module('kifi')
       this.description = library.description;
       this.color = library.color;
       this.image = library.image;
-      this.path = '/' + library.owner.username + '/' + library.slug;
+      this.path = library.path || ('/' + library.owner.username + '/' + library.slug);
       this.reason = reason;
       this.followers = library.followers;
     }
