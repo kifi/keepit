@@ -20,9 +20,9 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   }
   tile.id = 'kifi-tile';
   tile.className = 'kifi-tile kifi-root';
-  tile.style.display = "none";
+  tile.style.display = 'none';
   tile.innerHTML = '<div class="kifi-tile-card"></div><div class="kifi-tile-dot"></div>';
-  tile["kifi:position"] = positionTile;
+  tile['kifi:position'] = positionTile;
   tile.addEventListener('mouseover', function (e) {
     if ((tileCard.contains(e.target)) && e.isTrusted !== false) {
       loadAndDo('keeper', 'show');
@@ -45,8 +45,8 @@ k.tile = k.tile || function () {  // idempotent for Chrome
     init: function(o) {
       var pos = o.position;
       if (pos) {
-        tile.style.top = pos.top >= 0 ? pos.top + "px" : "auto";
-        tile.style.bottom = pos.bottom >= 0 ? pos.bottom + "px" : "auto";
+        tile.style.top = pos.top >= 0 ? pos.top + 'px' : 'auto';
+        tile.style.bottom = pos.bottom >= 0 ? pos.bottom + 'px' : 'auto';
         tile.dataset.pos = JSON.stringify(pos);
         positionTile(pos);
       }
@@ -253,7 +253,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
 
   function setTileVertOffset(px) {
     log('[setTileVertOffset] px:', px);
-    tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
+    tile.style['transform' in tile.style ? 'transform' : 'webkitTransform'] = 'translate(0,' + px + 'px)';
   }
 
   function cleanUpDom(trigger) {

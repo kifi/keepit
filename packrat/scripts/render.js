@@ -3,8 +3,8 @@
 var k = k && k.kifi ? k : {kifi: true};
 
 k.cdnBase = api.dev ?
-  "http://dev.ezkeep.com:9000" : //d1scct5mnc9d9m.cloudfront.net
-  "//djty7jcqog9qu.cloudfront.net";
+  'http://dev.ezkeep.com:9000' : //d1scct5mnc9d9m.cloudfront.net
+  '//djty7jcqog9qu.cloudfront.net';
 
 k.render = k.render || function () {
   'use strict';
@@ -20,7 +20,7 @@ k.render = k.render || function () {
     }
     var paths = [path];
     if (partials) {
-      var partialPaths = {}, basePath = path.replace(/[^\/]*$/, "");
+      var partialPaths = {}, basePath = path.replace(/[^\/]*$/, '');
       for (var name in partials) {
         paths.push(partialPaths[name] = basePath + partials[name]);
       }

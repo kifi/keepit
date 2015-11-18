@@ -322,9 +322,9 @@ function logEvent(eventFamily, eventName, metaData) {
     eventName: eventName,
     metaData: metaData
   };
-  log("#aaa", "[logEvent] %s %o", ev.eventName, ev);
+  log('#aaa', '[logEvent] %s %o', ev.eventName, ev);
   if (socket) {
-    socket.send(["log_event", ev]);
+    socket.send(['log_event', ev]);
   } else {
     ev.time = Date.now();
     logEvent.queue.push(ev);
@@ -340,7 +340,7 @@ logEvent.catchUp = function() {
     var ev = logEvent.queue.shift();
     ev.msAgo = t - ev.time;
     delete ev.time;
-    socket.send(["log_event", ev]);
+    socket.send(['log_event', ev]);
   }
 }
 
@@ -497,11 +497,11 @@ var socketHandlers = {
     });
   },
   thread_muted: function(threadId, muted) {
-    log("[socket:thread_muted]", threadId, muted);
+    log('[socket:thread_muted]', threadId, muted);
     setMuted(threadId, muted);
   },
   url_patterns: function(patterns) {
-    log("[socket:url_patterns]", patterns);
+    log('[socket:url_patterns]', patterns);
     urlPatterns = compilePatterns(patterns);
   },
   notification: function(n, th) {  // a new notification (real-time)
@@ -533,12 +533,12 @@ var socketHandlers = {
     }
   },
   message_read: function(nUri, threadId, time, messageId) {
-    log("[socket:message_read]", nUri, threadId, time);
+    log('[socket:message_read]', nUri, threadId, time);
     removeNotificationPopups(threadId);
     markRead(threadId, messageId, time);
   },
   message_unread: function(nUri, threadId, time, messageId) {
-    log("[socket:message_unread]", nUri, threadId, time);
+    log('[socket:message_unread]', nUri, threadId, time);
     markUnread(threadId, messageId);
   },
   unread_notifications_count: function (unreadCount) {
@@ -592,9 +592,9 @@ function emitSettings(tab) {
 }
 
 function makeRequest(name, method, url, data, callbacks) {
-  log("[" + name + "]", data);
+  log('[' + name + ']', data);
   ajax(method, url, data, function(response) {
-    log("[" + name + "] response:", response);
+    log('[' + name + '] response:', response);
     var result = {
       success: true,
       response: response,
@@ -606,7 +606,7 @@ function makeRequest(name, method, url, data, callbacks) {
       });
     }
   }, function(response) {
-    log("[" + name + "] error:", response);
+    log('[' + name + '] error:', response);
     var result = {
       success: false,
       response: response,
@@ -871,7 +871,7 @@ api.port.on({
         pageData[nUri].position = o.pos;
       }
     }
-    ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos});
+    ajax('POST', '/ext/pref/keeperPosition', {host: o.host, pos: o.pos});
   },
   set_look_here_mode: function (o) {
     ajax('POST', '/ext/pref/lookHereMode?on=' + o.on);

@@ -5,8 +5,8 @@ function log(a0) {
   'use strict';
   var args = arguments;
   if (hexRe.test(a0)) {
-    args[0] = "%c" + args[1];
-    args[1] = "color:" + a0;
+    args[0] = '%c' + args[1];
+    args[1] = 'color:' + a0;
   }
   console.log.apply(console, args);
 }
@@ -87,37 +87,37 @@ var api = (function createApi() {
   });
 
   chrome.pageAction.onClicked.addListener(errors.wrap(function (tab) {
-    log("[pageAction.onClicked]", tab);
+    log('[pageAction.onClicked]', tab);
     api.icon.on.click.dispatch(pages[tab.id]);
   }));
 
   chrome.runtime.onStartup.addListener(errors.wrap(function () {
-    log("[onStartup]");
-    api.loadReason = "startup";
+    log('[onStartup]');
+    api.loadReason = 'startup';
   }));
 
   chrome.runtime.onInstalled.addListener(errors.wrap(function (details) {
-    log("[onInstalled] details:", details);
-    if (details.reason === "install" || details.reason === "update") {
+    log('[onInstalled] details:', details);
+    if (details.reason === 'install' || details.reason === 'update') {
       api.loadReason = details.reason;
     }
   }));
 
   var updateCheckRequested, updateVersion;
   chrome.runtime.onUpdateAvailable.addListener(errors.wrap(function (details) {
-    log("#666", "[onUpdateAvailable]", updateVersion = details.version);
+    log('#666', '[onUpdateAvailable]', updateVersion = details.version);
     if (updateCheckRequested) {
       chrome.runtime.reload();
     }
   }));
 
   chrome.tabs.onCreated.addListener(errors.wrap(function (tab) {
-    log("#666", "[tabs.onCreated]", tab.id, tab.url);
+    log('#666', '[tabs.onCreated]', tab.id, tab.url);
     normalTab[tab.id] = tab.windowId in selectedTabIds;
   }));
 
   chrome.tabs.onActivated.addListener(errors.wrap(function (info) {
-    log("#666", "[tabs.onActivated] tab info:", info);
+    log('#666', '[tabs.onActivated] tab info:', info);
     var prevPageId = selectedTabIds[info.windowId];
     if (prevPageId) { // ignore popups, etc.
       selectedTabIds[info.windowId] = info.tabId;
@@ -287,7 +287,7 @@ var api = (function createApi() {
     if (winId !== chrome.windows.WINDOW_ID_NONE) {
       focusedWinId = winId;
       if (focusedWinId !== chrome.windows.WINDOW_ID_NONE) {
-        if (selectedTabIds[focusedWinId]) {  // "normal" window
+        if (selectedTabIds[focusedWinId]) {  // 'normal' window
           topNormalWinId = focusedWinId;
         }
         var page = pages[selectedTabIds[focusedWinId]];
@@ -353,7 +353,7 @@ var api = (function createApi() {
         allFrames: true,
         code: [
           'if (window !== top && document.URL === "', o.url, '") {',
-          " document.head.innerHTML='", o.styles.map(function(path) {return '<link rel="stylesheet" href="' + toUrl(path) + '">'}).join(''), "';",
+          ' document.head.innerHTML="', o.styles.map(function(path) {return '<link rel=\"stylesheet\" href=\"' + toUrl(path) + '\">'}).join(''), '" d;',
           ' ', JSON.stringify(o.scripts.map(function (path) {return toUrl(path)})), '.forEach(function(url) {',
           '  var s = document.createElement("SCRIPT");',
           '  s.dataset.loading = true;',
@@ -588,7 +588,7 @@ var api = (function createApi() {
     },
     noop: function() {},
     play: function(path) {
-      var el = document.createElement("audio");
+      var el = document.createElement('audio');
       el.src = path;
       el.play();
     },
@@ -613,7 +613,7 @@ var api = (function createApi() {
       } else {
         updateCheckRequested = true;
         chrome.runtime.requestUpdateCheck(errors.wrap(function (status) {
-          log("[requestUpdateCheck]", status);
+          log('[requestUpdateCheck]', status);
         }));
       }
     },
@@ -710,7 +710,7 @@ var api = (function createApi() {
             }
           }
         } else {
-          log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, page && page.url);
+          log('#a00', '[api.tabs.emit] suppressed %i %s navigated: %s -> %s', tab.id, type, tab.url, page && page.url);
         }
       },
       get: function (tabId) {

@@ -7,7 +7,7 @@ const tabs = require('sdk/tabs');
 const {getTabId} = require('sdk/tabs/utils');
 const {windows} = require('sdk/window/utils');
 const browserNs = require('sdk/core/namespace').ns();
-const {viewFor} = require("sdk/view/core");
+const {viewFor} = require('sdk/view/core');
 
 
 function getTabIdForBrowser(gBrowser, browser) {

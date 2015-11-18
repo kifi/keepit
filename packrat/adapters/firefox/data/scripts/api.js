@@ -95,7 +95,7 @@ const api = (function () {
     onEnd: [],
     port: {
       emit: function(type, data, callback) {
-        if (!callback && typeof data == "function") {
+        if (!callback && typeof data == 'function') {
           callback = data, data = null;
         }
         if (callback) {
@@ -110,7 +110,7 @@ const api = (function () {
           for (var type in handlers) {
             self.port.on(type, handlers[type]);
           }
-          self.port.emit("api:handling", Object.keys(handlers));
+          self.port.emit('api:handling', Object.keys(handlers));
         }
       },
       off: function(handlers) {
@@ -126,7 +126,7 @@ const api = (function () {
     require: function(paths, callback) {
       var callbackId = nextCallbackId++;
       callbacks[callbackId] = callback;
-      self.port.emit("api:require", paths, callbackId);
+      self.port.emit('api:require', paths, callbackId);
     },
     url: function(path) {
       return self.options.dataUriPrefix + path;
@@ -138,14 +138,14 @@ var log = function log() {
   var d = new Date, ds = d.toString();
   for (var args = Array.slice(arguments), i = 0; i < args.length; i++) {
     var arg = args[i];
-    if (typeof arg == "object") {
+    if (typeof arg == 'object') {
       try {
         args[i] = JSON.stringify(arg);
       } catch (e) {
-        args[i] = String(arg) + "{" + Object.keys(arg).join(",") + "}";
+        args[i] = String(arg) + '{' + Object.keys(arg).join(',') + '}';
       }
     }
   }
-  args.unshift("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'");
+  args.unshift('\'' + ds.substr(0,2) + ds.substr(15,9) + '.' + String(+d).substr(10) + '\'');
   console.log.apply(console, args);
 };

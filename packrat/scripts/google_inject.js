@@ -45,9 +45,9 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   var $q = $(), $qf = $q, $qp = $q, keyTimer;
   $(function() {
-    $q = $("#gbqfq,#lst-ib").on("input", onInput);  // stable identifier: "Google Bar Query Form Query"
-    $qf = $("#gbqf,#tsf").submit(onSubmit);  // stable identifiers: "Google Bar Query Form", "Top Search Form"
-    $qp = $("#gs_taif0");  // stable identifier: "Google Search Type-Ahead Input Field"
+    $q = $('#gbqfq,#lst-ib').on('input', onInput);  // stable identifier: "Google Bar Query Form Query"
+    $qf = $('#gbqf,#tsf').submit(onSubmit);  // stable identifiers: "Google Bar Query Form", "Top Search Form"
+    $qp = $('#gs_taif0');  // stable identifier: "Google Search Type-Ahead Input Field"
   });
   function onInput() {
     clearTimeout(keyTimer);
@@ -71,7 +71,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     var hash = location.hash, qs = /[#&]q=/.test(hash) ? hash : location.search;
     var isV = /[?#&]tbm=/.test(qs);
     if (isV !== isVertical) {
-      log("[checkSearchType] search type:", isV ? "vertical" : "web");
+      log('[checkSearchType] search type:', isV ? 'vertical' : 'web');
       isVertical = isV;
     }
   }
@@ -79,29 +79,29 @@ if (searchUrlRe.test(document.URL)) !function () {
   //endedWith is either "unload" or "refinement"
   function sendSearchedEvent(endedWith) {
     var kgDelta = time.kifi.shown - time.google.shown;
-    api.port.emit("log_search_event", [
-      "searched",
+    api.port.emit('log_search_event', [
+      'searched',
       {
-        "origin": origin,
-        "guided": 'guide' in k,
-        "uuid": response.uuid,
-        "experimentId": response.experimentId,
-        "query": response.query,
-        "filter": filter,
-        "maxResults": response.prefs.maxResults,
-        "kifiResults": response.hits.length,
-        "kifiResultsWithLibraries": response.hits.filter(hasLibrary).length,
-        "kifiExpanded": response.expanded || false,
-        "kifiTime": Math.max(-1, time.kifi.received - time.kifi.queried),
-        "kifiShownTime": Math.max(-1, time.kifi.shown - time.kifi.queried),
-        "thirdPartyShownTime": Math.max(-1, time.google.shown - time.kifi.queried),
-        "kifiResultsClicked": clicks.kifi.length,
-        "thirdPartyResultsClicked": clicks.google.length,
-        "chunkDelta": response.chunkDelta,
-        "chunksSplit": kgDelta > 0 && kgDelta < response.chunkDelta,
-        "refinements": refinements,
-        "pageSession": pageSession,
-        "endedWith": endedWith
+        'origin': origin,
+        'guided': 'guide' in k,
+        'uuid': response.uuid,
+        'experimentId': response.experimentId,
+        'query': response.query,
+        'filter': filter,
+        'maxResults': response.prefs.maxResults,
+        'kifiResults': response.hits.length,
+        'kifiResultsWithLibraries': response.hits.filter(hasLibrary).length,
+        'kifiExpanded': response.expanded || false,
+        'kifiTime': Math.max(-1, time.kifi.received - time.kifi.queried),
+        'kifiShownTime': Math.max(-1, time.kifi.shown - time.kifi.queried),
+        'thirdPartyShownTime': Math.max(-1, time.google.shown - time.kifi.queried),
+        'kifiResultsClicked': clicks.kifi.length,
+        'thirdPartyResultsClicked': clicks.google.length,
+        'chunkDelta': response.chunkDelta,
+        'chunksSplit': kgDelta > 0 && kgDelta < response.chunkDelta,
+        'refinements': refinements,
+        'pageSession': pageSession,
+        'endedWith': endedWith
       }
     ]);
   }
@@ -111,7 +111,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
     var q = ($qp.val() || $q.val() || useLocation && (parseQ(location.hash) || parseQ(location.search)) || '').trim().replace(/\s+/g, ' ');  // TODO: also detect "Showing results for" and prefer that
     if (q === query && areSameFilter(newFilter, filter)) {
-      log("[search] nothing new, query:", q, "filter:", newFilter);
+      log('[search] nothing new, query:', q, 'filter:', newFilter);
       if (isFirst) {
         document.addEventListener('DOMContentLoaded', search.bind(null, false, false, true));
       }
@@ -119,7 +119,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
     if (response) {
       try {
-        sendSearchedEvent("refinement");
+        sendSearchedEvent('refinement');
       } catch (e) {}
     }
     if (!q) {
@@ -129,7 +129,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     query = q;
     filter = newFilter;
 
-    log("[search] query:", q, "filter:", newFilter);
+    log('[search] query:', q, 'filter:', newFilter);
 
     if (!newFilter) {
       if (!isFirst) {
@@ -145,12 +145,12 @@ if (searchUrlRe.test(document.URL)) !function () {
 
     var t1 = time.kifi.queried = Date.now();
     refinements++;
-    api.port.emit("get_keeps", {query: q, filter: newFilter, first: isFirst, whence: 'i'}, function results(resp) {
+    api.port.emit('get_keeps', {query: q, filter: newFilter, first: isFirst, whence: 'i'}, function results(resp) {
       if (q !== query || !areSameFilter(newFilter, filter)) {
-        log("[results] ignoring for query:", q, "filter:", newFilter);
+        log('[results] ignoring for query:', q, 'filter:', newFilter);
         return;
       } else if (!resp.me) {
-        log("[results] no user info");
+        log('[results] no user info');
         $res.hide();
         return;
       }
@@ -247,16 +247,16 @@ if (searchUrlRe.test(document.URL)) !function () {
   }
 
   $(window).on('hashchange', function () {  // e.g. a click on a Google doodle or a switch from shopping to web search
-    log("[hashchange]");
+    log('[hashchange]');
     checkSearchType();
     if (!query && !response.query) {
       search(true, null, true);
     } else {
       search();
     }
-  }).on("beforeunload", function(e) {
+  }).on('beforeunload', function(e) {
     if (response.query === query) {
-      sendSearchedEvent("unload");
+      sendSearchedEvent('unload');
     }
   });
 
@@ -283,7 +283,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     }
     if (!$q.length || !document.contains($q[0])) {  // for #lst-ib (e.g. google.co.il)
       $q.remove(), $qf.remove();
-      $q = $($q.selector).on("input", onInput);
+      $q = $($q.selector).on('input', onInput);
       $qf = $($qf.selector).submit(onSubmit);
     }
   }
@@ -333,7 +333,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   // TODO: also detect result selection via keyboard
   $(document).on('mousedown', '#search h3.r a', function logSearchEvent(e) {
-    var href = this.href, $li = $(this).closest("li.g");
+    var href = this.href, $li = $(this).closest('li.g');
     var resIdx = $li.prevAll('li.g').length;
     var isKifi = $li[0].parentNode.id === 'kifi-res-list';
 
@@ -342,49 +342,49 @@ if (searchUrlRe.test(document.URL)) !function () {
     if (href && resIdx >= 0) {
       var hit = isKifi ? response.hits[resIdx] : null;
       api.port.emit('log_search_event', [
-        "clicked",
+        'clicked',
         {
-          "origin": origin,
-          "guided": e.originalEvent.guided || false,
-          "uuid": isKifi ? hit.uuid : response.uuid,
-          "experimentId": response.experimentId,
-          "query": response.query,
-          "filter": filter,
-          "maxResults": response.prefs.maxResults,
-          "kifiResults": response.hits.length,
-          "kifiExpanded": response.expanded || false,
-          "kifiTime": Math.max(-1, time.kifi.received - time.kifi.queried),
-          "kifiShownTime": Math.max(-1, time.kifi.shown - time.kifi.queried),
-          "thirdPartyShownTime": Math.max(-1, time.google.shown - time.kifi.queried),
-          "kifiResultsClicked": clicks.kifi.length,
-          "thirdPartyResultsClicked": clicks.google.length,
-          "resultPosition": resIdx,
-          "resultSource": isKifi ? "Kifi" : "Google",
-          "resultUrl": href,
-          "hit": isKifi ? {
-            "isMyBookmark": hit.keepers.length > 0 && hit.keepers[0].id === response.me.id,
-            "isPrivate": hit.secret || false,
-            "count": hit.keepersTotal,
-            "keepers": hit.keepers.map(getId),
-            "libraries": hit.libraries.map(getIdAndKeeperId),
-            "tags": hit.tags,
-            "title": hit.title,
-            "titleMatches": hit.matches.title.length,
-            "urlMatches": hit.matches.url.length
+          'origin': origin,
+          'guided': e.originalEvent.guided || false,
+          'uuid': isKifi ? hit.uuid : response.uuid,
+          'experimentId': response.experimentId,
+          'query': response.query,
+          'filter': filter,
+          'maxResults': response.prefs.maxResults,
+          'kifiResults': response.hits.length,
+          'kifiExpanded': response.expanded || false,
+          'kifiTime': Math.max(-1, time.kifi.received - time.kifi.queried),
+          'kifiShownTime': Math.max(-1, time.kifi.shown - time.kifi.queried),
+          'thirdPartyShownTime': Math.max(-1, time.google.shown - time.kifi.queried),
+          'kifiResultsClicked': clicks.kifi.length,
+          'thirdPartyResultsClicked': clicks.google.length,
+          'resultPosition': resIdx,
+          'resultSource': isKifi ? 'Kifi' : 'Google',
+          'resultUrl': href,
+          'hit': isKifi ? {
+            'isMyBookmark': hit.keepers.length > 0 && hit.keepers[0].id === response.me.id,
+            'isPrivate': hit.secret || false,
+            'count': hit.keepersTotal,
+            'keepers': hit.keepers.map(getId),
+            'libraries': hit.libraries.map(getIdAndKeeperId),
+            'tags': hit.tags,
+            'title': hit.title,
+            'titleMatches': hit.matches.title.length,
+            'urlMatches': hit.matches.url.length
           } : null,
-          "refinements": refinements,
-          "pageSession": pageSession
+          'refinements': refinements,
+          'pageSession': pageSession
         }
       ]);
     }
   });
 
   api.onEnd.push(function() {
-    log("[google_inject:onEnd]");
+    log('[google_inject:onEnd]');
     $(window).off('hashchange unload');
     observer.disconnect();
     $q.off('input');
-    $qf.off("submit");
+    $qf.off('submit');
     $res.find('.kifi-res-user,.kifi-res-users-n,.kifi-res-lib,.kifi-res-libs-n,.kifi-res-tags-n').hoverfu('destroy');
     $res.remove();
     $res.length = 0;
@@ -413,7 +413,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       icon: 'dropbox'
     }, {  // TODO: add support for Gmail labels like inbox/starred?
       match: /^https?:\/\/mail\.google\.com\/mail\/.*#.*\/[0-9a-f]{10,}$/,
-      desc: "An email on Gmail",
+      desc: 'An email on Gmail',
       icon: 'gmail'
     }, {
       match: /^https?:\/\/www.facebook\.com\/messages\/\w[\w.-]{2,}$/,
@@ -747,11 +747,11 @@ if (searchUrlRe.test(document.URL)) !function () {
   function prefetchMore() {
     if (response.mayHaveMore) {
       var origResp = response;
-      api.port.emit("get_keeps", {
-        "query": response.query,
-        "filter": response.filter,
-        "lastUUID": response.uuid,
-        "context": response.context
+      api.port.emit('get_keeps', {
+        'query': response.query,
+        'filter': response.filter,
+        'lastUUID': response.uuid,
+        'context': response.context
       }, function onPrefetchResponse(resp) {
         if (response === origResp) {
           log('[onPrefetchResponse]');
@@ -806,7 +806,7 @@ if (searchUrlRe.test(document.URL)) !function () {
     var hits = response.nextHits;
     var hitHtml = (!response.filter || response.filter.who === 'a') && response.cutPoint === response.hits.length ?
       ['<li class=kifi-res-more-heading>More keeps</li>'] : [];
-    log("[renderMore] hits:", hits);
+    log('[renderMore] hits:', hits);
     response.hits.push.apply(response.hits, hits);
     response.uuid = response.nextUUID;
     response.context = response.nextContext;

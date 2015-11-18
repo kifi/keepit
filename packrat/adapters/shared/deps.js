@@ -4,7 +4,7 @@
 		paths = typeof paths == 'string' ? [paths] : paths;
 		var scripts = [], styles = {};
 		for (var i = 0; i < paths.length; i++) {
-			if (paths[i].substr(-3) == ".js") {
+			if (paths[i].substr(-3) == '.js') {
 				scripts.push(paths[i]);
 			} else {
 				styles[paths[i]] = true;
@@ -39,4 +39,4 @@
 		}
 		return o;
 	}
-}(this.exports || this, this.meta || require("./meta"));
+}(this.exports || this, this.meta || require('./meta'));

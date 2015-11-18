@@ -243,7 +243,7 @@ k.panes.thread = k.panes.thread || function () {
     m.formatLocalDate = formatLocalDate;
     m.sender = m.user;
     formatParticipant(m.sender);
-    if (m.source && m.source !== "server") {
+    if (m.source && m.source !== 'server') {
       m.displayedSource = m.source;
     }
     var templates = {

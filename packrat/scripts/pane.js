@@ -88,21 +88,21 @@ k.pane = k.pane || function () {  // idempotent for Chrome
     if ($pane) {
       var left = back || toPaneIdx(name) < toPaneIdx(toPaneName(paneHistory[0]));
       k.keeper.onPaneChange(locator);
-      var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden").layout();
-      var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
-      var $old = $cart.find(".kifi-pane-box");
+      var $cubby = $pane.find('.kifi-pane-cubby').css('overflow', 'hidden').layout();
+      var $cart = $cubby.find('.kifi-pane-box-cart').addClass(left ? 'kifi-back' : 'kifi-forward');
+      var $old = $cart.find('.kifi-pane-box');
       $old.triggerHandler('kifi:removing');
       var $new = $(k.render('html/keeper/pane_' + name, {redirected: redirected}))[left ? 'prependTo' : 'appendTo']($cart).layout();
-      $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
-      .on("transitionend", function end(e) {
+      $cart.addClass('kifi-animated').layout().addClass('kifi-roll')
+      .on('transitionend', function end(e) {
         if (e.target !== this) return;
-        if (!left) $cart.removeClass("kifi-animated kifi-back kifi-forward");
+        if (!left) $cart.removeClass('kifi-animated kifi-back kifi-forward');
         $old.triggerHandler('kifi:remove');
         $old.remove();
-        $new.data("shown", true).triggerHandler("kifi:shown");
-        $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
-          .off("transitionend", end);
-        $cubby.css("overflow", "");
+        $new.data('shown', true).triggerHandler('kifi:shown');
+        $cart.removeClass('kifi-roll kifi-animated kifi-back kifi-forward')
+          .off('transitionend', end);
+        $cubby.css('overflow', '');
       });
       api.port.emit('pane', {old: $pane[0].dataset.locator, new: locator, how: trigger});
       $pane[0].dataset.locator = locator;
@@ -155,7 +155,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         });
       }
       $('html').attr('kifi-with-pane', '');
-      var $box = $pane.find(".kifi-pane-box");
+      var $box = $pane.find('.kifi-pane-box');
       populatePane($box, name, locator);
       setTimeout(function () {
         attachPaneBindings();
@@ -180,12 +180,12 @@ k.pane = k.pane || function () {  // idempotent for Chrome
           html: 'Customize your Kifi<br/>experience.'
         }, function (html) {
           configureHover(html, {
-            mustHoverFor: 700, hideAfter: 3000, click: "hide",
+            mustHoverFor: 700, hideAfter: 3000, click: 'hide',
             position: {my: 'right+6 top+10', at: 'right bottom', of: btn, collision: 'none'}
           });
         });
       })
-      .on("mousedown", ".kifi-pane-top-menu-a", function (e) {
+      .on('mousedown', '.kifi-pane-top-menu-a', function (e) {
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         var $a = $(this).addClass('kifi-active');
@@ -241,13 +241,13 @@ k.pane = k.pane || function () {  // idempotent for Chrome
           });
         }, 150);
       })
-      .on("mouseup", ".kifi-hide-on-site", function (e) {
+      .on('mouseup', '.kifi-hide-on-site', function (e) {
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
-        var $hide = $(this).toggleClass("kifi-checked");
-        var checked = $hide.hasClass("kifi-checked");
+        var $hide = $(this).toggleClass('kifi-checked');
+        var checked = $hide.hasClass('kifi-checked');
         $(k.tile).toggle(!checked);
-        api.port.emit("suppress_on_site", checked);
+        api.port.emit('suppress_on_site', checked);
         setTimeout(function () {
           if (checked) {
             hidePane();
@@ -262,20 +262,20 @@ k.pane = k.pane || function () {  // idempotent for Chrome
         $(this).closest('.kifi-pane-top-menu').triggerHandler('kifi:hide');
         api.require('styles/keeper/settings.css', showPane.bind(null, '/settings', 'menu'));
       })
-      .on("mouseup", ".kifi-sign-out", function (e) {
+      .on('mouseup', '.kifi-sign-out', function (e) {
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
-        api.port.emit("deauthenticate");
+        api.port.emit('deauthenticate');
         setTimeout(function () {
           $('<kifi class="kifi-root kifi-signed-out-tooltip"><b>Logged out</b><br/>To log back in to Kifi, click the <img class="kifi-signed-out-icon" src="' + api.url('images/url_gray.png') + '"/> icon above.</kifi>')
             .appendTo('body').delay(6000).fadeOut(1000, removeThis);
         }, 150);
       })
-      .on("mouseup", ".kifi-pane-top-menu-item[data-href]", function (e) {
+      .on('mouseup', '.kifi-pane-top-menu-item[data-href]', function (e) {
         if (e.originalEvent.isTrusted === false) return;
         e.preventDefault();
         window.open(this.dataset.href);
-        $(this).closest(".kifi-pane-top-menu").triggerHandler("kifi:hide");
+        $(this).closest('.kifi-pane-top-menu').triggerHandler('kifi:hide');
       })
       .hoverfu('.kifi-pane-x', function (configureHover) {
         configureHover({
@@ -288,7 +288,7 @@ k.pane = k.pane || function () {  // idempotent for Chrome
           hidePane(k.tile.style.display !== 'none' && !k.tile.hasAttribute('kifi-fullscreen'));
         }
       }, 400, true))
-      .on("mousedown click keydown keypress keyup", function (e) {
+      .on('mousedown click keydown keypress keyup', function (e) {
         e.stopPropagation();
       });
   }
