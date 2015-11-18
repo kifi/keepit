@@ -339,7 +339,7 @@ class LibraryMembershipCommanderImpl @Inject() (
 
   def suggestMembers(userId: Id[User], libraryId: Id[Library], query: Option[String], limit: Option[Int]): Future[Seq[MaybeLibraryMember]] = {
     val futureFriendsAndContacts = query.map(_.trim).filter(_.nonEmpty) match {
-      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, limit)
+      case Some(validQuery) => typeaheadCommander.searchFriendsAndContacts(userId, validQuery, includeSelf = false, limit)
       case None => Future.successful(typeaheadCommander.suggestFriendsAndContacts(userId, limit))
     }
 

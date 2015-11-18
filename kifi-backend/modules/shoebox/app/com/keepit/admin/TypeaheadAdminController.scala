@@ -96,14 +96,15 @@ class TypeaheadAdminController @Inject() (
   }
 
   def contactSearch(userId: Id[User], query: String) = AdminUserAction.async { request =>
+
     abookServiceClient.prefixQuery(userId, query, None) map { hits =>
       log.info(s"[contactSearch($userId,$query)-LOCAL] res=(${hits.length});${hits.take(10).mkString(",")}")
       Ok(Json.toJson(hits))
     }
   }
 
-  def search(userId: Id[User], query: String, limit: Int, pictureUrl: Boolean, dedupEmail: Boolean) = AdminUserPage.async { request =>
-    typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), pictureUrl, dedupEmail) map { res => // hack
+  def search(userId: Id[User], query: String, limit: Int, pictureUrl: Boolean) = AdminUserPage.async { request =>
+    typeaheadCommander.searchWithInviteStatus(userId, query, Some(limit), pictureUrl) map { res => // hack
       Ok(
         Html("<table border=1><tr><td>label</td><td>networkType</td><td>score</td><td>status</td><td>value</td><td>image</td><td>email</td><td>inviteLastSentAt</td></tr>" +
           res.map(c => s"<tr><td>${c.label}</td><td>${c.networkType}</td><td>${c.score}</td><td>${c.status}</td><td>${c.value}</td><td>${c.image.getOrElse("")}</td><td>${c.email}</td><td>${c.inviteLastSentAt}</td></tr>").mkString("") +
