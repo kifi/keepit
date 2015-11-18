@@ -134,6 +134,12 @@ package object json {
         }
       case _ => JsError(Seq(JsPath() -> Seq(ValidationError(s"Expected a JsObject with a single field of [$strA, $strB]"))))
     }
+    def keyedWrites[A, B](strA: String, strB: String)(implicit aWrites: Writes[A], bWrites: Writes[B]): OWrites[Either[A, B]] = OWrites {
+      case Left(a) => Json.obj(strA -> aWrites.writes(a))
+      case Right(b) => Json.obj(strB -> bWrites.writes(b))
+    }
+    def keyedFormat[A, B](strA: String, strB: String)(implicit aFormat: Format[A], bFormat: Format[B]): OFormat[Either[A, B]] =
+      OFormat(keyedReads[A,B](strA, strB), keyedWrites[A,B](strA, strB))
   }
 
   object TraversableFormat {

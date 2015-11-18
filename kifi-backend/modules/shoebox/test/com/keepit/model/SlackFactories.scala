@@ -3,6 +3,7 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.Id
+import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.slack.models._
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
@@ -22,8 +23,9 @@ object SlackTeamFactory {
 object SlackTeamMembershipFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
   def membership(): PartialSlackTeamMembership = {
+    val owner = Id[User](idx.incrementAndGet())
     PartialSlackTeamMembership(SlackTeamMembership(
-      userId = Id[User](idx.incrementAndGet()),
+      userId = owner,
       slackUserId = SlackUserId(ran(10)),
       slackUsername = SlackUsername(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
@@ -69,8 +71,10 @@ object SlackIncomingWebhookFactory {
 object SlackChannelToLibraryFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
   def stl(): PartialSlackChannelToLibrary = {
+    val owner = Id[User](idx.incrementAndGet())
     PartialSlackChannelToLibrary(SlackChannelToLibrary(
-      ownerId = Id[User](idx.incrementAndGet()),
+      ownerId = owner,
+      space = UserSpace(owner),
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
@@ -92,8 +96,10 @@ object SlackChannelToLibraryFactory {
 object LibraryToSlackChannelFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
   def lts(): PartialLibraryToSlackChannel = {
+    val owner = Id[User](idx.incrementAndGet())
     PartialLibraryToSlackChannel(LibraryToSlackChannel(
-      ownerId = Id[User](idx.incrementAndGet()),
+      ownerId = owner,
+      space = UserSpace(owner),
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,

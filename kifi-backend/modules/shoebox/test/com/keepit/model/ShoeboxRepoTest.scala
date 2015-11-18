@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.store.ImagePath
+import com.keepit.model.LibrarySpace.UserSpace
 import com.keepit.slack.models._
 import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import org.specs2.mutable.Specification
@@ -117,7 +118,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         }
 
         // LibraryToSlackChannel
-        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId, slackAccount.slackUserId, slackAccount.slackTeamId, None, channel, lib.id.get)
+        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId, UserSpace(slackAccount.userId), slackAccount.slackUserId, slackAccount.slackTeamId, None, channel, lib.id.get)
         val libraryToSlackChannelRepo = inject[LibraryToSlackChannelRepo]
         db.readWrite { implicit session =>
           val (saved, true) = libraryToSlackChannelRepo.internBySlackTeamChannelAndLibrary(integrationRequest)

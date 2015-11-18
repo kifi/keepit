@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.json.{ EitherFormat, EnumFormat }
 import com.keepit.common.reflection.Enumerator
-import com.keepit.model.{ Library, User }
+import com.keepit.model.{ LibrarySpace, Library, User }
 import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -42,6 +42,7 @@ trait SlackIntegration {
 sealed abstract class SlackIntegrationRequest
 case class SlackIntegrationCreateRequest(
   userId: Id[User],
+  space: LibrarySpace,
   slackUserId: SlackUserId,
   slackTeamId: SlackTeamId,
   slackChannelId: Option[SlackChannelId],
