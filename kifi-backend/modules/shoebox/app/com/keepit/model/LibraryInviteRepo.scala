@@ -16,6 +16,7 @@ import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
 trait LibraryInviteRepo extends Repo[LibraryInvite] with RepoWithDelete[LibraryInvite] {
   def getWithLibraryId(libraryId: Id[Library], excludeState: Option[State[LibraryInvite]] = Some(LibraryInviteStates.INACTIVE))(implicit session: RSession): Seq[LibraryInvite]
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Seq[LibraryInvite]
+  def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Map[Id[Library], Seq[LibraryInvite]]
   def countWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int
   def countWithLibraryIdAndEmail(libraryId: Id[Library], email: EmailAddress, excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int
   def countDistinctWithUserId(userId: Id[User])(implicit session: RSession): Int
@@ -88,6 +89,10 @@ class LibraryInviteRepoImpl @Inject() (
 
   def getWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
     (for (b <- rows if b.libraryId === libraryId && b.userId === userId && b.state.inSet(includeSet)) yield b).sortBy(_.createdAt).list
+  }
+  def getWithLibraryIdsAndUserId(libraryIds: Set[Id[Library]], userId: Id[User], includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Map[Id[Library], Seq[LibraryInvite]] = {
+    val foundInvites = rows.filter(b => b.libraryId.inSet(libraryIds) && b.userId === userId && b.state.inSet(includeSet)).sortBy(_.createdAt).list.groupBy(_.libraryId)
+    libraryIds.map { libId => libId -> foundInvites.getOrElse(libId, Seq.empty) }.toMap
   }
 
   def countWithLibraryIdAndUserId(libraryId: Id[Library], userId: Id[User], excludeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.INACTIVE))(implicit session: RSession): Int = {
