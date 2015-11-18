@@ -8,15 +8,11 @@ import org.apache.http.protocol.HttpContext
 import org.apache.http._
 
 trait SecurityInterceptor extends Logging {
-  def throwIfBannedHost(host: String): Boolean = {
+  def throwIfBannedHost(host: String): Unit = {
     val trimmed = host.trim
     if (SecurityInterceptor.bannedHosts.exists(trimmed.startsWith)) {
       //throw new HttpException(s"Tried to scrape banned domain ${host.toString}")
       log.error(s"[SI] Blocking $trimmed")
-      true
-    } else {
-      log.info(s"[SI] Allowing $trimmed")
-      false
     }
   }
 }
@@ -25,12 +21,7 @@ class RequestSecurityInterceptor extends HttpRequestInterceptor with SecurityInt
   def process(request: HttpRequest, context: HttpContext): Unit = {
     request match {
       case uriRequest: HttpUriRequest =>
-        Option(uriRequest.getFirstHeader("Host")).map(_.getValue).map(throwIfBannedHost).getOrElse {
-          val deets = {
-            uriRequest.getClass.getCanonicalName + "  " + uriRequest.getURI.toString + " " + uriRequest.getAllHeaders.map(h => h.getName -> h.getValue).toList.mkString(", ")
-          }
-          log.warn(s"[SI-2] Couldn't parse ${request.toString} Allowing. $deets")
-        }
+        Option(uriRequest.getFirstHeader("Host")).map(_.getValue).foreach(throwIfBannedHost)
       case _ =>
     }
   }
@@ -40,7 +31,7 @@ class ResponseSecurityInterceptor extends HttpResponseInterceptor with SecurityI
   def process(response: HttpResponse, context: HttpContext): Unit = {
     val loc = Option(response.getFirstHeader(LOCATION)).flatMap(l => URI.parse(l.getValue).toOption).flatMap(_.host).map(_.name)
     val host = Option(response.getFirstHeader(HOST)).map(_.getValue)
-    loc.orElse(host).map(throwIfBannedHost)
+    loc.orElse(host).foreach(throwIfBannedHost)
   }
 }
 
