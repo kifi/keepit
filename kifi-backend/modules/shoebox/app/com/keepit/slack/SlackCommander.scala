@@ -157,7 +157,12 @@ class SlackCommanderImpl @Inject() (
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {
     request match {
       case r: SlackIntegrationCreateRequest =>
-        None
+        val userHasAccessToSpace = r.space match {
+          case UserSpace(uid) => r.userId == uid
+          case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.userId).isDefined
+        }
+        if (!userHasAccessToSpace) Some(LibraryFail(FORBIDDEN, "insufficient_permissions_for_target_space"))
+        else None
 
       case r: SlackIntegrationModifyRequest =>
         val owners = libToChannelRepo.getActiveByIds(r.libToSlack.keySet).map(_.ownerId) ++ channelToLibRepo.getActiveByIds(r.slackToLib.keySet).map(_.ownerId)
