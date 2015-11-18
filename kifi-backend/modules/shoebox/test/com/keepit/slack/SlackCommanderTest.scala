@@ -49,6 +49,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           val slackInfo = db.readOnlyMaster { implicit s =>
             slackCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
           }
+          println(Json.prettyPrint(Json.toJson(slackInfo(lib.id.get))))
           slackInfo(lib.id.get).map(_.integrations.length) must beSome(2)
         }
       }
@@ -99,6 +100,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           val slackInfo = db.readOnlyMaster { implicit s =>
             slackCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
           }
+          println(Json.prettyPrint(Json.toJson(slackInfo(lib.id.get))))
           slackInfo(lib.id.get).map(_.integrations.length) must beSome(2)
         }
       }
