@@ -57,7 +57,7 @@ trait SlackCommander {
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
 
   // For use in the LibraryInfoCommander to send info down to clients
-  def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[LibrarySlackInfo]]
+  def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
 }
 
 @Singleton
@@ -207,57 +207,60 @@ class SlackCommanderImpl @Inject() (
     SlackIntegrationDeleteResponse(request.libToSlack.size + request.slackToLib.size)
   }
 
-  def getSlackIntegrationsForLibraries(viewerId: Id[User], libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[LibrarySlackInfo]] = {
-    val userOrgs = orgMembershipRepo.getAllByUserId(viewerId).map(_.organizationId).toSet
-    val slackToLibs = channelToLibRepo.getUserVisibleIntegrationsForLibraries(viewerId, userOrgs, libraryIds)
-    val libToSlacks = libToChannelRepo.getUserVisibleIntegrationsForLibraries(viewerId, userOrgs, libraryIds)
+  def getSlackIntegrationsForLibraries(viewerId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo] = {
+    db.readOnlyMaster { implicit session =>
+      val userOrgs = orgMembershipRepo.getAllByUserId(viewerId).map(_.organizationId).toSet
+      val slackToLibs = channelToLibRepo.getUserVisibleIntegrationsForLibraries(viewerId, userOrgs, libraryIds)
+      val libToSlacks = libToChannelRepo.getUserVisibleIntegrationsForLibraries(viewerId, userOrgs, libraryIds)
 
-    val teamNameByTeamId = (slackToLibs.map(_.slackTeamId) ++ libToSlacks.map(_.slackTeamId)).map { teamId =>
-      val memberships = slackTeamMembershipRepo.getBySlackTeam(teamId)
-      val teamName = memberships.head.slackTeamName
-      assert(memberships.forall(_.slackTeamName == teamName)) // oh sweet jesus I hope so
-      teamId -> teamName
-    }.toMap
-    val userNameByUserId = {
-      val slackUserIds = slackToLibs.map(_.slackUserId) ++ libToSlacks.map(_.slackUserId)
-      slackTeamMembershipRepo.getBySlackUserIds(slackUserIds.toSet).map {
-        case (slackUserId, stm) => slackUserId -> stm.slackUsername
+      val teamNameByTeamId = (slackToLibs.map(_.slackTeamId) ++ libToSlacks.map(_.slackTeamId)).map { teamId =>
+        val memberships = slackTeamMembershipRepo.getBySlackTeam(teamId)
+        val teamName = memberships.head.slackTeamName
+        assert(memberships.forall(_.slackTeamName == teamName)) // oh sweet jesus I hope so
+        teamId -> teamName
+      }.toMap
+      val userNameByUserId = {
+        val slackUserIds = slackToLibs.map(_.slackUserId) ++ libToSlacks.map(_.slackUserId)
+        slackTeamMembershipRepo.getBySlackUserIds(slackUserIds.toSet).map {
+          case (slackUserId, stm) => slackUserId -> stm.slackUsername
+        }
       }
-    }
-    val externalSpaceBySpace: Map[LibrarySpace, ExternalLibrarySpace] = {
-      (slackToLibs.map(_.space) ++ libToSlacks.map(_.space)).map {
-        case space @ OrganizationSpace(orgId) => space -> ExternalOrganizationSpace(Organization.publicId(orgId))
-        case space @ UserSpace(userId) => space -> ExternalUserSpace(basicUserRepo.load(userId).externalId)
+      val externalSpaceBySpace: Map[LibrarySpace, ExternalLibrarySpace] = {
+        (slackToLibs.map(_.space) ++ libToSlacks.map(_.space)).map {
+          case space @ OrganizationSpace(orgId) => space -> ExternalOrganizationSpace(Organization.publicId(orgId))
+          case space @ UserSpace(userId) => space -> ExternalUserSpace(basicUserRepo.load(userId).externalId)
+        }.toMap
+      }
+
+      libraryIds.map { libId =>
+        val fromSlacksThisLib = slackToLibs.filter(_.libraryId == libId)
+        val toSlacksThisLib = libToSlacks.filter(_.libraryId == libId)
+
+        val fromSlacksGrouped = fromSlacksThisLib.groupBy(x => (x.ownerId, x.space, x.slackUserId, x.slackTeamId, x.slackChannelName)).map {
+          case (key, Seq(fs)) => key -> SlackToLibraryIntegrationInfo(SlackChannelToLibrary.publicId(fs.id.get), fs.status)
+        }
+        val toSlacksGrouped = toSlacksThisLib.groupBy(x => (x.ownerId, x.space, x.slackUserId, x.slackTeamId, x.slackChannelName)).map {
+          case (key, Seq(ts)) => key -> LibraryToSlackIntegrationInfo(LibraryToSlackChannel.publicId(ts.id.get), ts.status)
+        }
+        val integrations = (fromSlacksGrouped.keySet ++ toSlacksGrouped.keySet).map {
+          case key @ (ownerId, space, slackUserId, slackTeamId, slackChannelName) =>
+            LibrarySlackIntegrationInfo(
+              creator = basicUserRepo.load(ownerId),
+              teamName = teamNameByTeamId(slackTeamId),
+              channelName = slackChannelName,
+              creatorName = userNameByUserId(slackUserId),
+              space = externalSpaceBySpace(space),
+              toSlack = toSlacksGrouped.get(key),
+              fromSlack = fromSlacksGrouped.get(key)
+            )
+        }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value, x.creatorName.value))
+        libId -> LibrarySlackInfo(
+          link = SlackAPI.OAuthAuthorize(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))).url,
+          integrations = integrations
+        )
+
       }.toMap
     }
-
-    libraryIds.map { libId =>
-      val fromSlacksThisLib = slackToLibs.filter(_.libraryId == libId)
-      val toSlacksThisLib = libToSlacks.filter(_.libraryId == libId)
-
-      val fromSlacksGrouped = fromSlacksThisLib.groupBy(x => (x.ownerId, x.space, x.slackUserId, x.slackTeamId, x.slackChannelName)).map {
-        case (key, Seq(fs)) => key -> SlackToLibraryIntegrationInfo(SlackChannelToLibrary.publicId(fs.id.get), fs.status)
-      }
-      val toSlacksGrouped = toSlacksThisLib.groupBy(x => (x.ownerId, x.space, x.slackUserId, x.slackTeamId, x.slackChannelName)).map {
-        case (key, Seq(ts)) => key -> LibraryToSlackIntegrationInfo(LibraryToSlackChannel.publicId(ts.id.get), ts.status)
-      }
-      val integrations = (fromSlacksGrouped.keySet ++ toSlacksGrouped.keySet).map {
-        case key @ (ownerId, space, slackUserId, slackTeamId, slackChannelName) =>
-          LibrarySlackIntegrationInfo(
-            creator = basicUserRepo.load(ownerId),
-            teamName = teamNameByTeamId(slackTeamId),
-            channelName = slackChannelName,
-            creatorName = userNameByUserId(slackUserId),
-            space = externalSpaceBySpace(space),
-            toSlack = toSlacksGrouped.get(key),
-            fromSlack = fromSlacksGrouped.get(key)
-          )
-      }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value, x.creatorName.value))
-      libId -> Some(LibrarySlackInfo(
-        link = SlackAPI.OAuthAuthorize(SlackAuthScope.library, DeepLinkRouter.libraryLink(Library.publicId(libId))).url,
-        integrations = integrations
-      ))
-    }.toMap
   }
 
 }

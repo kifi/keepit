@@ -49,8 +49,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           val slackInfo = db.readOnlyMaster { implicit s =>
             slackCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
           }
-          println(Json.prettyPrint(Json.toJson(slackInfo(lib.id.get))))
-          slackInfo(lib.id.get).map(_.integrations.length) must beSome(2)
+          slackInfo.get(lib.id.get).map(_.integrations.length) must beSome(2)
         }
       }
     }
@@ -71,11 +70,10 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
 
             (user, lib1, lib2)
           }
-          val slackInfo = db.readOnlyMaster { implicit s =>
-            slackCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib1.id.get, lib2.id.get))
-          }
-          slackInfo(lib1.id.get).map(_.integrations.length) must beSome(1)
-          slackInfo(lib2.id.get).map(_.integrations.length) must beSome(2)
+          val slackInfo = slackCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib1.id.get, lib2.id.get))
+
+          slackInfo.get(lib1.id.get).map(_.integrations.length) must beSome(1)
+          slackInfo.get(lib2.id.get).map(_.integrations.length) must beSome(2)
         }
       }
       "handle really dumb edge-cases correctly" in {
@@ -97,11 +95,10 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
 
             (user, lib)
           }
-          val slackInfo = db.readOnlyMaster { implicit s =>
-            slackCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
-          }
-          println(Json.prettyPrint(Json.toJson(slackInfo(lib.id.get))))
-          slackInfo(lib.id.get).map(_.integrations.length) must beSome(2)
+          val slackInfo = slackCommander.getSlackIntegrationsForLibraries(user.id.get, Set(lib.id.get))
+          // Uncomment to visually inspect the slack info
+          // println(Json.prettyPrint(Json.toJson(slackInfo(lib.id.get))))
+          slackInfo.get(lib.id.get).map(_.integrations.length) must beSome(2)
         }
       }
     }

@@ -17,13 +17,14 @@ import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.SlackCommander
+import com.keepit.slack.{ LibrarySlackInfo, SlackCommander }
 import com.keepit.slack.models.SlackAuthScope
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @ImplementedBy(classOf[LibraryInfoCommanderImpl])
 trait LibraryInfoCommander {
@@ -262,13 +263,16 @@ class LibraryInfoCommanderImpl @Inject() (
       } toMap
     }
 
-    val permissionsByLibraryId = db.readOnlyMaster { implicit s => permissionCommander.getLibrariesPermissions(libIds, viewerUserIdOpt) }.toMap
+    val permissionsByLibraryId = db.readOnlyMaster { implicit s => permissionCommander.getLibrariesPermissions(libIds, viewerUserIdOpt) }
 
-    val slackInfoByLibraryId = viewerUserIdOpt.map { viewerId =>
-      // TODO(ryan): do something with this line
-      // val slackableLibIds = permissionsByLibraryId.collect { case (libId, ps) if ps.contains(LibraryPermission.CREATE_SLACK_INTEGRATION) => libId }.toSet
-      db.readOnlyReplica { implicit s => slackCommander.getSlackIntegrationsForLibraries(viewerId, libIds) }
-    }.getOrElse(Map.empty.withDefaultValue(None))
+    // I refuse to allow something small, like Slack integrations, take down the important stuff like Libraries
+    val slackInfoByLibraryId: Map[Id[Library], LibrarySlackInfo] = viewerUserIdOpt.map { viewerId =>
+      Try(slackCommander.getSlackIntegrationsForLibraries(viewerId, libIds)).recover {
+        case fail =>
+          airbrake.notify(s"Exploded while getting Slack integrations for user $viewerId and libraries $libIds", fail)
+          Map.empty[Id[Library], LibrarySlackInfo]
+      }.get
+    }.getOrElse(Map.empty)
 
     val futureFullLibraryInfos = libraries.map { lib =>
       val libId = lib.id.get
@@ -318,7 +322,7 @@ class LibraryInfoCommanderImpl @Inject() (
           membership = membershipByLibraryId.flatMap(_.get(libId)),
           invite = inviteByLibraryId.flatMap(_.get(libId)),
           permissions = permissionsByLibraryId(libId),
-          slack = slackInfoByLibraryId(libId)
+          slack = slackInfoByLibraryId.get(libId)
         )
       }
     }
