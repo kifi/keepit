@@ -63,7 +63,7 @@ class ShardedKeepIndexer(
     shoebox.getKeepsAndTagsChanged(seq, fetchSize).map { changedKeepsAndTags =>
       if (changedKeepsAndTags.nonEmpty) {
         val shardedIndexables = indexShards.keys.map { shard =>
-          val indexables = changedKeepsAndTags.map { case KeepAndTags(keep, tags) => new KeepIndexable(keep, tags, shard) }
+          val indexables = changedKeepsAndTags.map { case KeepAndTags(keep, source, tags) => new KeepIndexable(keep, source, tags, shard) }
           shard -> indexables
         }.toMap
         val exhausted = changedKeepsAndTags.length < fetchSize

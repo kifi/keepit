@@ -551,7 +551,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         keepIds.collect { case keepId if changedKeepIds.contains(keepId) => (keepId, allCollections(collectionId).name) }
     }
     val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
-    val changedKeepsAndTags = changedKeeps.map { keep => KeepAndTags(keep, tagsByChangedKeep(keep.id.get)) }
+    val changedKeepsAndTags = changedKeeps.map { keep => KeepAndTags(keep, None, tagsByChangedKeep(keep.id.get)) }
     Future.successful(changedKeepsAndTags)
   }
 
