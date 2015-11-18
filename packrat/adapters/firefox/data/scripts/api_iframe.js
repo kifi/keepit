@@ -1,6 +1,12 @@
 api.pwnIframe = function (iframe, styles, scripts) {
   var doc = iframe.contentWindow.document;
-  doc.head.innerHTML = styles.map(function (path) {return '<link rel="stylesheet" href="' + api.url(path) + '">'}).join('');
+  var head = doc.head;
+  styles.forEach(function (path) {
+    var link = doc.createElement('LINK');
+    link.setAttribute('rel', 'stylesheet');
+    link.setAttribute('href', api.url(path));
+    head.appendChild(link);
+  });
   scripts.forEach(function (path) {
     var s = doc.createElement('SCRIPT');
     s.dataset.loading = true;
