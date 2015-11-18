@@ -89,6 +89,7 @@ object UserValueName {
 
   val UPDATED_LIBRARIES_LAST_SEEN = UserValueName("updated_libraries_last_seen")
   val COMPANY_NAME = UserValueName("company_name")
+  val HIDE_COMPANY_NAME = UserValueName("hide_company_name")
 
   val IGNORE_FOR_POTENTIAL_ORGANIZATIONS = UserValueName("ignore_for_potential_organizations")
   val HIDE_EMAIL_DOMAIN_ORGANIZATIONS = UserValueName("hide_email_domain_organizations")

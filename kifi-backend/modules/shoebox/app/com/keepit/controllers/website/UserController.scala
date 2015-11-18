@@ -338,6 +338,7 @@ class UserController @Inject() (
       USE_MINIMAL_KEEP_CARD,
       HAS_SEEN_FTUE,
       COMPANY_NAME,
+      HIDE_COMPANY_NAME,
       STORED_CREDIT_CODE
     )
   }
