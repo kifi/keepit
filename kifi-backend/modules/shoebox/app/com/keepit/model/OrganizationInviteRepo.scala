@@ -229,7 +229,7 @@ class OrganizationInviteRepoImpl @Inject() (
   }
 
   def deactivate(model: OrganizationInvite)(implicit session: RWSession): Unit = {
-    save(model.withState(OrganizationInviteStates.INACTIVE))
+    save(model.sanitizeForDelete)
   }
 
   def getCountByOrganization(organizationId: Id[Organization], decisions: Set[InvitationDecision], excludeState: Option[State[OrganizationInvite]])(implicit s: RSession): Int = {

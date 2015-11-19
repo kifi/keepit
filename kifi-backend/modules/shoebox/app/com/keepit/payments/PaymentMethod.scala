@@ -31,6 +31,7 @@ case class PaymentMethod(
   def withUpdateTime(now: DateTime): PaymentMethod = this.copy(updatedAt = now)
   def withState(state: State[PaymentMethod]): PaymentMethod = this.copy(state = state)
   def isActive: Boolean = state == PaymentMethodStates.ACTIVE
+  def sanitizeForDelete = this.copy(state = PaymentMethodStates.INACTIVE, default = false, stripeToken = StripeToken.DELETED)
 }
 
 object PaymentMethod extends ModelWithPublicIdCompanion[PaymentMethod] {

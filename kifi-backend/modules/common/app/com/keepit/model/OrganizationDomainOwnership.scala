@@ -23,7 +23,7 @@ case class OrganizationDomainOwnership(
   override def withUpdateTime(now: DateTime): OrganizationDomainOwnership = copy(updatedAt = now)
   def isActive = this.state == OrganizationDomainOwnershipStates.ACTIVE
   def toIngestableOrganizationDomainOwnership(domainId: Id[Domain]) = IngestableOrganizationDomainOwnership(id.get, createdAt, state, seq, organizationId, domainId)
-
+  def sanitizeForDelete = this.copy(state = OrganizationDomainOwnershipStates.INACTIVE)
 }
 
 object OrganizationDomainOwnership {

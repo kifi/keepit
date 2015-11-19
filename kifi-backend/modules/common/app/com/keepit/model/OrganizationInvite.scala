@@ -32,6 +32,7 @@ case class OrganizationInvite(
   def withState(newState: State[OrganizationInvite]): OrganizationInvite = this.copy(state = newState)
   def accepted: OrganizationInvite = this.copy(decision = InvitationDecision.ACCEPTED)
   def declined: OrganizationInvite = this.copy(decision = InvitationDecision.DECLINED)
+  def sanitizeForDelete = this.copy(state = OrganizationInviteStates.INACTIVE)
 
   override def toString: String = s"OrganizationInvite[id=$id,organizationId=$organizationId,ownerId=$inviterId,userId=$userId,decision=$decision,email=$emailAddress,role=$role,state=$state, authToken=$authToken]"
 }
