@@ -154,7 +154,7 @@ class KeepToLibraryRepoImpl @Inject() (
   }
 
   def getAllByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
-    rows.filter(r => r.organizationId === orgId && r.state === excludeStateOpt.orNull).list
+    rows.filter(r => r.organizationId === orgId && r.state =!= excludeStateOpt.orNull).list
   }
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary] = {
