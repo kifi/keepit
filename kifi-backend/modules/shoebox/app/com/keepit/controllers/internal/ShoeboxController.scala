@@ -25,6 +25,8 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
+import com.keepit.slack.SlackCommander
+import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackAccessToken }
 import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -92,6 +94,7 @@ class ShoeboxController @Inject() (
   permissionCommander: PermissionCommander,
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
+  slackCommander: SlackCommander,
   implicit val config: PublicIdConfiguration)(implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends ShoeboxServiceController with Logging {
@@ -578,5 +581,13 @@ class ShoeboxController @Inject() (
     }
 
     Ok(Json.toJson(permissionsByOrgId))
+  }
+
+  def getSlackChannelLibrary() = Action(parse.tolerantJson) { request =>
+    val token = (request.body \ "token").as[SlackAccessToken]
+    val teamId = (request.body \ "teamId").as[SlackTeamId]
+    val channelId = (request.body \ "channelId").as[SlackChannelId]
+    val libIdOpt = slackCommander.getSlackChannelLibrary(token, teamId, channelId)
+    Ok(Json.toJson(libIdOpt))
   }
 }

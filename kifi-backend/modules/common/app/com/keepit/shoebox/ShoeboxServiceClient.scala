@@ -24,6 +24,7 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
+import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackAccessToken }
 import com.keepit.social.{ BasicUserUserIdKey, _ }
 import org.joda.time.DateTime
 import play.api.libs.json.Json._
@@ -127,6 +128,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship]
   def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]): Future[Option[LibraryMembershipView]]
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
+  def getSlackChannelLibrary(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Future[Option[Id[Library]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -837,4 +839,10 @@ class ShoeboxServiceClientImpl @Inject() (
     val payload = Json.obj("orgIds" -> orgIds, "userId" -> userId)
     call(Shoebox.internal.getUserPermissionsByOrgId, payload).map { _.json.as[Map[Id[Organization], Set[OrganizationPermission]]] }
   }
+
+  def getSlackChannelLibrary(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Future[Option[Id[Library]]] = {
+    val payload = Json.obj("token" -> token, "teamId" -> teamId, "channelId" -> channelId)
+    call(Shoebox.internal.getSlackChannelLibrary, payload).map { _.json.as[Option[Id[Library]]] }
+  }
+
 }

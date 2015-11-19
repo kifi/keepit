@@ -1041,6 +1041,7 @@ POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.inte
 POST     /internal/shoebox/database/getKeepImages   @com.keepit.controllers.internal.ShoeboxController.getKeepImages()
 GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
 GET      /internal/shoebox/database/getLibraryMembershipView    @com.keepit.controllers.internal.ShoeboxController.getLibraryMembershipView(libraryId: Id[Library], userId: Id[User])
+POST     /internal/shoebox/database/getSlackChannelLibrary      @com.keepit.controllers.internal.ShoeboxController.getSlackChannelLibrary()
 
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 

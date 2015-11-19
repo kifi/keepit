@@ -20,8 +20,9 @@ import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.http.Status._
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ ExecutionContext }
 import scala.util.{ Success, Failure, Try }
+import com.keepit.common.core._
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -58,6 +59,7 @@ trait SlackCommander {
 
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
+  def getSlackChannelLibrary(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Option[Id[Library]]
 }
 
 @Singleton
@@ -263,4 +265,13 @@ class SlackCommanderImpl @Inject() (
     }
   }
 
+  def getSlackChannelLibrary(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Option[Id[Library]] = {
+    db.readOnlyMaster { implicit session =>
+      slackTeamMembershipRepo.getByToken(token).flatMap { membership =>
+        if (membership.slackTeamId == teamId) {
+          channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId).maxByOpt(_.lastMessageTimestamp).map(_.libraryId)
+        } else None
+      }
+    }
+  }
 }
