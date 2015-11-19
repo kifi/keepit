@@ -58,7 +58,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       title = Some(SlackAttachment.Title(title, Some(keep.url))),
       text = summary.description,
       imageUrl = summary.imageUrl,
-      fallback = title,
+      fallback = Some(title),
       color = None,
       pretext = None,
       author = None,
