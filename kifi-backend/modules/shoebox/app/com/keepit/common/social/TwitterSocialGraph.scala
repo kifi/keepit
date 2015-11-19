@@ -76,7 +76,7 @@ trait TwitterSocialGraph extends SocialGraph {
 
   def sendDM(socialUserInfo: SocialUserInfo, receiverUserId: Long, msg: String): Future[WSResponse]
   def sendTweet(socialUserInfo: SocialUserInfo, image: Option[File], msg: String): Unit
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] //uses app auth if no social user info is given
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] //uses app auth if no social user info is given
 }
 
 class TwitterSocialGraphImpl @Inject() (
@@ -217,7 +217,7 @@ class TwitterSocialGraphImpl @Inject() (
         val socialUserInfos = db.readOnlyReplica { implicit s =>
           socialUserInfoRepo.getBySocialIds(userIds.map(id => SocialId(id.toString)))
         }
-        val twitterHandles = socialUserInfos.flatMap(_.username).toSet
+        val twitterHandles = socialUserInfos.flatMap(_.username.map(TwitterHandle(_))).toSet
         db.readOnlyMaster { implicit s =>
           twitterSyncStateRepo.getTwitterSyncsByFriendIds(twitterHandles)
         } map { twitterSyncState =>
@@ -354,7 +354,7 @@ class TwitterSocialGraphImpl @Inject() (
         s"PhotoSizeLimit:${conf.getPhotoSizeLimit},ShortURLLength:${conf.getShortURLLength},ShortURLLengthHttps:${conf.getShortURLLengthHttps},CharactersReservedPerMedia:${conf.getCharactersReservedPerMedia},limits:$limits", e)
   }
 
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = {
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = {
     val stackTrace = new StackTrace()
     val endpoint = "https://api.twitter.com/1.1/statuses/user_timeline.json"
     val sigOpt: Option[OAuthCalculator] = socialUserInfoOpt.flatMap { socialUserInfo =>
@@ -367,7 +367,7 @@ class TwitterSocialGraphImpl @Inject() (
     }
     sigOpt match {
       case Some(sig) =>
-        val query = Seq("screen_name" -> Some(handle), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
+        val query = Seq("screen_name" -> Some(handle.value), "count" -> Some("200"), "since_id" -> lowerBoundId.map(_.toString), "max_id" -> upperBoundId.map(id => (id - 1).toString)).collect { case (k, Some(v)) => k -> v }
 
         log.info(s"[twfetch] Fetching tweets for $handle using ${socialUserInfoOpt.flatMap(_.userId).map(_.toString).getOrElse("system")} token. ($upperBoundId, $lowerBoundId)")
         val call = WS.url(endpoint).sign(sig).withQueryString(query: _*)

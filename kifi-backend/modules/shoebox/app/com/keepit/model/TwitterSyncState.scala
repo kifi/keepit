@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.cache._
+import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 
@@ -15,7 +16,7 @@ case class TwitterSyncState(
     updatedAt: DateTime = currentDateTime,
     state: State[TwitterSyncState] = TwitterSyncStateStates.ACTIVE,
     userId: Option[Id[User]], // Id of user to use to sync with Twitter
-    twitterHandle: String,
+    twitterHandle: TwitterHandle,
     lastFetchedAt: Option[DateTime],
     libraryId: Id[Library],
     maxTweetIdSeen: Option[Long],
@@ -26,11 +27,11 @@ case class TwitterSyncState(
 
 object TwitterSyncStateStates extends States[TwitterSyncState]
 
-case class TwitterHandleLibraryIdKey(val id: Id[Library]) extends Key[String] {
+case class TwitterHandleLibraryIdKey(val id: Id[Library]) extends Key[TwitterHandle] {
   override val version = 2
   val namespace = "twitter_handle_library_id"
   def toKey(): String = id.id.toString
 }
 
 class TwitterHandleCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends StringCacheImpl[TwitterHandleLibraryIdKey](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+  extends JsonCacheImpl[TwitterHandleLibraryIdKey, TwitterHandle](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

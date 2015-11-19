@@ -3,12 +3,16 @@ package com.keepit.model
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
-import com.keepit.slack.models.{ SlackChannelId, SlackMessage }
+import com.keepit.slack.models.SlackMessage
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 
 import scala.util.{ Failure, Success, Try }
+
+@json case class TwitterHandle(value: String) {
+  override def toString = value
+}
 
 @json case class TwitterId(id: Long) {
   // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
@@ -89,20 +93,17 @@ object SourceAttribution {
   }
 }
 
-case class TwitterAttribution(idString: String, screenName: String) extends SourceAttribution {
-  def getOriginalURL: String = s"https://twitter.com/$screenName/status/$idString"
-  def getHandle: String = screenName
+case class TwitterAttribution(idString: String, screenName: TwitterHandle) extends SourceAttribution {
+  def getOriginalURL: String = s"https://twitter.com/${screenName.value}/status/$idString"
 }
 
 object TwitterAttribution {
   implicit val format = Json.format[TwitterAttribution]
 
-  def fromRawTweetJson(js: JsValue): Option[TwitterAttribution] = {
-    val idStringOpt = (js \ "id_str").asOpt[String]
-    val screenNameOpt = (js \ "user" \ "screen_name").asOpt[String]
+  def fromRawTweetJson(js: JsValue): JsResult[TwitterAttribution] = {
     for {
-      idString <- idStringOpt
-      screenName <- screenNameOpt
+      idString <- (js \ "id_str").validate[String]
+      screenName <- (js \ "user" \ "screen_name").validate[TwitterHandle]
     } yield TwitterAttribution(idString, screenName)
   }
 }
