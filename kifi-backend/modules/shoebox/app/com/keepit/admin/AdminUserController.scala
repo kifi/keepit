@@ -347,39 +347,6 @@ class AdminUserController @Inject() (
     Ok(html.admin.userKeeps(user, bookmarks.size, filteredBookmarks, bookmarkSearch, collections, collectionFilter))
   }
 
-  def bulkMessageUsers() = AdminUserPage { implicit request =>
-    Ok(html.admin.bulkMessage())
-  }
-
-  def userJsonByEitherId(id: String) = AdminUserAction { implicit request =>
-    db.readOnlyReplica { implicit s =>
-      Try(id.toLong).map { userId =>
-        userRepo.get(Id[User](userId))
-      }.toOption.orElse {
-        ExternalId.asOpt[User](id).flatMap { userExtId =>
-          userRepo.getOpt(userExtId)
-        }
-      }.map { user =>
-        val orgMemberships = orgMembershipRepo.getAllByUserId(user.id.get)
-        val orgOpt = orgRepo.getByIds(orgMemberships.map(_.organizationId).toSet).values.toList
-          .filter(_.state == OrganizationStates.ACTIVE)
-          .map { org =>
-            (org, orgMemberships.find(_.organizationId == org.id.get).get)
-          }.sortBy { c =>
-            (c._2.role, -c._2.id.get.id)
-          }.map(_._1).headOption
-
-        Ok(Json.obj(
-          "user" -> user,
-          "basic" -> basicUserRepo.load(user.id.get),
-          "org" -> orgOpt
-        ))
-      }.getOrElse {
-        NotFound(Json.obj("error" -> "no_clue_who_this_is"))
-      }
-    }
-  }
-
   def allUsersView = usersView(0)
   def allRegisteredUsersView = registeredUsersView(0)
   def allFakeUsersView = fakeUsersView(0)
