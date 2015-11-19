@@ -6,6 +6,7 @@ import com.keepit.common.db.FakeSlickSessionProvider
 import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.common.mail.ElectronicMailRepo
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time.FakeClock
 import com.keepit.controllers.website.{ DeepLinkRouter, DeepLinkRouterImpl }
 import com.keepit.integrity.{ KeepChecker, LibraryChecker, OrganizationChecker }
 import com.keepit.model._
@@ -91,4 +92,5 @@ trait ShoeboxInjectionHelpers { self: TestInjectorProvider =>
 
   def slackCommander(implicit injector: Injector) = inject[SlackCommander].asInstanceOf[SlackCommanderImpl]
   def slackClient(implicit injector: Injector) = inject[SlackClient].asInstanceOf[FakeSlackClientImpl]
+  def fakeClock(implicit injector: Injector) = inject[FakeClock]
 }

@@ -35,6 +35,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   clock: Clock,
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
+  keepSourceAttributionRepo: KeepSourceAttributionRepo,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   keepDecorator: KeepDecorator,
@@ -68,6 +69,26 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       fromUrl = None
     )
   }
+  private def keepAsDescriptionElements(keep: Keep, lib: Library)(implicit session: RSession): DescriptionElements = {
+    import DescriptionElements._
+
+    val slackMessageOpt = keep.sourceAttributionId.map(keepSourceAttributionRepo.get(_).attribution).collect {
+      case sa: SlackAttribution => sa.message
+    }
+
+    slackMessageOpt match {
+      case Some(post) =>
+        DescriptionElements(
+          post.username.value, "posted", keep.title.getOrElse("a link") --> LinkElement(keep.url), "to", post.channel.name.value, ".",
+          "It was automatically added to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.",
+          s"(permalink: ${post.permalink})"
+        )
+      case None =>
+        DescriptionElements(
+          getUser(keep.userId), "added", keep.title.getOrElse("a keep") --> LinkElement(keep.url),
+          "to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.")
+    }
+  }
   private def describeKeeps(keeps: KeepsToPush, withAttachments: Boolean = false): Option[Future[SlackMessageRequest]] = {
     import DescriptionElements._
     keeps match {
@@ -84,11 +105,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         })
       case SomeKeeps(ks, lib) if !withAttachments =>
         val msgs = db.readOnlyMaster { implicit s =>
-          ks.map { k =>
-            DescriptionElements(
-              getUser(k.userId), "added", k.title.getOrElse("a keep") --> LinkElement(k.url),
-              "to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.")
-          }
+          ks.map(k => keepAsDescriptionElements(k, lib))
         }
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
