@@ -6,7 +6,9 @@ import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, Use
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
-import com.keepit.model.{ LibraryFail, Library }
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
+import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
+import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackClient, SlackCommander }
 import play.api.libs.json.{ JsObject, JsSuccess, Json, JsError }
@@ -19,6 +21,7 @@ class SlackController @Inject() (
     slackCommander: SlackCommander,
     deepLinkRouter: DeepLinkRouter,
     libraryToSlackChannelProcessor: LibraryToSlackChannelPusher,
+    userRepo: UserRepo,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
     val permissionCommander: PermissionCommander,
@@ -51,14 +54,26 @@ class SlackController @Inject() (
 
   // TODO(ryan): account for permissions!
   def modifyIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
-    (request.body \ "integrations").validate[Seq[SlackIntegrationModification]] match {
+    (request.body \ "integrations").validate[Seq[ExternalSlackIntegrationModification]] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
       case JsSuccess(mods, _) =>
+        val extUserIds = mods.flatMap(_.space).collect { case ExternalUserSpace(uid) => uid }
+        val pubOrgIds = mods.flatMap(_.space).collect { case ExternalOrganizationSpace(oid) => oid }
+        val extToIntUserId = db.readOnlyReplica { implicit s =>
+          userRepo.getAllUsersByExternalId(extUserIds)
+        }.map { case (extId, u) => extId -> u.id.get }
+        val externalToInternalSpace: Map[ExternalLibrarySpace, LibrarySpace] = {
+          extToIntUserId.map { case (extId, intId) => ExternalUserSpace(extId) -> UserSpace(intId) } ++
+            pubOrgIds.map { pubId => ExternalOrganizationSpace(pubId) -> OrganizationSpace(Organization.decodePublicId(pubId).get) }.toMap
+        }
+
         val libToSlackMods = mods.collect {
-          case SlackIntegrationModification(Left(ltsId), status) => LibraryToSlackChannel.decodePublicId(ltsId).get -> status
+          case ExternalSlackIntegrationModification(Left(ltsId), extSpace, status) =>
+            LibraryToSlackChannel.decodePublicId(ltsId).get -> SlackIntegrationModification(extSpace.map(x => externalToInternalSpace(x)), status)
         }.toMap
         val slackToLibMods = mods.collect {
-          case SlackIntegrationModification(Right(stlId), status) => SlackChannelToLibrary.decodePublicId(stlId).get -> status
+          case ExternalSlackIntegrationModification(Right(stlId), extSpace, status) =>
+            SlackChannelToLibrary.decodePublicId(stlId).get -> SlackIntegrationModification(extSpace.map(externalToInternalSpace(_)), status)
         }.toMap
         slackCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
           Ok(Json.toJson(response))
