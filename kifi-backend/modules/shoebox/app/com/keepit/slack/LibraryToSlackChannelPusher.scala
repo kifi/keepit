@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{PermissionCommander, ProcessedImageSize, KeepDecorator, PathCommander}
+import com.keepit.commanders.{ PermissionCommander, ProcessedImageSize, KeepDecorator, PathCommander }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -17,6 +17,7 @@ import org.joda.time.Period
 import com.keepit.common.core.futureExtensionOps
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
@@ -60,7 +61,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       title = Some(SlackAttachment.Title(title, Some(keep.url))),
       text = summary.description,
       imageUrl = summary.imageUrl,
-      fallback = title,
+      fallback = Some(title),
       color = None,
       pretext = None,
       author = None,
@@ -131,7 +132,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       def isIllegal(lts: LibraryToSlackChannel) = {
         !permissionCommander.getLibraryPermissions(libId, Some(lts.ownerId)).contains(LibraryPermission.VIEW_LIBRARY)
       }
-      integrations.map(libToChannelRepo.get).filter(!isLegalIntegration(_)).foreach(libToChannelRepo.save(_.withStatus(SlackIntegrationStatus.Off)))
+      integrations.map(libToChannelRepo.get).filter(isIllegal).foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
 
       val integrationsToProcess = integrations.flatMap(ltsId => libToChannelRepo.markAsProcessing(ltsId))
       (lib, integrationsToProcess)
@@ -167,8 +168,11 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           }
       }
       slackPush.andThen {
-        case res => db.readWrite { implicit s =>
+        case Success(true) => db.readWrite { implicit s =>
           libToChannelRepo.finishProcessing(lts.withLastProcessedKeep(ktls.lastOption.map(_.id.get)))
+        }
+        case Success(false) => db.readWrite { implicit s =>
+          libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
         }
       }.imap { res => lts.id.get -> res }
     }
