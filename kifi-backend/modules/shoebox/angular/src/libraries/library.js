@@ -78,10 +78,25 @@ angular.module('kifi')
 
       this.slackToKeep = this.data.fromSlack && this.data.fromSlack.status === 'on';
 
+      if (this.data.space) {
+        if (this.data.space.user) {
+          // can't see other user integrations for now
+          this.spaceName = 'Your';
+        } else {
+          var orgs = profileService.me.orgs;
+          for (var i = 0; i < orgs.length; i++) {
+            if (orgs[i].id === this.data.space.org) {
+              this.spaceName = orgs[i].name;
+            }
+          }
+        }
+      }
+
       this.onKeepToSlackChanged = function(on) {
         // make request
         // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
         this.data.toSlack.status = on ? 'on' : 'off';
+        this.data.toSlack.space = this.data.space;
         libraryService.modifySlackIntegrations(this.library.id, [this.data.toSlack]);
       };
 
@@ -89,14 +104,38 @@ angular.module('kifi')
         // make request
         // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
         this.data.fromSlack.status = $scope.canAddKeepsToLibrary && on ? 'on' : 'off';
+        this.data.fromSlack.space = this.data.space;
         libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack]);
+      };
+
+      this.getChannelName = function() {
+        if (this.data.channelName[0] === '@') {
+          return this.data.channelName;
+        } else {
+          return '#' + this.data.channelName.replace('#', '');
+        }
+      };
+
+      this.moveIntegration = function(space) {
+        this.spaceName = space.type === 'me' ? 'Your' : space.name;
+        if (space.type === 'org') {
+          this.data.space = {org: space.id};
+        } else {
+          this.data.space = {user: space.id};
+        }
+
+        this.data.fromSlack.space = this.data.space;
+        this.data.toSlack.space = this.data.space;
+        libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack, this.data.toSlack]);
+        $scope.sortSlackIntegrations();
+        this.menuItems = this.getSpaceMenuItems();
       };
 
       this.guardDeleteIntegration = function() {
         var self = this;
         modalService.open({
           template: 'common/modal/simpleModal.tpl.html',
-          modalDefaults: {  
+          modalDefaults: {
             title: 'Delete Integration?',
             content: 'Are you sure you\'d like to delete this integration?',
             centered: true,
@@ -108,6 +147,25 @@ angular.module('kifi')
           }
         });
       };
+
+      this.getSpaceMenuItems = function() {
+        var currSpaceId = this.data.space.user || this.data.space.org;
+        var orgs = profileService.me.orgs;
+        var items = [];
+        if (profileService.me.id !== currSpaceId) {
+          items.push({type: 'me', name: 'Your Profile', id: profileService.me.id, userOrOrg: profileService.me});
+        }
+
+        orgs.forEach(function(org) {
+          if (((org.viewer && org.viewer.permissions) || []).indexOf('create_slack_integration') !== -1
+              && currSpaceId !== org.id) {
+            items.push({type: 'org', name: org.name, id: org.id, userOrOrg: org});
+          }
+        });
+        return items;
+      };
+
+      this.menuItems = this.getSpaceMenuItems();
 
       this.deleteIntegration = function() {
         var ids = [];
@@ -150,13 +208,51 @@ angular.module('kifi')
     // slack stuff
     $scope.slackIntegrations = [];
 
+    $scope.sortSlackIntegrations = function() {
+      var integrations = $scope.slackIntegrations;
+      var buckets = {};
 
+      integrations.forEach(function(integration) {
+        var space = null;
+        if (integration.data.space) {
+          space = integration.data.space.org || integration.data.space.user;
+        }
+        if (space) {
+          if (!buckets[space]) {
+            buckets[space] = [];
+          }
+          buckets[space].push(integration);
+        }
 
-    if (library.slack && library.slack.integrations) {
-      $scope.slackIntegrations = library.slack.integrations.map(function (integration) {
-        return new SlackIntegration(integration);
       });
-    }
+
+      integrations = [];
+      Object.keys(buckets).forEach(function (space) {
+        integrations = integrations.concat(buckets[space]);
+      });
+
+      $scope.slackIntegrations = integrations;
+
+
+    };
+
+    $scope.processSlackIntegrations = function() {
+      //var i = JSON.parse(JSON.stringify(library.slack.integrations[0]));
+      //i.space = {'user': profileService.me.id};
+      //library.slack.integrations.push(i);
+      //library.slack.integrations.push(JSON.parse(JSON.stringify(library.slack.integrations[0])));
+      if (library.slack && library.slack.integrations) {
+        var integrations = library.slack.integrations.map(function(integration) {
+          return new SlackIntegration(integration);
+        });
+
+        $scope.slackIntegrations = integrations;
+        $scope.sortSlackIntegrations();
+      }
+    };
+
+    $scope.processSlackIntegrations();
+
 
     $scope.edit = {
       enabled: false,
@@ -174,6 +270,20 @@ angular.module('kifi')
     //
     // Scope methods.
     //
+
+    $scope.slackIntegrationHasHeader = function(index) {
+      if (index === 0) {
+        return true;
+      }
+
+      var last = $scope.slackIntegrations[index - 1];
+      var curr = $scope.slackIntegrations[index];
+
+      var lastId = last.data.space.user || last.data.space.org;
+      var currId = curr.data.space.user || curr.data.space.org;
+
+      return lastId !== currId;
+    };
 
     $scope.getSlackLink = function() {
       return library.slack && (library.slack.link || '');

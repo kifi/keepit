@@ -1,7 +1,12 @@
 .kf-library-slack-integration-modal
+  overflow: auto
   display: flex
   flex-direction: column
   text-align: left
+
+  .kf-library-slack-integration-modal-scroller
+    max-height: 400px
+    overflow-y: scroll
 
   .kf-library-slack-integration-modal-item-left-space
     margin-left: 5px
@@ -18,7 +23,7 @@
     color: #333
 
   .kf-library-slack-integration-modal-subtitle
-    margin-top: 2px
+    margin-bottom: 4px
     font-size: 16px
     color: #999
 
@@ -32,32 +37,90 @@
     margin-top: 10px
     width: 100%
 
+  .kf-library-slack-integration-modal-space-title
+    font-size: 18px
+    color: #333
+    font-weight: bold
+
   .kf-library-slack-integration-modal-item-title-wrap
     display: flex
     flex-direction: row
-    align-items: flex-end
-    margin-bottom: 3px
+    align-items: baseline
 
-  .kf-library-slack-integration-modal-item-title
-    font-size: 18px
-    color: #333
-    margin-right: 10px
-    font-weight: bold
+
+    .kf-library-slack-integration-modal-item-title
+      margin-right: 5px
+      font-size: 18px
+      color: #333
+      //font-weight: bold
 
   .kf-library-slack-integration-modal-item-delete
     font-size: 14px
-    color: #CCC
+    color: #AAA
     text-decoration: underline
     cursor: pointer
-    margin-bottom: 1px
+    margin-left: 10px
 
   .kf-library-slack-integration-modal-item-delete:hover
-    color: #999
+    color: #888
 
   .kf-library-slack-integration-modal-item-content
     font-size: 16px
     color: #999
     word-wrap: normal
+
+    .kf-library-slack-integration-modal-move-dropdown-container
+
+      .kf-dropdown-menu-item
+        display: flex
+        align-items: center
+
+      .kf-library-slack-integration-modal-move-dropdown-item-img
+        margin-right: 5px
+        width: 20px
+        height: 20px
+        background-color: #DDD
+        border-radius: 15%
+
+
+      .kf-library-slack-integration-modal-move-dropdown-menu
+        position: absolute
+        box-shadow: 0px 2px 5px #888888;
+        background: white
+        border: 1px solid separatorColor
+        z-index: 1
+        display: flex
+        flex-direction: column
+        line-height: 150%
+        padding: 4px 0
+        border-radius: 4px
+        transform-origin: top
+        transition: opacity .12s linear, transform .12s ease-in
+        font-size: 14px
+        transition: visibility 0s, opacity linear dur, transform dur ease-out
+
+      &:not(.kf-open)>.kf-library-slack-integration-modal-move-dropdown-menu
+        dur = .08s
+        visibility: hidden
+        opacity: 0
+        transform: scale(.9)
+        transition-duration: 0s, dur, dur
+        transition-delay: dur, 0s, 0s
+
+      .kf-dropdown-menu-item
+        text-align: left
+        padding: 5px 6px 5px 6px
+        color: #333
+        font-size: 16px
+        font-weight: bold
+        white-space: nowrap
+        cursor: pointer
+
+        &:hover
+          background-color: #eee
+
+        &:active
+          background-color: #ccc
 
     .kf-library-slack-integration-modal-cursor-pointer
       cursor: pointer
@@ -102,16 +165,16 @@
 
       span
         color: #333
-        font-weight: bold
+        //font-weight: bold
 
 
-  .kf-library-slack-integration-modal-item-content.ng-leave
-    opacity: 1.0
-    transition: .3s
-
-  .kf-library-slack-integration-modal-item-content.ng-leave-active
-    opacity: 0.0
-    height: 0 !important
+  //.kf-library-slack-integration-modal-item-content.ng-leave
+  //  opacity: 1.0
+  //  transition: .3s
+  //
+  //.kf-library-slack-integration-modal-item-content.ng-leave-active
+  //  opacity: 0.0
+  //  height: 0 !important
 
   .kf-library-slack-integration-modal-item-arrow
     width: 22px
@@ -131,4 +194,10 @@
     span
       text-decoration: underline
 
+.kf-library-slack-text-wrap
+  height: 50px
+  overscroll-y: scroll
 
+.kf-library-slack-text
+  background-color: red
+  height: 500px
