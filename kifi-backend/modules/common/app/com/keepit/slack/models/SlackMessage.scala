@@ -35,7 +35,7 @@ object SlackUsername {
 @json case class SlackMessageType(value: String)
 
 case class SlackAttachment(
-  fallback: String,
+  fallback: Option[String],
   color: Option[String],
   pretext: Option[String],
   service: Option[String],
@@ -53,7 +53,7 @@ object SlackAttachment {
   @json case class Field(title: String, value: String, short: Boolean)
 
   def minimal(fallback: String, text: String) = SlackAttachment(
-    fallback = fallback,
+    fallback = Some(fallback),
     color = None,
     pretext = None,
     service = None,
@@ -67,7 +67,7 @@ object SlackAttachment {
   )
 
   def applyFromSlack(
-    fallback: String,
+    fallback: Option[String],
     color: Option[String],
     pretext: Option[String],
     service: Option[String],
@@ -87,7 +87,7 @@ object SlackAttachment {
   }
 
   def unapplyToSlack(attachment: SlackAttachment) = Some((
-    attachment.fallback: String,
+    attachment.fallback: Option[String],
     attachment.color: Option[String],
     attachment.pretext: Option[String],
     attachment.service: Option[String],
@@ -104,7 +104,7 @@ object SlackAttachment {
   ))
 
   implicit val format: Format[SlackAttachment] = (
-    (__ \ "fallback").format[String] and
+    (__ \ "fallback").formatNullable[String] and
     (__ \ "color").formatNullable[String] and
     (__ \ "pretext").formatNullable[String] and
     (__ \ "service_name").formatNullable[String] and
