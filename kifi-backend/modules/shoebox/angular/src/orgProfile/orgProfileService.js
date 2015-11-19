@@ -25,6 +25,7 @@ angular.module('kifi')
   DISABLED: 'disabled',
   ADMIN: 'admins',
   MEMBER: 'members',
+  NONMEMBERS: 'nonmembers',
   ANYONE: 'anyone'
 })
 
@@ -36,7 +37,8 @@ angular.module('kifi')
         net.getOrgLibraries,
         net.getOrgMembers,
         net.userOrOrg,
-        net.getOrgSettings
+        net.getOrgSettings,
+        net.getOrgDomains
       ].forEach(function (endpoint) {
         endpoint.clearCache();
       });
@@ -94,6 +96,35 @@ angular.module('kifi')
           invalidateOrgProfileCache();
 
           return response.data;
+        });
+      },
+      getOrgDomains: function (pubId) {
+        return net
+        .getOrgDomains(pubId)
+        .then(getResponseData);
+      },
+      addOrgDomain: function (pubId, domain) {
+        return net
+        .addOrgDomain(pubId, { domain: domain })
+        .then(function (response) {
+          net.getOrgDomains.clearCache();
+          return getResponseData(response);
+        });
+      },
+      addDomainAfterVerification: function (pubId, email) {
+        return net
+        .addDomainAfterVerification(pubId, { email: email })
+        .then(function (response) {
+          net.getOrgDomains.clearCache();
+          return getResponseData(response);
+        });
+      },
+      removeOrgDomain: function (pubId, domain) {
+        return net
+        .removeOrgDomain(pubId, { domain: domain })
+        .then(function (response) {
+          net.getOrgDomains.clearCache();
+          return getResponseData(response);
         });
       },
       getOrgLibraries: function (orgId, page, size) {

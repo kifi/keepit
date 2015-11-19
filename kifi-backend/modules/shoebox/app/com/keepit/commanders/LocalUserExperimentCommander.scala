@@ -37,7 +37,7 @@ class LocalUserExperimentCommander @Inject() (
     db.readWrite(attempts = 3) { implicit session =>
       userExperimentRepo.get(userId, experiment, excludeState = None) match {
         case None => userExperimentRepo.save(UserExperiment(userId = userId, experimentType = experiment))
-        case Some(existing) if existing.isActive == false => userExperimentRepo.save(existing.copy(state = UserExperimentStates.ACTIVE))
+        case Some(existing) if !existing.isActive => userExperimentRepo.save(existing.copy(state = UserExperimentStates.ACTIVE))
         case Some(existing) => existing
       }
 

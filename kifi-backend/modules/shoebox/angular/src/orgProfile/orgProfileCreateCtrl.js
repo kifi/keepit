@@ -7,8 +7,9 @@ angular.module('kifi')
   function($scope, $timeout, orgProfileService, $state, profileService, modalService, billingService) {
     $scope.orgSlug = ''; // Not yet implemented.
     $scope.disableCreate = false;
-
     $scope.orgName = '';
+
+    var me = profileService.me;
     $scope.$watch(function () {
       return profileService.prefs.stored_credit_code;
     }, function () {
@@ -21,10 +22,26 @@ angular.module('kifi')
       profileService.fetchPrefs().then(function (prefs) {
         if (prefs.company_name && !orgNameExists(prefs.company_name)) {
           $scope.orgName = prefs.company_name;
+        } else {
+          var potentialEmails = potentialCompanyEmails(me.emails);
+          $scope.orgName = potentialEmails[0] && getEmailDomain(potentialEmails[0].address);
         }
       });
     } else {
       $scope.orgName = (!orgNameExists(profileService.prefs.company_name) && profileService.prefs.company_name) || '';
+    }
+
+    function potentialCompanyEmails(emails) {
+      return emails.filter(function(email){
+        return !email.isOwned && !email.isFreeMail;
+      });
+    }
+
+    var domainSuffixRegex = /\..*$/;
+
+    function getEmailDomain(address) {
+      var domain = address.slice(address.lastIndexOf('@') + 1).replace(domainSuffixRegex, '');
+      return domain[0].toUpperCase() + domain.slice(1, domain.length);
     }
 
     function orgNameExists(companyName) {

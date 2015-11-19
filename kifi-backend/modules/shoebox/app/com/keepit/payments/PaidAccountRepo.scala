@@ -28,6 +28,8 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   // admin/integrity methods
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
   def getPlanEnrollments(implicit session: RSession): Map[Id[PaidPlan], PlanEnrollment]
+
+  def deactivate(model: PaidAccount)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -112,5 +114,9 @@ class PaidAccountRepoImpl @Inject() (
     activeRows.groupBy(_.planId).map { case (planId, accounts) => planId -> (accounts.length, accounts.map(_.activeUsers).sum) }.list.map {
       case (planId, (numAccounts, numUsers)) => planId -> PlanEnrollment(numAccounts = numAccounts, numActiveUsers = numUsers.getOrElse(0))
     }.toMap
+  }
+
+  def deactivate(model: PaidAccount)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }

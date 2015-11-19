@@ -3,14 +3,23 @@
 angular.module('kifi')
 
 .directive('kfOrgInviteMany', [
-  'util', 'orgProfileService', '$timeout',
-  function (util, orgProfileService, $timeout) {
+  '$rootScope', 'util', 'orgProfileService', 'profileService', '$timeout',
+  'ORG_PERMISSION',
+  function ($rootScope, util, orgProfileService, profileService, $timeout,
+            ORG_PERMISSION) {
     return {
       restrict: 'A',
       require: '^kfModal',
       templateUrl: 'orgProfile/orgProfileInviteMany.tpl.html',
       link: function (scope, element, attrs, kfModalCtrl) {
         scope.organization = scope.modalData.organization;
+
+        var meOrg = profileService.me.orgs.filter(function (o) {
+          return o.id === scope.organization.id;
+        })[0];
+
+        scope.hasManagePermission = meOrg && meOrg.viewer && meOrg.viewer.permissions && meOrg.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) > -1;
+
         scope.state = {
           emails: ''
         };
@@ -58,6 +67,14 @@ angular.module('kifi')
           scope.modalData.addMany = false;
           orgProfileService.trackEvent('user_clicked_page', scope.organization, { type: trackingType, action: 'WTI' });
         };
+
+        [
+          $rootScope.$on('$stateChangeStart', function () {
+            scope.close();
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
+        });
 
         scope.$emit('trackOrgProfileEvent', 'view', { type: trackingType });
         $timeout(function () {

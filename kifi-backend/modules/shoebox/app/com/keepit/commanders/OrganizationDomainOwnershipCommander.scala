@@ -11,8 +11,8 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.mail.EmailAddress._
 import com.keepit.model._
 import play.api.libs.json._
+import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
 
-import scala.concurrent.duration.Duration
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
 @ImplementedBy(classOf[OrganizationDomainOwnershipCommanderImpl])
@@ -36,9 +36,9 @@ object OrganizationDomainOwnershipCommander {
 class OrganizationDomainOwnershipCommanderImpl @Inject() (
     db: Database,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+    orgConfigurationRepo: OrganizationConfigurationRepo,
     domainRepo: DomainRepo,
     orgExperimentRepo: OrganizationExperimentRepo,
-    orgConfigurationRepo: OrganizationConfigurationRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
     userEmailAddressCommander: UserEmailAddressCommander,
     permissionCommander: PermissionCommander,
@@ -97,20 +97,21 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
       }
     }
 
-    //    db.readWriteAsync { implicit session =>
-    //      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
-    //      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
-    //    }
+    db.readWriteAsync { implicit session =>
+      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
+      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
+    }
 
     ownership
   }
 
   private def sendVerificationEmailsToAllPotentialMembers(ownership: OrganizationDomainOwnership)(implicit session: RWSession): Unit = {
-    val orgMembers = orgMembershipRepo.getAllByOrgId(ownership.organizationId)
+    lazy val orgMembers = orgMembershipRepo.getAllByOrgId(ownership.organizationId)
     val usersToEmail = userEmailAddressRepo.getByDomain(ownership.normalizedHostname)
-      .filter(userEmail => !orgMembers.exists(_.userId == userEmail.userId))
-      .filter(userEmail => !userValueRepo.getValue(userEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(ownership.organizationId))
-      .filter(userEmail => !userEmail.address.address.contains("+test@kifi.com"))
+      .filter { userEmail =>
+        !userEmail.address.address.contains("+test@kifi.com") && userEmail.lastVerificationSent.forall(lastSent => lastSent.plusDays(1).isBefore(currentDateTime)) &&
+          !orgMembers.exists(_.userId == userEmail.userId) && !userValueRepo.getValue(userEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(ownership.organizationId)
+      }
     usersToEmail.foreach(userEmailAddressCommander.sendVerificationEmailHelper)
   }
 
@@ -185,6 +186,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
   def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
     NormalizedHostname.fromHostname(verifiedEmail.address.hostname)
       .map(domain => orgDomainOwnershipRepo.getOwnershipsForDomain(domain).map(_.organizationId)).getOrElse(Set.empty)
+      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(verifiedEmail.userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
       .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
       .foreach { orgId =>
         val addRequest = OrganizationMembershipAddRequest(orgId, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)

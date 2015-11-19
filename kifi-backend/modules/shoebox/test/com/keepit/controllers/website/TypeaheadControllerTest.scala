@@ -89,8 +89,8 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
-          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
-          val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false).url
+          val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false)(FakeRequest("GET", path))
           val s = contentAsString(res)
           Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
@@ -169,8 +169,8 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
-          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
-          val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false).url
+          val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false)(FakeRequest("GET", path))
           val s = contentAsString(res)
           Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }
@@ -239,8 +239,8 @@ class TypeaheadControllerTest extends Specification with ShoeboxTestInjector {
         inject[FakeUserActionsHelper].setUser(u1)
 
         @inline def search(query: String, limit: Int = 10): Seq[ConnectionWithInviteStatus] = {
-          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false, true).url
-          val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false, true)(FakeRequest("GET", path))
+          val path = com.keepit.controllers.website.routes.TypeaheadController.searchWithInviteStatus(Some(query), Some(limit), false).url
+          val res = inject[TypeaheadController].searchWithInviteStatus(Some(query), Some(limit), false)(FakeRequest("GET", path))
           val s = contentAsString(res)
           Json.parse(s).as[Seq[ConnectionWithInviteStatus]] tap { res => log.info(s"[search($query,$limit)] res(len=${res.length}):$res") }
         }

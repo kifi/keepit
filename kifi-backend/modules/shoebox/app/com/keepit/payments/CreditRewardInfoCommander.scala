@@ -64,7 +64,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
-  private def getOrg(id: Id[Organization])(implicit session: RSession): BasicOrganization = orgInfoCommander.getBasicOrganizationHelper(id).getOrElse(throw new Exception(s"Tried to build event info for dead org: $id"))
+  private def getOrg(id: Id[Organization])(implicit session: RSession): Option[BasicOrganization] = orgInfoCommander.getBasicOrganizationHelper(id)
   def getDescription(creditReward: CreditReward)(implicit session: RSession): DescriptionElements = {
     require(creditReward.applied.isDefined)
     val reason = creditReward.reward match {

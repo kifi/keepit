@@ -97,6 +97,7 @@ case class PaidAccount(
   def withPaymentStatus(status: PaymentStatus): PaidAccount = this.copy(paymentStatus = status)
   def withPaymentDueAt(dueAt: Option[DateTime]): PaidAccount = this.copy(paymentDueAt = dueAt)
   def freeze: PaidAccount = this.copy(frozen = true) //a frozen account will not be charged anything by the payment processor until unfrozen by an admin. Intended for automatically detected data integrity issues.
+  def sanitizeForDelete = this.copy(state = PaidAccountStates.INACTIVE)
 
   def owed: DollarAmount = -(DollarAmount.ZERO min credit)
 

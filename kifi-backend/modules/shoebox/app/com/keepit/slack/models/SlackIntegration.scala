@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.json.{ EitherFormat, EnumFormat }
 import com.keepit.common.reflection.Enumerator
-import com.keepit.model.{ Library, User }
+import com.keepit.model.{ ExternalLibrarySpace, LibrarySpace, Library, User }
 import com.kifi.macros.json
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -42,6 +42,7 @@ trait SlackIntegration {
 sealed abstract class SlackIntegrationRequest
 case class SlackIntegrationCreateRequest(
   userId: Id[User],
+  space: LibrarySpace,
   slackUserId: SlackUserId,
   slackTeamId: SlackTeamId,
   slackChannelId: Option[SlackChannelId],
@@ -49,20 +50,26 @@ case class SlackIntegrationCreateRequest(
   libraryId: Id[Library]) extends SlackIntegrationRequest
 
 case class SlackIntegrationModification(
+  space: Option[LibrarySpace] = None,
+  status: Option[SlackIntegrationStatus] = None)
+
+case class ExternalSlackIntegrationModification(
   id: Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]],
-  status: SlackIntegrationStatus)
-object SlackIntegrationModification {
+  space: Option[ExternalLibrarySpace],
+  status: Option[SlackIntegrationStatus])
+object ExternalSlackIntegrationModification {
   private implicit val eitherIdFormat = EitherFormat(LibraryToSlackChannel.formatPublicId, SlackChannelToLibrary.formatPublicId)
-  implicit val format: Format[SlackIntegrationModification] = (
+  implicit val format: Format[ExternalSlackIntegrationModification] = (
     (__ \ 'id).format[Either[PublicId[LibraryToSlackChannel], PublicId[SlackChannelToLibrary]]] and
-    (__ \ 'status).format[SlackIntegrationStatus]
-  )(SlackIntegrationModification.apply, unlift(SlackIntegrationModification.unapply))
+    (__ \ 'space).formatNullable[ExternalLibrarySpace] and
+    (__ \ 'status).formatNullable[SlackIntegrationStatus]
+  )(ExternalSlackIntegrationModification.apply, unlift(ExternalSlackIntegrationModification.unapply))
 }
 
 case class SlackIntegrationModifyRequest(
   requesterId: Id[User],
-  libToSlack: Map[Id[LibraryToSlackChannel], SlackIntegrationStatus],
-  slackToLib: Map[Id[SlackChannelToLibrary], SlackIntegrationStatus]) extends SlackIntegrationRequest
+  libToSlack: Map[Id[LibraryToSlackChannel], SlackIntegrationModification],
+  slackToLib: Map[Id[SlackChannelToLibrary], SlackIntegrationModification]) extends SlackIntegrationRequest
 @json case class SlackIntegrationModifyResponse(modified: Int)
 
 case class SlackIntegrationDeleteRequest(

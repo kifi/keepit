@@ -20,6 +20,7 @@ trait OrganizationDomainOwnershipRepo extends Repo[OrganizationDomainOwnership] 
   def getOwnershipsForOrganization(organization: Id[Organization], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Seq[OrganizationDomainOwnership]
   def getOwnershipsForDomain(domainHostname: NormalizedHostname, excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Set[OrganizationDomainOwnership]
   def getOwnershipsByDomains(domainHostnames: Set[NormalizedHostname], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Map[NormalizedHostname, Seq[OrganizationDomainOwnership]]
+  def deactivate(model: OrganizationDomainOwnership)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -69,6 +70,10 @@ class OrganizationDomainOwnershipRepoImpl @Inject() (
 
   override def getOwnershipsByDomains(domainHostnames: Set[NormalizedHostname], excludeState: Option[State[OrganizationDomainOwnership]] = Some(OrganizationDomainOwnershipStates.INACTIVE))(implicit session: RSession): Map[NormalizedHostname, Seq[OrganizationDomainOwnership]] = {
     rows.filter(r => r.domainHostname.inSet(domainHostnames) && r.state =!= excludeState.orNull).list.groupBy(_.normalizedHostname)
+  }
+
+  def deactivate(model: OrganizationDomainOwnership)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }
 

@@ -31,14 +31,20 @@ angular.module('kifi')
           scope.organizations = scope.organizations.concat(me.potentialOrgs);
         }
 
-        if (!profileService.prefs.company_name) {
+        if (!profileService.prefs.hide_company_name && !profileService.prefs.company_name) {
           profileService.fetchPrefs().then(function (prefs) {
-            if (prefs.company_name && !orgNameExists(prefs.company_name)) {
+            if (prefs.hide_company_name) {
+              scope.companyName = null;
+            } else if (prefs.company_name && !orgNameExists(prefs.company_name)) {
               scope.companyName = prefs.company_name;
+            } else {
+              var potentialEmails = potentialCompanyEmails(me.emails);
+              scope.companyName = potentialEmails[0] && getEmailDomain(potentialEmails[0].address);
             }
           });
         } else {
-          scope.companyName = (!orgNameExists(profileService.prefs.company_name) && profileService.prefs.company_name);
+          scope.companyName = profileService.prefs.hide_company_name ? null :
+            (!orgNameExists(profileService.prefs.company_name) && profileService.prefs.company_name);
         }
 
         function orgNameExists(companyName) {
@@ -50,9 +56,18 @@ angular.module('kifi')
           return orgNames.indexOf(companyName.toLowerCase()) !== -1;
         }
 
-        scope.shouldShowCreateTeam = function () {
-          return scope.me.experiments.indexOf('admin') !== -1 || (scope.me.experiments.indexOf('create_team') !== -1 && scope.me.orgs.length <= 1);
-        };
+        function potentialCompanyEmails(emails) {
+          return emails.filter(function(email){
+            return !email.isOwned && !email.isFreeMail;
+          });
+        }
+
+        var domainSuffixRegex = /\..*$/;
+
+        function getEmailDomain(address) {
+          var domain = address.slice(address.lastIndexOf('@') + 1).replace(domainSuffixRegex, '');
+          return domain[0].toUpperCase() + domain.slice(1, domain.length);
+        }
 
         scope.registerEvent = function (action) {
           $analytics.eventTrack('user_clicked_page', {
@@ -82,6 +97,11 @@ angular.module('kifi')
             'type' : 'homeFeed',
             'action' : 'clickedCreateTeamRighthandRail'
           });
+
+          if (!profileService.prefs.hide_company_name) {
+            profileService.savePrefs({ hide_company_name: true });
+          }
+          
           $state.go('teams.new');
         };
 

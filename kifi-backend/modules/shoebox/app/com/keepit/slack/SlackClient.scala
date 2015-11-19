@@ -9,7 +9,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Failure
+import scala.util.{ Success, Failure }
 
 object KifiSlackApp {
   val SLACK_CLIENT_ID = "2348051170.12884760868"
@@ -27,11 +27,11 @@ object SlackAPI {
     val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
     val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
     val REDIRECT_URI = Param("redirect_uri", KifiSlackApp.KIFI_SLACK_REDIRECT_URI)
-    implicit def fromCode(code: SlackAuthorizationCode) = Param("code", code.code)
-    implicit def formState(state: SlackState) = Param("state", state.state)
-    implicit def fromScope(scopes: Set[SlackAuthScope]) = Param("scope", scopes.map(_.value).mkString(","))
-    implicit def fromToken(token: SlackAccessToken) = Param("token", token.token)
-    implicit def fromSearchParam(searchParam: SlackSearchRequest.Param) = Param(searchParam.name, searchParam.value)
+    implicit def fromCode(code: SlackAuthorizationCode): Param = Param("code", code.code)
+    implicit def formState(state: SlackState): Param = Param("state", state.state)
+    implicit def fromScope(scopes: Set[SlackAuthScope]): Param = Param("scope", scopes.map(_.value).mkString(","))
+    implicit def fromToken(token: SlackAccessToken): Param = Param("token", token.token)
+    implicit def fromSearchParam(searchParam: SlackSearchRequest.Param): Param = Param(searchParam.name, searchParam.value)
   }
 
   import SlackParams._
@@ -54,7 +54,6 @@ trait SlackClient {
 
 class SlackClientImpl(
   httpClient: HttpClient,
-  mode: Mode,
   implicit val ec: ExecutionContext)
     extends SlackClient with Logging {
 
@@ -63,10 +62,12 @@ class SlackClientImpl(
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.json) match {
         case (Status.OK, json) if json.asOpt[String].contains("ok") => Future.successful(())
+        case (Status.NOT_FOUND, SlackAPIFailure.Message.REVOKED_WEBHOOK) => Future.failed(SlackAPIFailure.RevokedWebhook)
         case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
       }
-    } andThen {
-      case Failure(f: SlackAPIFailure) => log.info(s"Failed to post $msg to the Slack webhook $url because: ${Json.stringify(Json.toJson(f))}")
+    }.andThen {
+      case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
+      case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to webhook $url because $f")
     }
   }
 
@@ -80,6 +81,7 @@ class SlackClientImpl(
             case errs: JsError =>
               Future.failed(SlackAPIFailure.ParseError(payload))
           }
+        case (Status.OK, SlackAPIFailure.Message.REVOKED_TOKEN) => Future.failed(SlackAPIFailure.RevokedWebhook)
         case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
       }
     }

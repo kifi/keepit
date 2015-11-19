@@ -63,6 +63,15 @@ class HomeController @Inject() (
     }
   }
 
+  def teams = MaybeUserAction { implicit request =>
+    val special = specialHandler(request)
+    if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
+      special(Redirect("/?ref=producthunt"))
+    } else {
+      Redirect("/")
+    }
+  }
+
   private def specialHandler(request: MaybeUserRequest[_]): Result => Result = {
     if (request.refererOpt.exists(r => r.contains("producthunt.com")) || request.rawQueryString.contains("ref=producthunt")) {
       request match {

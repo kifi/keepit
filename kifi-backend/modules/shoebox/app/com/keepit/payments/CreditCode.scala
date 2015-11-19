@@ -9,6 +9,7 @@ import com.keepit.common.json.EnumFormat
 import com.keepit.common.strings._
 import com.keepit.common.time._
 import com.keepit.model.{ Organization, User }
+import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.http.Status._
@@ -84,6 +85,8 @@ case class CreditCodeInfo(
   def withStatus(newStatus: CreditCodeStatus) = this.copy(status = newStatus)
 
   def isSingleUse: Boolean = CreditCodeKind.isSingleUse(kind)
+
+  def sanitizeForDelete = this.copy(state = CreditCodeInfoStates.INACTIVE)
 }
 
 case class CreditCodeRewards(target: CreditReward, referrer: Option[CreditReward])

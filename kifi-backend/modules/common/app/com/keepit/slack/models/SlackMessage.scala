@@ -5,6 +5,8 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.kifi.macros.json
 
+import scala.util.Try
+
 @json case class SlackUserId(value: String)
 @json case class SlackUsername(value: String)
 
@@ -25,13 +27,15 @@ object SlackUsername {
 
 @json case class SlackMessageTimestamp(value: String) extends Ordered[SlackMessageTimestamp] { // channel-specific timestamp
   def compare(that: SlackMessageTimestamp) = value compare that.value
-  def toDateTime: DateTime = new DateTime(value.split(".").head.toLong * 1000) // "The bit before the . is a unix timestamp, the bit after is a sequence to guarantee uniqueness."
+  def toDateTime: DateTime = Try {
+    new DateTime(value.split('.').head.toLong * 1000) // "The bit before the . is a unix timestamp, the bit after is a sequence to guarantee uniqueness."
+  }.getOrElse(throw new Exception(s"Could not parse a date-time out of $value"))
 }
 
 @json case class SlackMessageType(value: String)
 
 case class SlackAttachment(
-  fallback: String,
+  fallback: Option[String],
   color: Option[String],
   pretext: Option[String],
   service: Option[String],
@@ -49,7 +53,7 @@ object SlackAttachment {
   @json case class Field(title: String, value: String, short: Boolean)
 
   def minimal(fallback: String, text: String) = SlackAttachment(
-    fallback = fallback,
+    fallback = Some(fallback),
     color = None,
     pretext = None,
     service = None,
@@ -63,7 +67,7 @@ object SlackAttachment {
   )
 
   def applyFromSlack(
-    fallback: String,
+    fallback: Option[String],
     color: Option[String],
     pretext: Option[String],
     service: Option[String],
@@ -83,7 +87,7 @@ object SlackAttachment {
   }
 
   def unapplyToSlack(attachment: SlackAttachment) = Some((
-    attachment.fallback: String,
+    attachment.fallback: Option[String],
     attachment.color: Option[String],
     attachment.pretext: Option[String],
     attachment.service: Option[String],
@@ -100,7 +104,7 @@ object SlackAttachment {
   ))
 
   implicit val format: Format[SlackAttachment] = (
-    (__ \ "fallback").format[String] and
+    (__ \ "fallback").formatNullable[String] and
     (__ \ "color").formatNullable[String] and
     (__ \ "pretext").formatNullable[String] and
     (__ \ "service_name").formatNullable[String] and

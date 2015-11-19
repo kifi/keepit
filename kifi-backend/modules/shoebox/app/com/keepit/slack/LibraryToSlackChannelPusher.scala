@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ ProcessedImageSize, KeepDecorator, PathCommander }
+import com.keepit.commanders.{ PermissionCommander, ProcessedImageSize, KeepDecorator, PathCommander }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -17,6 +17,7 @@ import org.joda.time.Period
 import com.keepit.common.core.futureExtensionOps
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
@@ -28,13 +29,15 @@ trait LibraryToSlackChannelPusher {
 class LibraryToSlackChannelPusherImpl @Inject() (
   db: Database,
   libRepo: LibraryRepo,
+  slackClient: SlackClientWrapper,
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
-  slackClient: SlackClient,
   libToChannelRepo: LibraryToSlackChannelRepo,
+  permissionCommander: PermissionCommander,
   clock: Clock,
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
+  keepSourceAttributionRepo: KeepSourceAttributionRepo,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   keepDecorator: KeepDecorator,
@@ -58,7 +61,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       title = Some(SlackAttachment.Title(title, Some(keep.url))),
       text = summary.description,
       imageUrl = summary.imageUrl,
-      fallback = title,
+      fallback = Some(title),
       color = None,
       pretext = None,
       author = None,
@@ -67,6 +70,25 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       service = None,
       fromUrl = None
     )
+  }
+  private def keepAsDescriptionElements(keep: Keep, lib: Library)(implicit session: RSession): DescriptionElements = {
+    import DescriptionElements._
+
+    val slackMessageOpt = keep.sourceAttributionId.map(keepSourceAttributionRepo.get(_).attribution).collect {
+      case sa: SlackAttribution => sa.message
+    }
+
+    slackMessageOpt match {
+      case Some(post) =>
+        DescriptionElements(
+          s"@${post.username.value}", "posted", keep.title.getOrElse("a link") --> LinkElement(keep.url), "to", s"#${post.channel.name.value}" --> LinkElement(post.permalink), ".",
+          "It was automatically added to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library."
+        )
+      case None =>
+        DescriptionElements(
+          getUser(keep.userId), "added", keep.title.getOrElse("a keep") --> LinkElement(keep.url),
+          "to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.")
+    }
   }
   private def describeKeeps(keeps: KeepsToPush, withAttachments: Boolean = false): Option[Future[SlackMessageRequest]] = {
     import DescriptionElements._
@@ -84,11 +106,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         })
       case SomeKeeps(ks, lib) if !withAttachments =>
         val msgs = db.readOnlyMaster { implicit s =>
-          ks.map { k =>
-            DescriptionElements(
-              getUser(k.userId), "added", k.title.getOrElse("a keep") --> LinkElement(k.url),
-              "to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.")
-          }
+          ks.map(k => keepAsDescriptionElements(k, lib))
         }
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
@@ -110,6 +128,12 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     val (lib, integrationsToProcess) = db.readWrite { implicit s =>
       val lib = libRepo.get(libId)
       val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now.minus(gracePeriod))
+
+      def isIllegal(lts: LibraryToSlackChannel) = {
+        !permissionCommander.getLibraryPermissions(libId, Some(lts.ownerId)).contains(LibraryPermission.VIEW_LIBRARY)
+      }
+      integrations.map(libToChannelRepo.get).filter(isIllegal).foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
+
       val integrationsToProcess = integrations.flatMap(ltsId => libToChannelRepo.markAsProcessing(ltsId))
       (lib, integrationsToProcess)
     }
@@ -134,7 +158,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             case None => Future.successful(true)
             case Some(msgFut) =>
               msgFut.flatMap { msg =>
-                slackClient.sendToSlack(wh.webhook.url, msg).imap { _ => true }
+                slackClient.sendToSlack(wh.webhook, msg.quiet).imap { _ => true }
                   .recover {
                     case f: SlackAPIFailure =>
                       log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
@@ -144,8 +168,11 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           }
       }
       slackPush.andThen {
-        case res => db.readWrite { implicit s =>
+        case Success(true) => db.readWrite { implicit s =>
           libToChannelRepo.finishProcessing(lts.withLastProcessedKeep(ktls.lastOption.map(_.id.get)))
+        }
+        case Success(false) => db.readWrite { implicit s =>
+          libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
         }
       }.imap { res => lts.id.get -> res }
     }

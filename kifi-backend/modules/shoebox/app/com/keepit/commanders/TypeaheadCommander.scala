@@ -241,7 +241,7 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], dedupEmail: Boolean, contacts: Set[ContactType]): Future[Seq[NetworkTypeAndHit]] = {
+  private def aggregate(userId: Id[User], q: String, limitOpt: Option[Int], contacts: Set[ContactType]): Future[Seq[NetworkTypeAndHit]] = {
     implicit val prefix = LogPrefix(s"aggregate($userId,$q,$limitOpt)")
     // FB or LN
     val socialF = if (contacts.contains(ContactType.SOCIAL))
@@ -308,22 +308,24 @@ class TypeaheadCommander @Inject() (
 
     top flatMap {
       case (snType, hit) => hit.info match {
-        case e: RichContact =>
+        case e: RichContact if !e.userId.contains(userId) =>
           val (status, lastSentAt) = emailInvitesMap.get(e.email) map { inv => inviteStatus(inv) } getOrElse ("", None)
           Some(ConnectionWithInviteStatus(e.name.getOrElse(""), hit.score, SocialNetworks.EMAIL.name, None, emailId(e.email), status, None, lastSentAt))
 
-        case sci: SocialUserBasicInfo =>
+        case sci: SocialUserBasicInfo if !sci.userId.contains(userId) =>
           val (status, lastSentAt) = socialInvitesMap.get(sci.id) map { inv => inviteStatus(inv) } getOrElse ("", None)
           Some(ConnectionWithInviteStatus(sci.fullName, hit.score, sci.networkType.name, if (pictureUrl) sci.getPictureUrl(75, 75) else None, socialId(sci), status, None, lastSentAt))
 
-        case u: User =>
+        case u: User if !u.id.contains(userId) =>
           Some(ConnectionWithInviteStatus(u.fullName, hit.score, SocialNetworks.FORTYTWO.name, if (pictureUrl) u.pictureName.map(_ + ".jpg") else None, s"fortytwo/${u.externalId}", "joined"))
 
-        case bu: TypeaheadUserHit => // todo(Ray): uptake User API from search
+        case bu: TypeaheadUserHit if bu.userId != userId => // todo(Ray): uptake User API from search
           val name = s"${bu.firstName} ${bu.lastName}".trim // if not good enough, lookup User
           val picUrl = if (pictureUrl) Some(bu.pictureName) else None
           val frOpt = frMap.get(bu.userId)
           Some(ConnectionWithInviteStatus(name, hit.score, snType.name, picUrl, s"fortytwo/${bu.externalId}", frOpt.map(_ => "requested").getOrElse("joined"), None, frOpt.map(_.createdAt)))
+
+        case _: RichContact | SocialUserBasicInfo | User | TypeaheadUserHit => None
 
         case _ =>
           airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $hit"))
@@ -332,7 +334,7 @@ class TypeaheadCommander @Inject() (
     }
   }
 
-  def searchWithInviteStatus(userId: Id[User], query: String, limit: Option[Int], pictureUrl: Boolean, dedupEmail: Boolean): Future[Seq[ConnectionWithInviteStatus]] = {
+  def searchWithInviteStatus(userId: Id[User], query: String, limit: Option[Int], pictureUrl: Boolean): Future[Seq[ConnectionWithInviteStatus]] = {
     implicit val prefix = LogPrefix(s"searchWIS($userId,$query,$limit)")
 
     val socialInvitesF = db.readOnlyMasterAsync { implicit ro =>
@@ -345,7 +347,7 @@ class TypeaheadCommander @Inject() (
     val q = query.trim
     if (q.length == 0) Future.successful(Seq.empty[ConnectionWithInviteStatus])
     else {
-      aggregate(userId, q, limit, dedupEmail, ContactType.getAll()) flatMap { top =>
+      aggregate(userId, q, limit, ContactType.getAll()) flatMap { top =>
         for {
           socialInvites <- socialInvitesF
           emailInvites <- emailInvitesF
@@ -377,8 +379,8 @@ class TypeaheadCommander @Inject() (
     (users, contacts)
   }
 
-  def searchFriendsAndContacts(userId: Id[User], query: String, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
-    aggregate(userId, query, limit, true, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
+  def searchFriendsAndContacts(userId: Id[User], query: String, includeSelf: Boolean, limit: Option[Int]): Future[(Seq[(Id[User], BasicUser)], Seq[BasicContact])] = {
+    aggregate(userId, query, limit, Set(ContactType.KIFI_FRIEND, ContactType.EMAIL)).map { hits =>
       val (users, contacts) = hits.map(_._2.info).foldLeft((Seq.empty[User], Seq.empty[RichContact])) {
         case ((users, contacts), nextContact: RichContact) => (users, contacts :+ nextContact)
         case ((users, contacts), nextUser: User) => (users :+ nextUser, contacts)
@@ -386,17 +388,20 @@ class TypeaheadCommander @Inject() (
           airbrake.notify(new IllegalArgumentException(s"Unknown hit type: $nextHit"))
           (users, contacts)
       }
-      (users.map(user => user.id.get -> BasicUser.fromUser(user)), contacts.map(BasicContact.fromRichContact))
+      (
+        users.collect { case user if includeSelf || !user.id.contains(userId) => user.id.get -> BasicUser.fromUser(user) },
+        contacts.collect { case richContact if includeSelf || !richContact.userId.contains(userId) => BasicContact.fromRichContact(richContact) }
+      )
     }
   }
 
   def searchForContacts(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[ContactSearchResult]] = {
     val friendsAndContactsF = query.trim match {
       case q if q.isEmpty =>
-        (Future.successful(suggestFriendsAndContacts(userId, limit)))
+        Future.successful(suggestFriendsAndContacts(userId, limit))
       case q =>
         // Start futures
-        val friends = searchFriendsAndContacts(userId, q, limit)
+        val friends = searchFriendsAndContacts(userId, q, includeSelf = true, limit)
 
         val startTime = System.currentTimeMillis()
 

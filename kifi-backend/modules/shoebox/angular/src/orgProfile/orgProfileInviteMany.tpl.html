@@ -4,6 +4,13 @@
     <h1 class="dialog-header">Add Team Members</h1>
     <div class="dialog-body">
         <div class="opi-header">
+          <p ng-if="hasManagePermission">
+            You can auto-enable coworkers to join automatically using
+            <a
+              class="kf-link kf-link-underline"
+              ui-sref="orgProfile.settings.team({ openDomains: true, '#': 'join_by_verifying-' })"
+            >their company email</a>
+          </p>
           <p><button class="kf-link kf-link-underline" ng-click="clickWhoToInvite()">&laquo; Back to user search &amp; suggestions</button></p>
         </div>
         <div class="opi-banner" ng-class="{ 'opi-success-banner': inviteSentCount > 0, 'opi-fail-banner': inviteSentCount === 0 }" ng-if="sent">

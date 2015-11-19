@@ -38,6 +38,8 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     httpClientBuilder.setConnectionManager(cm)
     httpClientBuilder.setUserAgent(userAgent)
     httpClientBuilder.setRequestExecutor(new ContentAwareHttpRequestExecutor())
+    httpClientBuilder.addInterceptorLast(new RequestSecurityInterceptor())
+    httpClientBuilder.addInterceptorFirst(new ResponseSecurityInterceptor()) // blocks localhost/private scrapes
     httpClientBuilder.addInterceptorFirst(new RedirectInterceptor()) // track redirects
     httpClientBuilder.addInterceptorFirst(new EncodingInterceptor()) // transfer encoding
     httpClientBuilder.build()
@@ -71,7 +73,7 @@ class ApacheHttpFetcher(val airbrake: AirbrakeNotifier, userAgent: String, conne
     buildApacheFetchRequest(request, disableGzip).flatMap { apacheRequest =>
       apacheRequest.execute().map((apacheRequest, _))
     } recoverWith {
-      case z: ZipException if (!disableGzip) => execute(request, disableGzip = true) // Retry with gzip compression disabled
+      case z: ZipException if !disableGzip => execute(request, disableGzip = true) // Retry with gzip compression disabled
       case s: SocketTimeoutException if retryOnTimeout => execute(request, disableGzip, retryOnTimeout = false)
       case t: Throwable => Failure(InvalidFetchRequestException(request, t))
     }

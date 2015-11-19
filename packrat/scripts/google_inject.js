@@ -25,7 +25,6 @@ $.fn.layout = function () {
 
 // We check the pattern because Chrome match/glob patterns aren't powerful enough. crbug.com/289057
 if (searchUrlRe.test(document.URL)) !function () {
-  'use strict';
   log('[google_inject]');
 
   var origin = location.origin;
@@ -325,7 +324,7 @@ if (searchUrlRe.test(document.URL)) !function () {
           tryAttach();
         }, retryMs);
       }
-    });
+    };
 
     setTimeout(function () {
       tryAttach();

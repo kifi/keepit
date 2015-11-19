@@ -297,8 +297,7 @@ class AdminOrganizationController @Inject() (
     val oldOwnerId = org.ownerId
     implicit val context = HeimdalContext.empty
     orgCommander.transferOrganization(OrganizationTransferRequest(oldOwnerId, orgId, newOwnerId)) match {
-      case Left(fail) =>
-        fail.asErrorResponse
+      case Left(fail) => fail.asErrorResponse
       case Right(res) =>
         //next two line are to check that the impossible does not happen
         val updatedOrg = db.readOnlyMaster { implicit s => orgRepo.get(orgId) }
@@ -321,15 +320,14 @@ class AdminOrganizationController @Inject() (
   }
 
   def addCandidate(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
-    orgMembershipCandidateCommander.addCandidates(orgId, Set(userId))
+    val targetId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
+    orgMembershipCandidateCommander.addCandidates(orgId, Set(targetId))
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }
 
   def removeMember(orgId: Id[Organization]) = AdminUserPage(parse.tolerantFormUrlEncoded) { implicit request =>
-    val userId = Id[User](request.body.get("user-id").flatMap(_.headOption).get.toLong)
-    val org = db.readOnlyReplica { implicit s => orgRepo.get(orgId) }
-    orgMembershipCommander.unsafeRemoveMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = request.adminUserId.get, targetId = userId), isAdmin = true)
+    val targetId = Id[User](request.body.get("user-id").flatMap(_.headOption).get.toLong)
+    orgMembershipCommander.unsafeRemoveMembership(OrganizationMembershipRemoveRequest(orgId, requesterId = request.userId, targetId = targetId), isAdmin = true)
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }
 
@@ -340,9 +338,9 @@ class AdminOrganizationController @Inject() (
   }
 
   def addMember(orgId: Id[Organization]) = AdminUserPage { implicit request =>
-    val userId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
+    val targetId = Id[User](request.body.asFormUrlEncoded.get.apply("user-id").head.toLong)
     db.readWrite { implicit s =>
-      orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, requesterId = request.adminUserId.get, targetId = userId, OrganizationRole.MEMBER), isAdmin = true)
+      orgMembershipCommander.unsafeAddMembership(OrganizationMembershipAddRequest(orgId, requesterId = request.userId, targetId = targetId, OrganizationRole.MEMBER), isAdmin = true)
     }
     Redirect(com.keepit.controllers.admin.routes.AdminOrganizationController.organizationViewBy(orgId))
   }

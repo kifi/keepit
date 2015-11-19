@@ -17,13 +17,14 @@ import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.slack.{ SlackCommander, SlackClient }
+import com.keepit.slack.{ LibrarySlackInfo, SlackCommander }
 import com.keepit.slack.models.SlackAuthScope
 import com.keepit.social.{ BasicNonUser, BasicUser }
 import org.joda.time.DateTime
 import play.api.http.Status._
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Try
 
 @ImplementedBy(classOf[LibraryInfoCommanderImpl])
 trait LibraryInfoCommander {
@@ -113,6 +114,7 @@ class LibraryInfoCommanderImpl @Inject() (
         libraryMembershipRepo.getWithLibraryIdsAndUserId(libraryIds, id)
       } getOrElse Map.empty
 
+      val permissionsById = permissionCommander.getLibrariesPermissions(libraryIds, viewerId)
       libraryRepo.getActiveByIds(libraryIds).map {
         case (libId, lib) =>
           val counts = libraryMembershipRepo.countWithLibraryIdByAccess(libId)
@@ -121,8 +123,20 @@ class LibraryInfoCommanderImpl @Inject() (
           val imageOpt = libraryImageCommander.getBestImageForLibrary(libId, idealImageSize).map(libraryImageCommander.getUrl)
           val membershipOpt = membershipsByLibraryId.get(libId).flatten
           val path = libPathCommander.pathForLibrary(lib)
-          val permissions = permissionCommander.getLibraryPermissions(libId, viewerId)
-          libId -> BasicLibraryDetails(lib.name, lib.slug, lib.color, imageOpt, lib.description, numFollowers, numCollaborators, lib.keepCount, membershipOpt.map(libraryMembershipCommander.createMembershipInfo), lib.ownerId, path, permissions)
+          libId -> BasicLibraryDetails(
+            lib.name,
+            lib.slug,
+            lib.color,
+            imageOpt,
+            lib.description,
+            numFollowers,
+            numCollaborators,
+            lib.keepCount,
+            membershipOpt.map(libraryMembershipCommander.createMembershipInfo),
+            lib.ownerId,
+            path,
+            permissionsById(libId)
+          )
       }
     }
   }
@@ -173,6 +187,7 @@ class LibraryInfoCommanderImpl @Inject() (
   def createFullLibraryInfos(viewerUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, maxMembersShown: Int, maxKeepsShown: Int,
     idealKeepImageSize: ImageSize, libraries: Seq[Library], idealLibraryImageSize: ImageSize, withKeepTime: Boolean, sanitizeUrls: Boolean, useMultilibLogic: Boolean = false, authTokens: Map[Id[Library], String] = Map.empty): Future[Seq[(Id[Library], FullLibraryInfo)]] = {
     libraries.groupBy(l => l.id.get).foreach { case (lib, set) => if (set.size > 1) throw new Exception(s"There are ${set.size} identical libraries of $lib") }
+    val libIds = libraries.map(_.id.get).toSet
     val futureKeepInfosByLibraryId = libraries.map { library =>
       library.id.get -> {
         if (maxKeepsShown > 0) {
@@ -248,15 +263,16 @@ class LibraryInfoCommanderImpl @Inject() (
       } toMap
     }
 
-    val permissionsByLibraryId = db.readOnlyMaster { implicit s =>
-      libraries.map { lib => lib.id.get -> permissionCommander.getLibraryPermissions(lib.id.get, viewerUserIdOpt) }
-    }.toMap
+    val permissionsByLibraryId = db.readOnlyMaster { implicit s => permissionCommander.getLibrariesPermissions(libIds, viewerUserIdOpt) }
 
-    val slackInfoByLibraryId = viewerUserIdOpt.map { viewerId =>
-      // TODO(ryan): do something with this line
-      // val slackableLibIds = permissionsByLibraryId.collect { case (libId, ps) if ps.contains(LibraryPermission.CREATE_SLACK_INTEGRATION) => libId }.toSet
-      db.readOnlyReplica { implicit s => slackCommander.getSlackIntegrationsForLibraries(viewerId, libraries.map(_.id.get).toSet) }
-    }.getOrElse(Map.empty.withDefaultValue(None))
+    // I refuse to allow something small, like Slack integrations, take down the important stuff like Libraries
+    val slackInfoByLibraryId: Map[Id[Library], LibrarySlackInfo] = viewerUserIdOpt.map { viewerId =>
+      Try(slackCommander.getSlackIntegrationsForLibraries(viewerId, libIds)).recover {
+        case fail =>
+          airbrake.notify(s"Exploded while getting Slack integrations for user $viewerId and libraries $libIds", fail)
+          Map.empty[Id[Library], LibrarySlackInfo]
+      }.get
+    }.getOrElse(Map.empty)
 
     val futureFullLibraryInfos = libraries.map { lib =>
       val libId = lib.id.get
@@ -306,7 +322,7 @@ class LibraryInfoCommanderImpl @Inject() (
           membership = membershipByLibraryId.flatMap(_.get(libId)),
           invite = inviteByLibraryId.flatMap(_.get(libId)),
           permissions = permissionsByLibraryId(libId),
-          slack = slackInfoByLibraryId(libId)
+          slack = slackInfoByLibraryId.get(libId)
         )
       }
     }

@@ -28,6 +28,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json.toJson
+import play.api.libs.json.JsNumber
 import play.api.mvc.{ MaxSizeExceeded, Request }
 import play.api.libs.json._
 
@@ -51,6 +52,7 @@ class UserController @Inject() (
     postOffice: LocalPostOffice,
     userConnectionsCommander: UserConnectionsCommander,
     organizationDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
+    organizationDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     userCommander: UserCommander,
     clock: Clock,
     s3ImageStore: S3ImageStore,
@@ -210,12 +212,14 @@ class UserController @Inject() (
         case Some(emailRecord) if (emailRecord.userId == request.userId) => {
           val pendingPrimary = userValueRepo.getValueStringOpt(request.user.id.get, UserValueName.PENDING_PRIMARY_EMAIL).map(EmailAddress(_))
           val isFreeMail = NormalizedHostname.fromHostname(emailRecord.address.hostname).exists(hostname => domainRepo.get(hostname).exists(_.isEmailProvider))
+          val isOwned = NormalizedHostname.fromHostname(emailRecord.address.hostname).exists(hostname => organizationDomainOwnershipRepo.getOwnershipsForDomain(hostname).nonEmpty)
           Ok(Json.toJson(EmailInfo(
             address = emailRecord.address,
             isVerified = emailRecord.verified,
             isPrimary = emailRecord.primary,
             isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(emailRecord.address)),
-            isFreeMail = isFreeMail
+            isFreeMail = isFreeMail,
+            isOwned = isOwned
           )))
         }
         case _ => Ok(Json.obj("status" -> "available"))
@@ -334,6 +338,7 @@ class UserController @Inject() (
       USE_MINIMAL_KEEP_CARD,
       HAS_SEEN_FTUE,
       COMPANY_NAME,
+      HIDE_COMPANY_NAME,
       STORED_CREDIT_CODE
     )
   }
@@ -437,9 +442,7 @@ class UserController @Inject() (
     } yield ImageCropAttributes(w = w, h = h, x = x, y = y, s = s)
   }
 
-  private val url = fortytwoConfig.applicationBaseUrl
-
-  def resendVerificationEmail(email: EmailAddress) = UserAction.async(parse.tolerantJson) { implicit request =>
+  def resendVerificationEmail(email: EmailAddress) = UserAction.async { implicit request =>
     EmailAddress.validate(email.address) match {
       case Failure(err) => Future.successful(BadRequest(Json.obj("error" -> "invalid_email_format")))
       case Success(validEmail) =>

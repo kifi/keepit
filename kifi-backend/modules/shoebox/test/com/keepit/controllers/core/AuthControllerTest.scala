@@ -92,6 +92,7 @@ class AuthControllerTest extends Specification with ShoeboxApplicationInjector {
         status(result) === BAD_REQUEST
       }
     }
+
     "verify email invalid code" in {
       running(new ShoeboxApplication(modules: _*)) {
         val ctrl = inject[AuthController]

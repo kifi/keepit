@@ -88,7 +88,7 @@ angular.module('kifi')
       this.onSlackToKeepChanged = function(on) {
         // make request
         // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
-        this.data.fromSlack.status = on ? 'on' : 'off';
+        this.data.fromSlack.status = $scope.canAddKeepsToLibrary && on ? 'on' : 'off';
         libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack]);
       };
 
@@ -145,6 +145,7 @@ angular.module('kifi')
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === profileService.me.id;
     $scope.isAdminExperiment = (profileService.me.experiments || []).indexOf('admin') !== -1;
     $scope.canCreateSlackIntegration = (profileService.me.experiments || []).indexOf('slack') !== -1;
+    $scope.canAddKeepsToLibrary = library.membership && (library.membership.access === 'owner' || library.membership.access === 'read_write');
 
     // slack stuff
     $scope.slackIntegrations = [];
@@ -279,6 +280,18 @@ angular.module('kifi')
 
     $scope.slackDelegate = {
       title: 'Join Kifi or log in to add this Slack integration'
+    };
+
+    $scope.showUnableToKeepFromSlackModal = function(){
+      modalService.open({
+        template: 'common/modal/simpleModal.tpl.html',
+        modalDefaults: {
+          title: 'Oops!',
+          content: 'You aren\'t allowed to keep to a library unless you are the owner or a collaborator on the library',
+          centered: true,
+          actionText: 'OK'
+        }
+      });
     };
 
 

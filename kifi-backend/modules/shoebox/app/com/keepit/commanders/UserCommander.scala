@@ -46,7 +46,7 @@ object BasicSocialUser {
     BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
 }
 
-case class EmailInfo(address: EmailAddress, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean, isFreeMail: Boolean)
+case class EmailInfo(address: EmailAddress, isPrimary: Boolean, isVerified: Boolean, isPendingPrimary: Boolean, isFreeMail: Boolean, isOwned: Boolean)
 object EmailInfo {
   implicit val format = new Format[EmailInfo] {
     def reads(json: JsValue): JsResult[EmailInfo] = {
@@ -55,7 +55,8 @@ object EmailInfo {
         (json \ "isPrimary").asOpt[Boolean].getOrElse(false),
         (json \ "isVerified").asOpt[Boolean].getOrElse(false),
         (json \ "isPendingPrimary").asOpt[Boolean].getOrElse(false),
-        (json \ "isFreeMail").asOpt[Boolean].getOrElse(false)
+        (json \ "isFreeMail").asOpt[Boolean].getOrElse(false),
+        (json \ "isOwned").asOpt[Boolean].getOrElse(false)
       )).toOption match {
         case Some(ei) => JsSuccess(ei)
         case None => JsError()
@@ -63,7 +64,7 @@ object EmailInfo {
     }
 
     def writes(ei: EmailInfo): JsValue = {
-      Json.obj("address" -> ei.address, "isPrimary" -> ei.isPrimary, "isVerified" -> ei.isVerified, "isPendingPrimary" -> ei.isPendingPrimary, "canBeClaimed" -> ei.isFreeMail)
+      Json.obj("address" -> ei.address, "isPrimary" -> ei.isPrimary, "isVerified" -> ei.isVerified, "isPendingPrimary" -> ei.isPendingPrimary, "isFreeMail" -> ei.isFreeMail, "isOwned" -> ei.isOwned)
     }
   }
 }
@@ -157,6 +158,7 @@ class UserCommanderImpl @Inject() (
     basicUserRepo: BasicUserRepo,
     keepRepo: KeepRepo,
     libraryRepo: LibraryRepo,
+    orgConfigurationRepo: OrganizationConfigurationRepo,
     domainRepo: DomainRepo,
     organizationInfoCommander: OrganizationInfoCommander,
     organizationMembershipCommander: OrganizationMembershipCommander,
@@ -293,9 +295,10 @@ class UserCommanderImpl @Inject() (
 
       val emailHostnames = emails.flatMap(email => NormalizedHostname.fromHostname(email.address.hostname))
       val potentialOrgsToHide = userValueRepo.getValue(user.id.get, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]]
-      val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values.flatten
+      val potentialOrgIds = organizationDomainOwnershipRepo.getOwnershipsByDomains(emailHostnames.toSet).values.flatten.distinctBy(_.organizationId)
         .collect {
-          case ownership if !orgs.contains(ownership.organizationId) && !pendingOrgs.contains(ownership.organizationId) && !potentialOrgsToHide.contains(ownership.organizationId) =>
+          case ownership if !orgs.contains(ownership.organizationId) && !pendingOrgs.contains(ownership.organizationId) &&
+            !potentialOrgsToHide.contains(ownership.organizationId) && canVerifyToJoin(ownership.organizationId) =>
             ownership.organizationId
         }
       val potentialOrgViews = potentialOrgIds.map(orgId => organizationInfoCommander.getOrganizationViewHelper(orgId, user.id, authTokenOpt = None))
@@ -311,20 +314,29 @@ class UserCommanderImpl @Inject() (
             isVerified = email.verified,
             isPrimary = email.primary,
             isPendingPrimary = pendingPrimary.exists(_.equalsIgnoreCase(email.address)),
-            isFreeMail = isFreeMail(email)
+            isFreeMail = isFreeMail(email),
+            isOwned = isOwned(email)
           )
       }
     }
     BasicUserInfo(basicUser, UpdatableUserInfo(biography, Some(emailInfos)), notAuthed, numLibraries, numConnections, numFollowers, orgViews, pendingOrgViews.toSeq, potentialOrgs)
   }
 
+  private def canVerifyToJoin(orgId: Id[Organization])(implicit session: RSession) = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
   private def isFreeMail(email: UserEmailAddress)(implicit session: RSession): Boolean = {
-    val hostnameOpt = NormalizedHostname.fromHostname(email.address.hostname)
-    hostnameOpt match {
+    NormalizedHostname.fromHostname(email.address.hostname) match {
       case None =>
         airbrake.notify(s"email ${email.address} owned by user ${email.userId} does not have a valid hostname")
         false
       case Some(hostname) => domainRepo.get(hostname).exists(_.isEmailProvider)
+    }
+  }
+  private def isOwned(email: UserEmailAddress)(implicit session: RSession): Boolean = {
+    NormalizedHostname.fromHostname(email.address.hostname) match {
+      case None =>
+        airbrake.notify(s"email ${email.address} owned by user ${email.userId} does not have a valid hostname")
+        false
+      case Some(hostname) => organizationDomainOwnershipRepo.getOwnershipsForDomain(hostname).nonEmpty
     }
   }
 
@@ -345,7 +357,7 @@ class UserCommanderImpl @Inject() (
     require(newUser.id.isDefined, "UserCommander.tellUsersWithContactOfNewUserImmediate: newUser.id is required")
 
     val newUserId = newUser.id.get
-    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).exists(_ == "true") }) {
+    if (!db.readOnlyMaster { implicit session => userValueRepo.getValueStringOpt(newUserId, UserValueName.CONTACTS_NOTIFIED_ABOUT_JOINING).contains("true") }) {
 
       val verifiedEmailAddresses = db.readOnlyMaster { implicit session =>
         val allAddresses = emailRepo.getAllByUser(newUserId)
@@ -409,6 +421,7 @@ class UserCommanderImpl @Inject() (
             .map(organizationDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
             .diff(userValueRepo.getValue(emailRecord.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
             .filter(orgId => !organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailRecord.userId))
+            .filter(orgId => canVerifyToJoin(orgId))
           (code, domainOwnerIds)
         }
 
