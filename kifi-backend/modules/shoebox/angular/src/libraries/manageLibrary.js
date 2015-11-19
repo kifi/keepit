@@ -303,10 +303,7 @@ angular.module('kifi')
         };
 
         scope.isIntegrationsEnabled = function () {
-          return (
-            !scope.spaceIsOrg(scope.space.destination) ||
-            scope.space.destination.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) > -1
-          );
+          return scope.hasPermission(LIB_PERMISSION.CREATE_SLACK_INTEGRATION);
         };
 
         scope.$watch(function () {
