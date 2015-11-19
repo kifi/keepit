@@ -8,7 +8,7 @@ api.pwnIframe = function (iframe, styles, scripts) {
     head.appendChild(link);
   });
   scripts.forEach(function (path) {
-    var s = doc.createElement('SCRIPT');
+    var s = $('<script>')[0];
     s.dataset.loading = true;
     s.addEventListener('load', onLoad);
     s.src = api.url(path);
