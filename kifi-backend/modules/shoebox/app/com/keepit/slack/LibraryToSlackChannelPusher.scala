@@ -79,9 +79,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     slackMessageOpt match {
       case Some(post) =>
         DescriptionElements(
-          post.username.value, "posted", keep.title.getOrElse("a link") --> LinkElement(keep.url), "to", post.channel.name.value, ".",
-          "It was automatically added to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.",
-          s"(permalink: ${post.permalink})"
+          s"@${post.username.value}", "posted", keep.title.getOrElse("a link") --> LinkElement(keep.url), "to", s"#${post.channel.name.value}" --> LinkElement(post.permalink), ".",
+          "It was automatically added to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library."
         )
       case None =>
         DescriptionElements(
