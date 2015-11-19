@@ -238,6 +238,11 @@ if __name__=="__main__":
       action = 'store_true',
       help = "Ignore the local lock, so multiple deploys of the same service can happen at once",
     )
+    parser.add_argument(
+      '--uploadonly',
+      action = 'store_true',
+      help = "ONLY upload assets, do not trigger deployment"
+    )
 
 
     args = parser.parse_args(sys.argv[1:])
@@ -309,6 +314,8 @@ if __name__=="__main__":
     else:
       if (not args.nolock) and (not lock.lock()):
         log("There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business.")
+        sys.exit(0)
+      elif args.uploadonly:
         sys.exit(0)
 
     log("Deploying %s to %s (%s): %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, slack_version))
