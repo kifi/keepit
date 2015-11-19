@@ -66,7 +66,6 @@
 
           <div
             class="manage-lib-input-wrapper"
-            ng-if="showIntegrations()"
           >
             <div class="manage-lib-integrations-title-wrapper">
               <h3
@@ -78,27 +77,13 @@
                 ng-click="isIntegrationsEnabled() && toggleIntegrations($event)"
               >Integrations</h3>
               <span
-                ng-if="showIntegrationsUpsell()"
+                ng-if="!isIntegrationsEnabled()"
                 kf-upsell
                 on-click="onClickUpsellIntegration()"
                 on-hover="onHoverUpsellIntegration()"
               >
-                <span ng-if="!space.destination.config.showUpsells">
-                  <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.DISABLED">
-                    No member of your team can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
-                  </span>
-                  <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.ADMIN">
-                    Only admins can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
-                  </span>
-                  <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin') && space.destination.config.settings.create_slack_integration.setting === ORG_SETTING_VALUE.MEMBER">
-                    All team members can create integrations. Edit this in <a class="kf-link" ui-sref="orgProfile.settings.team({ handle: space.destination.handle })">settings</a>
-                  </span>
-                  <span ng-if="(space.destination.viewer.membership && space.destination.viewer.membership.role !== 'admin') && space.destination.viewer.permissions.indexOf(ORG_PERMISSION.CREATE_SLACK_INTEGRATION) === -1">
-                    Integrations are disabled for {{ library.org.name }}
-                  </span>
-                </span>
-                <span ng-if="space.destination.config.showUpsells && (space.destination.viewer.membership && space.destination.viewer.membership.role === 'admin')">
-                  Enable Slack integrations by <a class="kf-link" ui-sref="orgProfile.settings.plan({ handle: space.destination.handle, upgrade: true })">upgrading your plan</a>.
+                <span ng-if="!isIntegrationsEnabled()">
+                  You do not have permission to create Slack integrations on this library.
                 </span>
               </span>
             </div>
