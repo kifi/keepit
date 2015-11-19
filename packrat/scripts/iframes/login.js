@@ -38,7 +38,7 @@ document.addEventListener('keydown', function (e) {
     FB.init({appId: appIds.facebook, status: true, version: 'v2.0'});
   };
 
-  var s = document.createElement('SCRIPT');
+  var s = $('<script>')[0];
   s.src = '//connect.facebook.net/en_US/sdk.js';
   s.id = 'facebook-jssdk';
   document.head.appendChild(s);
