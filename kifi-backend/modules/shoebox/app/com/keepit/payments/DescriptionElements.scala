@@ -55,6 +55,7 @@ object DescriptionElements {
   implicit def fromCreditCode(code: CreditCode): BasicElement = code.value
   implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName --> LinkElement(user.path.absolute)
   implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name --> LinkElement(org.path.absolute)
+  implicit def fromBasicOrgOpt(orgOpt: Option[BasicOrganization]): BasicElement = orgOpt.map(fromBasicOrg).getOrElse(fromText("a team"))
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
   implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName --> LinkElement(Path(s"${orgHandle.value}/settings/plan").absolute)

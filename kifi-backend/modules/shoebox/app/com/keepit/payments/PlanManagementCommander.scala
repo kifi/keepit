@@ -85,6 +85,8 @@ class PlanManagementCommanderImpl @Inject() (
   orgConfigRepo: OrganizationConfigurationRepo,
   basicUserRepo: BasicUserRepo,
   emailRepo: UserEmailAddressRepo,
+  creditRewardRepo: CreditRewardRepo,
+  creditCodeInfoRepo: CreditCodeInfoRepo,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
@@ -177,18 +179,11 @@ class PlanManagementCommanderImpl @Inject() (
     implicit val s = session
     Try {
       paidAccountRepo.maybeGetByOrgId(orgId).foreach { account =>
-        paidAccountRepo.save(account.withState(PaidAccountStates.INACTIVE))
+        paidAccountRepo.deactivate(account)
         accountEventRepo.deactivateAll(account.id.get)
-        paymentMethodRepo.getByAccountId(account.id.get).foreach { paymentMethod =>
-          paymentMethodRepo.save(paymentMethod.copy(
-            state = PaymentMethodStates.INACTIVE,
-            default = false,
-            stripeToken = StripeToken.DELETED
-          ))
-        }
+        paymentMethodRepo.getByAccountId(account.id.get).foreach(paymentMethodRepo.deactivate)
       }
     }
-
   }
 
   def registerNewUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution, overrideLock: Boolean = false)(implicit session: RWSession): AccountEvent = {

@@ -1,7 +1,7 @@
 package com.keepit.integrity
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.LibraryCommander
+import com.keepit.commanders.{ HandleCommander, LibraryCommander }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -24,6 +24,7 @@ class OrganizationChecker @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryCommander: LibraryCommander,
+    keepToLibraryRepo: KeepToLibraryRepo,
     orgRepo: OrganizationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgInviteRepo: OrganizationInviteRepo,
@@ -31,6 +32,9 @@ class OrganizationChecker @Inject() (
     paidAccountRepo: PaidAccountRepo,
     planManagementCommander: PlanManagementCommander,
     systemValueRepo: SystemValueRepo,
+    handleOwnershipRepo: HandleOwnershipRepo,
+    handleCommander: HandleCommander,
+    organizationConfigurationRepo: OrganizationConfigurationRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   private[this] val lock = new AnyRef
@@ -79,8 +83,12 @@ class OrganizationChecker @Inject() (
       val zombieInvites = orgInviteRepo.getAllByOrgId(org.id.get, state = OrganizationInviteStates.ACTIVE)
       val zombiePaidAccount = paidAccountRepo.maybeGetByOrgId(org.id.get, excludeStates = Set(PaidAccountStates.INACTIVE))
       val zombieLibs = libraryRepo.getBySpace(org.id.get, excludeState = Some(LibraryStates.INACTIVE))
+      val zombieHandles = handleOwnershipRepo.getByOwnerId(Some(HandleOwner.fromOrganizationId(org.id.get)), excludeState = Some(HandleOwnershipStates.INACTIVE))
+      val zombieConfig = Some(organizationConfigurationRepo.getByOrgId(org.id.get)).filter(_.state == OrganizationConfigurationStates.ACTIVE)
+      val zombieKtls = keepToLibraryRepo.getAllByOrganizationId(org.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
 
-      zombieMemberships.nonEmpty || zombieCandidates.nonEmpty || zombieInvites.nonEmpty || zombiePaidAccount.isDefined || zombieLibs.nonEmpty
+      zombieMemberships.nonEmpty || zombieCandidates.nonEmpty || zombieInvites.nonEmpty || zombiePaidAccount.isDefined ||
+        zombieLibs.nonEmpty || zombieHandles.nonEmpty || zombieConfig.isDefined || zombieKtls.nonEmpty
     }
   }
   private def orgHasBrokenSystemLibraries(org: Organization)(implicit session: RSession): Boolean = {
@@ -119,6 +127,24 @@ class OrganizationChecker @Inject() (
         if (zombiePaidAccount.isDefined) {
           airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie paid account: ${zombiePaidAccount.map(_.id.get)}")
           planManagementCommander.deactivatePaidAccountForOrganization(org.id.get, session)
+        }
+
+        val zombieHandles = handleOwnershipRepo.getByOwnerId(Some(HandleOwner.fromOrganizationId(org.id.get)), excludeState = Some(HandleOwnershipStates.INACTIVE))
+        if (zombieHandles.nonEmpty) {
+          airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie handles: ${zombieHandles.map(_.id.get)}")
+          zombieHandles.foreach(handle => handleCommander.reclaim(handle.handle, overrideLock = true, overrideProtection = true))
+        }
+
+        val zombieConfig = Some(organizationConfigurationRepo.getByOrgId(org.id.get)).filter(_.state == OrganizationConfigurationStates.ACTIVE)
+        if (zombieConfig.isDefined) {
+          airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has a zombie config: ${zombieConfig.flatMap(_.id)}")
+          zombieConfig.foreach(organizationConfigurationRepo.deactivate)
+        }
+
+        val zombieKtls = keepToLibraryRepo.getAllByOrganizationId(org.id.get, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
+        if (zombieKtls.nonEmpty) {
+          airbrake.notify(s"[ORG-STATE-MATCH] Dead org $orgId has zombie ktls: ${zombieKtls.flatMap(_.id)}")
+          zombieKtls.foreach(keepToLibraryRepo.deactivate)
         }
       }
 
