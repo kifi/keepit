@@ -5,7 +5,7 @@ import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.time._
-import com.keepit.common.util.DescriptionElements
+import com.keepit.common.util.{ DollarAmount, DescriptionElements }
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
 import com.keepit.model.{ OrganizationRole, User, OrganizationFactory, UserFactory }

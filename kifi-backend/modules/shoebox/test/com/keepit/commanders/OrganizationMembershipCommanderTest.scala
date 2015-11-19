@@ -2,16 +2,13 @@ package com.keepit.commanders
 
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.WatchableExecutionContext
-import com.keepit.common.db.Id
 import com.keepit.common.mail.EmailAddress
 import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
-import com.keepit.payments.{ PlanManagementCommander, PaidPlan, BillingCycle, DollarAmount }
 
 import scala.util.Random
 

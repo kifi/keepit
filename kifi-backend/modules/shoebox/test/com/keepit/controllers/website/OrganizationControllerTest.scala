@@ -8,17 +8,15 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
-import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.PaidPlanFactoryHelper._
-
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsValue, JsArray, JsObject, Json }
+import play.api.libs.json.{ JsArray, JsObject, JsValue, Json }
 import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import com.keepit.payments.{ PlanManagementCommander, PaidPlan, DollarAmount, BillingCycle }
 
 import scala.concurrent.Future
 

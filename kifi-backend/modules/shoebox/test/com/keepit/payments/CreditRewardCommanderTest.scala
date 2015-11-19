@@ -1,6 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.util.DollarAmount
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.model.PaidPlanFactoryHelper.PaidPlanPersister

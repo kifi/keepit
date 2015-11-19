@@ -5,6 +5,7 @@ import java.math.{ BigDecimal, RoundingMode, MathContext }
 import com.google.inject.Injector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.{ Days, DateTime }
