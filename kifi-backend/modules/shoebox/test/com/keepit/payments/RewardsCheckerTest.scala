@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.{ FakeShoeboxStoreModule, ImagePath }
+import com.keepit.common.util.DollarAmount
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.KeepFactoryHelper._

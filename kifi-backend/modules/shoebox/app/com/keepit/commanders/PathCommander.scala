@@ -25,9 +25,26 @@ class PathCommander @Inject() (
 
   def pathForOrganization(org: Organization): Path = Path(org.handle.value)
 
-  def orgPage(orgId: Id[Organization])(implicit session: RSession): Path = Path(orgRepo.get(orgId).handle.value)
-  def orgMembersPage(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgId) + "/members"
-  def orgLibrariesPage(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgId)
+  private def orgPageByHandle(handle: OrganizationHandle): Path = Path(handle.value)
+  private def orgMembersPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle) + "/members"
+  private def orgLibrariesPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle)
+  private def orgPlanPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle) + "/settings/plan"
+
+  def orgPage(org: Organization): Path = orgPageByHandle(org.handle)
+  def orgPage(org: BasicOrganization): Path = orgPageByHandle(org.handle)
+  def orgPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgRepo.get(orgId))
+
+  def orgMembersPage(org: Organization): Path = orgMembersPageByHandle(org.handle)
+  def orgMembersPage(org: BasicOrganization): Path = orgMembersPageByHandle(org.handle)
+  def orgMembersPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgMembersPage(orgRepo.get(orgId))
+
+  def orgLibrariesPage(org: Organization): Path = orgLibrariesPageByHandle(org.handle)
+  def orgLibrariesPage(org: BasicOrganization): Path = orgLibrariesPageByHandle(org.handle)
+  def orgLibrariesPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgLibrariesPage(orgRepo.get(orgId))
+
+  def orgPlanPage(org: Organization): Path = orgPlanPageByHandle(org.handle)
+  def orgPlanPage(org: BasicOrganization): Path = orgPlanPageByHandle(org.handle)
+  def orgPlanPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPlanPage(orgRepo.get(orgId))
 
   // todo: remove these and replace with Path-returning versions
   def getPathForLibrary(lib: Library): String = {

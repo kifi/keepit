@@ -4,6 +4,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model.{ Limit, User, Organization }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.core._
@@ -41,7 +42,6 @@ class PaidAccountRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val statusColumnType = MappedColumnType.base[PaymentStatus, String](_.value, PaymentStatus(_))
 
   type RepoImpl = PaidAccountTable

@@ -8,6 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.util.DollarAmount
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.OrganizationFactoryHelper._

@@ -5,9 +5,10 @@ import javax.crypto.spec.IvParameterSpec
 import com.amazonaws.services.cloudfront.model.InvalidArgumentException
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
-import com.keepit.common.time._
-import com.keepit.model.{ OrganizationRole, User }
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
+import com.keepit.model.{ OrganizationRole, User }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsNull, JsValue, Json }

@@ -3,7 +3,7 @@ package com.keepit.commanders
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.abook.model.OrganizationInviteRecommendation
-import com.keepit.classify.{ NormalizedHostname, DomainRepo, Domain }
+import com.keepit.classify.{ DomainRepo, NormalizedHostname }
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -11,11 +11,12 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.EmailAddress
+import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.model.GroupThreadStats
-import com.keepit.payments.{ PaymentStatus, DollarAmount, PlanManagementCommander, PaidPlan }
 import com.keepit.model._
-import com.keepit.common.time._
+import com.keepit.payments.{ PaidPlan, PaymentStatus, PlanManagementCommander }
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }

@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import com.keepit.common.util.DollarAmount
 import com.keepit.model.{ Organization, User }
 import com.keepit.payments.CreditRewardFail.UnavailableCreditCodeException
 import org.joda.time.DateTime
@@ -30,7 +31,6 @@ class CreditCodeInfoRepoImpl @Inject() (
   import db.Driver.simple._
 
   implicit val creditCodeTypeMapper = CreditCode.columnType(db)
-  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val kindColumnType = CreditCodeKind.columnType(db)
   implicit val statusColumnType = CreditCodeStatus.columnType(db)
 

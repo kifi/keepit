@@ -1,5 +1,6 @@
 package com.keepit.payments
 
+import com.keepit.common.util.DollarAmount
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.model.{ PaidPlanFactory, OrganizationFactory, UserFactory }
@@ -27,7 +28,7 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
     "refuse to process a frozen account, no matter what" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
-        val price = DollarAmount(438)
+        val price = DollarAmount.cents(438)
         val initialCredit = -commander.MAX_BALANCE - DollarAmount.dollars(1)
         val accountPre = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
@@ -52,8 +53,8 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       Seq(PaymentStatus.Ok, PaymentStatus.Pending, PaymentStatus.Failed).map { paymentStatus =>
         withDb(modules: _*) { implicit injector =>
           val commander = inject[PaymentProcessingCommander]
-          val price = DollarAmount(438)
-          val initialCredit = -commander.MIN_BALANCE + DollarAmount(1)
+          val price = DollarAmount.cents(438)
+          val initialCredit = -commander.MIN_BALANCE + DollarAmount.cents(1)
           val (accountPre, _) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(user).saved
@@ -85,8 +86,8 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
     "do charge correctly if balance is high enough and payment status is Ok" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
-        val price = DollarAmount(438)
-        val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
+        val price = DollarAmount.cents(438)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.cents(1)
         val (accountPre, _) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -122,8 +123,8 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
       Seq(PaymentStatus.Pending, PaymentStatus.Failed).map { paymentStatus =>
         withDb(modules: _*) { implicit injector =>
           val commander = inject[PaymentProcessingCommander]
-          val price = DollarAmount(438)
-          val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
+          val price = DollarAmount.cents(438)
+          val initialCredit = -commander.MIN_BALANCE - DollarAmount.cents(1)
           val (accountPre, _) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val org = OrganizationFactory.organization().withOwner(user).saved
@@ -149,8 +150,8 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
     "handle a missing payment method, mark the account with PaymentStatus.failed" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
-        val price = DollarAmount(438)
-        val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
+        val price = DollarAmount.cents(438)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.cents(1)
         val (accountPre, _) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -188,8 +189,8 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val commander = inject[PaymentProcessingCommander]
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         stripeClient.cardFailureMode = true
-        val price = DollarAmount(438)
-        val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
+        val price = DollarAmount.cents(438)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.cents(1)
         val (accountPre, _) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -228,8 +229,8 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
         val commander = inject[PaymentProcessingCommander]
         val stripeClient = inject[StripeClient].asInstanceOf[FakeStripeClientImpl]
         stripeClient.stripeDownMode = true
-        val price = DollarAmount(438)
-        val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
+        val price = DollarAmount.cents(438)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.cents(1)
         val (accountPre, _) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val org = OrganizationFactory.organization().withOwner(user).saved
@@ -262,8 +263,8 @@ class PaymentProcessingTest extends SpecificationLike with ShoeboxTestInjector {
     "refund a valid charge" in {
       withDb(modules: _*) { implicit injector =>
         val commander = inject[PaymentProcessingCommander]
-        val price = DollarAmount(438)
-        val initialCredit = -commander.MIN_BALANCE - DollarAmount(1)
+        val price = DollarAmount.cents(438)
+        val initialCredit = -commander.MIN_BALANCE - DollarAmount.cents(1)
         val (accountPre, _, léo) = db.readWrite { implicit session =>
           val user = UserFactory.user().saved
           val léo = UserFactory.user().saved

@@ -6,24 +6,21 @@ import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
-import org.specs2.matcher._
-import com.keepit.controllers.admin.AdminPaymentsController
+import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.PaidPlanFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
-import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.PaidPlanFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
 import com.keepit.payments._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
-import org.specs2.matcher.{ Expectable, Matcher, Delta }
 import org.specs2.mutable.Specification
 import play.api.libs.json._
 import play.api.mvc.Call
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import com.keepit.common.time._
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -59,17 +56,17 @@ class PaymentsControllerTest extends Specification with ShoeboxTestInjector {
         val planRepo = inject[PaidPlanRepo]
         val standardAnnualPlan = planRepo.save(
           PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_annual"), displayName = "Standard",
-            billingCycle = BillingCycle(12), pricePerCyclePerUser = DollarAmount(8004),
+            billingCycle = BillingCycle(12), pricePerCyclePerUser = DollarAmount.cents(8004),
             editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
         )
         val standardBiannualPlan = planRepo.save(
           PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_biannual"), displayName = "Standard",
-            billingCycle = BillingCycle(6), pricePerCyclePerUser = DollarAmount(8004),
+            billingCycle = BillingCycle(6), pricePerCyclePerUser = DollarAmount.cents(8004),
             editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
         )
         val standardMonthlyPlan = planRepo.save(
           PaidPlan(kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("standard_monthly"), displayName = "Standard",
-            billingCycle = BillingCycle(1), pricePerCyclePerUser = DollarAmount(800),
+            billingCycle = BillingCycle(1), pricePerCyclePerUser = DollarAmount.cents(800),
             editableFeatures = PaidPlanFactory.testPlanEditableFeatures, defaultSettings = PaidPlanFactory.testPlanSettings)
         )
         Seq(standardMonthlyPlan, standardBiannualPlan, standardAnnualPlan)

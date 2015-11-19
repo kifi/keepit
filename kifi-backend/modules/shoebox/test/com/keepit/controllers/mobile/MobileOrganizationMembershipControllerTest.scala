@@ -2,11 +2,10 @@ package com.keepit.controllers.mobile
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.OrganizationMembershipCommander
 import com.keepit.common.concurrent.WatchableExecutionContext
 import com.keepit.common.controller.FakeUserActionsHelper
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
@@ -16,14 +15,12 @@ import com.keepit.model._
 import com.keepit.test.ShoeboxTestInjector
 import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.Specification
-import play.api.libs.json.Json
-import play.api.mvc.{ Request, Call, Result }
+import play.api.libs.json.{ Json, _ }
+import play.api.mvc.{ Call, Result }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import play.api.libs.json._
 
-import scala.concurrent.{ Await, Future }
-import scala.concurrent.duration._
+import scala.concurrent.Future
 
 class MobileOrganizationMembershipControllerTest extends Specification with ShoeboxTestInjector {
   implicit def createFakeRequest(route: Call) = FakeRequest(route.method, route.url)

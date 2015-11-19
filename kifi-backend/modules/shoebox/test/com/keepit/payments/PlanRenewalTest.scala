@@ -2,10 +2,11 @@ package com.keepit.payments
 
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.time._
-import com.keepit.model.{ PaidPlanFactory, OrganizationFactory, UserFactory }
+import com.keepit.common.util.DollarAmount
+import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.model.PaidPlanFactoryHelper.PaidPlanPersister
 import com.keepit.model.UserFactoryHelper.UserPersister
-import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
+import com.keepit.model.{ OrganizationFactory, PaidPlanFactory, UserFactory }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.SpecificationLike
 

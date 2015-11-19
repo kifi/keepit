@@ -4,6 +4,7 @@ import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{Id, ModelWithState, State, States}
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
+import com.keepit.common.util.{DollarAmount, DescriptionElements}
 import com.keepit.model.{Organization, User}
 import org.joda.time.DateTime
 import play.api.libs.json._

@@ -4,6 +4,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.controller.{ UserActions, ShoeboxServiceController, UserActionsHelper }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.util.DollarAmount
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import com.keepit.model._
 import com.keepit.commanders.{ OrganizationInfoCommander, PermissionCommander, OrganizationCommander, OrganizationMembershipCommander, OrganizationInviteCommander }

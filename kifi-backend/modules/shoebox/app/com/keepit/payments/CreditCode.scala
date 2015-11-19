@@ -8,6 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.strings._
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model.{ Organization, User }
 import org.apache.commons.lang3.RandomStringUtils
 import org.joda.time.DateTime

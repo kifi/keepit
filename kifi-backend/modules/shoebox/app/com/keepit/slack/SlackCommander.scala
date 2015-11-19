@@ -2,26 +2,26 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.PathCommander
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.controllers.website.DeepLinkRouter
-import com.keepit.model.ExternalLibrarySpace.{ ExternalUserSpace, ExternalOrganizationSpace }
-import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
+import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
-import com.keepit.payments.{ LinkElement, DescriptionElements }
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.http.Status._
 
-import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Success, Failure, Try }
+import scala.concurrent.ExecutionContext
+import scala.util.{ Failure, Success, Try }
 
 @json
 case class LibraryToSlackIntegrationInfo(
