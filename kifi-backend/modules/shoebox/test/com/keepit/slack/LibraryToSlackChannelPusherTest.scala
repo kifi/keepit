@@ -7,6 +7,7 @@ import com.keepit.common.time
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.LibraryToSlackChannelFactoryHelper._
+import com.keepit.model.SlackChannelToLibraryFactoryHelper._
 import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.SlackTeamMembershipFactoryHelper._
@@ -15,6 +16,7 @@ import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
+import org.joda.time.Period
 import org.specs2.mutable.SpecificationLike
 
 import scala.concurrent.Await
@@ -50,10 +52,11 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).lastProcessingAt must beNone }
         }
       }
+    }
+    "format messages properly" in {
       "push the right message depending on the number of new keeps" in {
         withDb(modules: _*) { implicit injector =>
-          var curTime = currentDateTime.minusDays(10)
-          inject[FakeClock].setTimeValue(curTime)
+          fakeClock.setTimeValue(currentDateTime.minusDays(10))
           val (user, lib, integration, webhook) = db.readWrite { implicit session =>
             val user = UserFactory.user().withName("Ryan", "Brewster").withUsername("ryanpbrewster").saved
             val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
@@ -67,30 +70,57 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           val titles = Iterator.from(1).map(n => s"panda time <3 #$n")
 
           // First, no keeps => no message
-          curTime = curTime.plusDays(1)
-          inject[FakeClock].setTimeValue(curTime)
+          fakeClock += Period.days(1)
           Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must beEmpty
 
           // 2 keeps => 1 msg, 2 lines
-          curTime = curTime.plusDays(1)
-          inject[FakeClock].setTimeValue(curTime)
-          db.readWrite { implicit s => KeepFactory.keeps(2).map(_.withUser(user).withLibrary(lib).withKeptAt(curTime).withTitle(titles.next())).saved }
+          fakeClock += Period.days(1)
+          db.readWrite { implicit s => KeepFactory.keeps(2).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved }
           Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 2
           slackClient.pushedMessagesByWebhook(webhook.url).head.attachments.length === 0 // TODO(ryan): write a test for the attachments-style
 
           // hella keeps => 1 msg, 1 line (a summary)
-          curTime = curTime.plusDays(1)
-          inject[FakeClock].setTimeValue(curTime)
-          db.readWrite { implicit s => KeepFactory.keeps(20).map(_.withUser(user).withLibrary(lib).withKeptAt(curTime).withTitle(titles.next())).saved }
+          fakeClock += Period.days(1)
+          db.readWrite { implicit s => KeepFactory.keeps(20).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved }
           Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 1
           slackClient.pushedMessagesByWebhook(webhook.url).head.attachments.length === 0
 
-          slackClient.pushedMessagesByWebhook(webhook.url).foreach(println)
+          1 === 1
+        }
+      }
+      "if a message came from slack, make it clear" in {
+        withDb(modules: _*) { implicit injector =>
+          fakeClock.setTimeValue(currentDateTime.minusDays(10))
+          val (user, lib, stm, libToSlack, slackToLib, webhook) = db.readWrite { implicit session =>
+            val user = UserFactory.user().withUsername("ryan-kifi").saved
+            val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
+            val slackTeam = SlackTeamFactory.team()
+            val stm = SlackTeamMembershipFactory.membership().withUser(user).withUsername("ryan-slack").withTeam(slackTeam).saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val stl = SlackChannelToLibraryFactory.stl().withMembership(stm).withLibrary(lib).withChannel("#eng").on().withNextIngestionAt(fakeClock.now).saved
+            (user, lib, stm, lts, stl, siw.webhook)
+          }
+
+          val ch = SlackChannel(SlackChannelId("C123123"), libToSlack.slackChannelName)
+          fakeClock += Period.days(1)
+          db.readWrite { implicit s => KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("In Kifi").saved }
+          Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
+          slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
+          slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("ryan-kifi")
+
+          slackClient.sayInChannel(stm, ch)("I love sharing links like <http://www.google.com>")
+          fakeClock += Period.days(1)
+          Await.result(inject[SlackIngestionCommander].ingestAllDue(), Duration.Inf)
+          Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
+          slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
+          slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("ryan-slack")
+
           1 === 1
         }
       }
