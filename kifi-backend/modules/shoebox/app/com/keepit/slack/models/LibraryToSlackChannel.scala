@@ -36,13 +36,16 @@ case class LibraryToSlackChannel(
   def withSpace(newSpace: LibrarySpace) = this.copy(space = newSpace)
   def sanitizeForDelete = this.copy(state = LibraryToSlackChannelStates.INACTIVE, status = SlackIntegrationStatus.Off)
   def withLastProcessedAt(time: DateTime) = this.copy(lastProcessedAt = Some(time))
-  def withLastProcessedKeep(ktlId: Option[Id[KeepToLibrary]]) = this.copy(lastProcessedKeep = ktlId)
+  def withLastProcessedKeep(ktlId: Option[Id[KeepToLibrary]]) = ktlId match {
+    case None => this
+    case Some(newKtlId) => this.copy(lastProcessedKeep = Some(newKtlId))
+  }
   def finishedProcessing: LibraryToSlackChannel = this.copy(lastProcessedAt = lastProcessingAt, lastProcessingAt = None)
 
   def withModifications(mods: SlackIntegrationModification) = {
     this
-      .maybeCopy(_.status, mods.status, this.withStatus)
-      .maybeCopy(_.space, mods.space, this.withSpace)
+      .maybeCopy(_.status, mods.status, _.withStatus)
+      .maybeCopy(_.space, mods.space, _.withSpace)
   }
 }
 
