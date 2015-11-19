@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ ProcessedImageSize, KeepDecorator, PathCommander }
+import com.keepit.commanders.{PermissionCommander, ProcessedImageSize, KeepDecorator, PathCommander}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -32,6 +32,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   slackTeamMembershipRepo: SlackTeamMembershipRepo,
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
+  permissionCommander: PermissionCommander,
   clock: Clock,
   ktlRepo: KeepToLibraryRepo,
   keepRepo: KeepRepo,
@@ -126,6 +127,12 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     val (lib, integrationsToProcess) = db.readWrite { implicit s =>
       val lib = libRepo.get(libId)
       val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now.minus(gracePeriod))
+
+      def isIllegal(lts: LibraryToSlackChannel) = {
+        !permissionCommander.getLibraryPermissions(libId, Some(lts.ownerId)).contains(LibraryPermission.VIEW_LIBRARY)
+      }
+      integrations.map(libToChannelRepo.get).filter(!isLegalIntegration(_)).foreach(libToChannelRepo.save(_.withStatus(SlackIntegrationStatus.Off)))
+
       val integrationsToProcess = integrations.flatMap(ltsId => libToChannelRepo.markAsProcessing(ltsId))
       (lib, integrationsToProcess)
     }
