@@ -38,8 +38,8 @@ case class SlackChannelToLibrary(
 
   def withModifications(mods: SlackIntegrationModification) = {
     this
-      .maybeCopy(_.status, mods.status, withStatus)
-      .maybeCopy(_.space, mods.space, withSpace)
+      .maybeCopy(_.status, mods.status, _.withStatus)
+      .maybeCopy(_.space, mods.space, _.withSpace)
   }
   def sanitizeForDelete = copy(state = SlackChannelToLibraryStates.INACTIVE, status = SlackIntegrationStatus.Off)
 }

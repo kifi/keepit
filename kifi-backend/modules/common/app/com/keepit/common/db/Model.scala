@@ -22,7 +22,7 @@ trait ModelWithSeqNumber[M] extends Model[M] { self: Model[M] =>
 }
 
 trait ModelWithMaybeCopy[M] { self: M =>
-  def maybeCopy[T](curVal: M => T, newVal: Option[T], modFn: T => M) = {
-    newVal.filter(_ != curVal(self)).map(modFn).getOrElse(self)
+  def maybeCopy[T](curVal: M => T, newVal: Option[T], modFn: M => (T => M)) = {
+    newVal.filter(_ != curVal(self)).map(modFn(self)).getOrElse(self)
   }
 }
