@@ -101,9 +101,8 @@
     }
 
     var testUserIds = [
-      "2",
       "df7ba036-700c-4f5d-84d1-313b5bf312b6", // Werdna
-      "@{request.userId}" //
+      "@{request.userId}"
     ];
 
     function sendGroup(userIds, url, title, text) {
@@ -126,18 +125,20 @@
           alert("Done. Sent to " + userIds.length + " users.");
           setTest();
         }
-      }, (userIds.length * delay) + 2000);
+      }, (userIds.length * delay) + 1000);
     }
 
     function setReal() {
       hasSentTestMessage = true;
-      $("#admin-chat-button").text("Send real message");
+      $("#admin-chat-button").text("!!! Send REAL message !!!");
     }
 
     function setTest() {
       hasSentTestMessage = false;
-      $("#admin-chat-button").text("Send test message");
+      $("#admin-chat-button").text("Test");
     }
+
+    setTest();
 
   });
 </script>
