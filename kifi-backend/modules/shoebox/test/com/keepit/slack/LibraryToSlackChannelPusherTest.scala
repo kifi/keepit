@@ -36,10 +36,11 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
         withDb(modules: _*) { implicit injector =>
           val (user, lib, integration) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
-            val lib = LibraryFactory.library().saved
+            val lib = LibraryFactory.library().withOwner(user).saved
             val slackTeam = SlackTeamFactory.team()
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
             (user, lib, lts)
           }
           db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).lastProcessingAt must beNone }
@@ -47,9 +48,57 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           val resFut = inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get)
           val res = Await.result(resFut, Duration.Inf)
           res.size === 1
-          res.values.toList === List(false) // integration failed because there is no webhook!
+          res.values.toList === List(true)
 
-          db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).lastProcessingAt must beNone }
+          db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).lastProcessedAt must beSome }
+        }
+      }
+      "deactivate integrations if the owner is missing permissions" in {
+        withDb(modules: _*) { implicit injector =>
+          val (owner, user, lib, integration) = db.readWrite { implicit session =>
+            val owner = UserFactory.user().saved
+            val user = UserFactory.user().saved
+            val lib = LibraryFactory.library().withOwner(owner).published().saved
+            val slackTeam = SlackTeamFactory.team()
+            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
+            (owner, user, lib, lts)
+          }
+          // First time is fine, since they have view permissions
+          Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf).values.toList === List(true)
+          // Now we make the lib secret
+          db.readWrite { implicit s => libraryRepo.save(lib.copy(visibility = LibraryVisibility.SECRET)) }
+          Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf).values.toList === List.empty
+          // We turn off "bad" integrations
+          db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).status === SlackIntegrationStatus.Off }
+          1 === 1
+        }
+      }
+      "mark busted integrations as broken" in {
+        withDb(modules: _*) { implicit injector =>
+          val (owner, lib, integration, webhook) = db.readWrite { implicit session =>
+            val user = UserFactory.user().saved
+            val lib = LibraryFactory.library().withOwner(user).published().saved
+            KeepFactory.keep().withUser(user).withLibrary(lib).saved
+
+            val slackTeam = SlackTeamFactory.team()
+            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
+            (user, lib, lts, siw)
+          }
+          slackClient.isSlackThrowingAFit = true // pretend Slack hates us and rejects all our webhooks
+          // We will try and send, but Slack rejects the webhook
+          Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf).values.toList === List(false)
+          // We should have noticed that the webhook is broken and marked it as failed
+          // Because the webhook failed, the integration should be marked as broken
+          db.readOnlyMaster { implicit s =>
+            inject[SlackIncomingWebhookInfoRepo].get(webhook.id.get).lastFailedAt must beSome
+            inject[SlackIncomingWebhookInfoRepo].get(webhook.id.get).lastFailure must beSome
+            inject[LibraryToSlackChannelRepo].get(integration.id.get).status === SlackIntegrationStatus.Broken
+          }
+          1 === 1
         }
       }
     }
