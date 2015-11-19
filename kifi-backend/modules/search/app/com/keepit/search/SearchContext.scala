@@ -14,6 +14,8 @@ case class OrganizationScope(id: Id[Organization], authorized: Boolean) extends 
 @json
 case class UserScope(id: Id[User]) extends SearchScope
 @json
+case class SourceScope(source: String) extends SearchScope
+@json
 case class ProximityScope(proximity: String) extends SearchScope
 
 object ProximityScope {
@@ -29,7 +31,8 @@ case class SearchFilter(
     proximity: Option[ProximityScope],
     user: Option[UserScope],
     library: Option[LibraryScope],
-    organization: Option[OrganizationScope]) {
+    organization: Option[OrganizationScope],
+    source: Option[SourceScope]) {
 
   import ProximityScope._
 
@@ -45,7 +48,7 @@ case class SearchFilter(
 }
 
 object SearchFilter {
-  val empty = SearchFilter(None, None, None, None)
+  val empty = SearchFilter(None, None, None, None, None)
 }
 
 @json
