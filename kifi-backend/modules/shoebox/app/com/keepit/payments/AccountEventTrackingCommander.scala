@@ -11,12 +11,12 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.net.HttpClient
 import com.keepit.common.time._
+import com.keepit.common.util.{ DollarAmount, LinkElement, DescriptionElements }
 import com.keepit.eliza.ElizaServiceClient
-import com.keepit.model._
+import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo, _ }
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.RewardCreditApplied
 import com.keepit.payments.AccountEventAction.RewardCredit
-import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, UserEmailAddressRepo }
 import com.keepit.slack.SlackClient
 import com.keepit.slack.models.{ SlackChannelName, SlackMessageRequest }
 import play.api.Mode
@@ -122,11 +122,14 @@ class AccountEventTrackingCommanderImpl @Inject() (
   }
 
   private def reportToSlack(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[SlackChannelName]] = {
+    import DescriptionElements._
     checkingParameters(event) {
       lazy val msg = {
         val info = activityCommander.buildSimpleEventInfo(event)
-        val orgHeader = s"<https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0|${SlackMessageRequest.escapeSegment(org.name)}>"
-        s"[$orgHeader] ${DescriptionElements.formatForSlack(info.description)} | ${info.creditChange}"
+        DescriptionElements.formatForSlack(DescriptionElements(
+          "[", org.name --> LinkElement(s"https://admin.kifi.com/admin/payments/getAccountActivity?orgId=${org.id.get}&page=0"), "]",
+          info.description, info.creditChange
+        ))
       }
       Future.sequence(toSlackChannels(event.action.eventType).map { channel =>
         reportToSlack(msg, channel).imap(_ => channel)

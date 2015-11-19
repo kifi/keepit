@@ -5,6 +5,7 @@ import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.logging.Logging
+import com.keepit.common.util.DollarAmount
 import com.keepit.payments.CreditRewardFail.UnrepeatableRewardKeyCollisionException
 import com.keepit.common.time._
 import com.keepit.model.User
@@ -37,7 +38,6 @@ class CreditRewardRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val kindColumnType = MappedColumnType.base[RewardKind, String](_.kind, RewardKind.apply)
   implicit val creditCodeTypeMapper = CreditCode.columnType(db)
   implicit val unrepeatableTypeMapper = MappedColumnType.base[UnrepeatableRewardKey, String](_.toKey, UnrepeatableRewardKey.fromKey)

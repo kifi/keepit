@@ -1,23 +1,22 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ PermissionCommander, ProcessedImageSize, KeepDecorator, PathCommander }
+import com.keepit.commanders.{ KeepDecorator, PathCommander, PermissionCommander, ProcessedImageSize }
+import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.store.ImageSize
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.model._
-import com.keepit.payments.{ LinkElement, DescriptionElements }
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import org.joda.time.Period
-import com.keepit.common.core.futureExtensionOps
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success }
+import scala.util.Success
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {

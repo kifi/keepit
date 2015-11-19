@@ -8,6 +8,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{ ElectronicMail, LocalPostOffice, SystemEmailAddress }
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model._
 import com.keepit.payments.CreditRewardFail._
 import com.keepit.payments.RewardKind.RewardChecklistKind

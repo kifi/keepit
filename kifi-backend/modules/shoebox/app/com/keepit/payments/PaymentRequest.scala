@@ -2,6 +2,7 @@ package com.keepit.payments
 
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.util.DollarAmount
 import com.keepit.model._
 import com.kifi.macros.json
 import org.joda.time.DateTime

@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model._
 import com.stripe.exception.APIException
 import org.joda.time.{ DateTime, Days }

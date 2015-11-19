@@ -73,6 +73,4 @@ object SlackMessageRequest {
       "unfurl_media" -> o.unfurlMedia
     )
   }
-
-  def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
 }

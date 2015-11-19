@@ -4,7 +4,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time._
-import com.keepit.common.util.Paginator
+import com.keepit.common.util.{ Paginator, DollarAmount }
 import com.keepit.model.{ SortDirection, Offset, Limit, User }
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
@@ -38,7 +38,6 @@ class AccountEventRepoImpl @Inject() (
   import db.Driver.simple._
 
   case class AccountEventKindNotFoundException(s: String) extends Exception(s"""AccountEventKind "$s" not found""")
-  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val accountEventKindMapper = MappedColumnType.base[AccountEventKind, String](_.value, s => AccountEventKind.get(s).getOrElse(throw new AccountEventKindNotFoundException(s))) // explicitly requires "good" data
   implicit val chargeIdMapper = MappedColumnType.base[StripeTransactionId, String](_.id, StripeTransactionId(_))
 

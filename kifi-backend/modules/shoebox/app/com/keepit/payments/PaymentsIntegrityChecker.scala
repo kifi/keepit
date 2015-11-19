@@ -7,6 +7,7 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.HttpClient
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model.{ Organization, OrganizationMembership, OrganizationMembershipRepo, OrganizationMembershipStates, OrganizationRepo, User }
 import com.kifi.macros.json
 import play.api.Mode.Mode
