@@ -128,7 +128,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship]
   def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]): Future[Option[LibraryMembershipView]]
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
-  def getIntegrationsBySlackChannel(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Future[Option[Seq[SlackChannelToLibrarySummary]]]
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[Seq[SlackChannelToLibrarySummary]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -840,9 +840,9 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getUserPermissionsByOrgId, payload).map { _.json.as[Map[Id[Organization], Set[OrganizationPermission]]] }
   }
 
-  def getIntegrationsBySlackChannel(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Future[Option[Seq[SlackChannelToLibrarySummary]]] = {
-    val payload = Json.obj("token" -> token, "teamId" -> teamId, "channelId" -> channelId)
-    call(Shoebox.internal.getIntegrationsBySlackChannel, payload).map { _.json.asOpt[Seq[SlackChannelToLibrarySummary]] }
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[Seq[SlackChannelToLibrarySummary]] = {
+    val payload = Json.obj("teamId" -> teamId, "channelId" -> channelId)
+    call(Shoebox.internal.getIntegrationsBySlackChannel, payload).map { _.json.as[Seq[SlackChannelToLibrarySummary]] }
   }
 
 }

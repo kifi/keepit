@@ -57,7 +57,7 @@ trait SlackCommander {
 
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
-  def getIntegrationsBySlackChannel(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Option[Seq[SlackChannelToLibrarySummary]]
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Seq[SlackChannelToLibrarySummary]
 }
 
 @Singleton
@@ -291,13 +291,10 @@ class SlackCommanderImpl @Inject() (
     }
   }
 
-  def getIntegrationsBySlackChannel(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Option[Seq[SlackChannelToLibrarySummary]] = {
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Seq[SlackChannelToLibrarySummary] = {
     db.readOnlyMaster { implicit session =>
-      slackTeamMembershipRepo.getByToken(token).collect {
-        case membership if membership.slackTeamId == teamId =>
-          channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId).map { integration =>
-            SlackChannelToLibrarySummary(teamId, channelId, integration.libraryId, integration.status == SlackIntegrationStatus.On, integration.lastMessageTimestamp)
-          }
+      channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId).map { integration =>
+        SlackChannelToLibrarySummary(teamId, channelId, integration.libraryId, integration.status == SlackIntegrationStatus.On, integration.lastMessageTimestamp)
       }
     }
   }

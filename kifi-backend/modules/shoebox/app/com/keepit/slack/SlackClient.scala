@@ -12,12 +12,6 @@ import com.keepit.common.core._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure }
 
-object KifiSlackApp {
-  val SLACK_CLIENT_ID = "2348051170.15031499078"
-  val SLACK_CLIENT_SECRET = "ad688ad730192eabe0bdc6675975f3fc"
-  val KIFI_SLACK_REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
-}
-
 object SlackAPI {
   import com.keepit.common.routes.{ GET, ServiceRoute, Param, Method }
 
