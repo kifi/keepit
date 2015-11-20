@@ -252,6 +252,10 @@ angular.module('kifi')
           $analytics.eventTrack('user_clicked_page', {type: 'library', action: 'clickedViewOriginalTweetURL'});
         };
 
+        scope.trackSlack = function() {
+          $analytics.eventTrack('user_clicked_page', { type: 'library', action: 'clickedSlackAttr' });
+        };
+
         //
         // Watches and listeners.
         //

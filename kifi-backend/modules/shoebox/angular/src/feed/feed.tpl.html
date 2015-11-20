@@ -97,6 +97,18 @@
           click-action="clickedOrganization"
         ></a> &mdash; <span am-time-ago="feedItem.createdAt"></span>
       </h4>
+      <div class="kf-feed-attr">
+        <div class="kf-feed-attr-twitter" ng-if="::feedItem.sourceAttribution.twitter.screenName">
+          <a class="kf-feed-attr-link" href="https://www.twitter.com/{{::feedItem.sourceAttribution.twitter.screenName}}/status/{{::feedItem.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
+            <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
+          </a>
+        </div>
+        <div class="kf-feed-attr-slack" ng-if="::feedItem.sourceAttribution.slack">
+          <a class="kf-feed-attr-link kf-flex-row" href="{{::feedItem.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
+            <span class="svg-slack kf-feed-slack-icon"></span><span>via @{{ feedItem.sourceAttribution.slack.message.username }}</span>
+          </a>
+        </div>
+      </div>
     </header>
     <div class="kf-keep">
       <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true" click-callback="keepClick(keep, event)"></div>

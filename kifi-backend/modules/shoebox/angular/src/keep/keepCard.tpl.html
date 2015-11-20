@@ -9,18 +9,25 @@
       </section>
       <section class="kf-keep-top-r">
         <a class="kf-keep-keeper-name" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
+        <span class="kf-keep-created-time">
+          &mdash;<time class="kf-keep-created-datetime" ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
+        </span>
+        <span class="kf-keep-saved" ng-if="showSaved && keep.summary.hasContent">&mdash;<a class="kf-keep-saved-link" ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
         <div class="kf-keep-time" ng-if="::keep.user">
-          <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
           <span ng-if="::!keep.createdAt">kept this</span>
           <span ng-if="::currentPageOrigin !== 'libraryPage' && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
             in <a class="kf-keep-lib-name" href="{{::keep.library.path}}">{{::keep.library.name}}</a>
           </span>
-          <span ng-if="showSaved && keep.summary.hasContent"><a ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
           <span ng-if="::keep.sourceAttribution.twitter.screenName">
-            <a class="kf-keep-tweet-link" href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
+            <a href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
               <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
             </a>
           </span>
+          <div class="kf-keep-attr-slack" ng-if="::keep.sourceAttribution.slack">
+            <a class="kf-flex-row" href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
+              <span class="svg-slack kf-keep-slack-icon"></span>via @{{ ::keep.sourceAttribution.slack.message.username }}
+            </a>
+          </div>
         </div>
       </section>
     </div>
@@ -93,6 +100,12 @@
           <a class="kf-keep-keeper-name" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
           <span class="kf-keep-time-at" ng-if="::keep.createdAt">
             <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}"></time>
+          </span>
+          <span class="kf-keep-attr-slack-mini" ng-if="::keep.sourceAttribution.slack">
+            <span class="kf-keep-spacing-dash">&mdash;</span>
+            <a href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
+              <span class="svg-slack kf-keep-slack-icon-mini"></span>via @{{ ::keep.sourceAttribution.slack.message.username }}
+            </a>
           </span>
         </div>
         <div class="kf-keep-header-r">
