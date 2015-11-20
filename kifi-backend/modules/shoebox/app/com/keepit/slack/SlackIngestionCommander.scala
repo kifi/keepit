@@ -21,8 +21,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object SlackIngestionCommander {
-  val nextIngestionDelayAfterFailure = Period.minutes(5)
-  val nextIngestionDelayWithoutNewMessages = Period.minutes(10)
+  val nextIngestionDelayAfterFailure = Period.minutes(10)
+  val nextIngestionDelayWithoutNewMessages = Period.minutes(5)
   val nextIngestionDelayAfterNewMessages = Period.minutes(1)
 
   val ingestionTimeout = Period.minutes(30)
