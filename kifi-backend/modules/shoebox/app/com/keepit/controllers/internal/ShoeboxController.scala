@@ -583,11 +583,11 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(permissionsByOrgId))
   }
 
-  def getSlackChannelLibrary() = Action(parse.tolerantJson) { request =>
+  def getIntegrationsBySlackChannel() = Action(parse.tolerantJson) { request =>
     val token = (request.body \ "token").as[SlackAccessToken]
     val teamId = (request.body \ "teamId").as[SlackTeamId]
     val channelId = (request.body \ "channelId").as[SlackChannelId]
-    val libIdOpt = slackCommander.getSlackChannelLibrary(token, teamId, channelId)
-    Ok(Json.toJson(libIdOpt))
+    val integrationsOpt = slackCommander.getIntegrationsBySlackChannel(token, teamId, channelId)
+    Ok(Json.toJson(integrationsOpt))
   }
 }

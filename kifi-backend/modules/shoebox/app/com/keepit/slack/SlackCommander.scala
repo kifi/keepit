@@ -22,7 +22,6 @@ import play.api.http.Status._
 
 import scala.concurrent.{ ExecutionContext }
 import scala.util.{ Success, Failure, Try }
-import com.keepit.common.core._
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -59,7 +58,7 @@ trait SlackCommander {
 
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
-  def getSlackChannelLibrary(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Option[Id[Library]]
+  def getIntegrationsBySlackChannel(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Option[Seq[SlackChannelToLibrarySummary]]
 }
 
 @Singleton
@@ -265,12 +264,13 @@ class SlackCommanderImpl @Inject() (
     }
   }
 
-  def getSlackChannelLibrary(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Option[Id[Library]] = {
+  def getIntegrationsBySlackChannel(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Option[Seq[SlackChannelToLibrarySummary]] = {
     db.readOnlyMaster { implicit session =>
-      slackTeamMembershipRepo.getByToken(token).flatMap { membership =>
-        if (membership.slackTeamId == teamId) {
-          channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId).maxByOpt(_.lastMessageTimestamp).map(_.libraryId)
-        } else None
+      slackTeamMembershipRepo.getByToken(token).collect {
+        case membership if membership.slackTeamId == teamId =>
+          channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId).map { integration =>
+            SlackChannelToLibrarySummary(teamId, channelId, integration.libraryId, integration.status == SlackIntegrationStatus.On, integration.lastMessageTimestamp)
+          }
       }
     }
   }

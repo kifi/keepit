@@ -1,7 +1,9 @@
 package com.keepit.slack.models
 
+import com.keepit.common.db.Id
 import com.keepit.common.reflection.Enumerator
 import com.keepit.model.KeepAttributionType._
+import com.keepit.model.Library
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -55,9 +57,9 @@ object SlackAttachment {
   case class Title(value: String, link: Option[String])
   @json case class Field(title: String, value: String, short: Boolean)
 
-  def fromTitle(title: Title) = SlackAttachment(
+  def fromTitleAndImage(title: Title, thumbUrl: Option[String], color: String) = SlackAttachment(
     fallback = None,
-    color = None,
+    color = Some(color),
     pretext = None,
     service = None,
     author = None,
@@ -66,7 +68,7 @@ object SlackAttachment {
     fields = Seq.empty,
     fromUrl = None,
     imageUrl = None,
-    thumbUrl = None
+    thumbUrl = thumbUrl
   )
 
   def minimal(fallback: String, text: String) = SlackAttachment(
@@ -226,3 +228,12 @@ object SlackCommandResponse {
     (__ \ "attachments").write[Seq[SlackAttachment]]
   )(unlift(unapply))
 }
+
+@json
+case class SlackChannelToLibrarySummary(
+  teamId: SlackTeamId,
+  channelId: SlackChannelId,
+  libraryId: Id[Library],
+  on: Boolean,
+  lastMessageTimestamp: Option[SlackMessageTimestamp])
+

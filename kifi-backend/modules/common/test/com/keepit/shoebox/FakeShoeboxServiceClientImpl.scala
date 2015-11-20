@@ -23,7 +23,7 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search._
 import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.shoebox.model.ids.UserSessionExternalId
-import com.keepit.slack.models.{ SlackChannelId, SlackTeamId, SlackAccessToken }
+import com.keepit.slack.models.{ SlackChannelToLibrarySummary, SlackChannelId, SlackTeamId, SlackAccessToken }
 import com.keepit.social.{ UserIdentity, BasicUser, SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.json.JsObject
@@ -668,6 +668,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
 
-  def getSlackChannelLibrary(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Future[Option[Id[Library]]] = Future.successful(None)
+  def getIntegrationsBySlackChannel(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Future[Option[Seq[SlackChannelToLibrarySummary]]] = Future.successful(None)
 
 }
