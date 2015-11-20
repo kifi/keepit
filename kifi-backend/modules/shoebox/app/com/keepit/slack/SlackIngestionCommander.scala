@@ -126,8 +126,8 @@ class SlackIngestionCommanderImpl @Inject() (
     FutureHelpers.foldLeftUntil(Stream.continually(()))(integration.lastMessageTimestamp) {
       case (lastMessageTimestamp, ()) =>
         getLatestMessagesWithLinks(tokenWithScopes.token, integration.slackChannelName, lastMessageTimestamp, Some(messageBatchSize)).flatMap { messages =>
-          val newLastMessageTimestamp = ingestMessages(integration, messages)
-          FutureHelpers.sequentialExec(messages) { message =>
+          val (newLastMessageTimestamp, ingestedMessages) = ingestMessages(integration, messages)
+          FutureHelpers.sequentialExec(ingestedMessages.toSeq.sortBy(_.timestamp)) { message =>
             slackClient.addReaction(tokenWithScopes.token, SlackReaction.checkMark, message.channel.id, message.timestamp) recover {
               case SlackAPIFailure(_, SlackAPIFailure.Error.alreadyReacted, _) => ()
             }
@@ -140,14 +140,17 @@ class SlackIngestionCommanderImpl @Inject() (
     }
   }
 
-  private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): Option[SlackMessageTimestamp] = {
+  private def ingestMessages(integration: SlackChannelToLibrary, messages: Seq[SlackMessage]): (Option[SlackMessageTimestamp], Set[SlackMessage]) = {
     log.info(s"[SLACK-INGEST] Ingesting links from ${messages.length} messages from ${integration.slackChannelName.value}")
     val lastMessageTimestamp = messages.map(_.timestamp).maxOpt
     val rawBookmarks = messages.flatMap(toRawBookmarks).distinctBy(_.url)
     log.info(s"[SLACK-INGEST] Extracted these urls from those messages: ${rawBookmarks.map(_.url)}")
     // The following block sucks, it should all happen within the same session but that KeepInterner doesn't allow it
     val library = db.readOnlyMaster { implicit session => libraryRepo.get(integration.libraryId) }
-    keepInterner.internRawBookmarks(rawBookmarks, integration.ownerId, library, KeepSource.slack)(HeimdalContext.empty)
+    val ingestedMessages = {
+      val (_, failed) = keepInterner.internRawBookmarks(rawBookmarks, integration.ownerId, library, KeepSource.slack)(HeimdalContext.empty)
+      (rawBookmarks.toSet -- failed).flatMap(_.sourceAttribution.collect { case SlackAttribution(message) => message })
+    }
     lastMessageTimestamp.foreach { timestamp =>
       db.readWrite { implicit session =>
         integrationRepo.updateLastMessageTimestamp(integration.id.get, timestamp)
@@ -163,7 +166,7 @@ class SlackIngestionCommanderImpl @Inject() (
         }
       }
     }
-    lastMessageTimestamp
+    (lastMessageTimestamp, ingestedMessages)
   }
 
   private def doNotIngest(message: SlackMessage): Boolean = message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)
