@@ -41,7 +41,7 @@ case class SlackIncomingWebhookInfo(
   def withLastFailure(f: SlackAPIFailure) = this.copy(lastFailure = Some(f))
   def withLastFailedAt(time: DateTime) = this.copy(lastFailedAt = Some(time))
   def withCleanSlate = this.copy(lastFailure = None, lastFailedAt = None)
-  def withLastPostedAt(time: DateTime) = this.copy(lastFailedAt = Some(time))
+  def withLastPostedAt(time: DateTime) = this.copy(lastPostedAt = Some(time))
 }
 
 object SlackIncomingWebhookInfoStates extends States[SlackIncomingWebhookInfo]
