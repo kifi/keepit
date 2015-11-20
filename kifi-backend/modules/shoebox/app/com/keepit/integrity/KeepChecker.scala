@@ -9,7 +9,9 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.time.{ Clock, _ }
+import com.keepit.common.util.Debouncing
 import com.keepit.model._
+import org.joda.time.Period
 
 import scala.concurrent.{ Future, ExecutionContext }
 
@@ -28,7 +30,7 @@ class KeepChecker @Inject() (
     libraryRepo: LibraryRepo,
     organizationRepo: OrganizationRepo,
     systemValueRepo: SystemValueRepo,
-    implicit val executionContext: ExecutionContext) extends Logging {
+    implicit val executionContext: ExecutionContext) extends Logging with Debouncing {
 
   private[this] val lock = new AnyRef
   private val timeSlicer = new TimeSlicer(clock)
@@ -77,13 +79,13 @@ class KeepChecker @Inject() (
     if (keep.isInactive) {
       val zombieKtus = ktuRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToUserStates.INACTIVE))
       for (ktu <- zombieKtus) {
-        airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!")
+        debounce(ktu.userId.toString, Period.minutes(1)) { airbrake.notify(s"[KTU-STATE-MATCH] KTU ${ktu.id.get} (keep ${ktu.keepId} --- user ${ktu.userId}) is a zombie!") }
         ktuCommander.deactivate(ktu)
       }
 
       val zombieKtls = ktlRepo.getAllByKeepId(keepId, excludeStateOpt = Some(KeepToLibraryStates.INACTIVE))
       for (ktl <- zombieKtls) {
-        airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!")
+        debounce(ktl.libraryId.toString, Period.minutes(1)) { airbrake.notify(s"[KTL-STATE-MATCH] KTL ${ktl.id.get} (keep ${ktl.keepId} --- lib ${ktl.libraryId}) is a zombie!") }
         ktlCommander.deactivate(ktl)
       }
     }

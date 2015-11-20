@@ -81,13 +81,14 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     slackMessageOpt match {
       case Some(post) =>
         DescriptionElements(
-          s"@${post.username.value}", "posted", keep.title.getOrElse("a link") --> LinkElement(keep.url), "to", s"#${post.channel.name.value}" --> LinkElement(post.permalink), ".",
-          "It was automatically added to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library."
+          keep.title.getOrElse("a link") --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
+          "was added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
         )
       case None =>
         DescriptionElements(
           getUser(keep.userId), "added", keep.title.getOrElse("a keep") --> LinkElement(keep.url),
-          "to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.")
+          "to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
+        )
     }
   }
   private def describeKeeps(keeps: KeepsToPush, withAttachments: Boolean = false): Option[Future[SlackMessageRequest]] = {
