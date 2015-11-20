@@ -13,8 +13,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure }
 
 object KifiSlackApp {
-  val SLACK_CLIENT_ID = "2348051170.12884760868"
-  val SLACK_CLIENT_SECRET = "3cfeb40c29a06272bbb159fc1d9d4fb3"
+  val SLACK_CLIENT_ID = "2348051170.15031499078"
+  val SLACK_CLIENT_SECRET = "ad688ad730192eabe0bdc6675975f3fc"
   val KIFI_SLACK_REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
 }
 
