@@ -167,11 +167,15 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           }
       }
       slackPush.andThen {
-        case Success(true) => db.readWrite { implicit s =>
-          libToChannelRepo.finishProcessing(lts.withLastProcessedKeep(ktls.lastOption.map(_.id.get)))
-        }
         case Success(false) => db.readWrite { implicit s =>
           libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
+        }
+        case _ => db.readWrite { implicit s =>
+          // TODO(ryan): to make sure we don't spam a channel, we always register a push as "processed"
+          // Sometimes this may lead to Slack messages getting lost
+          // This is a better alternative than spamming a channel because Slack (or our crappy Http Client)
+          // keeps saying we aren't succeeding even though the channel is getting messages
+          libToChannelRepo.finishProcessing(lts.withLastProcessedKeep(ktls.lastOption.map(_.id.get)))
         }
       }.imap { res => lts.id.get -> res }
     }
