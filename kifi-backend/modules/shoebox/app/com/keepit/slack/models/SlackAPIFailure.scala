@@ -22,6 +22,7 @@ object SlackAPIFailure {
     val invalidAuth = "invalid_auth"
     val revokedWebhook = "revoked_webhook"
     val revokedToken = "revoked_webhook"
+    val alreadyReacted = "already_reacted"
   }
   def Generic(status: Int, payload: JsValue) = SlackAPIFailure(status, Error.generic, payload)
   def ParseError(payload: JsValue) = SlackAPIFailure(OK, Error.parse, payload)
