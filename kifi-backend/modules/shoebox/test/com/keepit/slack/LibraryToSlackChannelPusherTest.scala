@@ -168,7 +168,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           Await.result(inject[SlackIngestionCommander].ingestAllDue(), Duration.Inf)
           Await.result(inject[LibraryToSlackChannelPusher].pushToLibrary(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
-          slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("ryan-slack")
+          slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("#eng")
 
           1 === 1
         }
