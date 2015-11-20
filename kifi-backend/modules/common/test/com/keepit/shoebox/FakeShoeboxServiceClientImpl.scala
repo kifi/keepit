@@ -668,6 +668,6 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
 
-  def getIntegrationsBySlackChannel(token: SlackAccessToken, teamId: SlackTeamId, channelId: SlackChannelId): Future[Option[Seq[SlackChannelToLibrarySummary]]] = Future.successful(None)
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[Seq[SlackChannelToLibrarySummary]] = Future.successful(Seq.empty)
 
 }

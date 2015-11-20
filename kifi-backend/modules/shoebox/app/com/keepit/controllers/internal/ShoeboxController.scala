@@ -584,10 +584,9 @@ class ShoeboxController @Inject() (
   }
 
   def getIntegrationsBySlackChannel() = Action(parse.tolerantJson) { request =>
-    val token = (request.body \ "token").as[SlackAccessToken]
     val teamId = (request.body \ "teamId").as[SlackTeamId]
     val channelId = (request.body \ "channelId").as[SlackChannelId]
-    val integrationsOpt = slackCommander.getIntegrationsBySlackChannel(token, teamId, channelId)
-    Ok(Json.toJson(integrationsOpt))
+    val integrations = slackCommander.getIntegrationsBySlackChannel(teamId, channelId)
+    Ok(Json.toJson(integrations))
   }
 }

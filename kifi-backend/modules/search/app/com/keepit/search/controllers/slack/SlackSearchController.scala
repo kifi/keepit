@@ -17,7 +17,7 @@ import com.keepit.search.controllers.util.SearchControllerUtil
 import com.keepit.search._
 import com.keepit.search.index.graph.keep.{ KeepFields }
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.slack.models.{ SlackAttachment, SlackCommandResponse, SlackCommand, SlackCommandRequest }
+import com.keepit.slack.models._
 import com.keepit.common.core._
 import play.api.libs.json.Json
 
@@ -43,9 +43,9 @@ class SlackSearchController @Inject() (
 
   def search() = MaybeUserAction.async(parse.tolerantJson) { request =>
     request.body.asOpt[SlackCommandRequest] match {
-      case Some(command) if command.command == SlackCommand.Kifi =>
-        shoeboxClient.getIntegrationsBySlackChannel(command.token, command.teamId, command.channelId).flatMap {
-          case Some(integrations) =>
+      case Some(command) if command.command == SlackCommand.Kifi && command.token == KifiSlackApp.SLACK_COMMAND_TOKEN =>
+        shoeboxClient.getIntegrationsBySlackChannel(command.teamId, command.channelId).flatMap {
+          case integrations =>
             val futureResponse = {
               import SlackAttachment._
               import SlackCommandResponse._
@@ -106,7 +106,6 @@ class SlackSearchController @Inject() (
               httpClient.postFuture(DirectUrl(command.responseUrl), result)
               Ok(result) // todo(Léo): remove after testing
             }
-          case None => Future.successful(BadRequest("invalid_auth"))
         }
       case _ => Future.successful(BadRequest("invalid_command"))
     }
