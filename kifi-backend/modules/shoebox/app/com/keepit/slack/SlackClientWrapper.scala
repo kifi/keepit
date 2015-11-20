@@ -38,19 +38,14 @@ class SlackClientWrapperImpl @Inject() (
           }
         }
       case Failure(fail: SlackAPIFailure) =>
+        log.error(s"[SLACK-CLIENT-WRAPPER] Caught a SlackAPIFailure ($fail) when posting, marking the webhook as broken")
         db.readWrite { implicit s =>
           slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
             slackIncomingWebhookInfoRepo.save(whi.withLastFailedAt(now).withLastFailure(fail))
           }
         }
-      // TODO(ryan): until I figure out how to actually recognize SlackAPIFailures, we need to catch ALL failures and mark the webhook as busted
-      // It would be nice to remove this at some point
       case Failure(other) =>
-        db.readWrite { implicit s =>
-          slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-            slackIncomingWebhookInfoRepo.save(whi.withLastFailedAt(now)) // Couldn't recognize the failure :(
-          }
-        }
+        log.error(s"[SLACK-CLIENT-WRAPPER] Caught a garbage error when posting, marking the webhook as broken")
     }
   }
 
