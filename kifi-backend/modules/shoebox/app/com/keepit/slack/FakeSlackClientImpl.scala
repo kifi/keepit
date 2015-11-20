@@ -64,4 +64,6 @@ class FakeSlackClientImpl extends SlackClient {
         )
       ))
   }
+
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = Future.successful(())
 }
