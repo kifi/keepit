@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.PathCommander
+import com.keepit.commanders.{ PermissionCommander, PathCommander }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -71,6 +71,7 @@ class SlackCommanderImpl @Inject() (
   libToSlackPusher: LibraryToSlackChannelPusher,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
+  permissionCommander: PermissionCommander,
   libRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   clock: Clock,
@@ -170,16 +171,28 @@ class SlackCommanderImpl @Inject() (
         else None
 
       case r: SlackIntegrationModifyRequest =>
-        val fromSpaces = libToChannelRepo.getActiveByIds(r.libToSlack.keySet).map(_.space) ++ channelToLibRepo.getActiveByIds(r.slackToLib.keySet).map(_.space)
-        val toSpaces = r.libToSlack.values.flatMap(_.space) ++ r.slackToLib.values.flatMap(_.space)
-        val spacesUserCannotModify = (fromSpaces ++ toSpaces).filter {
+        val toSlacks = libToChannelRepo.getActiveByIds(r.libToSlack.keySet)
+        val fromSlacks = channelToLibRepo.getActiveByIds(r.slackToLib.keySet)
+        val oldSpaces = fromSlacks.map(_.space) ++ toSlacks.map(_.space)
+        val newSpaces = (r.libToSlack.values.flatMap(_.space) ++ r.slackToLib.values.flatMap(_.space)).toSet
+        val spacesUserCannotAccess = (oldSpaces ++ newSpaces).filter {
           case UserSpace(uid) => r.requesterId != uid
           case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.requesterId).isEmpty
         }
-        if (spacesUserCannotModify.nonEmpty) {
-          println(s"user ${r.requesterId} does not have permission to modify ${spacesUserCannotModify}")
-          Some(LibraryFail(FORBIDDEN, "permission_denied"))
-        } else None
+        def userCanWriteToIngestingLibraries = r.slackToLib.filter {
+          case (stlId, mod) => mod.status.contains(SlackIntegrationStatus.On)
+        }.forall {
+          case (stlId, mod) =>
+            fromSlacks.find(_.id.get == stlId).exists { stl =>
+              // TODO(ryan): I don't know if it's a good idea to ignore permissions if the integration is already on...
+              stl.status == SlackIntegrationStatus.On || permissionCommander.getLibraryPermissions(stl.libraryId, Some(r.requesterId)).contains(LibraryPermission.ADD_KEEPS)
+            }
+        }
+        Stream(
+          (oldSpaces intersect spacesUserCannotAccess).nonEmpty -> LibraryFail(FORBIDDEN, "permission_to_modify_denied"),
+          (newSpaces intersect spacesUserCannotAccess).nonEmpty -> LibraryFail(FORBIDDEN, "illegal_destination_space"),
+          !userCanWriteToIngestingLibraries -> LibraryFail(FORBIDDEN, "cannot_write_to_library")
+        ).collect { case (true, fail) => fail }.headOption
 
       case r: SlackIntegrationDeleteRequest =>
         val spaces = libToChannelRepo.getActiveByIds(r.libToSlack).map(_.space) ++ channelToLibRepo.getActiveByIds(r.slackToLib).map(_.space)
