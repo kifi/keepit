@@ -43,7 +43,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     extends LibraryToSlackChannelPusher with Logging {
 
   private val gracePeriod = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
-  private val MAX_KEEPS_TO_SEND = 4
+  private val MAX_KEEPS_TO_SEND = 7
   def findAndPushToLibraries(): Unit = {
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
       libToChannelRepo.getLibrariesRipeForProcessing(Limit(10), overrideProcessesOlderThan = clock.now.minus(gracePeriod))
@@ -95,7 +95,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case NoKeeps =>
         None
       case SomeKeeps(ks, lib) if withAttachments =>
-        val msg = DescriptionElements("The", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library has", ks.length, "new keeps")
+        val msg = DescriptionElements(ks.length, "keeps have been added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
         val summariesFut = keepDecorator.getKeepSummaries(ks, ProcessedImageSize.Small.idealSize)
         Some(summariesFut.map { summaries =>
           val attachments = (ks zip summaries).map {
@@ -111,7 +111,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
         )))
       case ManyKeeps(ks, lib) =>
-        val msg = DescriptionElements("The", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library has", ks.length, "new keeps")
+        val msg = DescriptionElements(ks.length, "keeps have been added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(msg)
         )))
