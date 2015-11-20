@@ -67,7 +67,7 @@ class SlackCommanderImpl @Inject() (
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
-  slackClient: SlackClient,
+  slackClient: SlackClientWrapper,
   libToSlackPusher: LibraryToSlackChannelPusher,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
@@ -139,27 +139,10 @@ class SlackCommanderImpl @Inject() (
         "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
       )
     }
-    slackClient.sendToSlack(webhook.url, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
-      .andThen { case Failure(f: SlackAPIFailure) => db.readWrite { implicit s => markAsBroken(webhook, f) } }
+    slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
       .andThen { case Success(()) => libToSlackPusher.pushToLibrary(libId) }
   }
 
-  def registerSuccessfulPush(webhook: SlackIncomingWebhook)(implicit session: RWSession): Unit = {
-    val now = clock.now
-    slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-      if (whi.lastFailedAt.isDefined) {
-        log.info(s"[SLACK-WEBHOOK] The webhook at ${webhook.url} recovered at $now")
-      }
-      slackIncomingWebhookInfoRepo.save(whi.withCleanSlate.withLastPostedAt(now))
-    }
-  }
-  def markAsBroken(webhook: SlackIncomingWebhook, failure: SlackAPIFailure)(implicit session: RWSession): Unit = {
-    val now = clock.now
-    slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-      log.info(s"[SLACK-WEBHOOK] The webhook at ${webhook.url} recovered at $now")
-      slackIncomingWebhookInfoRepo.save(whi.withLastFailure(failure).withLastFailedAt(now))
-    }
-  }
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {
     request match {
       case r: SlackIntegrationCreateRequest =>

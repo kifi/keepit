@@ -8,7 +8,7 @@ import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.slack.models._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Try, Failure }
+import scala.util.{ Success, Try, Failure }
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
@@ -31,10 +31,24 @@ class SlackClientWrapperImpl @Inject() (
   def sendToSlack(webhook: SlackIncomingWebhook, msg: SlackMessageRequest): Future[Unit] = {
     val now = clock.now
     slackClient.sendToSlack(webhook.url, msg).andThen {
-      case Failure(fail @ SlackAPIFailure(_, SlackAPIFailure.Error.revokedWebhook, _)) =>
+      case Success(()) =>
+        db.readWrite { implicit s =>
+          slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
+            slackIncomingWebhookInfoRepo.save(whi.withCleanSlate.withLastPostedAt(now))
+          }
+        }
+      case Failure(fail: SlackAPIFailure) =>
         db.readWrite { implicit s =>
           slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
             slackIncomingWebhookInfoRepo.save(whi.withLastFailedAt(now).withLastFailure(fail))
+          }
+        }
+      // TODO(ryan): until I figure out how to actually recognize SlackAPIFailures, we need to catch ALL failures and mark the webhook as busted
+      // It would be nice to remove this at some point
+      case Failure(other) =>
+        db.readWrite { implicit s =>
+          slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
+            slackIncomingWebhookInfoRepo.save(whi.withLastFailedAt(now)) // Couldn't recognize the failure :(
           }
         }
     }
