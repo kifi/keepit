@@ -46,11 +46,12 @@ class SlackController @Inject() (
         case (Some(libId), Some(webhook)) => slackCommander.setupIntegrations(request.userId, libId, webhook, slackIdentity)
         case _ =>
       }
-      Redirect(redir, SEE_OTHER)
     }
 
     authFut.recover {
-      case fail: SlackAPIFailure => fail.asResponse
+      case fail: SlackAPIFailure => ()
+    }.map { _ =>
+      Redirect(redir, SEE_OTHER)
     }
   }
 
