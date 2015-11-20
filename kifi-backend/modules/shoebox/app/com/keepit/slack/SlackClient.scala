@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.common.net.{ NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.slack.models._
 import play.api.Mode.Mode
 import play.api.http.Status
@@ -63,6 +63,10 @@ class SlackClientImpl(
         case (Status.NOT_FOUND, SlackAPIFailure.Message.REVOKED_WEBHOOK) => Future.failed(SlackAPIFailure.RevokedWebhook)
         case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, JsString(payload)))
       }
+    }.recoverWith {
+      case f: NonOKResponseException =>
+        log.error(s"Caught a non-OK response exception to $url, recognizing that it's a revoked webhook")
+        Future.failed(SlackAPIFailure.RevokedWebhook)
     }.andThen {
       case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to webhook $url because $f")
