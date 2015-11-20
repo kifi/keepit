@@ -165,6 +165,8 @@ class SlackIngestionCommanderImpl @Inject() (
   }
 
   private def doNotIngest(message: SlackMessage): Boolean = message.userId.value.trim.isEmpty || SlackUsername.doNotIngest.contains(message.username)
+  private def doNotIngest(url: String): Boolean = urlClassifier.isSocialActivity(url) || urlClassifier.isSlackFile(url)
+
   private def toRawBookmarks(message: SlackMessage): Set[RawBookmarkRepresentation] = {
     if (doNotIngest(message)) Set.empty[RawBookmarkRepresentation]
     else {
@@ -182,7 +184,7 @@ class SlackIngestionCommanderImpl @Inject() (
       }.toMap
 
       (linksFromText.keySet ++ linksFromAttachments.keySet).collect {
-        case url if !urlClassifier.isSocialActivity(url) =>
+        case url if !doNotIngest(url) =>
           val title = linksFromText.get(url).flatten orElse linksFromAttachments.get(url).flatMap(_.title.map(_.value))
           RawBookmarkRepresentation(
             title = title,
