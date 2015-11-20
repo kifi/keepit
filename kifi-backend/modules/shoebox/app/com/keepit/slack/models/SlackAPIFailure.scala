@@ -11,7 +11,7 @@ object SlackAPIFailure {
   implicit val format: Format[SlackAPIFailure] = Json.format[SlackAPIFailure]
 
   object Message {
-    val REVOKED_WEBHOOK: JsValue = JsString("No service")
+    val REVOKED_WEBHOOK: String = "No service"
     val REVOKED_TOKEN: JsValue = Json.obj("ok" -> false, "error" -> "token_revoked")
   }
 

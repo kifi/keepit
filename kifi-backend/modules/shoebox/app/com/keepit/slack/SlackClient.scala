@@ -24,6 +24,7 @@ object SlackAPI {
   case class Route(method: Method, path: String, params: Param*)
   implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
 
+  val OK: String = "ok"
   object SlackParams {
     val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
     val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
@@ -63,10 +64,10 @@ class SlackClientImpl(
   def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit] = {
     log.info(s"About to post $msg to the Slack webhook at $url")
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
-      (clientResponse.status, clientResponse.json) match {
-        case (Status.OK, json) if json.asOpt[String].contains("ok") => Future.successful(())
+      (clientResponse.status, clientResponse.body) match {
+        case (Status.OK, SlackAPI.OK) => Future.successful(())
         case (Status.NOT_FOUND, SlackAPIFailure.Message.REVOKED_WEBHOOK) => Future.failed(SlackAPIFailure.RevokedWebhook)
-        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
+        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, JsString(payload)))
       }
     }.andThen {
       case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
