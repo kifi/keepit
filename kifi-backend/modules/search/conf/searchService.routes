@@ -38,6 +38,11 @@ GET         /site/search/warmUp                 @com.keepit.search.controllers.w
 POST        /site/search/events/resultClicked   @com.keepit.search.controllers.website.WebsiteSearchEventController.clickedKifiResult()
 POST        /site/search/events/searched        @com.keepit.search.controllers.website.WebsiteSearchEventController.searched()
 
+##########################################
+# Search Slack API
+##########################################
+
+POST        /slack/search                      @com.keepit.search.controllers.slack.SlackSearchController.search()
 
 ##########################################
 # INTERNAL ROUTES/Search

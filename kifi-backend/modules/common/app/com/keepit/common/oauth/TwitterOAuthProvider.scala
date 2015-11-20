@@ -4,7 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.model.OAuth1TokenInfo
+import com.keepit.model.{ TwitterHandle, OAuth1TokenInfo }
 import com.kifi.macros.json
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.Play.current
@@ -24,7 +24,7 @@ import scala.concurrent.Future
 trait TwitterOAuthProvider extends OAuthProvider with OAuth1Support {
   val providerId = ProviderIds.Twitter
 
-  def getUserShow(accessToken: OAuth1TokenInfo, screenName: String): Future[TwitterUserShow]
+  def getUserShow(accessToken: OAuth1TokenInfo, screenName: TwitterHandle): Future[TwitterUserShow]
 }
 
 @Singleton
@@ -57,10 +57,10 @@ class TwitterOAuthProviderImpl @Inject() (
 
   // Returns several useful fields about a user
   // https://dev.twitter.com/rest/reference/get/users/show
-  def getUserShow(accessToken: OAuth1TokenInfo, screenName: String): Future[TwitterUserShow] = {
+  def getUserShow(accessToken: OAuth1TokenInfo, screenName: TwitterHandle): Future[TwitterUserShow] = {
     val call = WS.url("https://api.twitter.com/1.1/users/show.json")
       .sign(OAuthCalculator(providerConfig.key, accessToken))
-      .withQueryString("screen_name" -> screenName)
+      .withQueryString("screen_name" -> screenName.value)
       .get()
     call.map { resp =>
       if (resp.status != 200) {

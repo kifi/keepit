@@ -90,7 +90,7 @@ class FakeTwitterSocialGraph @Inject() (
 
   }
 
-  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: String, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = Future.successful {
+  def fetchTweets(socialUserInfoOpt: Option[SocialUserInfo], handle: TwitterHandle, lowerBoundId: Option[Long], upperBoundId: Option[Long]): Future[Seq[JsObject]] = Future.successful {
     Seq.empty
   }
 

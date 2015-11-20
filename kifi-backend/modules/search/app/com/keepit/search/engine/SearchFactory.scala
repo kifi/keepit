@@ -108,6 +108,9 @@ class SearchFactory @Inject() (
         // if this is a organization restricted search, add an organization filter query
         context.filter.organization.foreach(addOrganizationFilterToUriSearch(engBuilder, _))
 
+        // if this a source restricted search, add a source filter query
+        context.filter.source.foreach(addSourceFilterToUriSearch(engBuilder, _))
+
         val librarySearcher = libraryIndexer.getSearcher
 
         shards.toSeq.map { shard =>
@@ -290,6 +293,7 @@ class SearchFactory @Inject() (
   private def addLibraryFilterToUriSearch(engBuilder: QueryEngineBuilder, library: LibraryScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, library.id.id.toString))) }
   private def addUserFilterToUriSearch(engBuilder: QueryEngineBuilder, user: UserScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.userField, user.id.id.toString))) }
   private def addOrganizationFilterToUriSearch(engBuilder: QueryEngineBuilder, organization: OrganizationScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.orgField, organization.id.id.toString))) }
+  private def addSourceFilterToUriSearch(engBuilder: QueryEngineBuilder, source: SourceScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.sourceField, source.source))) }
 
   def getLibrarySearches(
     shards: Set[Shard[NormalizedURI]],

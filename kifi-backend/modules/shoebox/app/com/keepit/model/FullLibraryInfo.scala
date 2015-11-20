@@ -307,7 +307,7 @@ object LibrarySourceAttribution {
   }
 }
 
-case class TwitterLibrarySourceAttribution(screenName: String) extends LibrarySourceAttribution
+case class TwitterLibrarySourceAttribution(screenName: TwitterHandle) extends LibrarySourceAttribution
 
 object TwitterLibrarySourceAttribution {
   implicit val writes = Json.writes[TwitterLibrarySourceAttribution]
