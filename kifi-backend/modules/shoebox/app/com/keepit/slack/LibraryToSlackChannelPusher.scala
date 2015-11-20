@@ -45,9 +45,10 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   private val gracePeriod = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
   private val MAX_KEEPS_TO_SEND = 7
+  private val LIBRARY_BATCH_SIZE = 20
   def findAndPushToLibraries(): Unit = {
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
-      libToChannelRepo.getLibrariesRipeForProcessing(Limit(10), overrideProcessesOlderThan = clock.now.minus(gracePeriod))
+      libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now.minus(gracePeriod))
     }
     librariesThatNeedToBeProcessed.foreach(pushToLibrary)
   }

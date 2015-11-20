@@ -34,7 +34,7 @@ class ShoeboxTasksPlugin @Inject() (
       slackIngestionCommander.ingestAllDue()
     }
 
-    scheduleTaskOnOneMachine(system, 10 minute, 10 minutes, "slack pushing") {
+    scheduleTaskOnOneMachine(system, 10 minute, 2 minutes, "slack pushing") {
       libToSlackPusher.findAndPushToLibraries()
     }
 
