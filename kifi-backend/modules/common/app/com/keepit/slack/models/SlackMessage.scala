@@ -144,3 +144,9 @@ object SlackMessage {
   )(apply, unlift(unapply))
 
 }
+
+@json
+case class SlackReaction(value: String)
+object SlackReaction {
+  val checkMark = SlackReaction("heavy_check_mark")
+}

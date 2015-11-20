@@ -7,6 +7,7 @@ import play.api.Mode.Mode
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure }
@@ -43,6 +44,7 @@ object SlackAPI {
     val params = Seq[Param](token, request.query) ++ request.optional.map(fromSearchParam)
     Route(GET, "https://slack.com/api/search.messages", params: _*)
   }
+  def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, Param("name", reaction.value), Param("channel", channelId.value), Param("timestamp", messageTimestamp.value))
 }
 
 trait SlackClient {
@@ -50,6 +52,7 @@ trait SlackClient {
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
 }
 
 class SlackClientImpl(
@@ -96,6 +99,10 @@ class SlackClientImpl(
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
     slackCall[SlackIdentifyResponse](SlackAPI.Identify(token))
+  }
+
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = {
+    slackCall[JsValue](SlackAPI.AddReaction(token, reaction, channelId, messageTimestamp)).imap(_ => ())
   }
 
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {

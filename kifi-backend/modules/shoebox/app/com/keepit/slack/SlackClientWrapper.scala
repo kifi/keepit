@@ -8,12 +8,13 @@ import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.slack.models._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Failure
+import scala.util.{ Try, Failure }
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
   def sendToSlack(webhook: SlackIncomingWebhook, msg: SlackMessageRequest): Future[Unit]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
 }
 
 @Singleton
@@ -40,13 +41,20 @@ class SlackClientWrapperImpl @Inject() (
   }
 
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
-    slackClient.searchMessages(token, request).andThen {
-      case Failure(fail @ SlackAPIFailure(_, SlackAPIFailure.Error.revokedToken, _)) =>
-        db.readWrite { implicit s =>
-          slackTeamMembershipRepo.getByToken(token).foreach { stm =>
-            slackTeamMembershipRepo.save(stm.revoked)
-          }
-        }
-    }
+    slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
   }
+
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = {
+    slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedToken(token))
+  }
+
+  private def onRevokedToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
+    case Failure(fail @ SlackAPIFailure(_, SlackAPIFailure.Error.revokedToken, _)) =>
+      db.readWrite { implicit s =>
+        slackTeamMembershipRepo.getByToken(token).foreach { stm =>
+          slackTeamMembershipRepo.save(stm.revoked)
+        }
+      }
+  }
+
 }
