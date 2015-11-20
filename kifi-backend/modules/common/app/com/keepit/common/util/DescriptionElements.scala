@@ -1,13 +1,13 @@
-package com.keepit.payments
+package com.keepit.common.util
 
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
-import com.keepit.model.{ OrganizationRole, OrganizationHandle, BasicOrganization }
-import com.keepit.slack.models.{ SlackMessageRequest, SlackMessage }
+import com.keepit.model.{ BasicOrganization, OrganizationRole }
 import com.keepit.social.BasicUser
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
+import com.keepit.common.strings.StringWithReplacements
 
 sealed trait DescriptionElements {
   def flatten: Seq[BasicElement]
@@ -42,6 +42,9 @@ object BasicElement {
 }
 
 case class LinkElement(url: String)
+object LinkElement {
+  def apply(path: Path): LinkElement = LinkElement(path.absolute)
+}
 case class Hover(elements: DescriptionElements*)
 object DescriptionElements {
   def apply(elements: DescriptionElements*): SequenceOfElements = SequenceOfElements(elements)
@@ -52,12 +55,11 @@ object DescriptionElements {
   implicit def fromOption[T](opt: Option[T])(implicit toElements: T => DescriptionElements): SequenceOfElements = opt.toSeq
 
   implicit def fromInt(x: Int): BasicElement = x.toString
-  implicit def fromCreditCode(code: CreditCode): BasicElement = code.value
   implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName --> LinkElement(user.path.absolute)
   implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name --> LinkElement(org.path.absolute)
+  implicit def fromBasicOrgOpt(orgOpt: Option[BasicOrganization]): BasicElement = orgOpt.map(fromBasicOrg).getOrElse(fromText("a team"))
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
-  implicit def fromPaidPlanAndUrl(plan: PaidPlan)(implicit orgHandle: OrganizationHandle): BasicElement = plan.fullName --> LinkElement(Path(s"${orgHandle.value}/settings/plan").absolute)
   implicit def fromRole(role: OrganizationRole): BasicElement = role.value
 
   private def intersperse[T](xs: Seq[T], ins: Seq[T]): Seq[T] = {
@@ -75,8 +77,8 @@ object DescriptionElements {
     val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
 
-    val leftEnds = Set("'", "\n")
-    val rightStarts = Set(".", "'", "\n")
+    val leftEnds = Set("'", "\n", "[")
+    val rightStarts = Set(".", "'", "\n", "]")
     val interpolatedPunctuation = wordPairs.map {
       case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
       case _ => " "
@@ -85,10 +87,12 @@ object DescriptionElements {
   }
 
   def formatPlain(description: DescriptionElements): String = interpolatePunctuation(description.flatten).map(_.text).mkString
+
+  private def escapeSegment(segment: String): String = segment.replaceAllLiterally("<" -> "&lt;", ">" -> "&gt;", "&" -> "&amp")
   def formatForSlack(description: DescriptionElements): String = {
     interpolatePunctuation(description.flatten).map { be =>
       be.url
-        .map(u => s"<$u|${SlackMessageRequest.escapeSegment(be.text)}>")
+        .map(u => s"<$u|${escapeSegment(be.text)}>")
         .getOrElse(be.text)
     }.mkString
   }

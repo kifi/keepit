@@ -46,7 +46,7 @@ class SocialUserImportFriends @Inject() (
           } catch {
             case e: Exception =>
               repo.deleteCache(friend)(session)
-              airbrake.notify(s"Error persisting single social user info for userId ${socialUserInfo.userId} (${socialUserInfo.fullName})", e)
+              airbrake.notify(s"Error persisting single social user info for userId ${socialUserInfo.userId} (${socialUserInfo.fullName}), friend social id ${friend.socialId}, network ${friend.networkType}", e)
               None
           }
         }

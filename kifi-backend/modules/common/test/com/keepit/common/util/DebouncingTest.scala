@@ -10,10 +10,9 @@ class DebouncingTest extends Specification {
     def trigger() = increment()
   }
   private class QuietYapper extends Debouncing {
-    protected val refractoryPeriod = Period.millis(1)
     var count = 0
     private def increment(): Unit = count += 1
-    def trigger() = debounce("trigger") { increment() }
+    def trigger() = debounce("trigger", Period.millis(1)) { increment() }
   }
   "Debouncing" should {
     "make sure an event doesn't get triggered too often" in {

@@ -6,6 +6,7 @@ import com.keepit.commanders.emails.EmailConfirmationSender
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE, currentDateTime }
@@ -50,6 +51,7 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
     emailConfirmationSender: EmailConfirmationSender,
     permissionCommander: PermissionCommander,
     clock: Clock,
+    airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends UserEmailAddressCommander with Logging {
 
   def sendVerificationEmail(emailAddress: UserEmailAddress): Future[Unit] = db.readWrite { implicit session =>
@@ -95,8 +97,14 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   private def save(emailAddress: UserEmailAddress, verified: Boolean)(implicit session: RWSession): UserEmailAddress = {
-    if (verified) saveAsVerified(emailAddress)
-    else userEmailAddressRepo.save(emailAddress)
+    try {
+      if (verified) saveAsVerified(emailAddress)
+      else userEmailAddressRepo.save(emailAddress)
+    } catch {
+      case ex: Exception =>
+        airbrake.notify(s"error saving email ${emailAddress.address} (hash=${emailAddress.hash}) for user ${emailAddress.userId}", ex)
+        throw ex
+    }
   }
 
   def saveAsVerified(emailAddress: UserEmailAddress)(implicit session: RWSession): UserEmailAddress = {

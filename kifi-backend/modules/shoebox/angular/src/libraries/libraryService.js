@@ -47,7 +47,7 @@ angular.module('kifi')
       this.description = library.description;
       this.color = library.color;
       this.image = library.image;
-      this.path = '/' + library.owner.username + '/' + library.slug;
+      this.path = library.path || ('/' + library.owner.username + '/' + library.slug);
       this.reason = reason;
       this.followers = library.followers;
     }
@@ -123,11 +123,25 @@ angular.module('kifi')
         if (invalidateCache) {
           net.getLibraryByHandleAndSlug.clearCache();
         }
-        return net.getLibraryByHandleAndSlug(handle, slug, authToken).then(function (res) {
+        var libPromise = net.getLibraryByHandleAndSlug(handle, slug, authToken).then(function (res) {
           res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
           res.data.library.subscriptions = res.data.subscriptions;
           return augment(res.data.library);
         });
+
+        libPromise['catch'](function (e) {
+          if (e.status === 403) {
+            var eventName;
+            if (profileService.me.id) {
+              eventName = 'user_viewed_page';
+            } else {
+              eventName = 'visitor_viewed_page';
+            }
+            $analytics.eventTrack(eventName, {'type': 'libraryWhomp'});
+          }
+        });
+
+        return libPromise;
       },
 
       getKeepsInLibrary: function (libraryId, offset, authToken) {

@@ -3,8 +3,8 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.Id
+import com.keepit.common.util.DollarAmount
 import com.keepit.payments._
-import org.apache.commons.lang3.RandomStringUtils.random
 
 object PaidPlanFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
@@ -27,12 +27,12 @@ object PaidPlanFactory {
 
   def paidPlan(): PartialPaidPlan = {
     new PartialPaidPlan(PaidPlan(id = Some(Id[PaidPlan](idx.incrementAndGet())), kind = PaidPlan.Kind.NORMAL, name = Name[PaidPlan]("test"), displayName = "Free",
-      pricePerCyclePerUser = DollarAmount(10000), billingCycle = BillingCycle(months = 1), editableFeatures = testPlanEditableFeatures, defaultSettings = testPlanSettings))
+      pricePerCyclePerUser = DollarAmount.cents(10000), billingCycle = BillingCycle(months = 1), editableFeatures = testPlanEditableFeatures, defaultSettings = testPlanSettings))
   }
 
   class PartialPaidPlan private[PaidPlanFactory] (plan: PaidPlan) {
     def withPricePerCyclePerUser(pricePerCyclePerUser: DollarAmount) = new PartialPaidPlan(plan.copy(pricePerCyclePerUser = pricePerCyclePerUser))
-    def withPricePerCyclePerUser(cents: Int) = new PartialPaidPlan(plan.copy(pricePerCyclePerUser = DollarAmount(cents)))
+    def withPricePerCyclePerUser(cents: Int) = new PartialPaidPlan(plan.copy(pricePerCyclePerUser = DollarAmount.cents(cents)))
     def withBillingCycle(billingCycle: BillingCycle) = new PartialPaidPlan(plan.copy(billingCycle = billingCycle))
     def withKind(kind: PaidPlan.Kind) = new PartialPaidPlan(plan.copy(kind = kind))
     def withDisplayName(name: String) = new PartialPaidPlan(plan.copy(displayName = name))

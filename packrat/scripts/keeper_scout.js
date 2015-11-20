@@ -82,9 +82,11 @@ k.tile = k.tile || function () {  // idempotent for Chrome
               tileCard.removeEventListener(e.type, end);
               tileCard.textContent = '';
             });
-            tileCard.innerHTML = o.kept === 'public' ?
-              '<div class="kifi-tile-icon-keep"></div>' :
-              '<div class="kifi-tile-icon-lock"></div>';
+            if (o.kept === 'public') {
+              tileCard.innerHTML = '<div class="kifi-tile-icon-keep"></div>';
+            } else {
+              tileCard.innerHTML = '<div class="kifi-tile-icon-lock"></div>';
+            }
           }
         }
       } else if (o.kept === null) {

@@ -19,6 +19,8 @@ object UrlClassifier {
       """http[s]?://rnkpr.com/.*"""
     ).map("(" + _ + ")").mkString("|") + ")"
   }.r
+
+  val slackFileUrl = """http[s]?://.*?\.slack\.com/files/.*""".r
 }
 
 class UrlClassifier extends Logging {
@@ -29,4 +31,6 @@ class UrlClassifier extends Logging {
     }
     found.isDefined
   }
+
+  def isSlackFile(url: String): Boolean = UrlClassifier.slackFileUrl.findFirstIn(url).isDefined
 }

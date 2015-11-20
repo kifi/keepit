@@ -6,33 +6,41 @@ import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
-import com.keepit.common.db.{ ModelWithState, Id, State, States }
+import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model.{ Organization, LibrarySpace, User, Library }
 import org.joda.time.{ Period, DateTime }
 
 case class SlackChannelToLibrary(
-    id: Option[Id[SlackChannelToLibrary]] = None,
-    createdAt: DateTime = currentDateTime,
-    updatedAt: DateTime = currentDateTime,
-    state: State[SlackChannelToLibrary] = SlackChannelToLibraryStates.ACTIVE,
-    ownerId: Id[User],
-    space: LibrarySpace,
-    slackUserId: SlackUserId,
-    slackTeamId: SlackTeamId,
-    slackChannelId: Option[SlackChannelId],
-    slackChannelName: SlackChannelName,
-    libraryId: Id[Library],
-    status: SlackIntegrationStatus = SlackIntegrationStatus.Off,
-    nextIngestionAt: Option[DateTime] = None,
-    lastIngestingAt: Option[DateTime] = None,
-    lastIngestedAt: Option[DateTime] = None,
-    lastMessageTimestamp: Option[SlackMessageTimestamp] = None) extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with SlackIntegration {
-  def withId(id: Id[SlackChannelToLibrary]) = copy(id = Some(id))
-  def withUpdateTime(now: DateTime) = copy(updatedAt = now)
-  def isActive: Boolean = (state == SlackChannelToLibraryStates.ACTIVE)
+  id: Option[Id[SlackChannelToLibrary]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[SlackChannelToLibrary] = SlackChannelToLibraryStates.ACTIVE,
+  ownerId: Id[User],
+  space: LibrarySpace,
+  slackUserId: SlackUserId,
+  slackTeamId: SlackTeamId,
+  slackChannelId: Option[SlackChannelId],
+  slackChannelName: SlackChannelName,
+  libraryId: Id[Library],
+  status: SlackIntegrationStatus = SlackIntegrationStatus.Off,
+  nextIngestionAt: Option[DateTime] = None,
+  lastIngestingAt: Option[DateTime] = None,
+  lastIngestedAt: Option[DateTime] = None,
+  lastMessageTimestamp: Option[SlackMessageTimestamp] = None)
+    extends ModelWithState[SlackChannelToLibrary] with ModelWithPublicId[SlackChannelToLibrary] with ModelWithMaybeCopy[SlackChannelToLibrary] with SlackIntegration {
+  def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
+  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def isActive: Boolean = state == SlackChannelToLibraryStates.ACTIVE
+  def withSpace(newSpace: LibrarySpace) = this.copy(space = newSpace)
   def withStatus(newStatus: SlackIntegrationStatus) = copy(status = newStatus, nextIngestionAt = if (newStatus == SlackIntegrationStatus.On) Some(currentDateTime) else None)
+
+  def withModifications(mods: SlackIntegrationModification) = {
+    this
+      .maybeCopy(_.status, mods.status, _.withStatus)
+      .maybeCopy(_.space, mods.space, _.withSpace)
+  }
   def sanitizeForDelete = copy(state = SlackChannelToLibraryStates.INACTIVE, status = SlackIntegrationStatus.Off)
 }
 

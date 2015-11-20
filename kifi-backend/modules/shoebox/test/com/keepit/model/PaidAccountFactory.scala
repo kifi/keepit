@@ -3,6 +3,7 @@ package com.keepit.model
 import java.util.concurrent.atomic.AtomicLong
 
 import com.keepit.common.db.Id
+import com.keepit.common.util.DollarAmount
 import com.keepit.payments._
 import com.keepit.common.time._
 

@@ -13,6 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model._
 import com.stripe.exception.APIException
 import org.joda.time.{ DateTime, Days }
@@ -85,6 +86,8 @@ class PlanManagementCommanderImpl @Inject() (
   orgConfigRepo: OrganizationConfigurationRepo,
   basicUserRepo: BasicUserRepo,
   emailRepo: UserEmailAddressRepo,
+  creditRewardRepo: CreditRewardRepo,
+  creditCodeInfoRepo: CreditCodeInfoRepo,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   userRepo: UserRepo,
@@ -177,18 +180,11 @@ class PlanManagementCommanderImpl @Inject() (
     implicit val s = session
     Try {
       paidAccountRepo.maybeGetByOrgId(orgId).foreach { account =>
-        paidAccountRepo.save(account.withState(PaidAccountStates.INACTIVE))
+        paidAccountRepo.deactivate(account)
         accountEventRepo.deactivateAll(account.id.get)
-        paymentMethodRepo.getByAccountId(account.id.get).foreach { paymentMethod =>
-          paymentMethodRepo.save(paymentMethod.copy(
-            state = PaymentMethodStates.INACTIVE,
-            default = false,
-            stripeToken = StripeToken.DELETED
-          ))
-        }
+        paymentMethodRepo.getByAccountId(account.id.get).foreach(paymentMethodRepo.deactivate)
       }
     }
-
   }
 
   def registerNewUser(orgId: Id[Organization], userId: Id[User], role: OrganizationRole, attribution: ActionAttribution, overrideLock: Boolean = false)(implicit session: RWSession): AccountEvent = {

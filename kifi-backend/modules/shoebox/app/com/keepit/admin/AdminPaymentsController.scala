@@ -4,7 +4,7 @@ import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time.Clock
-import com.keepit.common.util.{ PaginationHelper, Paginator }
+import com.keepit.common.util.{ DollarAmount, DescriptionElements, PaginationHelper, Paginator }
 import com.keepit.model._
 import com.keepit.payments._
 import com.keepit.common.akka.SafeFuture
@@ -53,7 +53,7 @@ class AdminPaymentsController @Inject() (
     val amount = request.body.asFormUrlEncoded.get.apply("amount").head.trim.toInt
     val memo = request.body.asFormUrlEncoded.get.apply("memo").filterNot(_ == "").headOption.map(_.trim)
     val attributedToMember = request.body.asFormUrlEncoded.get.get("member").flatMap(_.headOption.filterNot(_ == "").map(id => Id[User](id.trim.toLong)))
-    val dollarAmount = DollarAmount(amount)
+    val dollarAmount = DollarAmount.cents(amount)
 
     val isAttributedToNonMember = db.readOnlyMaster { implicit session =>
       val org = orgRepo.get(orgId) //lets see if its actually a good id
@@ -93,9 +93,8 @@ class AdminPaymentsController @Inject() (
 
   def addCreditCardView(orgId: Id[Organization]) = AdminUserAction.async { request =>
     val currentCardFuture = planCommander.getDefaultPaymentMethod(orgId) match {
-      case Some(pm) => {
+      case Some(pm) =>
         stripeClient.getLastFourDigitsOfCard(pm.stripeToken).map { lastFour => s"*${lastFour}" }
-      }
       case None => Future.successful("N/A")
     }
     currentCardFuture.map { lastFour =>

@@ -3,6 +3,7 @@ package com.keepit.payments
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
 import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId, PublicIdConfiguration }
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model._
 
 import play.api.libs.json._

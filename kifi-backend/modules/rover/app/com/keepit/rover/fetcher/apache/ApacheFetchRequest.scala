@@ -74,7 +74,6 @@ object ApacheFetchRequest {
       val url = {
         val uri = URI.parse(request.url).get
         if (uri.host.isEmpty) throw new IllegalArgumentException(s"url $uri has no host!")
-        SecurityInterceptor.throwIfBannedHost(uri.host.get.name)
         uri.toString()
       }
       try {

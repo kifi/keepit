@@ -11,6 +11,7 @@ import com.keepit.common.math.ProbabilityDensity
 import com.keepit.common.net.UserAgent
 import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.cortex.models.lda.LDATopic
 import com.keepit.heimdal.DelightedAnswerSource
 import com.keepit.model._
@@ -106,6 +107,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val processImageOperationMapper = MappedColumnType.base[ProcessImageOperation, String](_.kind, ProcessImageOperation.apply)
   implicit val keepLibrariesHashMapper = MappedColumnType.base[LibrariesHash, Int](_.value, LibrariesHash.apply)
   implicit val keepParticipantsHashMapper = MappedColumnType.base[ParticipantsHash, Int](_.value, ParticipantsHash.apply)
+  implicit val dollarAmountMapper = MappedColumnType.base[DollarAmount, Int](_.cents, DollarAmount.cents)
 
   implicit val recipientMapper = MappedColumnType.base[Recipient, String](
     {recip =>

@@ -1,3 +1,4 @@
+@import com.keepit.common.util.DollarAmount
 @(orgId: Id[Organization],
 events: Seq[com.keepit.controllers.admin.AdminAccountEventView],
 title: String,
@@ -22,7 +23,7 @@ paginationSize: Int
                     <td>@event.whoDunnit.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
                     <td>@event.adminInvolved.map(adminHelper.userDisplay(_)).getOrElse("none")</td>
                     <td>@{event.creditChange.toDollarString}</td>
-                    <td>@{event.paymentCharge.map(_.toDollarString)} @if(event.paymentCharge.exists(_ > com.keepit.payments.DollarAmount.ZERO)) { <a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.refundCharge(event.id)">[Refund]</a>} </td>
+                    <td>@{event.paymentCharge.map(_.toDollarString)} @if(event.paymentCharge.exists(_ > DollarAmount.ZERO)) { <a href="@com.keepit.controllers.admin.routes.AdminPaymentsController.refundCharge(event.id)">[Refund]</a>} </td>
                     <td>@{event.memo.getOrElse("")}</td>
                 </tr>
             }

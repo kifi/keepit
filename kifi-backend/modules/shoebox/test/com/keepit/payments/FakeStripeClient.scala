@@ -1,5 +1,7 @@
 package com.keepit.payments
 
+import com.keepit.common.util.DollarAmount
+
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 

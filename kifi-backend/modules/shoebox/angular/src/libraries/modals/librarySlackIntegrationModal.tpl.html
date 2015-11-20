@@ -21,7 +21,7 @@
           <div class="kf-library-slack-integration-modal-checkbox-wrap">
 
             <input class="kf-library-slack-integration-modal-checkbox" id="cb-1-{{$index}}" type="checkbox" ng-model="si.keepToSlack"
-                   ng-checked="si.keepToSlack" ng-change="si.onkeepToSlackChanged(si.keepToSlack)"/>
+                   ng-checked="si.keepToSlack" ng-change="si.onKeepToSlackChanged(si.keepToSlack)"/>
             <label ng-mouseenter="si.keepToSlackHover = true"
                    ng-mouseleave="si.keepToSlackHover = false" for="cb-1-{{$index}}"
                    ng-class="{'svg-checkbox_checked': si.keepToSlack && !si.keepToSlackHover,

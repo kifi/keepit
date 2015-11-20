@@ -238,6 +238,16 @@ if __name__=="__main__":
       action = 'store_true',
       help = "Ignore the local lock, so multiple deploys of the same service can happen at once",
     )
+    parser.add_argument(
+      '--uploadonly',
+      action = 'store_true',
+      help = "ONLY upload assets, do not trigger deployment"
+    )
+    parser.add_argument(
+      '--inprog',
+      action = 'store_true',
+      help = "Deploy build that is current in progress"
+    )
 
 
     args = parser.parse_args(sys.argv[1:])
@@ -248,6 +258,26 @@ if __name__=="__main__":
       userName = getpass.getuser()
       if userName=="eng":
         print "Yo, dude, set your name! ('--iam' option)"
+
+    if (args.inprog):
+      curr_build = requests.get('http://localhost:8080/job/all-quick-s3/lastBuild/api/json').json()
+      if curr_build['building']:
+        log("Waiting for current build to finish.")
+        build_id = curr_build['id']
+        is_building = True
+        count = 1
+        while is_building and count < 600:
+          curr_build = requests.get('http://localhost:8080/job/all-quick-s3/%s/api/json' % build_id).json()
+          is_building = curr_build['building']
+          time.sleep(1)
+          count = count + 1
+        if curr_build['result']=='SUCCESS':
+          log("Build complete, carrying on")
+        else:
+          log("Build failed, bailing. Sorry.")
+          sys.exit(0)
+      else:
+        log("No build in progress, carrying on")
 
     lock = FileLock("/home/eng/" + args.serviceType + ".lock")
 
@@ -309,6 +339,8 @@ if __name__=="__main__":
     else:
       if (not args.nolock) and (not lock.lock()):
         log("There appears to be a deploy already in progress for " + args.serviceType + ". Please try again later. We appreciate your business.")
+        sys.exit(0)
+      elif args.uploadonly:
         sys.exit(0)
 
     log("Deploying %s to %s (%s): %s" % (args.serviceType.upper(), str([str(inst.name) for inst in instances]), args.mode, slack_version))

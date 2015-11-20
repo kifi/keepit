@@ -2,6 +2,7 @@ package com.keepit.payments
 
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.db.Id
+import com.keepit.common.util.{ DollarAmount, DescriptionElements }
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.OrganizationFactoryHelper.OrganizationPersister
 import com.keepit.model.UserFactoryHelper.UserPersister

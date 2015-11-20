@@ -40,6 +40,7 @@ class OrganizationCommanderImpl @Inject() (
     userRepo: UserRepo,
     paidPlanRepo: PaidPlanRepo,
     libraryRepo: LibraryRepo,
+    orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     organizationInfoCommander: OrganizationInfoCommander,
     planManagementCommander: PlanManagementCommander,
     permissionCommander: PermissionCommander,
@@ -197,6 +198,11 @@ class OrganizationCommanderImpl @Inject() (
 
           val invites = orgInviteRepo.getAllByOrgId(org.id.get)
           invites.foreach(orgInviteRepo.deactivate)
+
+          val domains = orgDomainOwnershipRepo.getOwnershipsForOrganization(org.id.get)
+          domains.foreach(orgDomainOwnershipRepo.deactivate)
+
+          orgConfigRepo.deactivate(orgConfigRepo.getByOrgId(org.id.get))
 
           orgRepo.save(org.sanitizeForDelete)
           handleCommander.reclaimAll(org.id.get, overrideProtection = true, overrideLock = true)

@@ -38,6 +38,7 @@ object SlackTeamMembershipFactory {
   case class PartialSlackTeamMembership(stm: SlackTeamMembership) {
     def withUser(user: User) = this.copy(stm = stm.copy(userId = user.id.get))
     def withTeam(team: TestingSlackTeam) = this.copy(stm = stm.copy(slackTeamId = team.teamId, slackTeamName = team.teamName))
+    def withUsername(str: String) = this.copy(stm = stm.copy(slackUsername = SlackUsername(str)))
   }
 
   def memberships(count: Int) = List.fill(count)(membership())

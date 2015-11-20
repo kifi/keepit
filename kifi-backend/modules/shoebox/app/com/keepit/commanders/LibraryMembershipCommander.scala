@@ -35,6 +35,8 @@ trait LibraryMembershipCommander {
   def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo
   def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo]
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
+
+  def ensureUserCanWriteTo(userId: Id[User], libIds: Set[Id[Library]]): Boolean
 }
 
 object LibraryMembershipCommander {
@@ -420,5 +422,26 @@ class LibraryMembershipCommanderImpl @Inject() (
 
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]] = {
     db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) }
+  }
+
+  def ensureUserCanWriteTo(userId: Id[User], libIds: Set[Id[Library]]): Boolean = {
+    val (libsUserCanJoin, libsUserCannotJoin) = db.readWrite { implicit s =>
+      val libsUserCannotWriteTo = permissionCommander.getLibrariesPermissions(libIds, Some(userId)).collect {
+        case (libId, ps) if !ps.contains(LibraryPermission.ADD_KEEPS) => libId
+      }.toSet
+      libsUserCannotWriteTo.partition { libId =>
+        val lib = libraryRepo.get(libId)
+        val userHasInvite = libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).exists(inv => LibraryAccess.collaborativePermissions.contains(inv.access))
+        val libHasOpenCollaboration = lib.organizationMemberAccess.exists(LibraryAccess.collaborativePermissions.contains) &&
+          lib.organizationId.exists(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined)
+        userHasInvite || libHasOpenCollaboration
+      }
+    }
+    if (libsUserCannotJoin.nonEmpty) false
+    else {
+      implicit val context = HeimdalContext.empty
+      libsUserCanJoin.foreach(libId => joinLibrary(userId, libId))
+      true
+    }
   }
 }

@@ -164,6 +164,12 @@ object SlackMessage {
 
 }
 
+@json
+case class SlackReaction(value: String)
+object SlackReaction {
+  val checkMark = SlackReaction("heavy_check_mark")
+}
+
 sealed abstract class SlackCommand(val value: String)
 object SlackCommand extends Enumerator[SlackCommand] {
   case class UnknownSlackCommandException(command: String) extends Exception(s"Unknown Slack command: $command")
@@ -182,6 +188,7 @@ object SlackCommand extends Enumerator[SlackCommand] {
     Writes(command => JsString(command.value))
   )
 }
+
 case class SlackCommandRequest(
   token: SlackAccessToken,
   teamId: SlackTeamId,
@@ -236,4 +243,3 @@ case class SlackChannelToLibrarySummary(
   libraryId: Id[Library],
   on: Boolean,
   lastMessageTimestamp: Option[SlackMessageTimestamp])
-

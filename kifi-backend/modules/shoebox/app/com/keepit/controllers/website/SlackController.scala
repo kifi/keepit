@@ -1,12 +1,14 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.PermissionCommander
+import com.keepit.commanders.{ LibraryMembershipCommander, PermissionCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
-import com.keepit.model.{ LibraryFail, Library }
+import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
+import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
+import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackClient, SlackCommander }
 import play.api.libs.json.{ JsObject, JsSuccess, Json, JsError }
@@ -17,8 +19,11 @@ import scala.concurrent.ExecutionContext
 class SlackController @Inject() (
     slackClient: SlackClient,
     slackCommander: SlackCommander,
+    libraryMembershipCommander: LibraryMembershipCommander,
     deepLinkRouter: DeepLinkRouter,
     libraryToSlackChannelProcessor: LibraryToSlackChannelPusher,
+    slackToLibRepo: SlackChannelToLibraryRepo,
+    userRepo: UserRepo,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
     val permissionCommander: PermissionCommander,
@@ -41,30 +46,55 @@ class SlackController @Inject() (
         case (Some(libId), Some(webhook)) => slackCommander.setupIntegrations(request.userId, libId, webhook, slackIdentity)
         case _ =>
       }
-      Redirect(redir, SEE_OTHER)
     }
 
     authFut.recover {
-      case fail: SlackAPIFailure => fail.asResponse
+      case fail: SlackAPIFailure => ()
+    }.map { _ =>
+      Redirect(redir, SEE_OTHER)
     }
   }
 
-  // TODO(ryan): account for permissions!
   def modifyIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>
-    (request.body \ "integrations").validate[Seq[SlackIntegrationModification]] match {
+    (request.body \ "integrations").validate[Seq[ExternalSlackIntegrationModification]] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
       case JsSuccess(mods, _) =>
+        val extUserIds = mods.flatMap(_.space).collect { case ExternalUserSpace(uid) => uid }
+        val pubOrgIds = mods.flatMap(_.space).collect { case ExternalOrganizationSpace(oid) => oid }
+        val extToIntUserId = db.readOnlyReplica { implicit s =>
+          userRepo.getAllUsersByExternalId(extUserIds)
+        }.map { case (extId, u) => extId -> u.id.get }
+        val externalToInternalSpace: Map[ExternalLibrarySpace, LibrarySpace] = {
+          extToIntUserId.map { case (extId, intId) => ExternalUserSpace(extId) -> UserSpace(intId) } ++
+            pubOrgIds.map { pubId => ExternalOrganizationSpace(pubId) -> OrganizationSpace(Organization.decodePublicId(pubId).get) }.toMap
+        }
+
         val libToSlackMods = mods.collect {
-          case SlackIntegrationModification(Left(ltsId), status) => LibraryToSlackChannel.decodePublicId(ltsId).get -> status
+          case ExternalSlackIntegrationModification(Left(ltsId), extSpace, status) =>
+            LibraryToSlackChannel.decodePublicId(ltsId).get -> SlackIntegrationModification(extSpace.map(x => externalToInternalSpace(x)), status)
         }.toMap
         val slackToLibMods = mods.collect {
-          case SlackIntegrationModification(Right(stlId), status) => SlackChannelToLibrary.decodePublicId(stlId).get -> status
+          case ExternalSlackIntegrationModification(Right(stlId), extSpace, status) =>
+            SlackChannelToLibrary.decodePublicId(stlId).get -> SlackIntegrationModification(extSpace.map(externalToInternalSpace(_)), status)
         }.toMap
-        slackCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
-          Ok(Json.toJson(response))
-        }.recover {
-          case fail: LibraryFail => fail.asErrorResponse
-        }.get
+
+        val libsUserNeedsToWriteTo = db.readOnlyMaster { implicit s =>
+          slackToLibMods.flatMap {
+            case (stlId, mod) =>
+              val stl = slackToLibRepo.get(stlId)
+              if (mod.status.contains(SlackIntegrationStatus.On) && stl.status != SlackIntegrationStatus.On) Some(stl.libraryId)
+              else None
+          }.toSet
+        }
+        if (libraryMembershipCommander.ensureUserCanWriteTo(request.userId, libsUserNeedsToWriteTo)) {
+          slackCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
+            Ok(Json.toJson(response))
+          }.recover {
+            case fail: LibraryFail => fail.asErrorResponse
+          }.get
+        } else {
+          LibraryFail(FORBIDDEN, "cannot_write_to_library").asErrorResponse
+        }
     }
   }
   def deleteIntegrations(id: PublicId[Library]) = UserAction(parse.tolerantJson) { implicit request =>

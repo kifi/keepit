@@ -5,6 +5,7 @@ import com.keepit.common.db.{ State, Id }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo, Repo }
 import com.keepit.common.logging.Logging
+import com.keepit.common.util.DollarAmount
 import com.keepit.payments.CreditRewardFail.UnrepeatableRewardKeyCollisionException
 import com.keepit.common.time._
 import com.keepit.model.User
@@ -21,6 +22,7 @@ trait CreditRewardRepo extends Repo[CreditReward] {
   def getByAccount(accountId: Id[PaidAccount])(implicit session: RSession): Set[CreditReward]
 
   def deactivate(model: CreditReward)(implicit session: RWSession): Unit
+  def deactivateAll(accountId: Id[PaidAccount])(implicit session: RSession): Int
 }
 
 // Unique index on (code, singleUse) - single-use codes can only be used once overall
@@ -36,7 +38,6 @@ class CreditRewardRepoImpl @Inject() (
 
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val kindColumnType = MappedColumnType.base[RewardKind, String](_.kind, RewardKind.apply)
   implicit val creditCodeTypeMapper = CreditCode.columnType(db)
   implicit val unrepeatableTypeMapper = MappedColumnType.base[UnrepeatableRewardKey, String](_.toKey, UnrepeatableRewardKey.fromKey)
@@ -86,6 +87,10 @@ class CreditRewardRepoImpl @Inject() (
   }
 
   def deactivate(model: CreditReward)(implicit session: RWSession): Unit = save(model.withState(CreditRewardStates.INACTIVE))
+
+  def deactivateAll(accountId: Id[PaidAccount])(implicit session: RSession): Int = {
+    (for (r <- rows if r.accountId === accountId) yield (r.state, r.updatedAt, r.singleUse)).update((CreditRewardStates.INACTIVE, clock.now(), None))
+  }
 }
 
 object CreditRewardRepo {

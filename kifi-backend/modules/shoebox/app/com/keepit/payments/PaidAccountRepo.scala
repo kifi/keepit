@@ -4,6 +4,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.{ Id, State }
 import com.keepit.common.time._
+import com.keepit.common.util.DollarAmount
 import com.keepit.model.{ Limit, User, Organization }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.core._
@@ -28,6 +29,8 @@ trait PaidAccountRepo extends Repo[PaidAccount] {
   // admin/integrity methods
   def getIdSubsetByModulus(modulus: Int, partition: Int)(implicit session: RSession): Set[Id[Organization]]
   def getPlanEnrollments(implicit session: RSession): Map[Id[PaidPlan], PlanEnrollment]
+
+  def deactivate(model: PaidAccount)(implicit session: RWSession): Unit
 }
 
 @Singleton
@@ -39,7 +42,6 @@ class PaidAccountRepoImpl @Inject() (
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
 
-  implicit val dollarAmountColumnType = DollarAmount.columnType(db)
   implicit val statusColumnType = MappedColumnType.base[PaymentStatus, String](_.value, PaymentStatus(_))
 
   type RepoImpl = PaidAccountTable
@@ -112,5 +114,9 @@ class PaidAccountRepoImpl @Inject() (
     activeRows.groupBy(_.planId).map { case (planId, accounts) => planId -> (accounts.length, accounts.map(_.activeUsers).sum) }.list.map {
       case (planId, (numAccounts, numUsers)) => planId -> PlanEnrollment(numAccounts = numAccounts, numActiveUsers = numUsers.getOrElse(0))
     }.toMap
+  }
+
+  def deactivate(model: PaidAccount)(implicit session: RWSession): Unit = {
+    save(model.sanitizeForDelete)
   }
 }
