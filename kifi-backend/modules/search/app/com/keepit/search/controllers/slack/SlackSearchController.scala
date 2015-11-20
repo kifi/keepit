@@ -3,7 +3,7 @@ package com.keepit.search.controllers.slack
 import com.google.inject.Inject
 import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
@@ -78,11 +78,11 @@ class SlackSearchController @Inject() (
                         val summary = summaries.get(uriId)
                         val keepId = hit.keepId.map(Id[Keep](_))
                         val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
-                        SlackAttachment.fromTitleAndImage(Title(title, Some(url)), thumbUrl = imageOpt.map(_.path.getUrl), color = "good")
+                        SlackAttachment.fromTitleAndImage(Title(title, Some(url)), thumbUrl = imageOpt.map("https" + _.path.getUrl), color = "good")
                       }
                       val text = {
-                        if (relevantHits.isEmpty) s"We couldn't find any link relevant to your query in this channel :("
-                        else s"Here are the ${relevantHits.length} most relevant links we found in ${command.channelName.value}:"
+                        if (relevantHits.isEmpty) s"We couldn't find any relevant link in this channel :("
+                        else s"Here are the most relevant links we found in ${command.channelName.value}:"
                       }
                       (text, attachments)
                     }
@@ -92,17 +92,20 @@ class SlackSearchController @Inject() (
                   Future.successful((text, Seq.empty))
                 case None =>
                   shoeboxClient.getBasicLibraryDetails(integrations.map(_.libraryId).toSet, idealImageSize = idealImageSize, None).map { libraryInfos =>
-                    val text = s"We are not capturing links from this channel yet, all Kifi integrations are turned off. Turn one on:"
+                    val text = s"Your Kifi integrations with this channel are currently turned off:"
                     val attachments = libraryInfos.values.toSeq.map { info =>
-                      SlackAttachment.fromTitleAndImage(Title(info.name, Some(info.url.absolute)), thumbUrl = info.imageUrl, color = "warning")
+                      SlackAttachment.fromTitleAndImage(Title(info.name, Some(info.url.absolute)), thumbUrl = info.imageUrl.map("https" + _), color = "warning")
                     }
                     (text, attachments)
                   }
               }
               futureTextAndAttachments.imap { case (text, attachments) => SlackCommandResponse(ResponseType.Ephemeral, text, attachments) }
-              // httpClient.postFuture(DirectUrl(command.responseUrl), Json.toJson(response)) todo(Léo): call Slack back
             }
-            futureResponse.map(r => Ok(Json.toJson(r))) // for testing
+            futureResponse.map { r =>
+              val result = Json.toJson(r)
+              httpClient.postFuture(DirectUrl(command.responseUrl), result)
+              Ok(result) // todo(Léo): remove after testing
+            }
           case None => Future.successful(BadRequest("invalid_auth"))
         }
       case _ => Future.successful(BadRequest("invalid_command"))
