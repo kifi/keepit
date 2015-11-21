@@ -77,13 +77,15 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
   echo $'\nDeploying REAL Firefox extension to kifi.com'
   read -p 'Press Enter or Ctrl-C '
 
+  # TODO(carlos): When jpm 1.0.4 is released,
+  # remove this mess and use `jpm sign` instead
   if [[ ! -f out/kifi-signed.xpi ]]; then
+
     ID=$(cat out/firefox/package.json | $JSON_CMD id)
     VERSION=$(cat out/firefox/package.json | $JSON_CMD version)
     UNSIGNED_XPI="out/kifi.xpi"
 
     # Step 1: Upload the unsigned XPI for validation and signing
-
     UPLOAD_RESULT=$( amo_upload $ID $VERSION $UNSIGNED_XPI )
     UPLOAD_RESULT_CODE=$?
 
@@ -91,19 +93,26 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
     UPLOAD_ERR=$(echo "$UPLOAD_RESULT_JSON" | $JSON_CMD error detail)
 
     if [[ "$UPLOAD_RESULT_CODE" -ne 0 || -n "$UPLOAD_ERR" ]]; then
+
       echo "Upload Error: $UPLOAD_ERR"
       exit 1
+
     fi
 
-    # Step 2: Check if the file is ready yet.
+    # Step 2: Check if processing has finished
     # If not: poll
-    # If ready: check if valid
-    # If valid: proceed
+    # If finished: check if valid
+    # If valid: proceed, else fail
+    #
+    # Continue polling until the file is present in the response
+    # Then save the URL and download it
 
     STATUS_WAITING=''
 
     printf "Fetching validation.."
+
     while true; do
+
       STATUS_RESULT=$( amo_status $ID $VERSION )
       STATUS_RESULT_CODE=$?
       STATUS_RESULT_JSON="$( echo "$STATUS_RESULT" | tail -r | tail +2 | tail -r )"
@@ -126,14 +135,23 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
           echo "$STATUS_RESULT_JSON" | $JSON_CMD validation_results
           exit 1
 
-        else # Validation passed, break
+        else
 
           if [ -n "$STATUS_FILE_URL" ]; then
-            break # break to step 3
+
+            # Validation passed, break out of the polling while-loop
+            printf $'\nPassed validaton!'
+            break
+
           else
             if [ -z $STATUS_WAITING ]; then
+
               STATUS_WAITING='WAITING'
-              printf $'\nPassed Validation!\nFile not ready. Waiting.\n(It takes ~1 minute to become available)'
+              printf $'\nPassed validation!'
+              printf $'\nBut the signed file isn\'t ready. It may take ~3 minutes to become available'
+              printf $'\n(Download the xpi from https://addons.mozilla.org/en-US/developers/addons if it fails)'
+              printf $'\nWaiting..'
+
             fi
             # continue to wait
           fi
@@ -153,8 +171,10 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
     "$STATUS_FILE_URL"
 
     if [[ ! -f out/kifi-signed.xpi ]]; then
+
       printf $'\nCouldn\'t find out/kifi-signed.xpi for upload. Exiting.'
       exit 1
+
     fi
 
   fi
