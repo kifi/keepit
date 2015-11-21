@@ -71,80 +71,86 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
   echo $'\nDeploying REAL Firefox extension to kifi.com'
   read -p 'Press Enter or Ctrl-C '
 
-  ID=$(cat out/firefox/package.json | $JSON_CMD id)
-  VERSION=$(cat out/firefox/package.json | $JSON_CMD version)
-  UNSIGNED_XPI="out/kifi.xpi"
+  if [[ ! -f out/kifi-signed.xpi ]]; then
+    ID=$(cat out/firefox/package.json | $JSON_CMD id)
+    VERSION=$(cat out/firefox/package.json | $JSON_CMD version)
+    UNSIGNED_XPI="out/kifi.xpi"
 
-  # Step 1: Upload the unsigned XPI for validation and signing
+    # Step 1: Upload the unsigned XPI for validation and signing
 
-  UPLOAD_RESULT=$( amo_upload $ID $VERSION $UNSIGNED_XPI )
-  UPLOAD_RESULT_CODE=$?
+    UPLOAD_RESULT=$( amo_upload $ID $VERSION $UNSIGNED_XPI )
+    UPLOAD_RESULT_CODE=$?
 
-  UPLOAD_RESULT_JSON=$( echo "$UPLOAD_RESULT" | tail -r | tail +2 | tail -r ) # all but last line
-  UPLOAD_ERR=$(echo "$UPLOAD_RESULT_JSON" | $JSON_CMD error detail)
+    UPLOAD_RESULT_JSON=$( echo "$UPLOAD_RESULT" | tail -r | tail +2 | tail -r ) # all but last line
+    UPLOAD_ERR=$(echo "$UPLOAD_RESULT_JSON" | $JSON_CMD error detail)
 
-  if [[ "$UPLOAD_RESULT_CODE" -ne 0 || -n "$UPLOAD_ERR" ]]; then
-    echo "Upload Error: $UPLOAD_ERR"
-    exit 1
-  fi
-
-  # Step 2: Check if the file is ready yet.
-  # If not: poll
-  # If ready: check if valid
-  # If valid: proceed
-
-  STATUS_WAITING=''
-
-  printf "Fetching validation.."
-  while true; do
-    STATUS_RESULT=$( amo_status $ID $VERSION )
-    STATUS_RESULT_CODE=$?
-    STATUS_RESULT_JSON="$( echo "$STATUS_RESULT" | tail -r | tail +2 | tail -r )"
-
-    STATUS_PROCESSED="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD processed)"
-    STATUS_ERR="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD error detail)"
-    STATUS_VALID="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD valid)"
-    STATUS_FILE_URL="$( echo "$STATUS_RESULT_JSON" | $JSON_CMD files[0].download_url )"
-
-    if [[ "$STATUS_RESULT_CODE" -ne 0 || -n "$STATUS_ERR" ]]; then # check for errors from cUrl
-
-      echo "Status Error: $STATUS_ERR"
+    if [[ "$UPLOAD_RESULT_CODE" -ne 0 || -n "$UPLOAD_ERR" ]]; then
+      echo "Upload Error: $UPLOAD_ERR"
       exit 1
+    fi
 
-    elif [ "$STATUS_PROCESSED" == "true" ]; then # check to see if validation has completed
+    # Step 2: Check if the file is ready yet.
+    # If not: poll
+    # If ready: check if valid
+    # If valid: proceed
 
-      if [ "$STATUS_VALID" != "true" ]; then # validation failed, quit
+    STATUS_WAITING=''
 
-        echo "Failed validation : ("
-        echo "$STATUS_RESULT_JSON" | $JSON_CMD validation_results
+    printf "Fetching validation.."
+    while true; do
+      STATUS_RESULT=$( amo_status $ID $VERSION )
+      STATUS_RESULT_CODE=$?
+      STATUS_RESULT_JSON="$( echo "$STATUS_RESULT" | tail -r | tail +2 | tail -r )"
+
+      STATUS_PROCESSED="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD processed)"
+      STATUS_ERR="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD error detail)"
+      STATUS_VALID="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD valid)"
+      STATUS_FILE_URL="$( echo "$STATUS_RESULT_JSON" | $JSON_CMD files[0].download_url )"
+
+      if [[ "$STATUS_RESULT_CODE" -ne 0 || -n "$STATUS_ERR" ]]; then # check for errors from cUrl
+
+        echo "Status Error: $STATUS_ERR"
         exit 1
 
-      else # Validation passed, break
+      elif [ "$STATUS_PROCESSED" == "true" ]; then # check to see if validation has completed
 
-        if [ -n "$STATUS_FILE_URL" ]; then
-          break # break to step 3
-        else
-          if [ -z $STATUS_WAITING ]; then
-            STATUS_WAITING='WAITING'
-            printf $'\nPassed Validation!\nFile not ready. Waiting.\n(It takes ~1 minute to become available)'
+        if [ "$STATUS_VALID" != "true" ]; then # validation failed, quit
+
+          echo "Failed validation : ("
+          echo "$STATUS_RESULT_JSON" | $JSON_CMD validation_results
+          exit 1
+
+        else # Validation passed, break
+
+          if [ -n "$STATUS_FILE_URL" ]; then
+            break # break to step 3
+          else
+            if [ -z $STATUS_WAITING ]; then
+              STATUS_WAITING='WAITING'
+              printf $'\nPassed Validation!\nFile not ready. Waiting.\n(It takes ~1 minute to become available)'
+            fi
+            # continue to wait
           fi
-          # continue to wait
+
         fi
 
       fi
+      sleep 5 # it's not ready, so continue polling
+      printf "."
+    done
 
+    # Step 3: Download the file
+    printf $'\nDownloading signed file from '$STATUS_FILE_URL
+    curl \
+    -qSsLo "out/kifi-signed.xpi" \
+    -H "Authorization: JWT $($AUTH_CMD)" \
+    "$STATUS_FILE_URL"
+
+    if [[ ! -f out/kifi-signed.xpi ]]; then
+      printf $'\nCouldn\'t find out/kifi-signed.xpi for upload. Exiting.'
+      exit 1
     fi
-    sleep 5 # it's not ready, so continue polling
-    printf "."
-  done
 
-  # Step 3: Download the file
-  printf $'\nDownloading signed file from '$STATUS_FILE_URL
-  curl -qSsLo "out/kifi-signed.xpi" "$STATUS_FILE_URL"
-
-  if [[ ! -f out/kifi-signed.xpi ]]; then
-    printf $'\nCouldn\'t find out/kifi-signed.xpi for upload. Exiting.'
-    exit 1
   fi
 
   echo 'Uploading to S3...'
