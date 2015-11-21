@@ -19,6 +19,7 @@ object SlackAPI {
   implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
 
   val OK: String = "ok"
+  val NoService: String = "No service"
   object SlackParams {
     val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
     val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
@@ -60,13 +61,13 @@ class SlackClientImpl(
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
       (clientResponse.status, clientResponse.body) match {
         case (Status.OK, SlackAPI.OK) => Future.successful(())
-        case (Status.NOT_FOUND, SlackAPIFailure.Message.REVOKED_WEBHOOK) => Future.failed(SlackAPIFailure.RevokedWebhook)
-        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, JsString(payload)))
+        case (Status.NOT_FOUND, SlackAPI.NoService) => Future.failed(SlackAPIFailure.TokenRevoked)
+        case (status, payload) => Future.failed(SlackAPIFailure.ApiError(status, Json.obj("error" -> payload)))
       }
     }.recoverWith {
       case f: NonOKResponseException =>
         log.error(s"Caught a non-OK response exception to $url, recognizing that it's a revoked webhook")
-        Future.failed(SlackAPIFailure.RevokedWebhook)
+        Future.failed(SlackAPIFailure.WebhookRevoked)
     }.andThen {
       case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to webhook $url because $f")
@@ -83,8 +84,7 @@ class SlackClientImpl(
             case errs: JsError =>
               Future.failed(SlackAPIFailure.ParseError(payload))
           }
-        case (Status.OK, SlackAPIFailure.Message.REVOKED_TOKEN) => Future.failed(SlackAPIFailure.RevokedWebhook)
-        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
+        case (status, payload) => Future.failed(SlackAPIFailure.ApiError(status, payload))
       }
     }
   }
