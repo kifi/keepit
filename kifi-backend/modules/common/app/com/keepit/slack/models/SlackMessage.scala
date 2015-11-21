@@ -47,17 +47,17 @@ object SlackUsername {
 @json case class SlackMessageType(value: String)
 
 case class SlackAttachment(
-  fallback: Option[String],
-  color: Option[String],
-  pretext: Option[String],
-  service: Option[String],
-  author: Option[SlackAttachment.Author],
-  title: Option[SlackAttachment.Title],
-  text: Option[String],
-  fields: Seq[SlackAttachment.Field],
-  fromUrl: Option[String],
-  imageUrl: Option[String],
-  thumbUrl: Option[String])
+  fallback: Option[String] = None,
+  color: Option[String] = None,
+  pretext: Option[String] = None,
+  service: Option[String] = None,
+  author: Option[SlackAttachment.Author] = None,
+  title: Option[SlackAttachment.Title] = None,
+  text: Option[String] = None,
+  fields: Seq[SlackAttachment.Field] = Seq.empty,
+  fromUrl: Option[String] = None,
+  imageUrl: Option[String] = None,
+  thumbUrl: Option[String] = None)
 
 object SlackAttachment {
   case class Author(name: String, link: Option[String], icon: Option[String])

@@ -5,6 +5,7 @@ import com.keepit.commanders.ProcessedImageSize
 import com.keepit.common.controller.{ SearchServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
+import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient }
@@ -72,17 +73,23 @@ class SlackSearchController @Inject() (
                       keepImages <- futureKeepImages
                     } yield {
                       val attachments = relevantHits.map { hit =>
-                        val uriId = Id[NormalizedURI](hit.id)
-                        val title = Some(hit.title).filter(_.nonEmpty) getOrElse hit.url
                         val url = hit.url
+                        val uriId = Id[NormalizedURI](hit.id)
                         val summary = summaries.get(uriId)
+                        val title = Some(hit.title).filter(_.nonEmpty) orElse summary.flatMap(_.article.title.filter(_.nonEmpty)) getOrElse url
                         val keepId = hit.keepId.map(Id[Keep](_))
                         val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
-                        SlackAttachment.fromTitleAndImage(Title(title, Some(url)), thumbUrl = imageOpt.map("https:" + _.path.getUrl), color = "good")
+                        SlackAttachment(
+                          pretext = DomainToNameMapper.getNameFromUrl(url),
+                          title = Some(Title(title, Some(url))),
+                          text = summary.flatMap(_.article.description),
+                          thumbUrl = imageOpt.map("https:" + _.path.getUrl),
+                          color = Some("good")
+                        )
                       }
                       val text = {
                         if (relevantHits.isEmpty) s"We couldn't find any relevant link for '${command.text}' in this channel :("
-                        else s"Here are the most relevant links we found in this channel for '${command.text}':"
+                        else s"'${command.text}' top links in this channel:"
                       }
                       (text, attachments)
                     }
