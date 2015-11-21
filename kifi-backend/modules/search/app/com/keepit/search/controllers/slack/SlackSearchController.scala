@@ -41,10 +41,8 @@ class SlackSearchController @Inject() (
 
   import SlackSearchController._
 
-  def search() = MaybeUserAction.async { request =>
-    airbrake.notify(s"This is what I got from Slack: ${request.body}")
-
-    SlackCommandRequest.fromSlack(request.body.asText.get) match {
+  def search() = MaybeUserAction.async(parse.tolerantFormUrlEncoded) { request =>
+    SlackCommandRequest.fromSlack(request.body) match {
       case Success(command) if command.command == SlackCommand.Kifi && command.token == KifiSlackApp.SLACK_COMMAND_TOKEN =>
         shoeboxClient.getIntegrationsBySlackChannel(command.teamId, command.channelId).flatMap {
           case integrations =>
