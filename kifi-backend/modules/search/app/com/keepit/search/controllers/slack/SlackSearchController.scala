@@ -80,7 +80,7 @@ class SlackSearchController @Inject() (
                         val keepId = hit.keepId.map(Id[Keep](_))
                         val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
                         SlackAttachment(
-                          pretext = DomainToNameMapper.getNameFromUrl(url),
+                          service = DomainToNameMapper.getNameFromUrl(url),
                           title = Some(Title(title, Some(url))),
                           text = summary.flatMap(_.article.description),
                           thumbUrl = imageOpt.map("https:" + _.path.getUrl),
@@ -89,7 +89,7 @@ class SlackSearchController @Inject() (
                       }
                       val text = {
                         if (relevantHits.isEmpty) s"We couldn't find any relevant link for '${command.text}' in this channel :("
-                        else s"'${command.text}' top links in this channel:"
+                        else s"Top links for '${command.text}' in this channel:"
                       }
                       (text, attachments)
                     }
