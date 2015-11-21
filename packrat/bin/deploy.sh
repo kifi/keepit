@@ -48,7 +48,13 @@ function amo_status() {
 
 if [[ ! -f FortyTwo.pem ]]; then
 
-  echo $'\nERROR: need FortyTwo.pem in '$(pwd)' (ask Jared or Andrew)'
+  echo $'\nERROR: need FortyTwo.pem in '$(pwd)' (ask Carlos or Andrew)'
+  exit 1
+
+elif [[ ! -f amo_secret.key ]]; then
+
+  echo $'\nERROR: need amo_secret.key in '$(pwd)' (ask Carlos or Andrew)'
+  echo $'\n(it\'s just a plaintext file with the secret key from addons.mozilla.com)'
   exit 1
 
 elif ! which -s xpisign; then
