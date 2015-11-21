@@ -54,7 +54,7 @@ case class SlackAttachment(
   author: Option[SlackAttachment.Author] = None,
   title: Option[SlackAttachment.Title] = None,
   text: Option[String] = None,
-  fields: Seq[SlackAttachment.Field] = None,
+  fields: Seq[SlackAttachment.Field] = Seq.empty,
   fromUrl: Option[String] = None,
   imageUrl: Option[String] = None,
   thumbUrl: Option[String] = None)
