@@ -73,16 +73,16 @@ class SlackSearchController @Inject() (
                     } yield {
                       val attachments = relevantHits.map { hit =>
                         val uriId = Id[NormalizedURI](hit.id)
-                        val title = hit.title
+                        val title = Some(hit.title).filter(_.nonEmpty) getOrElse hit.url
                         val url = hit.url
                         val summary = summaries.get(uriId)
                         val keepId = hit.keepId.map(Id[Keep](_))
                         val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
-                        SlackAttachment.fromTitleAndImage(Title(title, Some(url)), thumbUrl = imageOpt.map("https" + _.path.getUrl), color = "good")
+                        SlackAttachment.fromTitleAndImage(Title(title, Some(url)), thumbUrl = imageOpt.map("https:" + _.path.getUrl), color = "good")
                       }
                       val text = {
                         if (relevantHits.isEmpty) s"We couldn't find any relevant link in this channel :("
-                        else s"Here are the most relevant links we found in ${command.channelName.value}:"
+                        else s"Here are the most relevant links we found in this channel:"
                       }
                       (text, attachments)
                     }
@@ -94,7 +94,7 @@ class SlackSearchController @Inject() (
                   shoeboxClient.getBasicLibraryDetails(integrations.map(_.libraryId).toSet, idealImageSize = idealImageSize, None).map { libraryInfos =>
                     val text = s"Your Kifi integrations with this channel are currently turned off:"
                     val attachments = libraryInfos.values.toSeq.map { info =>
-                      SlackAttachment.fromTitleAndImage(Title(info.name, Some(info.url.absolute)), thumbUrl = info.imageUrl.map("https" + _), color = "warning")
+                      SlackAttachment.fromTitleAndImage(Title(info.name, Some(info.url.absolute)), thumbUrl = info.imageUrl.map("https:" + _), color = "warning")
                     }
                     (text, attachments)
                   }
@@ -103,8 +103,7 @@ class SlackSearchController @Inject() (
             }
             futureResponse.map { r =>
               val result = Json.toJson(r)
-              httpClient.postFuture(DirectUrl(command.responseUrl), result)
-              Ok(result) // todo(Léo): remove after testing
+              Ok(result)
             }
         }
       case invalidCommand =>
