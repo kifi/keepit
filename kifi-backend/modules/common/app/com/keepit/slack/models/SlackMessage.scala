@@ -143,7 +143,7 @@ object SlackAttachment {
     (__ \ "fields").formatNullable[Seq[SlackAttachment.Field]] and
     (__ \ "from_url").formatNullable[String] and
     (__ \ "image_url").formatNullable[String] and
-    (__ \ "image_thumb").formatNullable[String]
+    (__ \ "thumb_url").formatNullable[String]
   )(applyFromSlack, unlift(unapplyToSlack))
 }
 
