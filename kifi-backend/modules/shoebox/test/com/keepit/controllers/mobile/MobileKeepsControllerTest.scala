@@ -52,6 +52,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
   implicit val helperFormat = RawBookmarkRepresentation.helperFormat
 
+  implicit def pubIdConfig(implicit injetesctor: Injector) = inject[PublicIdConfiguration]
+
   // NOTE: No attemp to write the trait SourceAttribution
   implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {
     def writes(keep: RawBookmarkRepresentation): JsValue = {
@@ -184,8 +186,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
       inject[FakeUserActionsHelper].setUser(user)
       val request = FakeRequest("POST", path).withBody(JsObject(Seq("url" -> JsString("http://www.google.com/"))))
       val result = inject[MobileKeepsController].addTag(collections(0).externalId)(request)
-      status(result) must equalTo(OK);
-      contentType(result) must beSome("application/json");
+      status(result) must equalTo(OK)
+      contentType(result) must beSome("application/json")
 
       val expected = Json.parse(s"""
         {"id":"${collections(0).externalId}","name":"myCollaction1"}
@@ -294,7 +296,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
         (user1, user2, bookmark1, bookmark2, bookmark3, lib1)
       }
-      implicit val publicIdConfiguration = inject[PublicIdConfiguration]
       val pubLibId1 = Library.publicId(lib1.id.get)
       val keeps = db.readWrite { implicit s =>
         keepRepo.getByUser(user1.id.get, None, None, 100)
@@ -326,6 +327,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
          "keeps":[
           {
             "id":"${bookmark2.externalId.toString}",
+            "pubId":"${Keep.publicId(bookmark2.id.get).id}",
             "title":"A1",
             "url":"http://www.amazon.com",
             "isPrivate":false,
@@ -348,6 +350,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             },
           {
             "id":"${bookmark1.externalId.toString}",
+            "pubId":"${Keep.publicId(bookmark1.id.get).id}",
             "title":"G1",
             "url":"http://www.google.com",
             "isPrivate":false,
@@ -415,6 +418,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                    "keeps":[
                     {
                       "id":"${keeps1(1).externalId.toString}",
+                      "pubId":"${Keep.publicId(keeps1(1).id.get).id}",
                       "url":"${keeps1(1).url}",
                       "isPrivate":${keeps1(1).isPrivate},
                       "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
@@ -436,6 +440,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
+                      "pubId":"${Keep.publicId(keeps1(0).id.get).id}",
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
                       "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
@@ -495,6 +500,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                    "keeps":[
                     {
                       "id":"${keeps1(0).externalId.toString}",
+                      "pubId":"${Keep.publicId(keeps1(0).id.get).id}",
                       "url":"${keeps1(0).url}",
                       "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
                       "isPrivate":${keeps1(0).isPrivate},
@@ -558,8 +564,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         (user1, bookmark1, bookmark2, bookmark3, lib1)
       }
 
-      implicit val publicIdConfiguration = inject[PublicIdConfiguration]
-
       val pubLibId1 = Library.publicId(lib1.id.get)
 
       val keeps = db.readWrite { implicit s =>
@@ -590,6 +594,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "keeps":[
               {
                 "id":"${bookmark2.externalId.toString}",
+                "pubId":"${Keep.publicId(bookmark2.id.get).id}",
                 "title":"A1",
                 "url":"http://www.amazon.com",
                 "isPrivate":false,
@@ -714,19 +719,19 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
-        val extIds = db.readOnlyMaster { implicit session =>
+        val keeps = db.readOnlyMaster { implicit session =>
           val keeps = keepRepo.all
           keeps.length === 3
           keeps.map(_.source) === Seq(KeepSource.mobile, KeepSource.mobile, KeepSource.mobile)
           keeps.map(_.state.value) === Seq("active", "active", "active")
-          keeps.map(_.externalId)
+          keeps
         }
 
         val expected = Json.parse(s"""
           {
-            "keeps":[{"id":"${extIds(0)}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-                     {"id":"${extIds(1)}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-                     {"id":"${extIds(2)}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su"}],
+            "keeps":[{"id":"${keeps(0).externalId.id}","pubId":"${Keep.publicId(keeps(0).id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
+                     {"id":"${keeps(1).externalId.id}","pubId":"${Keep.publicId(keeps(1).id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
+                     {"id":"${keeps(2).externalId.id}","pubId":"${Keep.publicId(keeps(2).id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su"}],
             "addedToCollection":3
           }
         """)

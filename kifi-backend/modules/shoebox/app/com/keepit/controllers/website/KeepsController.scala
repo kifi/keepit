@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.{ InternalOrExternalId, PublicId, PublicIdConfiguration }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import com.google.inject.Inject
@@ -151,12 +151,20 @@ class KeepsController @Inject() (
     res getOrElse BadRequest(Json.obj("error" -> "Could not parse keep selection and/or collection id from request body"))
   }
 
-  def getKeepInfo(id: ExternalId[Keep], withFullInfo: Boolean) = UserAction.async { request =>
-    val keepOpt = db.readOnlyMaster { implicit s => keepRepo.getOpt(id).filter(_.isActive) }
-    keepOpt match {
-      case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-      case Some(keep) if withFullInfo => keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize, withKeepTime = true, sanitizeUrls = false).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
-      case Some(keep) => Future.successful(Ok(Json.toJson(KeepInfo.fromKeep(keep))))
+  def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep]) = UserAction.async { request =>
+    implicit val keepCompanion = Keep
+    internalOrExternalId.parse match {
+      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id", "details" -> ex.getMessage)))
+      case Success(idOrExtId) =>
+        val keepOpt = db.readOnlyReplica { implicit s =>
+          idOrExtId.fold[Option[Keep]](
+            { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
+          )
+        }
+        keepOpt match {
+          case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
+          case Some(keep) => keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize, withKeepTime = true, sanitizeUrls = false).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+        }
     }
   }
 

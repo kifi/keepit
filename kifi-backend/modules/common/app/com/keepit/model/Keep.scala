@@ -1,5 +1,11 @@
 package com.keepit.model
 
+import javax.crypto.spec.IvParameterSpec
+
+import com.keepit.common.path.Path
+import org.apache.commons.lang3.RandomStringUtils
+import play.api.mvc.PathBindable
+
 import scala.concurrent.duration._
 import org.joda.time.DateTime
 import com.keepit.common.cache._
@@ -9,8 +15,9 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.crypto.PublicId
+import com.keepit.common.crypto.{ PublicIdConfiguration, ModelWithPublicIdCompanion, ModelWithPublicId, PublicId }
 
+import scala.util.Try
 import scala.util.hashing.MurmurHash3
 
 case class Keep(
@@ -34,7 +41,7 @@ case class Keep(
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None,
     librariesHash: LibrariesHash = LibrariesHash.EMPTY,
-    participantsHash: ParticipantsHash = ParticipantsHash.EMPTY) extends ModelWithExternalId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    participantsHash: ParticipantsHash = ParticipantsHash.EMPTY) extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def withPrimary(newPrimary: Boolean) = this.copy(isPrimary = newPrimary)
   def sanitizeForDelete: Keep = copy(title = None, state = KeepStates.INACTIVE, isPrimary = false, librariesHash = LibrariesHash.EMPTY, participantsHash = ParticipantsHash.EMPTY)
@@ -84,9 +91,14 @@ case class Keep(
         note.isEmpty || note == other.note
       ).forall(b => b))
   }
+
+  def titlePathString = this.title.map(_.trim.replaceAll(" ", "-")).getOrElse(this.url.trim.replaceAll("[./]", "-")).take(40)
 }
 
-object Keep {
+object Keep extends ModelWithPublicIdCompanion[Keep] {
+
+  protected[this] val publicIdPrefix = "k"
+  protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-28, 113, 122, 123, -126, 62, -12, 87, -112, 68, -9, -84, -56, -13, 15, 28))
 
   // If you see this after library migration is done, tell Andrew to clean up his messes.
   def isPrivateToVisibility(isPrivate: Boolean) = {

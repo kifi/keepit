@@ -96,7 +96,7 @@ angular.module('kifi')
     // keep information we need to display it. This function fetches that
     // information.
     function fetchFullKeepInfo(keep) {
-      return net.getKeep(keep.id, {withFullInfo: true}).then(function (result) {
+      return net.getKeep(keep.id).then(function (result) {
         return _.assign(keep, result.data);
       });
     }

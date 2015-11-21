@@ -1,7 +1,7 @@
 package com.keepit.common.crypto
 
 import javax.crypto.spec.IvParameterSpec
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ExternalId, Id}
 import play.api.libs.json._
 import play.api.mvc.{ PathBindable, QueryStringBindable }
 
@@ -95,5 +95,25 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {
     PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id)))
+  }
+}
+
+case class InternalOrExternalId[T <: ModelWithPublicId[T]](id: String) {
+  def parse(implicit config: PublicIdConfiguration, companion: ModelWithPublicIdCompanion[T]): Try[Either[Id[T], ExternalId[T]]] = {
+    companion.decodePublicId(PublicId[T](id)).map(Left(_)).recoverWith {
+      case _: Throwable => Try(ExternalId[T](id)).map(Right(_))
+    }
+  }
+}
+
+object InternalOrExternalId {
+  implicit def pathBinder[T <: ModelWithPublicId[T]](implicit stringBinder: PathBindable[String]) = new PathBindable[InternalOrExternalId[T]] {
+    override def bind(key: String, value: String): Either[String, InternalOrExternalId[T]] =
+      stringBinder.bind(key, value) match {
+        case Right(id) => Right(InternalOrExternalId[T](id))
+        case _ => Left("Unable to bind an Id")
+      }
+
+    override def unbind(key: String, id: InternalOrExternalId[T]): String = id.id
   }
 }
