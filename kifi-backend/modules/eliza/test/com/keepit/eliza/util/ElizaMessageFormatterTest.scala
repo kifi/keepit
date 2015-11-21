@@ -2,7 +2,7 @@ package com.keepit.eliza.util
 
 import org.specs2.mutable.Specification
 
-class MessageFormatterTest extends Specification {
+class ElizaMessageFormatterTest extends Specification {
   "MessageFormatter.toText" should {
     "remove look here v1 links" in {
       MessageFormatter.toText("""Hey [look here](x-kifi-sel:body>div#foo.bar:nth-child(3\)) man! [rad](x-kifi-sel:body>a#k.m)""") ===

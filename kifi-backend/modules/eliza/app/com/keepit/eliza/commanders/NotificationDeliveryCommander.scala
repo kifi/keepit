@@ -43,7 +43,7 @@ class NotificationDeliveryCommander @Inject() (
     notificationRepo: NotificationRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  def notifySendMessage(from: Id[User], message: Message, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
+  def notifySendMessage(from: Id[User], message: ElizaMessage, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
     val notifJson = buildMessageNotificationJson(
       message = message,
       thread = thread,
@@ -62,7 +62,7 @@ class NotificationDeliveryCommander @Inject() (
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
-  def updateEmailParticipantThreads(thread: MessageThread, newMessage: Message): Unit = {
+  def updateEmailParticipantThreads(thread: MessageThread, newMessage: ElizaMessage): Unit = {
     val emailParticipants = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
     val emailSenderOption = newMessage.from.asNonUser.collect {
       case emailSender: NonUserEmailParticipant => emailSender.address
@@ -85,7 +85,7 @@ class NotificationDeliveryCommander @Inject() (
 
   def notifyEmailParticipants(thread: MessageThread): Unit = { emailCommander.notifyEmailUsers(thread) }
 
-  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: Message, adderUserId: Id[User]): Unit = {
+  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, adderUserId: Id[User]): Unit = {
     new SafeFuture(shoebox.getBasicUsers(thread.participants.get.allUsers.toSeq) map { basicUsers =>
       val adderUserName = basicUsers(adderUserId).firstName + " " + basicUsers(adderUserId).lastName
       val theTitle: String = thread.pageTitle.getOrElse("New conversation")
@@ -155,12 +155,12 @@ class NotificationDeliveryCommander @Inject() (
   def notifyMessage(userId: Id[User], thread: MessageThread, message: MessageWithBasicUser): Unit =
     sendToUser(userId, Json.arr("message", thread.externalId.id, message))
 
-  def notifyRead(userId: Id[User], threadExtId: ExternalId[MessageThread], msgExtId: ExternalId[Message], nUrl: String, creationDate: DateTime): Unit = {
+  def notifyRead(userId: Id[User], threadExtId: ExternalId[MessageThread], msgExtId: ExternalId[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
     sendToUser(userId, Json.arr("message_read", nUrl, threadExtId.id, creationDate, msgExtId.id))
     notifyUnreadCount(userId, threadExtId)
   }
 
-  def notifyUnread(userId: Id[User], threadExtId: ExternalId[MessageThread], msgExtId: ExternalId[Message], nUrl: String, creationDate: DateTime): Unit = {
+  def notifyUnread(userId: Id[User], threadExtId: ExternalId[MessageThread], msgExtId: ExternalId[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
     sendToUser(userId, Json.arr("message_unread", nUrl, threadExtId.id, creationDate, msgExtId.id))
     notifyUnreadCount(userId, threadExtId)
   }
@@ -187,7 +187,7 @@ class NotificationDeliveryCommander @Inject() (
     notificationRouter.sendToUser(userId, data)
 
   private def buildMessageNotificationJson(
-    message: Message,
+    message: ElizaMessage,
     thread: MessageThread,
     messageWithBasicUser: MessageWithBasicUser,
     locator: String,
@@ -239,7 +239,7 @@ class NotificationDeliveryCommander @Inject() (
     sendPushNotification(request.userId, notification, request.force)
   }
 
-  def sendNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
+  def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
     SafeFuture {
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
       val lastSeenOpt: Option[DateTime] = orderedActivityInfo.filter(_.userId == userId).head.lastSeen
@@ -390,7 +390,7 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   // todo(Léo): Why send unread counts computed before marking stuff as read?
-  def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message], unreadMessages: Int, unreadNotifications: Int): DateTime = {
+  def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[ElizaMessage], unreadMessages: Int, unreadNotifications: Int): DateTime = {
     val message = db.readWrite(attempts = 2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)

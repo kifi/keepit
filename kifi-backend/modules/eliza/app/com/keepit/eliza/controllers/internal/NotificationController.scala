@@ -5,7 +5,7 @@ import com.keepit.common.controller.{ ElizaServiceController, ServiceController 
 import com.keepit.common.db.ExternalId
 import com.keepit.common.service.ServiceType
 import com.keepit.eliza.commanders.{ MessagingAnalytics, NotificationCommander }
-import com.keepit.eliza.model.{ MessageThread, Message }
+import com.keepit.eliza.model.{ MessageThread, ElizaMessage }
 import com.keepit.model.NotificationCategory
 import com.keepit.notify.model.{ Recipient, GroupingNotificationKind, NKind, UserRecipient }
 import com.keepit.notify.model.event.NotificationEvent
@@ -25,7 +25,7 @@ class NotificationController @Inject() (
         notif foreach { notifWithItems =>
           messagingAnalytics.sentGlobalNotification(
             Set(id),
-            ExternalId[Message](notifWithItems.relevantItem.externalId.id),
+            ExternalId[ElizaMessage](notifWithItems.relevantItem.externalId.id),
             ExternalId[MessageThread](notifWithItems.notification.externalId.id),
             NotificationCategory("new_system")
           )

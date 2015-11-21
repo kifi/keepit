@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.crypto.FakeCryptoModule
 import com.keepit.eliza.FakeElizaExternalEmailModule
 
-class MailMessageReceiverPluginTest extends Specification with ElizaTestInjector {
+class MailElizaMessageReceiverPluginTest extends Specification with ElizaTestInjector {
 
   "MailDiscussionMessageParser" should {
     "be successfully instantiated" in {

@@ -252,6 +252,7 @@ object Eliza extends Service {
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
     def getTotalMessageCountForGroup = ServiceRoute(POST, "/internal/eliza/getTotalMessageCountForGroup")
     def getParticipantsByThreadExtId(threadExtId: String) = ServiceRoute(GET, "/internal/eliza/getParticipantsByThreadExtId", Param("threadId", threadExtId))
+    def getDiscussionMessagesForKeeps = ServiceRoute(POST, "/internal/eliza/getDiscussionMessagesForKeeps")
   }
 }
 

@@ -252,7 +252,7 @@ class SharedWsMessagingController @Inject() (
     },
     "set_all_notifications_visited" -> {
       case JsString(notifId) +: _ =>
-        val messageId = ExternalId[Message](notifId)
+        val messageId = ExternalId[ElizaMessage](notifId)
         legacyNotificationCheck.ifNotifItemExists(notifId) {
           case (notif, item) =>
             val recipient = Recipient(socket.userId)
@@ -274,12 +274,12 @@ class SharedWsMessagingController @Inject() (
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = true)
         } {
-          messagingCommander.setUnread(socket.userId, ExternalId[Message](messageId))
+          messagingCommander.setUnread(socket.userId, ExternalId[ElizaMessage](messageId))
         }
     },
     "set_message_read" -> {
       case JsString(messageId) +: _ =>
-        val msgExtId = ExternalId[Message](messageId)
+        val msgExtId = ExternalId[ElizaMessage](messageId)
         val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
         contextBuilder += ("global", false)
         contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json

@@ -22,7 +22,7 @@ class MessageFetchingCommander @Inject() (
     shoebox: ShoeboxServiceClient) extends Logging {
 
   def getMessageWithBasicUser(
-    id: ExternalId[Message],
+    id: ExternalId[ElizaMessage],
     createdAt: DateTime,
     text: String,
     source: Option[MessageSource],
@@ -35,7 +35,7 @@ class MessageFetchingCommander @Inject() (
   }
 
   //this is for internal use (not just this class, also several other commanders and tests). Do not use from a controller!
-  def getThreadMessages(thread: MessageThread): Seq[Message] = db.readOnlyMaster { implicit session =>
+  def getThreadMessages(thread: MessageThread): Seq[ElizaMessage] = db.readOnlyMaster { implicit session =>
     log.info(s"[get_thread] trying to get thread messages for thread extId ${thread.externalId}")
     messageRepo.get(thread.id.get, 0)
   }
