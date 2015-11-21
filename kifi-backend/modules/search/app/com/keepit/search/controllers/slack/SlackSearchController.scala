@@ -81,8 +81,8 @@ class SlackSearchController @Inject() (
                         SlackAttachment.fromTitleAndImage(Title(title, Some(url)), thumbUrl = imageOpt.map("https:" + _.path.getUrl), color = "good")
                       }
                       val text = {
-                        if (relevantHits.isEmpty) s"We couldn't find any relevant link in this channel :("
-                        else s"Here are the most relevant links we found in this channel:"
+                        if (relevantHits.isEmpty) s"We couldn't find any relevant link for '${command.text}' in this channel :("
+                        else s"Here are the most relevant links we found in this channel for '${command.text}':"
                       }
                       (text, attachments)
                     }
