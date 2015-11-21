@@ -89,7 +89,7 @@ class SlackSearchController @Inject() (
                       }
                       val text = {
                         if (relevantHits.isEmpty) s"We couldn't find any relevant link for '${command.text}' in this channel :("
-                        else s"'${command.text}' top links in this channel:"
+                        else s"Top links for '${command.text}' in this channel:"
                       }
                       (text, attachments)
                     }
