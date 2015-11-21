@@ -10,7 +10,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient }
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.model.{ Keep, NormalizedURI }
-import com.keepit.model.UserExperimentType._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.SearchControllerUtil
@@ -19,9 +18,10 @@ import com.keepit.search.index.graph.keep.{ KeepFields }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.slack.models._
 import com.keepit.common.core._
-import play.api.libs.json.{ JsSuccess, Json }
+import play.api.libs.json.Json
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Success
 
 object SlackSearchController {
   val maxUris = 5
@@ -41,9 +41,10 @@ class SlackSearchController @Inject() (
 
   import SlackSearchController._
 
-  def search() = MaybeUserAction.async(parse.tolerantJson) { request =>
-    request.body.validate[SlackCommandRequest] match {
-      case JsSuccess(command, _) if command.command == SlackCommand.Kifi && command.token == KifiSlackApp.SLACK_COMMAND_TOKEN =>
+  def search() = MaybeUserAction.async(parse.text) { request =>
+
+    SlackCommandRequest.fromSlack(request.body) match {
+      case Success(command) if command.command == SlackCommand.Kifi && command.token == KifiSlackApp.SLACK_COMMAND_TOKEN =>
         shoeboxClient.getIntegrationsBySlackChannel(command.teamId, command.channelId).flatMap {
           case integrations =>
             val futureResponse = {
@@ -108,7 +109,7 @@ class SlackSearchController @Inject() (
             }
         }
       case invalidCommand =>
-        airbrake.notify(s"Invalid command: $invalidCommand")
+        airbrake.notify(s"Invalid Slack command: $invalidCommand")
         Future.successful(BadRequest("invalid_command"))
     }
   }
