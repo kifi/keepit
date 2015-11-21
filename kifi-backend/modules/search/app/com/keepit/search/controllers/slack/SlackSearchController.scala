@@ -80,7 +80,7 @@ class SlackSearchController @Inject() (
                         val keepId = hit.keepId.map(Id[Keep](_))
                         val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
                         SlackAttachment(
-                          service = DomainToNameMapper.getNameFromUrl(url),
+                          pretext = DomainToNameMapper.getNameFromUrl(url),
                           title = Some(Title(title, Some(url))),
                           text = summary.flatMap(_.article.description),
                           thumbUrl = imageOpt.map("https:" + _.path.getUrl),
