@@ -90,7 +90,7 @@ class SlackSearchController @Inject() (
                 case Some(emptyIntegration) =>
                   val text = s"We haven't captured any link from this channel yet. Messages whose links have been captured will be marked with :heavy_check_mark:!"
                   Future.successful((text, Seq.empty))
-                case None =>
+                case None if integrations.nonEmpty =>
                   shoeboxClient.getBasicLibraryDetails(integrations.map(_.libraryId).toSet, idealImageSize = idealImageSize, None).map { libraryInfos =>
                     val text = s"Your Kifi integrations with this channel are currently turned off:"
                     val attachments = libraryInfos.values.toSeq.map { info =>
@@ -98,6 +98,9 @@ class SlackSearchController @Inject() (
                     }
                     (text, attachments)
                   }
+                case _ =>
+                  val text = "Links from this channel are not being captured by Kifi. Add an integration maybe?"
+                  Future.successful((text, Seq.empty))
               }
               futureTextAndAttachments.imap { case (text, attachments) => SlackCommandResponse(ResponseType.Ephemeral, text, attachments) }
             }
