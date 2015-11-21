@@ -225,15 +225,11 @@ object SlackCommandRequest {
     (__ \ "response_url").read[String]
   )(apply _)
 
-  case class InvalidSlackCommandRequest(command: String, missingKey: String) extends Exception(s"Invalid Slack command request, $missingKey not found: $command")
+  case class InvalidSlackCommandRequest(commandForm: Map[String, Seq[String]], missingKey: String) extends Exception(s"Invalid Slack command request, $missingKey not found: $commandForm")
 
-  def fromSlack(command: String): Try[SlackCommandRequest] = Try {
-    val parameters = command.split("\n").map { param =>
-      val Array(key, value) = param.split("=")
-      key -> value
-    }.toMap
+  def fromSlack(commandForm: Map[String, Seq[String]]): Try[SlackCommandRequest] = Try {
 
-    def get(key: String) = parameters.get(key).getOrElse { throw new InvalidSlackCommandRequest(command, key) }
+    def get(key: String): String = commandForm.get(key).flatMap(_.headOption).getOrElse { throw new InvalidSlackCommandRequest(commandForm, key) }
 
     SlackCommandRequest(
       SlackCommandToken(get("token")),
