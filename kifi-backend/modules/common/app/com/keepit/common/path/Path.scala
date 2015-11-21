@@ -12,7 +12,13 @@ sealed class Path(private val value: String) {
 
   def isEncoded: Boolean = false
 
-  def absolute: String = Path.base + relative
+  def absolute: String = {
+    if (relative.startsWith("/")) {
+      Path.base + relative.drop(1)
+    } else {
+      Path.base + relative
+    }
+  }
 
   def relative: String = value
 
