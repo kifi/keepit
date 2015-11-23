@@ -150,6 +150,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
            "keeps":[
             {
               "id":"${bookmark2.externalId.toString}",
+              "pubId": "${Keep.publicId(bookmark2.id.get).id}",
               "title":"A1",
               "url":"http://www.amazon.com/",
               "isPrivate":false,
@@ -172,6 +173,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
               },
             {
               "id":"${bookmark1.externalId.toString}",
+              "pubId":"${Keep.publicId(bookmark1.id.get).id}",
               "title":"G1",
               "url":"http://www.google.com/",
               "isPrivate":false,
@@ -265,6 +267,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
             "keeps":[
               {
                 "id":"${bookmark2.externalId.toString}",
+                "pubId":"${Keep.publicId(bookmark2.id.get).id}",
                 "title":"A1",
                 "url":"http://www.amazon.com/",
                 "isPrivate":false,
@@ -328,6 +331,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                    "keeps":[
                     {
                       "id":"${keeps1(1).externalId.toString}",
+                      "pubId": "${Keep.publicId(keeps1(1).id.get).id}",
                       "url":"${keeps1(1).url}",
                       "isPrivate":${keeps1(1).isPrivate},
                       "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
@@ -349,6 +353,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
+                      "pubId": "${Keep.publicId(keeps1(0).id.get).id}",
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
                       "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
@@ -413,6 +418,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                    "keeps":[
                     {
                       "id":"${keeps1(0).externalId.toString}",
+                      "pubId": "${Keep.publicId(keeps1(0).id.get).id}",
                       "url":"${keeps1(0).url}",
                       "isPrivate":${keeps1(0).isPrivate},
                       "user":{"id":"${u1.externalId}","firstName":"Shanee","lastName":"Smith","pictureName":"0.jpg","username":"test"},
@@ -475,6 +481,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                    "keeps":[
                                     {
                                       "id":"${keeps3(2).externalId.toString}",
+                                      "pubId": "${Keep.publicId(keeps3(2).id.get).id}",
                                       "url":"${keeps3(2).url}",
                                       "isPrivate":${keeps3(2).isPrivate},
                                       "user":{"id":"${u3.externalId}","firstName":"Discoveryer","lastName":"DiscoveryetyDiscoveryyDiscovery","pictureName":"0.jpg","username":"test"},
@@ -496,6 +503,7 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                     },
                                     {
                                       "id":"${keeps3(0).externalId.toString}",
+                                      "pubId": "${Keep.publicId(keeps3(0).id.get).id}",
                                       "url":"${keeps3(0).url}",
                                       "isPrivate":${keeps3(0).isPrivate},
                                       "user":{"id":"${u3.externalId}","firstName":"Discoveryer","lastName":"DiscoveryetyDiscoveryyDiscovery","pictureName":"0.jpg","username":"test"},

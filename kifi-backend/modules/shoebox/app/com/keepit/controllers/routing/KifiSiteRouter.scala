@@ -23,7 +23,7 @@ import views.html
 import views.html.mobile.mobileAppRedirect
 
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.{ Success, Failure, Try }
 
 @Singleton // for performance
 class KifiSiteRouter @Inject() (
@@ -31,6 +31,8 @@ class KifiSiteRouter @Inject() (
   userRepo: UserRepo,
   orgRepo: OrganizationRepo,
   libraryRepo: LibraryRepo,
+  libraryMembershipRepo: LibraryMembershipRepo,
+  keepRepo: KeepRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   userCommander: UserCommander,
   handleCommander: HandleCommander,
@@ -42,6 +44,8 @@ class KifiSiteRouter @Inject() (
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
   orgMetadataCache: OrgMetadataCache,
+  keepMetadataCache: KeepMetadataCache,
+  userExperimentRepo: UserExperimentRepo,
   applicationConfig: FortyTwoConfig,
   organizationAnalytics: OrganizationAnalytics,
   airbrake: AirbrakeNotifier,
@@ -230,6 +234,37 @@ class KifiSiteRouter @Inject() (
     } getOrElse notFound(request)
   }
 
+  def serveWebAppIfKeepFound(title: String, pubId: PublicId[Keep]) = WebAppPage { implicit request =>
+    val experiments = request match {
+      case ur: UserRequest[_] => ur.experiments
+      case _ => Set.empty[UserExperimentType]
+    }
+    if (experiments.contains(UserExperimentType.ADMIN)) {
+      Keep.decodePublicId(pubId).map(keepId => keepId -> db.readOnlyReplica(implicit s => keepRepo.get(keepId))) match {
+        case Failure(ex) => notFound(request)
+        case Success((id, keep)) => {
+          val canSeeKeep = db.readOnlyReplica { implicit s =>
+            libraryRepo.get(keep.libraryId.get).visibility match {
+              case LibraryVisibility.SECRET => request.userIdOpt.exists { userId =>
+                keep.libraryId.exists { libraryId =>
+                  libraryMembershipRepo.getWithLibraryId(libraryId).exists(_.userId == userId)
+                }
+              }
+              case LibraryVisibility.ORGANIZATION => request.userIdOpt.exists { userId =>
+                keep.organizationId.exists { orgId =>
+                  orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId)
+                }
+              }
+              case _ => true
+            }
+          }
+          if (!canSeeKeep) notFound(request)
+          else AngularApp.app(() => keepMetadata(keep))
+        }
+      }
+    } else notFound(request)
+  }
+
   private def lookupUser(handle: Handle) = {
     lookupByHandle(handle) flatMap {
       case (Left(org), _) => None
@@ -340,6 +375,16 @@ class KifiSiteRouter @Inject() (
   } catch {
     case e: Throwable =>
       airbrake.notify(s"on getting library metadata for $library", e)
+      Future.successful("")
+  }
+
+  private def keepMetadata(keep: Keep): Future[String] = try {
+    keepMetadataCache.getOrElseFuture(KeepMetadataKey(keep.id.get)) {
+      pageMetaTagsCommander.keepMetaTags(keep).imap(_.formatOpenGraphForKeep)
+    }
+  } catch {
+    case e: Throwable =>
+      airbrake.notify(s"on getting keep metadata for keep ${keep.id.get}", e)
       Future.successful("")
   }
 

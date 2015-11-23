@@ -18,6 +18,7 @@ object BasicLibraryWithKeptAt {
 
 case class KeepInfo(
   id: Option[ExternalId[Keep]] = None,
+  pubId: Option[PublicId[Keep]] = None,
   title: Option[String],
   url: String,
   isPrivate: Boolean, // deprecated
@@ -52,6 +53,7 @@ object KeepInfo {
       import com.keepit.common.core._
       def writes(o: KeepInfo) = Json.obj(
         "id" -> o.id,
+        "pubId" -> o.pubId,
         "title" -> o.title,
         "url" -> o.url,
         "isPrivate" -> o.isPrivate,
@@ -81,6 +83,6 @@ object KeepInfo {
   // Are you looking for a decorated keep (with tags, rekeepers, etc)?
   // Use KeepsCommander#decorateKeepsIntoKeepInfos(userId, keeps)
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId), sourceAttribution = None)
+    KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId), sourceAttribution = None)
   }
 }

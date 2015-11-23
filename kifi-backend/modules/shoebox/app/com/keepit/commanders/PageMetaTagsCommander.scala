@@ -2,7 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.concurrent.FutureHelpers
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -15,6 +15,7 @@ import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.social.SocialNetworks
 import com.keepit.common.core._
+import org.apache.commons.lang3.RandomStringUtils
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -127,7 +128,7 @@ class PageMetaTagsCommander @Inject() (
     if (library.visibility != PUBLISHED) {
       Future.successful(PublicPageMetaPrivateTags(urlPathOnly))
     } else {
-      val relatedLibraiesLinksF: Future[Seq[String]] = relatedLibrariesLinks(library)
+      val relatedLibrariesLinksF: Future[Seq[String]] = relatedLibrariesLinks(library)
       val metaInfoF = db.readOnlyMasterAsync { implicit s =>
         val facebookId: Option[String] = socialUserInfoRepo.getByUser(library.ownerId).filter(i => i.networkType == SocialNetworks.FACEBOOK).map(_.socialId.id).headOption
 
@@ -147,7 +148,7 @@ class PageMetaTagsCommander @Inject() (
       }
       for {
         (owner, url, imageUrls, facebookId, lowQualityLibrary) <- metaInfoF
-        relatedLibraiesLinks <- relatedLibraiesLinksF
+        relatedLibrariesLinks <- relatedLibrariesLinksF
         altDesc <- altDescF
       } yield {
         PublicPageMetaFullTags(
@@ -164,7 +165,7 @@ class PageMetaTagsCommander @Inject() (
           unsafeLastName = owner.lastName,
           getUserProfileUrl(owner.username),
           noIndex = lowQualityLibrary,
-          related = relatedLibraiesLinks)
+          related = relatedLibrariesLinks)
       }
     }
   }
@@ -173,17 +174,21 @@ class PageMetaTagsCommander @Inject() (
   private def getProfileImageUrl(user: User): String =
     s"$cdnBaseUrl/users/${user.externalId}/pics/200/${user.pictureName.getOrElse(S3UserPictureConfig.defaultName)}.jpg"
 
-  private def getUserProfileUrl(username: Username): String = {
-    val fullUrl = s"${applicationConfig.applicationBaseUrl}${userPathOnly(username)}"
-    if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
-  }
-  private def getOrgProfileUrl(primaryHandle: PrimaryOrganizationHandle): String = {
-    val fullUrl = s"${applicationConfig.applicationBaseUrl}${orgPathOnly(primaryHandle)}"
+  private def getProfileUrl[T](info: T, subPath: T => String): String = {
+    val fullUrl = s"${applicationConfig.applicationBaseUrl}${subPath(info)}"
     if (fullUrl.startsWith("http") || fullUrl.startsWith("https:")) fullUrl else s"http:$fullUrl"
   }
 
+  private def getUserProfileUrl(username: Username): String = getProfileUrl(username, userPathOnly)
+  private def getOrgProfileUrl(primaryHandle: PrimaryOrganizationHandle): String = getProfileUrl(primaryHandle, orgPathOnly)
+  private def getKeepProfileUrl(keep: Keep): String = getProfileUrl(keep, keepPathOnly)
+
   private def userPathOnly(username: Username): String = s"/${username.value}"
   private def orgPathOnly(primaryHandle: PrimaryOrganizationHandle): String = s"/${primaryHandle.original.value}"
+  private def keepPathOnly(keep: Keep): String = {
+    val pubId = Keep.publicId(keep.id.get)
+    s"/${keep.titlePathString}/k/${pubId.id}"
+  }
 
   def userMetaTags(user: User, tab: UserProfileTab): Future[PublicPageMetaTags] = {
     val urlPath = userPathOnly(user.username)
@@ -244,6 +249,32 @@ class PageMetaTagsCommander @Inject() (
         profileUrl = url.getOrElse(""),
         noIndex = countLibraries == 0, //no public libraries - no index
         related = Seq.empty)
+    }
+  }
+
+  def keepMetaTags(keep: Keep): Future[PublicPageMetaTags] = {
+    val urlPath = keepPathOnly(keep)
+    val url = getKeepProfileUrl(keep)
+    val keeperFut = db.readOnlyMasterAsync { implicit s =>
+      basicUserRepo.load(keep.userId)
+    }
+    keeperFut.map { keeper =>
+      PublicPageMetaFullTags( // todo(cam): see with Eishay if we can have more fun below
+        unsafeTitle = keep.title.getOrElse(""),
+        url = url,
+        urlPathOnly = urlPath,
+        feedName = None,
+        unsafeDescription = keep.note.orElse(keep.title).getOrElse(""),
+        images = Seq(), // todo(cam): get this from embeddly
+        facebookId = None,
+        createdAt = keep.createdAt,
+        updatedAt = keep.updatedAt,
+        unsafeFirstName = keeper.firstName,
+        unsafeLastName = keeper.lastName,
+        profileUrl = url,
+        noIndex = true, // not sure if this is okay
+        related = Seq.empty
+      )
     }
   }
 }

@@ -1,19 +1,22 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
+import org.apache.commons.lang3.RandomStringUtils
 
 @Singleton
 class PathCommander @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
-    userRepo: UserRepo) {
+    userRepo: UserRepo,
+    implicit val config: PublicIdConfiguration) {
 
   // TODO(ryan): I feel bad for "fixing" this problem like this, but a bunch of existing
   // code directly calls getPathForLibrary, which calls LibraryPathHelper, and that class
@@ -22,6 +25,8 @@ class PathCommander @Inject() (
   def pathForLibrary(lib: Library): Path = Path(getPathForLibrary(lib).tail)
 
   def pathForUser(user: User): Path = Path(user.username.value)
+
+  def pathForKeep(keep: Keep): Path = Path(s"k/${keep.titlePathString}/${Keep.publicId(keep.id.get).id}")
 
   def pathForOrganization(org: Organization): Path = Path(org.handle.value)
 
