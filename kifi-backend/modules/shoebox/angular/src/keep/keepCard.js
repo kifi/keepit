@@ -107,7 +107,7 @@ angular.module('kifi')
           // Don't change until the link is updated to be a bit more secure:
           scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1 && keep.summary.hasContent;
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
-            keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret';
+            keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
 
           var setImage = function(galleryView) {
             scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);

@@ -267,13 +267,7 @@ angular.module('kifi')
       .state('keepPage', {
         url: '/k/:title/:pubId',
         templateUrl: 'keep/keepPage.tpl.html',
-        controller: 'KeepPageCtrl',
-        resolve: {
-          keepService: 'keepActionService',
-          keep: ['keepService', '$stateParams', function(keepService, $stateParams){
-            return keepService.getFullKeepInfo($stateParams.pubId);
-          }]
-        }
+        controller: 'KeepPageCtrl'
       })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {

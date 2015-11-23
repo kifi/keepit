@@ -1,5 +1,8 @@
 <div class="kf-keep-page">
-  <div class="kf-keep">
+  <div class="kf-keep-page-loading-spinner-container" ng-if="!loaded">
+    <div kf-loading-spinner class="kf-keep-page-loading-spinner" hide="loaded"></div>
+  </div>
+  <div class="kf-keep" ng-if="keep">
     <div kf-keep-card="keep" boxed="true" gallery-view="gallery" click-callback="keepClick(keep, event)"></div>
   </div>
 </div>
