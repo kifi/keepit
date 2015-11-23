@@ -1,6 +1,6 @@
 package com.keepit.eliza
 
-import com.keepit.discussion.Message
+import com.keepit.discussion.{Discussion, Message}
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
@@ -101,7 +101,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
     Future.successful(true)
   }
 
-  def getDiscussionMessagesForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Seq[Message]]] = {
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
     Future.successful(Map.empty)
   }
 

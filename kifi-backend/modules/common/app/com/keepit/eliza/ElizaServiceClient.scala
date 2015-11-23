@@ -2,7 +2,7 @@ package com.keepit.eliza
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.store.S3UserPictureConfig
-import com.keepit.discussion.Message
+import com.keepit.discussion.{Discussion, Message}
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
@@ -125,7 +125,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int]
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
-  def getDiscussionMessagesForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Seq[Message]]]
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -282,9 +282,9 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getDiscussionMessagesForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Seq[Message]]] = {
-    call(Eliza.internal.getDiscussionMessagesForKeeps, body = Json.toJson(keepIds)).map { response =>
-      response.json.as[Map[Id[Keep], Seq[Message]]]
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
+    call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(keepIds)).map { response =>
+      response.json.as[Map[Id[Keep], Discussion]]
     }
   }
 }

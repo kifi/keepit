@@ -130,13 +130,13 @@ class KeepDecoratorImpl @Inject() (
       } getOrElse Set.empty
 
       val keepIds = keeps.map(_.id.get).toSet
-      val messagesByKeepFut = eliza.getDiscussionMessagesForKeeps(keepIds)
+      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds)
 
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
-        messagesByKeep <- messagesByKeepFut
+        discussionsByKeep <- discussionsByKeepFut
       } yield {
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
@@ -184,7 +184,7 @@ class KeepDecoratorImpl @Inject() (
               organization = keep.libraryId.flatMap(idToBasicOrg.get),
               sourceAttribution = sourceAttrOpt,
               note = keep.note,
-              discussionMessages = messagesByKeep.getOrElse(keep.id.get, Seq.empty)
+              discussion = discussionsByKeep.get(keep.id.get)
             )
         }
         keepsInfo

@@ -2,7 +2,7 @@ package com.keepit.eliza.controllers.internal
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.time.Clock
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
@@ -150,10 +150,10 @@ class ElizaController @Inject() (
     Ok(Json.toJson(participants))
   }
 
-  def getDiscussionMessagesForKeeps = Action(parse.tolerantJson) { request =>
+  def getDiscussionsForKeeps = Action(parse.tolerantJson) { request =>
     val keepIds = request.body.as[Set[Id[Keep]]]
     // TODO(ryan): actually implement this
-    val messagesByKeep = keepIds.map(keepId => keepId -> Seq.empty[Message]).toMap
-    Ok(Json.toJson(messagesByKeep))
+    val discussionsByKeep = Map.empty[Id[Keep], Discussion]
+    Ok(Json.toJson(discussionsByKeep))
   }
 }

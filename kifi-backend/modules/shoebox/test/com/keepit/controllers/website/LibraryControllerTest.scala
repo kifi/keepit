@@ -1023,8 +1023,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "summary": {},
                 "siteName": "Amazon",
                 "libraryId": "l7jlKlnA36Su",
-                "library": ${Json.toJson(libraryCard(lib1.id.get))},
-                "messages": []
+                "library": ${Json.toJson(libraryCard(lib1.id.get))}
               },
               {
                 "id": "${keep1.externalId}",
@@ -1047,8 +1046,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "summary": {},
                 "siteName": "Google",
                 "libraryId": "l7jlKlnA36Su",
-                "library": ${Json.toJson(libraryCard(lib1.id.get))},
-                "messages": []
+                "library": ${Json.toJson(libraryCard(lib1.id.get))}
               }
             ],
             "numKeeps": 2
@@ -1305,9 +1303,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           s"""
             {
               "keeps":[
-                {"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]},
-                {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]},
-                {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]}
+                {"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}"},
+                {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}"},
+                {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}"}
               ],
               "failures":[],
               "alreadyKept":[]
@@ -1330,9 +1328,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           s"""
             {
               "keeps":[
-                {"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}","messages":[]},
-                {"id":"${k5.externalId}","pubId": "${Keep.publicId(k5.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"${pubId2.id}","messages":[]},
-                {"id":"${k6.externalId}","pubId": "${Keep.publicId(k6.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":true, "libraryId":"${pubId2.id}","messages":[]}
+                {"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"},
+                {"id":"${k5.externalId}","pubId": "${Keep.publicId(k5.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"${pubId2.id}"},
+                {"id":"${k6.externalId}","pubId": "${Keep.publicId(k6.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":true, "libraryId":"${pubId2.id}"}
               ],
               "failures":[],
               "alreadyKept":[]
@@ -1353,7 +1351,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               {
                 "keeps":[],
                 "failures":[],
-                "alreadyKept":[{"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11zzz","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}","messages":[]}]
+                "alreadyKept":[{"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11zzz","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"}]
               }
             """.stripMargin
         ))
@@ -1408,8 +1406,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
             {
               "failures":["$k4Id"],
               "unkept":[
-                {"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]},
-                {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]}
+                {"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}"},
+                {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}"}
               ]
             }
           """.stripMargin
@@ -1425,7 +1423,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result3)) must equalTo(Json.parse(
           s"""
             {
-              "unkept": {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]}
+              "unkept": {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}"}
             }
           """.stripMargin
         ))

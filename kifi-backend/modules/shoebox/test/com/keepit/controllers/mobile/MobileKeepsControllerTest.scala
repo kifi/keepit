@@ -346,8 +346,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "summary":{},
             "siteName":"Amazon",
             "libraryId":"${pubLibId1.id}",
-            "library": ${Json.toJson(libraryCard(lib1.id.get))},
-            "messages":[]
+            "library": ${Json.toJson(libraryCard(lib1.id.get))}
             },
           {
             "id":"${bookmark1.externalId.toString}",
@@ -373,8 +372,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             "summary":{},
             "siteName":"Google",
             "libraryId":"${pubLibId1.id}",
-            "library": ${Json.toJson(libraryCard(lib1.id.get))},
-            "messages":[]
+            "library": ${Json.toJson(libraryCard(lib1.id.get))}
             }
         ]}
       """)
@@ -438,8 +436,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "summary":{},
                       "siteName":"Kifi",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
-                      "messages":[]
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
@@ -461,8 +458,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
-                      "messages":[]
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     }
                   ],
                   "helprank":"click"
@@ -522,8 +518,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
-                      "messages":[]
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
                     }
                   ],
                   "helprank":"click"
@@ -618,8 +613,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                 "summary":{},
                 "siteName":"Amazon",
                 "libraryId":"${pubLibId1.id}",
-                "library": ${Json.toJson(libraryCard(lib1.id.get))},
-                "messages":[]
+                "library": ${Json.toJson(libraryCard(lib1.id.get))}
               }
             ]
           }
@@ -735,9 +729,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
         val expected = Json.parse(s"""
           {
-            "keeps":[{"id":"${keeps(0).externalId.id}","pubId":"${Keep.publicId(keeps(0).id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su","messages":[]},
-                     {"id":"${keeps(1).externalId.id}","pubId":"${Keep.publicId(keeps(1).id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su","messages":[]},
-                     {"id":"${keeps(2).externalId.id}","pubId":"${Keep.publicId(keeps(2).id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su","messages":[]}],
+            "keeps":[{"id":"${keeps(0).externalId.id}","pubId":"${Keep.publicId(keeps(0).id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
+                     {"id":"${keeps(1).externalId.id}","pubId":"${Keep.publicId(keeps(1).id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
+                     {"id":"${keeps(2).externalId.id}","pubId":"${Keep.publicId(keeps(2).id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su"}],
             "addedToCollection":3
           }
         """)
