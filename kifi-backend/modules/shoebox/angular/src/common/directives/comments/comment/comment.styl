@@ -1,0 +1,36 @@
+.kf-keep-comment-container
+  width: 100%
+  height: auto
+  display: flex
+  flex-direction: row
+
+  .kf-keep-comment-img
+    align-self: flex-start
+    border: none
+    outline: none
+    width: 34px
+    height: 34px
+    background: #3e495533
+    border-radius: 17px
+    flex-shrink: 0
+    margin-right: 10px
+
+  .kf-keep-comment-content
+    display: flex
+    flex-direction: column
+
+    .kf-keep-comment-commenter-text
+      white-space: pre-wrap
+      word-wrap: break-word
+      flex-grow: 1
+      color: #3e4955FF
+      font-size: 14px
+
+    .kf-keep-comment-commenter-name
+      font-weight: bold
+      color: accentGreen
+      margin-right: 5px
+
+      &:hover
+        text-decoration: underline
+        cursor: pointer
