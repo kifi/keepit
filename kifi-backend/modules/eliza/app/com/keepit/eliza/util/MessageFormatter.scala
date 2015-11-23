@@ -18,7 +18,7 @@ object MessageFormatter extends Logging {
   private[this] val escapedBackslashOrRightParenRe = """\\([\)\\])""".r
 
   /**
-   * Formats [[com.keepit.eliza.model.Message.messageText]] (in a markdown-based format) as plain text.
+   * Formats [[com.keepit.eliza.model.ElizaMessage.messageText]] (in a markdown-based format) as plain text.
    * Removes "look here" links, preserving only the link text.
    */
   def toText(messageText: String): String = {
@@ -26,7 +26,7 @@ object MessageFormatter extends Logging {
   }
 
   /**
-   * Parses message segments from [[com.keepit.eliza.model.Message.messageText]] (in a markdown-based format)
+   * Parses message segments from [[com.keepit.eliza.model.ElizaMessage.messageText]] (in a markdown-based format)
    */
   def parseMessageSegments(msg: String): Seq[MessageSegment] = Try {
 

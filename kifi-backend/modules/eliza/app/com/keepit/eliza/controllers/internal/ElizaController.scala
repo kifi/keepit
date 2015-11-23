@@ -2,11 +2,12 @@ package com.keepit.eliza.controllers.internal
 
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.time.Clock
+import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza._
 import com.keepit.eliza.controllers.WebSocketRouter
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ Username, Library, User }
+import com.keepit.model.{ Keep, Username, Library, User }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.realtime._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
@@ -149,4 +150,10 @@ class ElizaController @Inject() (
     Ok(Json.toJson(participants))
   }
 
+  def getDiscussionsForKeeps = Action(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Set[Id[Keep]]]
+    // TODO(ryan): actually implement this
+    val discussionsByKeep = Map.empty[Id[Keep], Discussion]
+    Ok(Json.toJson(discussionsByKeep))
+  }
 }

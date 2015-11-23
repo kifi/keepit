@@ -12,7 +12,7 @@ import org.joda.time.DateTime
 import scala.Some
 import com.keepit.common.crypto.ModelWithPublicId
 
-case class UserThreadNotification(thread: Id[MessageThread], message: Id[Message])
+case class UserThreadNotification(thread: Id[MessageThread], message: Id[ElizaMessage])
 
 case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], userId: Id[User], lastActive: Option[DateTime], started: Boolean, lastSeen: Option[DateTime])
 
@@ -26,7 +26,7 @@ case class UserThread(
   lastSeen: Option[DateTime],
   unread: Boolean = false,
   muted: Boolean = false,
-  lastMsgFromOther: Option[Id[Message]],
+  lastMsgFromOther: Option[Id[ElizaMessage]],
   lastNotification: JsValue, // Option[JsObject] would have been a better choice (using database null instead of 'null')
   notificationUpdatedAt: DateTime = currentDateTime,
   notificationLastSeen: Option[DateTime] = None,
@@ -47,13 +47,13 @@ case class UserThread(
 }
 
 object UserThread {
-  def toUserThreadView(userThread: UserThread, messages: Seq[Message], messageThread: MessageThread): UserThreadView = {
+  def toUserThreadView(userThread: UserThread, messages: Seq[ElizaMessage], messageThread: MessageThread): UserThreadView = {
     UserThreadView(
       pageTitle = messageThread.pageTitle,
       uriId = userThread.uriId,
       lastSeen = userThread.lastSeen,
       notificationUpdatedAt = userThread.notificationUpdatedAt,
-      messages = messages map Message.toMessageView
+      messages = messages map ElizaMessage.toMessageView
     )
   }
 }

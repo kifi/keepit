@@ -11,7 +11,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class MessageWithBasicUser(
-  id: ExternalId[Message],
+  id: ExternalId[ElizaMessage],
   createdAt: DateTime,
   text: String,
   source: Option[MessageSource],
@@ -24,7 +24,7 @@ case class MessageWithBasicUser(
 object MessageWithBasicUser {
   implicit val basicUserLikeEntityFormat = BasicUserLikeEntity.format
   implicit val format = (
-    (__ \ 'id).format(ExternalId.format[Message]) and
+    (__ \ 'id).format(ExternalId.format[ElizaMessage]) and
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'text).format[String] and
     (__ \ 'source).formatNullable[MessageSource] and

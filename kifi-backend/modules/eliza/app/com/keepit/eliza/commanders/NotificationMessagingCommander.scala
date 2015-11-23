@@ -74,7 +74,7 @@ class NotificationMessagingCommander @Inject() (
       val nUrl = ""
       webSocketRouter.sendToUser(userId, Json.arr(if (unread) "message_unread" else "message_read", nUrl, notif.externalId, item.eventTime, item.externalId))
       if (unread) {
-        messagingAnalytics.clearedNotification(userId, ExternalId[Message](item.externalId.id), ExternalId[MessageThread](notif.externalId.id), context)
+        messagingAnalytics.clearedNotification(userId, ExternalId[ElizaMessage](item.externalId.id), ExternalId[MessageThread](notif.externalId.id), context)
       }
       sendUnreadNotificationsWith(notif, Recipient(userId))
     }

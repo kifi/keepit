@@ -14,6 +14,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.controllers.website.DeepLinkRouter
+import com.keepit.discussion.Message
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient

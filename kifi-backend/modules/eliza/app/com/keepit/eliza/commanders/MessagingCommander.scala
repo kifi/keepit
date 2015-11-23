@@ -66,7 +66,7 @@ class MessagingCommander @Inject() (
     //get all basic users
     val userId2BasicUserF = shoebox.getBasicUsers(allInvolvedUsers.toSeq)
     //get all messages
-    val messagesByThread: Map[Id[MessageThread], Seq[Message]] = threads.map { thread =>
+    val messagesByThread: Map[Id[MessageThread], Seq[ElizaMessage]] = threads.map { thread =>
       (thread.id.get, basicMessageCommander.getThreadMessages(thread))
     }.toMap
     //get user_threads
@@ -171,7 +171,7 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext): Future[(MessageThread, Message)] = {
+  def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext): Future[(MessageThread, ElizaMessage)] = {
     updateMessageSearchHistoryWithEmailAddresses(from, nonUserRecipients)
     val userParticipants = (from +: userRecipients).distinct
     val tStart = currentDateTime
@@ -223,7 +223,7 @@ class MessagingCommander @Inject() (
         //this is code for a special status message used in the client to do the email preview
         if (nonUserRecipients.nonEmpty) {
           db.readWrite { implicit session =>
-            messageRepo.save(Message(
+            messageRepo.save(ElizaMessage(
               from = MessageSender.System,
               thread = thread.id.get,
               threadExtId = thread.externalId,
@@ -243,19 +243,19 @@ class MessagingCommander @Inject() (
 
   }
 
-  def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
     log.info(s"Sending message from non-user with id ${nut.id} to thread ${nut.threadId}")
     val thread = db.readOnlyMaster { implicit session => threadRepo.get(nut.threadId) }
     sendMessage(MessageSender.NonUser(nut.participant), thread, messageText, source, urlOpt)
   }
 
-  def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessageWithUserThread(userThread: UserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
     log.info(s"Sending message from user with id ${userThread.user} to thread ${userThread.threadId}")
     val thread = db.readOnlyMaster { implicit session => threadRepo.get(userThread.threadId) }
     sendMessage(MessageSender.User(userThread.user), thread, messageText, source, urlOpt)
   }
 
-  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
     val thread =
       db.readOnlyMaster { implicit session =>
         threadRepo.get(threadId)
@@ -264,14 +264,14 @@ class MessagingCommander @Inject() (
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, Message) = {
+  def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
     val thread = db.readOnlyMaster { implicit session =>
       threadRepo.get(threadId)
     }
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
-  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, Message) = {
+  private def sendMessage(from: MessageSender, thread: MessageThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI], nUriIdOpt: Option[Id[NormalizedURI]] = None, isNew: Option[Boolean] = None)(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
     from match {
       case MessageSender.User(id) =>
         if (!thread.containsUser(id)) throw NotAuthorizedException(s"User $id not authorized to send message on thread ${thread.id.get}")
@@ -283,7 +283,7 @@ class MessagingCommander @Inject() (
 
     log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite { implicit session =>
-      messageRepo.save(Message(
+      messageRepo.save(ElizaMessage(
         id = None,
         from = from,
         thread = thread.id.get,
@@ -443,7 +443,7 @@ class MessagingCommander @Inject() (
           None
         } else {
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers, actuallyNewNonUsers))
-          val message = messageRepo.save(Message(
+          val message = messageRepo.save(ElizaMessage(
             from = MessageSender.System,
             thread = thread.id.get,
             threadExtId = thread.externalId,
@@ -481,8 +481,8 @@ class MessagingCommander @Inject() (
     new SafeFuture[Boolean](haveBeenAdded, Some("Adding Participants to Thread"))
   }
 
-  def setRead(userId: Id[User], msgExtId: ExternalId[Message])(implicit context: HeimdalContext): Unit = {
-    val (message: Message, thread: MessageThread) = db.readOnlyMaster { implicit session =>
+  def setRead(userId: Id[User], msgExtId: ExternalId[ElizaMessage])(implicit context: HeimdalContext): Unit = {
+    val (message: ElizaMessage, thread: MessageThread) = db.readOnlyMaster { implicit session =>
       val message = messageRepo.get(msgExtId)
       (message, threadRepo.get(message.thread))
     }
@@ -494,8 +494,8 @@ class MessagingCommander @Inject() (
     notificationDeliveryCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt)
   }
 
-  def setUnread(userId: Id[User], msgExtId: ExternalId[Message]): Unit = {
-    val (message: Message, thread: MessageThread) = db.readOnlyMaster { implicit session =>
+  def setUnread(userId: Id[User], msgExtId: ExternalId[ElizaMessage]): Unit = {
+    val (message: ElizaMessage, thread: MessageThread) = db.readOnlyMaster { implicit session =>
       val message = messageRepo.get(msgExtId)
       (message, threadRepo.get(message.thread))
     }
@@ -513,7 +513,7 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def setLastSeen(userId: Id[User], messageExtId: ExternalId[Message]): Unit = {
+  def setLastSeen(userId: Id[User], messageExtId: ExternalId[ElizaMessage]): Unit = {
     val message = db.readOnlyMaster { implicit session => messageRepo.get(messageExtId) }
     setLastSeen(userId, message.thread, Some(message.createdAt))
   }
@@ -592,7 +592,7 @@ class MessagingCommander @Inject() (
     validOrgRecipients: Seq[PublicId[Organization]],
     url: String,
     userId: Id[User],
-    initContext: HeimdalContext): Future[(Message, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
+    initContext: HeimdalContext): Future[(ElizaMessage, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
     val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients)
