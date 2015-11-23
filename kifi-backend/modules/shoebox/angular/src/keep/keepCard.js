@@ -84,6 +84,7 @@ angular.module('kifi')
         keepCallback: '&',
         clickCallback: '&',
         deleteCallback: '&',
+        removeImageCallback: '&',
         isFirstItem: '='
       },
       replace: true,
@@ -289,18 +290,27 @@ angular.module('kifi')
           }
           _.remove(keep.keepers, {pictureName: '0.jpg'});
 
-          scope.menuItems = [];
-          var permissions = keep.library.permissions || [];
-          if ((keep.user.id === scope.me.id && permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1) {
-            scope.menuItems.push({title: keep.note ? 'Edit Note' : 'Add Note', action: scope.editKeepNote.bind(scope)});
-            var callback = scope.deleteCallback()
-            if (callback) {
-              scope.menuItems.push({title: 'Delete', action: function(event, keep) {
-                callback(event, keep)
-                console.log(scope.keep.unkept)
-              }});
+          var updateMenuItems = function () {
+            scope.menuItems = [];
+            var permissions = keep.library.permissions || [];
+            if ((keep.user.id === scope.me.id && permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1) {
+              scope.menuItems.push({
+                title: keep.note ? 'Edit Note' : 'Add Note',
+                action: scope.editKeepNote.bind(scope)
+              });
+              var deleteCallback = scope.deleteCallback();
+              if (deleteCallback) {
+                scope.menuItems.push({title: 'Delete Keep', action: deleteCallback});
+              }
+              var removeImageCallback = scope.removeImageCallback();
+              if (keep.summary && keep.summary.imageUrl && removeImageCallback) {
+                scope.menuItems.push({title: 'Remove Image', action: removeImageCallback});
+              }
             }
-          }
+          };
+          updateMenuItems();
+          scope.$watch('keep.note', updateMenuItems);
+          scope.$watch('keep.summary.imageUrl', updateMenuItems);
         }(scope.keep));
       }
     };
