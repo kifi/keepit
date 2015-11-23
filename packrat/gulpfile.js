@@ -1,4 +1,5 @@
 var gulp = require('gulp');
+var path = require('path');
 var rimraf = require('gulp-rimraf');
 var rename = require('gulp-rename');
 var less = require('gulp-less');
@@ -361,6 +362,9 @@ gulp.task('config', ['copy'], function () {
     .pipe(rename('firefox/package.json'))
     .pipe(jeditor(function(json) {
       json.version = version;
+      json.updateURL = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.update.rdf';
+      json.updateLink = 'https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.xpi';
+
       return json;
     }))
     .pipe(gulp.dest(outDir))
@@ -415,18 +419,12 @@ gulp.task('xpi-firefox', ['build', 'config'], function () {
     }))
     .pipe(gulp.dest('.'))
     .pipe(shell([
-      // TODO: verify cfx version before using it
-      // cfxver=$(cfx --version)
-      // if [ "$cfxver" != "Add-on SDK 1.17 (12f7d53e8b5fc015a15fa4a30fa588e81e9e9b2e)" ]; then
-      //   echo "$cfxver"$'\n'"Looks like you need to download the latest Firefox Addon SDK."
-      //   echo "https://addons.mozilla.org/en-US/developers/builder"
-      //   exit 1
-      // fi
+      // TODO: verify jpm version before using it
       (target === 'dev' ? 'cp icons/dev/kifi.??.png out/firefox/data/icons/ && ' : '') + '\
-      cd ' + outDir + ' && \
-      cfx xpi --pkgdir=firefox \
-        --update-link=https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.xpi \
-        --update-url=https://www.kifi.com/extensions/firefox/kifi' + (target === 'dev' ? '-dev' : '') + '.update.rdf && \
+      cd ' + path.join(outDir + '/firefox') + ' && \
+      jpm xpi && \
+      cp *.xpi ../kifi.xpi && \
+      cp *.update.rdf ../kifi.update.rdf && \
       cd - > /dev/null'
     ]));
 });

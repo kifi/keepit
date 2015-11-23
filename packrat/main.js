@@ -79,7 +79,7 @@ function clearDataCache() {
 
       var o2 = {};
       for (var k in o) {
-        if (o.hasOwnProperty(k)) {
+        if (Object.prototype.hasOwnProperty.call(o, k)) {
           if (++n > 100) break;
           var v;
           try {
