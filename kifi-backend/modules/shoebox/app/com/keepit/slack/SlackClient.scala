@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.common.net.{ NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.slack.models._
 import play.api.Mode.Mode
 import play.api.http.Status
@@ -12,18 +12,14 @@ import com.keepit.common.core._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure }
 
-object KifiSlackApp {
-  val SLACK_CLIENT_ID = "2348051170.12884760868"
-  val SLACK_CLIENT_SECRET = "3cfeb40c29a06272bbb159fc1d9d4fb3"
-  val KIFI_SLACK_REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
-}
-
 object SlackAPI {
   import com.keepit.common.routes.{ GET, ServiceRoute, Param, Method }
 
   case class Route(method: Method, path: String, params: Param*)
   implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
 
+  val OK: String = "ok"
+  val NoService: String = "No service"
   object SlackParams {
     val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
     val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
@@ -63,11 +59,15 @@ class SlackClientImpl(
   def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit] = {
     log.info(s"About to post $msg to the Slack webhook at $url")
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
-      (clientResponse.status, clientResponse.json) match {
-        case (Status.OK, json) if json.asOpt[String].contains("ok") => Future.successful(())
-        case (Status.NOT_FOUND, SlackAPIFailure.Message.REVOKED_WEBHOOK) => Future.failed(SlackAPIFailure.RevokedWebhook)
-        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
+      (clientResponse.status, clientResponse.body) match {
+        case (Status.OK, SlackAPI.OK) => Future.successful(())
+        case (Status.NOT_FOUND, SlackAPI.NoService) => Future.failed(SlackAPIFailure.TokenRevoked)
+        case (status, payload) => Future.failed(SlackAPIFailure.ApiError(status, Json.obj("error" -> payload)))
       }
+    }.recoverWith {
+      case f: NonOKResponseException =>
+        log.error(s"Caught a non-OK response exception to $url, recognizing that it's a revoked webhook")
+        Future.failed(SlackAPIFailure.WebhookRevoked)
     }.andThen {
       case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to webhook $url because $f")
@@ -84,8 +84,7 @@ class SlackClientImpl(
             case errs: JsError =>
               Future.failed(SlackAPIFailure.ParseError(payload))
           }
-        case (Status.OK, SlackAPIFailure.Message.REVOKED_TOKEN) => Future.failed(SlackAPIFailure.RevokedWebhook)
-        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
+        case (status, payload) => Future.failed(SlackAPIFailure.ApiError(status, payload))
       }
     }
   }

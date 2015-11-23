@@ -36,7 +36,7 @@ angular.module('kifi')
             // Give preference to (1) id from args, (2) current page, (3) First organization in list.
             var orgId = id || ($scope.library.org || $scope.me.orgs[0]).id;
             $scope.libraryProps.selectedOrgId = orgId;
-            $scope.space.destination = $scope.me.orgs.filter(function(org) {
+            $scope.space.destination = ($scope.me.orgs || []).filter(function(org) {
               return org.id === orgId;
             })[0];
           }

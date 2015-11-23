@@ -38,7 +38,7 @@ class TwitterWaitlistController @Inject() (
   def getFakeWaitlistPosition() = UserAction { request =>
     val (handleOpt, emailOpt) = db.readOnlyReplica { implicit session =>
       val twOpt = socialRepo.getByUser(request.userId).find(_.networkType == SocialNetworks.TWITTER).flatMap { info =>
-        info.username.orElse(info.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1)))
+        info.username.orElse(info.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1))).map(TwitterHandle(_))
       }
       val emailOpt = Try(userEmailAddressRepo.getByUser(request.userId)).toOption
       (twOpt, emailOpt)
@@ -99,7 +99,7 @@ class TwitterWaitlistController @Inject() (
     }
   }
 
-  private def pollDbForTwitterHandle(userId: Id[User], iterations: Int): Future[Option[String]] = {
+  private def pollDbForTwitterHandle(userId: Id[User], iterations: Int): Future[Option[TwitterHandle]] = {
     /*
      * This is not good code, but appears to be necessary because initially, when a social
      * account is brought in, the SocialUserInfo record is not complete. Namely, it's missing
@@ -120,7 +120,7 @@ class TwitterWaitlistController @Inject() (
             None // pending sync, keep polling
           } else if (tsui.state == SocialUserInfoStates.FETCHED_USING_SELF && tsui.getProfileUrl.isDefined) { // done
             log.info(s"[checkStatusOfTwitterUser] Got it for ${tsui.networkType}/${tsui.socialId}")
-            Some(Right(tsui.getProfileUrl.map(url => url.substring(url.lastIndexOf('/') + 1)).get))
+            Some(Right(tsui.getProfileUrl.map(url => TwitterHandle(url.substring(url.lastIndexOf('/') + 1))).get))
           } else { // other
             log.info(s"[checkStatusOfTwitterUser] Couldn't get handle of ${tsui.networkType}/${tsui.socialId}")
             Some(Left(()))
@@ -131,7 +131,7 @@ class TwitterWaitlistController @Inject() (
 
     var times = 0
     def timeoutF = play.api.libs.concurrent.Promise.timeout(None, 700)
-    def pollCheck(): Future[Option[String]] = {
+    def pollCheck(): Future[Option[TwitterHandle]] = {
       timeoutF.flatMap { _ =>
         checkStatusOfTwitterUser() match {
           case None if times < iterations =>

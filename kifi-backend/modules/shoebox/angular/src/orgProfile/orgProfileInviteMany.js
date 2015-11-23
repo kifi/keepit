@@ -14,7 +14,8 @@ angular.module('kifi')
       link: function (scope, element, attrs, kfModalCtrl) {
         scope.organization = scope.modalData.organization;
 
-        var meOrg = profileService.me.orgs.filter(function (o) {
+        var me = profileService.me;
+        var meOrg = (me.orgs || []).filter(function (o) {
           return o.id === scope.organization.id;
         })[0];
 

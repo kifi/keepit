@@ -36,7 +36,7 @@ class AdminTwitterWaitlistController @Inject() (
   }
 
   def acceptUser(userId: Id[User], handle: String) = AdminUserPage { implicit request =>
-    val result = twitterWaitlistCommander.acceptUser(userId, handle).right.map { syncState =>
+    val result = twitterWaitlistCommander.acceptUser(userId, TwitterHandle(handle)).right.map { syncState =>
       val (lib, owner, email) = db.readOnlyMaster { implicit s =>
         val lib = libraryRepo.get(syncState.libraryId)
         val owner = userRepo.get(lib.ownerId)

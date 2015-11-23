@@ -2,7 +2,7 @@ package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import com.keepit.model.{ TwitterHandle, OAuth1TokenInfo, OAuth2TokenInfo }
 import play.api.libs.json.JsValue
 import play.api.libs.oauth.ConsumerKey
 import play.api.libs.ws.WSResponse
@@ -44,7 +44,7 @@ class FakeFacebookOAuthProvider extends FacebookOAuthProvider with FakeOAuth2Pro
 class FakeLinkedInOAuthProvider extends LinkedInOAuthProvider with FakeOAuth2Provider
 @Singleton
 class FakeTwitterOAuthProvider extends TwitterOAuthProvider with FakeOAuth1Provider {
-  def getUserShow(accessToken: OAuth1TokenInfo, screenName: String): Future[TwitterUserShow] = Future.successful(TwitterUserShow(None, None, None, None))
+  def getUserShow(accessToken: OAuth1TokenInfo, screenName: TwitterHandle): Future[TwitterUserShow] = Future.successful(TwitterUserShow(None, None, None, None))
 }
 
 case class FakeOAuth1ConfigurationModule() extends OAuth1ConfigurationModule {

@@ -323,7 +323,7 @@ object KeepSource {
   }
 }
 
-case class KeepAndTags(keep: Keep, tags: Set[Hashtag])
+case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
   implicit val format = Json.format[KeepAndTags]

@@ -161,7 +161,9 @@ angular.module('kifi')
 
     function getMeOrg() {
       var scope = this;
-      var meOrg = profileService.me.orgs.filter(function (o) { return o.id === scope.lib.org.id; }).pop();
+      var me = profileService.me;
+
+      var meOrg = (me.orgs || []).filter(function (o) { return o.id === scope.lib.org.id; })[0];
       return meOrg;
     }
 

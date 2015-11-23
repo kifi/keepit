@@ -19,7 +19,6 @@ import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.http.Status._
-
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
 
@@ -58,6 +57,7 @@ trait SlackCommander {
 
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Seq[SlackChannelToLibrarySummary]
 }
 
 @Singleton
@@ -67,7 +67,7 @@ class SlackCommanderImpl @Inject() (
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
-  slackClient: SlackClient,
+  slackClient: SlackClientWrapper,
   libToSlackPusher: LibraryToSlackChannelPusher,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
@@ -139,27 +139,10 @@ class SlackCommanderImpl @Inject() (
         "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
       )
     }
-    slackClient.sendToSlack(webhook.url, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
-      .andThen { case Failure(f: SlackAPIFailure) => db.readWrite { implicit s => markAsBroken(webhook, f) } }
+    slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
       .andThen { case Success(()) => libToSlackPusher.pushToLibrary(libId) }
   }
 
-  def registerSuccessfulPush(webhook: SlackIncomingWebhook)(implicit session: RWSession): Unit = {
-    val now = clock.now
-    slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-      if (whi.lastFailedAt.isDefined) {
-        log.info(s"[SLACK-WEBHOOK] The webhook at ${webhook.url} recovered at $now")
-      }
-      slackIncomingWebhookInfoRepo.save(whi.withCleanSlate.withLastPostedAt(now))
-    }
-  }
-  def markAsBroken(webhook: SlackIncomingWebhook, failure: SlackAPIFailure)(implicit session: RWSession): Unit = {
-    val now = clock.now
-    slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-      log.info(s"[SLACK-WEBHOOK] The webhook at ${webhook.url} recovered at $now")
-      slackIncomingWebhookInfoRepo.save(whi.withLastFailure(failure).withLastFailedAt(now))
-    }
-  }
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {
     request match {
       case r: SlackIntegrationCreateRequest =>
@@ -291,4 +274,11 @@ class SlackCommanderImpl @Inject() (
     }
   }
 
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Seq[SlackChannelToLibrarySummary] = {
+    db.readOnlyMaster { implicit session =>
+      channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId).map { integration =>
+        SlackChannelToLibrarySummary(teamId, channelId, integration.libraryId, integration.status == SlackIntegrationStatus.On, integration.lastMessageTimestamp)
+      }
+    }
+  }
 }

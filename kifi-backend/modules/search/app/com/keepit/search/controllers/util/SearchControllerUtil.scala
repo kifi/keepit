@@ -73,7 +73,7 @@ trait SearchControllerUtil {
       library <- libraryScope
       user <- userScope
       organization <- organizationScope
-    } yield SearchFilter(proximity, user, library, organization)
+    } yield SearchFilter(proximity, user, library, organization, None)
   }
 
   def getProximityScope(proximityStr: Option[String]): Option[ProximityScope] = proximityStr.flatMap(ProximityScope.parse)

@@ -227,7 +227,7 @@ class UriSearchCommanderImpl @Inject() (
     val firstLang = langs(0)
     val secondLang = langs.lift(1)
 
-    val searchFilter = SearchFilter(proximity = None, user = None, library = libraryId.map(LibraryScope(_, authorized = true)), organization = None)
+    val searchFilter = SearchFilter(proximity = None, user = None, library = libraryId.map(LibraryScope(_, authorized = true)), organization = None, source = None)
     val searchContext = SearchContext(None, SearchRanking.default, searchFilter, disablePrefixSearch, disableFullTextSearch)
 
     searchFactory.getConfigFuture(userId, experiments).map {

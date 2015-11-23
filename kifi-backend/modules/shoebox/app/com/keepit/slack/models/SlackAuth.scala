@@ -9,6 +9,7 @@ import scala.util.{ Failure, Try }
 
 case class SlackAuthScope(value: String)
 object SlackAuthScope {
+  val Commands = SlackAuthScope("commands")
   val ChannelsWrite = SlackAuthScope("channels:write")
   val ChannelsHistory = SlackAuthScope("channels:history")
   val ChannelsRead = SlackAuthScope("channels:read")
@@ -39,7 +40,7 @@ object SlackAuthScope {
   val UsersRead = SlackAuthScope("users:read")
   val UsersWrite = SlackAuthScope("users:write")
 
-  val library: Set[SlackAuthScope] = Set(IncomingWebhook, SearchRead, ReactionsWrite)
+  val library: Set[SlackAuthScope] = Set(IncomingWebhook, SearchRead, ReactionsWrite, Commands)
   val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
 
   val dbFormat: Format[SlackAuthScope] = Format(

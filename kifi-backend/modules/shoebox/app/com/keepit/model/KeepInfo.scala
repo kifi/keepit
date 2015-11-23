@@ -74,7 +74,7 @@ object KeepInfo {
         "libraryId" -> o.libraryId,
         "library" -> o.library,
         "organization" -> o.organization,
-        "sourceAttribution" -> o.sourceAttribution,
+        "sourceAttribution" -> o.sourceAttribution.map(SourceAttribution.deprecatedWrites.writes(_)),
         "note" -> o.note
       ).nonNullFields
     }

@@ -11,7 +11,7 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule }
-import com.keepit.model.{ TwitterWaitlistEntry, TwitterWaitlistEntryStates, TwitterWaitlistRepo }
+import com.keepit.model.{ TwitterHandle, TwitterWaitlistEntry, TwitterWaitlistEntryStates, TwitterWaitlistRepo }
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
@@ -52,20 +52,22 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
           emailRepo.count === 0
         }
 
+        val therealcaptainfalcon = TwitterHandle("therealcaptainfalcon")
+
         // add a new entry
-        val res1 = twitterWaitlistCommander.addEntry(user1.id.get, "therealcaptainfalcon")
+        val res1 = twitterWaitlistCommander.addEntry(user1.id.get, therealcaptainfalcon)
         res1.isRight === true
         val emailFuture = res1.right.get._2.get
         Await.result(emailFuture, Duration(10, "seconds"))
         db.readOnlyMaster { implicit s =>
-          twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon").nonEmpty === true
+          twitterWaitlistRepo.getByUserAndHandle(user1.id.get, therealcaptainfalcon).nonEmpty === true
           emailRepo.count === 1
         }
 
         // add a duplicate entry
-        twitterWaitlistCommander.addEntry(user1.id.get, "therealcaptainfalcon").isRight === false
+        twitterWaitlistCommander.addEntry(user1.id.get, therealcaptainfalcon).isRight === false
         db.readOnlyMaster { implicit s =>
-          twitterWaitlistRepo.getByUserAndHandle(user1.id.get, "therealcaptainfalcon").nonEmpty === true
+          twitterWaitlistRepo.getByUserAndHandle(user1.id.get, therealcaptainfalcon).nonEmpty === true
           emailRepo.count === 1
         }
       }
@@ -79,10 +81,10 @@ class TwitterWaitlistCommanderTest extends TestKitSupport with ShoeboxTestInject
         }
         val t1 = new DateTime(2014, 8, 1, 7, 0, 0, 1, DEFAULT_DATE_TIME_ZONE)
         db.readWrite { implicit s =>
-          twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = user1.id.get, twitterHandle = "handle1", state = TwitterWaitlistEntryStates.ACTIVE, createdAt = t1))
-          twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = user1.id.get, twitterHandle = "handle2", state = TwitterWaitlistEntryStates.ACTIVE, createdAt = t1))
-          twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = user1.id.get, twitterHandle = "handle3", state = TwitterWaitlistEntryStates.ACCEPTED, createdAt = t1))
-          twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = user1.id.get, twitterHandle = "handle4", state = TwitterWaitlistEntryStates.INACTIVE, createdAt = t1))
+          twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = user1.id.get, twitterHandle = TwitterHandle("handle1"), state = TwitterWaitlistEntryStates.ACTIVE, createdAt = t1))
+          twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = user1.id.get, twitterHandle = TwitterHandle("handle2"), state = TwitterWaitlistEntryStates.ACTIVE, createdAt = t1))
+          twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = user1.id.get, twitterHandle = TwitterHandle("handle3"), state = TwitterWaitlistEntryStates.ACCEPTED, createdAt = t1))
+          twitterWaitlistRepo.save(TwitterWaitlistEntry(userId = user1.id.get, twitterHandle = TwitterHandle("handle4"), state = TwitterWaitlistEntryStates.INACTIVE, createdAt = t1))
         }
 
         db.readOnlyMaster { implicit s =>
