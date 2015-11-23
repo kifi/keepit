@@ -21,6 +21,7 @@ case class KeepInfo(
   pubId: Option[PublicId[Keep]] = None,
   title: Option[String],
   url: String,
+  path: String,
   isPrivate: Boolean, // deprecated
   user: Option[BasicUser], // The user to be shown as associated with this keep, esp. with notes
   createdAt: Option[DateTime] = None,
@@ -56,6 +57,7 @@ object KeepInfo {
         "pubId" -> o.pubId,
         "title" -> o.title,
         "url" -> o.url,
+        "path" -> o.path,
         "isPrivate" -> o.isPrivate,
         "user" -> o.user,
         "createdAt" -> o.createdAt,
@@ -83,6 +85,6 @@ object KeepInfo {
   // Are you looking for a decorated keep (with tags, rekeepers, etc)?
   // Use KeepsCommander#decorateKeepsIntoKeepInfos(userId, keeps)
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId), sourceAttribution = None)
+    KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url, bookmark.path.relative, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId), sourceAttribution = None)
   }
 }

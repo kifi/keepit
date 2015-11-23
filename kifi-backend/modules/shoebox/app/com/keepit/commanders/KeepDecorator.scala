@@ -157,6 +157,7 @@ class KeepDecoratorImpl @Inject() (
               pubId = Some(Keep.publicId(keep.id.get)),
               title = keep.title,
               url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
+              path = keep.path.relative,
               isPrivate = keep.isPrivate,
               user = Some(idToBasicUser(keep.userId)),
               createdAt = keptAt,
