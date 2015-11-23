@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.PathCommander
+import com.keepit.commanders.{ PermissionCommander, PathCommander }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -19,7 +19,6 @@ import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.http.Status._
-
 import scala.concurrent.ExecutionContext
 import scala.util.{ Failure, Success, Try }
 
@@ -58,6 +57,7 @@ trait SlackCommander {
 
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Seq[SlackChannelToLibrarySummary]
 }
 
 @Singleton
@@ -67,10 +67,11 @@ class SlackCommanderImpl @Inject() (
   slackIncomingWebhookInfoRepo: SlackIncomingWebhookInfoRepo,
   channelToLibRepo: SlackChannelToLibraryRepo,
   libToChannelRepo: LibraryToSlackChannelRepo,
-  slackClient: SlackClient,
+  slackClient: SlackClientWrapper,
   libToSlackPusher: LibraryToSlackChannelPusher,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
+  permissionCommander: PermissionCommander,
   libRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
   clock: Clock,
@@ -138,27 +139,10 @@ class SlackCommanderImpl @Inject() (
         "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
       )
     }
-    slackClient.sendToSlack(webhook.url, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
-      .andThen { case Failure(f: SlackAPIFailure) => db.readWrite { implicit s => markAsBroken(webhook, f) } }
+    slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
       .andThen { case Success(()) => libToSlackPusher.pushToLibrary(libId) }
   }
 
-  def registerSuccessfulPush(webhook: SlackIncomingWebhook)(implicit session: RWSession): Unit = {
-    val now = clock.now
-    slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-      if (whi.lastFailedAt.isDefined) {
-        log.info(s"[SLACK-WEBHOOK] The webhook at ${webhook.url} recovered at $now")
-      }
-      slackIncomingWebhookInfoRepo.save(whi.withCleanSlate.withLastPostedAt(now))
-    }
-  }
-  def markAsBroken(webhook: SlackIncomingWebhook, failure: SlackAPIFailure)(implicit session: RWSession): Unit = {
-    val now = clock.now
-    slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
-      log.info(s"[SLACK-WEBHOOK] The webhook at ${webhook.url} recovered at $now")
-      slackIncomingWebhookInfoRepo.save(whi.withLastFailure(failure).withLastFailedAt(now))
-    }
-  }
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {
     request match {
       case r: SlackIntegrationCreateRequest =>
@@ -170,16 +154,28 @@ class SlackCommanderImpl @Inject() (
         else None
 
       case r: SlackIntegrationModifyRequest =>
-        val fromSpaces = libToChannelRepo.getActiveByIds(r.libToSlack.keySet).map(_.space) ++ channelToLibRepo.getActiveByIds(r.slackToLib.keySet).map(_.space)
-        val toSpaces = r.libToSlack.values.flatMap(_.space) ++ r.slackToLib.values.flatMap(_.space)
-        val spacesUserCannotModify = (fromSpaces ++ toSpaces).filter {
+        val toSlacks = libToChannelRepo.getActiveByIds(r.libToSlack.keySet)
+        val fromSlacks = channelToLibRepo.getActiveByIds(r.slackToLib.keySet)
+        val oldSpaces = fromSlacks.map(_.space) ++ toSlacks.map(_.space)
+        val newSpaces = (r.libToSlack.values.flatMap(_.space) ++ r.slackToLib.values.flatMap(_.space)).toSet
+        val spacesUserCannotAccess = (oldSpaces ++ newSpaces).filter {
           case UserSpace(uid) => r.requesterId != uid
           case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.requesterId).isEmpty
         }
-        if (spacesUserCannotModify.nonEmpty) {
-          println(s"user ${r.requesterId} does not have permission to modify ${spacesUserCannotModify}")
-          Some(LibraryFail(FORBIDDEN, "permission_denied"))
-        } else None
+        def userCanWriteToIngestingLibraries = r.slackToLib.filter {
+          case (stlId, mod) => mod.status.contains(SlackIntegrationStatus.On)
+        }.forall {
+          case (stlId, mod) =>
+            fromSlacks.find(_.id.get == stlId).exists { stl =>
+              // TODO(ryan): I don't know if it's a good idea to ignore permissions if the integration is already on...
+              stl.status == SlackIntegrationStatus.On || permissionCommander.getLibraryPermissions(stl.libraryId, Some(r.requesterId)).contains(LibraryPermission.ADD_KEEPS)
+            }
+        }
+        Stream(
+          (oldSpaces intersect spacesUserCannotAccess).nonEmpty -> LibraryFail(FORBIDDEN, "permission_to_modify_denied"),
+          (newSpaces intersect spacesUserCannotAccess).nonEmpty -> LibraryFail(FORBIDDEN, "illegal_destination_space"),
+          !userCanWriteToIngestingLibraries -> LibraryFail(FORBIDDEN, "cannot_write_to_library")
+        ).collect { case (true, fail) => fail }.headOption
 
       case r: SlackIntegrationDeleteRequest =>
         val spaces = libToChannelRepo.getActiveByIds(r.libToSlack).map(_.space) ++ channelToLibRepo.getActiveByIds(r.slackToLib).map(_.space)
@@ -278,4 +274,11 @@ class SlackCommanderImpl @Inject() (
     }
   }
 
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Seq[SlackChannelToLibrarySummary] = {
+    db.readOnlyMaster { implicit session =>
+      channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId).map { integration =>
+        SlackChannelToLibrarySummary(teamId, channelId, integration.libraryId, integration.status == SlackIntegrationStatus.On, integration.lastMessageTimestamp)
+      }
+    }
+  }
 }

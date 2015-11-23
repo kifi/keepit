@@ -22,7 +22,7 @@ class FakeSlackClientImpl extends SlackClient {
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse] = ???
   def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))
-    case _ if isSlackThrowingAFit => Future.failed(SlackAPIFailure.RevokedWebhook)
+    case _ if isSlackThrowingAFit => Future.failed(SlackAPIFailure.WebhookRevoked)
     case _ =>
       pushedMessagesByWebhook.put(url, msg :: pushedMessagesByWebhook(url))
       Future.successful(())
@@ -46,7 +46,7 @@ class FakeSlackClientImpl extends SlackClient {
   }
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = () match {
     case _ if isSlackDown => Future.failed(new Exception("slack_is_down"))
-    case _ if isSlackThrowingAFit => Future.failed(SlackAPIFailure.RevokedToken)
+    case _ if isSlackThrowingAFit => Future.failed(SlackAPIFailure.TokenRevoked)
     case _ =>
       val stmOpt = membershipToken.get(token)
       val bestGuessChannel = inChannelQuery.findAllMatchIn(request.query.query).toList.headOption.map(_.subgroups.head)
@@ -64,4 +64,6 @@ class FakeSlackClientImpl extends SlackClient {
         )
       ))
   }
+
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = Future.successful(())
 }

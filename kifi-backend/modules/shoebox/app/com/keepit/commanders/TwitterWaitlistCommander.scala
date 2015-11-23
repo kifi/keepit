@@ -23,11 +23,11 @@ import scala.util.{ Try, Success }
 
 @ImplementedBy(classOf[TwitterWaitlistCommanderImpl])
 trait TwitterWaitlistCommander {
-  def addEntry(userId: Id[User], handle: String): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])]
-  def getFakeWaitlistPosition(userId: Id[User], handle: String): Option[Long]
+  def addEntry(userId: Id[User], handle: TwitterHandle): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])]
+  def getFakeWaitlistPosition(userId: Id[User], handle: TwitterHandle): Option[Long]
   def getFakeWaitlistLength(): Long
   def getWaitlist: Seq[TwitterWaitlistEntry]
-  def acceptUser(userId: Id[User], handle: String): Either[String, TwitterSyncState]
+  def acceptUser(userId: Id[User], handle: TwitterHandle): Either[String, TwitterSyncState]
 }
 
 @Singleton
@@ -52,7 +52,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
   private val WAITLIST_LENGTH_SHIFT = 1152
   private val WAITLIST_MULTIPLIER = 3
 
-  def addEntry(userId: Id[User], handle: String): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])] = {
+  def addEntry(userId: Id[User], handle: TwitterHandle): Either[String, (TwitterWaitlistEntry, Option[Future[ElectronicMail]])] = {
     val waitlistEntry = db.readOnlyMaster { implicit s =>
       twitterWaitlistRepo.getByUserAndHandle(userId, handle)
     }
@@ -80,7 +80,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     }
   }
 
-  def getFakeWaitlistPosition(userId: Id[User], handle: String): Option[Long] = {
+  def getFakeWaitlistPosition(userId: Id[User], handle: TwitterHandle): Option[Long] = {
     db.readOnlyMaster { implicit session =>
       twitterWaitlistRepo.getByUserAndHandle(userId, handle).map { waitlistEntry =>
         twitterWaitlistRepo.countActiveEntriesBeforeDateTime(waitlistEntry.createdAt)
@@ -100,7 +100,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     }
   }
 
-  def acceptUser(userId: Id[User], handle: String): Either[String, TwitterSyncState] = {
+  def acceptUser(userId: Id[User], handle: TwitterHandle): Either[String, TwitterSyncState] = {
     val (entryOpt, suiOpt, syncOpt) = db.readWrite { implicit session =>
       val entryOpt = twitterWaitlistRepo.getByUserAndHandle(userId, handle)
       val suiOpt = socialUserInfoRepo.getByUser(userId).find(_.networkType == SocialNetworks.TWITTER)
@@ -157,7 +157,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     }
   }
 
-  private def updateUserShow(sui: SocialUserInfo, handle: String): Future[Option[TwitterUserShow]] = {
+  private def updateUserShow(sui: SocialUserInfo, handle: TwitterHandle): Future[Option[TwitterUserShow]] = {
     val result = for {
       cred <- sui.credentials
       oauth <- cred.oAuth1Info
@@ -184,7 +184,7 @@ class TwitterWaitlistCommanderImpl @Inject() (
     result.getOrElse(Future.successful(None))
   }
 
-  private def syncPic(userId: Id[User], handle: String, libraryId: Id[Library], bannerPic: String) = {
+  private def syncPic(userId: Id[User], handle: TwitterHandle, libraryId: Id[Library], bannerPic: String) = {
     // Twitter's return URL is actually incomplete. You need to specify a size. We'll use the largest.
     val imageUrl = bannerPic + "/1500x500"
     WS.url(imageUrl).getStream().flatMap {

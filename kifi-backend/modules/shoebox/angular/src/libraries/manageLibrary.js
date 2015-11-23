@@ -278,30 +278,6 @@ angular.module('kifi')
           }
         };
 
-        scope.showIntegrations = function () {
-          return (
-            scope.modifyingExistingLibrary &&
-            (
-              scope.showIntegrationsUpsell() ||
-              !scope.spaceIsOrg(scope.space.destination) ||
-              (
-                scope.library.subscriptions[0] &&
-                scope.library.subscriptions[0].url
-              )
-            )
-          );
-        };
-
-        scope.showIntegrationsUpsell = function () {
-          return (
-            scope.spaceIsOrg(scope.space.destination) &&
-            !(
-              scope.space.destination.viewer.membership &&
-              scope.space.destination.viewer.membership.role !== 'admin'
-            )
-          );
-        };
-
         scope.isIntegrationsEnabled = function () {
           return scope.hasPermission(LIB_PERMISSION.CREATE_SLACK_INTEGRATION);
         };

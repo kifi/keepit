@@ -7,6 +7,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.NonOKResponseException
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
@@ -44,10 +45,11 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     extends LibraryToSlackChannelPusher with Logging {
 
   private val gracePeriod = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
-  private val MAX_KEEPS_TO_SEND = 4
+  private val MAX_KEEPS_TO_SEND = 7
+  private val LIBRARY_BATCH_SIZE = 20
   def findAndPushToLibraries(): Unit = {
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
-      libToChannelRepo.getLibrariesRipeForProcessing(Limit(10), overrideProcessesOlderThan = clock.now.minus(gracePeriod))
+      libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now.minus(gracePeriod))
     }
     librariesThatNeedToBeProcessed.foreach(pushToLibrary)
   }
@@ -80,13 +82,14 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     slackMessageOpt match {
       case Some(post) =>
         DescriptionElements(
-          s"@${post.username.value}", "posted", keep.title.getOrElse("a link") --> LinkElement(keep.url), "to", s"#${post.channel.name.value}" --> LinkElement(post.permalink), ".",
-          "It was automatically added to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library."
+          keep.title.getOrElse("a link") --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
+          "was added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
         )
       case None =>
         DescriptionElements(
           getUser(keep.userId), "added", keep.title.getOrElse("a keep") --> LinkElement(keep.url),
-          "to the", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library.")
+          "to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
+        )
     }
   }
   private def describeKeeps(keeps: KeepsToPush, withAttachments: Boolean = false): Option[Future[SlackMessageRequest]] = {
@@ -95,7 +98,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case NoKeeps =>
         None
       case SomeKeeps(ks, lib) if withAttachments =>
-        val msg = DescriptionElements("The", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library has", ks.length, "new keeps")
+        val msg = DescriptionElements(ks.length, "keeps have been added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
         val summariesFut = keepDecorator.getKeepSummaries(ks, ProcessedImageSize.Small.idealSize)
         Some(summariesFut.map { summaries =>
           val attachments = (ks zip summaries).map {
@@ -111,7 +114,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
         )))
       case ManyKeeps(ks, lib) =>
-        val msg = DescriptionElements("The", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "library has", ks.length, "new keeps")
+        val msg = DescriptionElements(ks.length, "keeps have been added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(msg)
         )))
@@ -167,11 +170,15 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           }
       }
       slackPush.andThen {
-        case Success(true) => db.readWrite { implicit s =>
-          libToChannelRepo.finishProcessing(lts.withLastProcessedKeep(ktls.lastOption.map(_.id.get)))
-        }
         case Success(false) => db.readWrite { implicit s =>
           libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
+        }
+        case _ => db.readWrite { implicit s =>
+          // TODO(ryan): to make sure we don't spam a channel, we always register a push as "processed"
+          // Sometimes this may lead to Slack messages getting lost
+          // This is a better alternative than spamming a channel because Slack (or our crappy Http Client)
+          // keeps saying we aren't succeeding even though the channel is getting messages
+          libToChannelRepo.finishProcessing(lts.withLastProcessedKeep(ktls.lastOption.map(_.id.get)))
         }
       }.imap { res => lts.id.get -> res }
     }

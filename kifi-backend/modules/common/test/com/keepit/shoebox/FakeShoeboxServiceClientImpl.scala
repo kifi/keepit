@@ -23,6 +23,7 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search._
 import com.keepit.shoebox.model.IngestableUserIpAddress
 import com.keepit.shoebox.model.ids.UserSessionExternalId
+import com.keepit.slack.models.{ SlackChannelToLibrarySummary, SlackChannelId, SlackTeamId, SlackAccessToken }
 import com.keepit.social.{ UserIdentity, BasicUser, SocialId, SocialNetworkType }
 import org.joda.time.DateTime
 import play.api.libs.json.JsObject
@@ -551,7 +552,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         keepIds.collect { case keepId if changedKeepIds.contains(keepId) => (keepId, allCollections(collectionId).name) }
     }
     val tagsByChangedKeep = allCollectionBookmarks.toSet.flatMap(flattenTags.tupled).groupBy(_._1).mapValues(_.map(_._2)).withDefaultValue(Set.empty[Hashtag])
-    val changedKeepsAndTags = changedKeeps.map { keep => KeepAndTags(keep, tagsByChangedKeep(keep.id.get)) }
+    val changedKeepsAndTags = changedKeeps.map { keep => KeepAndTags(keep, None, tagsByChangedKeep(keep.id.get)) }
     Future.successful(changedKeepsAndTags)
   }
 
@@ -666,4 +667,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = Future.successful(OrganizationUserRelationship(orgId = Id[Organization](1), userId = Id[User](1), role = None, permissions = None, isInvited = false, isCandidate = false))
 
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
+
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[Seq[SlackChannelToLibrarySummary]] = Future.successful(Seq.empty)
+
 }

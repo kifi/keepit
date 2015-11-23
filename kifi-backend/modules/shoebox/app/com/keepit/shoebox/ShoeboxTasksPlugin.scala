@@ -30,11 +30,11 @@ class ShoeboxTasksPlugin @Inject() (
       twitterSyncCommander.syncAll()
     }
 
-    scheduleTaskOnOneMachine(system, 5 minute, 1 minutes, "slack ingestion") {
+    scheduleTaskOnLeader(system, 3 minute, 1 minutes, "slack ingestion") {
       slackIngestionCommander.ingestAllDue()
     }
 
-    scheduleTaskOnOneMachine(system, 10 minute, 10 minutes, "slack pushing") {
+    scheduleTaskOnOneMachine(system, 10 minute, 2 minutes, "slack pushing") {
       libToSlackPusher.findAndPushToLibraries()
     }
 

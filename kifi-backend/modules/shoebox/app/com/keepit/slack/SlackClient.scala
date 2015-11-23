@@ -1,21 +1,16 @@
 package com.keepit.slack
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.common.net.{ NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.slack.models._
 import play.api.Mode.Mode
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.common.core._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Success, Failure }
-
-object KifiSlackApp {
-  val SLACK_CLIENT_ID = "2348051170.12884760868"
-  val SLACK_CLIENT_SECRET = "3cfeb40c29a06272bbb159fc1d9d4fb3"
-  val KIFI_SLACK_REDIRECT_URI = "https://www.kifi.com/oauth2/slack"
-}
 
 object SlackAPI {
   import com.keepit.common.routes.{ GET, ServiceRoute, Param, Method }
@@ -23,6 +18,8 @@ object SlackAPI {
   case class Route(method: Method, path: String, params: Param*)
   implicit def toServiceRoute(route: Route): ServiceRoute = ServiceRoute(route.method, route.path, route.params: _*)
 
+  val OK: String = "ok"
+  val NoService: String = "No service"
   object SlackParams {
     val CLIENT_ID = Param("client_id", KifiSlackApp.SLACK_CLIENT_ID)
     val CLIENT_SECRET = Param("client_secret", KifiSlackApp.SLACK_CLIENT_SECRET)
@@ -43,6 +40,7 @@ object SlackAPI {
     val params = Seq[Param](token, request.query) ++ request.optional.map(fromSearchParam)
     Route(GET, "https://slack.com/api/search.messages", params: _*)
   }
+  def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, Param("name", reaction.value), Param("channel", channelId.value), Param("timestamp", messageTimestamp.value))
 }
 
 trait SlackClient {
@@ -50,6 +48,7 @@ trait SlackClient {
   def processAuthorizationResponse(code: SlackAuthorizationCode): Future[SlackAuthorizationResponse]
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
 }
 
 class SlackClientImpl(
@@ -60,11 +59,15 @@ class SlackClientImpl(
   def sendToSlack(url: String, msg: SlackMessageRequest): Future[Unit] = {
     log.info(s"About to post $msg to the Slack webhook at $url")
     httpClient.postFuture(DirectUrl(url), Json.toJson(msg)).flatMap { clientResponse =>
-      (clientResponse.status, clientResponse.json) match {
-        case (Status.OK, json) if json.asOpt[String].contains("ok") => Future.successful(())
-        case (Status.NOT_FOUND, SlackAPIFailure.Message.REVOKED_WEBHOOK) => Future.failed(SlackAPIFailure.RevokedWebhook)
-        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
+      (clientResponse.status, clientResponse.body) match {
+        case (Status.OK, SlackAPI.OK) => Future.successful(())
+        case (Status.NOT_FOUND, SlackAPI.NoService) => Future.failed(SlackAPIFailure.TokenRevoked)
+        case (status, payload) => Future.failed(SlackAPIFailure.ApiError(status, Json.obj("error" -> payload)))
       }
+    }.recoverWith {
+      case f: NonOKResponseException =>
+        log.error(s"Caught a non-OK response exception to $url, recognizing that it's a revoked webhook")
+        Future.failed(SlackAPIFailure.WebhookRevoked)
     }.andThen {
       case Success(_) => log.error(s"[SLACK-CLIENT] Succeeded in pushing to webhook $url")
       case Failure(f) => log.error(s"[SLACK-CLIENT] Failed to post to webhook $url because $f")
@@ -81,8 +84,7 @@ class SlackClientImpl(
             case errs: JsError =>
               Future.failed(SlackAPIFailure.ParseError(payload))
           }
-        case (Status.OK, SlackAPIFailure.Message.REVOKED_TOKEN) => Future.failed(SlackAPIFailure.RevokedWebhook)
-        case (status, payload) => Future.failed(SlackAPIFailure.Generic(status, payload))
+        case (status, payload) => Future.failed(SlackAPIFailure.ApiError(status, payload))
       }
     }
   }
@@ -96,6 +98,10 @@ class SlackClientImpl(
 
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse] = {
     slackCall[SlackIdentifyResponse](SlackAPI.Identify(token))
+  }
+
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = {
+    slackCall[JsValue](SlackAPI.AddReaction(token, reaction, channelId, messageTimestamp)).imap(_ => ())
   }
 
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {

@@ -11,13 +11,13 @@ import org.joda.time.DateTime
 @ImplementedBy(classOf[TwitterSyncStateRepoImpl])
 trait TwitterSyncStateRepo extends Repo[TwitterSyncState] {
   def getSyncsToUpdate(refreshWindow: DateTime)(implicit session: RSession): Seq[TwitterSyncState]
-  def getByHandleAndLibraryId(handle: String, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState]
-  def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[String]
-  def getByHandleAndUserIdUsed(handle: String, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState]
+  def getByHandleAndLibraryId(handle: TwitterHandle, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState]
+  def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[TwitterHandle]
+  def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState]
   def getByUserIdUsed(userIdUsed: Id[User])(implicit session: RSession): Seq[TwitterSyncState]
 
   // This needs to be rewritten. Does not work as expected.
-  def getTwitterSyncsByFriendIds(twitterHandles: Set[String])(implicit session: RSession): Seq[TwitterSyncState]
+  def getTwitterSyncsByFriendIds(twitterHandles: Set[TwitterHandle])(implicit session: RSession): Seq[TwitterSyncState]
 }
 
 @Singleton
@@ -27,11 +27,13 @@ class TwitterSyncStateRepoImpl @Inject() (
     val twitterHandleCache: TwitterHandleCache) extends TwitterSyncStateRepo with DbRepo[TwitterSyncState] {
   import db.Driver.simple._
 
+  implicit val twitterHandleColumnType = MappedColumnType.base[TwitterHandle, String](_.value, TwitterHandle(_))
+
   type RepoImpl = TwitterSyncStateTable
 
   class TwitterSyncStateTable(tag: Tag) extends RepoTable[TwitterSyncState](db, tag, "twitter_sync_state") {
     def userId = column[Id[User]]("user_id", O.Nullable)
-    def twitterHandle = column[String]("twitter_handle", O.NotNull)
+    def twitterHandle = column[TwitterHandle]("twitter_handle", O.NotNull)
     def lastFetchedAt = column[Option[DateTime]]("last_fetched_at", O.Nullable)
     def libraryId = column[Id[Library]]("library_id", O.NotNull)
     def maxTweetIdSeen = column[Option[Long]]("max_tweet_id_seen", O.Nullable)
@@ -55,22 +57,22 @@ class TwitterSyncStateRepoImpl @Inject() (
       .sortBy(_.lastFetchedAt.asc).list
   }
 
-  def getByHandleAndLibraryId(handle: String, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState] = {
+  def getByHandleAndLibraryId(handle: TwitterHandle, libId: Id[Library])(implicit session: RSession): Option[TwitterSyncState] = {
     (for { row <- rows if row.libraryId === libId && row.twitterHandle === handle } yield row).firstOption
   }
 
-  def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[String] = {
+  def getFirstHandleByLibraryId(libId: Id[Library])(implicit session: RSession): Option[TwitterHandle] = {
     twitterHandleCache.getOrElseOpt(TwitterHandleLibraryIdKey(libId)) {
       (for { row <- rows if row.libraryId === libId && row.state === TwitterSyncStateStates.ACTIVE } yield row.twitterHandle).firstOption
     }
   }
 
-  def getByHandleAndUserIdUsed(handle: String, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState] = {
+  def getByHandleAndUserIdUsed(handle: TwitterHandle, userIdUsed: Id[User])(implicit session: RSession): Option[TwitterSyncState] = {
     (for { row <- rows if row.userId === userIdUsed && row.twitterHandle === handle } yield row).firstOption
   }
 
   // This needs to be rewritten. Does not work as expected.
-  def getTwitterSyncsByFriendIds(twitterHandles: Set[String])(implicit session: RSession): Seq[TwitterSyncState] = {
+  def getTwitterSyncsByFriendIds(twitterHandles: Set[TwitterHandle])(implicit session: RSession): Seq[TwitterSyncState] = {
     (for (r <- rows if r.twitterHandle.inSet(twitterHandles) && r.state === TwitterSyncStateStates.ACTIVE) yield r).list
   }
 

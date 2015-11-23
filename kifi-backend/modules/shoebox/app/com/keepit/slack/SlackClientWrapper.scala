@@ -8,12 +8,13 @@ import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.slack.models._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.Failure
+import scala.util.{ Success, Try, Failure }
 
 @ImplementedBy(classOf[SlackClientWrapperImpl])
 trait SlackClientWrapper {
   def sendToSlack(webhook: SlackIncomingWebhook, msg: SlackMessageRequest): Future[Unit]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
 }
 
 @Singleton
@@ -30,23 +31,39 @@ class SlackClientWrapperImpl @Inject() (
   def sendToSlack(webhook: SlackIncomingWebhook, msg: SlackMessageRequest): Future[Unit] = {
     val now = clock.now
     slackClient.sendToSlack(webhook.url, msg).andThen {
-      case Failure(fail @ SlackAPIFailure(_, SlackAPIFailure.Error.revokedWebhook, _)) =>
+      case Success(()) =>
+        db.readWrite { implicit s =>
+          slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
+            slackIncomingWebhookInfoRepo.save(whi.withCleanSlate.withLastPostedAt(now))
+          }
+        }
+      case Failure(fail: SlackAPIFailure) =>
+        log.error(s"[SLACK-CLIENT-WRAPPER] Caught a SlackAPIFailure ($fail) when posting, marking the webhook as broken")
         db.readWrite { implicit s =>
           slackIncomingWebhookInfoRepo.getByWebhook(webhook).foreach { whi =>
             slackIncomingWebhookInfoRepo.save(whi.withLastFailedAt(now).withLastFailure(fail))
           }
         }
+      case Failure(other) =>
+        log.error(s"[SLACK-CLIENT-WRAPPER] Caught a garbage error when posting, marking the webhook as broken")
     }
   }
 
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse] = {
-    slackClient.searchMessages(token, request).andThen {
-      case Failure(fail @ SlackAPIFailure(_, SlackAPIFailure.Error.revokedToken, _)) =>
-        db.readWrite { implicit s =>
-          slackTeamMembershipRepo.getByToken(token).foreach { stm =>
-            slackTeamMembershipRepo.save(stm.revoked)
-          }
-        }
-    }
+    slackClient.searchMessages(token, request).andThen(onRevokedToken(token))
   }
+
+  def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = {
+    slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedToken(token))
+  }
+
+  private def onRevokedToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
+    case Failure(fail @ SlackAPIFailure(_, SlackAPIFailure.Error.tokenRevoked, _)) =>
+      db.readWrite { implicit s =>
+        slackTeamMembershipRepo.getByToken(token).foreach { stm =>
+          slackTeamMembershipRepo.save(stm.revoked)
+        }
+      }
+  }
+
 }

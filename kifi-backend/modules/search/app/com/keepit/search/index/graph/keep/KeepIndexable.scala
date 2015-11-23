@@ -8,6 +8,7 @@ import com.keepit.search.{ LangDetector }
 import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
+import com.keepit.slack.models.SlackChannelId
 import org.apache.lucene.index.Term
 
 object KeepFields {
@@ -29,6 +30,7 @@ object KeepFields {
   val titleValueField = "tv"
   val contentField = "c"
   val contentStemmedField = "cs"
+  val sourceField = "source"
   val siteField = "site"
   val homePageField = "home_page"
   val keptAtField = "keptAt"
@@ -43,6 +45,15 @@ object KeepFields {
 
   val maxPrefixLength = 8
 
+  object Source {
+    def apply(channelId: SlackChannelId): String = s"slack|${channelId.value}"
+    def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
+    def apply(source: SourceAttribution): String = source match {
+      case twitter: TwitterAttribution => Source(twitter.screenName)
+      case slack: SlackAttribution => Source(slack.message.channel.id)
+    }
+  }
+
   val decoders: Map[String, FieldDecoder] = Map.empty
 }
 
@@ -51,7 +62,7 @@ object KeepIndexable {
   def isDiscoverable(keepSearcher: Searcher, uriId: Long) = keepSearcher.has(new Term(KeepFields.uriDiscoverableField, uriId.toString))
 }
 
-case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
+case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution], tags: Set[Hashtag], shard: Shard[NormalizedURI]) extends Indexable[Keep, Keep] {
   val id = keep.id.get
   val sequenceNumber = keep.seq
   val isDeleted = !keep.isActive || !shard.contains(keep.uriId)
@@ -94,6 +105,10 @@ case class KeepIndexable(keep: Keep, tags: Set[Hashtag], shard: Shard[Normalized
     val content = keep.note.getOrElse("")
     doc.add(buildTextField(contentField, content, contentAnalyzer))
     doc.add(buildTextField(contentStemmedField, content, contentAnalyzerWithStemmer))
+
+    sourceAttribution.foreach { source =>
+      doc.add(buildKeywordField(sourceField, Source(source)))
+    }
 
     tags.foreach { tag =>
       val tagLang = LangDetector.detect(tag.tag)
