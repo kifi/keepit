@@ -185,6 +185,8 @@ angular.module('kifi')
 
     };
 
+    var me = profileService.me;
+
     //
     // Scope data.
     //
@@ -200,12 +202,18 @@ angular.module('kifi')
     $scope.isMobile = platformService.isSupportedMobilePlatform();
     $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
-    $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === profileService.me.id;
-    $scope.isAdminExperiment = (profileService.me.experiments || []).indexOf('admin') !== -1;
-    $scope.canCreateSlackIntegration = (profileService.me.experiments || []).indexOf('slack') !== -1;
-    $scope.canAddKeepsToLibrary = (library.membership && (library.membership.access === 'owner' || library.membership.access === 'read_write'))
-      || (profileService.me.orgs.filter(function(org) { return library.org && library.org.id === org.id; }).length > 0
-            && library.orgMemberAccess === 'read_write');
+    $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === me.id;
+    $scope.isAdminExperiment = (me.experiments || []).indexOf('admin') !== -1;
+    $scope.canCreateSlackIntegration = (me.experiments || []).indexOf('slack') !== -1;
+    $scope.canAddKeepsToLibrary = (
+      library.membership && (
+        library.membership.access === 'owner' ||
+        library.membership.access === 'read_write'
+      )
+    ) || (
+      (me.orgs || []).filter(function (org) { return library.org && library.org.id === org.id; }).length > 0 &&
+      library.orgMemberAccess === 'read_write'
+    );
 
     // slack stuff
     $scope.slackIntegrations = [];
