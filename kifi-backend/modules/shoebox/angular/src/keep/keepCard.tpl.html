@@ -12,16 +12,17 @@
         <div class="kf-keep-time" ng-if="::keep.user">
           <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt" title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
           <span ng-if="::!keep.createdAt">kept this</span>
-          <span ng-if="::currentPageOrigin !== 'libraryPage' && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
+          <span ng-if="::showOriginLibrary">
             in <a class="kf-keep-lib-name" href="{{::keep.library.path}}">{{::keep.library.name}}</a>
           </span>
-          <span ng-if="showSaved && keep.summary.hasContent"><a ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
-          <span ng-if="::keep.sourceAttribution.twitter.screenName">
-            <a class="kf-keep-tweet-link" href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
-              <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
-            </a>
-          </span>
+          <span ng-if="::showSaved && (showOriginLibrary || keep.user)">&mdash;</span>
+          <span ng-if="showSaved"><a ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
         </div>
+        <span ng-if="::keep.sourceAttribution.twitter.screenName">
+          <a class="kf-keep-tweet-link" href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
+            <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
+          </a>
+        </span>
       </section>
     </div>
 
@@ -68,7 +69,7 @@
             <span>Share</span>
           </button>
         </div>
-        <div class="kf-keep-who" ng-if="keep.keepersTotal > 1 || keep.keepers.length">
+        <div class="kf-keep-who" ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.user.id)">
           <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper" library="::keeper.library" desc="Your Kifi connection">
             <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})" ng-href="{{::keeper.library.path || '/' + keeper.username}}" kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy" ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedOtherKeeper"></a>
           </span>

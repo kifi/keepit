@@ -96,8 +96,14 @@ angular.module('kifi')
     // keep information we need to display it. This function fetches that
     // information.
     function fetchFullKeepInfo(keep) {
-      return net.getKeep(keep.id, {withFullInfo: true}).then(function (result) {
+      return net.getKeep(keep.id).then(function (result) {
         return _.assign(keep, result.data);
+      });
+    }
+
+    function getFullKeepInfo(id) {
+      return net.getKeep(id).then(function (result) {
+        return result.data;
       });
     }
 
@@ -123,6 +129,7 @@ angular.module('kifi')
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,
       fetchFullKeepInfo: fetchFullKeepInfo,
+      getFullKeepInfo: getFullKeepInfo,
       unkeepFromLibrary: unkeepFromLibrary,
       unkeepManyFromLibrary: unkeepManyFromLibrary,
       removeKeepImage: removeKeepImage

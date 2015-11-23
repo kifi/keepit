@@ -264,6 +264,17 @@ angular.module('kifi')
         templateUrl: 'userProfile/userProfileFollowers.tpl.html',
         controller: 'UserProfileFollowersCtrl'
       })
+      .state('keepPage', {
+        url: '/k/:title/:pubId',
+        templateUrl: 'keep/keepPage.tpl.html',
+        controller: 'KeepPageCtrl',
+        resolve: {
+          keepService: 'keepActionService',
+          keep: ['keepService', '$stateParams', function(keepService, $stateParams){
+            return keepService.getFullKeepInfo($stateParams.pubId);
+          }]
+        }
+      })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
         url: '/:handle/:librarySlug?authToken',
