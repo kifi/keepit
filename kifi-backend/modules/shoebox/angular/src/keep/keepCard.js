@@ -83,7 +83,7 @@ angular.module('kifi')
         currentPageOrigin: '@',
         keepCallback: '&',
         clickCallback: '&',
-        deleteKeep: '=deleteKeep',
+        deleteCallback: '&',
         isFirstItem: '='
       },
       replace: true,
@@ -293,9 +293,12 @@ angular.module('kifi')
           var permissions = keep.library.permissions || [];
           if ((keep.user.id === scope.me.id && permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1) {
             scope.menuItems.push({title: keep.note ? 'Edit Note' : 'Add Note', action: scope.editKeepNote.bind(scope)});
-            scope.deleteKeep = scope.deleteKeep || scope.$parent.deleteKeep;
-            if (scope.deleteKeep) {
-              scope.menuItems.push({title: 'Delete', action: scope.deleteKeep.bind(scope)});
+            var callback = scope.deleteCallback()
+            if (callback) {
+              scope.menuItems.push({title: 'Delete', action: function(event, keep) {
+                callback(event, keep)
+                console.log(scope.keep.unkept)
+              }});
             }
           }
         }(scope.keep));
