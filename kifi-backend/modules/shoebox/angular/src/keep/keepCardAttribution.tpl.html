@@ -1,0 +1,64 @@
+<div class="kf-keep-card-attribution">
+  <a class="kf-keep-card-attribution-keeper-pic" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}"
+     ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
+
+  <div class="kf-keep-card-attribution-message">
+    <a class="kf-keep-card-attribution-keeper-name" ng-if="::keep.user"
+       ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}</a>
+    <span>&nbsp;kept this</span>
+    <span ng-if="::showLibraryAttribution && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
+    &nbsp;into&nbsp;
+    </span>
+
+    <div class="kf-privacy-container" ng-if="::showLibraryAttribution && keep.library.visibility === 'secret'"
+         data-kf-tooltip="This library is only viewable to those you invite"
+         data-kf-tooltip-position="{{ !isFirstItem ? 'top' : 'bottom' }}">
+      <svg kf-symbol-sprite
+           icon="lock"
+           class="kf-privacy-icon"
+           ng-class="{'kf-collab': keep.library.numCollaborators}"
+           title="A private library"></svg>
+    </div>
+    <div class="kf-privacy-container"
+         ng-if="::showLibraryAttribution && keep.library.visibility === 'discoverable'"
+         data-kf-tooltip="This library is viewable to others in search results"
+         data-kf-tooltip-position="{{ !isFirstItem ? 'top' : 'bottom' }}">
+      <svg kf-symbol-sprite
+           icon="star"
+           class="kf-privacy-icon"
+           ng-class="{'kf-collab': lib.numCollaborators}"
+           title="A discoverable library"
+           ng-show="keep.library.visibility === 'discoverable'"></svg>
+    </div>
+    <a ng-if="::showLibraryAttribution && keep.library"
+       class="kf-feed-tooltip-target kf-link"
+       ng-href="{{ keep.library.path }}"
+       kf-user-tooltip="::keep.user"
+       library="::keep.library"
+       ng-bind="keep.library.name"
+       ng-click="keepClick(null, $event)"
+       click-action="clickedLibrary"></a>
+
+    <span ng-if="::showLibraryAttribution && keep.library.org.name">&nbsp;in&nbsp;</span>
+    <a class="kf-keep-card-attribution-message-tooltip-target kf-link"
+       ng-href="{{::keep.library.org.handle}}"
+       kf-user-tooltip="::keep.library.org"
+       ng-bind="::keep.library.org.name"
+       ng-click="keepClick(null, $event)"
+       ng-if="::showLibraryAttribution && keep.library.org.name"
+       click-action="clickedOrganization"></a>
+
+    <span ng-if="showSaved && keep.summary.hasContent"><a
+            ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
+    <span ng-if="::keep.sourceAttribution.twitter.screenName">
+      <a class="kf-keep-tweet-link"
+         href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}"
+         target="_blank" ng-click="trackTweet()">
+        <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
+      </a>
+    </span>
+    <span ng-if="::keep.createdAt">&nbsp;·&nbsp;</span>
+    <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
+          title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
+  </div>
+</div>

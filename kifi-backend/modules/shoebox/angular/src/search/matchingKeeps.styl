@@ -18,7 +18,7 @@
     font-size: 17px
 
   &.enabled
-    color: linkColor
+    color: accentGreen
 
     &:hover
       text-decoration: underline
@@ -32,13 +32,16 @@
     margin-left: 10px
 
 .kf-smk-top
+  display: flex
+  flex-direction: row
+  align-items: center
   padding: 10px 0
   font-size: 13px
-  line-height: 20px
   font-smoothing: antialiased
 
 .kf-smk-heading
   color: #999
+  flex-grow: 1
   vertical-align: middle
 
 .kf-smk-bulk-add
@@ -49,7 +52,14 @@
   &>.sprite-edit-pencil-icon
     margin-right: 5px
 
+.kf-smk-bulk-add-icon
+  width: 15px
+  height: 15px
+  margin-right: 5px
+  fill: accentGreen
+  stroke-width: 10px
+
 .kf-smk-bulk-add-text
-  color: linkColor
+  color: accentGreen
   cursor: pointer
   user-select: none

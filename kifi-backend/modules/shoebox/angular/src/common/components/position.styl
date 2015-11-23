@@ -10,3 +10,16 @@
 
 .kf-flex-row + .kf-flex-row
   margin-top: 5px
+
+.kf-flex-column
+  display: flex
+  flex-direction: column
+
+  > * + *
+    margin-top: 5px
+
+.kf-flex-column + .kf-flex-column
+  margin-left: 5px
+
+.kf-flex-grow
+  flex-grow: 1

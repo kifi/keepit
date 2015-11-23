@@ -1,0 +1,57 @@
+.kf-keep-card-attribution-message-tooltip-target
+  position: relative
+
+  > .kf-utt
+    left: calc(50% - 40px)
+
+  > .kf-ult
+    left: calc(50% - 105px)
+
+.kf-keep-card-attribution
+  display: flex
+  flex-direction: row
+  flex-grow: 1
+  align-items: center
+  font-size: 14px
+  color: textGreyColor
+
+.kf-keep-card-attribution.kf-keep-card-attribution-compact
+  font-size: 13px
+
+.kf-keep-card-attribution-message
+  display: flex
+  flex-direction: row
+  align-items: baseline
+  flex-wrap: wrap
+
+.kf-keep-card-attribution-keeper-pic
+  display: inline-block
+  height: 34px
+  width: 34px
+  border-radius: 50%
+  background-size: cover
+  margin-right: 8px
+  margin-top: auto
+  margin-bottom: auto
+
+  &:focus
+    outline-color: #ccc
+
+.kf-keep-card-attribution-compact
+  .kf-keep-card-attribution-keeper-pic
+    height: 24px
+    width: 24px
+    margin-right: 6px
+
+.kf-keep-card-attribution-keeper-name
+  color: accentGreen
+  font-weight: bold
+
+  @media (max-width: maxWidthForNarrowKeep)
+    font-size: 14px
+
+  &:hover
+    text-decoration: underline
+
+  &:focus
+    outline-color: tint(accentGreen, 50%)

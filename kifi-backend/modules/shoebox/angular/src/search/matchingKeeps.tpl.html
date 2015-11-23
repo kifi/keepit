@@ -8,10 +8,14 @@
     <div class="kf-smk-top">
       <span class="kf-smk-heading" ng-if="loading">Searching...</span>
       <span class="kf-smk-heading" ng-if="!loading" ng-pluralize count="resultKeeps.length" when="{0: 'No matching keeps', 1: '1 matching keep', other: 'Top {} results'}"></span>
-      <div class="kf-smk-bulk-add" ng-click="edit.enabled = !edit.enabled" ng-if="$root.userLoggedIn && resultKeeps.length > 1">
-        <span class="sprite sprite-edit-pencil-icon"></span>
+
+      <div class="kf-smk-bulk-add kf-flex-row" ng-click="edit.enabled = !edit.enabled" ng-if="$root.userLoggedIn && resultKeeps.length > 1">
+        <svg kf-symbol-sprite
+             icon="pencil"
+             class="kf-smk-bulk-add-icon"></svg>
         <span class="kf-smk-bulk-add-text">{{edit.enabled ? 'Done' : 'Bulk keep to library'}}</span>
       </div>
+      <div kf-card-style-selector style="float: right; padding-left: 10px"></div>
     </div>
   </div>
 
