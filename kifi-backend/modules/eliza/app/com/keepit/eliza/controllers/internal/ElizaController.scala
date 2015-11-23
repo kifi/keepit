@@ -153,7 +153,7 @@ class ElizaController @Inject() (
   def getDiscussionMessagesForKeeps = Action(parse.tolerantJson) { request =>
     val keepIds = request.body.as[Set[Id[Keep]]]
     // TODO(ryan): actually implement this
-    val messagesByKeep = keepIds.map(kid => kid -> Seq.empty[Message]).toMap
+    val messagesByKeep = keepIds.map(keepId => keepId -> Seq.empty[Message]).toMap
     Ok(Json.toJson(messagesByKeep))
   }
 }

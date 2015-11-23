@@ -1023,7 +1023,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "summary": {},
                 "siteName": "Amazon",
                 "libraryId": "l7jlKlnA36Su",
-                "library": ${Json.toJson(libraryCard(lib1.id.get))}
+                "library": ${Json.toJson(libraryCard(lib1.id.get))},
+                "messages": []
               },
               {
                 "id": "${keep1.externalId}",
@@ -1046,7 +1047,8 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
                 "summary": {},
                 "siteName": "Google",
                 "libraryId": "l7jlKlnA36Su",
-                "library": ${Json.toJson(libraryCard(lib1.id.get))}
+                "library": ${Json.toJson(libraryCard(lib1.id.get))},
+                "messages": []
               }
             ],
             "numKeeps": 2
@@ -1299,18 +1301,19 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           (keeps(0), keeps(1), keeps(2))
         }
 
-        Json.parse(contentAsString(result1)) must equalTo(Json.parse(
+        contentAsJson(result1) === Json.parse(
           s"""
             {
-              "keeps":
-              [{"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}"},
-              {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}"},
-              {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}"}],
+              "keeps":[
+                {"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]},
+                {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]},
+                {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]}
+              ],
               "failures":[],
               "alreadyKept":[]
             }
           """.stripMargin
-        ))
+        )
 
         val request2 = FakeRequest("POST", testPath2).withBody(json)
         val result2 = libraryController.addKeeps(pubId2)(request2)
@@ -1327,10 +1330,10 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
           s"""
             {
               "keeps":[
-                {"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"},
-                {"id":"${k5.externalId}","pubId": "${Keep.publicId(k5.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"${pubId2.id}"},
-                {"id":"${k6.externalId}","pubId": "${Keep.publicId(k6.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":true, "libraryId":"${pubId2.id}"}
-                ],
+                {"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}","messages":[]},
+                {"id":"${k5.externalId}","pubId": "${Keep.publicId(k5.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":true, "libraryId":"${pubId2.id}","messages":[]},
+                {"id":"${k6.externalId}","pubId": "${Keep.publicId(k6.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":true, "libraryId":"${pubId2.id}","messages":[]}
+              ],
               "failures":[],
               "alreadyKept":[]
             }
@@ -1350,7 +1353,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
               {
                 "keeps":[],
                 "failures":[],
-                "alreadyKept":[{"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11zzz","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}"}]
+                "alreadyKept":[{"id":"${k4.externalId}","pubId": "${Keep.publicId(k4.id.get).id}","title":"title 11zzz","url":"http://www.hi.com11","isPrivate":true, "libraryId":"${pubId2.id}","messages":[]}]
               }
             """.stripMargin
         ))
@@ -1400,16 +1403,17 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
-        Json.parse(contentAsString(result2)) must equalTo(Json.parse(
+        contentAsJson(result2) === Json.parse(
           s"""
             {
-              "failures":["${k4Id}"],
-              "unkept":
-              [{"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}"},
-              {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}"}]
+              "failures":["$k4Id"],
+              "unkept":[
+                {"id":"${k1.externalId}","pubId": "${Keep.publicId(k1.id.get).id}","title":"title 11","url":"http://www.hi.com11","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]},
+                {"id":"${k2.externalId}","pubId": "${Keep.publicId(k2.id.get).id}","title":"title 21","url":"http://www.hi.com21","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]}
+              ]
             }
           """.stripMargin
-        ))
+        )
 
         // test single unkeeping
         val testPathRemoveOne = com.keepit.controllers.website.routes.LibraryController.removeKeep(pubId1, k3.externalId).url
@@ -1421,7 +1425,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         Json.parse(contentAsString(result3)) must equalTo(Json.parse(
           s"""
             {
-              "unkept": {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}"}
+              "unkept": {"id":"${k3.externalId}","pubId": "${Keep.publicId(k3.id.get).id}","title":"title 31","url":"http://www.hi.com31","isPrivate":false, "libraryId":"${pubId1.id}","messages":[]}
             }
           """.stripMargin
         ))

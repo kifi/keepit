@@ -114,7 +114,7 @@ case class MessageThread(
   pageTitle: Option[String],
   participants: Option[MessageThreadParticipants],
   participantsHash: Option[Int],
-  keepId: Option[Id[Keep]])
+  keepId: Option[Id[Keep]] = None)
     extends ModelWithExternalId[MessageThread] {
   def deepLocator: DeepLocator = DeepLocator(s"/messages/$externalId")
 

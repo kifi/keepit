@@ -1,5 +1,6 @@
 package com.keepit.eliza
 
+import com.keepit.discussion.Message
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
@@ -98,6 +99,10 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean] = {
     completedNotifications = recipient +: completedNotifications
     Future.successful(true)
+  }
+
+  def getDiscussionMessagesForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Seq[Message]]] = {
+    Future.successful(Map.empty)
   }
 
 }

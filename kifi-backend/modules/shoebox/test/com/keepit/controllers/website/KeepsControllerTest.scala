@@ -25,7 +25,7 @@ import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
-import play.api.libs.json.{ JsObject, JsArray, JsString, Json }
+import play.api.libs.json._
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.model.UserFactoryHelper._
@@ -47,6 +47,24 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeSocialGraphModule(),
     FakeCortexServiceClientModule()
   )
+
+  def deepTest(a: JsValue, b: JsValue, path: Option[String] = None): Option[String] = {
+    (a.asOpt[JsObject], b.asOpt[JsObject]) match {
+      case (Some(aObj), Some(bObj)) =>
+        (aObj.keys ++ bObj.keys).flatMap(k => deepTest(aObj \ k, bObj \ k, path.map(_ + k))).headOption
+      case _ =>
+        (a.asOpt[JsArray], b.asOpt[JsArray]) match {
+          case (Some(aArr), Some(bArr)) if aArr.value.length != bArr.value.length =>
+            Some(s"${path.getOrElse("")}: lengths unequal")
+          case (Some(aArr), Some(bArr)) =>
+            (aArr.value zip bArr.value).flatMap { case (av, bv) => deepTest(av, bv, path.map(_ + "[i]")) }.headOption
+          case _ if a != b =>
+            println(s"Found discrepancy: $a != $b")
+            Some(s"${path.getOrElse("")}: $a != $b")
+          case _ => None
+        }
+    }
+  }
 
   def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id
   def externalIdForCollection(userId: Id[User], name: String)(implicit injector: Injector): String = forCollection(userId, name).externalId.id
@@ -143,63 +161,67 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
 
-        val expected = Json.parse(s"""
-          {"collection":null,
-           "before":null,
-           "after":null,
-           "keeps":[
-            {
-              "id":"${bookmark2.externalId.toString}",
-              "pubId": "${Keep.publicId(bookmark2.id.get).id}",
-              "title":"A1",
-              "url":"http://www.amazon.com/",
-              "isPrivate":false,
-              "user":{"id":"${user1.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test"},
-              "createdAt":"${bookmark2.createdAt.toStandardTimeString}",
-              "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}", "libraryId":"${pubLibId1.id}"}],
-              "keepers":[{"id":"${user2.externalId.toString}","firstName":"Eishay","lastName":"S","pictureName":"0.jpg", "username":"test"}],
-              "keepersOmitted": 0,
-              "keepersTotal": 3,
-              "libraries":[],
-              "librariesOmitted": 0,
-              "librariesTotal": 0,
-              "collections":[],
-              "tags":[],
-              "hashtags":[],
-              "summary":{},
-              "siteName":"Amazon",
-              "libraryId":"${pubLibId1.id}",
-              "library":${Json.toJson(libraryCard(lib1.id.get))}
-              },
-            {
-              "id":"${bookmark1.externalId.toString}",
-              "pubId":"${Keep.publicId(bookmark1.id.get).id}",
-              "title":"G1",
-              "url":"http://www.google.com/",
-              "isPrivate":false,
-              "user":{"id":"${user1.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test"},
-              "createdAt":"${bookmark1.createdAt.toStandardTimeString}",
-              "keeps":[
-                {"id":"${bookmark1.externalId}", "mine":true, "removable":true, "visibility":"${bookmark1.visibility.value}", "libraryId":"${pubLibId1.id}"},
-                {"id":"${bookmark3.externalId}", "mine":false, "removable":true, "visibility":"${bookmark3.visibility.value}", "libraryId":"${pubLibId1.id}"}
-              ],
-              "keepers":[],
-              "keepersOmitted": 0,
-              "keepersTotal": 1,
-              "libraries":[],
-              "librariesOmitted": 0,
-              "librariesTotal": 0,
-              "collections":[],
-              "tags":[],
-              "hashtags":[],
-              "summary":{},
-              "siteName":"Google",
-              "libraryId":"${pubLibId1.id}",
-              "library":${Json.toJson(libraryCard(lib1.id.get))}
-              }
-          ]}
-        """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        val expected = Json.obj(
+          "collection" -> JsNull,
+          "before" -> JsNull,
+          "after" -> JsNull,
+          "keeps" -> Json.arr(
+            Json.obj(
+              "id" -> bookmark2.externalId,
+              "pubId" -> Keep.publicId(bookmark2.id.get),
+              "title" -> "A1",
+              "url" -> "http://www.amazon.com/",
+              "isPrivate" -> false,
+              "user" -> Json.obj("id" -> s"${user1.externalId}", "firstName" -> "Andrew", "lastName" -> "C", "pictureName" -> "0.jpg", "username" -> "test"),
+              "createdAt" -> bookmark2.createdAt.toStandardTimeString,
+              "keeps" -> Json.arr(Json.obj("id" -> bookmark2.externalId, "mine" -> true, "removable" -> true, "visibility" -> bookmark2.visibility, "libraryId" -> pubLibId1.id)),
+              "keepers" -> Json.arr(Json.obj("id" -> user2.externalId, "firstName" -> "Eishay", "lastName" -> "S", "pictureName" -> "0.jpg", "username" -> "test")),
+              "keepersOmitted" -> 0,
+              "keepersTotal" -> 3,
+              "libraries" -> Json.arr(),
+              "librariesOmitted" -> 0,
+              "librariesTotal" -> 0,
+              "collections" -> Json.arr(),
+              "tags" -> Json.arr(),
+              "hashtags" -> Json.arr(),
+              "summary" -> Json.obj(),
+              "siteName" -> "Amazon",
+              "libraryId" -> pubLibId1.id,
+              "library" -> Json.toJson(libraryCard(lib1.id.get)),
+              "messages" -> Json.arr()
+            ),
+            Json.obj(
+              "id" -> bookmark1.externalId,
+              "pubId" -> Keep.publicId(bookmark1.id.get),
+              "title" -> "G1",
+              "url" -> "http://www.google.com/",
+              "isPrivate" -> false,
+              "user" -> Json.obj("id" -> user1.externalId, "firstName" -> "Andrew", "lastName" -> "C", "pictureName" -> "0.jpg", "username" -> "test"),
+              "createdAt" -> bookmark1.createdAt.toStandardTimeString,
+              "keeps" -> Json.arr(
+                Json.obj("id" -> bookmark1.externalId, "mine" -> true, "removable" -> true, "visibility" -> bookmark1.visibility, "libraryId" -> pubLibId1.id),
+                Json.obj("id" -> bookmark3.externalId, "mine" -> false, "removable" -> true, "visibility" -> bookmark3.visibility, "libraryId" -> pubLibId1.id)
+              ),
+              "keepers" -> Json.arr(),
+              "keepersOmitted" -> 0,
+              "keepersTotal" -> 1,
+              "libraries" -> Json.arr(),
+              "librariesOmitted" -> 0,
+              "librariesTotal" -> 0,
+              "collections" -> Json.arr(),
+              "tags" -> Json.arr(),
+              "hashtags" -> Json.arr(),
+              "summary" -> Json.obj(),
+              "siteName" -> "Google",
+              "libraryId" -> pubLibId1.id,
+              "library" -> libraryCard(lib1.id.get),
+              "messages" -> Json.arr()
+            )
+          )
+        )
+        val actual = contentAsJson(result).as[JsObject]
+        deepTest(actual, expected) must beNone
+        1 === 1
       }
     }
 
@@ -286,12 +308,14 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                 "summary":{},
                 "siteName":"Amazon",
                 "libraryId":"${pubLibId1.id}",
-                "library":${Json.toJson(libraryCard(lib1.id.get))}
+                "library":${Json.toJson(libraryCard(lib1.id.get))},
+                "messages":[]
               }
             ]
           }
         """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        val actual = contentAsJson(result)
+        deepTest(actual, expected) must beNone
       }
     }
 
@@ -349,7 +373,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "summary":{},
                       "siteName":"Kifi",
                       "libraryId":"${Library.publicId(u1Main.id.get)(inject[PublicIdConfiguration]).id}",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
+                      "messages":[]
                     },
                     {
                       "id":"${keeps1(0).externalId.toString}",
@@ -371,14 +396,16 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
+                      "messages":[]
                     }
                   ],
                   "helprank":"click"
                   }
                 """)
 
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        val actual = contentAsJson(result)
+        deepTest(actual, expected) must beNone
       }
     }
 
@@ -436,13 +463,15 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                       "summary":{},
                       "siteName":"FortyTwo",
                       "libraryId":"l7jlKlnA36Su",
-                      "library":${Json.toJson(libraryCard(u1Main.id.get))}
+                      "library":${Json.toJson(libraryCard(u1Main.id.get))},
+                      "messages":[]
                     }
                   ],
                   "helprank":"click"
                   }
                 """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        val actual = contentAsJson(result)
+        deepTest(actual, expected) must beNone
       }
     }
 
@@ -499,7 +528,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "summary":{},
                                       "siteName":"Facebook",
                                       "libraryId":"lzmfsKLJyou6",
-                                      "library":${Json.toJson(libraryCard(u3Main.id.get))}
+                                      "library":${Json.toJson(libraryCard(u3Main.id.get))},
+                                      "messages":[]
                                     },
                                     {
                                       "id":"${keeps3(0).externalId.toString}",
@@ -521,7 +551,8 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
                                       "summary":{},
                                       "siteName":"Kifi",
                                       "libraryId":"lzmfsKLJyou6",
-                                      "library":${Json.toJson(libraryCard(u3Main.id.get))}
+                                      "library":${Json.toJson(libraryCard(u3Main.id.get))},
+                                      "messages":[]
                                     }
                                   ],
                                   "helprank":"click"

@@ -77,7 +77,7 @@ object KeepInfo {
         "organization" -> o.organization,
         "sourceAttribution" -> o.sourceAttribution.map(SourceAttribution.deprecatedWrites.writes(_)),
         "note" -> o.note,
-        "discussionMessages" -> o.discussionMessages
+        "messages" -> o.discussionMessages
       ).nonNullFields
     }
   }
