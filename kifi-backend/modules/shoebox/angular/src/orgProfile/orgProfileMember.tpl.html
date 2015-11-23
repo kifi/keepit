@@ -6,7 +6,7 @@
         <div class="kf-org-member-email symbol-sprite svg-envelope" ng-if="!member.id"></div>
         <div class="kf-org-member-info">
           <p class="kf-org-member-info-name" ng-bind="member.firstName ? member.firstName + ' ' + member.lastName : member.email"></p>
-          <p class="kf-org-member-info-role" ng-bind="role()"></p>
+          <p class="kf-org-member-info-role" ng-if="shouldShowRole()" ng-bind="role()"></p>
         </div>
       </a>
     </div>
