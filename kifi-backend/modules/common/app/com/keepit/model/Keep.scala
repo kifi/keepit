@@ -352,11 +352,16 @@ object BasicKeep {
 
 // All the important parts of a Keep to send across services
 // NOT to be sent to clients
+// PSA: Think of a Keep as the source node of a graph
+// People can view the keep if they are connected to the Keep node:
+//     1. Directly (via a keep-to-user)
+//     2. Indirectly, via a library (keep -> library -> library-membership -> user)
+//     3. Indirectly, via an organization (keep -> library -> organization -> organization-membership -> user)
 case class CrossServiceKeep(
   id: Id[Keep],
-  owner: Id[User],
-  users: Set[Id[User]],
-  libraries: Set[Id[Library]],
+  owner: Id[User], // the person who created the keep
+  users: Set[Id[User]], // all the users directly connected to the keep
+  libraries: Set[Id[Library]], // all the libraries directly connected to the keep
   title: Option[String],
   url: String,
   uriId: Id[NormalizedURI])
