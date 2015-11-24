@@ -147,7 +147,7 @@ class MessageRepoImpl @Inject() (
       case None => threadMessages
       case Some(fid) =>
         val fromTime = rows.filter(_.id === fid).map(_.createdAt).first
-        threadMessages.filter(r => r.createdAt > fromTime || (r.createdAt === fromTime && r.id > fid))
+        threadMessages.filter(r => r.createdAt < fromTime || (r.createdAt === fromTime && r.id < fid))
     }
     filteredMessages.sortBy(r => (r.createdAt desc, r.id desc)).take(limit).list
   }

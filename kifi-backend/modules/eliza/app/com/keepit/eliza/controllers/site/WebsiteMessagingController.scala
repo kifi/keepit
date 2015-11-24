@@ -38,11 +38,11 @@ class WebsiteMessagingController @Inject() (
     }
   }
 
-  def getMessagesOnKeep(keepPubId: PublicId[Keep], fromPubIdOpt: Option[PublicId[Message]], limit: Int = 10) = UserAction.async { request =>
+  def getMessagesOnKeep(keepPubId: PublicId[Keep], limit: Int = 10, fromPubIdOpt: Option[String] = None) = UserAction.async { request =>
     val keepIdTry = Keep.decodePublicId(keepPubId)
-    val fromIdOptTry = fromPubIdOpt match {
+    val fromIdOptTry = fromPubIdOpt.filter(_.nonEmpty) match {
       case None => Success(None)
-      case Some(fromPubId) => Message.decodePublicId(fromPubId).map(msgId => Some(ElizaMessage.fromMessageId(msgId)))
+      case Some(fromPubId) => Message.decodePublicId(PublicId[Message](fromPubId)).map(msgId => Some(ElizaMessage.fromMessageId(msgId)))
     }
     (for {
       keepId <- keepIdTry
