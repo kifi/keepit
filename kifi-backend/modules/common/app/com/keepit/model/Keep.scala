@@ -93,6 +93,8 @@ case class Keep(
   }
 
   def titlePathString = this.title.map(_.trim.replaceAll(" ", "-")).getOrElse(this.url.trim.replaceAll("[./]", "-")).take(40)
+
+  def path(implicit config: PublicIdConfiguration) = Path(s"k/$titlePathString/${Keep.publicId(this.id.get).id}")
 }
 
 object Keep extends ModelWithPublicIdCompanion[Keep] {
