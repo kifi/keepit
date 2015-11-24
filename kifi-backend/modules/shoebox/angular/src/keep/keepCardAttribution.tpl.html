@@ -46,14 +46,22 @@
        ng-if="::showLibraryAttribution && keep.library.org.name"
        click-action="clickedOrganization"></a>
 
-    <span ng-if="showSaved && keep.summary.hasContent"><a
-            ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
+    <span class="kf-keep-card-attribution-slack" ng-if="::keep.sourceAttribution.slack">
+      using
+      <a class="kf-keep-card-attribution-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
+        <span class="svg-slack kf-keep-card-attribution-slack-icon"></span>via @<span ng-bind="keep.sourceAttribution.slack.message.username"></span>
+      </a>
+    </span>
+
     <a class="kf-keep-tweet-link"
        ng-if="::keep.sourceAttribution.twitter.screenName"
        href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}"
        target="_blank" ng-click="trackTweet()"><span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
     </a>
+
     <span ng-if="::keep.createdAt">·</span>
+    <span ng-if="showSaved && keep.summary.hasContent"><a
+      ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
     <span>
       <a class="kf-keep-card-attribution-page-link" ng-href="{{::keep.path}}">
       <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
