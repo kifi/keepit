@@ -574,7 +574,8 @@ angular.module('kifi')
     });
 
     // query param handling
-    if ($location.search() && $location.search().showSlackDialog) {
+    var showSlackDialog = initParams.getAndClear('showSlackDialog');
+    if (showSlackDialog) {
       $scope.openSlackIntegrations();
     }
   }

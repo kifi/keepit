@@ -83,7 +83,7 @@ angular.module('kifi', [
 .factory('initParams', [
   '$location',
   function ($location) {
-    var names = ['m', 'o', 'install', 'intent'];
+    var names = ['m', 'o', 'install', 'intent', 'showSlackDialog'];
     var scrub = ['kcid', 'utm_campaign', 'utm_content', 'utm_medium', 'utm_source', 'utm_term', 'dat', 'kma'];
     var search = $location.search();
     var params = _.pick(search, names);
