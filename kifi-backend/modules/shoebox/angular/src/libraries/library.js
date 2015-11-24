@@ -426,7 +426,7 @@ angular.module('kifi')
         signupService.register({});
       } else if (profileService.me && profileService.me.orgs.length > 0) {
 
-        if ($scope.canAddKeepsToLibrary && (library.permissions || []).indexOf('create_slack_integration') !== -1) {
+        if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
           if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
             $scope.openSlackIntegrations();
           } else {
