@@ -30,7 +30,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
   implicit val defaultContext: ExecutionContext)
     extends ElizaDiscussionCommander with Logging {
 
-  private def externalizeMessages(emsgs: Seq[ElizaMessage]): Future[Seq[Message]] = {
+  val MESSAGES_TO_INCLUDE = 8
+
+  private def externalizeMessages(emsgs: Seq[ElizaMessage]): Future[Map[Id[ElizaMessage], Message]] = {
     val users = emsgs.flatMap(_.from.asUser)
     val nonUsers = emsgs.flatMap(_.from.asNonUser)
     val basicUsersFut = shoebox.getBasicUsers(users)
@@ -39,32 +41,36 @@ class ElizaDiscussionCommanderImpl @Inject() (
       basicUsers <- basicUsersFut
       basicNonUsers <- basicNonUsersFut
     } yield emsgs.map { em =>
-      Message(
-        id = ExternalId[Message](em.externalId.id), // TODO(ryan): this is a hack to expose Id[ElizaMessage] in a semi-typesafe way
+      val msgId = ExternalId[Message](em.externalId.id) // this is a hack to expose Id[ElizaMessage] in a semi-typesafe way
+      em.id.get -> Message(
+        id = msgId,
         sentAt = em.createdAt,
         sentBy = em.from.asUser.map(uid => BasicUserLikeEntity(basicUsers(uid))).getOrElse {
           BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(em.from.asNonUser.get))
         },
         text = em.messageText
       )
-    }
+    }.toMap
   }
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]) = db.readOnlyReplica { implicit s =>
     val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
     val threadIds = threadsByKeep.values.map(_.id.get).toSet
     val countsByThread = messageRepo.getAllMessageCounts(threadIds)
-    val recentsByThread = threadIds.map(threadId => threadId -> messageRepo.getRecentByThread(threadId, None, 5)).toMap
+    val recentsByThread = threadIds.map { threadId =>
+      threadId -> messageRepo.getRecentByThread(threadId, None, MESSAGES_TO_INCLUDE)
+    }.toMap
 
-    val discussionsByKeepFut = threadsByKeep.map {
-      case (kid, thread) =>
-        externalizeMessages(recentsByThread(thread.id.get)).map { msgs =>
+    val extMessageMapFut = externalizeMessages(recentsByThread.values.toSeq.flatten)
+
+    extMessageMapFut.map { extMessageMap =>
+      threadsByKeep.map {
+        case (kid, thread) =>
           kid -> Discussion(
             startedAt = thread.createdAt,
-            numMessages = countsByThread(thread.id.get),
-            messages = msgs
+            numMessages = countsByThread.getOrElse(thread.id.get, 0),
+            messages = recentsByThread(thread.id.get).flatMap(em => extMessageMap.get(em.id.get))
           )
-        }
+      }
     }
-    Future.sequence(discussionsByKeepFut).map(_.toMap)
   }
 }
