@@ -33,86 +33,15 @@
       </div>
     </div>
   </section>
+
+  <div class="kf-feed-header-container" ng-if="!isLoading()">
+    <div kf-card-style-selector></div>
+  </div>
   <section class="kf-feed-item" ng-repeat="feedItem in feed">
-    <header class="kf-feed-top">
-      <h4 class="kf-feed-heading">
-        <a
-          class="kf-feed-tooltip-target"
-          ng-href="{{ feedItem.user | slug }}"
-          kf-user-tooltip="::feedItem.user"
-          ng-bind="feedItem.user | name"
-          ng-click="keepClick(null, $event)"
-          click-action="clickedProfile"
-        ></a>
-        <span>kept this</span>
-        <span ng-if="::feedItem.library">into</span>
-        <div
-          class="kf-privacy-container"
-          ng-if="feedItem.library.visibility === 'secret'"
-          data-kf-tooltip="This library is only viewable to those you invite"
-          data-kf-tooltip-position="{{ feed.indexOf(feedItem) ? 'top' : 'bottom' }}"
-        >
-          <svg
-            kf-symbol-sprite
-            icon="lock"
-            class="kf-privacy-icon"
-            ng-class="{'kf-collab': lib.numCollaborators}"
-            title="A private library"
-          ></svg>
-        </div>
-        <div
-          class="kf-privacy-container"
-          ng-if="feedItem.library.visibility === 'discoverable'"
-          data-kf-tooltip="This library is viewable to others in search results"
-          data-kf-tooltip-position="{{ feed.indexOf(feedItem) ? 'top' : 'bottom' }}"
-        >
-          <svg
-            kf-symbol-sprite
-            icon="star"
-            class="kf-privacy-icon"
-            ng-class="{'kf-collab': lib.numCollaborators}"
-            title="A discoverable library"
-            ng-show="feedItem.library.visibility === 'discoverable'"
-          ></svg>
-        </div>
-        <span><!-- Separate the inline-block elements from each other --></span>
-        <a
-          ng-if="::feedItem.library"
-          class="kf-feed-tooltip-target"
-          ng-href="{{ feedItem.library.path }}"
-          kf-user-tooltip="::feedItem.user"
-          library="::feedItem.library"
-          ng-bind="feedItem.library.name"
-          ng-click="keepClick(null, $event)"
-          click-action="clickedLibrary"
-        ></a>
-        <span ng-if="feedItem.organization">in</span>
-        <a
-          class="kf-feed-tooltip-target"
-          ng-if="feedItem.organization"
-          ng-href="{{feedItem.organization.handle}}"
-          kf-user-tooltip="::feedItem.organization"
-          ng-bind="feedItem.organization.name"
-          ng-click="keepClick(null, $event)"
-          click-action="clickedOrganization"
-        ></a> &mdash; <span am-time-ago="feedItem.createdAt"></span>
-      </h4>
-      <div class="kf-feed-attr">
-        <div class="kf-feed-attr-twitter" ng-if="::feedItem.sourceAttribution.twitter.screenName">
-          <a class="kf-feed-attr-link" href="https://www.twitter.com/{{::feedItem.sourceAttribution.twitter.screenName}}/status/{{::feedItem.sourceAttribution.twitter.idString}}" target="_blank" ng-click="trackTweet()">
-            <span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
-          </a>
-        </div>
-        <div class="kf-feed-attr-slack" ng-if="::feedItem.sourceAttribution.slack">
-          <a class="kf-feed-attr-link kf-flex-row" href="{{::feedItem.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
-            <span class="svg-slack kf-feed-slack-icon"></span><span>via @{{ feedItem.sourceAttribution.slack.message.username }}</span>
-          </a>
-        </div>
-      </div>
-    </header>
-    <div class="kf-keep">
-      <div class="kf-feed-item" kf-keep-card="feedItem" boxed="true" gallery-view="true" click-callback="keepClick(keep, event)"></div>
-    </div>
+      <div kf-keep-card="feedItem"
+           boxed="true"
+           click-callback="keepClick(keep, event)"
+           is-first-item="::feedItem === feed[0]"></div>
   </section>
   <div ng-if="feed.length > 0" class="kf-feed-get-more-container" ng-click="hasMoreKeeps() && fetchKeeps()">
     <span ng-if="!isLoading() && hasMoreKeeps()" class="kf-feed-get-more">See more</span>

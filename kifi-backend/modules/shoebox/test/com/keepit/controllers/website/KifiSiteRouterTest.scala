@@ -2,27 +2,25 @@ package com.keepit.controllers.website
 
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.commanders.{ LibraryCommander, UserCommander }
+import com.keepit.commanders.{PathCommander, LibraryCommander, UserCommander}
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.controller.{ FakeUserActionsHelper, UserRequest, NonUserRequest }
-import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
-import com.keepit.common.db.Id
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
+import com.keepit.common.controller.FakeUserActionsHelper
+import com.keepit.common.crypto.{PublicIdConfiguration, FakeCryptoModule}
+import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.controllers.mobile.MobileKeepsController
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
-import com.keepit.test.{ ShoeboxTestInjector, ShoeboxApplication, ShoeboxApplicationInjector }
+import com.keepit.test.{ ShoeboxApplication, ShoeboxApplicationInjector }
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.UserFactory
-import org.apache.commons.lang3.RandomStringUtils
+
 
 import org.specs2.mutable.Specification
 import org.specs2.matcher.{ Matcher, Expectable }
@@ -50,8 +48,12 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
     FakeCryptoModule()
   )
 
+
+
   "KifiSiteRouter" should {
     implicit val context = HeimdalContext.empty
+
+    implicit def publicIdConfig(implicit injector: Injector) = inject[PublicIdConfiguration]
 
     "route correctly" in {
       running(new ShoeboxApplication(modules: _*)) {
@@ -276,6 +278,29 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         // for someone without an org, it redirects to org creation
         actionsHelper.setUser(user2)
         route(FakeRequest("GET", "/pricing")) must beRedirect(SEE_OTHER, "/teams/new")
+
+        val (lib, keep) = db.readWrite { implicit s =>
+          val lib = LibraryFactory.library().withName("Lincoln's Speeches").withOwner(user1.id.get).withVisibility(LibraryVisibility.PUBLISHED).saved
+          val keep = KeepFactory.keep().withUser(user1).withLibrary(lib).withTitle("The Gettysburg Address").withNote("Four score and seven years ago...")
+            .withUrl("www.lincoln.gov/speeches/gettysburg").withVisibility(LibraryVisibility.PUBLISHED).saved
+          (lib, keep)
+        }
+
+        // keep pages
+        val keepPath = inject[PathCommander].pathForKeep(keep)
+        actionsHelper.setUser(user1, Set(UserExperimentType.ADMIN))
+        route(FakeRequest("GET", "/"+keepPath.relative)) must beWebApp
+
+        actionsHelper.setUser(user2, Set(UserExperimentType.ADMIN))
+        route(FakeRequest("GET", "/"+keepPath.relative)) must beWebApp
+
+        libraryCommander.modifyLibrary(lib.id.get, lib.ownerId, LibraryModifications(visibility = Some(LibraryVisibility.SECRET)))
+        actionsHelper.setUser(user1, Set(UserExperimentType.ADMIN))
+        route(FakeRequest("GET", "/"+keepPath.relative)) must beWebApp
+
+        actionsHelper.setUser(user2, Set(UserExperimentType.ADMIN))
+        route(FakeRequest("GET", "/"+keepPath.relative)) must be404
+
 
         // catching mobile
         {

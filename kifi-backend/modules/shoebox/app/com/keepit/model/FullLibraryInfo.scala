@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.json
 import com.keepit.common.mail.BasicContact
+import com.keepit.discussion.Message
 import com.keepit.slack.LibrarySlackInfo
 import com.keepit.slack.models.{ SlackIntegrationStatus, SlackChannelToLibrary, LibraryToSlackChannel, SlackChannelName }
 import com.keepit.social.BasicUser

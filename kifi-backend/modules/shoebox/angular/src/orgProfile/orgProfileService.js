@@ -30,8 +30,8 @@ angular.module('kifi')
 })
 
 .factory('orgProfileService', [
-  '$analytics', 'net',
-  function ($analytics, net) {
+  '$analytics', 'net', 'profileService',
+  function ($analytics, net, profileService) {
     function invalidateOrgProfileCache() {
       [
         net.getOrgLibraries,
@@ -64,13 +64,16 @@ angular.module('kifi')
       acceptOrgMemberInvite: function (orgId, authToken) {
         return net
         .acceptOrgMemberInvite(orgId, authToken)
-        .then(invalidateOrgProfileCache);
+        .then(invalidateOrgProfileCache)
+        .then(profileService.fetchMe);
       },
       cancelOrgMemberInvite: function (orgId, cancelFields) {
         return net.cancelOrgMemberInvite(orgId, cancelFields);
       },
       declineOrgMemberInvite: function (orgId) {
-        return net.declineOrgMemberInvite(orgId);
+        return net
+        .declineOrgMemberInvite(orgId)
+        .then(profileService.fetchMe);
       },
       removeOrgMember: function (orgId, removeFields) {
 

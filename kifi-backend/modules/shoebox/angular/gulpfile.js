@@ -143,11 +143,12 @@ var htmlCache = 'html';
 var jsHintSrcCache = 'jshint-src';
 var jsHintTestCache = 'jshint-test';
 
-var cacheUpdater = function (cacheName) {
+var cacheUpdater = function () {
+  var args = arguments;
   return function (event) {
     if (event.type === 'deleted') {
-      for(var i = 0; i < arguments.length; i++) {
-        var cacheName = arguments[arg];
+      for(var i = 0; i < args.length; i++) {
+        var cacheName = args[i];
         delete cache.caches[cacheName][event.path];
         remember.forget(cacheName, event.path);
       }

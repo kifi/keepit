@@ -1,19 +1,22 @@
 package com.keepit.commanders
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
+import org.apache.commons.lang3.RandomStringUtils
 
 @Singleton
 class PathCommander @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
-    userRepo: UserRepo) {
+    userRepo: UserRepo,
+    implicit val config: PublicIdConfiguration) {
 
   // TODO(ryan): I feel bad for "fixing" this problem like this, but a bunch of existing
   // code directly calls getPathForLibrary, which calls LibraryPathHelper, and that class
@@ -23,6 +26,8 @@ class PathCommander @Inject() (
 
   def pathForUser(user: User): Path = Path(user.username.value)
 
+  def pathForKeep(keep: Keep): Path = Path(s"k/${keep.titlePathString}/${Keep.publicId(keep.id.get).id}")
+
   def pathForOrganization(org: Organization): Path = Path(org.handle.value)
 
   private def orgPageByHandle(handle: OrganizationHandle): Path = Path(handle.value)
@@ -30,19 +35,19 @@ class PathCommander @Inject() (
   private def orgLibrariesPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle)
   private def orgPlanPageByHandle(handle: OrganizationHandle): Path = orgPageByHandle(handle) + "/settings/plan"
 
-  def orgPage(org: Organization): Path = orgPageByHandle(org.handle)
+  def orgPage(org: Organization): Path = orgPageByHandle(org.primaryHandle.get.normalized)
   def orgPage(org: BasicOrganization): Path = orgPageByHandle(org.handle)
   def orgPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPage(orgRepo.get(orgId))
 
-  def orgMembersPage(org: Organization): Path = orgMembersPageByHandle(org.handle)
+  def orgMembersPage(org: Organization): Path = orgMembersPageByHandle(org.primaryHandle.get.normalized)
   def orgMembersPage(org: BasicOrganization): Path = orgMembersPageByHandle(org.handle)
   def orgMembersPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgMembersPage(orgRepo.get(orgId))
 
-  def orgLibrariesPage(org: Organization): Path = orgLibrariesPageByHandle(org.handle)
+  def orgLibrariesPage(org: Organization): Path = orgLibrariesPageByHandle(org.primaryHandle.get.normalized)
   def orgLibrariesPage(org: BasicOrganization): Path = orgLibrariesPageByHandle(org.handle)
   def orgLibrariesPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgLibrariesPage(orgRepo.get(orgId))
 
-  def orgPlanPage(org: Organization): Path = orgPlanPageByHandle(org.handle)
+  def orgPlanPage(org: Organization): Path = orgPlanPageByHandle(org.primaryHandle.get.normalized)
   def orgPlanPage(org: BasicOrganization): Path = orgPlanPageByHandle(org.handle)
   def orgPlanPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPlanPage(orgRepo.get(orgId))
 
@@ -50,7 +55,7 @@ class PathCommander @Inject() (
   def getPathForLibrary(lib: Library): String = {
     val (user, org) = db.readOnlyMaster { implicit s =>
       val user = basicUserRepo.load(lib.ownerId)
-      val org = lib.organizationId.map(orgRepo.get(_))
+      val org = lib.organizationId.map(orgRepo.get)
       (user, org)
     }
     LibraryPathHelper.formatLibraryPath(user, org.map(_.handle), lib.slug)

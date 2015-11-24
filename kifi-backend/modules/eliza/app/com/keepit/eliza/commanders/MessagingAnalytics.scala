@@ -30,7 +30,7 @@ class MessagingAnalytics @Inject() (
 
   // TODO: DRY up sent notification analytics
 
-  def sentNotificationForMessage(userId: Id[User], message: Message, thread: MessageThread, muted: Boolean): Unit = {
+  def sentNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, muted: Boolean): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
@@ -146,7 +146,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentGlobalNotification(userIds: Set[Id[User]], messageId: ExternalId[Message], threadId: ExternalId[MessageThread], category: NotificationCategory): Unit = {
+  def sentGlobalNotification(userIds: Set[Id[User]], messageId: ExternalId[ElizaMessage], threadId: ExternalId[MessageThread], category: NotificationCategory): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
@@ -161,7 +161,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def clearedNotification(userId: Id[User], message: ExternalId[Message], thread: ExternalId[MessageThread], existingContext: HeimdalContext): Unit = {
+  def clearedNotification(userId: Id[User], message: ExternalId[ElizaMessage], thread: ExternalId[MessageThread], existingContext: HeimdalContext): Unit = {
     val clearedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
@@ -191,7 +191,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentMessage(sender: MessageSender, message: Message, thread: MessageThread, isActuallyNew: Option[Boolean], existingContext: HeimdalContext) = {
+  def sentMessage(sender: MessageSender, message: ElizaMessage, thread: MessageThread, isActuallyNew: Option[Boolean], existingContext: HeimdalContext) = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder

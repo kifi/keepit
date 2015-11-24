@@ -264,6 +264,11 @@ angular.module('kifi')
         templateUrl: 'userProfile/userProfileFollowers.tpl.html',
         controller: 'UserProfileFollowersCtrl'
       })
+      .state('keepPage', {
+        url: '/k/:title/:pubId',
+        templateUrl: 'keep/keepPage.tpl.html',
+        controller: 'KeepPageCtrl'
+      })
       // ↓↓↓↓↓ Important: This needs to be last! ↓↓↓↓↓
       .state('library', {
         url: '/:handle/:librarySlug?authToken',
