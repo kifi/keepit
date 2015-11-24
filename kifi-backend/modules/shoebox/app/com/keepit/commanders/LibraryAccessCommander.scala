@@ -12,6 +12,7 @@ class LibraryAccessCommander @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryMembershipCommander: LibraryMembershipCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     permissionCommander: PermissionCommander,
     libraryInviteRepo: LibraryInviteRepo) extends Logging {
@@ -51,7 +52,7 @@ class LibraryAccessCommander @Inject() (
     userCanModifyLibrary && canMoveToFromSpace
   }
 
-  def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
+  def userAccess(userId: Id[User], libraryId: Id[Library]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       lib.state match {
@@ -63,8 +64,6 @@ class LibraryAccessCommander @Inject() (
               if (lib.visibility == LibraryVisibility.PUBLISHED)
                 Some(LibraryAccess.READ_ONLY)
               else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
-                Some(LibraryAccess.READ_ONLY)
-              else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt.get)
                 Some(LibraryAccess.READ_ONLY)
               else
                 None
@@ -106,6 +105,10 @@ class LibraryAccessCommander @Inject() (
       val library = libraryRepo.get(libraryId)
       library.state == LibraryStates.ACTIVE && canViewLibraryHelper(userId, library, accessToken)
     }
+  }
+
+  def canWriteOrAutojoin(userId: Id[User], libraryId: Id[Library]) = {
+    libraryMembershipCommander.ensureUserCanWriteTo(userId, Set(libraryId))
   }
 
 }

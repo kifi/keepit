@@ -21,7 +21,7 @@ import scala.util.Success
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
-  def pushToLibrary(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]]
+  def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]]
   def findAndPushToLibraries(): Unit
 }
 
@@ -51,7 +51,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
       libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now.minus(gracePeriod))
     }
-    librariesThatNeedToBeProcessed.foreach(pushToLibrary)
+    librariesThatNeedToBeProcessed.foreach(pushUpdatesToSlack)
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
@@ -126,7 +126,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   case class SomeKeeps(keeps: Seq[Keep], lib: Library) extends KeepsToPush
   case class ManyKeeps(keeps: Seq[Keep], lib: Library) extends KeepsToPush
 
-  def pushToLibrary(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
+  def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     val (lib, integrationsToProcess) = db.readWrite { implicit s =>
       val lib = libRepo.get(libId)
       val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now.minus(gracePeriod))

@@ -178,7 +178,7 @@ class Database @Inject() (
           case Failure(e: ExecutionSkipped) => true // retry skipped items
           case _ => false // no retry for all other cases
         }
-      }.toSeq
+      }
       if (pending.isEmpty) return results
     }
     val partialResults = readWriteBatch(pending)(f)(location)

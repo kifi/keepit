@@ -758,14 +758,13 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           libShwarmas
         }
 
-        inject[LibraryAccessCommander].userAccess(userIron.id.get, libScience.id.get, None) === Some(LibraryAccess.OWNER) // test owner access
-        inject[LibraryAccessCommander].userAccess(userHulk.id.get, libScience.id.get, None) === Some(LibraryAccess.READ_WRITE) // test membership accesss
-        inject[LibraryAccessCommander].userAccess(userIron.id.get, libShield.id.get, None) === None // test no membership (secret library)
-        inject[LibraryAccessCommander].userAccess(userHulk.id.get, libMurica.id.get, None) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
-        inject[LibraryAccessCommander].userAccess(userCaptain.id.get, libShwarmas.id.get, None) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
+        inject[LibraryAccessCommander].userAccess(userIron.id.get, libScience.id.get) === Some(LibraryAccess.OWNER) // test owner access
+        inject[LibraryAccessCommander].userAccess(userHulk.id.get, libScience.id.get) === Some(LibraryAccess.READ_WRITE) // test membership accesss
+        inject[LibraryAccessCommander].userAccess(userIron.id.get, libShield.id.get) === None // test no membership (secret library)
+        inject[LibraryAccessCommander].userAccess(userHulk.id.get, libMurica.id.get) === Some(LibraryAccess.READ_ONLY) // test invited (but not accepted) access
+        inject[LibraryAccessCommander].userAccess(userCaptain.id.get, libShwarmas.id.get) === Some(LibraryAccess.READ_ONLY) // test no membership (public library)
 
-        inject[LibraryAccessCommander].userAccess(userCaptain.id.get, libScience.id.get, None) === None // test  library (no membership)
-        inject[LibraryAccessCommander].userAccess(userCaptain.id.get, libScience.id.get, Some(libScience.universalLink)) === Some(LibraryAccess.READ_ONLY) // test  library (no membership) but with universalLink
+        inject[LibraryAccessCommander].userAccess(userCaptain.id.get, libScience.id.get) === None // test  library (no membership)
       }
     }
 
@@ -1087,7 +1086,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             libraryInviteRepo.save(LibraryInvite(libraryId = libShield.id.get, inviterId = userIron.id.get, userId = Some(userAgent.id.get), access = LibraryAccess.READ_ONLY, createdAt = t1))
           }
           libraryMembershipCommander.joinLibrary(userAgent.id.get, libShield.id.get)
-          inject[LibraryAccessCommander].userAccess(userAgent.id.get, libShield.id.get, None) === Some(LibraryAccess.OWNER)
+          inject[LibraryAccessCommander].userAccess(userAgent.id.get, libShield.id.get) === Some(LibraryAccess.OWNER)
 
           // Joining a private library from an email invite (library invite has a null userId field)!
           db.readWrite { implicit s =>

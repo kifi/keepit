@@ -140,7 +140,7 @@ class SlackCommanderImpl @Inject() (
       )
     }
     slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
-      .andThen { case Success(()) => libToSlackPusher.pushToLibrary(libId) }
+      .andThen { case Success(()) => libToSlackPusher.pushUpdatesToSlack(libId) }
   }
 
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {

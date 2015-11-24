@@ -299,7 +299,6 @@ class LibraryAnalytics @Inject() (
         contextBuilder += ("hasTitle", bookmark.title.isDefined)
         contextBuilder += ("uriId", bookmark.uriId.toString)
         contextBuilder ++= populateLibraryInfoForKeep(library).data
-        library.organizationId.foreach(orgId => contextBuilder += ("organizationId", orgId.toString))
         val context = contextBuilder.build
         heimdal.trackEvent(UserEvent(userId, context, UserEventTypes.KEPT, keptAt))
         if (!KeepSource.imports.contains(bookmark.source)) {

@@ -425,6 +425,7 @@ class LibraryMembershipCommanderImpl @Inject() (
   }
 
   def ensureUserCanWriteTo(userId: Id[User], libIds: Set[Id[Library]]): Boolean = {
+    // todo: This needs to be rectified with LibraryAccessCommander logic (which does not check ADD_KEEPS like this one)
     val (libsUserCanJoin, libsUserCannotJoin) = db.readWrite { implicit s =>
       val libsUserCannotWriteTo = permissionCommander.getLibrariesPermissions(libIds, Some(userId)).collect {
         case (libId, ps) if !ps.contains(LibraryPermission.ADD_KEEPS) => libId
