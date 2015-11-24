@@ -65,7 +65,7 @@ class LibrarySearchCommanderImpl @Inject() (
     explain: Option[Id[Library]]): Future[LibrarySearchResult] = {
     val (localShards, remotePlan) = distributionPlan(userId, activeShards)
     contextFuture.flatMap { context =>
-      languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, context.filter.library).flatMap {
+      languageCommander.getLangs(localShards, remotePlan, userId, query, acceptLangs, context.filter.libraries).flatMap {
         case (lang1, lang2) =>
           val request = LibrarySearchRequest(userId, experiments, query, context, lang1, lang2, maxHits, predefinedConfig, debug, explain)
           val futureRemoteLibraryShardResults = searchClient.distSearchLibraries(remotePlan, request)

@@ -110,7 +110,7 @@ class UriSearchCommanderImpl @Inject() (
 
     val context = monitoredAwait.result(contextFuture, 2 second, "getting search context")
 
-    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, context.filter.library)
+    val langsFuture = languageCommander.getLangs(localShards, dispatchPlan, userId, query, acceptLangs, context.filter.libraries)
 
     val (firstLang, secondLang) = monitoredAwait.result(langsFuture, 10 seconds, "slow getting lang profile")
 
@@ -227,7 +227,7 @@ class UriSearchCommanderImpl @Inject() (
     val firstLang = langs(0)
     val secondLang = langs.lift(1)
 
-    val searchFilter = SearchFilter(proximity = None, user = None, library = libraryId.map(LibraryScope(_, authorized = true)), organization = None, source = None)
+    val searchFilter = SearchFilter(proximity = None, user = None, libraries = libraryId.map(libId => LibraryScope(Set(libId), authorized = true)), organization = None, source = None)
     val searchContext = SearchContext(None, SearchRanking.default, searchFilter, disablePrefixSearch, disableFullTextSearch)
 
     searchFactory.getConfigFuture(userId, experiments).map {

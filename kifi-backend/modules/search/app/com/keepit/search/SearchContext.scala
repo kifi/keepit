@@ -8,7 +8,7 @@ import com.kifi.macros.json
 sealed trait SearchScope
 
 @json
-case class LibraryScope(id: Id[Library], authorized: Boolean) extends SearchScope
+case class LibraryScope(ids: Set[Id[Library]], authorized: Boolean) extends SearchScope
 @json
 case class OrganizationScope(id: Id[Organization], authorized: Boolean) extends SearchScope
 @json
@@ -30,20 +30,20 @@ object ProximityScope {
 case class SearchFilter(
     proximity: Option[ProximityScope],
     user: Option[UserScope],
-    library: Option[LibraryScope],
+    libraries: Option[LibraryScope],
     organization: Option[OrganizationScope],
     source: Option[SourceScope]) {
 
   import ProximityScope._
 
-  val isDefault: Boolean = proximity.isEmpty && user.isEmpty && library.isEmpty && organization.isEmpty
+  val isDefault: Boolean = proximity.isEmpty && user.isEmpty && libraries.isEmpty && organization.isEmpty
 
   val includeMine: Boolean = !proximity.exists(_ == network)
   val includeNetwork: Boolean = !proximity.exists(_ == mine)
   val includeOthers: Boolean = !proximity.exists(Set(mine, network).contains)
 
   val userId = user.map(_.id.id) getOrElse -1L
-  val libraryId = library.map(_.id.id) getOrElse -1L
+  val libraryIds = libraries.map(scope => LongArraySet.fromSet(scope.ids.map(_.id))) getOrElse LongArraySet.empty
   val orgId = organization.map(_.id.id) getOrElse -1L
 }
 

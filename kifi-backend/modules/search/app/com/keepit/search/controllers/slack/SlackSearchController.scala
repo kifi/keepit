@@ -54,7 +54,7 @@ class SlackSearchController @Inject() (
                 case Some(integration) if integration.lastMessageTimestamp.isDefined =>
                   val acceptLangs = getAcceptLangs(request)
                   val (userId, experiments) = getUserAndExperiments(request)
-                  val libraryScope = LibraryScope(integration.libraryId, authorized = true)
+                  val libraryScope = LibraryScope(integrations.map(_.libraryId).toSet, authorized = true)
                   val sourceScope = SourceScope(KeepFields.Source.apply(command.channelId))
                   val searchFilter = SearchFilter(None, None, Some(libraryScope), None, Some(sourceScope))
                   val searchContext = SearchContext(None, SearchRanking.relevancy, searchFilter, disablePrefixSearch = true, disableFullTextSearch = false)
