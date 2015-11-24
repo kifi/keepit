@@ -1,10 +1,11 @@
 package com.keepit.eliza.controllers.site
 
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.discussion.Message
 import com.keepit.eliza.commanders.{ ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.time._
-import com.keepit.eliza.model.MessageSource
+import com.keepit.eliza.model.{ ElizaMessage, MessageSource }
 import com.keepit.heimdal._
 import com.keepit.model.Keep
 
@@ -34,6 +35,24 @@ class WebsiteMessagingController @Inject() (
     noticesFuture.map { notices =>
       val numUnreadUnmuted = notificationCommander.getTotalUnreadUnmutedCount(request.userId)
       Ok(Json.arr("notifications", notices.map(_.obj), numUnreadUnmuted))
+    }
+  }
+
+  def getMessagesOnKeep(keepPubId: PublicId[Keep], fromPubIdOpt: Option[PublicId[Message]], limit: Int = 10) = UserAction.async { request =>
+    val keepIdTry = Keep.decodePublicId(keepPubId)
+    val fromIdOptTry = fromPubIdOpt match {
+      case None => Success(None)
+      case Some(fromPubId) => Message.decodePublicId(fromPubId).map(msgId => Some(ElizaMessage.fromMessageId(msgId)))
+    }
+    (for {
+      keepId <- keepIdTry
+      fromIdOpt <- fromIdOptTry
+    } yield {
+      discussionCommander.getMessagesOnKeep(keepId, fromIdOpt, limit).map { msgs =>
+        Ok(Json.obj("messages" -> msgs))
+      }
+    }).getOrElse {
+      Future.successful(BadRequest(Json.obj("hint" -> "pass in a valid keepId and fromId")))
     }
   }
 

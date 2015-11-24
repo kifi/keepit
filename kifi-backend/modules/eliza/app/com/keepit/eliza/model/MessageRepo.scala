@@ -25,7 +25,8 @@ trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[Eliza
   def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int]
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage
 
-  def getRecentByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage]
+  // PSA: please just use this method going forward, it has the cleanest API
+  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage]
 }
 
 @Singleton
@@ -140,7 +141,7 @@ class MessageRepoImpl @Inject() (
     (for (row <- rows if row.thread === threadId && row.from.isDefined) yield row).sortBy(row => row.id desc).first
   }
 
-  def getRecentByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
     val threadMessages = activeRows.filter(row => row.thread === threadId)
     val filteredMessages = fromId match {
       case None => threadMessages
