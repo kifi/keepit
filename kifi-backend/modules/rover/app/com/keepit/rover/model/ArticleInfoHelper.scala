@@ -15,7 +15,7 @@ class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImag
       val existingByKind: Map[ArticleKind[_ <: Article], RoverArticleInfo] = articleInfoRepo.getByUrl(url, excludeState = None).map { info => (info.articleKind -> info) }.toMap
       kinds.map { kind =>
         val savedInfo = existingByKind.get(kind) match {
-          case Some(articleInfo) if articleInfo.isActive => {
+          case Some(articleInfo) if articleInfo.isActive =>
             if (uriId.exists(expectedUriId => !articleInfo.uriId.contains(expectedUriId))) {
               articleInfo.uriId.foreach { invalidUriId =>
                 airbrake.notify(s"Fixing ArticleInfo $kind for url $url with inconsistent uriId: expected $uriId, found $invalidUriId.")
@@ -30,11 +30,9 @@ class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImag
             } else {
               articleInfo
             }
-          }
-          case inactiveArticleInfoOpt => {
+          case inactiveArticleInfoOpt =>
             val newInfo = RoverArticleInfo.initialize(url, uriId, kind).copy(id = inactiveArticleInfoOpt.flatMap(_.id))
             articleInfoRepo.save(newInfo)
-          }
         }
         kind -> savedInfo
       }.toMap
