@@ -66,14 +66,6 @@ angular.module('kifi')
       }
     };
 
-    $scope.trackTweet = function() {
-      $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: 'clickedViewOriginalTweetURL' });
-    };
-
-    $scope.trackSlack = function() {
-      $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: 'clickedSlackAttr' });
-    };
-
     $scope.$on('keepRemoved', function (e, keepData) {
       var matches = $scope.feed.filter(function (f) {
         return f.url === keepData.url;
