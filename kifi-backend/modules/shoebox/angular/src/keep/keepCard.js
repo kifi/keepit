@@ -79,11 +79,13 @@ angular.module('kifi')
       restrict: 'A',
       scope: {
         keep: '=kfKeepCard',
-        galleryView: '=',
         boxed: '@',
         currentPageOrigin: '@',
         keepCallback: '&',
-        clickCallback: '&'
+        clickCallback: '&',
+        deleteCallback: '&',
+        removeImageCallback: '&',
+        isFirstItem: '='
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
@@ -93,60 +95,6 @@ angular.module('kifi')
           // Default to true when the caller doesn't specify
           scope.galleryView = true;
         }
-
-        //
-        // Scope data.
-        //
-
-        (function (keep) {
-          scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
-          scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
-          scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
-          scope.defaultDescLines = 4;
-          scope.me = profileService.me;
-          // Don't change until the link is updated to be a bit more secure:
-          scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1 && keep.summary.hasContent;
-          scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
-            keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
-
-          var setImage = function(galleryView) {
-            scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
-            scope.defaultDescLines = galleryView ? 4 : 2;
-          };
-          setImage(scope.galleryView);
-          scope.$watch('galleryView', setImage);
-
-          if (keep.user) {
-            // don't repeat the user at the top of the keep card in the keeper list
-            _.remove(keep.keepers, {id: keep.user.id});
-          }
-          if (keep.libraryId && $state.includes('libraries')) {
-            // if on a library page, don't show the library
-            // TODO: The controller should not decide what data is SHOWN, that's
-            // the template's responsibility...
-            _.remove(keep.libraries, function (pair) {
-              return pair[0].id === keep.libraryId;
-            });
-          }
-          if (keep.libraries) {
-            // associate libraries with connected keepers
-            var libsByUserId = _(keep.libraries).reverse().indexBy(function (pair) { return pair[1].id; }).mapValues(0).value();
-            _.each(keep.keepers, function (keeper) {
-              keeper.library = libsByUserId[keeper.id];
-            });
-            // show additional libraries after connected keepers
-            var keepersById = _.indexBy(keep.keepers, 'id');
-            _.each(keep.libraries, function (pair) {
-              var user = pair[1];
-              if (!keepersById[user.id]) {
-                keepersById[user.id] = user;
-                user.library = pair[0];
-                keep.keepers.push(user);
-              }
-            });
-          }
-          _.remove(keep.keepers, {pictureName: '0.jpg'});
-        }(scope.keep));
 
         //
         // Internal methods.
@@ -166,10 +114,10 @@ angular.module('kifi')
             return;
           }
 
-          var keepEl = angular.element(event.target).closest('.kf-keep');
+          var keepEl = angular.element(event.target).closest(scope.galleryView ? '.kf-gallery-card' : '.kf-compact-card');
           var editor = keepEl.find('.kf-knf-editor');
           if (!editor.length) {
-            var noteEl = keepEl.find('.kf-keep-note');
+            var noteEl = keepEl.find(scope.galleryView ? '.kf-keep-note' : '.kf-keep-card-note');
             var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keep.library.id; })[0];
             $injector.get('keepNoteForm').init(noteEl, keep.note, keep.library.id, distinctKeep.id, function update(noteText) {
               keep.note = noteText;
@@ -278,10 +226,94 @@ angular.module('kifi')
         [
           $rootScope.$on('onWidgetLibraryClicked', function(event, args) {
             scope.onWidgetLibraryClicked(args.clickedLibrary);
+          }),
+          $rootScope.$on('prefsChanged', function() {
+            scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+          }),
+          $rootScope.$on('cardStyleChanged', function(style) {
+            scope.galleryView = style.use_minimal_keep_card;
           })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
         });
+
+        //
+        // Scope data.
+        //
+
+        (function (keep) {
+          scope.isAdmin = profileService.isAdmin();
+          scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
+          scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
+          scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
+          scope.defaultDescLines = 4;
+          scope.me = profileService.me;
+          scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
+            keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
+          // Don't change until the link is updated to be a bit more secure:
+          scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1;
+          scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+
+          var setImage = function(galleryView) {
+            scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
+            scope.defaultDescLines = galleryView ? 4 : 2;
+          };
+          setImage(scope.galleryView);
+          scope.$watch('galleryView', setImage);
+
+          if (keep.user) {
+            // don't repeat the user at the top of the keep card in the keeper list
+            _.remove(keep.keepers, {id: keep.user.id});
+          }
+          if (keep.libraryId && $state.includes('libraries')) {
+            // if on a library page, don't show the library
+            // TODO: The controller should not decide what data is SHOWN, that's
+            // the template's responsibility...
+            _.remove(keep.libraries, function (pair) {
+              return pair[0].id === keep.libraryId;
+            });
+          }
+          if (keep.libraries) {
+            // associate libraries with connected keepers
+            var libsByUserId = _(keep.libraries).reverse().indexBy(function (pair) { return pair[1].id; }).mapValues(0).value();
+            _.each(keep.keepers, function (keeper) {
+              keeper.library = libsByUserId[keeper.id];
+            });
+            // show additional libraries after connected keepers
+            var keepersById = _.indexBy(keep.keepers, 'id');
+            _.each(keep.libraries, function (pair) {
+              var user = pair[1];
+              if (!keepersById[user.id]) {
+                keepersById[user.id] = user;
+                user.library = pair[0];
+                keep.keepers.push(user);
+              }
+            });
+          }
+          _.remove(keep.keepers, {pictureName: '0.jpg'});
+
+          var updateMenuItems = function () {
+            scope.menuItems = [];
+            var permissions = keep.library.permissions || [];
+            if ((keep.user.id === scope.me.id && permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1) {
+              scope.menuItems.push({
+                title: keep.note ? 'Edit Note' : 'Add Note',
+                action: scope.editKeepNote.bind(scope)
+              });
+              var deleteCallback = scope.deleteCallback();
+              if (deleteCallback) {
+                scope.menuItems.push({title: 'Delete Keep', action: deleteCallback});
+              }
+              var removeImageCallback = scope.removeImageCallback();
+              if (keep.summary && keep.summary.imageUrl && removeImageCallback) {
+                scope.menuItems.push({title: 'Remove Image', action: removeImageCallback});
+              }
+            }
+          };
+          updateMenuItems();
+          scope.$watch('keep.note', updateMenuItems);
+          scope.$watch('keep.summary.imageUrl', updateMenuItems);
+        }(scope.keep));
       }
     };
   }

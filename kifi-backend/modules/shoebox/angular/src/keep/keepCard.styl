@@ -7,6 +7,9 @@ defaultBorderColorOverEee = rgba(0,0,100,.08)  // makes #dadae2 (defaultBorderCo
 maxWidthForNarrowKeep = 559px // see derivation in keeps.styl
 minWidthForBoxed = maxWidthForNarrowKeep + 1px
 
+.kf-keep-container
+  margin-bottom: 15px
+
 .kf-keep-body
   &.kf-side-by-side
   &.kf-text-only
@@ -440,5 +443,108 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
   word-break: break-word
   paragraph()
 
-.kf-keep-page-link
-  color: grey
+.kf-keep-card-flex-row
+  display: flex
+  flex-direction: row
+
+.kf-keep-card-flex-column
+  display: flex
+  flex-direction: column
+
+.kf-compact-card
+  padding-top: 10px;
+
+  .kf-keep-card-attribution-container
+    display: flex
+    flex-direction: rpx
+    align-items: center
+    margin-bottom: 5px
+
+  .kf-keep-keeper-pic
+    margin-right: 10px
+
+  .kf-keep-card-image
+    width: 70px
+    height: 70px
+    display: inline-block
+    margin: 0 -1px // cover container's 1px side borders
+    background-size: cover
+    background-position: center
+    box-shadow: inset 0 0 0 1px eeeOverlay // provides subtle boundary for white image
+
+  .kf-keep-card-content
+    display: flex
+    flex-direction: column
+    flex-grow: 1
+    justify-content: flex-start
+    padding-left: 0px
+    margin-bottom: 5px
+    margin-right: 5px
+
+  .kf-keep-card-title
+    margin-left: 0px
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+
+  .kf-keep-title-link[href]
+    font: bold 16px/20px Lato,sans-serif
+    max-lines: 1
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+  .kf-keep-card-note
+    font: 13px Lato,sans-serif
+    color: #777
+    display: table-cell
+    vertical-align: top
+    line-height: 19px
+    margin-bottom: 2px
+    white-space: pre-wrap
+    word-wrap: break-word
+
+    .kf-knf+&
+      display: none
+
+    &:not(:empty)
+      margin: noteMargin
+
+
+  .kf-keep-keep-btn
+  .kf-keep-share-btn
+    font-size: 13px
+
+    &>.svg-hearts-green
+    &>.svg-hearts-green-empty
+    &>.svg-share-arrow-green
+      width: 14px
+      height: 14px
+
+  .kf-keep-card-menu-container
+    .kf-dropdown-menu
+      top: 30px
+      right: 0
+      font-size: 14px
+      transform-origin: 80% top
+      transition: visibility 0s, opacity linear dur, transform dur ease-out
+
+    &:not(.kf-open)>.kf-dropdown-menu
+      dur = .08s
+      visibility: hidden
+      opacity: 0
+      transform: scale(.9)
+      transition-duration: 0s, dur, dur
+      transition-delay: dur, 0s, 0s
+
+    .kf-dropdown-menu-item
+      display: block
+      padding: 0 16px
+      color: #556179
+      white-space: nowrap
+      cursor: pointer
+
+      &:hover
+        background-color: #eee
+
+      &:active
+        background-color: #ccc

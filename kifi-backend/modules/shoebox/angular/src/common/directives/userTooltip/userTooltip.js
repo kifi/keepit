@@ -45,7 +45,10 @@ angular.module('kifi')
           // above or below depending on the scroll position.
           var elementRect = getAbsoluteBoundingRect(element);
 
-          scope.below = (elementRect.top - tooltipHeight <= 0);
+          var headerElement = angular.element('.kf-lih');
+          headerElement = headerElement && headerElement[0];
+          var headerHeight = (headerElement && headerElement.offsetHeight) || 0;
+          scope.below = (elementRect.top - tooltipHeight <= headerHeight);
 
           if (Date.now() - touchedAt < 1000 || angular.element(e.target).is('.kf-utt,.kf-utt *')) {
             return;

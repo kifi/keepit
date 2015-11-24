@@ -272,10 +272,6 @@ angular.module('kifi')
         moveToLibrary: true
       }
     };
-    $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
-    $rootScope.$on('prefsChanged', function() {
-      $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
-    });
 
     //
     // Scope methods.
@@ -574,7 +570,8 @@ angular.module('kifi')
     });
 
     // query param handling
-    if ($location.search() && $location.search().showSlackDialog) {
+    var showSlackDialog = initParams.getAndClear('showSlackDialog');
+    if (showSlackDialog) {
       $scope.openSlackIntegrations();
     }
   }

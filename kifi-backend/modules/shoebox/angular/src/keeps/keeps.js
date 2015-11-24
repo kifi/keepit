@@ -204,6 +204,7 @@ angular.module('kifi')
         scope.removeImage = function (event, keep) {
           var keepEl = angular.element(event.target).closest('.kf-keep');
           keepEl.find('.kf-keep-image').remove();
+          keepEl.find('.kf-keep-card-image').remove();
           delete keep.summary.imageUrl;
           delete keep.summary.imageWidth;
           delete keep.summary.imageHeight;

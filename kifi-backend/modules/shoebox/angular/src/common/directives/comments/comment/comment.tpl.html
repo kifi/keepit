@@ -1,0 +1,14 @@
+<div class="kf-keep-comment-container">
+
+  <img src="{{comment.user|pic:100}}" class="kf-keep-comment-img"/>
+  <div class="kf-keep-comment-content">
+    <div>
+        <span class="kf-keep-comment-commenter-text">
+      <a class="kf-keep-comment-commenter-name">{{::comment.user|name}}</a>{{comment.text}}</span>
+    </div>
+    <time ng-attr-datetime="{{::comment.time}}" am-time-ago="::comment.time"
+    title="{{::comment.time|localTime}}" ng-if="::comment.time"></time>
+  </div>
+
+
+</div>
