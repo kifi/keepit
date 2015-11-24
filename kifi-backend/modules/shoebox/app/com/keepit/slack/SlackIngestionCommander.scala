@@ -59,9 +59,11 @@ class SlackIngestionCommanderImpl @Inject() (
   import SlackIngestionCommander._
 
   def ingestAllDue(): Future[Unit] = {
+    log.info("[SLACK-INGEST] Processing all due integrations.")
     FutureHelpers.doUntil {
       val (integrations, isAllowed, getTokenWithScopes) = db.readWrite { implicit session =>
         val integrationIds = integrationRepo.getRipeForIngestion(integrationBatchSize, ingestionTimeout)
+        log.info(s"[SLACK-INGEST] Found ${integrationIds.length}/$integrationBatchSize integrations to process.")
         integrationRepo.markAsIngesting(integrationIds: _*)
         val integrationsByIds = integrationRepo.getByIds(integrationIds.toSet)
         val integrations = integrationIds.map(integrationsByIds(_))
@@ -82,9 +84,17 @@ class SlackIngestionCommanderImpl @Inject() (
         (integrations, isAllowed, getToken)
       }
       val allIngestedFuture = FutureHelpers.sequentialExec(integrations) {
-        case integration => ingestMaybe(integration, isAllowed, getTokenWithScopes).imap(_ => ()).recover { case _ => () }
+        case integration => ingestMaybe(integration, isAllowed, getTokenWithScopes).imap(_ => ()).recover {
+          case error =>
+            log.error(s"[SLACK-INGEST] Something went wrong", error)
+            airbrake.notify(s"[SLACK-INGEST] Something went wrong", error)
+            ()
+        }
       }
-      allIngestedFuture.imap(_ => integrations.isEmpty)
+      allIngestedFuture.imap { _ =>
+        log.info(s"[SLACK-INGEST] Done processing ${integrations.length} integrations.]")
+        integrations.isEmpty
+      }
     }
   }
 
