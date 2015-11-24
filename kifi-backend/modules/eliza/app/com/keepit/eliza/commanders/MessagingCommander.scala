@@ -256,18 +256,12 @@ class MessagingCommander @Inject() (
   }
 
   def sendMessage(from: Id[User], threadId: ExternalId[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
-    val thread =
-      db.readOnlyMaster { implicit session =>
-        threadRepo.get(threadId)
-      }
-
+    val thread = db.readOnlyMaster { implicit session => threadRepo.get(threadId) }
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
   def sendMessage(from: Id[User], threadId: Id[MessageThread], messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
-    val thread = db.readOnlyMaster { implicit session =>
-      threadRepo.get(threadId)
-    }
+    val thread = db.readOnlyMaster { implicit session => threadRepo.get(threadId) }
     sendMessage(MessageSender.User(from), thread, messageText, source, urlOpt)
   }
 
@@ -340,7 +334,7 @@ class MessagingCommander @Inject() (
       (numMessages, numUnread, threadActivity)
     }
 
-    val originalAuthor = threadActivity.filter(_.started).zipWithIndex.head._2
+    val originalAuthorOpt = threadActivity.filter(_.started).zipWithIndex.headOption.map(_._2)
     val numAuthors = threadActivity.count(_.lastActive.isDefined)
 
     val orderedMessageWithBasicUser = messageWithBasicUser.copy(
@@ -358,8 +352,10 @@ class MessagingCommander @Inject() (
     }
 
     // update user thread of the sender again, might be deprecated
-    from.asUser.foreach { sender =>
-      notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+    (from.asUser, originalAuthorOpt) match {
+      case (Some(sender), Some(originalAuthor)) =>
+        notificationDeliveryCommander.notifySendMessage(sender, message, thread, orderedMessageWithBasicUser, originalAuthor, numAuthors, numMessages, numUnread)
+      case _ =>
     }
 
     // update non user threads of non user recipients

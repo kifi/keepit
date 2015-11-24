@@ -1,22 +1,25 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.db.{ ExternalId, Id }
+import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.discussion.{ Discussion, Message }
-import com.keepit.eliza.model.{ NonUserParticipant, MessageRepo, MessageThreadRepo, ElizaMessage }
+import com.keepit.eliza.model._
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.social.{ BasicNonUser, BasicUserLikeEntity }
+import com.keepit.social.BasicUserLikeEntity
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
+  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage]
 }
 
 @Singleton
@@ -24,6 +27,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   db: Database,
   messageThreadRepo: MessageThreadRepo,
   messageRepo: MessageRepo,
+  messagingCommander: MessagingCommander,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   shoebox: ShoeboxServiceClient,
@@ -71,6 +75,41 @@ class ElizaDiscussionCommanderImpl @Inject() (
             messages = recentsByThread(thread.id.get).flatMap(em => extMessageMap.get(em.id.get))
           )
       }
+    }
+  }
+
+  // Creates a MessageThread with a keepId set (gets the uriId and title from Shoebox)
+  // Does not automatically add any participants
+  private def getOrCreateMessageThreadForKeep(keepId: Id[Keep]): Future[MessageThread] = {
+    db.readOnlyMaster { implicit s =>
+      messageThreadRepo.getByKeepId(keepId)
+    }.map(Future.successful).getOrElse {
+      shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
+        val csKeep = csKeeps.getOrElse(keepId, throw new Exception(s"Tried to create message thread for dead keep $keepId"))
+        db.readWrite { implicit s =>
+          assert(messageThreadRepo.getByKeepId(keepId).isEmpty, s"A message thread for keep $keepId was created while our back was turned")
+          messageThreadRepo.save(MessageThread(
+            uriId = Some(csKeep.uriId),
+            url = Some(csKeep.url),
+            nUrl = None,
+            pageTitle = csKeep.title,
+            participants = Some(MessageThreadParticipants.empty),
+            participantsHash = None,
+            keepId = Some(csKeep.id)
+          ))
+        }
+      }
+    }
+  }
+  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage] = {
+    getOrCreateMessageThreadForKeep(keepId).imap { thread =>
+      if (!thread.containsUser(userId)) {
+        db.readWrite { implicit s =>
+          messageThreadRepo.save(thread.withParticipants(clock.now, Seq(userId)))
+        }
+      }
+      val (_, message) = messagingCommander.sendMessage(userId, thread.id.get, txt, source, None)
+      message
     }
   }
 }

@@ -350,6 +350,28 @@ object BasicKeep {
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
 
+// All the important parts of a Keep to send across services
+// NOT to be sent to clients
+case class CrossServiceKeep(
+  id: Id[Keep],
+  owner: Id[User],
+  users: Set[Id[User]],
+  libraries: Set[Id[Library]],
+  title: Option[String],
+  url: String,
+  uriId: Id[NormalizedURI])
+object CrossServiceKeep {
+  implicit val format: Format[CrossServiceKeep] = (
+    (__ \ 'id).format[Id[Keep]] and
+    (__ \ 'owner).format[Id[User]] and
+    (__ \ 'users).format[Set[Id[User]]] and
+    (__ \ 'libraries).format[Set[Id[Library]]] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'uriId).format[Id[NormalizedURI]]
+  )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
+}
+
 case class PersonalKeep(
   id: ExternalId[Keep],
   mine: Boolean,
