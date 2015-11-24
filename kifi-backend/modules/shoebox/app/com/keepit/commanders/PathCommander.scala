@@ -26,7 +26,7 @@ class PathCommander @Inject() (
 
   def pathForUser(user: User): Path = Path(user.username.value)
 
-  def pathForKeep(keep: Keep): Path = Path(s"k/${keep.titlePathString}/${Keep.publicId(keep.id.get).id}")
+  def pathForKeep(keep: Keep): Path = keep.path
 
   def pathForOrganization(org: Organization): Path = Path(org.handle.value)
 

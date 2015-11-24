@@ -19,8 +19,8 @@ import play.api.mvc.Action
 import play.api.libs.json.{ JsNumber, Json, JsObject, JsArray }
 
 import com.google.inject.Inject
-import com.keepit.eliza.commanders.{ MessagingCommander, NotificationJson, NotificationDeliveryCommander, ElizaStatsCommander }
-import com.keepit.eliza.model.{ MessageThread, UserThreadStats }
+import com.keepit.eliza.commanders._
+import com.keepit.eliza.model.{ MessageRepo, MessageThreadRepo, MessageThread, UserThreadStats }
 import com.keepit.common.db.slick._
 
 class ElizaController @Inject() (
@@ -28,6 +28,7 @@ class ElizaController @Inject() (
     notificationDeliveryCommander: NotificationDeliveryCommander,
     deviceRepo: DeviceRepo,
     db: Database,
+    discussionCommander: ElizaDiscussionCommander,
     elizaStatsCommander: ElizaStatsCommander,
     clock: Clock) extends ElizaServiceController with Logging {
 
@@ -150,10 +151,10 @@ class ElizaController @Inject() (
     Ok(Json.toJson(participants))
   }
 
-  def getDiscussionsForKeeps = Action(parse.tolerantJson) { request =>
+  def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
     val keepIds = request.body.as[Set[Id[Keep]]]
-    // TODO(ryan): actually implement this
-    val discussionsByKeep = Map.empty[Id[Keep], Discussion]
-    Ok(Json.toJson(discussionsByKeep))
+    discussionCommander.getDiscussionsForKeeps(keepIds).map { discussions =>
+      Ok(Json.toJson(discussions))
+    }
   }
 }

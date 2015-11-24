@@ -63,8 +63,10 @@
     <span ng-if="showSaved && keep.summary.hasContent"><a
       ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
     <span>
+      <a class="kf-keep-card-attribution-page-link" ng-href="{{::keep.path}}">
       <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
             title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
+      </a>
     </span>
   </div>
 </div>
