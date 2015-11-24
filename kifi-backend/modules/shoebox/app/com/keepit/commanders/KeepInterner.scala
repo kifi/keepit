@@ -45,6 +45,7 @@ trait KeepInterner {
 class KeepInternerImpl @Inject() (
   db: Database,
   normalizedURIInterner: NormalizedURIInterner,
+  normalizedURIRepo: NormalizedURIRepo,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
   keepCommander: KeepCommander,
@@ -250,7 +251,10 @@ class KeepInternerImpl @Inject() (
         SafeFuture { libraryNewFollowersCommander.notifyFollowersOfNewKeeps(library, keeps.head) }
         libToSlackProcessor.pushUpdatesToSlack(library.id.get)
         FutureHelpers.sequentialExec(keeps) { keep =>
-          roverClient.fetchAsap(keep.uriId, keep.url)
+          val nuri = db.readOnlyMaster { implicit session =>
+            normalizedURIRepo.get(keep.uriId)
+          }
+          roverClient.fetchAsap(nuri.id.get, nuri.url)
         }
       }
 
