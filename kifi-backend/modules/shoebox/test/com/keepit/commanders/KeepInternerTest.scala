@@ -160,8 +160,6 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           "url" -> "http://kifi.com",
           "isPrivate" -> true
         )))
-        val deduped = bookmarkInterner.deDuplicate(raw)
-        raw === deduped
 
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(raw, user.id.get, library, KeepSource.email)
         fakeAirbrake.errorCount() === 2

@@ -155,7 +155,7 @@ class KeepInternerImpl @Inject() (
 
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
-      failed.foreach { f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}", f._2.failed.get) }
+      failed.foreach { f => log.warn(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}", f._2.failed.get) }
     }
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
     (persisted.values.map(_.get).toSeq, failedRaws)
@@ -255,7 +255,7 @@ class KeepInternerImpl @Inject() (
       }
 
       // Update data-dependencies
-      db.readWrite { implicit s =>
+      db.readWrite(attempts = 3) { implicit s =>
         libraryRepo.updateLastKept(library.id.get)
         Try(libraryRepo.save(libraryRepo.getNoCache(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone
       }

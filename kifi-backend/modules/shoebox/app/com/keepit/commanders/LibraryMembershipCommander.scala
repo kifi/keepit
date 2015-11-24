@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject, Singleton }
+import com.google.inject.{ Provider, ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -35,8 +35,6 @@ trait LibraryMembershipCommander {
   def createMembershipInfo(mem: LibraryMembership)(implicit session: RSession): LibraryMembershipInfo
   def getViewerMembershipInfo(userIdOpt: Option[Id[User]], libraryId: Id[Library]): Option[LibraryMembershipInfo]
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]]
-
-  def ensureUserCanWriteTo(userId: Id[User], libIds: Set[Id[Library]]): Boolean
 }
 
 object LibraryMembershipCommander {
@@ -60,7 +58,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     libraryInviteRepo: LibraryInviteRepo,
     libraryInviteCommander: LibraryInviteCommander,
-    libraryAccessCommander: LibraryAccessCommander,
+    libraryAccessCommanderProvider: Provider[LibraryAccessCommander],
     permissionCommander: PermissionCommander,
     organizationMembershipRepo: OrganizationMembershipRepo,
     typeaheadCommander: TypeaheadCommander,
@@ -131,7 +129,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     val (lib, inviteList, existingActiveMembership) = db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       val tokenInvites = if (authToken.isDefined) {
-        libraryAccessCommander.getValidLibInvitesFromAuthToken(libraryId, authToken)
+        libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get)
       } else Seq.empty
       val libInvites = libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId)
       val allInvites = tokenInvites ++ libInvites
@@ -140,7 +138,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     }
 
     val isSystemGeneratedLibrary = lib.kind == LibraryKind.SYSTEM_MAIN || lib.kind == LibraryKind.SYSTEM_SECRET
-    val userCanJoinLibraryWithoutInvite = libraryAccessCommander.canViewLibrary(Some(userId), lib, authToken) // uses a db session
+    val userCanJoinLibraryWithoutInvite = libraryAccessCommanderProvider.get.canViewLibrary(Some(userId), lib, authToken) // uses a db session
 
     if (isSystemGeneratedLibrary) {
       Left(LibraryFail(FORBIDDEN, "cant_join_system_generated_library"))
@@ -422,27 +420,5 @@ class LibraryMembershipCommanderImpl @Inject() (
 
   def getLibrariesWithWriteAccess(userId: Id[User]): Set[Id[Library]] = {
     db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) }
-  }
-
-  def ensureUserCanWriteTo(userId: Id[User], libIds: Set[Id[Library]]): Boolean = {
-    // todo: This needs to be rectified with LibraryAccessCommander logic (which does not check ADD_KEEPS like this one)
-    val (libsUserCanJoin, libsUserCannotJoin) = db.readWrite { implicit s =>
-      val libsUserCannotWriteTo = permissionCommander.getLibrariesPermissions(libIds, Some(userId)).collect {
-        case (libId, ps) if !ps.contains(LibraryPermission.ADD_KEEPS) => libId
-      }.toSet
-      libsUserCannotWriteTo.partition { libId =>
-        val lib = libraryRepo.get(libId)
-        val userHasInvite = libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).exists(inv => LibraryAccess.collaborativePermissions.contains(inv.access))
-        val libHasOpenCollaboration = lib.organizationMemberAccess.exists(LibraryAccess.collaborativePermissions.contains) &&
-          lib.organizationId.exists(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined)
-        userHasInvite || libHasOpenCollaboration
-      }
-    }
-    if (libsUserCannotJoin.nonEmpty) false
-    else {
-      implicit val context = HeimdalContext.empty
-      libsUserCanJoin.foreach(libId => joinLibrary(userId, libId))
-      true
-    }
   }
 }
