@@ -13,7 +13,8 @@ import com.keepit.slack.models._
 import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackClient, SlackCommander }
 import play.api.libs.json.{ JsObject, JsSuccess, Json, JsError }
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
+import scala.util.{ Success, Failure }
 
 @Singleton
 class SlackController @Inject() (
@@ -30,7 +31,7 @@ class SlackController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
-  def registerSlackAuthorization(code: String, state: String) = UserAction.async { request =>
+  def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
     val stateObj = SlackState.toJson(SlackState(state)).toOption.flatMap(_.asOpt[JsObject])
     val libIdOpt = stateObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
@@ -38,6 +39,7 @@ class SlackController @Inject() (
     val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(r => r.url + "?showSlackDialog").getOrElse("/")
 
     val authFut = for {
+      code <- codeOpt.map(Future.successful).getOrElse(Future.failed(SlackAPIFailure.NoAuthCode))
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
     } yield {
