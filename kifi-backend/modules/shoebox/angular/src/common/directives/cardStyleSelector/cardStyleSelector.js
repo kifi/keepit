@@ -2,9 +2,8 @@
 
 angular.module('kifi')
 
-
 .directive('kfCardStyleSelector', [
-    '$rootScope', 'profileService',
+  '$rootScope', 'profileService',
   function ($rootScope, profileService) {
     return {
       scope: {},
@@ -14,9 +13,14 @@ angular.module('kifi')
       link: function (scope) {
         scope.admin = profileService.isAdmin();
         scope.galleryView = !profileService.prefs.use_minimal_keep_card;
-        $rootScope.$on('prefsChanged', function() {
-          scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+        [
+          $rootScope.$on('prefsChanged', function() {
+            scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+          })
+        ].forEach(function (deregister) {
+          scope.$on('$destroy', deregister);
         });
+
 
         scope.setGalleryView = function() {
           scope.galleryView = true;
@@ -29,7 +33,6 @@ angular.module('kifi')
           profileService.savePrefs({use_minimal_keep_card: true});
           $rootScope.$emit('cardStyleChanged', {use_minimal_keep_card: true});
         };
-
       }
     };
   }

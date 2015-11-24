@@ -37,14 +37,14 @@
     </div>
   </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
-    <div ng-repeat="keep in keeps">
+    <li ng-repeat="keep in keeps">
       <div kf-keep-card="keep"
            boxed
            current-page-origin="{{currentPageOrigin}}"
            click-callback="keepClickAction(event, keep)"
            delete-callback="deleteKeep"
            remove-image-callback="removeImage"></div>
-    </div>
+    </li>
   </ol>
   <img class="kf-keeps-loading" ng-show="keepsLoading" src="/img/load.gif">
   <a class="kf-keeps-load-more" ng-show="isShowMore()" href="javascript:" ng-click="scrollNext()(keeps.length)">Show more</a>

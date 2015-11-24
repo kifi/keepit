@@ -34,7 +34,7 @@
     </div>
   </section>
 
-  <div style="display: flex; flex-direction: row;justify-content: flex-end;align-items: center">
+  <div class="kf-feed-header-container" ng-if="!isLoading()">
     <div kf-card-style-selector></div>
   </div>
   <section class="kf-feed-item" ng-repeat="feedItem in feed">

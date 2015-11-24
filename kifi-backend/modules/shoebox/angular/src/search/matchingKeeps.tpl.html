@@ -15,7 +15,7 @@
              class="kf-smk-bulk-add-icon"></svg>
         <span class="kf-smk-bulk-add-text">{{edit.enabled ? 'Done' : 'Bulk keep to library'}}</span>
       </div>
-      <div kf-card-style-selector style="float: right; padding-left: 10px"></div>
+      <div kf-card-style-selector ng-if="$root.userLoggedIn && resultKeeps.length > 1"></div>
     </div>
   </div>
 

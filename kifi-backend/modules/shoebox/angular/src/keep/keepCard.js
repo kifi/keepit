@@ -226,6 +226,12 @@ angular.module('kifi')
         [
           $rootScope.$on('onWidgetLibraryClicked', function(event, args) {
             scope.onWidgetLibraryClicked(args.clickedLibrary);
+          }),
+          $rootScope.$on('prefsChanged', function() {
+            scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+          }),
+          $rootScope.$on('cardStyleChanged', function(style) {
+            scope.galleryView = style.use_minimal_keep_card;
           })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
@@ -243,14 +249,7 @@ angular.module('kifi')
           scope.me = profileService.me;
           // Don't change until the link is updated to be a bit more secure:
           scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1;
-
           scope.galleryView = !profileService.prefs.use_minimal_keep_card;
-          $rootScope.$on('prefsChanged', function() {
-            scope.galleryView = !profileService.prefs.use_minimal_keep_card;
-          });
-          $rootScope.$on('cardStyleChanged', function(style) {
-            scope.galleryView = style.use_minimal_keep_card;
-          });
 
           var setImage = function(galleryView) {
             scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
