@@ -24,7 +24,7 @@ import com.keepit.search.index.user.UserIndexer
 import com.keepit.search.util.LongArraySet
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.TermQuery
+import org.apache.lucene.search.{ BooleanClause, BooleanQuery, TermQuery }
 import scala.concurrent._
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -76,7 +76,7 @@ class SearchFactory @Inject() (
     val clickBoostsFuture = resultClickTracker.getBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"))
     val clickHistoryFuture = clickHistoryTracker.getClickHistoryFuture(userId)
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.library)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.libraries)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
     val orgIdsFuture = getOrganizations(userId, context.filter.organization)
@@ -100,7 +100,7 @@ class SearchFactory @Inject() (
         engBuilder.setRanking(context.orderBy)
 
         // if this is a library restricted search, add a library filter query
-        context.filter.library.foreach(addLibraryFilterToUriSearch(engBuilder, _))
+        context.filter.libraries.foreach(addLibraryFilterToUriSearch(engBuilder, _))
 
         // if this is a user restricted search, add a user filter query
         context.filter.user.foreach(addUserFilterToUriSearch(engBuilder, _))
@@ -192,13 +192,13 @@ class SearchFactory @Inject() (
     val trustedPublishedLibIds = {
       val librarySearcher = libraryIndexer.getSearcher
       libraryScope match {
-        case Some(library) if !library.authorized && LibraryIndexable.isPublished(librarySearcher, library.id.id) => LongArraySet.from(Array(library.id.id))
+        case Some(libraries) if !libraries.authorized => LongArraySet.fromSet(libraries.ids.collect { case libId if LibraryIndexable.isPublished(librarySearcher, libId.id) => libId.id })
         case _ => LongArraySet.empty // we may want to get a set of published libraries that are trusted (or featured) somehow
       }
     }
 
     val authorizedLibIds = libraryScope match {
-      case Some(library) if library.authorized => LongArraySet.from(Array(library.id.id))
+      case Some(libraries) if libraries.authorized => LongArraySet.fromSet(libraries.ids.map(_.id))
       case _ => LongArraySet.empty
     }
 
@@ -226,11 +226,11 @@ class SearchFactory @Inject() (
 
     val currentTime = System.currentTimeMillis()
 
-    val libraryIdsFuture = context.filter.library match {
-      case Some(library) if library.authorized => // this non-user is treated as if he/she were a member of the library
-        Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(library.id.id))))
-      case Some(library) if !library.authorized => // not authorized, but the library may be a published one
-        Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.from(Array(library.id.id)), LongArraySet.empty))
+    val libraryIdsFuture = context.filter.libraries match {
+      case Some(libraries) if libraries.authorized => // this non-user is treated as if he/she were a member of the libraries
+        Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.empty, LongArraySet.fromSet(libraries.ids.map(_.id))))
+      case Some(libraries) if !libraries.authorized => // not authorized, but the library may be a published one
+        Future.successful((LongArraySet.empty, LongArraySet.empty, LongArraySet.fromSet(libraries.ids.map(_.id)), LongArraySet.empty))
       case _ =>
         throw new IllegalArgumentException("library must be specified")
     }
@@ -260,7 +260,7 @@ class SearchFactory @Inject() (
         engBuilder.setRanking(context.orderBy)
 
         // this is a non-user, library restricted search, add a library filter query
-        addLibraryFilterToUriSearch(engBuilder, context.filter.library.get)
+        addLibraryFilterToUriSearch(engBuilder, context.filter.libraries.get)
 
         shards.toSeq.map { shard =>
           val articleSearcher = shardedArticleIndexer.getIndexer(shard).getSearcher
@@ -290,7 +290,18 @@ class SearchFactory @Inject() (
     }
   }
 
-  private def addLibraryFilterToUriSearch(engBuilder: QueryEngineBuilder, library: LibraryScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.libraryField, library.id.id.toString))) }
+  private def addLibraryFilterToUriSearch(engBuilder: QueryEngineBuilder, library: LibraryScope) = {
+    val filterQuery = library.ids.toSeq match {
+      case Seq(libId) => new TermQuery(new Term(KeepFields.libraryField, libId.id.toString))
+      case libIds =>
+        val booleanQuery = new BooleanQuery()
+        libIds.foreach { libId =>
+          booleanQuery.add(new TermQuery(new Term(KeepFields.libraryField, libId.id.toString)), BooleanClause.Occur.SHOULD)
+        }
+        booleanQuery
+    }
+    engBuilder.addFilterQuery(filterQuery)
+  }
   private def addUserFilterToUriSearch(engBuilder: QueryEngineBuilder, user: UserScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.userField, user.id.id.toString))) }
   private def addOrganizationFilterToUriSearch(engBuilder: QueryEngineBuilder, organization: OrganizationScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.orgField, organization.id.id.toString))) }
   private def addSourceFilterToUriSearch(engBuilder: QueryEngineBuilder, source: SourceScope) = { engBuilder.addFilterQuery(new TermQuery(new Term(KeepFields.sourceField, source.source))) }
@@ -309,7 +320,7 @@ class SearchFactory @Inject() (
 
     val currentTime = System.currentTimeMillis()
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.library)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.libraries)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
     val orgIdsFuture = getOrganizations(userId, context.filter.organization)
@@ -383,7 +394,7 @@ class SearchFactory @Inject() (
 
     val currentTime = System.currentTimeMillis()
 
-    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.library)
+    val libraryIdsFuture = getLibraryIdsFuture(userId, context.filter.libraries)
     val friendIdsFuture = getSearchFriends(userId)
     val restrictedUserIdsFuture = getRestrictedUsers(Some(userId))
     val orgIdsFuture = getOrganizations(userId, context.filter.organization)

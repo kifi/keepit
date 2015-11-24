@@ -83,7 +83,7 @@ trait SearchControllerUtil {
   }
   private def getLibraryScope(libraryIdStr: String, userId: Option[Id[User]], auth: Option[String])(implicit publicIdConfig: PublicIdConfiguration): Future[LibraryScope] = {
     Library.decodePublicId(PublicId[Library](libraryIdStr)) match {
-      case Success(libId) => shoeboxClient.canViewLibrary(libId, userId, auth).imap(LibraryScope(libId, _))
+      case Success(libId) => shoeboxClient.canViewLibrary(libId, userId, auth).imap(LibraryScope(Set(libId), _))
       case Failure(e) => Future.failed(e)
     }
   }

@@ -35,12 +35,8 @@ class LanguageCommanderImpl @Inject() (
     searchFactory: SearchFactory,
     shardedKeepIndexer: ShardedKeepIndexer) extends LanguageCommander with Logging {
 
-  private[this] val reqConsolidator = new RequestConsolidator[(Id[User], Long), ListBuffer[Map[Lang, Int]]](60 seconds)
-  private[this] val localConsolidator = new RequestConsolidator[(Id[User], Long), Map[Lang, Int]](60 seconds)
-
-  private def getLibraryId(libraryScope: Option[LibraryScope]): Long = {
-    libraryScope.map(_.id.id) getOrElse -1L
-  }
+  private[this] val reqConsolidator = new RequestConsolidator[(Id[User], Option[LibraryScope]), ListBuffer[Map[Lang, Int]]](60 seconds)
+  private[this] val localConsolidator = new RequestConsolidator[(Id[User], Option[LibraryScope]), Map[Lang, Int]](60 seconds)
 
   def getLangs(
     localShards: Set[Shard[NormalizedURI]],
@@ -58,9 +54,7 @@ class LanguageCommanderImpl @Inject() (
 
     // TODO: use user profile info as a bias
 
-    val libId = getLibraryId(libraryScope)
-
-    val future = reqConsolidator((userId, libId)) { key =>
+    val future = reqConsolidator((userId, libraryScope)) { key =>
       val resultFutures = new ListBuffer[Future[Map[Lang, Int]]]()
 
       if (dispatchPlan.nonEmpty) {
@@ -136,9 +130,7 @@ class LanguageCommanderImpl @Inject() (
   }
 
   def distLangFreqs(shards: Set[Shard[NormalizedURI]], userId: Id[User], libraryScope: Option[LibraryScope]): Future[Map[Lang, Int]] = {
-    val libId = getLibraryId(libraryScope)
-
-    localConsolidator((userId, libId)) { key =>
+    localConsolidator((userId, libraryScope)) { key =>
       searchFactory.getLibraryIdsFuture(userId, libraryScope).flatMap {
         case (_, memberLibIds, trustedPublishedLibIds, authorizedLibIds) =>
           Future.traverse(shards) { shard =>

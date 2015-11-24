@@ -106,11 +106,11 @@ final class KeepVisibilityEvaluator(
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
   private[this] val organization = LibraryFields.Visibility.ORGANIZATION
-  private val noFilter = (context.filter.libraryId < 0) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
+  private val noFilter = (context.filter.libraryIds.isEmpty) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
 
   @inline
   private def isRelevant(libId: Long, keeperId: Long, orgId: Long) = {
-    (context.filter.libraryId < 0 || context.filter.libraryId == libId) && (context.filter.userId < 0 || context.filter.userId == keeperId) && (context.filter.orgId < 0 || context.filter.orgId == orgId)
+    (context.filter.libraryIds.isEmpty || context.filter.libraryIds.findIndex(libId) >= 0) && (context.filter.userId < 0 || context.filter.userId == keeperId) && (context.filter.orgId < 0 || context.filter.orgId == orgId)
   }
 
   def isRelevant(docId: Int): Boolean = noFilter || {
@@ -174,11 +174,11 @@ final class LibraryVisibilityEvaluator(
 
   private[this] val published = LibraryFields.Visibility.PUBLISHED
   private[this] val organization = LibraryFields.Visibility.ORGANIZATION
-  private val noFilter = (context.filter.libraryId < 0) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
+  private val noFilter = (context.filter.libraryIds.isEmpty) && (context.filter.userId < 0) && (context.filter.orgId < 0) // optimization
 
   @inline
   private def isRelevant(libId: Long, ownerId: Long, orgId: Long) = {
-    (context.filter.libraryId < 0 || context.filter.libraryId == libId) && (context.filter.userId < 0 || context.filter.userId == ownerId) && (context.filter.orgId < 0 || context.filter.orgId == orgId)
+    (context.filter.libraryIds.isEmpty || context.filter.libraryIds.findIndex(libId) >= 0) && (context.filter.userId < 0 || context.filter.userId == ownerId) && (context.filter.orgId < 0 || context.filter.orgId == orgId)
   }
 
   def isRelevant(docId: Int, libId: Long): Boolean = noFilter || {
