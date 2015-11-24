@@ -16,6 +16,7 @@ import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model.OrganizationPermission.{ ADD_LIBRARIES, REMOVE_LIBRARIES, FORCE_EDIT_LIBRARIES }
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.models.{ SlackChannelToLibraryRepo, LibraryToSlackChannelRepo, SlackChannelToLibrary }
 import com.kifi.macros.json
 import play.api.http.Status._
 
@@ -62,6 +63,8 @@ class LibraryCommanderImpl @Inject() (
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryAliasRepo: LibraryAliasRepo,
     libraryInviteRepo: LibraryInviteRepo,
+    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
+    libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
     librarySubscriptionCommander: LibrarySubscriptionCommander,
     permissionCommander: PermissionCommander,
     libraryAccessCommander: LibraryAccessCommander,
@@ -396,6 +399,13 @@ class LibraryCommanderImpl @Inject() (
         libraryInviteRepo.getWithLibraryId(oldLibrary.id.get).foreach { inv =>
           libraryInviteRepo.save(inv.withState(LibraryInviteStates.INACTIVE))
         }
+        slackChannelToLibraryRepo.getActiveByLibrary(libraryId).foreach { integration =>
+          slackChannelToLibraryRepo.deactivate(integration)
+        }
+        libraryToSlackChannelRepo.getActiveByLibrary(libraryId).foreach { integration =>
+          libraryToSlackChannelRepo.deactivate(integration)
+        }
+
         keepRepo.getByLibrary(oldLibrary.id.get, 0, Int.MaxValue)
       }
       val savedKeeps = db.readWriteBatch(keepsInLibrary) { (s, keep) =>
@@ -436,6 +446,15 @@ class LibraryCommanderImpl @Inject() (
       }
     }
 
+    val deletedIntegrationsFut = db.readWriteAsync { implicit session =>
+      slackChannelToLibraryRepo.getActiveByLibrary(libraryId).foreach { integration =>
+        slackChannelToLibraryRepo.deactivate(integration)
+      }
+      libraryToSlackChannelRepo.getActiveByLibrary(libraryId).foreach { integration =>
+        libraryToSlackChannelRepo.deactivate(integration)
+      }
+    }
+
     val deletedKeepsFut = db.readWriteAsync { implicit session =>
       keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).foreach(keepCommander.deactivateKeep)
       searchClient.updateKeepIndex()
@@ -445,6 +464,7 @@ class LibraryCommanderImpl @Inject() (
       deletedMembers <- deletedMembersFut
       deletedInvites <- deletedInvitesFut
       deletedKeeps <- deletedKeepsFut
+      deletedIntegrations <- deletedIntegrationsFut
     } yield {
       db.readWrite { implicit session =>
         libraryRepo.save(libraryRepo.get(libraryId).withState(LibraryStates.INACTIVE))
