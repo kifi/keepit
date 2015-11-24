@@ -11,7 +11,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
@@ -130,7 +130,11 @@ class KeepDecoratorImpl @Inject() (
       } getOrElse Set.empty
 
       val keepIds = keeps.map(_.id.get).toSet
-      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds)
+      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds).recover {
+        case fail =>
+          airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
+          Map.empty[Id[Keep], Discussion]
+      }
 
       for {
         augmentationInfos <- augmentationFuture
