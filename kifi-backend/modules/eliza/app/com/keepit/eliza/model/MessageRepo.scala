@@ -14,27 +14,18 @@ import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[ElizaMessage] {
-
   def updateUriId(message: ElizaMessage, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
-
   def refreshCache(thread: Id[MessageThread])(implicit session: RSession): Unit
-
   def get(thread: Id[MessageThread], from: Int)(implicit session: RSession): Seq[ElizaMessage]
-
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[ElizaMessage]
-
   def getFromIdToId(fromId: Id[ElizaMessage], toId: Id[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage]
-
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
-
   def getMaxId()(implicit session: RSession): Id[ElizaMessage]
-
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
-
   def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int]
-
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage
 
+  def getRecentByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage]
 }
 
 @Singleton
@@ -61,6 +52,9 @@ class MessageRepoImpl @Inject() (
     def * = (id.?, createdAt, updatedAt, externalId, from, thread, threadExtId, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbTuple _).tupled, ElizaMessage.toDbTuple)
   }
   def table(tag: Tag) = new MessageTable(tag)
+
+  // TODO(ryan): for some reason we can't delete messages? We really need to add a `state` column
+  private def activeRows = rows
 
   override def invalidateCache(message: ElizaMessage)(implicit session: RSession): Unit = {
     val key = MessagesForThreadIdKey(message.thread)
@@ -144,6 +138,17 @@ class MessageRepoImpl @Inject() (
 
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage = {
     (for (row <- rows if row.thread === threadId && row.from.isDefined) yield row).sortBy(row => row.id desc).first
+  }
+
+  def getRecentByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+    val threadMessages = activeRows.filter(row => row.thread === threadId)
+    val filteredMessages = fromId match {
+      case None => threadMessages
+      case Some(fid) =>
+        val fromTime = rows.filter(_.id === fid).map(_.createdAt).first
+        threadMessages.filter(r => r.createdAt > fromTime || (r.createdAt === fromTime && r.id > fid))
+    }
+    filteredMessages.sortBy(r => (r.createdAt desc, r.id desc)).take(limit).list
   }
 
 }

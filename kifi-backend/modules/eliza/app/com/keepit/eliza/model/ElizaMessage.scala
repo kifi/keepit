@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, Exte
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
+import com.keepit.discussion.Message
 import com.keepit.notify.model.Recipient
 import org.joda.time.DateTime
 import com.keepit.common.time._
@@ -123,6 +124,7 @@ case class ElizaMessage(
 
   def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
+
 }
 
 object ElizaMessage {
