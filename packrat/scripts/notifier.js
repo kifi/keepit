@@ -72,7 +72,7 @@ var notifier = function () {
       contentHtml: params.contentHtml,
       image: params.imageHtml,
       popupClass: 'kifi-notify-' + category,
-      link: params.link,
+      pageTitle: params.link,
       threadId: params.threadId
     }))
     .appendTo($wrap)
