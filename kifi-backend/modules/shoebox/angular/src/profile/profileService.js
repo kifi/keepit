@@ -256,6 +256,7 @@ angular.module('kifi')
       if (!_.isEmpty(newPrefObject)) {
         return $http.post(routeService.prefs, newPrefObject).then(function (p) {
           _.assign(prefs, p.data);
+          $rootScope.$emit('prefsChanged');
           return p.data;
         });
       }
@@ -296,6 +297,10 @@ angular.module('kifi')
       return net.hideOrgDomain(org.id).then(fetchMe);
     }
 
+    function isAdmin() {
+      return me.experiments && me.experiments.indexOf('admin') > -1;
+    }
+
     return {
       initLoggedOut: function () {
         updateLoginState(false);
@@ -326,7 +331,8 @@ angular.module('kifi')
       postDelightedAnswer: postDelightedAnswer,
       cancelDelightedSurvey: cancelDelightedSurvey,
       closeAccountRequest: closeAccountRequest,
-      hideOrgDomain: hideOrgDomain
+      hideOrgDomain: hideOrgDomain,
+      isAdmin: isAdmin
     };
   }
 ]);

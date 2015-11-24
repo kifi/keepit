@@ -158,11 +158,6 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
     .kf-knf // may not be needed
       margin-top: 35px
 
-    .kf-keep-note-compact
-      display: table-cell
-      vertical-align: top
-      paragraph()
-
     .svg-note-gray
       width: 20px
       height: 20px
@@ -330,21 +325,6 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
     border-radius: '%s' % inherit
     box-shadow: inset 0 0 1px rgba(0,0,0,.2)
 
-.kf-keep-top-l,
-.kf-keep-top-r
-  display: inline-block
-  vertical-align: middle
-
-  .symbol-sprite
-    display: none
-
-.kf-keep-top-l
-  .kf-keep-keeper-name
-    display: none
-
-.kf-keep-top-r
-  margin-left: 12px
-
 .kf-keep-keeper-name
   color: accentGreen
   font-weight: bold
@@ -374,6 +354,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
 twitterBlue = #00aced
 
 .kf-keep-tweet-link
+  margin-left: 3px
   color: shade(twitterBlue, 10%)
   font-size: 12px
 
