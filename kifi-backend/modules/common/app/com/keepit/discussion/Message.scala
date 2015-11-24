@@ -1,6 +1,8 @@
 package com.keepit.discussion
 
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.ExternalId
+import com.keepit.model.Keep
 import com.keepit.social.BasicUserLikeEntity
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -21,13 +23,11 @@ object Message {
 }
 
 case class Discussion(
-  id: ExternalId[Discussion],
   startedAt: DateTime,
   numMessages: Int,
   messages: Seq[Message])
 object Discussion {
   implicit val format: Format[Discussion] = (
-    (__ \ 'id).format[ExternalId[Discussion]] and
     (__ \ 'startedAt).format[DateTime] and
     (__ \ 'numMessages).format[Int] and
     (__ \ 'messages).format[Seq[Message]]
