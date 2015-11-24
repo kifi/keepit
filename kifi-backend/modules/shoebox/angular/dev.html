@@ -74,4 +74,11 @@
       },
   });
 </script>
-<script>$.get('/dist/symbol-sprite.svg', function(data) { document.body.appendChild(data.documentElement) });</script>
+<script>
+var c = document.createElement('div');
+c.classList.add('symbol-sprite-container');
+document.body.appendChild(c);
+$.get('/dist/symbol-sprite.svg', function (data) {
+  c.appendChild(data.documentElement);
+});
+</script>
