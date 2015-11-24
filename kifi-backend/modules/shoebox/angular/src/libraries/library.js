@@ -272,6 +272,10 @@ angular.module('kifi')
         moveToLibrary: true
       }
     };
+    $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+    $rootScope.$on('prefsChanged', function() {
+      $scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+    });
 
     //
     // Scope methods.
@@ -426,7 +430,7 @@ angular.module('kifi')
         signupService.register({});
       } else if (profileService.me && profileService.me.orgs.length > 0) {
 
-        if ($scope.canAddKeepsToLibrary && (library.permissions || []).indexOf('create_slack_integration') !== -1) {
+        if ((library.permissions || []).indexOf('create_slack_integration') !== -1) {
           if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
             $scope.openSlackIntegrations();
           } else {
@@ -570,8 +574,7 @@ angular.module('kifi')
     });
 
     // query param handling
-    var showSlackDialog = initParams.getAndClear('showSlackDialog');
-    if (showSlackDialog) {
+    if ($location.search() && $location.search().showSlackDialog) {
       $scope.openSlackIntegrations();
     }
   }
