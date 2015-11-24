@@ -35,8 +35,8 @@ class ShoeboxTasksPlugin @Inject() (
       slackIngestionCommander.ingestAllDue()
     }
 
-    scheduleTaskOnLeader(system, 1 minute, 30 minutes, "slack filling missing channel ids") {
-      slackCommander.fillInMissingChannelIds()
+    scheduleTaskOnLeader(system, 1 minute, 5 minutes, "slack filling missing channel ids") {
+      slackCommander.fetchMissingChannelIds()
     }
 
     scheduleTaskOnOneMachine(system, 10 minute, 2 minutes, "slack pushing") {
