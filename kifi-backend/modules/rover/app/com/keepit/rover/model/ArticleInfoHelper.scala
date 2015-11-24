@@ -4,15 +4,17 @@ import com.google.inject.{ Singleton, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURI
 import com.keepit.rover.article.{ Article, ArticleKind }
 
 @Singleton
-class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImageRepo: ArticleImageRepo, airbrake: AirbrakeNotifier) {
+class ArticleInfoHelper @Inject() (articleInfoRepo: ArticleInfoRepo, articleImageRepo: ArticleImageRepo, airbrake: AirbrakeNotifier) extends Logging {
   def intern(url: String, uriId: Option[Id[NormalizedURI]], kinds: Set[ArticleKind[_ <: Article]])(implicit session: RWSession): Map[ArticleKind[_ <: Article], RoverArticleInfo] = {
     if (kinds.isEmpty) Map.empty[ArticleKind[_ <: Article], RoverArticleInfo]
     else {
       val existingByKind: Map[ArticleKind[_ <: Article], RoverArticleInfo] = articleInfoRepo.getByUrl(url, excludeState = None).map { info => (info.articleKind -> info) }.toMap
+      if (existingByKind.exists(_._2.uriId.contains(Id(15508652)))) log.info(s"[RPB-ROVER] existingByKind for url $url = $existingByKind")
       kinds.map { kind =>
         val savedInfo = existingByKind.get(kind) match {
           case Some(articleInfo) if articleInfo.isActive => {
