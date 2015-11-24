@@ -1,10 +1,11 @@
 package com.keepit.commanders
 
-import com.google.inject.Inject
+import com.google.inject.{ Provider, Inject }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model._
 
@@ -12,6 +13,7 @@ class LibraryAccessCommander @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
+    libraryMembershipCommanderProvider: Provider[LibraryMembershipCommander],
     organizationMembershipRepo: OrganizationMembershipRepo,
     permissionCommander: PermissionCommander,
     libraryInviteRepo: LibraryInviteRepo) extends Logging {
@@ -51,7 +53,7 @@ class LibraryAccessCommander @Inject() (
     userCanModifyLibrary && canMoveToFromSpace
   }
 
-  def userAccess(userId: Id[User], libraryId: Id[Library], universalLinkOpt: Option[String]): Option[LibraryAccess] = {
+  def userAccess(userId: Id[User], libraryId: Id[Library]): Option[LibraryAccess] = {
     db.readOnlyMaster { implicit s =>
       val lib = libraryRepo.get(libraryId)
       lib.state match {
@@ -63,8 +65,6 @@ class LibraryAccessCommander @Inject() (
               if (lib.visibility == LibraryVisibility.PUBLISHED)
                 Some(LibraryAccess.READ_ONLY)
               else if (libraryInviteRepo.getWithLibraryIdAndUserId(libraryId, userId).nonEmpty)
-                Some(LibraryAccess.READ_ONLY)
-              else if (universalLinkOpt.nonEmpty && lib.universalLink == universalLinkOpt.get)
                 Some(LibraryAccess.READ_ONLY)
               else
                 None
@@ -89,14 +89,6 @@ class LibraryAccessCommander @Inject() (
       })
   }
 
-  def getValidLibInvitesFromAuthToken(libraryId: Id[Library], authToken: Option[String])(implicit s: RSession): Seq[LibraryInvite] = {
-    if (authToken.nonEmpty) {
-      libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get) // todo: only accept 'general invites' for x days
-    } else {
-      Seq.empty[LibraryInvite]
-    }
-  }
-
   def canViewLibrary(userIdOpt: Option[Id[User]], library: Library, authToken: Option[String] = None): Boolean = {
     db.readOnlyReplica { implicit session => canViewLibraryHelper(userIdOpt, library, authToken) }
   }
@@ -105,6 +97,36 @@ class LibraryAccessCommander @Inject() (
     db.readOnlyReplica { implicit session =>
       val library = libraryRepo.get(libraryId)
       library.state == LibraryStates.ACTIVE && canViewLibraryHelper(userId, library, accessToken)
+    }
+  }
+
+  def ensureUserCanWriteTo(userId: Id[User], libIds: Set[Id[Library]]): Boolean = {
+    // todo: This needs to be rectified with LibraryAccessCommander logic elsewhere (which does not check ADD_KEEPS like this one)
+    val (libsUserCanJoin, libsUserCannotJoin) = db.readWrite { implicit s =>
+      val libsUserCannotWriteTo = permissionCommander.getLibrariesPermissions(libIds, Some(userId)).collect {
+        case (libId, ps) if !ps.contains(LibraryPermission.ADD_KEEPS) => libId
+      }.toSet
+      libsUserCannotWriteTo.partition { libId =>
+        val lib = libraryRepo.get(libId)
+        val userHasInvite = libraryInviteRepo.getWithLibraryIdAndUserId(libId, userId).exists(inv => LibraryAccess.collaborativePermissions.contains(inv.access))
+        val libHasOpenCollaboration = lib.organizationMemberAccess.exists(LibraryAccess.collaborativePermissions.contains) &&
+          lib.organizationId.exists(orgId => organizationMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined)
+        userHasInvite || libHasOpenCollaboration
+      }
+    }
+    if (libsUserCannotJoin.nonEmpty) false
+    else {
+      implicit val context = HeimdalContext.empty
+      libsUserCanJoin.foreach(libId => libraryMembershipCommanderProvider.get.joinLibrary(userId, libId))
+      true
+    }
+  }
+
+  private def getValidLibInvitesFromAuthToken(libraryId: Id[Library], authToken: Option[String])(implicit s: RSession): Seq[LibraryInvite] = {
+    if (authToken.nonEmpty) {
+      libraryInviteRepo.getByLibraryIdAndAuthToken(libraryId, authToken.get)
+    } else {
+      Seq.empty[LibraryInvite]
     }
   }
 

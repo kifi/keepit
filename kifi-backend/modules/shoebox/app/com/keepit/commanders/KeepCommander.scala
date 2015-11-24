@@ -747,6 +747,7 @@ class KeepCommanderImpl @Inject() (
 
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
 
+  // Only use this directly if you want to skip ALL interning features. You probably want KeepInterner.
   def persistKeep(k: Keep, userIds: Set[Id[User]], libraryIds: Set[Id[Library]])(implicit session: RWSession): Keep = {
     require(userIds.contains(k.userId), "keep owner is not one of the connected users")
     require(libraryIds.contains(k.libraryId.get), "keep's library is not one of the connected libraries")

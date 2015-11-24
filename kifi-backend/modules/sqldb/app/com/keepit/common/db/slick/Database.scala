@@ -158,11 +158,6 @@ class Database @Inject() (
         }
       } finally { rw.close() }
     }
-    if (failure != null) {
-      //this is very dangerous since we swallow the exception (just report it) and don't let the caller know something bad happened as an exception
-      //the signature of the method should be revisited to enforce check of partial failure of the transaction
-      airbrake.notify(s"Batch partial fail (${failure.exception.getClass.getSimpleName}) readWrite transaction, processed $successCnt out of ${batch.size}", failure.exception)
-    }
     results
   }
 
@@ -178,7 +173,7 @@ class Database @Inject() (
           case Failure(e: ExecutionSkipped) => true // retry skipped items
           case _ => false // no retry for all other cases
         }
-      }.toSeq
+      }
       if (pending.isEmpty) return results
     }
     val partialResults = readWriteBatch(pending)(f)(location)

@@ -314,7 +314,8 @@ object KeepSource {
   // These may be old links
   val bulk = imports ++ Set(userCopied, unknown)
 
-  val discrete = Set(keeper, site, mobile, email, twitterSync)
+  // One-at-a-time keeps
+  val discrete = Set(keeper, site, mobile, email, twitterSync, slack)
 
   val manual = Set(keeper, site, mobile, email)
 

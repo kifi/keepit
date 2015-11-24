@@ -110,6 +110,7 @@ class LibraryInviteRepoImpl @Inject() (
   }
 
   def getByLibraryIdAndAuthToken(libraryId: Id[Library], authToken: String, includeSet: Set[State[LibraryInvite]] = Set(LibraryInviteStates.ACTIVE))(implicit session: RSession): Seq[LibraryInvite] = {
+    // todo: Fetch invite for only x days
     (for (b <- rows if b.libraryId === libraryId && b.authToken === authToken && b.state.inSet(includeSet)) yield b).sortBy(_.createdAt).list
   }
 

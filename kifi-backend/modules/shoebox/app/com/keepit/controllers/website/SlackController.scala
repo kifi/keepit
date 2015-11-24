@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ LibraryMembershipCommander, PermissionCommander }
+import com.keepit.commanders.{ LibraryAccessCommander, LibraryMembershipCommander, PermissionCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
 class SlackController @Inject() (
     slackClient: SlackClient,
     slackCommander: SlackCommander,
-    libraryMembershipCommander: LibraryMembershipCommander,
+    libraryAccessCommander: LibraryAccessCommander,
     deepLinkRouter: DeepLinkRouter,
     libraryToSlackChannelProcessor: LibraryToSlackChannelPusher,
     slackToLibRepo: SlackChannelToLibraryRepo,
@@ -86,7 +86,7 @@ class SlackController @Inject() (
               else None
           }.toSet
         }
-        if (libraryMembershipCommander.ensureUserCanWriteTo(request.userId, libsUserNeedsToWriteTo)) {
+        if (libraryAccessCommander.ensureUserCanWriteTo(request.userId, libsUserNeedsToWriteTo)) {
           slackCommander.modifyIntegrations(SlackIntegrationModifyRequest(request.userId, libToSlackMods, slackToLibMods)).map { response =>
             Ok(Json.toJson(response))
           }.recover {
@@ -116,7 +116,7 @@ class SlackController @Inject() (
   def triggerIntegrations(pubId: PublicId[Library]) = UserAction { implicit request =>
     val libId = Library.decodePublicId(pubId).get
     val userId = request.userId
-    libraryToSlackChannelProcessor.pushToLibrary(libId)
+    libraryToSlackChannelProcessor.pushUpdatesToSlack(libId)
     Ok
   }
 }
