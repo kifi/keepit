@@ -44,6 +44,7 @@ class MessageThreadParticipants(val userParticipants: Map[Id[User], DateTime], v
 }
 
 object MessageThreadParticipants {
+  val empty: MessageThreadParticipants = MessageThreadParticipants(Set.empty[Id[User]], Set.empty[NonUserParticipant])
   implicit val format = new Format[MessageThreadParticipants] {
     def reads(json: JsValue) = {
       json match {

@@ -168,6 +168,7 @@ object Shoebox extends Service {
     def getOrganizationsForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getOrganizationsForUsers")
     def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))
     def getBasicKeepsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeepsByIds")
+    def getCrossServiceKeepsByIds = ServiceRoute(POST, "/internal/shoebox/database/getCrossServiceKeepsByIds")
     def getBasicOrganizationsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicOrganizationsByIds")
     def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipView", Param("libraryId", libraryId), Param("userId", userId))
     def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationUserRelationship", Param("orgId", orgId), Param("userId", userId))

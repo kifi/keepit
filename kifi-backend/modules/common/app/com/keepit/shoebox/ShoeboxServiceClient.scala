@@ -45,6 +45,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]]
+  def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]]
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]]
   def getEmailAddressForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Option[EmailAddress]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI]
@@ -301,15 +302,19 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = {
     cacheProvider.basicKeepByIdCache.bulkGetOrElseFuture(keepIds.map(BasicKeepIdKey)) { missingKeys =>
-      if (missingKeys.isEmpty) Future.successful(Map.empty)
-      else {
-        val payload = Json.toJson(missingKeys.map(_.id))
-        call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
-          val missing = res.json.as[Map[Id[Keep], BasicKeep]]
-          missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
-        }
+      val payload = Json.toJson(missingKeys.map(_.id))
+      call(Shoebox.internal.getBasicKeepsByIds(), payload).map { res =>
+        val missing = res.json.as[Map[Id[Keep], BasicKeep]]
+        missing.map { case (id, basicKeep) => BasicKeepIdKey(id) -> basicKeep }
       }
     }.map { bigMap => bigMap.map { case (key, value) => key.id -> value } }
+  }
+
+  def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = {
+    val payload = Json.toJson(keepIds)
+    call(Shoebox.internal.getCrossServiceKeepsByIds, payload).map { res =>
+      res.json.as[Map[Id[Keep], CrossServiceKeep]]
+    }
   }
 
   def getEmailAddressesForUsers(userIds: Set[Id[User]]): Future[Map[Id[User], Seq[EmailAddress]]] = {

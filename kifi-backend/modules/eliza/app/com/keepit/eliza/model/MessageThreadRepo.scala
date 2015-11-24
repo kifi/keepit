@@ -14,6 +14,7 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
   override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit
 
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread]
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread]
 }
 
@@ -77,8 +78,12 @@ class MessageThreadRepoImpl @Inject() (
   override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread = {
     threadExternalIdCache.getOrElse(MessageThreadExternalIdKey(id))(super.get(id))
   }
+
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
     rows.filter(_.keepId.inSet(keepIds)).list.groupBy(_.keepId).collect { case (Some(kid), Seq(thread)) => kid -> thread }
+  }
+  def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread] = {
+    getByKeepIds(Set(keepId)).get(keepId)
   }
 
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit = {
