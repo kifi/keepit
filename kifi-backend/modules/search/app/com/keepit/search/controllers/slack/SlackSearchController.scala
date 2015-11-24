@@ -50,8 +50,8 @@ class SlackSearchController @Inject() (
             val futureResponse = {
               import SlackAttachment._
               import SlackCommandResponse._
-              val futureTextAndAttachments: Future[(String, Seq[SlackAttachment])] = integrations.filter(_.on).maxByOpt(_.lastMessageTimestamp) match {
-                case Some(integration) if integration.lastMessageTimestamp.isDefined =>
+              val futureTextAndAttachments: Future[(String, Seq[SlackAttachment])] = {
+                if (integrations.nonEmpty) {
                   val acceptLangs = getAcceptLangs(request)
                   val (userId, experiments) = getUserAndExperiments(request)
                   val libraryScope = LibraryScope(integrations.map(_.libraryId).toSet, authorized = true)
@@ -94,20 +94,10 @@ class SlackSearchController @Inject() (
                       (text, attachments)
                     }
                   }
-                case Some(emptyIntegration) =>
-                  val text = s"We haven't captured any link from this channel yet. Messages whose links have been captured will be marked with :heavy_check_mark:!"
+                } else {
+                  val text = "You don't have any integration with this channel, add an one maybe?"
                   Future.successful((text, Seq.empty))
-                case None if integrations.nonEmpty =>
-                  shoeboxClient.getBasicLibraryDetails(integrations.map(_.libraryId).toSet, idealImageSize = idealImageSize, None).map { libraryInfos =>
-                    val text = s"Your Kifi integrations with this channel are currently turned off:"
-                    val attachments = libraryInfos.values.toSeq.map { info =>
-                      SlackAttachment.fromTitleAndImage(Title(info.name, Some(info.url.absolute)), thumbUrl = info.imageUrl.map("https:" + _), color = "warning")
-                    }
-                    (text, attachments)
-                  }
-                case _ =>
-                  val text = "Links from this channel are not being captured by Kifi. Add an integration maybe?"
-                  Future.successful((text, Seq.empty))
+                }
               }
               futureTextAndAttachments.imap { case (text, attachments) => SlackCommandResponse(ResponseType.Ephemeral, text, attachments) }
             }
