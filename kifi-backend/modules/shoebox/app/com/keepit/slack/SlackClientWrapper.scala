@@ -15,6 +15,7 @@ trait SlackClientWrapper {
   def sendToSlack(webhook: SlackIncomingWebhook, msg: SlackMessageRequest): Future[Unit]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
+  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
 }
 
 @Singleton
@@ -55,6 +56,10 @@ class SlackClientWrapperImpl @Inject() (
 
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit] = {
     slackClient.addReaction(token, reaction, channelId, messageTimestamp).andThen(onRevokedToken(token))
+  }
+
+  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
+    slackClient.getChannelId(token, channelName).andThen(onRevokedToken(token))
   }
 
   private def onRevokedToken[T](token: SlackAccessToken): PartialFunction[Try[T], Unit] = {
