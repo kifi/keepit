@@ -39,7 +39,7 @@ object PublicId {
 }
 
 trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
-  val id: Option[Id[T]]
+  def id: Option[Id[T]]
 }
 
 object PublicIdRegistry {

@@ -2,6 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.core.futureExtensionOps
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -18,6 +19,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
+  def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
   def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage]
 }
@@ -31,7 +33,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
   clock: Clock,
   airbrake: AirbrakeNotifier,
   shoebox: ShoeboxServiceClient,
-  implicit val defaultContext: ExecutionContext)
+  implicit val defaultContext: ExecutionContext,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends ElizaDiscussionCommander with Logging {
 
   val MESSAGES_TO_INCLUDE = 8
@@ -45,9 +48,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
       basicUsers <- basicUsersFut
       basicNonUsers <- basicNonUsersFut
     } yield emsgs.map { em =>
-      val msgId = ExternalId[Message](em.externalId.id) // this is a hack to expose Id[ElizaMessage] in a semi-typesafe way
+      val msgId = Message.publicId(ElizaMessage.toMessageId(em.id.get)) // this is a hack to expose Id[ElizaMessage] without exposing ElizaMessage itself
       em.id.get -> Message(
-        id = msgId,
+        pubId = msgId,
         sentAt = em.createdAt,
         sentBy = em.from.asUser.map(uid => BasicUserLikeEntity(basicUsers(uid))).getOrElse {
           BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(em.from.asNonUser.get))
@@ -56,12 +59,22 @@ class ElizaDiscussionCommanderImpl @Inject() (
       )
     }.toMap
   }
+  def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]] = {
+    val elizaMsgs = db.readOnlyReplica { implicit s =>
+      messageThreadRepo.getByKeepId(keepId).map { thread =>
+        messageRepo.getByThread(thread.id.get, fromIdOpt, limit)
+      }.getOrElse(Seq.empty)
+    }
+    externalizeMessages(elizaMsgs).map { extMessageMap =>
+      elizaMsgs.flatMap(em => extMessageMap.get(em.id.get))
+    }
+  }
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]) = db.readOnlyReplica { implicit s =>
     val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
     val threadIds = threadsByKeep.values.map(_.id.get).toSet
     val countsByThread = messageRepo.getAllMessageCounts(threadIds)
     val recentsByThread = threadIds.map { threadId =>
-      threadId -> messageRepo.getRecentByThread(threadId, None, MESSAGES_TO_INCLUDE)
+      threadId -> messageRepo.getByThread(threadId, None, MESSAGES_TO_INCLUDE)
     }.toMap
 
     val extMessageMapFut = externalizeMessages(recentsByThread.values.toSeq.flatten)

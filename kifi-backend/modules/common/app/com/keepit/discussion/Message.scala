@@ -1,7 +1,9 @@
 package com.keepit.discussion
 
-import com.keepit.common.crypto.PublicId
-import com.keepit.common.db.ExternalId
+import javax.crypto.spec.IvParameterSpec
+
+import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId, PublicId }
+import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.model.Keep
 import com.keepit.social.BasicUserLikeEntity
 import org.joda.time.DateTime
@@ -9,13 +11,18 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class Message(
-  id: ExternalId[Message],
+  pubId: PublicId[Message],
   sentAt: DateTime,
   sentBy: BasicUserLikeEntity,
   text: String)
-object Message {
+    extends ModelWithPublicId[Message] {
+  val id: Option[Id[Message]] = None
+}
+object Message extends ModelWithPublicIdCompanion[Message] {
+  val publicIdIvSpec: IvParameterSpec = new IvParameterSpec(Array(-128, 93, 21, 18, 70, 113, -105, 79, -60, 109, -78, 108, -103, -82, 91, -14))
+  val publicIdPrefix = "msg"
   implicit val format: Format[Message] = (
-    (__ \ 'id).format[ExternalId[Message]] and
+    (__ \ 'id).format[PublicId[Message]] and
     (__ \ 'sentAt).format[DateTime] and
     (__ \ 'sentBy).format[BasicUserLikeEntity] and
     (__ \ 'text).format[String]
