@@ -34,7 +34,7 @@ angular.module('kifi')
 
         var symbolSpriteContainer = angular.element('.symbol-sprite-container')[0];
         var observer;
-        if (symbolSpriteContainer.children.length === 0) {
+        if (MutationObserver && symbolSpriteContainer.children.length === 0) {
           observer = new MutationObserver(renderSymbolSprite);
           observer.observe(symbolSpriteContainer, { childList: true });
         } else {
