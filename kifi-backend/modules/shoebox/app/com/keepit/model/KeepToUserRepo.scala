@@ -13,6 +13,9 @@ trait KeepToUserRepo extends Repo[KeepToUser] {
   def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Int
   def getAllByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser]
 
+  def countByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int]
+  def getAllByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepToUser]]
+
   def getCountByUserId(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Int
   def getCountsByUserIds(userIds: Set[Id[User]], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Map[Id[User], Int]
   def getAllByUserId(userId: Id[User], excludeStateOpt: Option[State[KeepToUser]] = Some(KeepToUserStates.INACTIVE))(implicit session: RSession): Seq[KeepToUser]
@@ -50,9 +53,20 @@ class KeepToUserRepoImpl @Inject() (
   def table(tag: Tag) = new KeepToUserTable(tag)
   initTable()
 
+  private def activeRows = rows.filter(_.state === KeepToUserStates.ACTIVE)
+
   private def getByKeepIdHelper(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]])(implicit session: RSession) = {
     for (row <- rows if row.keepId === keepId && row.state =!= excludeStateOpt.orNull) yield row
   }
+
+  private def getByKeepIdsHelper(keepIds: Set[Id[Keep]])(implicit session: RSession) = activeRows.filter(_.keepId.inSet(keepIds))
+  def countByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Int] = {
+    getByKeepIdsHelper(keepIds).groupBy(_.keepId).map { case (keepId, ktus) => keepId -> ktus.length }.list.toMap
+  }
+  def getAllByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[KeepToUser]] = {
+    getByKeepIdsHelper(keepIds).list.groupBy(_.keepId)
+  }
+
   def countByKeepId(keepId: Id[Keep], excludeStateOpt: Option[State[KeepToUser]] = Option(KeepToUserStates.INACTIVE))(implicit session: RSession): Int = {
     getByKeepIdHelper(keepId, excludeStateOpt).run.length
   }

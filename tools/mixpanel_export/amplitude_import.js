@@ -18,11 +18,14 @@ var path = require('path');
 var Promise = require('bluebird');
 var querystring = require('querystring');
 var winston = require('winston');
+var spawnSync = require('child_process').spawnSync;
 
 var USE_FAKE_API = !!_.get(process.env, 'USE_FAKE_API', false);
+var CONCURRENT_API_CALLS = parseInt(_.get(process.env, 'CONCURRENT_API_CALLS', 100), 10);
 
 // var AMPLITUDE_API_KEY = '5a7a940f68887487129b20a4cbf0622d'; // Test
-var AMPLITUDE_API_KEY = 'ca7e6c5bdd95ed9e43ffb7c106479e17'; // Test 2
+// var AMPLITUDE_API_KEY = 'ca7e6c5bdd95ed9e43ffb7c106479e17'; // Test 2
+var AMPLITUDE_API_KEY = '3e8539247e1f053efbe422220e682854'; // Test 3
 
 var filename = process.argv[2];
 if (!_.isString(filename) || !fs.statSync(filename).isFile()) {
@@ -106,17 +109,24 @@ var userWasNotifiedClickActions = ['open', 'click', 'spamreport', 'cleared', 'ma
 
 // many property values will be automatically convereted from camelCase to snake_case,
 // but the following fields should not be changed
+var fieldNamesToNotChangeValuesToSnakeCase = [
+  'library_owner_user_name', '$email', 'os_name', 'os_version', 'country', 'region', 'city', 'agent', 'user_agent',
+  'service_version', 'operating_system', 'origin', 'current_url', 'browser_details', 'browser', 'created_at',
+  'language'
+];
+
 var fieldsToNotChangeValuesToSnakeCase = [
-  'library_owner_user_name', '$email',
   function(field) {
-    return _.startsWith(field, 'kcid') ||
+    return fieldNamesToNotChangeValuesToSnakeCase.indexOf(field) >= 0 ||
+      _.startsWith(field, 'kcid') ||
       _.startsWith(field, 'utm_') ||
-      _.endsWith(field, '_id');
+      _.endsWith(field, '_id') ||
+      _.endsWith(field, '_version');
   }
 ];
 
-// do not convert these values from snakeCase to camel_case
-var valuesThatAreOkayAsSnakeCase = ['iPad', 'iPhone'];
+// do not convert these values from camelCase to snake_case
+var valuesThatAreOkayAsCamelCase = ['iPad', 'iPhone', 'iOS'];
 
 // function(url) - https GET request that return a promise
 var httpsGet = Promise.method(function(url) {
@@ -172,6 +182,9 @@ function amplitudeEventName(mixpanelEvent) {
   }
 }
 
+// offset in seconds to UTC
+var pstOffset = 8 * 60 * 60; // 8 hr * 60 min * 60 sec
+
 /**
  *
  * @param mixpanelEvent
@@ -182,7 +195,6 @@ function amplitudeTimestamp(mixpanelEvent) {
   // https://mixpanel.com/docs/api-documentation/exporting-raw-data-you-inserted-into-mixpanel
 
   var epochSecondsInPST = mixpanelEvent.properties.time;
-  var pstOffset = 8 * 60 * 60; // 8 hr * 60 min * 60 sec
   var epochSecondsInUTC = epochSecondsInPST + pstOffset;
   return epochSecondsInUTC * 1000; // to milliseconds
 }
@@ -197,12 +209,17 @@ function amplitudeEvent(mixpanelEvent, insertId) {
   event.event_properties = props.eventProperties;
 
   _.each(defaultUserProperties, function(amplitudeKey, mixpanelKey) {
-    event[amplitudeKey] = mixpanelEvent.properties[mixpanelKey];
+    var value = mixpanelEvent.properties[mixpanelKey];
+    event[amplitudeKey] = convertValueToSnakeCase(amplitudeKey, value);
   });
 
-  // copy the system "os" property to also be an event property
+  // copy these system property to also be event properties
   if (mixpanelEvent.properties.os) {
-    event.event_properties.operating_system = mixpanelEvent.properties.os;
+    event.event_properties.operating_system = convertValueToSnakeCase('operating_system', mixpanelEvent.properties.os);
+  }
+
+  if (mixpanelEvent.properties.client) {
+    event.event_properties.client = convertValueToSnakeCase('client', mixpanelEvent.properties.client);
   }
 
   // amplitude will automatically dedupe events with the same insert_id:
@@ -295,9 +312,17 @@ function isCamelCase(value) {
 }
 
 function shouldConvertValueToSnakeCase(field, value) {
-  return !_.some(valuesThatAreOkayAsSnakeCase, isSimpleMatch(value)) &&
+  return _.isString(value) &&
+      !_.some(valuesThatAreOkayAsCamelCase, isSimpleMatch(value)) &&
       !_.some(fieldsToNotChangeValuesToSnakeCase, isSimpleMatch(field)) &&
       isCamelCase(value);
+}
+
+function convertValueToSnakeCase(field, value) {
+  if (shouldConvertValueToSnakeCase(field, value)) {
+    return _.snakeCase(value);
+  }
+  return value;
 }
 
 function isPropertyToKeep(key, value) {
@@ -332,11 +357,7 @@ function getUserAndEventProperties(mixpanelEvent) {
     var newKey = renameProperty(key);
     var propertiesObj = isUserProperty(key, value) ? userProperties : eventProperties;
 
-    if (shouldConvertValueToSnakeCase(newKey, value)) {
-      propertiesObj[newKey] = _.snakeCase(value);
-    } else {
-      propertiesObj[newKey] = value;
-    }
+    propertiesObj[newKey] = convertValueToSnakeCase(newKey, value);
   });
 
   return {
@@ -364,7 +385,7 @@ function sendAmplitudeEvent(event) {
 function fakeApiWorker(task, done) {
   setTimeout(function() {
     done(null, {event: task.event});
-  }, 2);
+  }, 2); // 2ms artificial delay
 }
 
 function apiWorker(task, done) {
@@ -408,24 +429,29 @@ function hashString(str) {
   return hash.digest('hex');
 }
 
-// have no more than 100 requests in flight at a time
-var amplitudeApiQueue = async.queue(USE_FAKE_API ? fakeApiWorker : apiWorker, 100);
+// have no more than CONCURRENT_API_CALLS (defaut 100) requests in flight at a time
+var amplitudeApiQueue = async.queue(USE_FAKE_API ? fakeApiWorker : apiWorker, CONCURRENT_API_CALLS);
 var successCounter = 0;
 var skipCounter = 0;
 var retryCount = 0;
 var eventsByTypeCounter = {};
 var failedEvents = [];
+var startTime = new Date().getTime();
+var lineCounter = 0;
 
 function printQueueState() {
-  logger.info("[api queue] [%s] success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
-    path.basename(filename),
-    successCounter, failedEvents.length, amplitudeApiQueue.length(), amplitudeApiQueue.running(), skipCounter, retryCount);
-  logger.info("[summary]", eventsByTypeCounter);
+  var basename = path.basename(filename);
+  var elapsedSeconds = ((new Date()).getTime() - startTime) / 1000;
+  var rate = Math.floor(lineCounter / elapsedSeconds) + ' lines/sec';
+  logger.info("[api queue] [%s] rate=%s seconds=%d lines=%d success=%d fail=%d pending=%d running=%d skipped=%d retries=%d",
+    basename, rate, elapsedSeconds, lineCounter, successCounter, failedEvents.length, amplitudeApiQueue.length(),
+    amplitudeApiQueue.running(), skipCounter, retryCount);
+  logger.info("[summary] [%s]", basename, eventsByTypeCounter);
 }
 
 if (_.endsWith(filename, 'bz2')) {
   logger.info('running bunzip2 on %s', filename);
-  var bunzipProcess = require('child_process').spawnSync('bunzip2', [filename], {stdio: 'inherit'});
+  var bunzipProcess = spawnSync('bunzip2', [filename], {stdio: 'inherit'});
 
   if (bunzipProcess.status !== 0) {
     logger.error('bunzip error', bunzipProcess);
@@ -435,13 +461,18 @@ if (_.endsWith(filename, 'bz2')) {
   filename = filename.substring(0, filename.length - 4);
 }
 
-var printQueueStateInterval = setInterval(printQueueState, 2000);
+// save the failed events to disk so they can be retried later
+spawnSync('mkdir', ['-p', __dirname + '/failed']);
+var failedEventsFilename = 'failed/' + path.basename(filename);
+var failedEventsFh = fs.openSync(failedEventsFilename, 'a');
+
+var printQueueStateInterval = setInterval(printQueueState, 5000);
 
 logger.info('START: import from %s', filename);
 var reader = new LineByLineReader(filename);
 
 // used to prevent the entire file from being loaded into memory
-setInterval(function() {
+var readerTaskCheck = setInterval(function() {
   if (amplitudeApiQueue.length() > 500) {
     reader.pause();
   } else {
@@ -449,10 +480,25 @@ setInterval(function() {
   }
 }, 20);
 
+var RETRYABLE_ERRORS = ['ETIMEDOUT', 'ECONNREFUSED', 'EHOSTUNREACH', 'ECONNRESET'];
+
+function recordFailedEvent(err, mpEvent, line) {
+  failedEvents.push([err, mpEvent, line]);
+  writeFailedEventToDisk(line);
+}
+
 function handleLine(line, retries) {
   retries = retries || 0;
+  lineCounter++;
 
-  var mpEvent = JSON.parse(line);
+  var mpEvent;
+  try {
+    mpEvent = JSON.parse(line);
+  } catch(e) {
+    logger.error({line: line}, 'failed to parse line into JSON');
+    return;
+  }
+
   if (isSkippedEvent(mpEvent)) {
     skipCounter += 1;
     return;
@@ -472,21 +518,25 @@ function handleLine(line, retries) {
 
   amplitudeApiQueue.push(task, function(err, result) {
     if (err) {
-      if (retries === 0) {
-        if (err === undefined) {
-          log.error({result: result, mpEvent: mpEvent}, 'undefined error for some reason');
-        }
-
-        failedEvents.push([err, mpEvent]);
+      if (retries === 0 && err === undefined) {
+        logger.error({result: result, mpEvent: mpEvent}, 'undefined error for some reason');
       }
 
       // retry events for these errors up to 5 times
-      if (retries < 5 && (err.errno === 'ECONNREFUSED' || err.errno === 'EHOSTUNREACH')) {
+      if (_.contains(RETRYABLE_ERRORS, err.errno)) {
         retryCount += 1;
-        setTimeout(function() {
-          retries += 1;
-          handleLine(line, retries);
-        }, 1000);
+
+        if (retries < 5) {
+          setTimeout(function () {
+            handleLine(line, retries + 1);
+          }, 1000);
+        } else {
+          logger.error({result: result, err: err}, 'line failed after 5 tries');
+          recordFailedEvent(err, mpEvent, line);
+        }
+      } else {
+        logger.error({result: result, err: err}, 'non-retryable error');
+        recordFailedEvent(err, mpEvent, line);
       }
     } else {
       successCounter += 1;
@@ -501,13 +551,22 @@ function handleLine(line, retries) {
   });
 }
 
+function printAndStop() {
+  try {
+    fs.closeSync(failedEventsFh);
+    reader.close();
+  } catch(e) {}
+  clearInterval(readerTaskCheck);
+  clearInterval(printQueueStateInterval);
+  printQueueState();
+  printFailedEvents();
+}
+
 reader.on('line', handleLine);
 
 reader.on('end', function() {
   logger.info('DONE: import from %s', filename);
-  clearInterval(printQueueStateInterval);
-  printQueueState();
-  printFailedEvents();
+  printAndStop();
 });
 
 function printFailedEvents() {
@@ -522,9 +581,22 @@ function printFailedEvents() {
   logger.info('************ properties dropped:', _.keys(propertiesDropped).join(', '));
 }
 
+function writeFailedEventToDisk(line) {
+  fs.appendFile(failedEventsFh, line + '\n', function(err) {
+    if (err) logger.error({err: err}, 'failed to write error to disk');
+  });
+}
+
+var sigIntCaughtCount = 0;
 process.on('SIGINT', function() {
-  logger.info('SIGINT caught');
-  printQueueState();
+  logger.info('SIGINT caught: quitting');
+  printAndStop();
+  if (++sigIntCaughtCount > 1) {
+    process.exit();
+  }
+});
+
+process.on('SIGUSR1', function() {
+  logger.info('SIGINT caught: printing failed events');
   printFailedEvents();
-  process.exit();
 });

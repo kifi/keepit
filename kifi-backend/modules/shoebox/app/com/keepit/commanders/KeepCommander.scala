@@ -60,6 +60,7 @@ object BulkKeepSelection {
 trait KeepCommander {
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep]
+  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep]
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
@@ -151,6 +152,25 @@ class KeepCommanderImpl @Inject() (
           users(keep.userId).externalId
         )
       }
+    }
+  }
+  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {
+    val (keeps, users, libs) = db.readOnlyReplica { implicit s =>
+      val keepsById = keepRepo.getByIds(ids)
+      val usersById = ktuRepo.getAllByKeepIds(ids).map { case (keepId, ktus) => keepId -> ktus.map(_.userId).toSet }
+      val libsById = ktlRepo.getAllByKeepIds(ids).map { case (keepId, ktls) => keepId -> ktls.map(_.libraryId).toSet }
+      (keepsById, usersById, libsById)
+    }
+    keeps.map {
+      case (keepId, keep) => keepId -> CrossServiceKeep(
+        keepId,
+        keep.userId,
+        users.getOrElse(keepId, Set.empty),
+        libs.getOrElse(keepId, Set.empty),
+        keep.title,
+        keep.url,
+        keep.uriId
+      )
     }
   }
 

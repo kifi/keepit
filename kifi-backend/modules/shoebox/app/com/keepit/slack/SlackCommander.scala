@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.{ PermissionCommander, PathCommander }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
@@ -19,7 +20,7 @@ import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.http.Status._
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success, Try }
 
 @json
@@ -54,6 +55,7 @@ trait SlackCommander {
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit
   def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
+  def fetchMissingChannelIds(): Future[Unit]
 
   // For use in the LibraryInfoCommander to send info down to clients
   def getSlackIntegrationsForLibraries(userId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo]
@@ -139,8 +141,13 @@ class SlackCommanderImpl @Inject() (
         "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
       )
     }
-    slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet)
-      .andThen { case Success(()) => libToSlackPusher.pushUpdatesToSlack(libId) }
+    slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet) andThen {
+      case Success(()) =>
+        libToSlackPusher.pushUpdatesToSlack(libId) andThen {
+          case Success(_) =>
+            fetchMissingChannelIds()
+        }
+    }
   }
 
   private def validateRequest(request: SlackIntegrationRequest)(implicit session: RSession): Option[LibraryFail] = {
@@ -216,6 +223,45 @@ class SlackCommanderImpl @Inject() (
     request.libToSlack.foreach { ltsId => libToChannelRepo.deactivate(libToChannelRepo.get(ltsId)) }
     request.slackToLib.foreach { stlId => channelToLibRepo.deactivate(channelToLibRepo.get(stlId)) }
     SlackIntegrationDeleteResponse(request.libToSlack.size + request.slackToLib.size)
+  }
+
+  def fetchMissingChannelIds(): Future[Unit] = {
+    log.info("Fetching missing Slack channel ids.")
+    val (channelsWithMissingIds, tokensWithScopesByUserIdAndTeamId) = db.readOnlyMaster { implicit session =>
+      val channelsWithMissingIds = libToChannelRepo.getWithMissingChannelId() ++ channelToLibRepo.getWithMissingChannelId()
+      val uniqueUserIdAndTeamIds = channelsWithMissingIds.map { case (userId, teamId, channelName) => (userId, teamId) }
+      val tokensWithScopesByUserIdAndTeamId = uniqueUserIdAndTeamIds.map {
+        case (userId, teamId) => (userId, teamId) ->
+          slackTeamMembershipRepo.getBySlackTeamAndUser(teamId, userId).flatMap(m => m.token.map((_, m.scopes)))
+      }.toMap
+      (channelsWithMissingIds, tokensWithScopesByUserIdAndTeamId)
+    }
+    log.info(s"Fetching ${channelsWithMissingIds.size} missing channel ids.")
+    FutureHelpers.sequentialExec(channelsWithMissingIds) {
+      case (userId, teamId, channelName) =>
+        log.info(s"Fetching channelId for Slack channel $channelName via user $userId in team $teamId")
+        tokensWithScopesByUserIdAndTeamId(userId, teamId) match {
+          case Some((token, scopes)) if scopes.contains(SlackAuthScope.SearchRead) => slackClient.getChannelId(token, channelName).map {
+            case Some(channelId) =>
+              log.info(s"Found channelId $channelId for Slack channel $channelName via user $userId in team $teamId")
+              db.readWrite { implicit session =>
+                libToChannelRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
+                channelToLibRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
+              }
+            case None => airbrake.notify(s"ChannelId not found Slack for channel $channelName via user $userId in team $teamId.")
+          } recover {
+            case error =>
+              airbrake.notify(s"Unexpected error while fetching channelId for Slack channel $channelName via user $userId in team $teamId", error)
+              ()
+          }
+          case Some((invalidToken, invalidScopes)) =>
+            airbrake.notify(s"Missing search scope for token $invalidToken while fetching channelId for Slack channel $channelName via user $userId in team $teamId")
+            Future.successful(())
+          case None =>
+            airbrake.notify(s"Missing token while fetching channelId for channel $channelName via user $userId in team $teamId")
+            Future.successful(())
+        }
+    }
   }
 
   def getSlackIntegrationsForLibraries(viewerId: Id[User], libraryIds: Set[Id[Library]]): Map[Id[Library], LibrarySlackInfo] = {

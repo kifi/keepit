@@ -49,6 +49,7 @@ trait SlackClient {
   def identifyUser(token: SlackAccessToken): Future[SlackIdentifyResponse]
   def searchMessages(token: SlackAccessToken, request: SlackSearchRequest): Future[SlackSearchResponse]
   def addReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp): Future[Unit]
+  def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]]
 }
 
 class SlackClientImpl(
@@ -107,7 +108,7 @@ class SlackClientImpl(
   def getChannelId(token: SlackAccessToken, channelName: SlackChannelName): Future[Option[SlackChannelId]] = {
     val searchRequest = SlackSearchRequest(SlackSearchRequest.Query.in(channelName), SlackSearchRequest.PageSize(1))
     searchMessages(token, searchRequest).map { response =>
-      response.messages.matches.map(_.channel).collectFirst { case SlackChannel(id, `channelName`) => id }
+      response.messages.matches.headOption.map(_.channel.id)
     }
   }
 }
