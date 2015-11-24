@@ -34,7 +34,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def markAllReadAtOrBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
 
-  def setNotification(user: Id[User], thread: Id[MessageThread], message: Message, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit
+  def setNotification(user: Id[User], thread: Id[MessageThread], message: ElizaMessage, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession): Unit
 
@@ -70,23 +70,23 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
 
-  def markRead(userId: Id[User], threadId: Id[MessageThread], msg: Message)(implicit session: RWSession): Unit
+  def markRead(userId: Id[User], threadId: Id[MessageThread], msg: ElizaMessage)(implicit session: RWSession): Unit
 
   def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession): Seq[UserThread]
 
-  def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[Message]])(implicit session: RWSession): Unit
+  def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
 
   def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession): Boolean
 
-  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession): Unit
+  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[ElizaMessage], newJson: JsValue)(implicit session: RWSession): Unit
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
 
   def isMuted(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Boolean
 
-  def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue, message: Message)(implicit session: RWSession): Unit
+  def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue, message: ElizaMessage)(implicit session: RWSession): Unit
 
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession): Unit
 
@@ -132,7 +132,7 @@ class UserThreadRepoImpl @Inject() (
     def lastSeen = column[Option[DateTime]]("last_seen", O.Nullable)
     def unread = column[Boolean]("notification_pending", O.NotNull)
     def muted = column[Boolean]("muted", O.NotNull)
-    def lastMsgFromOther = column[Option[Id[Message]]]("last_msg_from_other", O.Nullable)
+    def lastMsgFromOther = column[Option[Id[ElizaMessage]]]("last_msg_from_other", O.Nullable)
     def lastNotification = column[JsValue]("last_notification", O.NotNull)
     def notificationUpdatedAt = column[DateTime]("notification_updated_at", O.NotNull)
     def notificationLastSeen = column[Option[DateTime]]("notification_last_seen", O.Nullable)
@@ -190,7 +190,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.notificationUpdatedAt <= timeCutoff) yield (row.unread, row.updatedAt)).update((false, clock.now()))
   }
 
-  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: Message, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit = {
+  def setNotification(userId: Id[User], threadId: Id[MessageThread], message: ElizaMessage, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit = {
     rows.filter(row => (row.user === userId && row.threadId === threadId) && (row.lastMsgFromOther.isEmpty || row.lastMsgFromOther < message.id.get))
       .map(row => (row.lastNotification, row.lastMsgFromOther, row.unread, row.notificationUpdatedAt, row.notificationEmailed, row.updatedAt))
       .update((notifJson, Some(message.id.get), unread, message.createdAt, false, clock.now()))
@@ -325,7 +325,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.threadId === threadId) yield row).first
   }
 
-  def markRead(userId: Id[User], threadId: Id[MessageThread], message: Message)(implicit session: RWSession): Unit = {
+  def markRead(userId: Id[User], threadId: Id[MessageThread], message: ElizaMessage)(implicit session: RWSession): Unit = {
     // Potentially updating lastMsgFromOther (and notificationUpdatedAt for consistency) b/c notification JSON may not have been persisted yet.
     // Note that this method works properly even if the message is from this user. TODO: Rename lastMsgFromOther => lastMsgId ?
     rows.filter(row => (row.user === userId && row.threadId === threadId) && (row.lastMsgFromOther.isEmpty || row.lastMsgFromOther <= message.id.get))
@@ -337,7 +337,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.unread && !row.notificationEmailed && row.notificationUpdatedAt < lastNotifiedBefore) yield row).list
   }
 
-  def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[Message]])(implicit session: RWSession): Unit = {
+  def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit = {
     relevantMessageOpt.map { relevantMessage =>
       (for (row <- rows if row.id === id && row.lastMsgFromOther === relevantMessage) yield row.notificationEmailed).update(true)
     } getOrElse {
@@ -356,7 +356,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.threadId === threadId && !row.unread) yield (row.unread, row.updatedAt)).update((true, clock.now())) > 0
   }
 
-  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], newJson: JsValue)(implicit session: RWSession): Unit = {
+  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[ElizaMessage], newJson: JsValue)(implicit session: RWSession): Unit = {
     (for (row <- rows if row.user === userId && row.threadId === threadId && row.lastMsgFromOther === messageId) yield (row.lastNotification, row.updatedAt)).update((newJson, clock.now()))
   }
 
@@ -368,7 +368,7 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- rows if row.user === userId && row.threadId === threadId) yield row.muted).firstOption.getOrElse(false)
   }
 
-  def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue, message: Message)(implicit session: RWSession): Unit = {
+  def setNotificationJsonIfNotPresent(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue, message: ElizaMessage)(implicit session: RWSession): Unit = {
     (for (row <- rows if row.user === userId && row.threadId === threadId && row.lastMsgFromOther.isEmpty) yield (row.lastNotification, row.notificationUpdatedAt)).update((notifJson, message.createdAt))
   }
 

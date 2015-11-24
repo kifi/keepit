@@ -106,11 +106,11 @@ object MessageSource {
   }
 }
 
-case class Message(
-  id: Option[Id[Message]] = None,
+case class ElizaMessage(
+  id: Option[Id[ElizaMessage]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  externalId: ExternalId[Message] = ExternalId(),
+  externalId: ExternalId[ElizaMessage] = ExternalId(),
   from: MessageSender,
   thread: Id[MessageThread],
   threadExtId: ExternalId[MessageThread],
@@ -119,18 +119,18 @@ case class Message(
   auxData: Option[JsArray] = None,
   sentOnUrl: Option[String],
   sentOnUriId: Option[Id[NormalizedURI]])
-    extends ModelWithExternalId[Message] {
+    extends ModelWithExternalId[ElizaMessage] {
 
-  def withId(id: Id[Message]): Message = this.copy(id = Some(id))
+  def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
 }
 
-object Message {
+object ElizaMessage {
   implicit val format = (
-    (__ \ 'id).formatNullable(Id.format[Message]) and
+    (__ \ 'id).formatNullable(Id.format[ElizaMessage]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
-    (__ \ 'externalId).format(ExternalId.format[Message]) and
+    (__ \ 'externalId).format(ExternalId.format[ElizaMessage]) and
     (__ \ 'from).format[MessageSender] and
     (__ \ 'thread).format(Id.format[MessageThread]) and
     (__ \ 'threadExtId).format(ExternalId.format[MessageThread]) and
@@ -139,13 +139,13 @@ object Message {
     (__ \ 'auxData).formatNullable[JsArray] and
     (__ \ 'sentOnUrl).formatNullable[String] and
     (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
-  )(Message.apply, unlift(Message.unapply))
+  )(ElizaMessage.apply, unlift(ElizaMessage.unapply))
 
   def fromDbTuple(
-    id: Option[Id[Message]],
+    id: Option[Id[ElizaMessage]],
     createdAt: DateTime,
     updatedAt: DateTime,
-    externalId: ExternalId[Message],
+    externalId: ExternalId[ElizaMessage],
     userSender: Option[Id[User]],
     thread: Id[MessageThread],
     threadExtId: ExternalId[MessageThread],
@@ -154,8 +154,8 @@ object Message {
     auxData: Option[JsArray],
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]],
-    nonUserSender: Option[JsValue]): Message = {
-    Message(
+    nonUserSender: Option[JsValue]): ElizaMessage = {
+    ElizaMessage(
       id,
       createdAt,
       updatedAt,
@@ -171,7 +171,7 @@ object Message {
     )
   }
 
-  def toDbTuple(message: Message): Option[(Option[Id[Message]], DateTime, DateTime, ExternalId[Message], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbTuple(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
@@ -189,7 +189,7 @@ object Message {
     ))
   }
 
-  def toMessageView(message: Message): MessageView = {
+  def toMessageView(message: ElizaMessage): MessageView = {
     MessageView(
       from = MessageSender.toMessageSenderView(message.from),
       messageText = message.messageText,
@@ -197,7 +197,7 @@ object Message {
   }
 }
 
-case class MessagesForThread(val thread: Id[MessageThread], val messages: Seq[Message]) {
+case class MessagesForThread(val thread: Id[MessageThread], val messages: Seq[ElizaMessage]) {
   override def equals(other: Any): Boolean = other match {
     case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
     case _ => false
@@ -210,12 +210,12 @@ object MessagesForThread {
 
   implicit val messagesForThreadReads = (
     (__ \ 'thread_id).read(Id.format[MessageThread]) and
-    (__ \ 'messages).read[Seq[Message]]
+    (__ \ 'messages).read[Seq[ElizaMessage]]
   )(MessagesForThread.apply _)
 
   implicit val messagesForThreadWrites = (
     (__ \ 'thread_id).write(Id.format[MessageThread]) and
-    (__ \ 'messages).write(Writes.traversableWrites[Message])
+    (__ \ 'messages).write(Writes.traversableWrites[ElizaMessage])
   )(unlift(MessagesForThread.unapply))
 
 }

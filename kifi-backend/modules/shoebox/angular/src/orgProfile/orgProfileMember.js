@@ -30,6 +30,12 @@ angular.module('kifi')
       return !$scope.member.lastInvitedAt;
     }
 
+    function _shouldShowRole() {
+      var $scope = this;
+
+      return $scope.thisViewer.membership && $scope.thisViewer.membership.role;
+    }
+
     function _shouldShowMakeOwner() {
       var $scope = this;
 
@@ -201,6 +207,7 @@ angular.module('kifi')
 
         $scope.getResentInvite = _getResentInvite;
 
+        $scope.shouldShowRole = _shouldShowRole;
         $scope.hasAcceptedInvite = _hasAcceptedInvite;
         $scope.shouldShowMakeOwner = _shouldShowMakeOwner;
         $scope.shouldShowPromote = _shouldShowPromote;

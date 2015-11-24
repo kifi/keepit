@@ -5,7 +5,7 @@ import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, Exte
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.time._
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Keep, User, NormalizedURI }
 
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
@@ -36,7 +36,8 @@ class MessageThreadRepoImpl @Inject() (
     def pageTitle = column[String]("page_title", O.Nullable)
     def participants = column[MessageThreadParticipants]("participants", O.Nullable)
     def participantsHash = column[Int]("participants_hash", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, uriId.?, url.?, nUrl.?, pageTitle.?, participants.?, participantsHash.?) <> ((MessageThread.apply _).tupled, MessageThread.unapply _)
+    def keepId = column[Option[Id[Keep]]]("keep_id", O.Nullable)
+    def * = (id.?, createdAt, updatedAt, externalId, uriId.?, url.?, nUrl.?, pageTitle.?, participants.?, participantsHash.?, keepId) <> ((MessageThread.apply _).tupled, MessageThread.unapply _)
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
 
@@ -68,7 +69,8 @@ class MessageThreadRepoImpl @Inject() (
         nUrl = nUriOpt,
         pageTitle = pageTitleOpt,
         participants = Some(mtps),
-        participantsHash = Some(mtps.userHash)
+        participantsHash = Some(mtps.userHash),
+        keepId = None
       )
       (save(thread), true)
     }

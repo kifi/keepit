@@ -95,7 +95,7 @@ class ExtMessagingController @Inject() (
   }
 
   def getEmailPreview(msgExtId: String) = UserAction.async { request =>
-    emailCommander.getEmailPreview(ExternalId[Message](msgExtId)).map(Ok(_))
+    emailCommander.getEmailPreview(ExternalId[ElizaMessage](msgExtId)).map(Ok(_))
   }
 
 }

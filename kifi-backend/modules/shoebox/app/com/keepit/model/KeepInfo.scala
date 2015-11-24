@@ -4,6 +4,7 @@ import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
 import com.keepit.common.time._
+import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, OWrites, Writes }
@@ -41,10 +42,10 @@ case class KeepInfo(
   library: Option[LibraryCardInfo] = None,
   organization: Option[BasicOrganization] = None,
   sourceAttribution: Option[KeepSourceAttribution],
-  note: Option[String] = None)
+  note: Option[String] = None,
+  discussion: Option[Discussion])
 
 object KeepInfo {
-
   val maxKeepersShown = 20
   val maxLibrariesShown = 10
 
@@ -77,14 +78,13 @@ object KeepInfo {
         "library" -> o.library,
         "organization" -> o.organization,
         "sourceAttribution" -> o.sourceAttribution.map(SourceAttribution.deprecatedWrites.writes(_)),
-        "note" -> o.note
+        "note" -> o.note,
+        "discussion" -> o.discussion
       ).nonNullFields
     }
   }
 
-  // Are you looking for a decorated keep (with tags, rekeepers, etc)?
-  // Use KeepsCommander#decorateKeepsIntoKeepInfos(userId, keeps)
   def fromKeep(bookmark: Keep)(implicit publicIdConfig: PublicIdConfiguration): KeepInfo = {
-    KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url, bookmark.path.relative, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId), sourceAttribution = None)
+    KeepInfo(Some(bookmark.externalId), Some(Keep.publicId(bookmark.id.get)), bookmark.title, bookmark.url, bookmark.path.relative, bookmark.isPrivate, user = None, libraryId = bookmark.libraryId.map(Library.publicId), sourceAttribution = None, discussion = None)
   }
 }

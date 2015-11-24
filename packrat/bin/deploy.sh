@@ -140,7 +140,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
           if [ -n "$STATUS_FILE_URL" ]; then
 
             # Validation passed, break out of the polling while-loop
-            printf $'\nPassed validaton!'
+            printf $'\nPassed validation!'
             break
 
           else

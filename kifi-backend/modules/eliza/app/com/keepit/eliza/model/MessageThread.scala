@@ -8,7 +8,7 @@ import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ ModelWithExternalId, Id, ExternalId }
-import com.keepit.model.{ DeepLocator, User, NormalizedURI }
+import com.keepit.model.{ Keep, DeepLocator, User, NormalizedURI }
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.time.{ DateTimeJsonFormat }
@@ -113,7 +113,8 @@ case class MessageThread(
   nUrl: Option[String],
   pageTitle: Option[String],
   participants: Option[MessageThreadParticipants],
-  participantsHash: Option[Int])
+  participantsHash: Option[Int],
+  keepId: Option[Id[Keep]] = None)
     extends ModelWithExternalId[MessageThread] {
   def deepLocator: DeepLocator = DeepLocator(s"/messages/$externalId")
 
@@ -121,6 +122,7 @@ case class MessageThread(
 
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
+  def withKeepId(keepId: Id[Keep]): MessageThread = this.copy(keepId = Some(keepId))
 
   def withParticipants(when: DateTime, userIds: Seq[Id[User]], nonUsers: Seq[NonUserParticipant] = Seq.empty) = {
     val newUsers = userIds.map(_ -> when).toMap
@@ -151,7 +153,8 @@ object MessageThread {
     (__ \ 'nUrl).formatNullable[String] and
     (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'participants).formatNullable[MessageThreadParticipants] and
-    (__ \ 'participantsHash).formatNullable[Int]
+    (__ \ 'participantsHash).formatNullable[Int] and
+    (__ \ 'keep).formatNullable[Id[Keep]]
   )(MessageThread.apply, unlift(MessageThread.unapply))
 }
 

@@ -11,6 +11,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URISanitizer
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
+import com.keepit.discussion.Message
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
@@ -45,6 +47,7 @@ class KeepDecoratorImpl @Inject() (
     searchClient: SearchServiceClient,
     keepSourceAttributionRepo: KeepSourceAttributionRepo,
     experimentCommander: LocalUserExperimentCommander,
+    eliza: ElizaServiceClient,
     rover: RoverServiceClient,
     airbrake: AirbrakeNotifier,
     implicit val imageConfig: S3ImageConfig,
@@ -126,10 +129,14 @@ class KeepDecoratorImpl @Inject() (
         db.readOnlyMaster { implicit session => libraryMembershipRepo.getLibrariesWithWriteAccess(userId) } //cached
       } getOrElse Set.empty
 
+      val keepIds = keeps.map(_.id.get).toSet
+      val discussionsByKeepFut = eliza.getDiscussionsForKeeps(keepIds)
+
       for {
         augmentationInfos <- augmentationFuture
         pageInfos <- pageInfosFuture
         (idToBasicUser, idToBasicLibrary, idToLibraryCard, idToBasicOrg) <- entitiesFutures
+        discussionsByKeep <- discussionsByKeepFut
       } yield {
 
         val keepsInfo = (keeps zip colls, augmentationInfos, pageInfos zip sourceAttrs).zipped.map {
@@ -177,7 +184,8 @@ class KeepDecoratorImpl @Inject() (
               library = keep.libraryId.map(idToLibraryCard(_)),
               organization = keep.libraryId.flatMap(idToBasicOrg.get),
               sourceAttribution = sourceAttrOpt,
-              note = keep.note
+              note = keep.note,
+              discussion = discussionsByKeep.get(keep.id.get)
             )
         }
         keepsInfo

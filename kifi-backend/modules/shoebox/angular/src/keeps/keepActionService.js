@@ -101,6 +101,12 @@ angular.module('kifi')
       });
     }
 
+    function getFullKeepInfo(id) {
+      return net.getKeep(id).then(function (result) {
+        return result.data;
+      });
+    }
+
     function unkeepFromLibrary(libraryId, keepId) {
       libraryService.expireKeepsInLibraries();
       return net.removeKeepFromLibrary(libraryId, keepId);
@@ -123,6 +129,7 @@ angular.module('kifi')
       copyToLibrary: copyToLibrary,
       moveToLibrary: moveToLibrary,
       fetchFullKeepInfo: fetchFullKeepInfo,
+      getFullKeepInfo: getFullKeepInfo,
       unkeepFromLibrary: unkeepFromLibrary,
       unkeepManyFromLibrary: unkeepManyFromLibrary,
       removeKeepImage: removeKeepImage

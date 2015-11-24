@@ -79,7 +79,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
 
         waitFor(notificationCommander.getLatestSendableNotifications(user1, 20, includeUriSummary = false)).length === 1
 
-        val messageIds: Seq[Option[Id[Message]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.id)
+        val messageIds: Seq[Option[Id[ElizaMessage]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.id)
         val messageContents: Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.messageText)
 
         messageIds.contains(msg1.id) === true

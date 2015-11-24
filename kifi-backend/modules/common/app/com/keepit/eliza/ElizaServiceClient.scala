@@ -2,6 +2,7 @@ package com.keepit.eliza
 
 import com.keepit.common.crypto.PublicId
 import com.keepit.common.store.S3UserPictureConfig
+import com.keepit.discussion.{Discussion, Message}
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
@@ -106,38 +107,25 @@ trait ElizaServiceClient extends ServiceClient {
   def sendOrgPushNotification(request: OrgPushNotificationRequest): Future[Int]
 
   def connectedClientCount: Future[Seq[Int]]
-
   def sendNotificationEvent(event: NotificationEvent): Future[Unit]
-
   def completeNotification[N <: NotificationEvent, G](kind: GroupingNotificationKind[N, G], params: G, recipient: Recipient): Future[Boolean]
-
   def getThreadContentForIndexing(sequenceNumber: SequenceNumber[ThreadContent], maxBatchSize: Long): Future[Seq[ThreadContent]]
-
   def getUserThreadStats(userId: Id[User]): Future[UserThreadStats]
-
   def getNonUserThreadMuteInfo(publicId: String): Future[Option[(String, Boolean)]]
-
   def setNonUserThreadMuteState(publicId: String, muted: Boolean): Future[Boolean]
-
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Future[Seq[Id[User]]]
-
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[Boolean]]
 
   //migration
   def importThread(data: JsObject): Unit
 
   def getRenormalizationSequenceNumber(): Future[SequenceNumber[ChangedURI]]
-
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
-
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
-
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
-
   def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int]
-
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
-
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -291,6 +279,12 @@ class ElizaServiceClientImpl @Inject() (
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]] = {
     call(Eliza.internal.getParticipantsByThreadExtId(threadExtId)).map { response =>
       response.json.as[Set[Id[User]]]
+    }
+  }
+
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
+    call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(keepIds)).map { response =>
+      response.json.as[Map[Id[Keep], Discussion]]
     }
   }
 }

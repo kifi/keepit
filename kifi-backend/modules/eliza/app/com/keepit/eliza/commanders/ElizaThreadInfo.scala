@@ -17,7 +17,7 @@ case class ElizaThreadInfo(
   digest: String,
   lastAuthor: ExternalId[User],
   messageCount: Long,
-  messageTimes: Map[ExternalId[Message], DateTime],
+  messageTimes: Map[ExternalId[ElizaMessage], DateTime],
   createdAt: DateTime,
   lastCommentedAt: DateTime,
   lastMessageRead: Option[DateTime],
@@ -32,7 +32,7 @@ object ElizaThreadInfo {
     (__ \ 'digest).write[String] and
     (__ \ 'lastAuthor).write(ExternalId.format[User]) and
     (__ \ 'messageCount).write[Long] and
-    (__ \ 'messageTimes).write[JsObject].contramap { m: Map[ExternalId[Message], DateTime] =>
+    (__ \ 'messageTimes).write[JsObject].contramap { m: Map[ExternalId[ElizaMessage], DateTime] =>
       JsObject(m.toSeq.map { case (id, date) => id.id -> Json.toJson(date) })
     } and
     (__ \ 'createdAt).write[DateTime] and
