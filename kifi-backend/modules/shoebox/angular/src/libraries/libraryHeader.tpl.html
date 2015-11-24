@@ -162,7 +162,7 @@
 
   </div>
   <div class="kf-lh-buttons kf-my-lib clearfix" ng-if="isOwnerOrCollaborator()">
-    <div kf-card-style-selector style="float: left"></div>
+    <div kf-card-style-selector></div>
     <button class="kf-lh-edit-keeps svg-edit-keeps-green" ng-click="toggleEditKeeps()" ng-if="library.numKeeps > 0 && !librarySearch">{{editMode ? 'Done editing' : 'Edit keeps'}}</button>
 
     <button class="kf-lh-invite-search-button" ng-click="openInviteModal('follow')" ng-if="!library.isSystem && hasPermission(LIB_PERMISSION.INVITE_FOLLOWERS)">
