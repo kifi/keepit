@@ -36,6 +36,15 @@ case class OrgMetadataKey(id: Id[Organization]) extends Key[String] {
 class OrgMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[OrgMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
+case class KeepMetadataKey(id: Id[Keep]) extends Key[String] {
+  override val version = 1
+  val namespace = "keep_metadata_by_id"
+  def toKey(): String = s"${id.id.toString}"
+}
+
+class KeepMetadataCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[KeepMetadataKey, String](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
 /**
  * https://developers.facebook.com/docs/sharing/best-practices
  * og:title – The title of your article, excluding any branding.
@@ -65,6 +74,7 @@ trait PublicPageMetaTags {
   def formatOpenGraphForLibrary: String
   def formatOpenGraphForUser: String
   def formatOpenGraphForOrg: String
+  def formatOpenGraphForKeep: String
 }
 
 case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMetaTags {
@@ -74,6 +84,8 @@ case class PublicPageMetaPrivateTags(urlPathOnly: String) extends PublicPageMeta
   def formatOpenGraphForUser: String = formatOpenGraph
 
   def formatOpenGraphForOrg: String = formatOpenGraph
+
+  def formatOpenGraphForKeep: String = formatOpenGraph
 
   private def formatOpenGraph: String =
     s"""
@@ -157,6 +169,10 @@ case class PublicPageMetaFullTags(unsafeTitle: String, url: String, urlPathOnly:
     titleAndMetaTags("profile")
   }
 
+  def formatOpenGraphForKeep: String = {
+    titleAndMetaTags("profile")
+  }
+
   //  verify with https://developers.facebook.com/tools/debug/og/object/
   private def titleAndMetaTags(ogType: String): String = {
 
@@ -209,7 +225,7 @@ object PublicPageMetaTags {
   /**
    * http://www.swellpath.com/2014/05/update-new-title-tag-meta-description-character-lengths/
    * Magic numbers:
-   * Google trimms descriptions with more then 115 characters
+   * Google trims descriptions with more then 115 characters
    * Google does not like descriptions with less then 60 characters
    * This function adds a bit of diversity to the description tags and tries to keep them longer then 70 characters.
    */

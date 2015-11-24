@@ -44,7 +44,7 @@ object KeepFactory {
     def secret() = new PartialKeep(keep.copy(visibility = LibraryVisibility.SECRET))
     def withLibrary(library: Library) = new PartialKeep(keep.withLibrary(library))
     def withLibrary(library: Id[Library]) = new PartialKeep(keep.copy(libraryId = Some(library)))
-    def withNote(note: Option[String]) = new PartialKeep(keep.copy(note = note))
+    def withNote(note: String) = new PartialKeep(keep.copy(note = Some(note)))
     def withState(state: State[Keep]) = new PartialKeep(keep.copy(state = state))
     def withOrganizationId(orgId: Option[Id[Organization]]) = new PartialKeep(keep.copy(organizationId = orgId))
     def withURIId(id: Id[NormalizedURI]) = new PartialKeep(keep.copy(uriId = id))

@@ -45,7 +45,7 @@ class MessagingController @Inject() (
 
   //for indexing data requests
   def getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long) = Action.async { request =>
-    (new SafeFuture(messagingIndexCommander.getThreadContentsForMessagesFromIdToId(Id[Message](sequenceNumber), Id[Message](sequenceNumber + maxBatchSize)))).map { threadContents =>
+    (new SafeFuture(messagingIndexCommander.getThreadContentsForMessagesFromIdToId(Id[ElizaMessage](sequenceNumber), Id[ElizaMessage](sequenceNumber + maxBatchSize)))).map { threadContents =>
       Ok(JsArray(threadContents.map(Json.toJson(_))))
     }
   }

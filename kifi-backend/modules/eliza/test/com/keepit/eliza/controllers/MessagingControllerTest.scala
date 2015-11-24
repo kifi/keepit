@@ -59,7 +59,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
   def createMessageThread(title: String)(implicit rw: RWSession, injector: Injector) = {
     inject[MessageThreadRepo].save(MessageThread(
       uriId = None, url = None, nUrl = None, pageTitle = Some(title),
-      participants = None, participantsHash = None))
+      participants = None, participantsHash = None, keepId = None))
   }
 
   def createUserThread(thread: MessageThread, userId: Id[User])(implicit rw: RWSession, injector: Injector) = {
@@ -71,7 +71,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
   def createMessage(thread: MessageThread, senderUserId: Id[User], text: String)(implicit rw: RWSession, injector: Injector) = {
     val sender = MessageSender.User(senderUserId)
     val createdAt = nextTime
-    inject[MessageRepo].save(Message(messageText = text, threadExtId = ExternalId[MessageThread](),
+    inject[MessageRepo].save(ElizaMessage(messageText = text, threadExtId = ExternalId[MessageThread](),
       thread = thread.id.get, from = sender, source = None, sentOnUrl = None, sentOnUriId = None,
       createdAt = createdAt, updatedAt = createdAt))
   }

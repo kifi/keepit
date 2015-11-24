@@ -8,7 +8,7 @@ import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ URISanitizer, UserAgent }
 import com.keepit.common.time._
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.{ Message, MessageSource, MessageThread }
+import com.keepit.eliza.model.{ ElizaMessage, MessageSource, MessageThread }
 import com.keepit.heimdal._
 import com.keepit.model.{ Organization, User }
 import com.keepit.notify.model.Recipient
@@ -184,7 +184,7 @@ class MobileMessagingController @Inject() (
           case None =>
             allMsgs.take(pageSize)
           case Some(idString) =>
-            val id = ExternalId[Message](idString)
+            val id = ExternalId[ElizaMessage](idString)
             val afterId = allMsgs.dropWhile(_.id != id)
             if (afterId.isEmpty) throw new IllegalStateException(s"thread of ${allMsgs.size} had no message id $id")
             afterId.drop(1).take(pageSize)

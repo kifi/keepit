@@ -23,7 +23,7 @@ class SuggestedSearchTermUpdaterTest extends Specification with ShoeboxTestInjec
 
       (0 until N).map { i =>
         hashtag = Hashtags.addNewHashtagsToString(hashtag, Seq(Hashtag(s"h${i + 1}")))
-        keeps(i).withNote(Some(hashtag)).withLibrary(Id[Library](1)).withUser(Id[User](1)).saved
+        keeps(i).withNote(hashtag).withLibrary(Id[Library](1)).withUser(Id[User](1)).saved
       }
     }
   }

@@ -95,8 +95,8 @@ class KeepExportCommanderTest extends Specification with ShoeboxTestInjector {
         val user = UserFactory.user().saved
         val lib = LibraryFactory.library().withOwner(user).saved
         val keeps = Seq(
-          KeepFactory.keep().withLibrary(lib).withTitle("title 1").withKeptAt(date).withUrl("http://www.url1.com").withNote(Some("note 1")).saved,
-          KeepFactory.keep().withLibrary(lib).withTitle("title 2").withKeptAt(date).withUrl("http://www.url2.com").withNote(Some("note 2")).saved
+          KeepFactory.keep().withLibrary(lib).withTitle("title 1").withKeptAt(date).withUrl("http://www.url1.com").withNote("note 1").saved,
+          KeepFactory.keep().withLibrary(lib).withTitle("title 2").withKeptAt(date).withUrl("http://www.url2.com").withNote("note 2").saved
         )
         val keepTags = Map(
           keeps(0).id.get -> Seq("1a", "1b"),

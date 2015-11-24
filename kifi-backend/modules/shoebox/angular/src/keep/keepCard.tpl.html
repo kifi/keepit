@@ -6,7 +6,7 @@
       <section>
         <div kf-keep-card-attribution
              keep="keep"
-             show-library-attribution="::currentPageOrigin !== 'libraryPage'"
+             show-library-attribution="::(currentPageOrigin !== 'libraryPage' || showOriginLibrary)"
              is-first-item="::isFirstItem"></div>
       </section>
       <div class="kf-keep-top-menu-container" kf-click-menu
@@ -82,7 +82,7 @@
             <span>Share</span>
           </button>
         </div>
-        <div class="kf-keep-who" ng-if="keep.keepersTotal > 1 || keep.keepers.length">
+        <div class="kf-keep-who" ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.user.id)">
           <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
                 library="::keeper.library" desc="Your Kifi connection">
             <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"

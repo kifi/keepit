@@ -44,6 +44,6 @@ GET     /:handle/settings/credits  @com.keepit.controllers.routing.KifiSiteRoute
 GET     /:handle/libraries         @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfHandleFound(handle: Handle)
 GET     /:name/libraries/following @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfUserFound(name: Username)
 GET     /:name/libraries/invited   @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfUserIsSelf(name: Username)
+GET     /k/:title/:id              @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfKeepFound(title: String, id: PublicId[Keep])
 GET     /:handle/:slug             @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
 GET     /:handle/:slug/find        @com.keepit.controllers.routing.KifiSiteRouter.serveWebAppIfLibraryFound(handle: Handle, slug)
-
