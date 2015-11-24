@@ -58,6 +58,7 @@ object LibraryToSlackChannel extends ModelWithPublicIdCompanion[LibraryToSlackCh
 @ImplementedBy(classOf[LibraryToSlackChannelRepoImpl])
 trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
   def getActiveByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Set[LibraryToSlackChannel]
+  def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[LibraryToSlackChannel]
   def getActiveByOwnerAndLibrary(ownerId: Id[User], libraryId: Id[Library])(implicit session: RSession): Set[LibraryToSlackChannel]
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[LibraryToSlackChannel]
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[LibraryToSlackChannel]] = Some(LibraryToSlackChannelStates.INACTIVE))(implicit session: RSession): Option[LibraryToSlackChannel]
@@ -170,6 +171,9 @@ class LibraryToSlackChannelRepoImpl @Inject() (
 
   def getActiveByIds(ids: Set[Id[LibraryToSlackChannel]])(implicit session: RSession): Set[LibraryToSlackChannel] = {
     activeRows.filter(_.id.inSet(ids)).list.toSet
+  }
+  def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[LibraryToSlackChannel] = {
+    activeRows.filter(_.libraryId === libraryId).list.toSet
   }
   def getActiveByOwnerAndLibrary(ownerId: Id[User], libraryId: Id[Library])(implicit session: RSession): Set[LibraryToSlackChannel] = {
     activeRows.filter(row => row.ownerId === ownerId && row.libraryId === libraryId).list.toSet
