@@ -13,6 +13,8 @@ angular.module('kifi')
     return {
       restrict: 'A',
       link: function (scope, element, attrs) {
+        var observer;
+
         function renderSymbolSprite() {
           var paths = angular.element('symbol#' + attrs.icon);
           var path = paths.children('g').clone()[0];
@@ -30,10 +32,13 @@ angular.module('kifi')
           } else {
             element.remove();
           }
+
+          if (observer) {
+            observer.disconnect();
+          }
         }
 
         var symbolSpriteContainer = angular.element('.symbol-sprite-container')[0];
-        var observer;
         if (MutationObserver && symbolSpriteContainer.children.length === 0) {
           observer = new MutationObserver(renderSymbolSprite);
           observer.observe(symbolSpriteContainer, { childList: true });
