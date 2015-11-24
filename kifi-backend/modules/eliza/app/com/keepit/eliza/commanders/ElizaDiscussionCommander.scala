@@ -87,16 +87,19 @@ class ElizaDiscussionCommanderImpl @Inject() (
       shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw new Exception(s"Tried to create message thread for dead keep $keepId"))
         db.readWrite { implicit s =>
-          assert(messageThreadRepo.getByKeepId(keepId).isEmpty, s"A message thread for keep $keepId was created while our back was turned")
-          messageThreadRepo.save(MessageThread(
-            uriId = Some(csKeep.uriId),
-            url = Some(csKeep.url),
-            nUrl = None,
-            pageTitle = csKeep.title,
-            participants = Some(MessageThreadParticipants.empty),
-            participantsHash = None,
-            keepId = Some(csKeep.id)
-          ))
+          // If someone created the message thread while we were messing around in Shoebox,
+          // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
+          messageThreadRepo.getByKeepId(keepId).getOrElse {
+            messageThreadRepo.save(MessageThread(
+              uriId = Some(csKeep.uriId),
+              url = Some(csKeep.url),
+              nUrl = None,
+              pageTitle = csKeep.title,
+              participants = Some(MessageThreadParticipants.empty),
+              participantsHash = None,
+              keepId = Some(csKeep.id)
+            ))
+          }
         }
       }
     }
