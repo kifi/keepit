@@ -7,6 +7,8 @@ angular.module('kifi')
   function (env, $http, createExpiringCache) {
     var shoebox = env.xhrBase;
     var search = env.xhrBaseSearch;
+    var elizaSite = env.xhrBaseElizaSite;
+    var eliza = env.xhrBaseEliza;
     var pathParamRe = /(:\w+)/;
 
     var post = angular.bind(null, http, 'POST');  // caller should pass any path params, optional post data (JSON), and an optional query params object
@@ -91,7 +93,12 @@ angular.module('kifi')
 
       // library slack integration
       modifyLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/modify'),
-      deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete')
+      deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete'),
+
+      // eliza
+      addMessageToKeepDiscussion: post(eliza, '/keeps/:id/message'),
+      // ?limit={{number}}&fromId={{Option(String))}}
+      getMessagesForKeepDiscussion: get(eliza, '/keeps/:id/messages?limit=:limit&fromId=:fromId')
     };
 
     function get(base, pathSpec, cacheSec) {

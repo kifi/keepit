@@ -301,6 +301,10 @@ angular.module('kifi')
       return me.experiments && me.experiments.indexOf('admin') > -1;
     }
 
+    function hasExperiment(experiment) {
+      return me.experiments && me.experiments.indexOf(experiment) > -1;
+    }
+
     return {
       initLoggedOut: function () {
         updateLoginState(false);
@@ -332,7 +336,8 @@ angular.module('kifi')
       cancelDelightedSurvey: cancelDelightedSurvey,
       closeAccountRequest: closeAccountRequest,
       hideOrgDomain: hideOrgDomain,
-      isAdmin: isAdmin
+      isAdmin: isAdmin,
+      hasExperiment: hasExperiment
     };
   }
 ]);
