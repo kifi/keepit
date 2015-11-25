@@ -136,13 +136,13 @@ class NotificationDeliveryCommander @Inject() (
       Future.sequence(newParticipants.map { userId =>
         recreateNotificationForAddedParticipant(userId, thread)
       }) map { permanentNotifications =>
-        newParticipants.zip(permanentNotifications) map {
+        newParticipants.zip(permanentNotifications) foreach {
           case (userId, permanentNotification) =>
             sendToUser(userId, Json.arr("notification", notificationJson, permanentNotification))
         }
         val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message.externalId, message.createdAt, "", message.source, message.auxData, "", "", None, participants)
         messageWithBasicUser.map { augmentedMessage =>
-          thread.participants.map(_.allUsers.par.foreach { userId =>
+          thread.participants.foreach(_.allUsers.par.foreach { userId =>
             sendToUser(userId, Json.arr("message", thread.externalId.id, augmentedMessage))
             sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))
           })

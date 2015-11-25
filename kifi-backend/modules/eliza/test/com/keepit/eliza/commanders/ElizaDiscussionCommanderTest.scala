@@ -18,7 +18,7 @@ import com.keepit.rover.FakeRoverServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable.SpecificationLike
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsNull, Json }
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -100,6 +100,23 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep)), Duration.Inf).get(keep)
           ans must beSome
           ans.get.numMessages === 2
+        }
+      }
+      "make sure that new users have their stupid lastNotification set" in {
+        withDb(modules: _*) { implicit injector =>
+          val keep = Id[Keep](1)
+          val user1 = Id[User](1)
+          val user2 = Id[User](2)
+
+          db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
+
+          Await.result(discussionCommander.sendMessageOnKeep(user1, "First post!", keep), Duration.Inf)
+          db.readOnlyMaster { implicit s =>
+            val th = messageThreadRepo.getByKeepId(keep).get
+            val uth = userThreadRepo.getByThread(th.id.get).head
+            uth.lastNotification !== JsNull
+          }
+          1 === 1
         }
       }
     }

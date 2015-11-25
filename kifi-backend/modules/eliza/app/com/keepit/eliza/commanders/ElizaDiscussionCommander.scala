@@ -132,7 +132,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
             uriId = thread.uriId,
             lastSeen = None,
             lastMsgFromOther = None,
-            lastNotification = JsNull
+            lastNotification = JsNull,
+            started = thread.allParticipants.isEmpty
           ))
           log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId. They're new so we added user thread ${ut.id.get} for them.")
         }
