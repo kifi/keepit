@@ -18,6 +18,7 @@ import scala.util.{ Failure, Success, Try }
   // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
   override def toString = id.toString
 }
+//todo: flip references i.e. kill Keep.attributionId and introduce KeepSourceAttribution.keepId
 case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,
     createdAt: DateTime = currentDateTime,

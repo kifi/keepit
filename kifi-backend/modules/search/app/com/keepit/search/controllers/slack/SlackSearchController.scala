@@ -10,7 +10,8 @@ import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ DirectUrl, HttpClient }
 import com.keepit.common.store.S3ImageConfig
-import com.keepit.model.{ Keep, NormalizedURI }
+import com.keepit.common.util.LinkElement
+import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.SearchControllerUtil
@@ -49,6 +50,7 @@ class SlackSearchController @Inject() (
           case integrations =>
             import SlackAttachment._
             import SlackCommandResponse._
+            val futureLibraries = shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None)
             val futureTextAndAttachments: Future[(String, Seq[SlackAttachment])] = {
               if (integrations.allLibraries.nonEmpty) {
                 val acceptLangs = getAcceptLangs(request)
@@ -61,15 +63,16 @@ class SlackSearchController @Inject() (
                   val relevantHits = uriSearchResult.hits.take(uriSearchResult.cutPoint)
 
                   val uriIds = relevantHits.map(hit => Id[NormalizedURI](hit.id))
+                  val keepIds = relevantHits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
                   val futureUriSummaries: Future[Map[Id[NormalizedURI], RoverUriSummary]] = rover.getUriSummaryByUris(uriIds.toSet)
-                  val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = {
-                    val keepIds = relevantHits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
-                    shoeboxClient.getKeepImages(keepIds.toSet)
-                  }
+                  val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = shoeboxClient.getKeepImages(keepIds.toSet)
+                  val futureSourceAttributions: Future[Map[Id[Keep], SourceAttribution]] = shoeboxClient.getSourceAttributionForKeeps(keepIds.toSet)
 
                   for {
                     summaries <- futureUriSummaries
                     keepImages <- futureKeepImages
+                    sourceAttributions <- futureSourceAttributions
+                    libraries <- futureLibraries
                   } yield {
                     val attachments = relevantHits.map { hit =>
                       val url = hit.url
@@ -78,8 +81,19 @@ class SlackSearchController @Inject() (
                       val title = Some(hit.title).filter(_.nonEmpty) orElse summary.flatMap(_.article.title.filter(_.nonEmpty)) getOrElse url
                       val keepId = hit.keepId.map(Id[Keep](_))
                       val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
+                      val pretext = {
+                        import com.keepit.common.util.{ DescriptionElements => Elements }
+                        import com.keepit.common.util.DescriptionElements._
+                        val attribution = keepId.flatMap(sourceAttributions.get).map {
+                          case twitter: TwitterAttribution => Elements("via", twitter.screenName.value --> LinkElement(twitter.getOriginalURL))
+                          case SlackAttribution(message) => Elements("via", message.username.value, "in", message.channel.name.value, "·", message.timestamp.toDateTime --> LinkElement(message.permalink))
+                        }
+                        val library = hit.libraryId.flatMap(id => libraries.get(Id(id)))
+                        val domain = DomainToNameMapper.getNameFromUrl(url)
+                        Elements.formatForSlack(Elements(domain, library.map(lib => Elements("kept in", lib.name --> LinkElement(lib.url))), attribution))
+                      }
                       SlackAttachment(
-                        pretext = DomainToNameMapper.getNameFromUrl(url),
+                        pretext = Some(pretext),
                         title = Some(Title(title, Some(url))),
                         text = summary.flatMap(_.article.description),
                         thumbUrl = imageOpt.map("https:" + _.path.getUrl),
