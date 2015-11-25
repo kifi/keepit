@@ -594,4 +594,10 @@ class ShoeboxController @Inject() (
     val integrations = slackCommander.getIntegrationsBySlackChannel(teamId, channelId)
     Ok(Json.toJson(integrations))
   }
+
+  def getSourceAttributionForKeeps() = Action(parse.tolerantJson) { request =>
+    val keepIds = (request.body \ "keepIds").as[Set[Id[Keep]]]
+    val attributions = keepDecorator.getSourceAttributionForKeeps(keepIds)
+    Ok(Json.toJson(attributions))
+  }
 }

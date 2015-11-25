@@ -267,9 +267,14 @@ object SlackCommandResponse {
 }
 
 @json
-case class SlackChannelToLibrarySummary(
+case class SlackChannelIntegrations(
   teamId: SlackTeamId,
   channelId: SlackChannelId,
-  libraryId: Id[Library],
-  on: Boolean,
-  lastMessageTimestamp: Option[SlackMessageTimestamp])
+  allLibraries: Set[Id[Library]],
+  toLibraries: Set[Id[Library]],
+  fromLibraries: Set[Id[Library]])
+
+object SlackChannelIntegrations {
+  def none(teamId: SlackTeamId, channelId: SlackChannelId) = SlackChannelIntegrations(teamId, channelId, Set.empty, Set.empty, Set.empty)
+}
+

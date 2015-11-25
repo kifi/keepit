@@ -4,10 +4,12 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.model.{ BasicOrganization, OrganizationRole }
 import com.keepit.social.BasicUser
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
 import com.keepit.common.strings.StringWithReplacements
+import org.ocpsoft.prettytime._
 
 sealed trait DescriptionElements {
   def flatten: Seq[BasicElement]
@@ -61,6 +63,9 @@ object DescriptionElements {
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
   implicit def fromRole(role: OrganizationRole): BasicElement = role.value
+
+  private val prettyTime = new PrettyTime()
+  implicit def fromDateTime(time: DateTime): BasicElement = prettyTime.format(time.toDate)
 
   private def intersperse[T](xs: Seq[T], ins: Seq[T]): Seq[T] = {
     (xs, ins) match {

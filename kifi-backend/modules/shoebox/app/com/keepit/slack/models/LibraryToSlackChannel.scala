@@ -74,6 +74,7 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
   def getLibrariesRipeForProcessing(limit: Limit, overrideProcessesOlderThan: DateTime)(implicit session: RSession): Seq[Id[Library]]
   def getIntegrationsRipeForProcessingByLibrary(libraryId: Id[Library], overrideProcessesOlderThan: DateTime)(implicit session: RWSession): Seq[Id[LibraryToSlackChannel]]
   def markAsProcessing(id: Id[LibraryToSlackChannel])(implicit session: RWSession): Option[LibraryToSlackChannel]
+  def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[LibraryToSlackChannel]
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)]
   def fillInMissingChannelId(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName, channelId: SlackChannelId)(implicit session: RWSession): Int
 }
@@ -236,6 +237,10 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     if (workingRows.filter(_.id === id).map(r => (r.updatedAt, r.lastProcessingAt)).update((now, Some(now))) > 0) {
       Some(workingRows.filter(_.id === id).first)
     } else None
+  }
+
+  def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[LibraryToSlackChannel] = {
+    activeRows.filter(r => r.slackTeamId === teamId && r.slackChannelId === channelId).list
   }
 
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)] = {

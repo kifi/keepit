@@ -24,7 +24,7 @@ import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
-import com.keepit.slack.models.{ SlackChannelToLibrarySummary, SlackChannelId, SlackTeamId, SlackAccessToken }
+import com.keepit.slack.models._
 import com.keepit.social.{ BasicUserUserIdKey, _ }
 import org.joda.time.DateTime
 import play.api.libs.json.Json._
@@ -129,7 +129,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]): Future[OrganizationUserRelationship]
   def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]): Future[Option[LibraryMembershipView]]
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
-  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[Seq[SlackChannelToLibrarySummary]]
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
+  def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -845,9 +846,14 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getUserPermissionsByOrgId, payload).map { _.json.as[Map[Id[Organization], Set[OrganizationPermission]]] }
   }
 
-  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[Seq[SlackChannelToLibrarySummary]] = {
+  def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = {
     val payload = Json.obj("teamId" -> teamId, "channelId" -> channelId)
-    call(Shoebox.internal.getIntegrationsBySlackChannel, payload).map { _.json.as[Seq[SlackChannelToLibrarySummary]] }
+    call(Shoebox.internal.getIntegrationsBySlackChannel, payload).map { _.json.as[SlackChannelIntegrations] }
+  }
+
+  def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = {
+    val payload = Json.obj("keepIds" -> keepIds)
+    call(Shoebox.internal.getSourceAttributionForKeeps, payload).map { _.json.as[Map[Id[Keep], SourceAttribution]] }
   }
 
 }
