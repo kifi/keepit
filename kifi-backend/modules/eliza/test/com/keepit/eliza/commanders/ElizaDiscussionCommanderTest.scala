@@ -85,6 +85,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             th.participants must beSome
             th.participants.get.allUsers === Set(user1)
             th.participants.get.allNonUsers must beEmpty
+            userThreadRepo.getByThread(th.id.get) must haveSize(1)
           }
 
           Await.result(discussionCommander.sendMessageOnKeep(user2, "Second post", keep), Duration.Inf)
@@ -93,6 +94,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             th.participants must beSome
             th.participants.get.allUsers === Set(user1, user2)
             th.participants.get.allNonUsers must beEmpty
+            userThreadRepo.getByThread(th.id.get) must haveSize(2)
           }
 
           val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep)), Duration.Inf).get(keep)
