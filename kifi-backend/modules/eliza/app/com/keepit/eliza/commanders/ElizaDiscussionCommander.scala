@@ -14,6 +14,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.BasicUserLikeEntity
+import play.api.libs.json.JsNull
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -28,6 +29,7 @@ trait ElizaDiscussionCommander {
 class ElizaDiscussionCommanderImpl @Inject() (
   db: Database,
   messageThreadRepo: MessageThreadRepo,
+  userThreadRepo: UserThreadRepo,
   messageRepo: MessageRepo,
   messagingCommander: MessagingCommander,
   clock: Clock,
@@ -122,6 +124,15 @@ class ElizaDiscussionCommanderImpl @Inject() (
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Seq(userId)))
+          userThreadRepo.save(UserThread(
+            user = userId,
+            threadId = thread.id.get,
+            uriId = thread.uriId,
+            lastSeen = None,
+            unread = true,
+            lastMsgFromOther = None,
+            lastNotification = JsNull
+          ))
         }
       }
       val (_, message) = messagingCommander.sendMessage(userId, thread.id.get, txt, source, None)
