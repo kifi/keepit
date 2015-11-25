@@ -5,6 +5,7 @@ import java.util.UUID
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
+import scala.concurrent.duration._
 import com.keepit.common.core._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -20,7 +21,7 @@ import com.keepit.model._
 import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.slack.LibraryToSlackChannelPusher
-import org.joda.time.DateTime
+import org.joda.time.{ Period, DateTime }
 import play.api.libs.json.Json
 
 import scala.util.{ Failure, Success, Try }
@@ -249,7 +250,9 @@ class KeepInternerImpl @Inject() (
       // Make external notifications
       if (notifyExternalSources && KeepSource.discrete.contains(keeps.head.source)) { // Only report first to not spam
         SafeFuture { libraryNewFollowersCommander.notifyFollowersOfNewKeeps(library, keeps.head) }
-        db.readWrite { implicit s => libToSlackProcessor.scheduleLibraryToBePushed(library.id.get) }
+        db.readWrite { implicit s =>
+          libToSlackProcessor.scheduleLibraryToBePushed(library.id.get, clock.now plus (if (keeps.forall(_.title.isDefined)) Period.seconds(20) else Period.seconds(40)))
+        }
         FutureHelpers.sequentialExec(keeps) { keep =>
           val nuri = db.readOnlyMaster { implicit session =>
             normalizedURIRepo.get(keep.uriId)

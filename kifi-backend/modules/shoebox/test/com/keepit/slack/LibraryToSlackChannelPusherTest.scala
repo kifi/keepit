@@ -70,7 +70,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           // Now we make the lib secret
           db.readWrite { implicit s =>
             libraryRepo.save(lib.copy(visibility = LibraryVisibility.SECRET))
-            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get)
+            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get, fakeClock.now)
           }
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf).values.toList === List.empty
           // We hopefully turned off the "bad" integration
@@ -130,7 +130,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           fakeClock += Period.days(1)
           db.readWrite { implicit s =>
             KeepFactory.keeps(2).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved
-            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get)
+            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get, fakeClock.now)
           }
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
@@ -141,7 +141,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           fakeClock += Period.days(1)
           db.readWrite { implicit s =>
             KeepFactory.keeps(20).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved
-            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get)
+            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get, fakeClock.now)
           }
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
