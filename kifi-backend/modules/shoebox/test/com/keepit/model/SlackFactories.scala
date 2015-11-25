@@ -113,6 +113,7 @@ object LibraryToSlackChannelFactory {
     def withMembership(stm: SlackTeamMembership) = this.copy(lts = lts.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withLibrary(lib: Library) = this.copy(lts = lts.copy(libraryId = lib.id.get))
     def withChannel(cn: String) = this.copy(lts = lts.copy(slackChannelName = SlackChannelName(cn)))
+    def withNextPushAt(time: DateTime) = this.copy(lts = lts.withNextPushAt(time))
   }
 
   def ltss(count: Int) = List.fill(count)(lts())

@@ -61,16 +61,19 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val lib = LibraryFactory.library().withOwner(owner).published().saved
             val slackTeam = SlackTeamFactory.team()
             val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
-            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").withNextPushAt(fakeClock.now).saved
             val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
             (owner, user, lib, lts)
           }
           // First time is fine, since they have view permissions
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf).values.toList === List(true)
           // Now we make the lib secret
-          db.readWrite { implicit s => libraryRepo.save(lib.copy(visibility = LibraryVisibility.SECRET)) }
+          db.readWrite { implicit s =>
+            libraryRepo.save(lib.copy(visibility = LibraryVisibility.SECRET))
+            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get)
+          }
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf).values.toList === List.empty
-          // We turn off "bad" integrations
+          // We hopefully turned off the "bad" integration
           db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).status === SlackIntegrationStatus.Off }
           1 === 1
         }
@@ -125,7 +128,10 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
 
           // 2 keeps => 1 msg, 2 lines
           fakeClock += Period.days(1)
-          db.readWrite { implicit s => KeepFactory.keeps(2).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved }
+          db.readWrite { implicit s =>
+            KeepFactory.keeps(2).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved
+            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get)
+          }
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 2
@@ -133,7 +139,10 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
 
           // hella keeps => 1 msg, 1 line (a summary)
           fakeClock += Period.days(1)
-          db.readWrite { implicit s => KeepFactory.keeps(20).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved }
+          db.readWrite { implicit s =>
+            KeepFactory.keeps(20).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved
+            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get)
+          }
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 1
@@ -157,8 +166,8 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           }
 
           val ch = SlackChannel(SlackChannelId("C123123"), libToSlack.slackChannelName)
-          fakeClock += Period.days(1)
           db.readWrite { implicit s => KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("In Kifi").saved }
+          fakeClock += Period.days(1)
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("ryan-kifi")

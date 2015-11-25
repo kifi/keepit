@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.google.inject.Injector
 import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.time.{ DEFAULT_DATE_TIME_ZONE, FakeClock }
 import com.keepit.model.LibraryToSlackChannelFactory.PartialLibraryToSlackChannel
 import com.keepit.model.SlackChannelToLibraryFactory.PartialSlackChannelToLibrary
 import com.keepit.model.SlackIncomingWebhookFactory.PartialSlackIncomingWebhook
@@ -33,7 +34,8 @@ object SlackChannelToLibraryFactoryHelper {
 object LibraryToSlackChannelFactoryHelper {
   implicit class LibraryToSlackChannelPersister(partial: PartialLibraryToSlackChannel) {
     def saved(implicit injector: Injector, session: RWSession): LibraryToSlackChannel = {
-      injector.getInstance(classOf[LibraryToSlackChannelRepo]).save(partial.lts)
+      val now = injector.getInstance(classOf[FakeClock]).now
+      injector.getInstance(classOf[LibraryToSlackChannelRepo]).save(partial.lts.withNextPushAt(now))
     }
   }
 }
