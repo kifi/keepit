@@ -85,8 +85,8 @@ class SlackSearchController @Inject() (
                         import com.keepit.common.util.{ DescriptionElements => Elements }
                         import com.keepit.common.util.DescriptionElements._
                         val attribution = keepId.flatMap(sourceAttributions.get).map {
-                          case twitter: TwitterAttribution => Elements("via", twitter.screenName.value --> LinkElement(twitter.getOriginalURL))
-                          case SlackAttribution(message) => Elements("via", message.username.value, "in", message.channel.name.value, "·", message.timestamp.toDateTime --> LinkElement(message.permalink))
+                          case twitter: TwitterAttribution => Elements("via", "@" + twitter.screenName.value --> LinkElement(twitter.getOriginalURL))
+                          case SlackAttribution(message) => Elements("via", "@" + message.username.value, "in", "#" + message.channel.name.value, "·", message.timestamp.toDateTime --> LinkElement(message.permalink))
                         }
                         val library = hit.libraryId.flatMap(id => libraries.get(Id(id)))
                         val domain = DomainToNameMapper.getNameFromUrl(url)
