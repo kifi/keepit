@@ -242,7 +242,7 @@ class NotificationDeliveryCommander @Inject() (
   def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
     SafeFuture {
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
-      val lastSeenOpt: Option[DateTime] = orderedActivityInfo.filter(_.userId == userId).head.lastSeen
+      val lastSeenOpt: Option[DateTime] = orderedActivityInfo.find(_.userId == userId).flatMap(_.lastSeen)
       val unseenAuthors: Int = lastSeenOpt match {
         case Some(lastSeen) => authorActivityInfos.count(_.lastActive.get.isAfter(lastSeen))
         case None => authorActivityInfos.length
