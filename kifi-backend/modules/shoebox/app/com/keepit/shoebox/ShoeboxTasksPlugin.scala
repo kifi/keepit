@@ -39,7 +39,7 @@ class ShoeboxTasksPlugin @Inject() (
       slackCommander.fetchMissingChannelIds()
     }
 
-    scheduleTaskOnOneMachine(system, 10 minute, 1 minutes, "slack pushing") {
+    scheduleTaskOnOneMachine(system, 1 minute, 20 seconds, "slack pushing") {
       libToSlackPusher.findAndPushUpdatesForRipestLibraries()
     }
 

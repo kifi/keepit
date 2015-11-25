@@ -6,17 +6,20 @@ import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.NonOKResponseException
+import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
-import org.joda.time.Period
+import org.joda.time.{ DateTime, Period }
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.duration.DurationConversions
 import scala.util.Success
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
@@ -25,7 +28,7 @@ trait LibraryToSlackChannelPusher {
   def findAndPushUpdatesForRipestLibraries(): Unit
 
   // Method to be called if something happens in a library, meant to be called from within other db sessions
-  def scheduleLibraryToBePushed(libId: Id[Library])(implicit session: RWSession): Unit
+  def scheduleLibraryToBePushed(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit
 
   // Only call there are scheduled pushes that you want to process immediately
   def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]]
@@ -47,6 +50,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   keepDecorator: KeepDecorator,
+  airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext)
     extends LibraryToSlackChannelPusher with Logging {
 
@@ -54,15 +58,18 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   private val defaultDelayBetweenPushes = Period.minutes(30)
   private val MAX_KEEPS_TO_SEND = 7
   private val LIBRARY_BATCH_SIZE = 20
+
+  @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
+  @AlertingTimer(5 seconds)
   def findAndPushUpdatesForRipestLibraries(): Unit = {
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
-      libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now.minus(maxAcceptableProcessingDuration))
+      libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
     }
     librariesThatNeedToBeProcessed.foreach(pushUpdatesToSlack)
   }
-  def scheduleLibraryToBePushed(libId: Id[Library])(implicit session: RWSession): Unit = {
+  def scheduleLibraryToBePushed(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
     libToChannelRepo.getActiveByLibrary(libId).foreach { lts =>
-      libToChannelRepo.save(lts.withNextPushAtLatest(clock.now))
+      libToChannelRepo.save(lts.withNextPushAtLatest(when))
     }
   }
 
