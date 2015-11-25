@@ -63,6 +63,10 @@ object ApplicationBuild extends Build {
     "org.apache.tika" % "tika-parsers" % "1.5"
   )
 
+  lazy val commonDependencies = Seq(
+    "org.ocpsoft.prettytime" % "prettytime" % "3.2.7.Final"
+  )
+
   lazy val commonSettings =
     Global.settings ++
     PlayGlobal.settings ++
@@ -81,6 +85,7 @@ object ApplicationBuild extends Build {
   lazy val common = Project("common", file("modules/common")).enablePlugins(play.PlayScala).settings(
     commonSettings: _*
   ).settings(
+    libraryDependencies ++= commonDependencies,
     javaOptions in Test += "-Dconfig.resource=application-dev.conf",
     // Only necessary for admin:
     includeFilter in (Assets, LessKeys.less) := "*.less"
