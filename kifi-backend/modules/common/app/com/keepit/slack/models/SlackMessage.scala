@@ -277,3 +277,4 @@ case class SlackChannelIntegrations(
 object SlackChannelIntegrations {
   def none(teamId: SlackTeamId, channelId: SlackChannelId) = SlackChannelIntegrations(teamId, channelId, Set.empty, Set.empty, Set.empty)
 }
+

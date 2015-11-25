@@ -173,6 +173,7 @@ object Shoebox extends Service {
     def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationUserRelationship", Param("orgId", orgId), Param("userId", userId))
     def getUserPermissionsByOrgId() = ServiceRoute(POST, "/internal/shoebox/database/getUserPermissionsByOrgId")
     def getIntegrationsBySlackChannel() = ServiceRoute(POST, "/internal/shoebox/database/getIntegrationsBySlackChannel")
+    def getSourceAttributionForKeeps() = ServiceRoute(POST, "/internal/shoebox/database/getSourceAttributionForKeeps")
   }
 }
 

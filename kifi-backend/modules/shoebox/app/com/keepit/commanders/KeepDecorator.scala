@@ -26,6 +26,7 @@ trait KeepDecorator {
   def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo]
   def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]]
   def getKeepSummaries(keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[URISummary]]
+  def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], SourceAttribution]
 }
 
 @Singleton
@@ -268,6 +269,14 @@ class KeepDecoratorImpl @Inject() (
           uriId -> Set.empty[PersonalKeep]
       }
     }.toMap
+  }
+
+  def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], SourceAttribution] = {
+    db.readOnlyMaster { implicit session =>
+      val keeps = keepRepo.getByIds(keepIds).values
+      val attributionByIds = keepSourceAttributionRepo.getByIds(keeps.flatMap(_.sourceAttributionId).toSet)
+      keeps.map(keep => keep.id.get -> keep.sourceAttributionId.flatMap(attributionByIds.get)).collect { case (keepId, Some(attribution)) => keepId -> attribution.attribution }.toMap
+    }
   }
 
 }
