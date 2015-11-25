@@ -113,12 +113,4 @@ class SlackController @Inject() (
         }.get
     }
   }
-
-  // TODO(ryan): this is for testing only, remove it
-  def triggerIntegrations(pubId: PublicId[Library]) = UserAction { implicit request =>
-    val libId = Library.decodePublicId(pubId).get
-    val userId = request.userId
-    libraryToSlackChannelProcessor.pushUpdatesToSlack(libId)
-    Ok
-  }
 }
