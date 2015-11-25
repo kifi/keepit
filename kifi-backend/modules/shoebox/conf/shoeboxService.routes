@@ -14,7 +14,7 @@ GET     /contacts/refresh           @com.keepit.controllers.core.OAuth2Controlle
 GET     /oauth2/start/:provider     @com.keepit.controllers.core.OAuth2Controller.start(provider:String, stateToken:Option[String], approvalPromptOpt:Option[String])
 GET     /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.callback(provider:String)
 POST    /oauth2/callback/:provider  @com.keepit.controllers.core.OAuth2Controller.accessTokenCallback(provider:String)
-GET     /oauth2/slack               @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: String, state: String)
+GET     /oauth2/slack               @com.keepit.controllers.website.SlackController.registerSlackAuthorization(code: Option[String] ?= None, state: String)
 
 GET     /signup                     @com.keepit.controllers.core.AuthController.signupPage()
 
@@ -480,8 +480,6 @@ POST    /site/libraries/:id/image/position  @com.keepit.controllers.website.Libr
 DELETE  /site/libraries/:id/image           @com.keepit.controllers.website.LibraryImageController.removeLibraryImage(id: PublicId[Library])
 GET     /site/libraries/:ids/images         @com.keepit.controllers.website.LibraryImageController.getLibraryImages(ids: String, is: Option[String] ?= None)
 
-# TODO(ryan): remove this trigger endpoint, it is just for testing
-GET   /site/libraries/:id/slack/trigger     @com.keepit.controllers.website.SlackController.triggerIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/modify      @com.keepit.controllers.website.SlackController.modifyIntegrations(id: PublicId[Library])
 POST  /site/libraries/:id/slack/delete      @com.keepit.controllers.website.SlackController.deleteIntegrations(id: PublicId[Library])
 
@@ -1033,16 +1031,17 @@ GET      /internal/shoebox/database/getAllFakeUsers                             
 GET      /internal/shoebox/database/getInvitations                              @com.keepit.controllers.internal.ShoeboxController.getInvitations(senderId: Id[User])
 GET      /internal/shoebox/database/getSocialConnections                        @com.keepit.controllers.internal.ShoeboxController.getSocialConnections(userId: Id[User])
 
-GET      /internal/shoebox/image/getUserImageUrl     @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
-POST     /internal/shoebox/database/canViewLibrary             @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
-POST     /internal/shoebox/database/getPersonalKeeps   @com.keepit.controllers.internal.ShoeboxController.getPersonalKeeps(userId: Id[User])
-POST     /internal/shoebox/database/getBasicKeepsByIds   @com.keepit.controllers.internal.ShoeboxController.getBasicKeepsByIds()
-POST     /internal/shoebox/database/getBasicLibraryDetails   @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
-POST     /internal/shoebox/database/getLibraryCardInfos      @com.keepit.controllers.internal.ShoeboxController.getLibraryCardInfos()
-POST     /internal/shoebox/database/getKeepCounts   @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
-POST     /internal/shoebox/database/getKeepImages   @com.keepit.controllers.internal.ShoeboxController.getKeepImages()
-GET      /internal/shoebox/database/getLibrariesWithWriteAccess @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
-GET      /internal/shoebox/database/getLibraryMembershipView    @com.keepit.controllers.internal.ShoeboxController.getLibraryMembershipView(libraryId: Id[Library], userId: Id[User])
+GET      /internal/shoebox/image/getUserImageUrl                   @com.keepit.controllers.internal.ShoeboxController.getUserImageUrl(id: Id[User], width: Int)
+POST     /internal/shoebox/database/canViewLibrary                 @com.keepit.controllers.internal.ShoeboxController.canViewLibrary()
+POST     /internal/shoebox/database/getPersonalKeeps               @com.keepit.controllers.internal.ShoeboxController.getPersonalKeeps(userId: Id[User])
+POST     /internal/shoebox/database/getBasicKeepsByIds             @com.keepit.controllers.internal.ShoeboxController.getBasicKeepsByIds()
+POST     /internal/shoebox/database/getCrossServiceKeepsByIds      @com.keepit.controllers.internal.ShoeboxController.getCrossServiceKeepsByIds()
+POST     /internal/shoebox/database/getBasicLibraryDetails         @com.keepit.controllers.internal.ShoeboxController.getBasicLibraryDetails()
+POST     /internal/shoebox/database/getLibraryCardInfos            @com.keepit.controllers.internal.ShoeboxController.getLibraryCardInfos()
+POST     /internal/shoebox/database/getKeepCounts                  @com.keepit.controllers.internal.ShoeboxController.getKeepCounts()
+POST     /internal/shoebox/database/getKeepImages                  @com.keepit.controllers.internal.ShoeboxController.getKeepImages()
+GET      /internal/shoebox/database/getLibrariesWithWriteAccess    @com.keepit.controllers.internal.ShoeboxController.getLibrariesWithWriteAccess(userId: Id[User])
+GET      /internal/shoebox/database/getLibraryMembershipView       @com.keepit.controllers.internal.ShoeboxController.getLibraryMembershipView(libraryId: Id[Library], userId: Id[User])
 POST     /internal/shoebox/database/getIntegrationsBySlackChannel      @com.keepit.controllers.internal.ShoeboxController.getIntegrationsBySlackChannel()
 POST     /internal/shoebox/database/getSourceAttributionForKeeps       @com.keepit.controllers.internal.ShoeboxController.getSourceAttributionForKeeps()
 

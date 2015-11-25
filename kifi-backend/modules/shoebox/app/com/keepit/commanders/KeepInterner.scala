@@ -4,7 +4,7 @@ import java.util.UUID
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.concurrent.ExecutionContext
+import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
 import com.keepit.common.core._
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -13,7 +13,7 @@ import com.keepit.common.healthcheck.{ AirbrakeError, AirbrakeNotifier }
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
-import com.keepit.eliza.ElizaServiceClient
+import com.keepit.common.util.Debouncing
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
@@ -25,22 +25,27 @@ import play.api.libs.json.Json
 
 import scala.util.{ Failure, Success, Try }
 
-case class InternedUriAndKeep(bookmark: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
+private case class InternedUriAndKeep(keep: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
 @ImplementedBy(classOf[KeepInternerImpl])
 trait KeepInterner {
-  private[commanders] def deDuplicateRawKeep(rawKeeps: Seq[RawKeep]): Seq[RawKeep]
   private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation]
   def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit
-  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation])
+
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation])
   def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
+
+  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
+    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
+    (newKeeps ++ existingKeeps, failures)
+  }
 }
 
 @Singleton
 class KeepInternerImpl @Inject() (
   db: Database,
   normalizedURIInterner: NormalizedURIInterner,
+  normalizedURIRepo: NormalizedURIRepo,
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
   keepCommander: KeepCommander,
@@ -58,19 +63,16 @@ class KeepInternerImpl @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
-  libraryNewFollowersCommander: LibraryNewFollowersCommander,
+  libraryNewFollowersCommander: LibraryNewKeepsCommander,
   subscriptionCommander: LibrarySubscriptionCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
   libToSlackProcessor: LibraryToSlackChannelPusher,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
-    extends KeepInterner with Logging {
+    extends KeepInterner with Logging with Debouncing {
 
   implicit private val fj = ExecutionContext.fj
-
-  private[commanders] def deDuplicateRawKeep(rawKeeps: Seq[RawKeep]): Seq[RawKeep] =
-    rawKeeps.map(b => (b.url, b)).toMap.values.toList
 
   private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation] =
     rawBookmarks.map(b => (b.url, b)).toMap.values.toList
@@ -80,7 +82,7 @@ class KeepInternerImpl @Inject() (
     log.info(s"[persistRawKeeps] persisting batch of ${rawKeeps.size} keeps")
     val newImportId = importId.getOrElse(UUID.randomUUID.toString)
 
-    val deduped = deDuplicateRawKeep(rawKeeps) map (_.copy(importId = Some(newImportId)))
+    val deduped = rawKeeps.distinctBy(_.url) map (_.copy(importId = Some(newImportId)))
 
     if (deduped.nonEmpty) {
       val userId = deduped.head.userId
@@ -92,22 +94,20 @@ class KeepInternerImpl @Inject() (
       db.readWrite(attempts = 3) { implicit session =>
         // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
         // If it happens, the user will experience the % complete jumping around a bit until it's finished.
-        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_LAST_START, clock.now)
         userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_DONE, 0)
         userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL, total)
         userValueRepo.setValue(userId, UserValueName.bookmarkImportContextName(newImportId), Json.toJson(context))
       }
-      deduped.grouped(500).toList.map { rawKeepGroup =>
+      deduped.grouped(500).foreach { rawKeepGroup =>
         // insertAll fails if any of the inserts failed
         log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
-        val bulkAttempt = db.readWrite(attempts = 2) { implicit session =>
+        val bulkAttempt = db.readWrite(attempts = 4) { implicit session =>
           rawKeepRepo.insertAll(rawKeepGroup)
         }
-        log.info(s"[persistRawKeeps] Persist result: $bulkAttempt")
         if (bulkAttempt.isFailure) {
-          log.info(s"[persistRawKeeps] Trying one at a time")
+          log.info(s"[persistRawKeeps] Failed bulk. Trying one at a time")
           val singleAttempt = db.readWrite { implicit session =>
-            rawKeepGroup.map { rawKeep =>
+            rawKeepGroup.toList.map { rawKeep =>
               rawKeep -> rawKeepRepo.insertOne(rawKeep)
             }
           }
@@ -122,27 +122,15 @@ class KeepInternerImpl @Inject() (
     }
   }
 
-  def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
-    (newKeeps ++ existingKeeps, failures)
-  }
-
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source)
-    if (persistedBookmarksWithUris.nonEmpty) {
-      db.readWrite { implicit s =>
-        libraryRepo.updateLastKept(library.id.get)
-        Try(libraryRepo.save(libraryRepo.getNoCache(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone.
-      }
-    }
-    val createdKeeps = persistedBookmarksWithUris collect {
-      case InternedUriAndKeep(bm, uri, isNewBookmark, wasInactiveKeep) if isNewBookmark => bm
-    }
+
     val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
-      case (newKeeps, existingKeeps) => (newKeeps map (_.bookmark), existingKeeps map (_.bookmark))
+      case (newKs, existingKs) => (newKs.map(_.keep), existingKs.map(_.keep))
     }
-    libraryAnalytics.keptPages(userId, createdKeeps, library, context)
-    heimdalClient.processKeepAttribution(userId, createdKeeps)
+
+    reportNewKeeps(userId, newKeeps, library, context, notifyExternalSources = true)
+
     (newKeeps, existingKeeps, failures)
   }
 
@@ -150,38 +138,25 @@ class KeepInternerImpl @Inject() (
     db.readWrite(attempts = 2) { implicit s =>
       internUriAndBookmark(rawBookmark, userId, library, source)
     } map { persistedBookmarksWithUri =>
-      val bookmark = persistedBookmarksWithUri.bookmark
-      if (persistedBookmarksWithUri.isNewKeep) {
-        if (library.kind == LibraryKind.USER_CREATED) SafeFuture { libraryNewFollowersCommander.notifyFollowersOfNewKeeps(library, bookmark) }
-        libraryAnalytics.keptPages(userId, Seq(bookmark), library, context)
-        heimdalClient.processKeepAttribution(userId, Seq(bookmark))
-      }
-      db.readWrite { implicit s =>
-        libraryRepo.updateLastKept(library.id.get)
-        Try(libraryRepo.save(libraryRepo.getNoCache(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone. Needs to be removed.
-      }
+      val bookmark = persistedBookmarksWithUri.keep
+
+      reportNewKeeps(userId, Seq(bookmark), library, context, notifyExternalSources = true)
+
       (bookmark, persistedBookmarksWithUri.isNewKeep)
     }
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource) = {
-    val (persisted, failed) = bms.map { bm =>
-      bm -> Try {
-        db.readWrite(attempts = 3) { implicit session =>
-          internUriAndBookmark(bm, userId, library, source).get
-          // This is bad, and I'm not sure why we need to do it now. Previously, we could batch keeps into one db session.
-          // It appears that when there's a problem, now, we're fetching from rover with ids that may not exist anymore.
-          // So, forcing the Try evaluation to make the db session fail, and then recatching it.
-          // Expect something more elegant soon. Signed, Andrew (May 22 2015)
-        }
-      }
-    }.toMap partition {
-      case (bm, res) => res.isSuccess
-    }
+
+    val (persisted, failed) = db.readWriteBatch(bms, attempts = 5) {
+      case ((session, bm)) =>
+        implicit val s = session
+        internUriAndBookmark(bm, userId, library, source).get // Exception caught by readWriteBatch
+    }.partition { case (bm, res) => res.isSuccess }
 
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
-      failed.foreach { f => log.error(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}", f._2.failed.get) }
+      failed.foreach { f => log.warn(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}", f._2.failed.get) }
     }
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
     (persisted.values.map(_.get).toSeq, failedRaws)
@@ -197,13 +172,6 @@ class KeepInternerImpl @Inject() (
         case t: Throwable => throw new Exception(s"error persisting raw bookmark $rawBookmark for user $userId, from $source", t)
       }
 
-      if (KeepSource.discrete.contains(source)) {
-        session.onTransactionSuccess {
-          Seq(library.id.get).foreach(libToSlackProcessor.pushToLibrary) // TODO(ryan): at some point this whole method needs to take in a set of library ids
-          roverClient.fetchAsap(uri.id.get, uri.url)
-        }
-      }
-
       log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")
       val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, userId, library, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.note)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
@@ -212,11 +180,6 @@ class KeepInternerImpl @Inject() (
     }
   } catch {
     case e: Throwable =>
-      //note that at this point we continue on. we don't want to mess the upload of entire user bookmarks because of one bad bookmark.
-      airbrake.notify(AirbrakeError(
-        exception = e,
-        message = Some(s"Exception while loading one of the bookmarks of user $userId: ${e.getMessage} from: $rawBookmark source: $source"),
-        userId = Some(userId)))
       Failure(e)
   }
 
@@ -224,7 +187,7 @@ class KeepInternerImpl @Inject() (
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
-    val keepOpt = keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get)
+    val keepOpt = keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get) // This in effect makes libraries only able to hold one keep per uriId
 
     val trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
 
@@ -275,6 +238,32 @@ class KeepInternerImpl @Inject() (
     }
 
     (isNewKeep, wasInactiveKeep, internedKeep)
+  }
+
+  private def reportNewKeeps(keeperUserId: Id[User], keeps: Seq[Keep], library: Library, ctx: HeimdalContext, notifyExternalSources: Boolean) = {
+    if (keeps.nonEmpty) {
+      // Analytics
+      libraryAnalytics.keptPages(keeperUserId, keeps, library, ctx)
+      heimdalClient.processKeepAttribution(keeperUserId, keeps)
+
+      // Make external notifications
+      if (notifyExternalSources && KeepSource.discrete.contains(keeps.head.source)) { // Only report first to not spam
+        SafeFuture { libraryNewFollowersCommander.notifyFollowersOfNewKeeps(library, keeps.head) }
+        db.readWrite { implicit s => libToSlackProcessor.scheduleLibraryToBePushed(library.id.get) }
+        FutureHelpers.sequentialExec(keeps) { keep =>
+          val nuri = db.readOnlyMaster { implicit session =>
+            normalizedURIRepo.get(keep.uriId)
+          }
+          roverClient.fetchAsap(nuri.id.get, nuri.url)
+        }
+      }
+
+      // Update data-dependencies
+      db.readWrite(attempts = 3) { implicit s =>
+        libraryRepo.updateLastKept(library.id.get)
+        Try(libraryRepo.save(libraryRepo.getNoCache(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone
+      }
+    }
   }
 
 }

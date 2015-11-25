@@ -242,7 +242,7 @@ angular.module('kifi')
         //
 
         (function (keep) {
-          scope.isAdmin = profileService.isAdmin();
+          scope.hasKeepCommentsPermission = profileService.hasExperiment('keep_comments');
           scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
           scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
@@ -294,7 +294,7 @@ angular.module('kifi')
 
           var updateMenuItems = function () {
             scope.menuItems = [];
-            var permissions = keep.library.permissions || [];
+            var permissions = (keep.library && keep.library.permissions) || [];
             if ((keep.user.id === scope.me.id && permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1) {
               scope.menuItems.push({
                 title: keep.note ? 'Edit Note' : 'Add Note',

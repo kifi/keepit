@@ -660,6 +660,18 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getBasicKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]] = Future.successful(Map.empty)
 
+  def getCrossServiceKeepsByIds(ids: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]] = Future.successful {
+    ids.map(id => id -> CrossServiceKeep(
+      id = id,
+      owner = Id[User](1),
+      users = Set(Id[User](1)),
+      libraries = Set(Id[Library](1)),
+      title = Some("Kifi!"),
+      url = "http://www.kifi.com",
+      uriId = Id[NormalizedURI](1)
+    )).toMap
+  }
+
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = Future.successful(Map.empty)
 
   def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = Future.successful(None)

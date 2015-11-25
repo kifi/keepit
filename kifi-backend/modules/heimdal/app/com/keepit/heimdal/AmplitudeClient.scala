@@ -1,23 +1,18 @@
 package com.keepit.heimdal
 
-import java.util.regex.Pattern
-
 import com.google.common.base.CaseFormat
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.WebService
 import com.keepit.model.{ User, UserExperimentType }
-import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.api.libs.ws.WS
 
 import scala.concurrent.Future
-import scala.util.matching.Regex
 
 object AmplitudeClient {
-  // do not send these existing properties to amplitude
-  val killedProperties = Set("client", "clientBuild", "clientVersion",
+  // do not send these existing properties to amplitude as user_properties or event_properties
+  val killedProperties = Set("clientBuild", "clientVersion",
     "device", "experiments", "extensionVersion", "kcid_6", "kcid_7", "kcid_8",
     "kcid_9", "kcid_10", "kcid_11", "os", "osVersion", "remoteAddress", "serviceInstance", "serviceZone",
     "userId", "userSegment")
@@ -25,6 +20,10 @@ object AmplitudeClient {
   private val killedEvents = Set("user_old_slider_sliderShown", "user_expanded_keeper", "user_used_kifi", "user_reco_action",
     "user_logged_in", "visitor_expanded_keeper", "visitor_reco_action", "visitor_viewed_notification",
     "visitor_clicked_notification")
+
+  var fieldNamesToNotChangeValuesToSnakeCase = Set("library_owner_user_name", "$email", "os_name", "os_version", "country",
+    "region", "city", "agent", "user_agent", "service_version", "operating_system", "origin", "current_url", "browser_details",
+    "browser", "created_at", "language")
 
   // do not record any of the events that that return true from any of these functions
   val skipEventFilters: Seq[AmplitudeEventBuilder[_] => Boolean] = Seq(
@@ -181,8 +180,28 @@ trait AmplitudeRequestBuilder {
 
   private def xformToSnakeCase(data: Map[String, ContextData]): Map[String, ContextData] = {
     data.foldLeft(Map.empty[String, ContextData]) {
-      case (acc, (key, context)) => acc.updated(camelCaseToUnderscore(key), context)
+      case (acc, (key, context)) =>
+        val updatedKey = camelCaseToUnderscore(key)
+        val updatedValue = context match {
+          case ContextStringData(value) => ContextStringData(transformValueToSnakeCase(updatedKey, value))
+          case contextData => contextData
+        }
+        acc.updated(updatedKey, updatedValue)
     }
+  }
+
+  private val simpleCamelCaseRegex = "[a-z]+[a-z0-9]*[A-Z][A-Za-z0-9]*".r
+
+  protected def transformValueToSnakeCase(key: String, value: String) = {
+    @inline def isCamelCase: Boolean = simpleCamelCaseRegex.findFirstIn(value).isDefined
+
+    if (fieldNamesToNotChangeValuesToSnakeCase.contains(key) ||
+        key.startsWith("kcid") ||
+        key.startsWith("utm_") ||
+        key.endsWith("_id") ||
+        key.endsWith("_version") ||
+        !isCamelCase) value
+    else camelCaseToUnderscore(value)
   }
 
   private def camelCaseToUnderscore(key: String): String = {
@@ -211,7 +230,7 @@ class AmplitudeIdentityBuilder(val userId: Id[User], val heimdalContext: Heimdal
           "device_id" -> getDistinctId(),
           "user_properties" -> Json.toJson(userProperties),
           "app_version" -> specificProperties.appVersion,
-          "platform" -> specificProperties.platform,
+          "platform" -> specificProperties.platform.map(v => transformValueToSnakeCase("platform", v)),
           "os_name" -> specificProperties.osName,
           "os_version" -> specificProperties.osVersion,
           "device_type" -> specificProperties.deviceType,
@@ -262,11 +281,11 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
           "user_id" -> getUserId(),
           "device_id" -> getDistinctId(),
           "event_type" -> eventType,
-          "time" -> event.time.getMillis / 1000,
+          "time" -> event.time.getMillis,
           "event_properties" -> Json.toJson(eventProperties),
           "user_properties" -> Json.toJson(userProperties),
           "app_version" -> specificProperties.appVersion,
-          "platform" -> specificProperties.platform,
+          "platform" -> specificProperties.platform.map(v => transformValueToSnakeCase("platform", v)),
           "os_name" -> specificProperties.osName,
           "os_version" -> specificProperties.osVersion,
           "device_type" -> specificProperties.deviceType,
@@ -276,17 +295,17 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
     }
   }
 
-  val userViewedPagePaneTypes = Set("libraryChooser", "keepDetails", "messages:all", "composeMessage", "createLibrary",
+  val userViewedPagePaneTypes = Set("library_chooser", "keep_details", "messages:all", "compose_message", "create_library",
     "chat", "messages:unread", "messages:page", "messages:sent")
 
-  val userViewedPageModalTypes = Set("importBrowserBookmarks", "import3rdPartyBookmarks", "addAKeep", "getExtension", "getMobile")
+  val userViewedPageModalTypes = Set("import_browser_bookmarks", "import_3_rd_party_bookmarks", "add_a_keep", "get_extension", "get_mobile")
 
-  val visitorViewedPageModalTypes = Set("libraryLandingPopup", "signupLibrary", "signup2Library", "forgotPassword", "resetPassword")
+  val visitorViewedPageModalTypes = Set("library_landing_popup", "signup_library", "signup_2_library", "forgot_password", "reset_password")
 
   private def augmentEventProperties(eventProperties: Map[String, ContextData]): Map[String, ContextData] = {
     val builder = { val b = new HeimdalContextBuilder; b ++= eventProperties; b }
 
-    // copy the existing "os" property to be an "operating_sytem" event property
+    // copy the existing "os" property to be an "operating_system" event property
     heimdalContext.get[String]("os").foreach { os => builder += ("operating_system", os) }
 
     lazy val typeProperty = eventProperties.get("type").map {
@@ -307,7 +326,7 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
       // spec would like these particular type property values to be renamed
       typeProperty foreach {
         case "/settings" => builder += ("type", "settings")
-        case "/tags/manage" => builder += ("type", "manageTags")
+        case "/tags/manage" => builder += ("type", "manage_tags")
         case v if v.startsWith("/?m=0") => builder += ("type", "home_feed:successful_signup")
         case _ =>
       }

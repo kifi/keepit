@@ -4,7 +4,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.{ KeepDecorator, PathCommander, PermissionCommander, ProcessedImageSize }
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.NonOKResponseException
@@ -21,8 +21,14 @@ import scala.util.Success
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
-  def pushToLibrary(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]]
-  def findAndPushToLibraries(): Unit
+  // Method called by scheduled plugin
+  def findAndPushUpdatesForRipestLibraries(): Unit
+
+  // Method to be called if something happens in a library, meant to be called from within other db sessions
+  def scheduleLibraryToBePushed(libId: Id[Library])(implicit session: RWSession): Unit
+
+  // Only call there are scheduled pushes that you want to process immediately
+  def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]]
 }
 
 @Singleton
@@ -44,14 +50,20 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   implicit val executionContext: ExecutionContext)
     extends LibraryToSlackChannelPusher with Logging {
 
-  private val gracePeriod = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
+  private val maxAcceptableProcessingDuration = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
+  private val defaultDelayBetweenPushes = Period.minutes(30)
   private val MAX_KEEPS_TO_SEND = 7
   private val LIBRARY_BATCH_SIZE = 20
-  def findAndPushToLibraries(): Unit = {
+  def findAndPushUpdatesForRipestLibraries(): Unit = {
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
-      libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now.minus(gracePeriod))
+      libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now.minus(maxAcceptableProcessingDuration))
     }
-    librariesThatNeedToBeProcessed.foreach(pushToLibrary)
+    librariesThatNeedToBeProcessed.foreach(pushUpdatesToSlack)
+  }
+  def scheduleLibraryToBePushed(libId: Id[Library])(implicit session: RWSession): Unit = {
+    libToChannelRepo.getActiveByLibrary(libId).foreach { lts =>
+      libToChannelRepo.save(lts.withNextPushAtLatest(clock.now))
+    }
   }
 
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
@@ -126,10 +138,10 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   case class SomeKeeps(keeps: Seq[Keep], lib: Library) extends KeepsToPush
   case class ManyKeeps(keeps: Seq[Keep], lib: Library) extends KeepsToPush
 
-  def pushToLibrary(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
+  def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     val (lib, integrationsToProcess) = db.readWrite { implicit s =>
       val lib = libRepo.get(libId)
-      val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now.minus(gracePeriod))
+      val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
 
       def isIllegal(lts: LibraryToSlackChannel) = {
         !permissionCommander.getLibraryPermissions(libId, Some(lts.ownerId)).contains(LibraryPermission.VIEW_LIBRARY)
@@ -174,11 +186,16 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
         }
         case _ => db.readWrite { implicit s =>
-          // TODO(ryan): to make sure we don't spam a channel, we always register a push as "processed"
+          // To make sure we don't spam a channel, we ALWAYS register a push as "processed"
           // Sometimes this may lead to Slack messages getting lost
-          // This is a better alternative than spamming a channel because Slack (or our crappy Http Client)
+          // This is a better alternative than spamming a channel because Slack (or our HttpClient)
           // keeps saying we aren't succeeding even though the channel is getting messages
-          libToChannelRepo.finishProcessing(lts.withLastProcessedKeep(ktls.lastOption.map(_.id.get)))
+          libToChannelRepo.save(
+            lts
+              .finishedProcessing
+              .withLastProcessedKeep(ktls.lastOption.map(_.id.get))
+              .withNextPushAt(clock.now plus defaultDelayBetweenPushes)
+          )
         }
       }.imap { res => lts.id.get -> res }
     }

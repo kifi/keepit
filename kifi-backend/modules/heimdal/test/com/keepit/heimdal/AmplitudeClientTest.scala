@@ -61,7 +61,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
       val amplitude = inject[AmplitudeClient]
       val now = currentDateTime
 
-      val userKept = new UserEvent(testUserId, heimdalContext("os" -> ContextStringData("Windows 95")), UserEventTypes.KEPT, now)
+      val userKept = new UserEvent(testUserId, heimdalContext("os" -> ContextStringData("Windows 95"), "client" -> ContextStringData("androidApp")), UserEventTypes.KEPT, now)
       val userRecoAction = new UserEvent(testUserId, heimdalContext(), UserEventTypes.RECOMMENDATION_USER_ACTION, now)
       val userUsedKifi = new UserEvent(testUserId, heimdalContext(), UserEventTypes.USED_KIFI, now)
       val nonUserMessaged: NonUserEvent = new NonUserEvent("foo@bar.com", NonUserKinds.email, heimdalContext(), NonUserEventTypes.MESSAGED)
@@ -104,6 +104,9 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
             dat.eventData \\ "created_at" === Seq(JsString("2015-06-22T06:59:01"))
             dat.eventData \ "os_name" === JsString("Windows 95")
             dat.eventData \\ "operating_system" === Seq(JsString("Windows 95"))
+            // test transforming camelCase values to snake_case
+            dat.eventData \ "platform" === JsString("android_app")
+            dat.eventData \\ "client" === Seq(JsString("android_app"))
         },
         amplitude.track(userKept) map { case _: AmplitudeEventSent => () },
         amplitude.track(userRecoAction) map { case _: AmplitudeEventSkipped => () },
@@ -124,7 +127,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
           case dat: AmplitudeEventSent =>
             dat.eventData \ "event_type" === JsString("user_viewed_page")
             dat.eventData \\ "page_type" === Seq(JsString("pane"))
-            dat.eventData \\ "type" === Seq(JsString("libraryChooser"))
+            dat.eventData \\ "type" === Seq(JsString("library_chooser"))
         },
         amplitude.track(userViewedPage1) map { case dat: AmplitudeEventSkipped => () },
         amplitude.track(userViewedPage2) map {
@@ -137,7 +140,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
           case dat: AmplitudeEventSent =>
             dat.eventData \ "event_type" === JsString("user_viewed_page")
             dat.eventData \\ "page_type" === Seq(JsString("pane"))
-            dat.eventData \\ "type" === Seq(JsString("libraryChooser"))
+            dat.eventData \\ "type" === Seq(JsString("library_chooser"))
         },
         amplitude.track(visitorViewedPane1) map {
           case dat: AmplitudeEventSent =>
@@ -155,7 +158,7 @@ class AmplitudeClientTest extends Specification with HeimdalApplicationInjector 
           case dat: AmplitudeEventSent =>
             dat.eventData \ "event_type" === JsString("visitor_viewed_page")
             dat.eventData \\ "page_type" === Seq(JsString("modal"))
-            dat.eventData \\ "type" === Seq(JsString("signupLibrary"))
+            dat.eventData \\ "type" === Seq(JsString("signup_library"))
         },
         amplitude.track(visitorViewedPage2) map {
           case dat: AmplitudeEventSent =>

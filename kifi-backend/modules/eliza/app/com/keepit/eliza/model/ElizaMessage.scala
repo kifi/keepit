@@ -1,6 +1,7 @@
 package com.keepit.eliza.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
@@ -93,6 +94,7 @@ object MessageSource {
   val IPAD = MessageSource("iPad")
   val ANDROID = MessageSource("Android")
   val SERVER = MessageSource("server")
+  val SITE = MessageSource("site")
 
   implicit val messageSourceFormat = new Format[MessageSource] {
     def reads(json: JsValue): JsResult[MessageSource] = {
@@ -128,6 +130,10 @@ case class ElizaMessage(
 }
 
 object ElizaMessage {
+  // hack to expose ElizaMessage ids outside Eliza
+  def toMessageId(emId: Id[ElizaMessage]): Id[Message] = Id[Message](emId.id)
+  def fromMessageId(msgId: Id[Message]): Id[ElizaMessage] = Id[ElizaMessage](msgId.id)
+
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[ElizaMessage]) and
     (__ \ 'createdAt).format[DateTime] and

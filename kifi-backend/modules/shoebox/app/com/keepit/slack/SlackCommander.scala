@@ -143,7 +143,7 @@ class SlackCommanderImpl @Inject() (
     }
     slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet) andThen {
       case Success(()) =>
-        libToSlackPusher.pushToLibrary(libId) andThen {
+        libToSlackPusher.pushUpdatesToSlack(libId) andThen {
           case Success(_) =>
             fetchMissingChannelIds()
         }

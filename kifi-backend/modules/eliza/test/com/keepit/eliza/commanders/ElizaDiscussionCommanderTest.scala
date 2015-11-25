@@ -1,18 +1,20 @@
 package com.keepit.eliza.commanders
 
+import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.actor.TestKitSupport
+import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
-import com.keepit.model._
-import com.keepit.eliza.{ commanders, FakeElizaServiceClientModule }
 import com.keepit.eliza.model.ElizaMessage
+import com.keepit.discussion.Message
+import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ Keep, MessageFactory, MessageThreadFactory }
+import com.keepit.model.{ Keep, MessageFactory, MessageThreadFactory, _ }
+import com.keepit.rover.FakeRoverServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable.SpecificationLike
@@ -23,9 +25,12 @@ import scala.concurrent.duration.Duration
 
 class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
   implicit val context = HeimdalContext.empty
+  implicit def pubIdConfig(implicit injector: Injector): PublicIdConfiguration = inject[PublicIdConfiguration]
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
+    FakeRoverServiceModule(),
+    FakeActorSystemModule(),
     FakeClockModule(),
     FakeExecutionContextModule(),
     ElizaCacheModule(),
@@ -61,6 +66,40 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
 
           ans.get(keepNoThread) must beNone
           1 === 1
+        }
+      }
+    }
+    "add messages to discussions" in {
+      "add new commenters as they chime in" in {
+        withDb(modules: _*) { implicit injector =>
+          val keep = Id[Keep](1)
+          val user1 = Id[User](1)
+          val user2 = Id[User](2)
+
+          db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
+
+          Await.result(discussionCommander.sendMessageOnKeep(user1, "First post!", keep), Duration.Inf)
+          db.readOnlyMaster { implicit s =>
+            messageThreadRepo.getByKeepId(keep) must beSome
+            val th = messageThreadRepo.getByKeepId(keep).get
+            th.participants must beSome
+            th.participants.get.allUsers === Set(user1)
+            th.participants.get.allNonUsers must beEmpty
+            userThreadRepo.getByThread(th.id.get) must haveSize(1)
+          }
+
+          Await.result(discussionCommander.sendMessageOnKeep(user2, "Second post", keep), Duration.Inf)
+          db.readOnlyMaster { implicit s =>
+            val th = messageThreadRepo.getByKeepId(keep).get
+            th.participants must beSome
+            th.participants.get.allUsers === Set(user1, user2)
+            th.participants.get.allNonUsers must beEmpty
+            userThreadRepo.getByThread(th.id.get) must haveSize(2)
+          }
+
+          val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep)), Duration.Inf).get(keep)
+          ans must beSome
+          ans.get.numMessages === 2
         }
       }
     }

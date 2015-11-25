@@ -27,6 +27,10 @@ trait LibraryAccessActions {
     def filter[A](input: UserRequest[A]): Future[Option[Result]] = Future.successful(lookupWriteAccess(id, input))
   }
 
+  def LibraryWriteOrJoinAction(id: PublicId[Library]): ActionFilter[UserRequest] = new ActionFilter[UserRequest] {
+    def filter[A](input: UserRequest[A]): Future[Option[Result]] = Future.successful(lookupWriteOrJoinAccess(id, input))
+  }
+
   def LibraryOwnerAction(id: PublicId[Library]): ActionFilter[UserRequest] = new ActionFilter[UserRequest] {
     def filter[A](input: UserRequest[A]): Future[Option[Result]] = Future.successful(lookupOwnerAccess(id, input))
   }
@@ -57,10 +61,23 @@ trait LibraryAccessActions {
     }
   }
 
+  private def lookupWriteOrJoinAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
+    parseRequest(libraryPubId, input) match {
+      case Some((libraryId, Some(userId), accessToken)) =>
+        if (libraryAccessCommander.ensureUserCanWriteTo(userId, Set(libraryId))) {
+          None
+        } else {
+          Some(Forbidden(Json.obj("error" -> "permission_denied")))
+        }
+      case _ =>
+        Some(BadRequest(Json.obj("error" -> "invalid_id")))
+    }
+  }
+
   private def lookupOwnerAccess[A](libraryPubId: PublicId[Library], input: MaybeUserRequest[A]) = {
     parseRequest(libraryPubId, input) match {
       case Some((libraryId, Some(userId), accessToken)) =>
-        libraryAccessCommander.userAccess(userId, libraryId, None) match {
+        libraryAccessCommander.userAccess(userId, libraryId) match {
           case Some(LibraryAccess.OWNER) =>
             None
           case _ =>

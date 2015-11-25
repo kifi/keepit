@@ -1,7 +1,7 @@
 <div class="kf-upl-card-list" smart-scroll scroll-distance="'100%'" scroll-disabled="!hasMoreLibraries()" scroll-next="fetchLibraries()">
-  <button ng-show="loaded" ng-if="viewingOwnProfile && libraryType === 'own'" class="kf-upl-card kf-upl-create-card" ng-click="openCreateLibrary()">
-    <span class="kf-upl-create-card-add-icon svg-create-library"></span>
-    <div class="kf-upl-create-card-text">CREATE A LIBRARY</div>
+  <button ng-show="loaded" ng-if="viewingOwnProfile && libraryType === 'own'" class="kf-upl-card kf-upl-create-card kf-link-parent" ng-click="openCreateLibrary()">
+    <span class="kf-upl-create-card-add-icon"><svg kf-symbol-sprite icon="plus"></svg></span>
+    <span class="kf-upl-create-card-text kf-link kf-link-black">Create a library</span>
   </button>
   <div kf-loading-spinner hide="loaded"></div>
   <div kf-user-profile-library-card="library" ng-repeat="library in libraries"
