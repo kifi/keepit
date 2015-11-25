@@ -47,63 +47,61 @@ class SlackSearchController @Inject() (
       case Success(command) if command.command == SlackCommand.Kifi && command.token == KifiSlackApp.SLACK_COMMAND_TOKEN =>
         shoeboxClient.getIntegrationsBySlackChannel(command.teamId, command.channelId).flatMap {
           case integrations =>
-            val futureResponse = {
-              import SlackAttachment._
-              import SlackCommandResponse._
-              val futureTextAndAttachments: Future[(String, Seq[SlackAttachment])] = {
-                if (integrations.nonEmpty) {
-                  val acceptLangs = getAcceptLangs(request)
-                  val (userId, experiments) = getUserAndExperiments(request)
-                  val libraryScope = LibraryScope(integrations.map(_.libraryId).toSet, authorized = true)
-                  val sourceScope = SourceScope(KeepFields.Source.apply(command.channelId))
-                  val searchFilter = SearchFilter(None, None, Some(libraryScope), None, Some(sourceScope))
-                  val searchContext = SearchContext(None, SearchRanking.relevancy, searchFilter, disablePrefixSearch = true, disableFullTextSearch = false)
-                  uriSearchCommander.searchUris(userId, acceptLangs, experiments, command.text, Future.successful(searchContext), maxUris, None, None, None).flatMap { uriSearchResult =>
-                    val relevantHits = uriSearchResult.hits.take(uriSearchResult.cutPoint)
+            import SlackAttachment._
+            import SlackCommandResponse._
+            val futureTextAndAttachments: Future[(String, Seq[SlackAttachment])] = {
+              if (integrations.allLibraries.nonEmpty) {
+                val acceptLangs = getAcceptLangs(request)
+                val (userId, experiments) = getUserAndExperiments(request)
+                val libraryScope = LibraryScope(integrations.allLibraries, authorized = true)
+                val sourceScope = SourceScope(KeepFields.Source.apply(command.channelId))
+                val searchFilter = SearchFilter(None, None, Some(libraryScope), None, Some(sourceScope))
+                val searchContext = SearchContext(None, SearchRanking.relevancy, searchFilter, disablePrefixSearch = true, disableFullTextSearch = false)
+                uriSearchCommander.searchUris(userId, acceptLangs, experiments, command.text, Future.successful(searchContext), maxUris, None, None, None).flatMap { uriSearchResult =>
+                  val relevantHits = uriSearchResult.hits.take(uriSearchResult.cutPoint)
 
-                    val uriIds = relevantHits.map(hit => Id[NormalizedURI](hit.id))
-                    val futureUriSummaries: Future[Map[Id[NormalizedURI], RoverUriSummary]] = rover.getUriSummaryByUris(uriIds.toSet)
-                    val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = {
-                      val keepIds = relevantHits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
-                      shoeboxClient.getKeepImages(keepIds.toSet)
-                    }
-
-                    for {
-                      summaries <- futureUriSummaries
-                      keepImages <- futureKeepImages
-                    } yield {
-                      val attachments = relevantHits.map { hit =>
-                        val url = hit.url
-                        val uriId = Id[NormalizedURI](hit.id)
-                        val summary = summaries.get(uriId)
-                        val title = Some(hit.title).filter(_.nonEmpty) orElse summary.flatMap(_.article.title.filter(_.nonEmpty)) getOrElse url
-                        val keepId = hit.keepId.map(Id[Keep](_))
-                        val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
-                        SlackAttachment(
-                          pretext = DomainToNameMapper.getNameFromUrl(url),
-                          title = Some(Title(title, Some(url))),
-                          text = summary.flatMap(_.article.description),
-                          thumbUrl = imageOpt.map("https:" + _.path.getUrl),
-                          color = Some("good")
-                        )
-                      }
-                      val text = {
-                        if (relevantHits.isEmpty) s"We couldn't find any relevant link for '${command.text}' in this channel :("
-                        else s"Top links for '${command.text}' in this channel:"
-                      }
-                      (text, attachments)
-                    }
+                  val uriIds = relevantHits.map(hit => Id[NormalizedURI](hit.id))
+                  val futureUriSummaries: Future[Map[Id[NormalizedURI], RoverUriSummary]] = rover.getUriSummaryByUris(uriIds.toSet)
+                  val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = {
+                    val keepIds = relevantHits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
+                    shoeboxClient.getKeepImages(keepIds.toSet)
                   }
-                } else {
-                  val text = "You don't have any integration with this channel, add an one maybe?"
-                  Future.successful((text, Seq.empty))
+
+                  for {
+                    summaries <- futureUriSummaries
+                    keepImages <- futureKeepImages
+                  } yield {
+                    val attachments = relevantHits.map { hit =>
+                      val url = hit.url
+                      val uriId = Id[NormalizedURI](hit.id)
+                      val summary = summaries.get(uriId)
+                      val title = Some(hit.title).filter(_.nonEmpty) orElse summary.flatMap(_.article.title.filter(_.nonEmpty)) getOrElse url
+                      val keepId = hit.keepId.map(Id[Keep](_))
+                      val imageOpt = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize))
+                      SlackAttachment(
+                        pretext = DomainToNameMapper.getNameFromUrl(url),
+                        title = Some(Title(title, Some(url))),
+                        text = summary.flatMap(_.article.description),
+                        thumbUrl = imageOpt.map("https:" + _.path.getUrl),
+                        color = Some("good")
+                      )
+                    }
+                    val text = {
+                      if (relevantHits.isEmpty) s"We couldn't find any relevant link for '${command.text}' in this channel :("
+                      else s"Top links for '${command.text}' in this channel:"
+                    }
+                    (text, attachments)
+                  }
                 }
+              } else {
+                val text = "You don't have any integration with this channel, add an one maybe?"
+                Future.successful((text, Seq.empty))
               }
-              futureTextAndAttachments.imap { case (text, attachments) => SlackCommandResponse(ResponseType.Ephemeral, text, attachments) }
             }
-            futureResponse.map { r =>
-              val result = Json.toJson(r)
-              Ok(result)
+            futureTextAndAttachments.imap {
+              case (text, attachments) =>
+                val response = Json.toJson(SlackCommandResponse(ResponseType.Ephemeral, text, attachments))
+                Ok(response)
             }
         }
       case invalidCommand =>
