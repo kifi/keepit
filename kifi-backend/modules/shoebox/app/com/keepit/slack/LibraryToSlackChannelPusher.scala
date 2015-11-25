@@ -163,7 +163,12 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
         val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
         val keepsById = keepRepo.getByIds(ktls.map(_.keepId).toSet)
-        val keeps = ktls.flatMap(ktl => keepsById.get(ktl.keepId))
+        val keeps = ktls.flatMap(ktl => keepsById.get(ktl.keepId)).filterNot { k =>
+          def comesFromDestinationChannel = k.sourceAttributionId.map(attrId => keepSourceAttributionRepo.get(attrId).attribution).collect {
+            case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
+          }.getOrElse(false)
+          k.source == KeepSource.slack && comesFromDestinationChannel
+        }
         val keepsToPush: KeepsToPush = keeps match {
           case Seq() => NoKeeps
           case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib)
