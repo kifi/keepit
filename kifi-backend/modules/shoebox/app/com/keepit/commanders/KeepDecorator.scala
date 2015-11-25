@@ -111,9 +111,10 @@ class KeepDecoratorImpl @Inject() (
       }.map(collectionCommander.getBasicCollections)
 
       val sourceAttrs = db.readOnlyReplica { implicit s =>
+        val attributionById = keepSourceAttributionRepo.getByIds(keeps.flatMap(_.sourceAttributionId).toSet)
         keeps.map { keep =>
           try {
-            keep.sourceAttributionId.map { id => keepSourceAttributionRepo.get(id) }
+            keep.sourceAttributionId.map { id => Some(attributionById(id)) }
           } catch {
             case ex: Exception => {
               airbrake.notify(s"error during keep decoration: keepId = ${keep.id}, keep source attribution id = ${keep.sourceAttributionId}", ex)

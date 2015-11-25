@@ -11,7 +11,9 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 
 @ImplementedBy(classOf[KeepSourceAttributionRepoImpl])
-trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution]
+trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
+  def getByIds(ids: Set[Id[KeepSourceAttribution]])(implicit session: RSession): Map[Id[KeepSourceAttribution], KeepSourceAttribution]
+}
 
 @Singleton
 class KeepSourceAttributionRepoImpl @Inject() (
@@ -51,5 +53,8 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   def deleteCache(uri: KeepSourceAttribution)(implicit session: RSession): Unit = {}
 
+  def getByIds(ids: Set[Id[KeepSourceAttribution]])(implicit session: RSession): Map[Id[KeepSourceAttribution], KeepSourceAttribution] = {
+    rows.filter(_.id inSet ids).list.map(att => att.id.get -> att).toMap
+  }
 }
 
