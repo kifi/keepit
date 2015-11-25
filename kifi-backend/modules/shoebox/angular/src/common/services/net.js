@@ -7,7 +7,6 @@ angular.module('kifi')
   function (env, $http, createExpiringCache) {
     var shoebox = env.xhrBase;
     var search = env.xhrBaseSearch;
-    var elizaSite = env.xhrBaseElizaSite;
     var eliza = env.xhrBaseEliza;
     var pathParamRe = /(:\w+)/;
 
