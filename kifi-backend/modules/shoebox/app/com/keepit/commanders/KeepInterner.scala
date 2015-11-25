@@ -249,7 +249,7 @@ class KeepInternerImpl @Inject() (
       // Make external notifications
       if (notifyExternalSources && KeepSource.discrete.contains(keeps.head.source)) { // Only report first to not spam
         SafeFuture { libraryNewFollowersCommander.notifyFollowersOfNewKeeps(library, keeps.head) }
-        libToSlackProcessor.pushUpdatesToSlack(library.id.get)
+        db.readWrite { implicit s => libToSlackProcessor.scheduleLibraryToBePushed(library.id.get) }
         FutureHelpers.sequentialExec(keeps) { keep =>
           val nuri = db.readOnlyMaster { implicit session =>
             normalizedURIRepo.get(keep.uriId)
