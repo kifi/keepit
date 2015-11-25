@@ -110,11 +110,20 @@ class ElizaDiscussionCommanderImpl @Inject() (
               url = Some(csKeep.url),
               nUrl = None,
               pageTitle = csKeep.title,
-              participants = Some(MessageThreadParticipants.empty),
+              participants = Some(MessageThreadParticipants(Set(csKeep.owner))),
               participantsHash = None,
               keepId = Some(csKeep.id)
             ))
-            log.info(s"[DISC-CMDR] Created empty message thread ${mt.id.get} for keep $keepId")
+            val ut = userThreadRepo.save(UserThread(
+              user = csKeep.owner,
+              threadId = mt.id.get,
+              uriId = mt.uriId,
+              lastSeen = None,
+              lastMsgFromOther = None,
+              lastNotification = JsNull,
+              started = true
+            ))
+            log.info(s"[DISC-CMDR] Created message thread ${mt.id.get} for keep $keepId, owned by ${csKeep.owner}")
             mt
           }
         }
@@ -132,8 +141,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
             uriId = thread.uriId,
             lastSeen = None,
             lastMsgFromOther = None,
-            lastNotification = JsNull,
-            started = thread.allParticipants.isEmpty
+            lastNotification = JsNull
           ))
           log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId. They're new so we added user thread ${ut.id.get} for them.")
         }
