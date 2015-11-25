@@ -105,7 +105,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           // If someone created the message thread while we were messing around in Shoebox,
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
           messageThreadRepo.getByKeepId(keepId).getOrElse {
-            messageThreadRepo.save(MessageThread(
+            val mt = messageThreadRepo.save(MessageThread(
               uriId = Some(csKeep.uriId),
               url = Some(csKeep.url),
               nUrl = None,
@@ -114,6 +114,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
               participantsHash = None,
               keepId = Some(csKeep.id)
             ))
+            log.info(s"[DISC-CMDR] Created empty message thread ${mt.id.get} for keep $keepId")
+            mt
           }
         }
       }
@@ -124,17 +126,17 @@ class ElizaDiscussionCommanderImpl @Inject() (
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Seq(userId)))
-          userThreadRepo.save(UserThread(
+          val ut = userThreadRepo.save(UserThread(
             user = userId,
             threadId = thread.id.get,
             uriId = thread.uriId,
             lastSeen = None,
-            unread = true,
             lastMsgFromOther = None,
             lastNotification = JsNull
           ))
+          log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId. They're new so we added user thread ${ut.id.get} for them.")
         }
-      }
+      } else { log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId, they were already part of the thread.") }
       val (_, message) = messagingCommander.sendMessage(userId, thread.id.get, txt, source, None)
       message
     }
