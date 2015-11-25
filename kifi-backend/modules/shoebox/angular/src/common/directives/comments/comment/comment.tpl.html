@@ -1,10 +1,12 @@
 <div class="kf-keep-comment-container">
 
-  <img ng-src="{{comment.sentBy|pic:100}}" class="kf-keep-comment-img"/>
+  <a ng-href="{{::comment.sentBy|profileUrl}}"
+     ng-attr-style="background-image:url({{::comment.sentBy|pic:100}})" class="kf-keep-comment-img"></a>
 
   <div class="kf-keep-comment-content">
     <div>
       <a class="kf-keep-comment-commenter-name"
+         ng-href="{{::comment.sentBy|profileUrl}}"
          ng-bind="::comment.sentBy|name"></a> </span>
       <time class="kf-keep-comment-time"
             ng-attr-datetime="{{::comment.sentAt}}" am-time-ago="::comment.sentAt"
