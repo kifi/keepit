@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
@@ -110,7 +110,8 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
 
           db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
 
-          Await.result(discussionCommander.sendMessageOnKeep(user2, "First post!", keep), Duration.Inf)
+          discussionCommander.sendMessageOnKeep(user2, "First post!", keep)
+          inject[WatchableExecutionContext].drain()
           db.readOnlyMaster { implicit s =>
             val th = messageThreadRepo.getByKeepId(keep).get
             userThreadRepo.getByThread(th.id.get).foreach { uth => uth.lastNotification !== JsNull }
