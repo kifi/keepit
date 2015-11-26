@@ -108,7 +108,7 @@ object RoverUriSummary {
 }
 
 case class RoverArticleSummaryKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[RoverArticleSummary] {
-  override val version = 2
+  override val version = 3
   val namespace = "best_article_summary_by_uri_id_and_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
@@ -117,7 +117,7 @@ class RoverArticleSummaryCache(stats: CacheStatistics, accessLog: AccessLog, inn
   extends JsonCacheImpl[RoverArticleSummaryKey, RoverArticleSummary](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class RoverArticleImagesKey(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article]) extends Key[BasicImages] {
-  override val version = 2
+  override val version = 3
   val namespace = "images_by_uri_id_and_article_kind"
   def toKey(): String = s"${uriId.id}:${kind.typeCode}"
 }
