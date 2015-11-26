@@ -10,7 +10,7 @@ import com.keepit.discussion.Message
 import com.keepit.notify.model.Recipient
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.db.{ ModelWithState, ModelWithExternalId, Id, ExternalId }
+import com.keepit.common.db._
 import com.keepit.model.{ User, NormalizedURI }
 import MessagingTypeMappers._
 import com.keepit.common.logging.Logging
@@ -113,6 +113,7 @@ case class ElizaMessage(
   id: Option[Id[ElizaMessage]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
+  state: State[ElizaMessage] = ElizaMessageStates.ACTIVE,
   externalId: ExternalId[ElizaMessage] = ExternalId(),
   from: MessageSender,
   thread: Id[MessageThread],
@@ -123,11 +124,10 @@ case class ElizaMessage(
   sentOnUrl: Option[String],
   sentOnUriId: Option[Id[NormalizedURI]])
     extends ModelWithExternalId[ElizaMessage] {
-
   def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
-
 }
+object ElizaMessageStates extends States[ElizaMessage]
 
 object ElizaMessage {
   // hack to expose ElizaMessage ids outside Eliza
@@ -138,6 +138,7 @@ object ElizaMessage {
     (__ \ 'id).formatNullable(Id.format[ElizaMessage]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'state).format[State[ElizaMessage]] and
     (__ \ 'externalId).format(ExternalId.format[ElizaMessage]) and
     (__ \ 'from).format[MessageSender] and
     (__ \ 'thread).format(Id.format[MessageThread]) and
@@ -149,10 +150,11 @@ object ElizaMessage {
     (__ \ 'sentOnUriId).formatNullable(Id.format[NormalizedURI])
   )(ElizaMessage.apply, unlift(ElizaMessage.unapply))
 
-  def fromDbTuple(
+  def fromDbRow(
     id: Option[Id[ElizaMessage]],
     createdAt: DateTime,
     updatedAt: DateTime,
+    state: State[ElizaMessage],
     externalId: ExternalId[ElizaMessage],
     userSender: Option[Id[User]],
     thread: Id[MessageThread],
@@ -167,6 +169,7 @@ object ElizaMessage {
       id,
       createdAt,
       updatedAt,
+      state,
       externalId,
       userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[NonUserParticipant])).getOrElse(MessageSender.System)),
       thread,
@@ -179,11 +182,12 @@ object ElizaMessage {
     )
   }
 
-  def toDbTuple(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
       message.updatedAt,
+      message.state,
       message.externalId,
       message.from.asUser,
       message.thread,

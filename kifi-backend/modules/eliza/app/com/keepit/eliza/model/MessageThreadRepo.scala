@@ -36,7 +36,7 @@ class MessageThreadRepoImpl @Inject() (
     def participants = column[MessageThreadParticipants]("participants", O.Nullable)
     def participantsHash = column[Int]("participants_hash", O.Nullable)
     def keepId = column[Option[Id[Keep]]]("keep_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, externalId, uriId.?, url.?, nUrl.?, pageTitle.?, participants.?, participantsHash.?, keepId) <> ((MessageThread.apply _).tupled, MessageThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, externalId, uriId.?, url.?, nUrl.?, pageTitle.?, participants.?, participantsHash.?, keepId) <> ((MessageThread.apply _).tupled, MessageThread.unapply _)
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
 
