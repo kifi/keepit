@@ -164,7 +164,7 @@ object MessageThread {
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 4
+  override val version = 5
   val namespace = "message_thread_by_external_id"
   def toKey(): String = externalId.id
 }
