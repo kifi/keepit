@@ -102,7 +102,7 @@ object UrlHash {
 }
 
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
-  override val version = 8
+  override val version = 9
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
