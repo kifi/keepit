@@ -144,7 +144,6 @@ class ElizaDiscussionCommanderImpl @Inject() (
             lastNotification = JsNull
           ))
           log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId. They're new so we added user thread ${ut.id.get} for them.")
-          println(s"[DISC-CMDR] User $userId said $txt on keep $keepId. They're new so we added user thread ${ut.id.get} for them.")
         }
       } else { log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId, they were already part of the thread.") }
       val (_, message) = messagingCommander.sendMessage(userId, thread.id.get, txt, source, None)
