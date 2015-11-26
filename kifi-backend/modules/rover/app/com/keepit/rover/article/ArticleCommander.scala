@@ -240,7 +240,7 @@ class ArticleCommander @Inject() (
 }
 
 case class ArticleInfoUriKey(uriId: Id[NormalizedURI]) extends Key[Set[ArticleInfo]] {
-  override val version = 2
+  override val version = 3
   val namespace = "article_info_by_uri"
   def toKey(): String = uriId.id.toString
 }
