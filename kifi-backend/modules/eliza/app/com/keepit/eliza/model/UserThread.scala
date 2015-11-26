@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import com.keepit.common.time._
-import com.keepit.common.db.{ Model, Id }
+import com.keepit.common.db.{ State, States, Model, Id }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.model.{ User, NormalizedURI }
 
@@ -19,7 +19,8 @@ case class UserThreadActivity(id: Id[UserThread], threadId: Id[MessageThread], u
 case class UserThread(
   id: Option[Id[UserThread]] = None,
   createdAt: DateTime = currentDateTime,
-  updateAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[UserThread] = UserThreadStates.ACTIVE,
   user: Id[User],
   threadId: Id[MessageThread],
   uriId: Option[Id[NormalizedURI]],
@@ -37,14 +38,17 @@ case class UserThread(
     extends Model[UserThread] with ParticipantThread {
 
   def withId(id: Id[UserThread]): UserThread = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
+  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
+  def sanitizeForDelete = this.copy(state = UserThreadStates.INACTIVE)
 
-  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updateAt, user = $user, thread = $threadId, " +
+  lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, thread = $threadId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed]"
 
   def toRawNotification: RawNotification = (lastNotification, unread, uriId)
 }
+
+object UserThreadStates extends States[UserThread]
 
 object UserThread {
   def toUserThreadView(userThread: UserThread, messages: Seq[ElizaMessage], messageThread: MessageThread): UserThreadView = {

@@ -31,6 +31,7 @@ case class Notification(
     id: Option[Id[Notification]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
+    state: State[Notification] = NotificationStates.ACTIVE,
     recipient: Recipient,
     lastChecked: Option[DateTime] = None,
     kind: NKind,
@@ -56,26 +57,28 @@ case class Notification(
 
 }
 
+object NotificationStates extends States[Notification]
+
 object Notification {
-
   implicit val format = (
-    (__ \ "id").formatNullable[Id[Notification]] and
-    (__ \ "createdAt").format[DateTime] and
-    (__ \ "updatedAt").format[DateTime] and
-    (__ \ "lastChecked").formatNullable[DateTime] and
-    (__ \ "kind").format[String] and
-    (__ \ "groupIdentifier").formatNullable[String] and
-    (__ \ "recipient").format[Recipient] and
-    (__ \ "lastEvent").format[DateTime] and
-    (__ \ "disabled").format[Boolean] and
-    (__ \ "externalId").format[ExternalId[Notification]] and
-    (__ \ "backfilledFor").formatNullable[Id[UserThread]]
+    (__ \ 'id).formatNullable[Id[Notification]] and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'state).format[State[Notification]] and
+    (__ \ 'lastChecked).formatNullable[DateTime] and
+    (__ \ 'kind).format[String] and
+    (__ \ 'groupIdentifier).formatNullable[String] and
+    (__ \ 'recipient).format[Recipient] and
+    (__ \ 'lastEvent).format[DateTime] and
+    (__ \ 'disabled).format[Boolean] and
+    (__ \ 'externalId).format[ExternalId[Notification]] and
+    (__ \ 'backfilledFor).formatNullable[Id[UserThread]]
   )(Notification.applyFromDbRow, unlift(Notification.unapplyToDbRow))
-
   def applyFromDbRow(
     id: Option[Id[Notification]],
     createdAt: DateTime,
     updatedAt: DateTime,
+    state: State[Notification],
     lastChecked: Option[DateTime],
     kind: String,
     groupIdentifier: Option[String],
@@ -87,6 +90,7 @@ object Notification {
     id,
     createdAt,
     updatedAt,
+    state,
     recipient,
     lastChecked,
     NotificationKind.getByName(kind).get,
@@ -97,10 +101,11 @@ object Notification {
     backfilledFor
   )
 
-  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, Option[DateTime], String, Option[String], Recipient, DateTime, Boolean, ExternalId[Notification], Option[Id[UserThread]])] = Some(
+  def unapplyToDbRow(notification: Notification): Option[(Option[Id[Notification]], DateTime, DateTime, State[Notification], Option[DateTime], String, Option[String], Recipient, DateTime, Boolean, ExternalId[Notification], Option[Id[UserThread]])] = Some(
     notification.id,
     notification.createdAt,
     notification.updatedAt,
+    notification.state,
     notification.lastChecked,
     notification.kind.name,
     notification.groupIdentifier,

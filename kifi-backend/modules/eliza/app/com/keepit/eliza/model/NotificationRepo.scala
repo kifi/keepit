@@ -12,31 +12,18 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[NotificationRepoImpl])
 trait NotificationRepo extends Repo[Notification] with ExternalIdColumnFunction[Notification] {
-
   def getLastByRecipientAndKind(recipient: Recipient, kind: NKind)(implicit session: RSession): Option[Notification]
-
   def getByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification]
-
   def getNotificationsWithNewEventsCount(recipient: Recipient)(implicit session: RSession): Int
-
   def getUnreadNotificationsCount(recipient: Recipient)(implicit session: RSession): Int
-
   def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
-
   def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int
-
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit
-
   def setAllRead(recipient: Recipient)(implicit session: RWSession): Unit
-
   def getNotificationsWithNewEvents(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
-
   def getNotificationsWithNewEventsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
-
   def getLatestNotifications(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification]
-
   def getLatestNotificationsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification]
-
 }
 
 @Singleton
@@ -62,7 +49,7 @@ class NotificationRepoImpl @Inject() (
 
     def ofKind(kind: NKind): Column[Boolean] = this.kind === kind.name
 
-    def * = (id.?, createdAt, updatedAt, lastChecked, kind, groupIdentifier, recipient, lastEvent, disabled, externalId, backfilledFor) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
+    def * = (id.?, createdAt, updatedAt, state, lastChecked, kind, groupIdentifier, recipient, lastEvent, disabled, externalId, backfilledFor) <> ((Notification.applyFromDbRow _).tupled, Notification.unapplyToDbRow)
 
   }
 

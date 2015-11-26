@@ -50,7 +50,7 @@ class MessageRepoImpl @Inject() (
     def sentOnUriId = column[Option[Id[NormalizedURI]]]("sent_on_uri_id", O.Nullable)
     def nonUserSender = column[Option[JsValue]]("non_user_sender", O.Nullable)
 
-    def * = (id.?, createdAt, updatedAt, externalId, from, thread, threadExtId, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbTuple _).tupled, ElizaMessage.toDbTuple)
+    def * = (id.?, createdAt, updatedAt, state, externalId, from, thread, threadExtId, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
   }
   def table(tag: Tag) = new MessageTable(tag)
 

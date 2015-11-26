@@ -7,7 +7,7 @@ import com.keepit.common.cache.CacheStatistics
 import com.keepit.common.logging.AccessLog
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.db.{ ModelWithExternalId, Id, ExternalId }
+import com.keepit.common.db._
 import com.keepit.model.{ Keep, DeepLocator, User, NormalizedURI }
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -107,7 +107,8 @@ object MessageThreadParticipants {
 case class MessageThread(
   id: Option[Id[MessageThread]] = None,
   createdAt: DateTime = currentDateTime,
-  updateAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[MessageThread] = MessageThreadStates.ACTIVE,
   externalId: ExternalId[MessageThread] = ExternalId(),
   uriId: Option[Id[NormalizedURI]],
   url: Option[String],
@@ -122,7 +123,7 @@ case class MessageThread(
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
 
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt = updateTime)
+  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withKeepId(keepId: Id[Keep]): MessageThread = this.copy(keepId = Some(keepId))
 
   def withParticipants(when: DateTime, userIds: Seq[Id[User]], nonUsers: Seq[NonUserParticipant] = Seq.empty) = {
@@ -143,11 +144,14 @@ case class MessageThread(
   def allParticipants: Set[Id[User]] = participants.map(_.allUsers).getOrElse(Set[Id[User]]())
 }
 
+object MessageThreadStates extends States[MessageThread]
+
 object MessageThread {
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[MessageThread]) and
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'state).format[State[MessageThread]] and
     (__ \ 'externalId).format(ExternalId.format[MessageThread]) and
     (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'url).formatNullable[String] and
@@ -160,7 +164,7 @@ object MessageThread {
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 3
+  override val version = 4
   val namespace = "message_thread_by_external_id"
   def toKey(): String = externalId.id
 }
