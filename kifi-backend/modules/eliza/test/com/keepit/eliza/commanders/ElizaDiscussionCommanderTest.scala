@@ -110,11 +110,10 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
 
           db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
 
-          Await.result(discussionCommander.sendMessageOnKeep(user1, "First post!", keep), Duration.Inf)
+          Await.result(discussionCommander.sendMessageOnKeep(user2, "First post!", keep), Duration.Inf)
           db.readOnlyMaster { implicit s =>
             val th = messageThreadRepo.getByKeepId(keep).get
-            val uth = userThreadRepo.getByThread(th.id.get).head
-            uth.lastNotification !== JsNull
+            userThreadRepo.getByThread(th.id.get).foreach { uth => uth.lastNotification !== JsNull }
           }
           1 === 1
         }

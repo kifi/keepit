@@ -94,7 +94,7 @@ object MessageSource {
   val IPAD = MessageSource("iPad")
   val ANDROID = MessageSource("Android")
   val SERVER = MessageSource("server")
-  val SITE = MessageSource("site")
+  val SITE = MessageSource("Kifi.com")
 
   implicit val messageSourceFormat = new Format[MessageSource] {
     def reads(json: JsValue): JsResult[MessageSource] = {

@@ -259,7 +259,7 @@ class NotificationDeliveryCommander @Inject() (
         messageWithBasicUser = messageWithBasicUser,
         locator = thread.deepLocator.value,
         unread = true,
-        originalAuthorIdx = authorActivityInfos.filter(_.started).zipWithIndex.head._2,
+        originalAuthorIdx = 0,
         unseenAuthors = unseenAuthors,
         numAuthors = authorActivityInfos.length,
         numMessages = numMessages,
@@ -357,10 +357,10 @@ class NotificationDeliveryCommander @Inject() (
       )
 
       db.readWrite(attempts = 2) { implicit session =>
-        userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, true)
+        userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, unread = true)
       }
 
-      messagingAnalytics.sentNotificationForMessage(userId, message, thread, false)
+      messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted = false)
       shoebox.createDeepLink(message.from.asUser, userId, thread.uriId.get, thread.deepLocator)
 
       notifJson
