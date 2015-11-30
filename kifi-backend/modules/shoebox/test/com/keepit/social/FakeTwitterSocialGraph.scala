@@ -51,7 +51,7 @@ class FakeTwitterSocialGraph @Inject() (
     }
   }
 
-  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, libPathCommander, elizaServiceClient, kifiInstallationCommander, publicIdConfig, executionContext, userRepo) {
+  val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, libPathCommander, publicIdConfig, executionContext, userRepo) {
     override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
