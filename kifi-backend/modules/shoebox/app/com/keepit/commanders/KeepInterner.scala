@@ -29,17 +29,26 @@ import scala.util.{ Failure, Success, Try }
 
 private case class InternedUriAndKeep(keep: Keep, uri: NormalizedURI, isNewKeep: Boolean, wasInactiveKeep: Boolean)
 
+case class KeepInternResponse(newKeeps: Seq[Keep], existingKeeps: Seq[Keep], failures: Seq[RawBookmarkRepresentation]) {
+  def successes = newKeeps ++ existingKeeps
+}
+
 @ImplementedBy(classOf[KeepInternerImpl])
 trait KeepInterner {
   private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation]
   def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit
 
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation])
-  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): Try[(Keep, Boolean)]
-
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val (newKeeps, existingKeeps, failures) = internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
-    (newKeeps ++ existingKeeps, failures)
+    val response = internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
+    (response.successes, response.failures)
+  }
+  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
+    internRawBookmarksWithStatus(Seq(rawBookmark), userId, library, source) match {
+      case KeepInternResponse(Seq(newKeep), _, _) => Success((newKeep, true))
+      case KeepInternResponse(_, Seq(existingKeep), _) => Success((existingKeep, false))
+      case KeepInternResponse(_, _, Seq(failedKeep)) => Failure(new Exception(s"could not intern $failedKeep"))
+    }
   }
 }
 
@@ -121,7 +130,7 @@ class KeepInternerImpl @Inject() (
     }
   }
 
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[Keep], Seq[RawBookmarkRepresentation]) = {
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse = {
     val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, userId, library, source)
 
     val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
@@ -130,23 +139,10 @@ class KeepInternerImpl @Inject() (
 
     reportNewKeeps(userId, newKeeps, library, context, notifyExternalSources = true)
 
-    (newKeeps, existingKeeps, failures)
-  }
-
-  def internRawBookmark(rawBookmark: RawBookmarkRepresentation, userId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
-    db.readWrite(attempts = 2) { implicit s =>
-      internUriAndBookmark(rawBookmark, userId, library, source)
-    } map { persistedBookmarksWithUri =>
-      val bookmark = persistedBookmarksWithUri.keep
-
-      reportNewKeeps(userId, Seq(bookmark), library, context, notifyExternalSources = true)
-
-      (bookmark, persistedBookmarksWithUri.isNewKeep)
-    }
+    KeepInternResponse(newKeeps, existingKeeps, failures)
   }
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource) = {
-
     // For batches, if we can't prenormalize, silently drop. This is a low bar, and usually means it couldn't *ever* be a valid keep.
     val validUrls = bms.filter(b => httpPrefix.findPrefixOf(b.url.toLowerCase).isDefined && normalizationService.prenormalize(b.url).isSuccess)
 

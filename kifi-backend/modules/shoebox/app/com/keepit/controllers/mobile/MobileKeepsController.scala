@@ -91,7 +91,7 @@ class MobileKeepsController @Inject() (
       }
     }
     fromJson.keeps.headOption
-    val (keeps, addedToCollection, _, _) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection)
+    val (keeps, addedToCollection, _) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection)
     Ok(Json.obj(
       "keeps" -> keeps,
       "addedToCollection" -> addedToCollection
