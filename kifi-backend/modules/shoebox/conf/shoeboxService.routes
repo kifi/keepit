@@ -591,10 +591,6 @@ GET     /r/$token<[0-9a-f-]{36}>    @com.keepit.controllers.email.EmailDeepLinkC
 GET     /mr/:token                  @com.keepit.controllers.email.EmailDeepLinkController.handleMobile(token: String)
 GET     /ir/:token                  @com.keepit.controllers.email.EmailDeepLinkController.handleIPhoneTempForDev(token: String)
 
-GET     /r/e/1/recos/view             @com.keepit.controllers.email.EmailRecosController.viewReco(id: ExternalId[NormalizedURI])
-GET     /r/e/1/recos/keep             @com.keepit.controllers.email.EmailRecosController.keepReco(id: ExternalId[NormalizedURI])
-GET     /r/e/1/recos/send           @com.keepit.controllers.email.EmailRecosController.sendReco(id: ExternalId[NormalizedURI])
-
 ##########################################
 # External Services API
 ##########################################
