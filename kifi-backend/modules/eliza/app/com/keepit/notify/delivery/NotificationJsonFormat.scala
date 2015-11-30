@@ -19,16 +19,8 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 @Singleton
 class NotificationJsonFormat @Inject() (
-    db: Database,
-    shoeboxServiceClient: ShoeboxServiceClient,
     elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
-    messageFetchingCommander: MessageFetchingCommander,
     notificationJsonMaker: NotificationJsonMaker,
-    messageThreadRepo: MessageThreadRepo,
-    messageRepo: MessageRepo,
-    userThreadRepo: UserThreadRepo,
-    roverServiceClient: RoverServiceClient,
-    notificationCommander: NotificationCommander,
     implicit val s3ImageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext) {
 

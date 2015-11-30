@@ -25,8 +25,7 @@ class UserPictureController @Inject() (
   db: Database,
   suiRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
-  imageStore: S3ImageStore,
-  val config: S3ImageConfig)
+  imageStore: S3ImageStore)
     extends UserActions with ShoeboxServiceController {
 
   def getPic(size: String, id: ExternalId[User], picName: String) = Action.async { request =>

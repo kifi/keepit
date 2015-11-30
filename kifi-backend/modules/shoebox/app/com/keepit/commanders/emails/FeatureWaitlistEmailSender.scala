@@ -12,7 +12,6 @@ import scala.concurrent.Future
 
 class FeatureWaitlistEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
-    config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   val emailTriggers = Map(

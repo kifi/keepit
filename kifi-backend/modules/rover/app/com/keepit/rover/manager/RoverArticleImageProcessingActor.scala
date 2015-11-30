@@ -25,7 +25,6 @@ class RoverArticleImageProcessingActor @Inject() (
     articleInfoRepo: ArticleInfoRepo,
     taskQueue: ProbabilisticArticleImageProcessingTaskQueue,
     airbrake: AirbrakeNotifier,
-    articleFetcher: ArticleFetcherProvider,
     articleStore: RoverArticleStore,
     imageProcessingCommander: ImageCommander,
     instanceInfo: AmazonInstanceInfo,

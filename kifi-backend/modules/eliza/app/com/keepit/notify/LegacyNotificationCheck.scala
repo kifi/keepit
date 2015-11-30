@@ -19,9 +19,7 @@ import scala.concurrent.duration._
  */
 @Singleton
 class LegacyNotificationCheck @Inject() (
-    shoeboxServiceClient: ShoeboxServiceClient,
     db: Database,
-    notificationCommander: NotificationCommander,
     notificationRepo: NotificationRepo,
     notificationItemRepo: NotificationItemRepo,
     implicit val executionContext: ExecutionContext) {

@@ -20,8 +20,6 @@ class LibraryInviteEmailSender @Inject() (
     db: Database,
     emailTemplateSender: EmailTemplateSender,
     basicUserRepo: BasicUserRepo,
-    keepRepo: KeepRepo,
-    userEmailRepo: UserEmailAddressRepo,
     libraryRepo: LibraryRepo,
     orgRepo: OrganizationRepo,
     libraryImageCommander: LibraryImageCommander,

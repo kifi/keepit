@@ -22,7 +22,6 @@ class AdminSocialUserController @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRawInfoStore: SocialUserRawInfoStore,
   socialGraphPlugin: SocialGraphPlugin,
-  abook: ABookServiceClient,
   clock: Clock)
     extends AdminUserActions {
 

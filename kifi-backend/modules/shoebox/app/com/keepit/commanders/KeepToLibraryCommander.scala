@@ -43,11 +43,7 @@ trait KeepToLibraryCommander {
 
 @Singleton
 class KeepToLibraryCommanderImpl @Inject() (
-  db: Database,
   clock: Clock,
-  keepRepo: KeepRepo,
-  libraryRepo: LibraryRepo,
-  libraryMembershipRepo: LibraryMembershipRepo,
   ktlRepo: KeepToLibraryRepo,
   airbrake: AirbrakeNotifier)
     extends KeepToLibraryCommander with Logging {

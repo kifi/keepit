@@ -56,7 +56,6 @@ class KeepImageCommanderImpl @Inject() (
     keepRepo: KeepRepo,
     rover: RoverServiceClient,
     implicit val s3ImageConfig: S3ImageConfig,
-    normalizedUriRepo: NormalizedURIRepo,
     keepImageRequestRepo: KeepImageRequestRepo,
     airbrake: AirbrakeNotifier,
     keepImageRepo: KeepImageRepo,

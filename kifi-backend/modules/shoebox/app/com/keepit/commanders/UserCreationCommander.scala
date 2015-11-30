@@ -17,7 +17,6 @@ class UserCreationCommander @Inject() (
     searchClient: SearchServiceClient,
     libraryCommander: LibraryCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
-    userExperimentRepo: UserExperimentRepo,
     implicit val executionContext: ExecutionContext) {
 
   def createUser(firstName: String, lastName: String, state: State[User]): User = {

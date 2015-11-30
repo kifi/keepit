@@ -15,7 +15,6 @@ import scala.concurrent.Future
 
 class WelcomeEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
-    localUserExperimentCommander: LocalUserExperimentCommander,
     fortytwoConfig: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 

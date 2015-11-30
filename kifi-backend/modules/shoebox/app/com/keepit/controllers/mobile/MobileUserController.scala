@@ -41,7 +41,6 @@ class MobileUserController @Inject() (
   userConnectionRepo: UserConnectionRepo,
   userValueRepo: UserValueRepo,
   notifyPreferenceRepo: UserNotifyPreferenceRepo,
-  libraryCommander: LibraryCommander,
   db: Database,
   airbrakeNotifier: AirbrakeNotifier,
   postOffice: LocalPostOffice,

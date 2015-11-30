@@ -13,8 +13,6 @@ import scala.util.Random
 class ChecklistCommander @Inject() (
     db: Database,
     kifiInstallationRepo: KifiInstallationRepo,
-    libraryCommander: LibraryCommander,
-    userProfileCommander: UserProfileCommander,
     libraryRepo: LibraryRepo,
     libraryInviteRepo: LibraryInviteRepo,
     invitationRepo: InvitationRepo,

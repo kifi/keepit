@@ -9,7 +9,6 @@ import play.api.libs.json.{ Json, JsObject }
 
 class UserInteractionCommander @Inject() (
     db: Database,
-    userRepo: UserRepo,
     userValueRepo: UserValueRepo) {
 
   def addInteractions(uid: Id[User], recipients: Seq[(InteractionRecipient, UserInteraction)]): Unit = {

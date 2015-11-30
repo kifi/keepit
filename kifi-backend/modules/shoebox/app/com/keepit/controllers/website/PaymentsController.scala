@@ -24,8 +24,6 @@ import org.joda.time.DateTime
 class PaymentsController @Inject() (
     orgCommander: OrganizationCommander,
     orgInfoCommander: OrganizationInfoCommander,
-    orgMembershipCommander: OrganizationMembershipCommander,
-    orgInviteCommander: OrganizationInviteCommander,
     planCommander: PlanManagementCommander,
     paymentCommander: PaymentProcessingCommander,
     activityLogCommander: ActivityLogCommander,

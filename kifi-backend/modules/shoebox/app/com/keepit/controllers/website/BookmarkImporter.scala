@@ -40,8 +40,6 @@ import scala.concurrent.duration.Duration
 
 class BookmarkImporter @Inject() (
     val userActionsHelper: UserActionsHelper,
-    db: Database,
-    urlClassifier: UrlClassifier,
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
     keepsCommander: KeepCommander,

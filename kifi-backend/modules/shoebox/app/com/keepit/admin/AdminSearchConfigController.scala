@@ -20,8 +20,6 @@ class AdminSearchConfigController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
     userRepo: UserRepo,
-    searchConfigExperimentRepo: SearchConfigExperimentRepo,
-    userExperimentCommander: LocalUserExperimentCommander,
     searchClient: SearchServiceClient,
     heimdal: HeimdalServiceClient) extends AdminUserActions {
 

@@ -17,11 +17,9 @@ import scala.util.{ Failure, Success }
 
 @Singleton
 class OrganizationMembershipController @Inject() (
-    orgCommander: OrganizationCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
-    heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
     val permissionCommander: PermissionCommander,

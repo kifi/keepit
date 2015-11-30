@@ -24,17 +24,13 @@ class NotificationMessagingCommander @Inject() (
     notificationJsonFormat: NotificationJsonFormat,
     notificationInfoGenerator: NotificationInfoGenerator,
     pushNotifier: MobilePushNotifier,
-    messageFetchingCommander: MessageFetchingCommander,
     notificationRepo: NotificationRepo,
-    messageRepo: MessageRepo,
     messagingCommander: MessagingCommander,
     notificationItemRepo: NotificationItemRepo,
     db: Database,
     webSocketRouter: WebSocketRouter,
     messagingAnalytics: MessagingAnalytics,
     userThreadRepo: UserThreadRepo,
-    messageThreadRepo: MessageThreadRepo,
-    shoeboxServiceClient: ShoeboxServiceClient,
     implicit val executionContext: ExecutionContext) {
 
   def combineNotificationsWithThreads(threadJsons: Seq[NotificationJson], notifJsons: Seq[NotificationWithJson], howMany: Option[Int]): Seq[JsObject] = {

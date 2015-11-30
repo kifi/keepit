@@ -30,7 +30,6 @@ object EmbedlyArticleFetcher {
 @Singleton
 class EmbedlyArticleFetcher @Inject() (
     ws: WebService,
-    airbrake: AirbrakeNotifier,
     clock: Clock) extends ArticleFetcher[EmbedlyArticle] with Logging {
 
   import com.keepit.rover.article.fetcher.EmbedlyArticleFetcher._

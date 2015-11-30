@@ -38,7 +38,6 @@ class ExtLibraryController @Inject() (
   libraryMembershipRepo: LibraryMembershipRepo,
   libPathCommander: PathCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  keepImageRequestRepo: KeepImageRequestRepo,
   keepImageCommander: KeepImageCommander,
   organizationAvatarCommander: OrganizationAvatarCommander,
   val userActionsHelper: UserActionsHelper,

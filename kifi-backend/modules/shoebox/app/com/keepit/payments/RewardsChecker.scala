@@ -18,8 +18,6 @@ class RewardsChecker @Inject() (
   creditRewardCommander: CreditRewardCommander,
   paidAccountRepo: PaidAccountRepo,
   paidPlanRepo: PaidPlanRepo,
-  userExperimentRepo: UserExperimentRepo,
-  // For double-checking checklist rewards
   libRepo: LibraryRepo,
   ktlRepo: KeepToLibraryRepo,
   orgRepo: OrganizationRepo,

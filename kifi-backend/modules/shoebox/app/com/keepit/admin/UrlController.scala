@@ -31,7 +31,6 @@ import scala.util.Try
 class UrlController @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
-    systemAdminMailSender: SystemAdminMailSender,
     uriRepo: NormalizedURIRepo,
     urlRepo: URLRepo,
     changedUriRepo: ChangedURIRepo,
@@ -45,7 +44,6 @@ class UrlController @Inject() (
     normalizationService: NormalizationService,
     urlPatternRuleRepo: UrlPatternRuleRepo,
     renormRepo: RenormalizedURLRepo,
-    centralConfig: CentralConfig,
     monitoredAwait: MonitoredAwait,
     normalizedURIInterner: NormalizedURIInterner,
     airbrake: AirbrakeNotifier,

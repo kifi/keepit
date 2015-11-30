@@ -17,10 +17,8 @@ import scala.concurrent.duration._
 
 class EmailMessageProcessingCommander @Inject() (
     mailNotificationReplyQueue: SQSQueue[MailNotificationReply],
-    nonUserThreadRepo: NonUserThreadRepo,
     messagingCommander: MessagingCommander,
     airbrake: AirbrakeNotifier,
-    db: Database,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends Logging {
 
   def readIncomingMessages(): Unit = {

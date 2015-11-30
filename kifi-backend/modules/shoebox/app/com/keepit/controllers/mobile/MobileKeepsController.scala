@@ -25,7 +25,6 @@ import com.keepit.common.json.TupleFormat
 
 class MobileKeepsController @Inject() (
   db: Database,
-  uriRepo: NormalizedURIRepo,
   keepRepo: KeepRepo,
   val userActionsHelper: UserActionsHelper,
   keepDecorator: KeepDecorator,

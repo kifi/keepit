@@ -58,7 +58,6 @@ class LibraryInviteCommanderImpl @Inject() (
     libraryAnalytics: LibraryAnalytics,
     libraryInviteSender: Provider[LibraryInviteEmailSender],
     libPathCommander: PathCommander,
-    heimdal: HeimdalServiceClient,
     libraryImageCommander: LibraryImageCommander,
     kifiInstallationCommander: KifiInstallationCommander,
     implicit val defaultContext: ExecutionContext,

@@ -57,15 +57,12 @@ object PaymentsIntegrityError {
 class PaymentsIntegrityChecker @Inject() (
     db: Database,
     clock: Clock,
-    organizationRepo: OrganizationRepo,
     organizationMembershipRepo: OrganizationMembershipRepo,
     accountLockHelper: AccountLockHelper,
     accountEventRepo: AccountEventRepo,
     eventTrackingCommander: AccountEventTrackingCommander,
     paidAccountRepo: PaidAccountRepo,
     planManagementCommander: PlanManagementCommander,
-    httpClient: HttpClient,
-    mode: Mode,
     airbrake: AirbrakeNotifier,
     implicit val defaultContext: ExecutionContext) extends Logging {
 

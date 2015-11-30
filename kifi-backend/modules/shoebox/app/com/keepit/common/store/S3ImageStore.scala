@@ -53,7 +53,6 @@ trait S3ImageStore extends S3ExternalIdImageStore {
 class S3ImageStoreImpl @Inject() (
     val userActionsHelper: UserActionsHelper,
     db: Database,
-    userValueRepo: UserValueRepo,
     override val s3Client: AmazonS3,
     suiRepo: SocialUserInfoRepo,
     userRepo: UserRepo,

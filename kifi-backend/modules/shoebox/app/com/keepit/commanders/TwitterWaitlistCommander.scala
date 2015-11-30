@@ -33,7 +33,6 @@ trait TwitterWaitlistCommander {
 @Singleton
 class TwitterWaitlistCommanderImpl @Inject() (
     db: Database,
-    userRepo: UserRepo,
     emailRepo: UserEmailAddressRepo,
     twitterWaitlistRepo: TwitterWaitlistRepo,
     twitterEmailSender: Provider[TwitterWaitlistEmailSender],

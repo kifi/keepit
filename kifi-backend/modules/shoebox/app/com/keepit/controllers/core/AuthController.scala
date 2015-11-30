@@ -117,13 +117,11 @@ class AuthController @Inject() (
     val userActionsHelper: UserActionsHelper,
     userRepo: UserRepo,
     userValueRepo: UserValueRepo,
-    airbrakeNotifier: AirbrakeNotifier,
     emailAddressRepo: UserEmailAddressRepo,
     inviteCommander: InviteCommander,
     passwordResetRepo: PasswordResetRepo,
     heimdalServiceClient: HeimdalServiceClient,
     config: FortyTwoConfig,
-    twitterWaitlistCommander: TwitterWaitlistCommander,
     userIdentityHelper: UserIdentityHelper,
     implicit val secureSocialClientIds: SecureSocialClientIds) extends UserActions with ShoeboxServiceController with Logging with SecureSocialHelper {
 

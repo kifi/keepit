@@ -17,13 +17,10 @@ import com.keepit.common.core._
 class PeopleRecommendationController @Inject() (
     val userActionsHelper: UserActionsHelper,
     abookServiceClient: ABookServiceClient,
-    userConnectionRepo: UserConnectionRepo,
-    basicUserRepo: BasicUserRepo,
     userRepo: UserRepo,
     db: Database,
     peopleRecoCommander: UserCommander,
     socialUserRepo: SocialUserInfoRepo,
-    inviteCommander: InviteCommander,
     val userProfileCommander: UserProfileCommander) extends UserActions with ShoeboxServiceController with UserLibraryCountSortingHelper {
 
   def getFriendRecommendations(offset: Int, limit: Int) = UserAction.async { request =>

@@ -34,9 +34,7 @@ class MobileUserProfileController @Inject() (
   userCommander: UserCommander,
   userProfileCommander: UserProfileCommander,
   collectionCommander: CollectionCommander,
-  userConnectionsCommander: UserConnectionsCommander,
   friendStatusCommander: FriendStatusCommander,
-  libraryCommander: LibraryCommander,
   implicit val executionContext: ExecutionContext)
     extends UserActions with ShoeboxServiceController {
 

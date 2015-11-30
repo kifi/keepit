@@ -53,7 +53,6 @@ class OrganizationInfoCommanderImpl @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     planManagementCommander: PlanManagementCommander,
     basicOrganizationIdCache: BasicOrganizationIdCache,
-    eliza: ElizaServiceClient,
     implicit val executionContext: ExecutionContext) extends OrganizationInfoCommander with Logging {
 
   def getOrganizationView(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], authTokenOpt: Option[String]): OrganizationView = {

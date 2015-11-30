@@ -16,7 +16,6 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class LibraryAnalytics @Inject() (
-    db: Database,
     userPropertyUpdateActor: ActorInstance[UserPropertyUpdateActor],
     implicit val executionContext: ExecutionContext,
     keepRepo: KeepRepo)(heimdal: HeimdalServiceClient) {

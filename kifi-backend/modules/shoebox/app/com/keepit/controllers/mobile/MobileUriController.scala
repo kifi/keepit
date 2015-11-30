@@ -13,7 +13,6 @@ import play.api.libs.json.Json
 
 class MobileUriController @Inject() (
     db: Database,
-    normalizedUriRepo: NormalizedURIRepo,
     normalizedUriInterner: NormalizedURIInterner,
     systemAdminMailSender: SystemAdminMailSender,
     clock: Clock,

@@ -38,7 +38,6 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     orgConfigurationRepo: OrganizationConfigurationRepo,
     domainRepo: DomainRepo,
-    orgExperimentRepo: OrganizationExperimentRepo,
     userEmailAddressRepo: UserEmailAddressRepo,
     userEmailAddressCommander: UserEmailAddressCommander,
     permissionCommander: PermissionCommander,

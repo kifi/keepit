@@ -19,7 +19,6 @@ trait DeepLinkRouter {
 
 @Singleton
 class DeepLinkRouterImpl @Inject() (
-    config: FortyTwoConfig,
     db: Database,
     userRepo: UserRepo,
     orgRepo: OrganizationRepo,

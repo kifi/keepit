@@ -15,13 +15,9 @@ import scala.concurrent.Future
 
 class LibraryFeedController @Inject() (
     db: Database,
-    userCommander: UserCommander,
     libraryInfoCommander: LibraryInfoCommander,
-    libraryAccessCommander: LibraryAccessCommander,
     libPathCommander: PathCommander,
-    experimentCommander: LocalUserExperimentCommander,
     feedCommander: FeedCommander,
-    fortyTwoConfig: FortyTwoConfig,
     atomCommander: AtomCommander,
     handleCommander: HandleCommander,
     val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController {

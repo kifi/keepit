@@ -31,12 +31,10 @@ class AdminBookmarksController @Inject() (
   libraryRepo: LibraryRepo,
   keepImageCommander: KeepImageCommander,
   keywordSummaryCommander: KeywordSummaryCommander,
-  libraryCommander: LibraryCommander,
   keepCommander: KeepCommander,
   collectionCommander: CollectionCommander,
   collectionRepo: CollectionRepo,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  keepDecorator: KeepDecorator,
   libraryChecker: LibraryChecker,
   clock: Clock,
   implicit val imageConfig: S3ImageConfig)

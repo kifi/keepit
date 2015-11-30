@@ -87,8 +87,7 @@ class EventWriter @Inject() (
 }
 
 class EventStreamActor @Inject() (
-  airbrake: AirbrakeNotifier,
-  eventWriter: EventWriter)
+  airbrake: AirbrakeNotifier)
     extends FortyTwoActor(airbrake) {
 
   val (eventEnumerator, eventChannel) = Concurrent.broadcast[JsValue]

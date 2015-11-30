@@ -22,7 +22,6 @@ class FriendConnectionNotifier @Inject() (
     userRepo: UserRepo,
     connectionMadeEmailSender: FriendConnectionMadeEmailSender,
     s3ImageStore: S3ImageStore,
-    kifiInstallationCommander: KifiInstallationCommander,
     implicit val executionContext: ExecutionContext,
     elizaServiceClient: ElizaServiceClient) {
 

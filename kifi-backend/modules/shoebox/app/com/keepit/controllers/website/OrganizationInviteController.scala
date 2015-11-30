@@ -21,11 +21,8 @@ import scala.util.{ Failure, Success }
 @Singleton
 class OrganizationInviteController @Inject() (
     userCommander: UserCommander,
-    orgCommander: OrganizationCommander,
-    orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     organizationInviteCommander: OrganizationInviteCommander,
-    typeaheadCommander: TypeaheadCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     airbrake: AirbrakeNotifier,

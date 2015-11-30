@@ -34,9 +34,6 @@ class TypeaheadCommander @Inject() (
     socialConnectionRepo: SocialConnectionRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     invitationRepo: InvitationRepo,
-    emailAddressRepo: UserEmailAddressRepo,
-    userRepo: UserRepo,
-    userExpRepo: UserExperimentRepo,
     basicUserRepo: BasicUserRepo,
     friendRequestRepo: FriendRequestRepo,
     abookServiceClient: ABookServiceClient,
@@ -44,9 +41,6 @@ class TypeaheadCommander @Inject() (
     kifiUserTypeahead: KifiUserTypeahead,
     searchClient: SearchServiceClient,
     interactionCommander: UserInteractionCommander,
-    systemAdminMailSender: SystemAdminMailSender,
-    libraryMembershipRepo: LibraryMembershipRepo,
-    libraryRepo: LibraryRepo,
     implicit val config: PublicIdConfiguration) extends Logging {
 
   type NetworkTypeAndHit = (SocialNetworkType, TypeaheadHit[_])

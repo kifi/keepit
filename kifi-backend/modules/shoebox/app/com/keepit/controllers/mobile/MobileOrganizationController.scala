@@ -21,7 +21,6 @@ class MobileOrganizationController @Inject() (
     orgCommander: OrganizationCommander,
     orgInfoCommander: OrganizationInfoCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
-    orgInviteCommander: OrganizationInviteCommander,
     userCommander: UserCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     val userActionsHelper: UserActionsHelper,

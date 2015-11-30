@@ -19,11 +19,8 @@ class MobileRecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     recommendationsCommander: RecommendationsCommander,
     keepsCommander: KeepCommander,
-    userExperimentCommander: LocalUserExperimentCommander,
-    libraryInfoCommander: LibraryInfoCommander,
     normalizedURIRepo: NormalizedURIRepo,
     val db: Database,
-    val userRepo: UserRepo,
     val keepRepo: KeepRepo,
     val libMemRepo: LibraryMembershipRepo) extends UserActions with ShoeboxServiceController {
 

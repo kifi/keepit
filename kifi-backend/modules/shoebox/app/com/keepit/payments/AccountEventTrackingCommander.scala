@@ -42,7 +42,6 @@ class AccountEventTrackingCommanderImpl @Inject() (
     postOffice: LocalPostOffice,
     slackClient: SlackClient,
     stripeClient: StripeClient,
-    httpClient: HttpClient,
     mode: play.api.Mode.Mode,
     airbrake: AirbrakeNotifier,
     activityCommander: ActivityLogCommander,

@@ -13,7 +13,6 @@ import com.keepit.commanders.{ AliasContactResult, EmailContactResult, UserConta
 case class TypeaheadSearchRequest(query: String, limit: Int, pictureUrl: Boolean, inviteStatus: Boolean)
 
 class TypeaheadController @Inject() (
-    db: Database,
     airbrake: AirbrakeNotifier,
     commander: TypeaheadCommander,
     val userActionsHelper: UserActionsHelper) extends UserActions with ShoeboxServiceController with Logging {

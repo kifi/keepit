@@ -12,12 +12,11 @@ import scala.concurrent.Future
 
 class TwitterWaitlistEmailSender @Inject() (
     emailTemplateSender: EmailTemplateSender,
-    config: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def sendToUser(email: EmailAddress, userId: Id[User]): Future[ElectronicMail] = {
     val emailToSend = EmailToSend(
-      title = "kifi — Congrats! You're on the list",
+      title = "Kifi — Congrats! You're on the list",
       fromName = Some(Right("Kifi")),
       from = SystemEmailAddress.NOTIFICATIONS,
       to = Right(email),
