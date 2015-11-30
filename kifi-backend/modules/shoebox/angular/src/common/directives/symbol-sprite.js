@@ -6,16 +6,34 @@
 angular.module('kifi')
 
 .directive('kfSymbolSprite', [
-  '$window',
-  function ($window) {
+  '$window', '$q',
+  function ($window, $q) {
     var MutationObserver = $window.MutationObserver;
+    var symbolSpriteReady = getSymbolSpritePromise();
+
+    function getSymbolSpritePromise () {
+      var symbolSpriteContainer = angular.element('.symbol-sprite-container')[0];
+      var deferred = $q.defer();
+      var observer;
+
+      if (symbolSpriteContainer.children.length === 0) {
+        observer = new MutationObserver(function () {
+          deferred.resolve();
+          observer.disconnect();
+        });
+        observer.observe(symbolSpriteContainer, { childList: true });
+      } else {
+        deferred.resolve();
+      }
+
+      return deferred.promise;
+    }
 
     return {
       restrict: 'A',
       link: function (scope, element, attrs) {
-        var observer;
-
-        function renderSymbolSprite() {
+        symbolSpriteReady
+        .then(function () {
           var paths = angular.element('symbol#' + attrs.icon);
           var path = paths.children('g').clone()[0];
 
@@ -32,19 +50,7 @@ angular.module('kifi')
           } else {
             element.remove();
           }
-
-          if (observer) {
-            observer.disconnect();
-          }
-        }
-
-        var symbolSpriteContainer = angular.element('.symbol-sprite-container')[0];
-        if (MutationObserver && symbolSpriteContainer.children.length === 0) {
-          observer = new MutationObserver(renderSymbolSprite);
-          observer.observe(symbolSpriteContainer, { childList: true });
-        } else {
-          renderSymbolSprite();
-        }
+        });
       }
     };
   }
