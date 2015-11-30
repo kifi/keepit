@@ -666,9 +666,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
       owner = Id[User](1),
       users = Set(Id[User](1)),
       libraries = Set(Id[Library](1)),
-      title = Some("Kifi!"),
       url = "http://www.kifi.com",
-      uriId = Id[NormalizedURI](1)
+      uriId = Id[NormalizedURI](1),
+      keptAt = currentDateTime.minusHours(10),
+      title = Some("Kifi!"),
+      note = Some("is great")
     )).toMap
   }
 
