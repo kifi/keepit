@@ -110,7 +110,7 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.editKeepNote = function (event, keep) {
-          if (keep.id !== scope.keep.id || keep.user.id !== profileService.me.id) {
+          if (keep.id !== scope.keep.id || !scope.canEditKeep) {
             return;
           }
 
@@ -254,6 +254,10 @@ angular.module('kifi')
           scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1;
           scope.galleryView = !profileService.prefs.use_minimal_keep_card;
 
+          var permissions = keep.library.permissions || [];
+          scope.canEditKeep = (keep.user.id === scope.me.id &&
+            permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1;
+
           var setImage = function(galleryView) {
             scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
             scope.defaultDescLines = galleryView ? 4 : 2;
@@ -294,8 +298,7 @@ angular.module('kifi')
 
           var updateMenuItems = function () {
             scope.menuItems = [];
-            var permissions = (keep.library && keep.library.permissions) || [];
-            if ((keep.user.id === scope.me.id && permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1) {
+            if (scope.canEditKeep) {
               scope.menuItems.push({
                 title: keep.note ? 'Edit Note' : 'Add Note',
                 action: scope.editKeepNote.bind(scope)

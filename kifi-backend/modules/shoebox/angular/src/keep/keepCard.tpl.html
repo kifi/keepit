@@ -1,5 +1,5 @@
 <div class="kf-keep-container" ng-hide="keep.unkept">
-  <div class="kf-keep" ng-hide="keep.unkept"
+  <div class="kf-keep"
        ng-class="{'editing': $parent.edit.enabled, 'compact': !galleryView, 'mine': (keep.user.id === me.id) }">
     <!-- Gallery card -->
     <div class="kf-gallery-card" ng-if="galleryView">
@@ -25,11 +25,12 @@
       </div>
 
       <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml"
-           ng-if="::keep.note || (keep.user.id === me.id && keep.library.permissions.indexOf('edit_own_keeps') !== -1)"></div>
+           ng-if="::keep.note || canEditKeep"></div>
       <div class="kf-keep-add-note"
-           ng-if="::(keep.user.id === me.id && keep.library.permissions.indexOf('edit_own_keeps') !== -1)">
+           ng-if="::canEditKeep">
         <!-- wrapping button in div to reduce watch count on read-only libraries -->
-        <button class="kf-keep-add-note-btn" ng-click="editKeepNote($event, keep)" ng-if="!keep.note">Add a note
+        <button class="kf-keep-add-note-btn" ng-click="editKeepNote($event, keep)"
+                ng-if="!keep.note && keep.user.id === me.id">Add a note
           (type # to add a tag)
         </button>
       </div>
@@ -73,8 +74,7 @@
                     kept-to-library-ids="keptToLibraryIds" lib-select-down-offset="180"
                     lib-select-left-offset="20" ng-click="clickCallback({keep: keep, event: $event})"
                     click-action="clickedKeep">
-              <span
-                ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
+              <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
               <span>{{howKept ? 'Kept' : 'Keep'}}</span>
             </button>
             <button class="kf-keep-share-btn"
@@ -109,7 +109,8 @@
         <div kf-keep-card-attribution
              keep="keep"
              class="kf-keep-card-attribution-compact"
-             show-library-attribution="::currentPageOrigin !== 'libraryPage'"></div>
+             show-library-attribution="::currentPageOrigin !== 'libraryPage'"
+             is-first-item="::isFirstItem"></div>
         <div class="kf-keep-card-menu-container" kf-click-menu ng-if="menuItems.length > 0">
           <!-- This controls who gets the controls -->
           <button class="kf-keep-top-menu-btn"></button>
@@ -122,16 +123,19 @@
           </menu>
         </div>
       </div>
+      <div class="kf-keep-card-note-container">
+        <div class="kf-keep-card-note" ng-bind-html="::keep.note|noteHtml"
+             ng-if="::keep.note || canEditKeep"></div>
+      </div>
       <div class="kf-keep-card-flex-row">
-        <div class="kf-flex-column kf-flex-grow">
+        <div class="kf-keep-card-content-bar"></div>
+        <div class="kf-flex-column kf-keep-card-flex-grow">
           <div class="kf-keep-card-content kf-flex-grow">
-            <div class="kf-keep-card-note" ng-bind-html="::keep.note|noteHtml"
-                 ng-if="::keep.note || keep.user.id === me.id"></div>
             <div class="kf-keep-card-title">
               <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank"
                  ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow"
                  click-action="clickedArticleTitle" full-text="displayTitle"
-                 ng-bind="displayTitle" max-num-lines="1"></a>
+                 ng-bind="displayTitle" kf-ellipsis max-num-lines="2"></a>
             </div>
           </div>
           <div class="kf-keep-card-flex-row">
@@ -141,8 +145,7 @@
                     kept-to-library-ids="keptToLibraryIds" lib-select-down-offset="180"
                     lib-select-left-offset="20" ng-click="clickCallback({keep: keep, event: $event})"
                     click-action="clickedKeep">
-              <span
-                ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
+              <span ng-attr-class="{{howKept ? howKept === 'private' ? 'svg-small-lock' : 'svg-hearts-green' : 'svg-hearts-green-empty'}}"></span>
               <span>{{howKept ? 'Kept' : 'Keep'}}</span>
             </button>
             <button class="kf-keep-share-btn"
@@ -175,7 +178,5 @@
   </div>
 
   <div ng-if="hasKeepCommentsPermission" kf-keep-comments keep="keep"></div>
-   
 </div>
-
 
