@@ -363,19 +363,50 @@ case class CrossServiceKeep(
   owner: Id[User], // the person who created the keep
   users: Set[Id[User]], // all the users directly connected to the keep
   libraries: Set[Id[Library]], // all the libraries directly connected to the keep
-  title: Option[String],
   url: String,
-  uriId: Id[NormalizedURI])
+  uriId: Id[NormalizedURI],
+  keptAt: DateTime,
+  title: Option[String],
+  note: Option[String])
 object CrossServiceKeep {
   implicit val format: Format[CrossServiceKeep] = (
     (__ \ 'id).format[Id[Keep]] and
     (__ \ 'owner).format[Id[User]] and
     (__ \ 'users).format[Set[Id[User]]] and
     (__ \ 'libraries).format[Set[Id[Library]]] and
-    (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
-    (__ \ 'uriId).format[Id[NormalizedURI]]
+    (__ \ 'uriId).format[Id[NormalizedURI]] and
+    (__ \ 'keptAt).format[DateTime] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'note).formatNullable[String]
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
+}
+
+case class ExternalRawKeep(
+    owner: ExternalId[User],
+    users: Set[ExternalId[User]],
+    libraries: Set[PublicId[Library]],
+    url: String,
+    title: Option[String] = None,
+    canonical: Option[String] = None,
+    openGraph: Option[String] = None,
+    keptAt: Option[DateTime] = None,
+    note: Option[String] = None) {
+  require(users.contains(owner))
+  require(libraries.size == 1) // TODO(ryan): remove when no longer true
+}
+object ExternalRawKeep {
+  implicit val format: Format[ExternalRawKeep] = (
+    (__ \ 'owner).format[ExternalId[User]] and
+    (__ \ 'users).format[Set[ExternalId[User]]] and
+    (__ \ 'libraries).format[Set[PublicId[Library]]] and
+    (__ \ 'url).format[String] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'canonical).formatNullable[String] and
+    (__ \ 'openGraph).formatNullable[String] and
+    (__ \ 'keptAt).formatNullable[DateTime] and
+    (__ \ 'note).formatNullable[String]
+  )(ExternalRawKeep.apply, unlift(ExternalRawKeep.unapply))
 }
 
 case class PersonalKeep(

@@ -260,7 +260,7 @@ class UserProfileController @Inject() (
   }
 
   def getProfileUsers(userExtIds: String) = MaybeUserAction { request =>
-    Try(userExtIds.split('.').map(ExternalId[User])) match {
+    Try(userExtIds.split('.').map(ExternalId[User]).toSet) match {
       case Success(userIds) =>
         val viewerIdOpt = request.userIdOpt
         val userJsonObjs = db.readOnlyMaster { implicit s =>

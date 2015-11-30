@@ -1,15 +1,13 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.time._
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.time._
 import com.keepit.model._
-import com.kifi.macros.json
-import play.api.libs.json._
 import org.joda.time.DateTime
-
-import scala.io.Source
+import play.api.libs.json._
 
 /* RawBookmarkRepresentation is an input (not output) class for parsing JSON requests dealing with keeps.
  * The standard use case is parsing the request JSON, then keeping it.
@@ -40,16 +38,22 @@ object RawBookmarkRepresentation {
       JsSuccess(RawBookmarkRepresentation(x.title, x.url, x.isPrivate, x.canonical, x.openGraph, x.keptAt, None))
     }
   }
+
+  def fromExternalRawKeep(rawKeep: ExternalRawKeep): RawBookmarkRepresentation = RawBookmarkRepresentation(
+    title = rawKeep.title,
+    url = rawKeep.url,
+    isPrivate = None, // TODO(ryan): kill isPrivate
+    canonical = rawKeep.canonical,
+    openGraph = rawKeep.openGraph,
+    keptAt = rawKeep.keptAt,
+    note = rawKeep.note
+  )
 }
 
 @Singleton
 class RawBookmarkFactory @Inject() (
     airbrake: AirbrakeNotifier,
     clock: Clock) {
-
-  @deprecated("KeepInfo was never intended to be an input value class. Use RawBookmarkRepresentation.", "2014-08-29")
-  def toRawBookmark(keepInfos: Seq[KeepInfo]): Seq[RawBookmarkRepresentation] =
-    keepInfos map { k => RawBookmarkRepresentation(title = k.title, url = k.url, isPrivate = Some(k.isPrivate), keptAt = k.createdAt) }
 
   private[commanders] def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
     case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
@@ -72,3 +76,4 @@ class RawBookmarkFactory @Inject() (
     RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph, keptAt = Some(clock.now), sourceAttribution = None, note = None)
   }
 }
+
