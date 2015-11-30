@@ -28,7 +28,6 @@ class SendgridMailProvider @Inject() (
   db: Database,
   mailRepo: ElectronicMailRepo,
   airbrake: AirbrakeNotifier,
-  heimdal: HeimdalServiceClient,
   clock: Clock)
     extends MailProvider with Logging {
 

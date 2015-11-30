@@ -20,7 +20,6 @@ class AtomCommander @Inject() (
     s3ImageConfig: S3ImageConfig,
     userRepo: UserRepo,
     keepRepo: KeepRepo,
-    libraryMembershipRepo: LibraryMembershipRepo,
     keepImageCommander: KeepImageCommander,
     libPathCommander: PathCommander,
     libraryImageCommander: LibraryImageCommander,

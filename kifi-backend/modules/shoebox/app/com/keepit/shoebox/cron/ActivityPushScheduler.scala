@@ -63,7 +63,6 @@ class ActivityPushActor @Inject() (
 }
 
 class ActivityPushScheduler @Inject() (
-    activityPushTaskRepo: ActivityPushTaskRepo,
     val scheduling: SchedulingProperties,
     actor: ActorInstance[ActivityPushActor]) extends SchedulerPlugin {
   override def onStart() {
@@ -77,7 +76,6 @@ class ActivityPusher @Inject() (
     activityPushTaskRepo: ActivityPushTaskRepo,
     db: Database,
     elizaServiceClient: ElizaServiceClient,
-    libraryRepo: LibraryRepo,
     keepRepo: KeepRepo,
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
@@ -87,8 +85,6 @@ class ActivityPusher @Inject() (
     kifiInstallationCommander: KifiInstallationCommander,
     libraryImageCommander: LibraryImageCommander,
     libPathCommander: PathCommander,
-    s3ImageStore: S3ImageStore,
-    actor: ActorInstance[ActivityPushActor],
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
     clock: Clock) extends Logging {

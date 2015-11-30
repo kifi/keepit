@@ -18,7 +18,6 @@ class ExtUserController @Inject() (
   userPersonaCommander: UserPersonaCommander,
   permissionCommander: PermissionCommander,
   orgMemberRepo: OrganizationMembershipRepo,
-  orgRepo: OrganizationRepo,
   orgInfoCommander: OrganizationInfoCommander,
   db: Database,
   implicit val config: PublicIdConfiguration)

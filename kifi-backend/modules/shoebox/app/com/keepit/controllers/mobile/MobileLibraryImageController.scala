@@ -21,8 +21,6 @@ class MobileLibraryImageController @Inject() (
   libraryRepo: LibraryRepo,
   libraryImageRepo: LibraryImageRepo,
   libraryImageRequestRepo: LibraryImageRequestRepo,
-  userRepo: UserRepo,
-  fortyTwoConfig: FortyTwoConfig,
   clock: Clock,
   libraryImageCommander: LibraryImageCommander,
   heimdalContextBuilder: HeimdalContextBuilderFactory,

@@ -15,7 +15,6 @@ class PathCommander @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
     basicUserRepo: BasicUserRepo,
-    userRepo: UserRepo,
     implicit val config: PublicIdConfiguration) {
 
   // TODO(ryan): I feel bad for "fixing" this problem like this, but a bunch of existing

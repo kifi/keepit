@@ -20,10 +20,7 @@ import scala.concurrent.Future
 class RecommendationsController @Inject() (
     val userActionsHelper: UserActionsHelper,
     commander: RecommendationsCommander,
-    userExperimentCommander: LocalUserExperimentCommander,
     val db: Database,
-    val userRepo: UserRepo,
-    val libMemRepo: LibraryMembershipRepo,
     implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController {
 
   def topPublicRecos() = UserAction.async { request =>

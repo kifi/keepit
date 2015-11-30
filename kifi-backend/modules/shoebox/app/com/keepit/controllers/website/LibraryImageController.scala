@@ -20,7 +20,6 @@ class LibraryImageController @Inject() (
   libraryRepo: LibraryRepo,
   libraryImageRepo: LibraryImageRepo,
   libraryImageRequestRepo: LibraryImageRequestRepo,
-  userRepo: UserRepo,
   fortyTwoConfig: FortyTwoConfig,
   clock: Clock,
   libraryImageCommander: LibraryImageCommander,
@@ -28,8 +27,7 @@ class LibraryImageController @Inject() (
   val userActionsHelper: UserActionsHelper,
   val libraryInfoCommander: LibraryInfoCommander,
   val libraryAccessCommander: LibraryAccessCommander,
-  val publicIdConfig: PublicIdConfiguration,
-  implicit val config: PublicIdConfiguration,
+  implicit val publicIdConfig: PublicIdConfiguration,
   private implicit val executionContext: ExecutionContext)
     extends UserActions with LibraryAccessActions with ShoeboxServiceController {
 

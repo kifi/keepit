@@ -44,7 +44,6 @@ class EmailTemplateSenderImpl @Inject() (
     db: Database,
     htmlPreProcessor: EmailTemplateProcessor,
     heimdal: HeimdalServiceClient,
-    emailRepo: ElectronicMailRepo,
     postOffice: LocalPostOffice,
     emailAddrRepo: UserEmailAddressRepo,
     userValueRepo: UserValueRepo,

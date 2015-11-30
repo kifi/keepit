@@ -134,7 +134,6 @@ class UserStatisticsCommander @Inject() (
     orgDomainOwnCommander: OrganizationDomainOwnershipCommander,
     userValueRepo: UserValueRepo,
     orgChatStatsCommander: OrganizationChatStatisticsCommander,
-    domainRepo: DomainRepo,
     abook: ABookServiceClient,
     airbrake: AirbrakeNotifier,
     planManagementCommander: PlanManagementCommander) {

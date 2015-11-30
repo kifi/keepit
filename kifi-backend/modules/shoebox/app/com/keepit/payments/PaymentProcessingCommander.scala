@@ -43,7 +43,6 @@ class PaymentProcessingCommanderImpl @Inject() (
   db: Database,
   paymentMethodRepo: PaymentMethodRepo,
   paidAccountRepo: PaidAccountRepo,
-  paidPlanRepo: PaidPlanRepo,
   accountEventRepo: AccountEventRepo,
   clock: Clock,
   accountLockHelper: AccountLockHelper,

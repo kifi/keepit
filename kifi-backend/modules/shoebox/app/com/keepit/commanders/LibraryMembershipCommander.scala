@@ -68,8 +68,6 @@ class LibraryMembershipCommanderImpl @Inject() (
     searchClient: SearchServiceClient,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
-    libraryImageCommander: LibraryImageCommander, // Only used by notifyOwnerOfNewFollowerOrCollaborator
-    s3ImageStore: S3ImageStore, // Only used by notifyOwnerOfNewFollowerOrCollaborator
     kifiInstallationCommander: KifiInstallationCommander, // Only used by notifyOwnerOfNewFollowerOrCollaborator
     mode: Mode) extends LibraryMembershipCommander with Logging {
 

@@ -91,7 +91,6 @@ class UserIpAddressEventLogger @Inject() (
     userValueRepo: UserValueRepo,
     httpClient: HttpClient,
     slackClient: SlackClient,
-    userStatisticsCommander: UserStatisticsCommander,
     richIpAddressCache: RichIpAddressCache,
     organizationRepo: OrganizationRepo,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,

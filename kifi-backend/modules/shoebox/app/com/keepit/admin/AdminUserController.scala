@@ -114,7 +114,6 @@ class AdminUserController @Inject() (
     userCommander: UserCommander,
     socialUserTypeahead: SocialUserTypeahead,
     kifiUserTypeahead: KifiUserTypeahead,
-    systemAdminMailSender: SystemAdminMailSender,
     eliza: ElizaServiceClient,
     abookClient: ABookServiceClient,
     heimdal: HeimdalServiceClient,
@@ -122,7 +121,6 @@ class AdminUserController @Inject() (
     activityPushSchedualer: ActivityPushScheduler,
     activityPusher: ActivityPusher,
     userIpAddressCommander: UserIpAddressCommander,
-    authCommander: AuthCommander,
     userStatisticsCommander: UserStatisticsCommander,
     airbrake: AirbrakeNotifier) extends AdminUserActions with PaginationActions {
 

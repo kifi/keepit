@@ -27,10 +27,7 @@ class SliderAdminController @Inject() (
   clock: Clock,
   kifiInstallationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
-  userRepo: UserRepo,
   kifiInstallationStore: KifiInstallationStore,
-  userValueRepo: UserValueRepo,
-  heimdal: HeimdalServiceClient,
   eliza: ElizaServiceClient)
     extends AdminUserActions {
 

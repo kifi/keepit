@@ -39,7 +39,6 @@ class NotificationDeliveryCommander @Inject() (
     notificationJsonMaker: NotificationJsonMaker,
     basicMessageCommander: MessageFetchingCommander,
     emailCommander: ElizaEmailCommander,
-    legacyNotificationCheck: LegacyNotificationCheck,
     notificationRepo: NotificationRepo,
     implicit val executionContext: ExecutionContext) extends Logging {
 

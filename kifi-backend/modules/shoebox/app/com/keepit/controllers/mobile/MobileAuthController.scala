@@ -31,13 +31,10 @@ import scala.concurrent.Future
 import scala.util.{ Failure, Success, Try }
 
 class MobileAuthController @Inject() (
-    airbrakeNotifier: AirbrakeNotifier,
     val userActionsHelper: UserActionsHelper,
     db: Database,
     clock: Clock,
-    authCommander: AuthCommander,
     socialUserInfoRepo: SocialUserInfoRepo,
-    userRepo: UserRepo,
     installationRepo: KifiInstallationRepo,
     authHelper: AuthHelper,
     activityPusher: ActivityPusher,

@@ -28,19 +28,15 @@ trait PermissionCommander {
 
 @Singleton
 class PermissionCommanderImpl @Inject() (
-    db: Database,
     orgPermissionsCache: OrganizationPermissionsCache,
     orgPermissionsNamespaceCache: OrganizationPermissionsNamespaceCache,
     orgRepo: OrganizationRepo,
     orgConfigRepo: OrganizationConfigurationRepo,
     orgMembershipRepo: OrganizationMembershipRepo,
     orgInviteRepo: OrganizationInviteRepo,
-    userRepo: UserRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
-    userExperimentRepo: UserExperimentRepo,
-    orgExperimentRepo: OrganizationExperimentRepo,
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 

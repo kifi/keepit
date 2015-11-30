@@ -20,7 +20,6 @@ class FacebookPublishingCommander @Inject() (
     val db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     libPathCommander: PathCommander,
-    userRepo: UserRepo,
     httpClient: HttpClient,
     implicit val executionContext: ExecutionContext,
     airbrake: AirbrakeNotifier) extends SocialPublishingCommander with Logging {

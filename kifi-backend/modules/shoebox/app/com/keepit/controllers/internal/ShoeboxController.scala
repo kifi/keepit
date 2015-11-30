@@ -53,15 +53,10 @@ class ShoeboxController @Inject() (
   airbrake: AirbrakeNotifier,
   keepDecorator: KeepDecorator,
   keepImageCommander: KeepImageCommander,
-  phraseRepo: PhraseRepo,
-  collectionRepo: CollectionRepo,
-  keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   socialConnectionRepo: SocialConnectionRepo,
   sessionRepo: UserSessionRepo,
-  orgRepo: OrganizationRepo,
-  organizationAvatarCommander: OrganizationAvatarCommander,
   searchFriendRepo: SearchFriendRepo,
   emailAddressRepo: UserEmailAddressRepo,
   libraryAccessCommander: LibraryAccessCommander,
@@ -75,7 +70,6 @@ class ShoeboxController @Inject() (
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   userInteractionCommander: UserInteractionCommander,
   libraryCommander: LibraryCommander,
-  libraryImageCommander: LibraryImageCommander,
   libraryRepo: LibraryRepo,
   libraryMembershipRepo: LibraryMembershipRepo,
   emailTemplateSender: EmailTemplateSender,
@@ -83,11 +77,9 @@ class ShoeboxController @Inject() (
   libraryInfoCommander: LibraryInfoCommander,
   libraryCardCommander: LibraryCardCommander,
   libraryMembershipCommander: LibraryMembershipCommander,
-  userConnectionsCommander: UserConnectionsCommander,
   organizationInviteCommander: OrganizationInviteCommander,
   organizationMembershipCommander: OrganizationMembershipCommander,
   s3ImageStore: S3ImageStore,
-  pathCommander: PathCommander,
   organizationInfoCommander: OrganizationInfoCommander,
   userPersonaRepo: UserPersonaRepo,
   orgCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -95,8 +87,7 @@ class ShoeboxController @Inject() (
   userIdentityHelper: UserIdentityHelper,
   rover: RoverServiceClient,
   slackCommander: SlackCommander,
-  implicit val config: PublicIdConfiguration)(implicit private val clock: Clock,
-    private val fortyTwoServices: FortyTwoServices)
+  implicit val config: PublicIdConfiguration)(implicit private val clock: Clock)
     extends ShoeboxServiceController with Logging {
 
   val MaxContentLength = 6000

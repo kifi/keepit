@@ -17,7 +17,6 @@ import scala.util.Try
 
 @Singleton
 class WsNotificationDelivery @Inject() (
-    shoeboxServiceClient: ShoeboxServiceClient,
     notificationRouter: WebSocketRouter,
     notificationInfoGenerator: NotificationInfoGenerator,
     notificationJsonFormat: Provider[NotificationJsonFormat],

@@ -25,10 +25,8 @@ class LibraryNewKeepsCommander @Inject() (
     db: Database,
     libraryMembershipRepo: LibraryMembershipRepo,
     userRepo: UserRepo,
-    libraryImageCommander: LibraryImageCommander,
     elizaClient: ElizaServiceClient,
     airbrake: AirbrakeNotifier,
-    s3ImageStore: S3ImageStore,
     libPathCommander: PathCommander,
     implicit val publicIdConfiguration: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) {

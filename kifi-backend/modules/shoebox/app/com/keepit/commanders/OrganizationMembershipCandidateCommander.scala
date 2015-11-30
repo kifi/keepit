@@ -25,12 +25,8 @@ trait OrganizationMembershipCandidateCommander {
 class OrganizationMembershipCandidateCommanderImpl @Inject() (
     db: Database,
     orgRepo: OrganizationRepo,
-    orgMembershipRepo: OrganizationMembershipRepo,
     orgMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
     orgInviteCommander: OrganizationInviteCommander,
-    userRepo: UserRepo,
-    keepRepo: KeepRepo,
-    libraryRepo: LibraryRepo,
     implicit val executionContext: ExecutionContext,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends OrganizationMembershipCandidateCommander with Logging {
 

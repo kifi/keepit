@@ -20,8 +20,6 @@ class AppBoyClientImpl @Inject() (
     clock: Clock,
     client: HttpClient,
     airbrake: AirbrakeNotifier,
-    db: Database,
-    deviceRepo: DeviceRepo,
     implicit val executionContext: ExecutionContext) extends AppBoyClient with Logging {
 
   lazy val httpClient: HttpClient = {

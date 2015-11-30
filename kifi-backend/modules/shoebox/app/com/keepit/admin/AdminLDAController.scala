@@ -17,7 +17,6 @@ import scala.concurrent.duration._
 
 class AdminLDAController @Inject() (
     cortex: CortexServiceClient,
-    shoebox: ShoeboxServiceClient,
     val userActionsHelper: UserActionsHelper,
     db: Database,
     userRepo: UserRepo,

@@ -28,7 +28,6 @@ class ActivityLogCommanderImpl @Inject() (
     paidPlanRepo: PaidPlanRepo,
     paidAccountRepo: PaidAccountRepo,
     accountEventRepo: AccountEventRepo,
-    creditCodeInfoRepo: CreditCodeInfoRepo,
     creditRewardRepo: CreditRewardRepo,
     creditRewardInfoCommander: CreditRewardInfoCommander,
     pathCommander: PathCommander,

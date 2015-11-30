@@ -21,7 +21,6 @@ import scala.util.{ Failure, Success }
 class MobileOrganizationInviteController @Inject() (
     userCommander: UserCommander,
     orgInfoCommander: OrganizationInfoCommander,
-    orgMembershipCommander: OrganizationMembershipCommander,
     orgInviteCommander: OrganizationInviteCommander,
     fortyTwoConfig: FortyTwoConfig,
     heimdalContextBuilder: HeimdalContextBuilderFactory,

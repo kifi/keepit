@@ -15,7 +15,6 @@ import scala.concurrent.{ ExecutionContext, Future }
 class RoverDocumentFetcher @Inject() (
     httpFetcher: HttpFetcher,
     throttler: DomainFetchThrottler,
-    db: Database,
     urlRuleCommander: RoverUrlRuleCommander) {
 
   def fetch[A](url: String, ifModifiedSince: Option[DateTime] = None, shouldThrottle: Boolean)(f: FetchResult[HttpInputStream] => A)(implicit ec: ExecutionContext): Future[A] = {

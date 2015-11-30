@@ -32,7 +32,6 @@ class LibrarySubscriptionCommanderImpl @Inject() (
     httpClient: HttpClient,
     librarySubscriptionRepo: LibrarySubscriptionRepo,
     userRepo: UserRepo,
-    organizationRepo: OrganizationRepo,
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration,
     protected val airbrake: AirbrakeNotifier) extends LibrarySubscriptionCommander with Logging {

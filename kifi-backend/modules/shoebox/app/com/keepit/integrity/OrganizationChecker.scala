@@ -20,7 +20,6 @@ class OrganizationChecker @Inject() (
     airbrake: AirbrakeNotifier,
     clock: Clock,
     db: Database,
-    userRepo: UserRepo,
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryCommander: LibraryCommander,

@@ -26,9 +26,6 @@ class KeepChecker @Inject() (
     ktuRepo: KeepToUserRepo,
     ktlCommander: KeepToLibraryCommander,
     ktuCommander: KeepToUserCommander,
-    userRepo: UserRepo,
-    libraryRepo: LibraryRepo,
-    organizationRepo: OrganizationRepo,
     systemValueRepo: SystemValueRepo,
     implicit val executionContext: ExecutionContext) extends Logging with Debouncing {
 

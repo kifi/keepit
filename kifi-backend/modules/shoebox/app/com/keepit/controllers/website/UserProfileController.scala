@@ -37,7 +37,6 @@ class UserProfileController @Inject() (
     userProfileCommander: UserProfileCommander,
     val userActionsHelper: UserActionsHelper,
     friendStatusCommander: FriendStatusCommander,
-    libraryCommander: LibraryCommander,
     orgMembershipRepo: OrganizationMembershipRepo,
     organizationInfoCommander: OrganizationInfoCommander,
     orgInviteRepo: OrganizationInviteRepo,

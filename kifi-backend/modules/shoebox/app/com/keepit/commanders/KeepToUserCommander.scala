@@ -32,7 +32,6 @@ trait KeepToUserCommander {
 
 @Singleton
 class KeepToUserCommanderImpl @Inject() (
-  db: Database,
   clock: Clock,
   ktuRepo: KeepToUserRepo)
     extends KeepToUserCommander with Logging {

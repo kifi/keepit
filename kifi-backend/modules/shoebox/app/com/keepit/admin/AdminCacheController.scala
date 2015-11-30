@@ -15,7 +15,6 @@ import com.keepit.common.cache.{ MemcachedCache, InMemoryCachePlugin }
 @Singleton
 class AdminCacheController @Inject() (
     val userActionsHelper: UserActionsHelper,
-    httpClient: HttpClient,
     localCache: InMemoryCachePlugin,
     memcachedCache: MemcachedCache,
     serviceDiscovery: ServiceDiscovery) extends AdminUserActions {

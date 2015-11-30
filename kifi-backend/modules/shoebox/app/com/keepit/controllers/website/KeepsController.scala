@@ -28,19 +28,14 @@ import com.keepit.common.core._
 class KeepsController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
-  userRepo: UserRepo,
   keepRepo: KeepRepo,
   keepDecorator: KeepDecorator,
   collectionRepo: CollectionRepo,
-  uriRepo: NormalizedURIRepo,
   collectionCommander: CollectionCommander,
   keepsCommander: KeepCommander,
   keepExportCommander: KeepExportCommander,
-  userValueRepo: UserValueRepo,
   clock: Clock,
-  normalizedURIInterner: NormalizedURIInterner,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
-  libraryCommander: LibraryCommander,
   airbrake: AirbrakeNotifier,
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {

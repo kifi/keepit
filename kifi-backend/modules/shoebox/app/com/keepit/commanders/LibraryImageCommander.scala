@@ -42,7 +42,6 @@ class LibraryImageCommanderImpl @Inject() (
     imageStore: RoverImageStore,
     libraryAnalytics: LibraryAnalytics,
     s3ImageConfig: S3ImageConfig,
-    normalizedUriRepo: NormalizedURIRepo,
     photoshop: Photoshop,
     implicit val executionContext: ExecutionContext,
     val webService: WebService) extends LibraryImageCommander with ProcessedImageHelper with Logging {

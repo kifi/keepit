@@ -12,7 +12,6 @@ import play.api.libs.functional.syntax._
 
 @Singleton
 class OrganizationChatStatisticsCommander @Inject() (
-    val orgRepo: OrganizationRepo,
     val elizaServiceClient: ElizaServiceClient,
     implicit val executionContext: ExecutionContext) {
 

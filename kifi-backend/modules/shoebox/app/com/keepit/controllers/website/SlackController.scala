@@ -22,12 +22,10 @@ class SlackController @Inject() (
     slackCommander: SlackCommander,
     libraryAccessCommander: LibraryAccessCommander,
     deepLinkRouter: DeepLinkRouter,
-    libraryToSlackChannelProcessor: LibraryToSlackChannelPusher,
     slackToLibRepo: SlackChannelToLibraryRepo,
     userRepo: UserRepo,
     val userActionsHelper: UserActionsHelper,
     val db: Database,
-    val permissionCommander: PermissionCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 

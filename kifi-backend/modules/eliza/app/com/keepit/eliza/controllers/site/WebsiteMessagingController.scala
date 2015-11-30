@@ -18,7 +18,6 @@ import scala.concurrent.Future
 import scala.util.{ Success, Failure }
 
 class WebsiteMessagingController @Inject() (
-    messagingCommander: MessagingCommander,
     notificationCommander: NotificationDeliveryCommander,
     discussionCommander: ElizaDiscussionCommander,
     val userActionsHelper: UserActionsHelper,

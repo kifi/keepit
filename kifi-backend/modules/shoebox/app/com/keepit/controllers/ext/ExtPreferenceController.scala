@@ -24,7 +24,6 @@ class ExtPreferenceController @Inject() (
   val userActionsHelper: UserActionsHelper,
   db: Database,
   urlPatternRepo: URLPatternRepo,
-  userRepo: UserRepo,
   userValueRepo: UserValueRepo,
   notifyPreferenceRepo: UserNotifyPreferenceRepo,
   domainRepo: DomainRepo,

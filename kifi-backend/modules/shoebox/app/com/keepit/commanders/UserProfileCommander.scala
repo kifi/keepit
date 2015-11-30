@@ -35,14 +35,12 @@ class UserProfileCommander @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
-    libraryImageRepo: LibraryImageRepo,
     basicUserRepo: BasicUserRepo,
     userConnectionRepo: UserConnectionRepo,
     userValueRepo: UserValueRepo,
     libraryCardCommander: LibraryCardCommander,
     libraryMembershipCommander: LibraryMembershipCommander,
     graphServiceClient: GraphServiceClient,
-    organizationCommander: OrganizationCommander,
     implicit val defaultContext: ExecutionContext,
     implicit val config: PublicIdConfiguration) {
 

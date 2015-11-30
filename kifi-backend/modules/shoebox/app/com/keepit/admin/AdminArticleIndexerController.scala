@@ -14,7 +14,6 @@ import com.google.inject.Inject
 class AdminArticleIndexerController @Inject() (
     val userActionsHelper: UserActionsHelper,
     searchClient: SearchServiceClient,
-    db: Database,
     normUriRepo: NormalizedURIRepo) extends AdminUserActions {
 
   def index = AdminUserPage { implicit request =>

@@ -16,9 +16,7 @@ import play.api.libs.json.{ JsArray, JsNumber, Json }
 class MobilePeopleRecommendationController @Inject() (
     val userActionsHelper: UserActionsHelper,
     peopleRecoCommander: UserCommander,
-    socialUserRepo: SocialUserInfoRepo,
     db: Database,
-    libraryRepo: LibraryRepo,
     userRepo: UserRepo,
     abookServiceClient: ABookServiceClient,
     val userProfileCommander: UserProfileCommander,

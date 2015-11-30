@@ -24,11 +24,7 @@ trait InviteEmailData {
 }
 
 class InviteToKifiSender @Inject() (
-    db: Database,
-    emailAddressRepo: UserEmailAddressRepo,
     emailTemplateSender: EmailTemplateSender,
-    userRepo: UserRepo,
-    s3ImageStore: S3ImageStore,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
   def apply(toAddress: EmailAddress, fromUserId: Id[User], inviteId: ExternalId[Invitation]): Future[ElectronicMail] = {

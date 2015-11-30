@@ -15,7 +15,6 @@ case class KeywordsSummary(article: Seq[String], embedly: Seq[EmbedlyKeyword], w
 
 class KeywordSummaryCommander @Inject() (
     rover: RoverServiceClient,
-    cortex: CortexServiceClient,
     implicit val executionContext: ExecutionContext) {
 
   def getFetchedKeywords(uriId: Id[NormalizedURI]): Future[(Set[String], Seq[EmbedlyKeyword])] = {

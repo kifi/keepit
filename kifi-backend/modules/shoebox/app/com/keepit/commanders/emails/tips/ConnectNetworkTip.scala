@@ -13,7 +13,6 @@ import scala.concurrent.Future
 
 class ConnectNetworkTip @Inject() (
     db: Database,
-    emailRepo: UserEmailAddressRepo,
     socialUserInfoRepo: SocialUserInfoRepo,
     private val airbrake: AirbrakeNotifier) extends TipTemplate {
 

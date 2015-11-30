@@ -25,17 +25,9 @@ import com.keepit.common.logging.AccessLog
 import scala.concurrent.Future
 
 class ExtMessagingController @Inject() (
-    postOffice: RemotePostOffice,
     messagingCommander: MessagingCommander,
     val userActionsHelper: UserActionsHelper,
-    notificationRouter: WebSocketRouter,
-    amazonInstanceInfo: AmazonInstanceInfo,
-    threadRepo: MessageThreadRepo,
     emailCommander: ElizaEmailCommander,
-    protected val shoebox: ShoeboxServiceClient,
-    protected val search: SearchServiceClient,
-    protected val impersonateCookie: ImpersonateCookie,
-    protected val actorSystem: ActorSystem,
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,

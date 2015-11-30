@@ -47,7 +47,6 @@ trait HandleCommander {
 
 @Singleton
 class HandleCommanderImpl @Inject() (
-    db: Database,
     handleRepo: HandleOwnershipRepo,
     userRepo: UserRepo,
     usernameCache: UsernameCache,

@@ -13,7 +13,6 @@ import scala.concurrent.Future
 
 class ABookAdminController @Inject() (
   val userActionsHelper: UserActionsHelper,
-  db: Database,
   abookServiceClient: ABookServiceClient)
     extends AdminUserActions {
 

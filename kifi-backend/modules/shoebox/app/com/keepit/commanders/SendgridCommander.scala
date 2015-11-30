@@ -18,15 +18,12 @@ import scala.concurrent.ExecutionContext
 
 class SendgridCommander @Inject() (
     db: Database,
-    systemAdminMailSender: SystemAdminMailSender,
     heimdalClient: HeimdalServiceClient,
     emailAddressRepo: UserEmailAddressRepo,
     electronicMailRepo: ElectronicMailRepo,
     emailOptOutRepo: EmailOptOutRepo,
-    recoCommander: RecommendationsCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     userExperimentCommander: RemoteUserExperimentCommander,
-    userEmailAddressCommander: UserEmailAddressCommander,
     implicit val executionContext: ExecutionContext,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 

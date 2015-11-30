@@ -37,15 +37,10 @@ class UriIntegrityActor @Inject() (
     urlRepo: URLRepo,
     val keepRepo: KeepRepo,
     keepCommander: KeepCommander,
-    ktlCommander: KeepToLibraryCommander,
-    ktuCommander: KeepToUserCommander,
     changedUriRepo: ChangedURIRepo,
-    keepToCollectionRepo: KeepToCollectionRepo,
-    collectionRepo: CollectionRepo,
     renormRepo: RenormalizedURLRepo,
     centralConfig: CentralConfig,
     val airbrake: AirbrakeNotifier,
-    keepUriUserCache: KeepUriUserCache,
     helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with UriIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */

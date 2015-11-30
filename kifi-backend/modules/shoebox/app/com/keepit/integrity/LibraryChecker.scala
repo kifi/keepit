@@ -21,7 +21,6 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
     libraryCommander: LibraryCommander,
     val libraryMembershipRepo: LibraryMembershipRepo,
     val libraryRepo: LibraryRepo,
-    val organizationRepo: OrganizationRepo,
     val userRepo: UserRepo,
     val systemValueRepo: SystemValueRepo) extends Logging {
 

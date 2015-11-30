@@ -94,8 +94,6 @@ class TwitterSocialGraphImpl @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     libraryImageCommander: LibraryImageCommander,
     libPathCommander: PathCommander,
-    elizaServiceClient: ElizaServiceClient,
-    kifiInstallationCommander: KifiInstallationCommander,
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext,
     userRepo: UserRepo) extends TwitterSocialGraph with Logging {

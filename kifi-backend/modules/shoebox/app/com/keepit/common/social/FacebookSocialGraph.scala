@@ -63,7 +63,6 @@ class FacebookSocialGraph @Inject() (
     httpClient: HttpClient,
     db: Database,
     clock: Clock,
-    postOffice: LocalPostOffice,
     socialRepo: SocialUserInfoRepo,
     airbrake: AirbrakeNotifier) extends SocialGraph with Logging {
 
