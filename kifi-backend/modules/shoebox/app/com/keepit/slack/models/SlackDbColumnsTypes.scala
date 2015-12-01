@@ -2,6 +2,7 @@ package com.keepit.slack.models
 
 import com.keepit.common.strings._
 import com.keepit.common.db.slick.DataBaseComponent
+import com.keepit.common.util.DescriptionElements
 import play.api.libs.json.{ Json, Writes }
 
 object SlackDbColumnTypes {
@@ -60,6 +61,16 @@ object SlackMessageRequest {
     attachments = attachments,
     unfurlLinks = true,
     unfurlMedia = true
+  )
+
+  def inhouse(txt: DescriptionElements) = SlackMessageRequest(
+    text = DescriptionElements.formatForSlack(txt),
+    channel = None,
+    username = "inhouse-kifi-bot",
+    iconUrl = "http://i.imgur.com/rBbZOrg.png",
+    attachments = Seq.empty,
+    unfurlLinks = false,
+    unfurlMedia = false
   )
 
   implicit val writes: Writes[SlackMessageRequest] = Writes { o =>

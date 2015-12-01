@@ -9,7 +9,6 @@ import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress, LocalPostOffice, SystemEmailAddress }
-import com.keepit.common.net.HttpClient
 import com.keepit.common.time._
 import com.keepit.common.util.{ DollarAmount, LinkElement, DescriptionElements }
 import com.keepit.eliza.ElizaServiceClient
@@ -17,7 +16,7 @@ import com.keepit.model.{ NotificationCategory, Organization, OrganizationRepo, 
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.RewardCreditApplied
 import com.keepit.payments.AccountEventAction.RewardCredit
-import com.keepit.slack.SlackClient
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.slack.models.{ SlackChannelName, SlackMessageRequest }
 import play.api.Mode
 
@@ -40,7 +39,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
     paymentMethodRepo: PaymentMethodRepo,
     pathCommander: PathCommander,
     postOffice: LocalPostOffice,
-    slackClient: SlackClient,
+    inhouseSlackClient: InhouseSlackClient,
     stripeClient: StripeClient,
     mode: play.api.Mode.Mode,
     airbrake: AirbrakeNotifier,
@@ -79,7 +78,6 @@ class AccountEventTrackingCommanderImpl @Inject() (
   } else Future.successful(())
 
   // todo(Léo): *temporary* this was copied straight from PaymentProcessingCommander
-  private val slackChannelUrl = "https://hooks.slack.com/services/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"
   private val reportingLock = new ReactiveLock(1) // guarantees event reporting order
   def reportToSlack(msg: String, channel: SlackChannelName): Future[Unit] = {
     reportingLock.withLockFuture {
@@ -92,7 +90,7 @@ class AccountEventTrackingCommanderImpl @Inject() (
         unfurlLinks = false,
         unfurlMedia = false
       )
-      slackClient.sendToSlack(slackChannelUrl, fullMsg).imap(_ => ())
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.BILLING_ALERTS, fullMsg).imap(_ => ())
     }
   }
 
