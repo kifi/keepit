@@ -1,5 +1,6 @@
 package com.keepit.commanders
 
+import java.lang.reflect.UndeclaredThrowableException
 import java.util.UUID
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
@@ -90,13 +91,6 @@ class KeepInternerImpl @Inject() (
       keepsAbuseMonitor.inspect(userId, total)
       libraryAnalytics.keepImport(userId, clock.now, context, total, deduped.headOption.map(_.source).getOrElse(KeepSource.bookmarkImport))
 
-      db.readWrite(attempts = 3) { implicit session =>
-        // This isn't designed to handle multiple imports at once. When we need this, it'll need to be tweaked.
-        // If it happens, the user will experience the % complete jumping around a bit until it's finished.
-        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_DONE, 0)
-        userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL, total)
-        userValueRepo.setValue(userId, UserValueName.bookmarkImportContextName(newImportId), Json.toJson(context))
-      }
       deduped.grouped(500).foreach { rawKeepGroup =>
         // insertAll fails if any of the inserts failed
         log.info(s"[persistRawKeeps] Persisting ${rawKeepGroup.length} raw keeps")
@@ -213,7 +207,13 @@ class KeepInternerImpl @Inject() (
               keep.copy(createdAt = clock.now)
             } else keep
           } |> { keep =>
-            keepCommander.persistKeep(keep, Set(userId), Set(library.id.get))
+            try {
+              keepCommander.persistKeep(keep, Set(userId), Set(library.id.get))
+            } catch {
+              case ex: UndeclaredThrowableException =>
+                log.warn(s"[keepinterner] Persisting keep failed of ${keep.url} (${keep.id.get})", ex)
+                throw ex.getUndeclaredThrowable
+            }
           }
         (false, wasInactiveKeep, savedKeep)
       case None =>
@@ -231,7 +231,14 @@ class KeepInternerImpl @Inject() (
           note = note,
           originalKeeperId = Some(userId)
         )
-        val improvedKeep = keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get))
+        val improvedKeep = try {
+          keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get))
+        } catch {
+          case ex: UndeclaredThrowableException =>
+            log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex)
+            throw ex.getUndeclaredThrowable
+        }
+
         (true, false, improvedKeep)
     }
     if (wasInactiveKeep) {

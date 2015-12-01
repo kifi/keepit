@@ -84,81 +84,52 @@ private class RawKeepImporterActor @Inject() (
     rawKeeps.groupBy(rk => (rk.userId, rk.importId, rk.source, rk.installationId, rk.libraryId)).foreach {
       case ((userId, importIdOpt, source, installationId, libraryId), rawKeepGroup) =>
 
-        val context = importIdOpt.flatMap(importId => getHeimdalContext(userId, importId)).getOrElse(HeimdalContext.empty)
+        val ctx = importIdOpt.flatMap(importId => getHeimdalContext(userId, importId)).getOrElse(HeimdalContext.empty)
 
-        // ------------------- helpers ---------------------
-
-        def parseRawBookmarksFromJson(rawKeepGroup: Seq[RawKeep]) = {
-          rawKeepGroup.map { rk =>
-            val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
-            val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
-            val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
-            RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None, keptAt = rk.createdDate, sourceAttribution = attribution)
-          }.distinctBy(_.url)
-        }
-
-        def internKeeps(userId: Id[User], rawBookmarks: Seq[RawBookmarkRepresentation]) = {
-          val library = db.readWrite { implicit s => libraryRepo.get(libraryId.get) }
-          val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(context)
-          val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
-
-          val failuresRawKeep = failures.flatMap(s => rawKeepByUrl.get(s.url)).toSet
-          val successesRawKeep = rawKeepGroup.filterNot(v => failuresRawKeep.contains(v))
-          log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
-
-          if (failuresRawKeep.nonEmpty) {
-            db.readWriteBatch(failuresRawKeep.toSeq) {
-              case (session, rk) =>
-                rawKeepRepo.setState(rk.id.get, RawKeepStates.FAILED)(session)
-            }
-          }
-
-          (successes, successesRawKeep)
-        }
-
-        def setUserValue(): Unit = {
-          val (doneOpt, totalOpt) = db.readOnlyMaster { implicit session =>
-            (userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_DONE).map(_.toInt),
-              userValueRepo.getValueStringOpt(userId, UserValueName.BOOKMARK_IMPORT_TOTAL).map(_.toInt))
-          }
-
-          db.readWrite { implicit session =>
-            (doneOpt, totalOpt) match {
-              case (Some(done), Some(total)) =>
-                if (done + rawKeepGroup.length >= total) {
-                  // Import is done
-                  userValueRepo.clearValue(userId, UserValueName.BOOKMARK_IMPORT_DONE)
-                  userValueRepo.clearValue(userId, UserValueName.BOOKMARK_IMPORT_TOTAL)
-                  importIdOpt.map { importId =>
-                    userValueRepo.clearValue(userId, UserValueName.bookmarkImportContextName(importId))
-                  }
-                } else {
-                  userValueRepo.setValue(userId, UserValueName.BOOKMARK_IMPORT_DONE, done + rawKeepGroup.length)
-                }
-              case _ =>
-            }
-          }
-        }
-
-        //------------------------ main method ----------------------
-
-        val rawBookmarks = parseRawBookmarksFromJson(rawKeepGroup)
-        val (successes, successesRawKeep) = internKeeps(userId, rawBookmarks)
+        val successes = internKeeps(userId, libraryId.get, rawKeepGroup, source, ctx)
 
         if (successes.nonEmpty) {
           //process tags: create collections, put keeps into collections.
-          tagHelper.process(RawKeepGroupImportContext(userId, source, installationId, rawKeepGroup, successes, context))
-
-          // mark done
-          db.readWriteBatch(successesRawKeep, attempts = 5) {
-            case (session, rk) =>
-              rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
-          }
+          tagHelper.process(RawKeepGroupImportContext(userId, source, installationId, rawKeepGroup, successes, ctx))
         }
-
-        setUserValue()
-
     }
+  }
+
+  private def parseRawBookmarksFromJson(rawKeepGroup: Seq[RawKeep]) = {
+    rawKeepGroup.map { rk =>
+      val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
+      val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
+      val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
+      RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None, keptAt = rk.createdDate, sourceAttribution = attribution)
+    }.distinctBy(_.url)
+  }
+
+  private def internKeeps(userId: Id[User], libraryId: Id[Library], rawKeepGroup: Seq[RawKeep], source: KeepSource, ctx: HeimdalContext) = {
+    val rawBookmarks = parseRawBookmarksFromJson(rawKeepGroup)
+    val library = db.readWrite { implicit s => libraryRepo.get(libraryId) }
+    val (successes, failures) = bookmarkInternerProvider.get.internRawBookmarks(rawBookmarks, userId, library, source)(ctx)
+    val rawKeepByUrl = rawKeepGroup.map(rk => rk.url -> rk).toMap
+
+    val failuresRawKeep = failures.flatMap(s => rawKeepByUrl.get(s.url)).toSet
+    val successesRawKeep = rawKeepGroup.filterNot(v => failuresRawKeep.contains(v))
+    log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
+
+    if (failuresRawKeep.nonEmpty) {
+      db.readWriteBatch(failuresRawKeep.toSeq) {
+        case (session, rk) =>
+          rawKeepRepo.setState(rk.id.get, RawKeepStates.FAILED)(session)
+      }
+    }
+
+    if (successesRawKeep.nonEmpty) {
+      // mark done
+      db.readWriteBatch(successesRawKeep, attempts = 5) {
+        case (session, rk) =>
+          rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
+      }
+    }
+
+    successes
   }
 
   private def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {

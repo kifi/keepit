@@ -47,12 +47,8 @@ class RawBookmarkFactory @Inject() (
     airbrake: AirbrakeNotifier,
     clock: Clock) {
 
-  @deprecated("KeepInfo was never intended to be an input value class. Use RawBookmarkRepresentation.", "2014-08-29")
-  def toRawBookmark(keepInfos: Seq[KeepInfo]): Seq[RawBookmarkRepresentation] =
-    keepInfos map { k => RawBookmarkRepresentation(title = k.title, url = k.url, isPrivate = Some(k.isPrivate), keptAt = k.createdAt) }
-
   private[commanders] def getBookmarkJsonObjects(value: JsValue): Seq[JsObject] = value match {
-    case JsArray(elements) => elements.map(getBookmarkJsonObjects).flatten
+    case JsArray(elements) => elements.flatMap(getBookmarkJsonObjects)
     case json: JsObject if json.keys.contains("children") => getBookmarkJsonObjects(json \ "children")
     case json: JsObject if json.keys.contains("bookmarks") => getBookmarkJsonObjects(json \ "bookmarks")
     case json: JsObject => Seq(json)

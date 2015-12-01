@@ -145,14 +145,7 @@ class BookmarkImporter @Inject() (
       }
       log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
 
-      val (importId, rawKeeps) = Library.decodePublicId(pubId) match {
-        case Failure(ex) =>
-          // airbrake.notify(s"importing to library with invalid pubId ${pubId}")
-          throw new Exception(s"importing to library with invalid pubId ${pubId}")
-          ("", List.empty[RawKeep])
-        case Success(id) =>
-          createRawKeeps(lf.request.userId, sourceOpt, taggedKeeps, id)
-      }
+      val (importId, rawKeeps) = createRawKeeps(lf.request.userId, sourceOpt, taggedKeeps, Library.decodePublicId(pubId).get)
 
       log.info(s"[bmFileImport:${lf.id}] Raw keep start persisting in ${clock.getMillis() - lf.startMillis}ms")
       keepInterner.persistRawKeeps(rawKeeps, Some(importId))
@@ -302,7 +295,7 @@ class EvernoteParser @Inject() () extends ImportParser {
     val notes = Jsoup.parse(bookmarks.file, "UTF-8").select("note").iterator().toStream
 
     val parsed = notes.flatMap { note =>
-      val createdAt = Option(note.select("updated")).orElse(Option(note.select("created"))).flatMap(s => Option(s.text())).map(formatter.parseDateTime)
+      val createdAt = Option(note.select("updated")).orElse(Option(note.select("created"))).flatMap(s => Option(s.text())).flatMap(d => Try(formatter.parseDateTime(d)).toOption)
       val links = Jsoup.parse(note.select("content").text()).select("en-note a").iterator().toStream.flatMap { elem =>
         val href = Option(elem.attr("href"))
         val text = Option(elem.text()).filterNot { text =>
