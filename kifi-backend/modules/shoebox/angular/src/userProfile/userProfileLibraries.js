@@ -74,20 +74,25 @@ angular.module('kifi')
       return libraryLazyLoader.hasMore();
     };
 
-    
-
     $scope.openCreateLibrary = function () {
+      function getOffsetLeft(element) {
+        var offset = element && element.offset && element.offset();
+        var offsetLeft = offset && offset.left;
+        return offsetLeft || 0;
+      }
       function addNewLibAnimationClass(newLibrary) {
         // If the second system library card is under the create-library card,
         // then there are two cards across and the new library will be
         // below and across from the create-library card.
-        if ((Math.abs(angular.element('.kf-upl-create-card').offset().left -
-                      angular.element('.kf-upl-lib-card').eq(1).offset().left)) < 10) {
+        var spaceBetween = Math.abs(
+          getOffsetLeft(angular.element('.kf-upl-create-card')) -
+          getOffsetLeft(angular.element('.kf-upl-lib-card').eq(1))
+        );
+        if (spaceBetween < 10) {
           newLibrary.justAddedBelowAcross = true;
-        }
-        // Otherwise, there are three cards across and the new library will be
-        // directly below the create-library-card.
-        else {
+        } else {
+          // Otherwise, there are three cards across and the new library will be
+          // directly below the create-library-card.
           newLibrary.justAddedBelow = true;
         }
 
