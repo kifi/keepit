@@ -160,13 +160,15 @@ class KeepCommanderImpl @Inject() (
     }
     keeps.map {
       case (keepId, keep) => keepId -> CrossServiceKeep(
-        keepId,
-        keep.userId,
-        users.getOrElse(keepId, Set.empty),
-        libs.getOrElse(keepId, Set.empty),
-        keep.title,
-        keep.url,
-        keep.uriId
+        id = keepId,
+        owner = keep.userId,
+        users = users.getOrElse(keepId, Set.empty),
+        libraries = libs.getOrElse(keepId, Set.empty),
+        url = keep.url,
+        uriId = keep.uriId,
+        keptAt = keep.keptAt,
+        title = keep.title,
+        note = keep.note
       )
     }
   }
