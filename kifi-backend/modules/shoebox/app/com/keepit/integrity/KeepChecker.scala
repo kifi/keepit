@@ -43,8 +43,8 @@ class KeepChecker @Inject() (
       val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
       if (keeps.nonEmpty) {
         keeps.foreach { keep =>
-          ensureUriIntegrity(keep.id.get)
           ensureStateIntegrity(keep.id.get)
+          ensureUriIntegrity(keep.id.get)
           ensureLibrariesHashIntegrity(keep.id.get)
           ensureParticipantsHashIntegrity(keep.id.get)
         }
