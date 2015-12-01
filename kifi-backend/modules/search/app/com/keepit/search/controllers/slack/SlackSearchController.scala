@@ -75,9 +75,9 @@ class SlackSearchController @Inject() (
       }
       else {
         shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None).map { libraries =>
-          def listLibraries(ids: Set[Id[Library]]): Elements = ids.flatMap(libraries.get(_)).toSeq.sortBy(_.name).map { lib =>
+          def listLibraries(ids: Set[Id[Library]]): Elements = Elements.unlines(ids.flatMap(libraries.get(_)).toSeq.sortBy(_.name).map { lib =>
             lib.name --> LinkElement(lib.url)
-          }.join("\n")
+          })
           val allLibraries: Elements = Elements(
             s"The following Kifi libraries are connected with #${channelName.value}:", "\n",
             "```", listLibraries(integrations.allLibraries), "```"
@@ -94,7 +94,7 @@ class SlackSearchController @Inject() (
           )
 
           val moreHelp = Elements(s"Learn more about Kifi and Slack." --> LinkElement(supportLink))
-          Elements(allLibraries, fromLibraries, toLibraries, moreHelp).join("\n\n")
+          Elements.unlines(Seq(allLibraries, fromLibraries, toLibraries, moreHelp))
         }
       }
     }
