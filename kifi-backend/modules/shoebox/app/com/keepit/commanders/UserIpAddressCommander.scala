@@ -14,8 +14,9 @@ import com.keepit.common.mail.EmailAddress
 import com.keepit.common.net.{ DirectUrl, HttpClient, UserAgent }
 import com.keepit.common.service.IpAddress
 import com.keepit.common.time._
+import com.keepit.common.util.DescriptionElements
 import com.keepit.model._
-import com.keepit.slack.SlackClient
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import com.keepit.slack.models.SlackMessageRequest
 import org.joda.time.{ DateTime, Period }
 import play.api.libs.functional.syntax._
@@ -90,7 +91,7 @@ class UserIpAddressEventLogger @Inject() (
     userIpAddressRepo: UserIpAddressRepo,
     userValueRepo: UserValueRepo,
     httpClient: HttpClient,
-    slackClient: SlackClient,
+    slackClient: InhouseSlackClient,
     richIpAddressCache: RichIpAddressCache,
     organizationRepo: OrganizationRepo,
     organizationMembershipCandidateRepo: OrganizationMembershipCandidateRepo,
@@ -99,7 +100,6 @@ class UserIpAddressEventLogger @Inject() (
     userCommander: UserCommander,
     clock: Clock) extends Logging {
 
-  private val ipClusterSlackChannelUrl = "https://hooks.slack.com/services/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"
   private val clusterMemoryTime = Period.days(2) // How long back do we look and still consider a user to be part of a cluster
 
   def logUser(event: UserIpAddressEvent): Unit = {
@@ -151,7 +151,7 @@ class UserIpAddressEventLogger @Inject() (
 
   private val GenericISP = Seq("comcast", "at&t", "verizon", "level 3", "communication", "mobile", "internet", "wifi", "broadband", "telecom", "orange", "network")
 
-  private def formatCluster(ip: RichIpAddress, users: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): SlackMessageRequest = {
+  private def describeCluster(ip: RichIpAddress, users: Seq[(User, Option[EmailAddress], Seq[Organization], Seq[Organization])], newUserId: Option[Id[User]]): SlackMessageRequest = {
     val clusterDeclaration = Seq(
       s"Found a cluster of ${users.length} at <http://ip-api.com/${ip.ip.ip}|${ip.ip.ip}>",
       s"I think the company is in ${ip.region.map(_ + ", ").getOrElse("")}${ip.country.getOrElse("")} ",
@@ -165,7 +165,7 @@ class UserIpAddressEventLogger @Inject() (
       case (user, email, candidateOrgs, orgs) => formatUser(user, email, candidateOrgs, orgs, user.id == newUserId)
     }
 
-    SlackMessageRequest.fromKifi((clusterDeclaration ++ userDeclarations).mkString("\n")).quiet
+    SlackMessageRequest.inhouse(DescriptionElements((clusterDeclaration ++ userDeclarations).mkString("\n")))
   }
 
   private def heuristicsSayThisClusterIsRelevant(ipInfo: RichIpAddress): Boolean = {
@@ -208,8 +208,8 @@ class UserIpAddressEventLogger @Inject() (
               s"candidates of organizations or have been marked as ignored for potential organizations")
           } else {
             log.info(s"[IPTRACK NOTIFY] making request to notify slack channel about $clusterIp")
-            val msg = formatCluster(ipInfo, usersFromCluster, newUserId)
-            slackClient.sendToSlack(ipClusterSlackChannelUrl, msg)
+            val msg = describeCluster(ipInfo, usersFromCluster, newUserId)
+            slackClient.sendToSlack(InhouseSlackChannel.IP_CLUSTERS, msg)
           }
         }
       }
