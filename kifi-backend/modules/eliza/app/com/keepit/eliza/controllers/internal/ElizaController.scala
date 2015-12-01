@@ -140,12 +140,6 @@ class ElizaController @Inject() (
     Ok(Json.toJson(threadStats))
   }
 
-  def getTotalMessageCountForGroup = Action(parse.tolerantJson) { request =>
-    val userIds = request.body.as[Set[Id[User]]]
-    val totalMessages = elizaStatsCommander.getTotalMessageCountForGroup(userIds)
-    Ok(Json.toJson(totalMessages))
-  }
-
   def getParticipantsByThreadExtId(threadId: ExternalId[MessageThread]) = Action { request =>
     val participants = elizaStatsCommander.getThreadByExtId(threadId).participants.map { _.allUsers }.getOrElse(Set.empty)
     Ok(Json.toJson(participants))

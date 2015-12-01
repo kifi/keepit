@@ -50,6 +50,8 @@ class MessageRepoImpl @Inject() (
     def sentOnUriId = column[Option[Id[NormalizedURI]]]("sent_on_uri_id", O.Nullable)
     def nonUserSender = column[Option[JsValue]]("non_user_sender", O.Nullable)
 
+    def fromHuman: Column[Boolean] = from.isDefined || nonUserSender.isDefined
+
     def * = (id.?, createdAt, updatedAt, state, externalId, from, thread, threadExtId, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
   }
   def table(tag: Tag) = new MessageTable(tag)
@@ -134,7 +136,7 @@ class MessageRepoImpl @Inject() (
   }
 
   def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int] = {
-    rows.filter(row => row.thread.inSet(threadIds)).groupBy(_.thread).map { case (thread, messages) => (thread, messages.length) }.list.toMap
+    rows.filter(row => row.thread.inSet(threadIds) && row.fromHuman).groupBy(_.thread).map { case (thread, messages) => (thread, messages.length) }.list.toMap
   }
 
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage = {

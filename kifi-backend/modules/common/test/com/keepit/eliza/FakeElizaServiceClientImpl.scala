@@ -87,8 +87,6 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
 
   override def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = Future.successful(Seq.empty)
 
-  override def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = Future.successful(0)
-
   override def sendNotificationEvent(event: NotificationEvent): Future[Unit] = {
     inbox = event +: inbox
     Future.successful(())
