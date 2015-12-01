@@ -254,7 +254,7 @@ angular.module('kifi')
           scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1;
           scope.galleryView = !profileService.prefs.use_minimal_keep_card;
 
-          var permissions = keep.library.permissions || [];
+          var permissions = (keep.library && keep.library.permissions) || [];
           scope.canEditKeep = (keep.user.id === scope.me.id &&
             permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1;
 
