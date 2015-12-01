@@ -147,6 +147,23 @@ package object json {
     def seq[U](implicit formatter: Format[U]) = materialize[U, Seq[U]]
     def set[U](implicit formatter: Format[U]) = materialize[U, Set[U]]
 
+    def mapReads[K, V](fromKey: String => Option[K])(implicit vReads: Reads[V]): Reads[Map[K,V]] = Reads { j =>
+      j.validate[JsObject].flatMap { jsObj =>
+        val pairs = jsObj.fields.map {
+          case (jsK, jsV) => for { k <- fromKey(jsK); v <- vReads.reads(jsV).asOpt } yield k -> v
+        }
+        pairs.zipWithIndex.find(_._1.isEmpty) match {
+          case Some((_, failedIdx)) => JsError(s"Could not parse ${jsObj.fields(failedIdx)} as a key-value pair")
+          case None => JsSuccess(pairs.map(_.get).toMap)
+        }
+      }
+    }
+    def mapWrites[K, V](toKey: K => String)(implicit vWrites: Writes[V]): Writes[Map[K,V]] = Writes { o =>
+      JsObject(o.toSeq.map { case (k,v) => toKey(k) -> vWrites.writes(v) })
+    }
+    def mapFormat[K, V](toKey: K => String, fromKey: String => Option[K])(implicit vFormat: Format[V]): Format[Map[K,V]] =
+      Format(mapReads(fromKey), mapWrites(toKey))
+
     def safeArrayReads[T](implicit reads: Reads[T]): Reads[Seq[T]] = Reads { jsv =>
       jsv.validate[Seq[JsValue]].map { arr =>
         val vs = arr.map { v => Try(v.as[T]) }
