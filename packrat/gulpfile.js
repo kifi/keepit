@@ -420,9 +420,11 @@ gulp.task('xpi-firefox', ['build', 'config'], function () {
     .pipe(gulp.dest('.'))
     .pipe(shell([
       // TODO: verify jpm version before using it
+      // TODO(carlos): remove the line with sed when https://github.com/mozilla-jetpack/jpm/issues/409 is resolved
       (target === 'dev' ? 'cp icons/dev/kifi.??.png out/firefox/data/icons/ && ' : '') + '\
       cd ' + path.join(outDir + '/firefox') + ' && \
       jpm xpi && \
+      sed -i ".bak" -e \'s/"urn:mozilla:kifi/"urn:mozilla:extension:kifi/g\' kifi\@42go.com-*.*.*.update.rdf && \
       cp *.xpi ../kifi.xpi && \
       cp *.update.rdf ../kifi.update.rdf && \
       cd - > /dev/null'
