@@ -26,25 +26,22 @@ class ShoeboxDiscussionController @Inject() (
     extends ShoeboxServiceController with Logging {
 
   def internKeep() = Action(parse.tolerantJson) { request =>
-    val rawKeep = request.body.as[ExternalRawKeep]
+    val createReq = request.body.as[KeepCreateRequest]
+    assert(createReq.libraries.size == 1)
+    assert(createReq.users.size == 1)
 
     implicit val context = heimdalContextBuilderFactory.withRequestInfo(request).build
 
-    val rawBookmark = RawBookmarkRepresentation.fromExternalRawKeep(rawKeep)
-    val users = db.readOnlyReplica { implicit s =>
-      userRepo.getAllUsersByExternalId(rawKeep.users).map { case (extId, u) => extId -> u.id.get }
-    }
-    val owner = users(rawKeep.owner)
-    val libraries = rawKeep.libraries.map(pubId => Library.decodePublicId(pubId).get)
-    assert(libraries.size == 1)
     val libPermissions = db.readOnlyReplica { implicit s =>
-      permissionCommander.getLibrariesPermissions(libraries, Some(owner))
+      permissionCommander.getLibrariesPermissions(createReq.libraries, Some(createReq.owner))
     }
-    val userCanWriteToAllRequiredLibraries = libraries.forall { libId =>
+    val userCanWriteToAllRequiredLibraries = createReq.libraries.forall { libId =>
       libPermissions.get(libId).exists(_.contains(LibraryPermission.ADD_KEEPS))
     }
+
     if (userCanWriteToAllRequiredLibraries) {
-      val (keep, _) = keepCommander.keepOne(rawBookmark, owner, libraries.head, KeepSource.keeper, SocialShare.empty)
+      val rawBookmark = RawBookmarkRepresentation.fromCreateRequest(createReq)
+      val (keep, _) = keepCommander.keepOne(rawBookmark, createReq.owner, createReq.libraries.head, KeepSource.keeper, SocialShare.empty)
       val csKeep = keepCommander.getCrossServiceKeeps(Set(keep.id.get)).get(keep.id.get).get
       Ok(Json.toJson(csKeep))
     } else Forbidden(Json.obj("error" -> "cannot_write_to_library"))

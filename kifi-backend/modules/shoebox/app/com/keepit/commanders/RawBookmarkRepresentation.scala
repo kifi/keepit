@@ -39,14 +39,14 @@ object RawBookmarkRepresentation {
     }
   }
 
-  def fromExternalRawKeep(rawKeep: ExternalRawKeep): RawBookmarkRepresentation = RawBookmarkRepresentation(
-    title = rawKeep.title,
-    url = rawKeep.url,
+  def fromCreateRequest(req: KeepCreateRequest): RawBookmarkRepresentation = RawBookmarkRepresentation(
+    title = req.title,
+    url = req.url,
     isPrivate = None, // TODO(ryan): kill isPrivate
-    canonical = rawKeep.canonical,
-    openGraph = rawKeep.openGraph,
-    keptAt = rawKeep.keptAt,
-    note = rawKeep.note
+    canonical = req.canonical,
+    openGraph = req.openGraph,
+    keptAt = req.keptAt,
+    note = req.note
   )
 }
 

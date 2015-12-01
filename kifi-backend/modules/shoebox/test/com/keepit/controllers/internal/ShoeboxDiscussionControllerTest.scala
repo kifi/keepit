@@ -55,7 +55,7 @@ class ShoeboxDiscussionControllerTest extends Specification with ShoeboxTestInje
             val lib = LibraryFactory.library().withOwner(owner).saved
             (owner, lib)
           }
-          val extRawKeep = ExternalRawKeep(
+          val extRawKeep = KeepCreateRequest(
             owner = owner.externalId,
             users = Set(owner.externalId),
             libraries = Set(Library.publicId(lib.id.get)),
@@ -94,7 +94,7 @@ class ShoeboxDiscussionControllerTest extends Specification with ShoeboxTestInje
             val lib = LibraryFactory.library().withOwner(owner).saved
             (owner, rando, lib)
           }
-          val happyRawKeep = ExternalRawKeep(
+          val happyRawKeep = KeepCreateRequest(
             owner = owner.externalId,
             users = Set(owner.externalId),
             libraries = Set(Library.publicId(lib.id.get)),

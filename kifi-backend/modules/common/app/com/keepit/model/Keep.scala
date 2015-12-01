@@ -382,10 +382,12 @@ object CrossServiceKeep {
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
 }
 
-case class ExternalRawKeep(
-    owner: ExternalId[User],
-    users: Set[ExternalId[User]],
-    libraries: Set[PublicId[Library]],
+// NOT client facing
+// Used by Eliza when creating a discussion (create a keep, then tie a message thread to it)
+case class KeepCreateRequest(
+    owner: Id[User],
+    users: Set[Id[User]],
+    libraries: Set[Id[Library]],
     url: String,
     title: Option[String] = None,
     canonical: Option[String] = None,
@@ -395,18 +397,18 @@ case class ExternalRawKeep(
   require(users.contains(owner))
   require(libraries.size == 1) // TODO(ryan): remove when no longer true
 }
-object ExternalRawKeep {
-  implicit val format: Format[ExternalRawKeep] = (
-    (__ \ 'owner).format[ExternalId[User]] and
-    (__ \ 'users).format[Set[ExternalId[User]]] and
-    (__ \ 'libraries).format[Set[PublicId[Library]]] and
+object KeepCreateRequest {
+  implicit val format: Format[KeepCreateRequest] = (
+    (__ \ 'owner).format[Id[User]] and
+    (__ \ 'users).format[Set[Id[User]]] and
+    (__ \ 'libraries).format[Set[Id[Library]]] and
     (__ \ 'url).format[String] and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'canonical).formatNullable[String] and
     (__ \ 'openGraph).formatNullable[String] and
     (__ \ 'keptAt).formatNullable[DateTime] and
     (__ \ 'note).formatNullable[String]
-  )(ExternalRawKeep.apply, unlift(ExternalRawKeep.unapply))
+  )(KeepCreateRequest.apply, unlift(KeepCreateRequest.unapply))
 }
 
 case class PersonalKeep(
