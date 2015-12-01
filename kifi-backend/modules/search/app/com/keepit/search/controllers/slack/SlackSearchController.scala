@@ -35,7 +35,7 @@ object SlackSearchController {
     val search = """^(.+)$""".r
   }
 
-  val supportLink = "http://support.kifi.com/hc/en-us/articles/205409125-Integrating-Kifi-with-Slack"
+  val supportLink = LinkElement("http://support.kifi.com/hc/en-us/articles/205409125-Integrating-Kifi-with-Slack")
 }
 
 class SlackSearchController @Inject() (
@@ -71,13 +71,13 @@ class SlackSearchController @Inject() (
   private def doHelp(channelName: SlackChannelName, integrations: SlackChannelIntegrations): Future[SlackCommandResponse] = {
     val futureElements: Future[Elements] = {
       if (integrations.allLibraries.isEmpty) Future.successful {
-        Elements(s"You don't have any Kifi library connected with #${channelName.value} yet", "Add one maybe?" --> LinkElement(supportLink))
+        Elements(s"You don't have any Kifi library connected with #${channelName.value} yet", "Add one maybe?" --> supportLink)
       }
       else {
         shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None).map { libraries =>
-          def listLibraries(ids: Set[Id[Library]]): Elements = ids.flatMap(libraries.get(_)).toSeq.sortBy(_.name).map { lib =>
+          def listLibraries(ids: Set[Id[Library]]): Elements = Elements.unlines(ids.flatMap(libraries.get(_)).toSeq.sortBy(_.name).map { lib =>
             lib.name --> LinkElement(lib.url)
-          }.join("\n")
+          })
           val allLibraries: Elements = Elements(
             s"The following Kifi libraries are connected with #${channelName.value}:", "\n",
             "```", listLibraries(integrations.allLibraries), "```"
@@ -93,8 +93,8 @@ class SlackSearchController @Inject() (
             "```", listLibraries(integrations.toLibraries), "```"
           )
 
-          val moreHelp = Elements(s"Learn more about Kifi and Slack." --> LinkElement(supportLink))
-          Elements(allLibraries, fromLibraries, toLibraries, moreHelp).join("\n\n")
+          val moreHelp = Elements(s"Learn more about Kifi and Slack." --> supportLink)
+          Elements.unlines(Seq(allLibraries, fromLibraries, toLibraries, moreHelp))
         }
       }
     }
