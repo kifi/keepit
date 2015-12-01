@@ -35,7 +35,7 @@ object SlackSearchController {
     val search = """^(.+)$""".r
   }
 
-  val supportLink = "http://support.kifi.com/hc/en-us/articles/205409125-Integrating-Kifi-with-Slack"
+  val supportLink = LinkElement("http://support.kifi.com/hc/en-us/articles/205409125-Integrating-Kifi-with-Slack")
 }
 
 class SlackSearchController @Inject() (
@@ -71,7 +71,7 @@ class SlackSearchController @Inject() (
   private def doHelp(channelName: SlackChannelName, integrations: SlackChannelIntegrations): Future[SlackCommandResponse] = {
     val futureElements: Future[Elements] = {
       if (integrations.allLibraries.isEmpty) Future.successful {
-        Elements(s"You don't have any Kifi library connected with #${channelName.value} yet", "Add one maybe?" --> LinkElement(supportLink))
+        Elements(s"You don't have any Kifi library connected with #${channelName.value} yet", "Add one maybe?" --> supportLink)
       }
       else {
         shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None).map { libraries =>
@@ -93,7 +93,7 @@ class SlackSearchController @Inject() (
             "```", listLibraries(integrations.toLibraries), "```"
           )
 
-          val moreHelp = Elements(s"Learn more about Kifi and Slack." --> LinkElement(supportLink))
+          val moreHelp = Elements(s"Learn more about Kifi and Slack." --> supportLink)
           Elements.unlines(Seq(allLibraries, fromLibraries, toLibraries, moreHelp))
         }
       }
