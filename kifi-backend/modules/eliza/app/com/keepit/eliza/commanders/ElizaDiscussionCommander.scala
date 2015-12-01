@@ -1,10 +1,9 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
@@ -104,7 +103,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     db.readOnlyMaster { implicit s =>
       messageThreadRepo.getByKeepId(keepId)
     }.map(Future.successful).getOrElse {
-      shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap { csKeeps =>
+      shoebox.getCrossServiceKeepsByIds(Set(keepId)).map { csKeeps =>
         val csKeep = csKeeps.getOrElse(keepId, throw new Exception(s"Tried to create message thread for dead keep $keepId"))
         db.readWrite { implicit s =>
           // If someone created the message thread while we were messing around in Shoebox,
@@ -136,7 +135,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
   def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage] = {
-    getOrCreateMessageThreadForKeep(keepId).imap { thread =>
+    getOrCreateMessageThreadForKeep(keepId).map { thread =>
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Seq(userId)))

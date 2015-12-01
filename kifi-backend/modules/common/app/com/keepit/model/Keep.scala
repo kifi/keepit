@@ -389,11 +389,11 @@ case class KeepCreateRequest(
     users: Set[Id[User]],
     libraries: Set[Id[Library]],
     url: String,
-    title: Option[String] = None,
-    canonical: Option[String] = None,
-    openGraph: Option[String] = None,
-    keptAt: Option[DateTime] = None,
-    note: Option[String] = None) {
+    title: Option[String],
+    canonical: Option[String],
+    openGraph: Option[String],
+    keptAt: Option[DateTime],
+    note: Option[String]) {
   require(users.contains(owner))
   require(libraries.size == 1) // TODO(ryan): remove when no longer true
 }

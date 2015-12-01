@@ -83,16 +83,14 @@ class SharedWsMessagingController @Inject() (
     "add_participants_to_thread" -> {
       case JsString(threadId) +: (data: JsValue) +: _ =>
         val (users, emailContacts, orgs) = data match {
-          case JsArray(whoDat) => {
+          case JsArray(whoDat) =>
             val (users, emailContacts, orgs) = messagingCommander.parseRecipients(whoDat)
-            (users, emailContacts, orgs)
-          }
-          case _ => {
+            (users.toSet, emailContacts, orgs)
+          case _ =>
             val (users, _, _) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
             val (_, _, orgs) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
             val (_, contacts, _) = messagingCommander.parseRecipients((data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
-            (users, contacts, orgs)
-          }
+            (users.toSet, contacts, orgs)
         }
 
         if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {

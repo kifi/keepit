@@ -1,33 +1,29 @@
 package com.keepit.eliza.controllers.ext
 
-import com.keepit.eliza.model._
-import com.keepit.eliza.controllers._
-import com.keepit.eliza.commanders.{ MessagingCommander, ElizaEmailCommander }
-import com.keepit.common.db.ExternalId
-import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
-import com.keepit.common.time._
-import com.keepit.common.amazon.AmazonInstanceInfo
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.heimdal._
-import com.keepit.search.SearchServiceClient
-import com.keepit.common.mail.RemotePostOffice
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
-import play.api.libs.json.{ JsSuccess, Json, JsValue, JsObject }
-
-import akka.actor.ActorSystem
-
 import com.google.inject.Inject
+import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.ExternalId
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.AccessLog
+import com.keepit.common.time._
+import com.keepit.eliza.commanders.{ ElizaDiscussionCommander, ElizaEmailCommander, MessagingCommander }
+import com.keepit.eliza.model._
+import com.keepit.heimdal._
+import com.keepit.model.{ Keep, KeepCreateRequest, Library }
+import com.keepit.shoebox.ShoeboxServiceClient
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json._
+
 import scala.concurrent.Future
 
 class ExtMessagingController @Inject() (
     messagingCommander: MessagingCommander,
     val userActionsHelper: UserActionsHelper,
     emailCommander: ElizaEmailCommander,
+    shoebox: ShoeboxServiceClient,
+    discussionCommander: ElizaDiscussionCommander,
+    private implicit val publicIdConfiguration: PublicIdConfiguration,
     protected val clock: Clock,
     protected val airbrake: AirbrakeNotifier,
     protected val heimdal: HeimdalServiceClient,
@@ -88,6 +84,31 @@ class ExtMessagingController @Inject() (
 
   def getEmailPreview(msgExtId: String) = UserAction.async { request =>
     emailCommander.getEmailPreview(ExternalId[ElizaMessage](msgExtId)).map(Ok(_))
+  }
+
+  def startDiscussion() = UserAction.async(parse.tolerantJson) { request =>
+    implicit val context = heimdalContextBuilder.withRequestInfo(request).build
+    request.body.validate[ExternalDiscussionCreateRequest] match {
+      case JsError(fail) => Future.successful(BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> fail.toString)))
+      case JsSuccess(extReq, _) =>
+        val extUserIds = extReq.users
+        val libraryIds = extReq.libraries.flatMap(pubLibId => Library.decodePublicId(pubLibId).toOption)
+        for {
+          userIdByExtId <- shoebox.getUserIdsByExternalIds(extUserIds)
+          csKeep <- shoebox.internKeep(KeepCreateRequest(
+            owner = request.userId,
+            users = extUserIds.flatMap(userIdByExtId.get),
+            libraries = libraryIds,
+            url = extReq.url,
+            title = None,
+            canonical = extReq.canonical,
+            openGraph = None,
+            keptAt = None,
+            note = None))
+          msg <- discussionCommander.sendMessageOnKeep(request.userId, extReq.initialMessage, csKeep.id, extReq.source)
+        } yield Ok(Json.obj("id" -> msg.externalId.id, "parentId" -> msg.threadExtId.id, "createdAt" -> msg.createdAt, "keep" -> Keep.publicId(csKeep.id).id))
+    }
+
   }
 
 }
