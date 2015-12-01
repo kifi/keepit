@@ -16,6 +16,10 @@ sealed trait DescriptionElements {
 }
 case class SequenceOfElements(elements: Seq[DescriptionElements]) extends DescriptionElements {
   def flatten = elements.flatMap(_.flatten).filter(_.text.nonEmpty)
+  def join(joiner: BasicElement) = elements.length match {
+    case 0 | 1 => this
+    case _ => SequenceOfElements(elements.flatMap(e => Seq(joiner, e)).tail)
+  }
 }
 object SequenceOfElements {
   val empty = SequenceOfElements(Seq.empty)
