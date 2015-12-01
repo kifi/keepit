@@ -123,7 +123,6 @@ trait ElizaServiceClient extends ServiceClient {
   def getUnreadNotifications(userId: Id[User], howMany: Int): Future[Seq[UserThreadView]]
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
-  def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int]
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
 }
@@ -267,12 +266,6 @@ class ElizaServiceClientImpl @Inject() (
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]] = {
     call(Eliza.internal.getAllThreadsForGroupByWeek, body = Json.toJson(users)).map { response =>
       response.json.as[Seq[GroupThreadStats]]
-    }
-  }
-
-  def getTotalMessageCountForGroup(users: Set[Id[User]]): Future[Int] = {
-    call(Eliza.internal.getTotalMessageCountForGroup, body = Json.toJson(users), callTimeouts = longTimeout).map { response =>
-      response.json.as[Int]
     }
   }
 

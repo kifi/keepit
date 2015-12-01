@@ -9,7 +9,7 @@ import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
-import com.keepit.eliza.model.ElizaMessage
+import com.keepit.eliza.model.{ MessageSender, ElizaMessage }
 import com.keepit.discussion.Message
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -65,6 +65,24 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           ans(keepNoMessages).messages must haveLength(0)
 
           ans.get(keepNoThread) must beNone
+          1 === 1
+        }
+      }
+      "dont' blow up on system messages" in {
+        withDb(modules: _*) { implicit injector =>
+          val keep = Id[Keep](1)
+          db.readWrite { implicit s =>
+            val thread = MessageThreadFactory.thread().withKeep(keep).saved
+            val userMessage = MessageFactory.message().withThread(thread).saved
+            val sysMessage = MessageFactory.message().withThread(thread).from(MessageSender.System).saved
+          }
+
+          val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep)), Duration.Inf)
+
+          ans(keep).numMessages === 1
+          ans(keep).messages must haveLength(1)
+          db.readOnlyMaster { implicit s => messageRepo.all must haveLength(2) }
+
           1 === 1
         }
       }
