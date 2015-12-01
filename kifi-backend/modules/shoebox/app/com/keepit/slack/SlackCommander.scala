@@ -228,7 +228,7 @@ class SlackCommanderImpl @Inject() (
   def fetchMissingChannelIds(): Future[Unit] = {
     log.info("Fetching missing Slack channel ids.")
     val (channelsWithMissingIds, tokensWithScopesByUserIdAndTeamId) = db.readOnlyMaster { implicit session =>
-      val channelsWithMissingIds = libToChannelRepo.getWithMissingChannelId() ++ channelToLibRepo.getWithMissingChannelId()
+      val channelsWithMissingIds = libToChannelRepo.getWithMissingChannelId() ++ channelToLibRepo.getWithMissingChannelId() ++ slackIncomingWebhookInfoRepo.getWithMissingChannelId()
       val uniqueUserIdAndTeamIds = channelsWithMissingIds.map { case (userId, teamId, channelName) => (userId, teamId) }
       val tokensWithScopesByUserIdAndTeamId = uniqueUserIdAndTeamIds.map {
         case (userId, teamId) => (userId, teamId) ->
@@ -247,6 +247,7 @@ class SlackCommanderImpl @Inject() (
               db.readWrite { implicit session =>
                 libToChannelRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
                 channelToLibRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
+                slackIncomingWebhookInfoRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
               }
             case None => airbrake.notify(s"ChannelId not found Slack for channel $channelName via user $userId in team $teamId.")
           } recover {
