@@ -227,7 +227,7 @@ class ExtLibraryController @Inject() (
           }
           implicit val context = hcb.build
 
-          val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, request.kifiInstallationId, source, SocialShare(body))
+          val (keep, isNewKeep) = keepsCommander.keepOne(body.as[RawBookmarkRepresentation], request.userId, libraryId, source, SocialShare(body))
           val futureTagsAndImage = if (isNewKeep) {
             rover.getImagesByUris(Set(keep.uriId)).imap(_.get(keep.uriId)).map { imagesMaybe =>
               val existingImageUri = imagesMaybe.flatMap(_.getLargest.map(_.path.getUrl))

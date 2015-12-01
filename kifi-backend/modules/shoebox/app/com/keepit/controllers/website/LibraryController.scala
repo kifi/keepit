@@ -520,7 +520,7 @@ class LibraryController @Inject() (
       val existingKeeps = db.readOnlyMaster { implicit s =>
         keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).map(_.externalId).toSet
       }
-      val (keeps, _, failures, _) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None, false)
+      val (keeps, _, failures) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None)
       val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id.get))
 
       log.info(s"kept ${keeps.size} keeps")
