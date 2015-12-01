@@ -703,10 +703,10 @@ class UserCommanderImpl @Inject() (
   }
 
   def getByExternalIds(externalIds: Seq[ExternalId[User]]): Map[ExternalId[User], User] = {
-    db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(externalIds) }
+    db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(externalIds.toSet) }
   }
   def getByExternalId(externalId: ExternalId[User]): User = {
-    db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(Seq(externalId)).values.head }
+    db.readOnlyReplica { implicit session => userRepo.getAllUsersByExternalId(Set(externalId)).values.head }
   }
 
   private val fakeUsers = new RequestConsolidator[AllFakeUsersKey.type, Set[Id[User]]](5.minutes)

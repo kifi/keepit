@@ -59,8 +59,8 @@ class SlackController @Inject() (
     (request.body \ "integrations").validate[Seq[ExternalSlackIntegrationModification]] match {
       case JsError(errs) => BadRequest(Json.obj("error" -> "could_not_parse", "hint" -> errs.toString))
       case JsSuccess(mods, _) =>
-        val extUserIds = mods.flatMap(_.space).collect { case ExternalUserSpace(uid) => uid }
-        val pubOrgIds = mods.flatMap(_.space).collect { case ExternalOrganizationSpace(oid) => oid }
+        val extUserIds = mods.flatMap(_.space).collect { case ExternalUserSpace(uid) => uid }.toSet
+        val pubOrgIds = mods.flatMap(_.space).collect { case ExternalOrganizationSpace(oid) => oid }.toSet
         val extToIntUserId = db.readOnlyReplica { implicit s =>
           userRepo.getAllUsersByExternalId(extUserIds)
         }.map { case (extId, u) => extId -> u.id.get }

@@ -1,35 +1,31 @@
 package com.keepit.controllers.internal
 
-import com.keepit.commanders.UserEmailAddressCommander
-import com.keepit.common.json.TupleFormat
-import com.keepit.social.BasicUser
-import org.specs2.mutable.Specification
-
-import com.keepit.common.db.slick._
-import com.keepit.common.social.{ FakeSocialGraphModule, BasicUserRepo }
-import com.keepit.model._
-import com.keepit.search.{ FakeSearchServiceClientModule, Lang }
-import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
-import com.keepit.common.controller._
-
-import play.api.libs.json.{ Json, JsNumber, JsArray }
-import play.api.test.{ FakeHeaders, FakeRequest }
-import play.api.test.Helpers._
 import com.google.inject.Injector
-import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
-import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.abook.FakeABookServiceClientModule
-import com.keepit.common.db.{ Id, SequenceNumber }
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory
-
-import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.commanders.UserEmailAddressCommander
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.analytics.FakeAnalyticsModule
+import com.keepit.common.controller._
 import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.db.slick._
+import com.keepit.common.db.{ Id, SequenceNumber }
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.json.TupleFormat
+import com.keepit.common.mail.{ EmailAddress, FakeMailModule }
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.{ BasicUserRepo, FakeSocialGraphModule }
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.{ UserFactory, _ }
+import com.keepit.search.{ FakeSearchServiceClientModule, Lang }
+import com.keepit.shoebox.{ FakeKeepImportsModule, FakeShoeboxServiceModule }
+import com.keepit.social.BasicUser
+import com.keepit.test.ShoeboxTestInjector
+import org.specs2.mutable.Specification
+import play.api.libs.json.{ JsArray, JsNumber, Json }
+import play.api.test.Helpers._
+import play.api.test.{ FakeHeaders, FakeRequest }
 
 class ShoeboxControllerTest extends Specification with ShoeboxTestInjector {
 
