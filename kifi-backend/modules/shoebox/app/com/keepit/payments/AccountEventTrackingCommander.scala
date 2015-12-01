@@ -97,27 +97,30 @@ class AccountEventTrackingCommanderImpl @Inject() (
   }
 
   private def sendNotificationToMembers(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[Id[User]]] = {
-    checkingParameters(event) {
-      event.action match {
-        case RewardCredit(id) =>
-          val (description, members) = db.readOnlyMaster { implicit s =>
-            val description = creditRewardInfoCommander.getDescription(creditRewardRepo.get(id))
-            val members = orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId)
-            (description, members)
-          }
-          val sent = members.toSeq.map { member =>
-            eliza.sendNotificationEvent(
-              RewardCreditApplied(
-                recipient = Recipient(member),
-                time = currentDateTime,
-                description = DescriptionElements.formatPlain(description),
-                org.id.get)).map(_ => member)
-          }
-          Future.sequence(sent)
-        case _ =>
-          Future.successful(Seq.empty)
+    if (event.kifiAdminInvolved.isEmpty) {
+      //we don't want to ping users when admin
+      checkingParameters(event) {
+        event.action match {
+          case RewardCredit(id) =>
+            val (description, members) = db.readOnlyMaster { implicit s =>
+              val description = creditRewardInfoCommander.getDescription(creditRewardRepo.get(id))
+              val members = orgMembershipRepo.getAllByOrgId(org.id.get).map(_.userId)
+              (description, members)
+            }
+            val sent = members.toSeq.map { member =>
+              eliza.sendNotificationEvent(
+                RewardCreditApplied(
+                  recipient = Recipient(member),
+                  time = currentDateTime,
+                  description = DescriptionElements.formatPlain(description),
+                  org.id.get)).map(_ => member)
+            }
+            Future.sequence(sent)
+          case _ =>
+            Future.successful(Seq.empty)
+        }
       }
-    }
+    } else Future.successful(Seq.empty)
   }
 
   private def reportToSlack(event: AccountEvent)(implicit account: PaidAccount, org: Organization, paymentMethod: Option[PaymentMethod]): Future[Seq[SlackChannelName]] = {
