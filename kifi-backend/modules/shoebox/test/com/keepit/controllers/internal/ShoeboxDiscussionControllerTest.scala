@@ -56,9 +56,9 @@ class ShoeboxDiscussionControllerTest extends Specification with ShoeboxTestInje
             (owner, lib)
           }
           val extRawKeep = KeepCreateRequest(
-            owner = owner.externalId,
-            users = Set(owner.externalId),
-            libraries = Set(Library.publicId(lib.id.get)),
+            owner = owner.id.get,
+            users = Set(owner.id.get),
+            libraries = Set(lib.id.get),
             url = "http://www.kifi.com",
             title = Some("Kifi!"),
             canonical = None,
@@ -95,9 +95,9 @@ class ShoeboxDiscussionControllerTest extends Specification with ShoeboxTestInje
             (owner, rando, lib)
           }
           val happyRawKeep = KeepCreateRequest(
-            owner = owner.externalId,
-            users = Set(owner.externalId),
-            libraries = Set(Library.publicId(lib.id.get)),
+            owner = owner.id.get,
+            users = Set(owner.id.get),
+            libraries = Set(lib.id.get),
             url = "http://www.kifi.com",
             title = Some("Kifi!"),
             canonical = None,
@@ -105,7 +105,7 @@ class ShoeboxDiscussionControllerTest extends Specification with ShoeboxTestInje
             keptAt = Some(fakeClock.now),
             note = Some("cool beans")
           )
-          val sadRawKeep = happyRawKeep.copy(owner = rando.externalId, users = Set(rando.externalId))
+          val sadRawKeep = happyRawKeep.copy(owner = rando.id.get, users = Set(rando.id.get))
 
           status(inject[ShoeboxDiscussionController].internKeep()(FakeRequest().withBody(Json.toJson(sadRawKeep)))) === FORBIDDEN
           db.readOnlyMaster { implicit s => keepRepo.all must beEmpty }
