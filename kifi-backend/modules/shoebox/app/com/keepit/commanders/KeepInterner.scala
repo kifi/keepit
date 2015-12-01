@@ -5,6 +5,7 @@ import java.util.UUID
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, ExecutionContext }
+import com.keepit.search.SearchServiceClient
 import scala.concurrent.duration._
 import com.keepit.common.core._
 import com.keepit.common.db._
@@ -18,7 +19,7 @@ import com.keepit.common.util.Debouncing
 import com.keepit.heimdal.{ HeimdalContext, HeimdalServiceClient }
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
-import com.keepit.normalizer.{ NormalizationCandidate, NormalizedURIInterner }
+import com.keepit.normalizer.{ NormalizationService, NormalizationCandidate, NormalizedURIInterner }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.slack.LibraryToSlackChannelPusher
 import org.joda.time.{ Period, DateTime }
@@ -50,25 +51,22 @@ class KeepInternerImpl @Inject() (
   keepRepo: KeepRepo,
   libraryRepo: LibraryRepo,
   keepCommander: KeepCommander,
-  countByLibraryCache: CountByLibraryCache,
   keepToCollectionRepo: KeepToCollectionRepo,
   collectionRepo: CollectionRepo,
-  urlRepo: URLRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
   airbrake: AirbrakeNotifier,
   libraryAnalytics: LibraryAnalytics,
   keepsAbuseMonitor: KeepsAbuseMonitor,
-  rawBookmarkFactory: RawBookmarkFactory,
   userValueRepo: UserValueRepo,
   rawKeepRepo: RawKeepRepo,
   rawKeepImporterPlugin: RawKeepImporterPlugin,
   heimdalClient: HeimdalServiceClient,
   roverClient: RoverServiceClient,
   libraryNewFollowersCommander: LibraryNewKeepsCommander,
-  subscriptionCommander: LibrarySubscriptionCommander,
   integrityHelpers: UriIntegrityHelpers,
   sourceAttrRepo: KeepSourceAttributionRepo,
   libToSlackProcessor: LibraryToSlackChannelPusher,
+  normalizationService: NormalizationService,
+  searchClient: SearchServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends KeepInterner with Logging with Debouncing {
@@ -149,14 +147,17 @@ class KeepInternerImpl @Inject() (
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], userId: Id[User], library: Library, source: KeepSource) = {
 
-    val (persisted, failed) = db.readWriteBatch(bms, attempts = 5) {
+    // For batches, if we can't prenormalize, silently drop. This is a low bar, and usually means it couldn't *ever* be a valid keep.
+    val validUrls = bms.filter(b => httpPrefix.findPrefixOf(b.url.toLowerCase).isDefined && normalizationService.prenormalize(b.url).isSuccess)
+
+    val (persisted, failed) = db.readWriteBatch(validUrls, attempts = 5) {
       case ((session, bm)) =>
         implicit val s = session
         internUriAndBookmark(bm, userId, library, source).get // Exception caught by readWriteBatch
     }.partition { case (bm, res) => res.isSuccess }
 
     if (failed.nonEmpty) {
-      airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks: look app.log for urls"), userId = Some(userId)))
+      airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks (${validUrls.size} valid): look app.log for urls"), userId = Some(userId)))
       failed.foreach { f => log.warn(s"failed to persist raw bookmarks of user $userId from $source: ${f._1.url}", f._2.failed.get) }
     }
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
@@ -246,8 +247,9 @@ class KeepInternerImpl @Inject() (
       // Analytics
       libraryAnalytics.keptPages(keeperUserId, keeps, library, ctx)
       heimdalClient.processKeepAttribution(keeperUserId, keeps)
+      searchClient.updateKeepIndex()
 
-      // Make external notifications
+      // Make external notifications & fetch
       if (notifyExternalSources && KeepSource.discrete.contains(keeps.head.source)) { // Only report first to not spam
         SafeFuture { libraryNewFollowersCommander.notifyFollowersOfNewKeeps(library, keeps.head) }
         db.readWrite { implicit s =>
