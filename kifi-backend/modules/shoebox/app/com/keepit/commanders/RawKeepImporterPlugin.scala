@@ -33,10 +33,6 @@ import scala.collection.mutable
 
 private case object ProcessKeeps
 
-private object RawKeepImporterActor {
-  val sourcesToEnsureContentFetch = Set(KeepSource.twitterSync)
-}
-
 private class RawKeepImporterActor @Inject() (
     db: Database,
     rawKeepRepo: RawKeepRepo,
@@ -46,7 +42,6 @@ private class RawKeepImporterActor @Inject() (
     libraryRepo: LibraryRepo,
     airbrake: AirbrakeNotifier,
     rover: RoverServiceClient,
-    searchClient: SearchServiceClient,
     clock: Clock,
     tagHelper: KeepTagImportHelper,
     implicit val executionContext: ExecutionContext) extends FortyTwoActor(airbrake) with Logging {
@@ -145,18 +140,6 @@ private class RawKeepImporterActor @Inject() (
           }
         }
 
-        def notifyRemoteServices(successes: Seq[Keep]): Unit = {
-          //the bookmarks list may be very large!
-          searchClient.updateKeepIndex()
-          if (RawKeepImporterActor.sourcesToEnsureContentFetch.contains(source)) {
-            // todo(Léo): Revisit with NormalizedURI.shouldHaveContent
-            successes.map(_.uriId).distinct.foreach { uriId =>
-              val normalizedUrl = db.readOnlyMaster { implicit session => uriRepo.get(uriId).url }
-              rover.fetchAsap(uriId, normalizedUrl)
-            }
-          }
-        }
-
         //------------------------ main method ----------------------
 
         val rawBookmarks = parseRawBookmarksFromJson(rawKeepGroup)
@@ -166,11 +149,8 @@ private class RawKeepImporterActor @Inject() (
           //process tags: create collections, put keeps into collections.
           tagHelper.process(RawKeepGroupImportContext(userId, source, installationId, rawKeepGroup, successes, context))
 
-          // notify rover to scrape, search to index
-          notifyRemoteServices(successes)
-
           // mark done
-          db.readWriteBatch(successesRawKeep) {
+          db.readWriteBatch(successesRawKeep, attempts = 5) {
             case (session, rk) =>
               rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
           }
