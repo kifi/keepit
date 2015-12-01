@@ -49,16 +49,21 @@ class ElizaDiscussionCommanderImpl @Inject() (
     for {
       basicUsers <- basicUsersFut
       basicNonUsers <- basicNonUsersFut
-    } yield emsgs.map { em =>
+    } yield emsgs.flatMap { em =>
       val msgId = Message.publicId(ElizaMessage.toMessageId(em.id.get)) // this is a hack to expose Id[ElizaMessage] without exposing ElizaMessage itself
-      em.id.get -> Message(
-        pubId = msgId,
-        sentAt = em.createdAt,
-        sentBy = em.from.asUser.map(uid => BasicUserLikeEntity(basicUsers(uid))).getOrElse {
-          BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(em.from.asNonUser.get))
-        },
-        text = em.messageText
+      val senderOpt: Option[BasicUserLikeEntity] = em.from.fold(
+        None,
+        { uid => Some(BasicUserLikeEntity(basicUsers(uid))) },
+        { nu => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu))) }
       )
+      senderOpt.map { sender =>
+        em.id.get -> Message(
+          pubId = msgId,
+          sentAt = em.createdAt,
+          sentBy = sender,
+          text = em.messageText
+        )
+      }
     }.toMap
   }
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]] = {
