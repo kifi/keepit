@@ -209,6 +209,7 @@ angular.module('kifi', [
           event.preventDefault();  // stay in error state
           $scope.errorStatus = error.status;
           $scope.errorParams = toParams;
+          $scope.errorState = toState;
         }
       });
 
