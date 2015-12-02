@@ -6,6 +6,7 @@ import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.model.helprank.{ UriReKeepCountCache, UriDiscoveryCountCache }
 import com.keepit.model.{ AnonymousEventDescriptorNameCache, UserEventDescriptorNameCache, SystemEventDescriptorNameCache, NonUserEventDescriptorNameCache }
 import com.keepit.shoebox.model.KeepImagesCache
+import com.keepit.slack.models.SlackChannelIntegrationsCache
 
 import scala.concurrent.duration._
 import com.keepit.common.logging.AccessLog
@@ -214,4 +215,9 @@ case class HeimdalCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def orgMemberWithMostClickedKeepsCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new OrgMemberWithMostClickedKeepsCache(stats, accessLog, (outerRepo, 1 day))
+
+  @Provides @Singleton
+  def slackIntegrationsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackChannelIntegrationsCache(stats, accessLog, (outerRepo, 30 days))
 }
+

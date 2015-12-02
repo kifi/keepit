@@ -213,65 +213,6 @@ class LibraryAnalytics @Inject() (
     }
   }
 
-  def renamedTag(oldTag: Collection, newTag: Collection, context: HeimdalContext): Unit = {
-    val when = currentDateTime
-    SafeFuture {
-      val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++= context.data
-      contextBuilder += ("action", "renamedTag")
-      contextBuilder += ("tagId", newTag.id.get.toString)
-      heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
-
-      // Anonymized event with tag information
-      anonymise(contextBuilder)
-      contextBuilder += ("oldTagName", oldTag.name.tag)
-      contextBuilder += ("tagName", newTag.name.tag)
-      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, when))
-    }
-  }
-
-  def createdTag(newTag: Collection, context: HeimdalContext): Unit = {
-    val when = currentDateTime
-    val isDefaultTag = context.get[String]("source").map(_ == KeepSource.default.value) getOrElse false
-    if (!isDefaultTag) SafeFuture {
-      val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++= context.data
-      contextBuilder += ("action", "createdTag")
-      contextBuilder += ("tagId", newTag.id.get.toString)
-      heimdal.trackEvent(UserEvent(newTag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
-      userPropertyUpdateActor.ref ! (newTag.userId, UserPropertyUpdateInstruction.TagCount)
-
-      // Anonymized event with tag information
-      anonymise(contextBuilder)
-      contextBuilder += ("tagName", newTag.name.tag)
-      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, when))
-    }
-  }
-
-  def deletedTag(oldTag: Collection, context: HeimdalContext): Unit = {
-    val when = currentDateTime
-    SafeFuture {
-      val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++= context.data
-      contextBuilder += ("action", "deletedTag")
-      contextBuilder += ("tagId", oldTag.id.get.toString)
-      heimdal.trackEvent(UserEvent(oldTag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
-      userPropertyUpdateActor.ref ! (oldTag.userId, UserPropertyUpdateInstruction.TagCount)
-    }
-  }
-
-  def undeletedTag(tag: Collection, context: HeimdalContext): Unit = {
-    val when = currentDateTime
-    SafeFuture {
-      val contextBuilder = new HeimdalContextBuilder
-      contextBuilder.data ++= context.data
-      contextBuilder += ("action", "undeletedTag")
-      contextBuilder += ("tagId", tag.id.get.toString)
-      heimdal.trackEvent(UserEvent(tag.userId, contextBuilder.build, UserEventTypes.KEPT, when))
-      userPropertyUpdateActor.ref ! (tag.userId, UserPropertyUpdateInstruction.TagCount)
-    }
-  }
-
   private def populateLibraryInfoForKeep(library: Library): HeimdalContext = {
     val numKeepsInLibrary = library.keepCount
     val numDays = getDaysSinceLibraryCreated(library)

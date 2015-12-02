@@ -27,10 +27,10 @@ sealed trait MessageSender {
   def asUser: Option[Id[User]] = None
   def asNonUser: Option[NonUserParticipant] = None
 
-  def fold[T](systemF: () => T, userF: Id[User] => T, nonUserF: String => T): T = {
+  def fold[T](systemF: => T, userF: Id[User] => T, nonUserF: NonUserParticipant => T): T = {
     asUser.map(userF).
-      orElse { asNonUser.map(nup => nonUserF(nup.identifier)) }.
-      getOrElse { systemF() }
+      orElse { asNonUser.map(nup => nonUserF(nup)) }.
+      getOrElse { systemF }
   }
 
   def asRecipient: Option[Recipient] =
@@ -82,7 +82,7 @@ object MessageSender {
   }
 
   def toMessageSenderView(messageSender: MessageSender): MessageSenderView =
-    messageSender.fold(MessageSenderSystemView, MessageSenderUserView, MessageSenderNonUserView)
+    messageSender.fold(MessageSenderSystemView(), MessageSenderUserView, nup => MessageSenderNonUserView(nup.identifier))
 }
 
 case class MessageSource(value: String)
@@ -209,9 +209,9 @@ object ElizaMessage {
   }
 }
 
-case class MessagesForThread(val thread: Id[MessageThread], val messages: Seq[ElizaMessage]) {
+case class MessagesForThread(thread: Id[MessageThread], messages: Seq[ElizaMessage]) {
   override def equals(other: Any): Boolean = other match {
-    case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
+    case mft: MessagesForThread => thread.id == mft.thread.id && messages.size == mft.messages.size
     case _ => false
   }
   override def hashCode = thread.id.hashCode

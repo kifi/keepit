@@ -2,6 +2,7 @@ package com.keepit.common.cache
 
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.shoebox.model.KeepImagesCache
+import com.keepit.slack.models.SlackChannelIntegrationsCache
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -187,5 +188,9 @@ case class FakeCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides @Singleton
   def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def slackIntegrationsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackChannelIntegrationsCache(stats, accessLog, (outerRepo, 30 days))
 }
 

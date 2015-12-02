@@ -59,7 +59,7 @@ object ParamValue {
   implicit def dateTimeToParam(dateTime: DateTime) = ParamValue(Some(dateTime.toStandardTimeString))
 }
 
-abstract class Method(name: String)
+sealed abstract class Method(name: String)
 case object GET extends Method("GET")
 case object POST extends Method("POST")
 case object PUT extends Method("PUT")
@@ -83,7 +83,7 @@ object Shoebox extends Service {
     def getNormalizedUriByUrlOrPrenormalize() = ServiceRoute(POST, "/internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize")
     def internNormalizedURI() = ServiceRoute(POST, "/internal/shoebox/database/internNormalizedURI")
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
-    def getUserIdsByExternalIds(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/userIdsByExternalIds", Param("ids", ids))
+    def getUserIdsByExternalIds() = ServiceRoute(POST, "/internal/shoebox/database/userIdsByExternalIds")
     def getBasicUsers() = ServiceRoute(POST, "/internal/shoebox/database/getBasicUsers")
     def getEmailAddressesForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressesForUsers")
     def getEmailAddressForUsers() = ServiceRoute(POST, "/internal/shoebox/database/getEmailAddressForUsers")
@@ -252,7 +252,6 @@ object Eliza extends Service {
     def getUnreadNotifications(userId: Id[User], howMany: Int) = ServiceRoute(GET, "/internal/eliza/getUnreadNotifications", Param("userId", userId), Param("howMany", howMany))
     def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
-    def getTotalMessageCountForGroup = ServiceRoute(POST, "/internal/eliza/getTotalMessageCountForGroup")
     def getParticipantsByThreadExtId(threadExtId: String) = ServiceRoute(GET, "/internal/eliza/getParticipantsByThreadExtId", Param("threadId", threadExtId))
     def getDiscussionsForKeeps = ServiceRoute(POST, "/internal/eliza/getDiscussionsForKeeps")
   }

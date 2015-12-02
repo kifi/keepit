@@ -48,9 +48,6 @@ object UserValueName {
   val LAST_ACTIVE = UserValueName("last_active")
   val GENDER = UserValueName("gender")
   val USER_COLLECTION_ORDERING = UserValueName("user_collection_ordering")
-  val BOOKMARK_IMPORT_LAST_START = UserValueName("bookmark_import_last_start")
-  val BOOKMARK_IMPORT_DONE = UserValueName("bookmark_import_done")
-  val BOOKMARK_IMPORT_TOTAL = UserValueName("bookmark_import_total")
   val USER_DESCRIPTION = UserValueName("user_description")
   val PENDING_PRIMARY_EMAIL = UserValueName("pending_primary_email")
   val FRIENDS_NOTIFIED_ABOUT_JOINING = UserValueName("friendsNotifiedAboutJoining") // no longer in use

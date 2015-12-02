@@ -23,6 +23,7 @@ case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
+    keepId: Id[Keep],
     attribution: SourceAttribution,
     state: State[KeepSourceAttribution] = KeepSourceAttributionStates.ACTIVE) extends ModelWithState[KeepSourceAttribution] {
 
@@ -86,9 +87,9 @@ object SourceAttribution {
     }
   }
 
-  implicit val deprecatedWrites = new Writes[KeepSourceAttribution] {
-    def writes(x: KeepSourceAttribution): JsValue = {
-      val (attrType, attrJs) = toJson(x.attribution)
+  implicit val deprecatedWrites = new Writes[SourceAttribution] {
+    def writes(x: SourceAttribution): JsValue = {
+      val (attrType, attrJs) = toJson(x)
       Json.obj(attrType.name -> attrJs)
     }
   }

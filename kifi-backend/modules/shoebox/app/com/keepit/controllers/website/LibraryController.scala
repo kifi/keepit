@@ -556,19 +556,6 @@ class LibraryController @Inject() (
     }
   }
 
-  // TODO(ryan): This seems to only update the keep title. Is it supposed to do other things?
-  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
-    val libraryId = Library.decodePublicId(libraryPubId).get
-    val body = request.body
-    val title = (body \ "title").asOpt[String]
-
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
-      case Left((status, code)) => Status(status)(Json.obj("error" -> code))
-      case Right(keep) => NoContent
-    }
-  }
-
   def editKeepNote(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(keepExtId)
@@ -581,36 +568,6 @@ class LibraryController @Inject() (
         implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
         keepsCommander.updateKeepNote(request.userId, keep, newNote)
         NoContent
-    }
-  }
-
-  def tagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = (UserAction andThen LibraryWriteAction(libraryPubId)) { request =>
-    val libraryId = Library.decodePublicId(libraryPubId).get;
-
-    keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
-      case Right(keep) =>
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-        val coll = keepsCommander.getOrCreateTag(request.userId, tag) // TODO: library ID, not user ID
-        keepsCommander.addToCollection(coll.id.get, Seq(keep))
-        Ok(Json.obj("tag" -> coll.name))
-      case Left((status, code)) =>
-        Status(status)(Json.obj("error" -> code))
-    }
-  }
-
-  def untagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = (UserAction andThen LibraryWriteAction(libraryPubId)) { request =>
-    val libraryId = Library.decodePublicId(libraryPubId).get
-    keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
-      case Right(keep) =>
-        db.readOnlyReplica { implicit s =>
-          collectionRepo.getByUserAndName(request.userId, Hashtag(tag)) // TODO: library ID, not user ID
-        } foreach { coll =>
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-          keepsCommander.removeFromCollection(coll, Seq(keep))
-        }
-        NoContent
-      case Left((status, code)) =>
-        Status(status)(Json.obj("error" -> code))
     }
   }
 

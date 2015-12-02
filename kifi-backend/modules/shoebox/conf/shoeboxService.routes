@@ -137,13 +137,10 @@ POST    /ext/libraries/:id/keeps/:k/note  @com.keepit.controllers.ext.ExtLibrary
 POST    /ext/libraries/:id/subscription @com.keepit.controllers.ext.ExtLibraryController.setSubscribedToUpdates(id: PublicId[Library], subscribed: Boolean)
 
 
-POST    /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
-DELETE  /ext/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.ext.ExtLibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 GET     /ext/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.ext.ExtLibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep],  q: Option[String] ?= None, n: Int ?= 5)
 POST    /ext/libraries/:id/keeps/:k/image/upload @com.keepit.controllers.ext.ExtKeepImageController.uploadKeepImage(id: PublicId[Library], k: ExternalId[Keep])
 GET     /ext/libraries/:id/keeps/:k/image/:token @com.keepit.controllers.ext.ExtKeepImageController.checkImageStatus(id: PublicId[Library], k: ExternalId[Keep], token: String)
 POST    /ext/libraries/:id/keeps/:k/image @com.keepit.controllers.ext.ExtKeepImageController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
-GET     /ext/libraries/:id/tags/search           @com.keepit.controllers.ext.ExtLibraryController.deprecatedSearchTags(id: PublicId[Library], q: String, n: Option[Int] ?= None)
 
 GET     /ext/guide                  @com.keepit.controllers.ext.ExtUserController.getGuideInfo()
 
@@ -167,9 +164,7 @@ POST    /m/1/user/friends/:id/hide          @com.keepit.controllers.mobile.Mobil
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
 
-GET     /m/1/keeps/count                    @com.keepit.controllers.mobile.MobileKeepsController.numKeeps()
 POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.keepMultiple()
-POST    /m/1/keeps/addWithTags              @com.keepit.controllers.mobile.MobileKeepsController.addKeepWithTags()
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV1(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /m/2/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV2(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 
@@ -190,8 +185,6 @@ POST    /m/1/user/me/biography              @com.keepit.controllers.mobile.Mobil
 GET     /m/1/user/prefs                     @com.keepit.controllers.mobile.MobileUserController.getPrefs()
 POST    /m/1/user/notifyPrefs               @com.keepit.controllers.mobile.MobilePreferenceController.setNotifyPreferences()
 POST    /m/1/user/pic/upload                @com.keepit.controllers.mobile.MobileUserController.uploadBinaryUserPicture()
-POST    /m/1/tags/:id/addToKeep             @com.keepit.controllers.mobile.MobileKeepsController.addTag(id: ExternalId[Collection])
-POST    /m/1/tags/:id/removeFromKeep        @com.keepit.controllers.mobile.MobileKeepsController.removeTag(id: ExternalId[Collection])
 GET     /m/1/tags/suggest                   @com.keepit.controllers.mobile.MobileKeepsController.suggestTags(keepId: Option[String], query: Option[String] ?= None, limit: Int ?= 5)
 
 POST    /m/1/auth/accessTokenSignup/:provider   @com.keepit.controllers.mobile.MobileAuthController.accessTokenSignup(provider)
@@ -285,7 +278,6 @@ POST    /m/1/libraries/:id/decline              @com.keepit.controllers.mobile.M
 POST    /m/1/libraries/:id/leave                @com.keepit.controllers.mobile.MobileLibraryController.leaveLibrary(id: PublicId[Library])
 GET     /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeepsV1(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
 GET     /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.getKeepsV2(id: PublicId[Library], offset: Int ?= 0, limit: Int ?= 10, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
-POST    /m/1/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.keepToLibraryV1(id: PublicId[Library])
 POST    /m/2/libraries/:id/keeps                @com.keepit.controllers.mobile.MobileLibraryController.keepToLibraryV2(id: PublicId[Library])
 DELETE  /m/1/libraries/:id/keeps/:kId           @com.keepit.controllers.mobile.MobileLibraryController.unkeepFromLibrary(id: PublicId[Library], kId: ExternalId[Keep])
 DELETE  /m/1/libraries/:id/invite               @com.keepit.controllers.mobile.MobileLibraryController.revokeLibraryInvitation(id: PublicId[Library])
@@ -401,24 +393,13 @@ GET     /assets/sitemap-libraries-0.xml         @com.keepit.controllers.website.
 GET     /assets/sitemap-users-0.xml             @com.keepit.controllers.website.SiteMapController.usersSitemap()
 
 GET     /site/keeps/stream               @com.keepit.controllers.website.KeepsController.getKeepStream(limit: Int ?= 10, beforeId: Option[String], afterId: Option[String])
-GET     /site/keeps/all                  @com.keepit.controllers.website.KeepsController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
-GET     /site/keeps/count                @com.keepit.controllers.website.KeepsController.numKeeps()
 POST    /site/keeps/personalExport       @com.keepit.controllers.website.KeepsController.exportPersonalKeeps()
 POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep])
 
-POST    /site/keeps/tag             @com.keepit.controllers.website.KeepsController.tagKeepBulk()
-POST    /site/keeps/untag           @com.keepit.controllers.website.KeepsController.untagKeepBulk()
-
-GET     /site/collections/all       @com.keepit.controllers.website.KeepsController.allCollections(sort: String ?= "last_kept")
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.page(sort: String ?= "used", offset : Int ?= 0, pageSize: Int ?= 0)
-POST    /site/collections/ordering  @com.keepit.controllers.website.KeepsController.updateCollectionOrdering()
-POST    /site/collections/reorderTag  @com.keepit.controllers.website.KeepsController.updateCollectionIndexOrdering()
-POST    /site/collections/create    @com.keepit.controllers.website.KeepsController.saveCollection()
 POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/undelete @com.keepit.controllers.website.KeepsController.undeleteCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.KeepsController.removeKeepsFromCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.KeepsController.keepToCollection(id: ExternalId[Collection])
 GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
 #### Deprecated: use /site/user-or-org/:handle/libraries/:slug
@@ -459,9 +440,6 @@ POST    /site/libraries/:id/keeps/delete   @com.keepit.controllers.website.Libra
 DELETE  /site/libraries/:id/keeps/:k   @com.keepit.controllers.website.LibraryController.removeKeep(id: PublicId[Library], k: ExternalId[Keep])
 GET     /site/libraries/:id/keeps/:k/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTags(id: PublicId[Library], k: ExternalId[Keep], q: Option[String] ?= None, n: Int ?= 5)
 GET     /site/libraries/:id/tags/suggest  @com.keepit.controllers.website.LibraryController.suggestTagsSimple(id: PublicId[Library], n: Int ?= 5)
-POST    /site/libraries/:id/keeps/:k/update       @com.keepit.controllers.website.LibraryController.updateKeep(id:PublicId[Library], k: ExternalId[Keep])
-POST    /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.tagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
-DELETE  /site/libraries/:id/keeps/:k/tags/:tag    @com.keepit.controllers.website.LibraryController.untagKeep(id: PublicId[Library], k: ExternalId[Keep], tag: String)
 POST    /site/libraries/:id/keeps/:k/note         @com.keepit.controllers.website.LibraryController.editKeepNote(id: PublicId[Library], k: ExternalId[Keep])
 POST    /site/libraries/:id/keeps/:k/image        @com.keepit.controllers.website.LibraryController.changeKeepImage(id: PublicId[Library], k: ExternalId[Keep], is: Option[String] = None)
 
@@ -948,7 +926,7 @@ POST    /internal/shoebox/database/getNormalizedURIByURL               @com.keep
 POST    /internal/shoebox/database/getNormalizedUriByUrlOrPrenormalize @com.keepit.controllers.internal.ShoeboxController.getNormalizedUriByUrlOrPrenormalize()
 POST    /internal/shoebox/database/internNormalizedURI                 @com.keepit.controllers.internal.ShoeboxController.internNormalizedURI()
 GET     /internal/shoebox/database/getUsers                            @com.keepit.controllers.internal.ShoeboxController.getUsers(ids: String)
-GET     /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.internal.ShoeboxController.getUserIdsByExternalIds(ids: String)
+POST    /internal/shoebox/database/userIdsByExternalIds                @com.keepit.controllers.internal.ShoeboxController.getUserIdsByExternalIds()
 POST    /internal/shoebox/database/getBasicUsers                       @com.keepit.controllers.internal.ShoeboxController.getBasicUsers()
 POST    /internal/shoebox/database/getEmailAddressesForUsers           @com.keepit.controllers.internal.ShoeboxController.getEmailAddressesForUsers()
 POST    /internal/shoebox/database/getEmailAddressForUsers             @com.keepit.controllers.internal.ShoeboxController.getEmailAddressForUsers()

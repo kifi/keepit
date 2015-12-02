@@ -100,7 +100,6 @@ class KeepRepoImpl @Inject() (
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
-    def sourceAttributionId = column[Option[Id[KeepSourceAttribution]]]("source_attribution_id", O.Nullable)
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
@@ -108,7 +107,7 @@ class KeepRepoImpl @Inject() (
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
+      (userId, state, source, seq, libraryId, visibility, keptAt,
         note, originalKeeperId, organizationId, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
 
     def isPrivate: Column[Boolean] = {
@@ -143,7 +142,6 @@ class KeepRepoImpl @Inject() (
       libraryId = r.<<[Option[Id[Library]]],
       visibility = r.<<[LibraryVisibility],
       keptAt = r.<<[DateTime],
-      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
       note = r.<<[Option[String]],
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],

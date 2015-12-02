@@ -351,13 +351,11 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     Future.successful(users)
   }
 
-  def getUserIdsByExternalIds(extIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    val ids = extIds.map { id =>
-      allUserExternalIds.get(id).getOrElse {
-        throw new Exception(s"can't find id $id in allUserExternalIds: $allUserExternalIds")
-      }.id.get
-    }
-    Future.successful(ids)
+  def getUserIdsByExternalIds(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]] = {
+    val idMap = extIds.map { id =>
+      id -> allUserExternalIds.getOrElse(id, throw new Exception(s"can't find id $id in $allUserExternalIds")).id.get
+    }.toMap
+    Future.successful(idMap)
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {

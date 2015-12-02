@@ -2,6 +2,7 @@ package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.{ PermissionCommander, PathCommander }
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.Id
@@ -79,7 +80,8 @@ class SlackCommanderImpl @Inject() (
   clock: Clock,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
-  implicit val publicIdConfig: PublicIdConfiguration)
+  implicit val publicIdConfig: PublicIdConfiguration,
+  inhouseSlackClient: InhouseSlackClient)
     extends SlackCommander with Logging {
 
   def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit = {
@@ -147,6 +149,16 @@ class SlackCommanderImpl @Inject() (
           case Success(_) =>
             fetchMissingChannelIds()
         }
+    }
+
+    SafeFuture {
+      val inhouseMsg = db.readOnlyReplica { implicit s =>
+        import DescriptionElements._
+        val lib = libRepo.get(libId)
+        val user = basicUserRepo.load(userId)
+        DescriptionElements(user, "set up Slack integrations for", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
+      }
+      inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(inhouseMsg))
     }
   }
 
@@ -228,7 +240,7 @@ class SlackCommanderImpl @Inject() (
   def fetchMissingChannelIds(): Future[Unit] = {
     log.info("Fetching missing Slack channel ids.")
     val (channelsWithMissingIds, tokensWithScopesByUserIdAndTeamId) = db.readOnlyMaster { implicit session =>
-      val channelsWithMissingIds = libToChannelRepo.getWithMissingChannelId() ++ channelToLibRepo.getWithMissingChannelId()
+      val channelsWithMissingIds = libToChannelRepo.getWithMissingChannelId() ++ channelToLibRepo.getWithMissingChannelId() ++ slackIncomingWebhookInfoRepo.getWithMissingChannelId()
       val uniqueUserIdAndTeamIds = channelsWithMissingIds.map { case (userId, teamId, channelName) => (userId, teamId) }
       val tokensWithScopesByUserIdAndTeamId = uniqueUserIdAndTeamIds.map {
         case (userId, teamId) => (userId, teamId) ->
@@ -247,6 +259,7 @@ class SlackCommanderImpl @Inject() (
               db.readWrite { implicit session =>
                 libToChannelRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
                 channelToLibRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
+                slackIncomingWebhookInfoRepo.fillInMissingChannelId(userId, teamId, channelName, channelId)
               }
             case None => airbrake.notify(s"ChannelId not found Slack for channel $channelName via user $userId in team $teamId.")
           } recover {

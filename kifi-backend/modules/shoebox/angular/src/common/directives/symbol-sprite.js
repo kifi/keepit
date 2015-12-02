@@ -16,7 +16,7 @@ angular.module('kifi')
       var deferred = $q.defer();
       var observer;
 
-      if (symbolSpriteContainer.children.length === 0) {
+      if (MutationObserver && symbolSpriteContainer.children.length === 0) {
         observer = new MutationObserver(function () {
           deferred.resolve();
           observer.disconnect();

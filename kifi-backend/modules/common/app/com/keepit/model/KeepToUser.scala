@@ -21,6 +21,7 @@ case class KeepToUser(
   def withUpdateTime(now: DateTime): KeepToUser = this.copy(updatedAt = now)
   def withState(newState: State[KeepToUser]): KeepToUser = this.copy(state = newState)
   def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
+  def withAddedAt(time: DateTime) = this.copy(addedAt = time)
 
   def isActive = state == KeepToUserStates.ACTIVE
   def isInactive = state == KeepToUserStates.INACTIVE

@@ -109,7 +109,7 @@ var formatMessage = (function () {
       var escapedUri = Mustache.escape(uri);
       var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
       parts[i] = '<a target="_blank" href="' + escapedUrl + '">' +
-        (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" src="' + escapedUrl + '"/>' : escapedUri);
+        (imageUrlRe.test(uri) ? '<img class="kifi-image-in-message" onerror="this.outerHTML=this.src" src="' + escapedUrl + '"/>' : escapedUri);
       parts[i+1] = '</a>';
     }
     for (i = 0; i < parts.length; i += 3) {

@@ -75,7 +75,7 @@ class CollectionCommander @Inject() (
     }.map { case (collectionSummary, keepCount) => BasicCollection.fromCollection(collectionSummary, Some(keepCount)) }
   }
 
-  def updateCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
+  private def updateCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     setCollectionOrdering(uid, getCollectionOrdering(uid))
   }
 
@@ -105,7 +105,7 @@ class CollectionCommander @Inject() (
     }
   }
 
-  def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
+  private def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
     userValueRepo.getValueStringOpt(uid, UserValueName.USER_COLLECTION_ORDERING).map { value =>
@@ -118,48 +118,13 @@ class CollectionCommander @Inject() (
     }
   }
 
-  def setCollectionOrdering(uid: Id[User],
+  private def setCollectionOrdering(uid: Id[User],
     order: Seq[ExternalId[Collection]])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
     val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
     userValueRepo.setValue(uid, UserValueName.USER_COLLECTION_ORDERING, Json.stringify(Json.toJson(newCollectionIds)))
     newCollectionIds
-  }
-
-  def setCollectionIndexOrdering(uid: Id[User], tagId: ExternalId[Collection], newIndex: Int): Seq[ExternalId[Collection]] = {
-    implicit val externalIdFormat = ExternalId.format[Collection]
-
-    val (allCollectionIds, orderStr) = db.readOnlyMaster { implicit s =>
-      val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).zipWithIndex
-      val orderStr = userValueRepo.getValue(uid, UserValues.tagOrdering)
-      (allCollectionIds, orderStr)
-    }
-    val orderStrArr = orderStr.as[JsArray].value.map(_.as[ExternalId[Collection]])
-
-    val tupleBuffer = allCollectionIds.sortWith {
-      case (first, second) =>
-        val firstIdx = orderStrArr.indexOf(first._1.externalId)
-        val secondIdx = orderStrArr.indexOf(second._1.externalId)
-        if (firstIdx != -1 && secondIdx == -1) {
-          true
-        } else if (firstIdx == -1 && secondIdx != -1) {
-          false
-        } else if (firstIdx == -1 && secondIdx == -1) { // both not found
-          first._2 < second._2
-        } else { // both found
-          firstIdx < secondIdx
-        }
-    }.toBuffer
-    val idsBuffer = tupleBuffer.unzip._1.map(_.externalId)
-    idsBuffer.remove(idsBuffer.indexOf(tagId))
-    idsBuffer.insert(newIndex, tagId)
-
-    val newOrdering = idsBuffer.toSeq
-    db.readWrite { implicit s =>
-      userValueRepo.setValue(uid, UserValueName.USER_COLLECTION_ORDERING, Json.stringify(Json.toJson(newOrdering)))
-    }
-    newOrdering
   }
 
   def saveCollection(userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
@@ -173,7 +138,6 @@ class CollectionCommander @Inject() (
             s.onTransactionSuccess { searchClient.updateKeepIndex() }
             val newColl = collectionRepo.save(Collection(userId = userId, name = name))
             updateCollectionOrdering(userId)
-            libraryAnalytics.createdTag(newColl, context)
             Left(BasicCollection.fromCollection(newColl.summary))
           } else {
             Right(CollectionSaveFail(s"Tag '$name' already exists"))
@@ -193,7 +157,6 @@ class CollectionCommander @Inject() (
       collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
       updateCollectionOrdering(collection.userId)
     }
-    libraryAnalytics.deletedTag(collection, context)
     searchClient.updateKeepIndex()
   }
 
@@ -202,7 +165,6 @@ class CollectionCommander @Inject() (
       collectionRepo.save(collection.copy(state = CollectionStates.ACTIVE, createdAt = clock.now()))
       updateCollectionOrdering(collection.userId)
     }
-    libraryAnalytics.undeletedTag(collection, context)
     searchClient.updateKeepIndex()
   }
 

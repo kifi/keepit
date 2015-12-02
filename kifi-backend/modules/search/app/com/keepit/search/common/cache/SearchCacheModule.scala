@@ -11,6 +11,7 @@ import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCach
 import com.keepit.search._
 import com.keepit.search.tracking.{ ClickHistoryBuilder, ClickHistoryUserIdCache, ProbablisticLRUChunkCache }
 import com.keepit.shoebox.model.KeepImagesCache
+import com.keepit.slack.models.SlackChannelIntegrationsCache
 import com.keepit.social.{ UserIdentityCache, BasicUserUserIdCache }
 
 import scala.concurrent.duration._
@@ -190,4 +191,8 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides @Singleton
   def basicOrganizationIdCache(stats: CacheStatistics, accessLog: AccessLog, outerRepo: FortyTwoCachePlugin) =
     new BasicOrganizationIdCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def slackIntegrationsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackChannelIntegrationsCache(stats, accessLog, (outerRepo, 30 days))
 }

@@ -39,6 +39,7 @@ import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
 class BookmarkImporter @Inject() (
+    db: Database,
     val userActionsHelper: UserActionsHelper,
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
@@ -106,9 +107,11 @@ class BookmarkImporter @Inject() (
     log.info(s"[TweetSync] Got ${parsed.length} Bookmarks out of ${tweets.length} tweets")
     val tagSet = parsed.flatMap { bm => bm.tags }.toSet
 
-    val tags = tagSet.map { tagStr =>
-      tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)(context)
-    }.toMap
+    val tags = db.readWrite { implicit s =>
+      tagSet.map { tagStr =>
+        tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)
+      }.toMap
+    }
     val taggedKeeps = parsed.map {
       case Bookmark(t, h, tagNames, createdDate, originalJson) =>
         val keepTagNames = tagNames.flatMap(tags.get).map(_.name.tag)
@@ -133,11 +136,17 @@ class BookmarkImporter @Inject() (
         }
       }
 
-      val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "imported-links")(context)
+      val importTag = db.readWrite { implicit s =>
+        keepsCommander.getOrCreateTag(lf.request.userId, "imported-links")
+      }
 
-      val tags = tagMap.values.toSeq.map { tagStr =>
-        tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
-      }.toMap
+      val tags = db.readWrite { implicit s =>
+        tagMap.values.toSeq.map { tagStr =>
+          tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) {
+            keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)
+          }
+        }.toMap
+      }
       val taggedKeeps = parsed.map {
         case Bookmark(t, h, tagNames, createdDate, originalJson) =>
           val keepTags = tagNames.flatMap(tags.get) :+ importTag
@@ -145,14 +154,7 @@ class BookmarkImporter @Inject() (
       }
       log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
 
-      val (importId, rawKeeps) = Library.decodePublicId(pubId) match {
-        case Failure(ex) =>
-          // airbrake.notify(s"importing to library with invalid pubId ${pubId}")
-          throw new Exception(s"importing to library with invalid pubId ${pubId}")
-          ("", List.empty[RawKeep])
-        case Success(id) =>
-          createRawKeeps(lf.request.userId, sourceOpt, taggedKeeps, id)
-      }
+      val (importId, rawKeeps) = createRawKeeps(lf.request.userId, sourceOpt, taggedKeeps, Library.decodePublicId(pubId).get)
 
       log.info(s"[bmFileImport:${lf.id}] Raw keep start persisting in ${clock.getMillis() - lf.startMillis}ms")
       keepInterner.persistRawKeeps(rawKeeps, Some(importId))
@@ -302,7 +304,7 @@ class EvernoteParser @Inject() () extends ImportParser {
     val notes = Jsoup.parse(bookmarks.file, "UTF-8").select("note").iterator().toStream
 
     val parsed = notes.flatMap { note =>
-      val createdAt = Option(note.select("updated")).orElse(Option(note.select("created"))).flatMap(s => Option(s.text())).map(formatter.parseDateTime)
+      val createdAt = Option(note.select("updated")).orElse(Option(note.select("created"))).flatMap(s => Option(s.text())).flatMap(d => Try(formatter.parseDateTime(d)).toOption)
       val links = Jsoup.parse(note.select("content").text()).select("en-note a").iterator().toStream.flatMap { elem =>
         val href = Option(elem.attr("href"))
         val text = Option(elem.text()).filterNot { text =>

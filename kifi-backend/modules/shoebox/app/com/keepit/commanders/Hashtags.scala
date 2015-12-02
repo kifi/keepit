@@ -9,23 +9,17 @@ object Hashtags {
   def findAllHashtagNames(s: String): Set[String] = {
     hashTagRe.findAllMatchIn(s).map(_ group 1).map { escapedName =>
       backslashUnescapeRe.replaceAllIn(escapedName, "$1")
-    } toSet
+    }.toSet
   }
 
   def addNewHashtagsToString(str: String, hashtags: Seq[Hashtag]): String = {
-    addNewHashtagNamesToString(str, hashtags.map(_.tag))
+    addTagsToString(str, hashtags.map(_.tag))
   }
 
-  def addNewHashtagNamesToString(str: String, hashtagNames: Seq[String]): String = {
+  def addTagsToString(str: String, hashtagNames: Seq[String]): String = {
     val existingHashtags = findAllHashtagNames(str).map(_.toLowerCase)
     val tagsToAppend = hashtagNames.filterNot(t => existingHashtags.contains(t.toLowerCase))
     appendHashtagNamesToString(str, tagsToAppend)
-  }
-
-  // append hashtags to the end of a string, separated by spaces
-  def appendHashtagsToString(str: String, hashtags: Seq[Hashtag]): String = {
-    val hashtagNames = hashtags.map(_.tag)
-    appendHashtagNamesToString(str, hashtagNames).trim
   }
 
   def appendHashtagNamesToString(str: String, hashtagNames: Seq[String]): String = {
@@ -77,8 +71,8 @@ object Hashtags {
   // A literal '[#' indicates the start of a hashtag
   // A literal ']' indicates the end of the hashtag
   // inside that (...), all ']' & '\' will be escaped to indicate they are part of the hashtag
-  val hashTagRe = """\[#((?:\\[\\\]]|[^\]])+)\]""".r
-  val backslashEscapeRe = """[\]\\]""".r
-  val backslashUnescapeRe = """\\(.)""".r
+  private val hashTagRe = """\[#((?:\\[\\\]]|[^\]])+)\]""".r
+  private val backslashEscapeRe = """[\]\\]""".r
+  private val backslashUnescapeRe = """\\(.)""".r
 
 }

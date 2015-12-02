@@ -2,6 +2,7 @@ package com.keepit.slack.models
 
 import com.keepit.common.strings._
 import com.keepit.common.db.slick.DataBaseComponent
+import com.keepit.common.util.DescriptionElements
 import play.api.libs.json.{ Json, Writes }
 
 object SlackDbColumnTypes {
@@ -51,6 +52,7 @@ case class SlackMessageRequest( // https://api.slack.com/incoming-webhooks
 object SlackMessageRequest {
 
   val kifiIconUrl = "https://d1dwdv9wd966qu.cloudfront.net/img/favicon64x64.7cc6dd4.png"
+  val pandaIconUrl = "http://i.imgur.com/A86F6aB.png"
 
   def fromKifi(text: String, channel: Option[SlackChannelName] = None, attachments: Seq[SlackAttachment] = Seq.empty) = SlackMessageRequest(
     text,
@@ -60,6 +62,16 @@ object SlackMessageRequest {
     attachments = attachments,
     unfurlLinks = true,
     unfurlMedia = true
+  )
+
+  def inhouse(txt: DescriptionElements) = SlackMessageRequest(
+    text = DescriptionElements.formatForSlack(txt),
+    channel = None,
+    username = "inhouse-kifi-bot",
+    iconUrl = pandaIconUrl,
+    attachments = Seq.empty,
+    unfurlLinks = false,
+    unfurlMedia = false
   )
 
   implicit val writes: Writes[SlackMessageRequest] = Writes { o =>
