@@ -93,7 +93,7 @@ trait SearchControllerUtil {
   }
   private def getUserScope(userIdStr: String): Future[UserScope] = {
     Try(ExternalId[User](userIdStr)) match {
-      case Success(extUserId) => shoeboxClient.getUserIdsByExternalIdsNew(Set(extUserId)).imap { case idMap => UserScope(idMap.values.head) }
+      case Success(extUserId) => shoeboxClient.getUserIdsByExternalIds(Set(extUserId)).imap { case idMap => UserScope(idMap.values.head) }
       case Failure(e) => Future.failed(e)
     }
   }

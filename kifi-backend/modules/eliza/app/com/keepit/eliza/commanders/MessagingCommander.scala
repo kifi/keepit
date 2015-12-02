@@ -405,7 +405,7 @@ class MessagingCommander @Inject() (
   }
 
   def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
-    val newUserParticipantsFuture = shoebox.getUserIdsByExternalIdsNew(newParticipantsExtIds.toSet).map(_.values.toSeq)
+    val newUserParticipantsFuture = shoebox.getUserIdsByExternalIds(newParticipantsExtIds.toSet).map(_.values.toSeq)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
     val orgIds = orgs.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
@@ -591,7 +591,7 @@ class MessagingCommander @Inject() (
     initContext: HeimdalContext): Future[(ElizaMessage, Option[ElizaThreadInfo], Seq[MessageWithBasicUser])] = {
     val tStart = currentDateTime
 
-    val userRecipientsFuture = shoebox.getUserIdsByExternalIdsNew(userExtRecipients.toSet).map(_.values.toSeq)
+    val userRecipientsFuture = shoebox.getUserIdsByExternalIds(userExtRecipients.toSet).map(_.values.toSeq)
     val nonUserRecipientsFuture = constructNonUserRecipients(userId, nonUserRecipients)
 
     val orgIds = validOrgRecipients.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)

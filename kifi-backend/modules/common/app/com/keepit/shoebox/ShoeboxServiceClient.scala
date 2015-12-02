@@ -43,8 +43,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getUser(userId: Id[User]): Future[Option[User]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
-  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
-  def getUserIdsByExternalIdsNew(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]]
+  def getUserIdsByExternalIds(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]]
   def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]]
@@ -264,31 +263,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
-    val (cachedUsers, needToGetUsers) = userIds.map({ u =>
-      u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
-    }).foldRight((Map[ExternalId[User], Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
-      uOpt._2 match {
-        case Some(uid) => (res._1 + (uOpt._1 -> uid), res._2)
-        case None => (res._1, res._2 :+ uOpt._1)
-      }
-    }
-    (needToGetUsers match {
-      case Seq() => Future.successful(cachedUsers)
-      case users => call(Shoebox.internal.getUserIdsByExternalIds(needToGetUsers.mkString(","))).map { r =>
-        cachedUsers ++ users.zip(r.json.as[Seq[Id[User]]])
-      }
-    }) map { extId2Id =>
-      userIds.map(extId2Id(_))
-    }
-
-  }
-
-  def getUserIdsByExternalIdsNew(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]] = {
+  def getUserIdsByExternalIds(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]] = {
     implicit val extIdToIdMapFormat = TraversableFormat.mapFormat[ExternalId[User], Id[User]](_.id, s => Try(ExternalId[User](s)).toOption)
     cacheProvider.externalUserIdCache.bulkGetOrElseFuture(extIds.map(ExternalUserIdKey)) { missingKeys =>
       val payload = Json.toJson(missingKeys.map(_.id))
-      call(Shoebox.internal.getUserIdsByExternalIdsNew, payload).map { res =>
+      call(Shoebox.internal.getUserIdsByExternalIds(), payload).map { res =>
         val missing = res.json.as[Map[ExternalId[User], Id[User]]]
         missing.map { case (extId, id) => ExternalUserIdKey(extId) -> id }
       }
