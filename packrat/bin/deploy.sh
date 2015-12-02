@@ -77,7 +77,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
   echo $'\nDeploying REAL Firefox extension to kifi.com'
   read -p 'Press Enter or Ctrl-C '
 
-  # TODO(carlos): When jpm 1.0.4 is released,
+  # TODO(carlos): When jpm 1.0.4+ is released (and hopefully not buggy),
   # remove this mess and use `jpm sign` instead
   if [[ ! -f out/kifi-signed.xpi ]]; then
 
@@ -120,7 +120,7 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
       STATUS_PROCESSED="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD processed)"
       STATUS_ERR="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD error detail)"
       STATUS_VALID="$(echo "$STATUS_RESULT_JSON" | $JSON_CMD valid)"
-      STATUS_FILE_URL="$( echo "$STATUS_RESULT_JSON" | $JSON_CMD files[0].download_url )"
+      STATUS_FILE_URL="$( echo "$STATUS_RESULT_JSON" | $JSON_CMD files | $JSON_CMD -c this.signed | $JSON_CMD 0.download_url )"
 
       if [[ "$STATUS_RESULT_CODE" -ne 0 || -n "$STATUS_ERR" ]]; then # check for errors from cUrl
 
@@ -166,7 +166,8 @@ elif [[ -f out/kifi.xpi && -f out/kifi.update.rdf ]]; then
     # Step 3: Download the file
     printf $'\nDownloading signed file from '$STATUS_FILE_URL
     curl \
-    -qSsLo "out/kifi-signed.xpi" \
+    -gqSsLw '\n%{http_code}\n' \
+    -o "out/kifi-signed.xpi" \
     -H "Authorization: JWT $($AUTH_CMD)" \
     "$STATUS_FILE_URL"
 

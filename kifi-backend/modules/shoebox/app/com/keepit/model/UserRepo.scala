@@ -38,7 +38,7 @@ trait UserRepo extends Repo[User] with RepoWithDelete[User] with ExternalIdColum
   def getUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getAllUsers(ids: Seq[Id[User]])(implicit session: RSession): Map[Id[User], User]
   def getByExternalId(id: ExternalId[User])(implicit session: RSession): User
-  def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User]
+  def getAllUsersByExternalId(ids: Set[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User]
   def getByUsername(username: Username)(implicit session: RSession): Option[User]
   def getRecentActiveUsers(since: DateTime = currentDateTime.minusDays(1))(implicit session: RSession): Seq[Id[User]]
   def countUsersWithPotentialOrgs()(implicit session: RSession): Int
@@ -253,10 +253,10 @@ class UserRepoImpl @Inject() (
   }
 
   def getByExternalId(id: ExternalId[User])(implicit session: RSession): User = {
-    getAllUsersByExternalId(Seq(id)).values.head
+    getAllUsersByExternalId(Set(id)).get(id).get
   }
 
-  def getAllUsersByExternalId(ids: Seq[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User] = {
+  def getAllUsersByExternalId(ids: Set[ExternalId[User]])(implicit session: RSession): Map[ExternalId[User], User] = {
     if (ids.isEmpty) {
       Map.empty
     } else if (ids.size == 1) {

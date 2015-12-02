@@ -1,15 +1,13 @@
 package com.keepit.commanders
 
-import com.google.inject.{ Singleton, Inject }
-import com.keepit.common.time._
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.crypto.PublicId
+import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.time._
 import com.keepit.model._
-import com.kifi.macros.json
-import play.api.libs.json._
 import org.joda.time.DateTime
-
-import scala.io.Source
+import play.api.libs.json._
 
 /* RawBookmarkRepresentation is an input (not output) class for parsing JSON requests dealing with keeps.
  * The standard use case is parsing the request JSON, then keeping it.
@@ -40,6 +38,16 @@ object RawBookmarkRepresentation {
       JsSuccess(RawBookmarkRepresentation(x.title, x.url, x.isPrivate, x.canonical, x.openGraph, x.keptAt, None))
     }
   }
+
+  def fromCreateRequest(req: KeepCreateRequest): RawBookmarkRepresentation = RawBookmarkRepresentation(
+    title = req.title,
+    url = req.url,
+    isPrivate = None, // TODO(ryan): kill isPrivate
+    canonical = req.canonical,
+    openGraph = req.openGraph,
+    keptAt = req.keptAt,
+    note = req.note
+  )
 }
 
 @Singleton
@@ -68,3 +76,4 @@ class RawBookmarkFactory @Inject() (
     RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph, keptAt = Some(clock.now), sourceAttribution = None, note = None)
   }
 }
+

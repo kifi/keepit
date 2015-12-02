@@ -21,9 +21,11 @@ trait SocialPublishingCommander {
 case class SocialShare(twitter: Boolean, facebook: Boolean)
 
 object SocialShare {
+  val empty = SocialShare(twitter = false, facebook = false)
+
   def apply(json: JsValue): SocialShare = {
-    val fPost = (json \ "fPost").asOpt[Boolean].exists(_ == true)
-    val tweet = (json \ "tweet").asOpt[Boolean].exists(_ == true)
+    val fPost = (json \ "fPost").asOpt[Boolean].contains(true)
+    val tweet = (json \ "tweet").asOpt[Boolean].contains(true)
     SocialShare(twitter = tweet, facebook = fPost)
   }
 }

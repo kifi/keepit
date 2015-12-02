@@ -1,11 +1,39 @@
 package com.keepit.common.json
 
+import com.keepit.common.db.ExternalId
+import com.keepit.common.mail.EmailAddress
 import com.keepit.model.{ Feature, FeatureSetting, OrganizationRole }
 import org.specs2.mutable.Specification
 import play.api.libs.json._
 
+import scala.util.Try
+
 class JsonTest extends Specification {
+  private case class Foo(x: Int, y: Double, z: String)
+  private object Foo { implicit val format = Json.format[Foo] }
   "json package" should {
+    "format JsObject maps" in {
+      val f = TraversableFormat.mapFormat[ExternalId[Foo], Foo](_.id, s => Try(ExternalId[Foo](s)).toOption)
+      val obj = Map[ExternalId[Foo], Foo](
+        ExternalId("180922ae-7aab-4622-b4ad-131e9c901fa6") -> Foo(1, 2.0, "3"),
+        ExternalId("b80511f6-8248-4799-a17d-f86c1508c90d") -> Foo(42, 19.19, "wapiti")
+      )
+      val js = Json.obj(
+        "180922ae-7aab-4622-b4ad-131e9c901fa6" -> Json.obj("x" -> 1, "y" -> 2.0, "z" -> "3"),
+        "b80511f6-8248-4799-a17d-f86c1508c90d" -> Json.obj("x" -> 42, "y" -> 19.19, "z" -> "wapiti")
+      )
+      "write" in {
+        f.writes(obj) === js
+      }
+      "read" in {
+        f.reads(js).asEither === Right(obj)
+      }
+      "fail on garbage" in {
+        f.reads(Json.obj("180922ae-7aab-4622-b4ad-131e9c901fa6" -> "pqrs")).asEither must beLeft
+        f.reads(Json.obj("asdf" -> Json.obj("x" -> 42, "y" -> 19.19, "z" -> "wapiti"))).asEither must beLeft
+        f.reads(Json.obj("asdf" -> "pqrs")).asEither must beLeft
+      }
+    }
     "robustly deserialize collections" in {
       "robustly handle js arrays" in {
         val myFormat = TraversableFormat.safeArrayReads[OrganizationRole]

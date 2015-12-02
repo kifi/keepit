@@ -129,14 +129,15 @@
       </div>
       <div class="kf-keep-card-flex-row">
         <div class="kf-keep-card-content-bar"></div>
-        <div class="kf-flex-column kf-keep-card-flex-grow">
+        <div class=".kf-keep-card-flex-column kf-keep-card-flex-grow">
           <div class="kf-keep-card-content kf-flex-grow">
             <div class="kf-keep-card-title">
               <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank"
                  ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow"
                  click-action="clickedArticleTitle" full-text="displayTitle"
-                 ng-bind="displayTitle" kf-ellipsis max-num-lines="2"></a>
+                 ng-bind="displayTitle"></a>
             </div>
+            <span class="kf-keep-source">{{::keepSource}}</span>
           </div>
           <div class="kf-keep-card-flex-row">
             <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
@@ -156,13 +157,11 @@
             </button>
           </div>
         </div>
-        <div>
-          <a class="kf-keep-card-image" ng-if="::image"
-             ng-style="{'background-image': 'url(\'' + image.url + '\')'}"
-             ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
-             ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
-          </a>
-        </div>
+        <a class="kf-keep-card-image" ng-if="::image"
+           ng-style="{'background-image': 'url(\'' + image.url + '\')'}"
+           ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
+           ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
+        </a>
       </div>
     </div>
 

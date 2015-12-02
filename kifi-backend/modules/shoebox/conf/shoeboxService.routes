@@ -588,10 +588,6 @@ GET     /r/$token<[0-9a-f-]{36}>    @com.keepit.controllers.email.EmailDeepLinkC
 GET     /mr/:token                  @com.keepit.controllers.email.EmailDeepLinkController.handleMobile(token: String)
 GET     /ir/:token                  @com.keepit.controllers.email.EmailDeepLinkController.handleIPhoneTempForDev(token: String)
 
-GET     /r/e/1/recos/view             @com.keepit.controllers.email.EmailRecosController.viewReco(id: ExternalId[NormalizedURI])
-GET     /r/e/1/recos/keep             @com.keepit.controllers.email.EmailRecosController.keepReco(id: ExternalId[NormalizedURI])
-GET     /r/e/1/recos/send           @com.keepit.controllers.email.EmailRecosController.sendReco(id: ExternalId[NormalizedURI])
-
 ##########################################
 # External Services API
 ##########################################
@@ -1048,6 +1044,8 @@ GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controll
 
 POST    /internal/shoebox/user/addInteractions            @com.keepit.controllers.internal.ShoeboxController.addInteractions(userId: Id[User])
 GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
+
+POST    /internal/shoebox/database/internKeep    @com.keepit.controllers.internal.ShoeboxDiscussionController.internKeep()
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)

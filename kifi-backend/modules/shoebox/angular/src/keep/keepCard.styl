@@ -457,7 +457,7 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
 
 .kf-keep
   &.compact
-      padding: 8px 12px
+      padding: 6px 8px
 
 .kf-compact-card
   > * + *
@@ -473,7 +473,7 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     margin-right: 10px
 
   .kf-keep-card-content-bar
-    width: 2px
+    width: 1px
     background-color: #DEDEDE
     margin-top: 4px
     margin-left: 15px
@@ -481,8 +481,9 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     margin-bottom: 4px
 
   .kf-keep-card-image
-    width: 70px
-    height: 70px
+    align-self: center
+    width: 62px
+    height: 62px
     display: inline-block
     margin: 0 -1px // cover container's 1px side borders
     background-size: cover
@@ -496,16 +497,23 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     flex-grow: 1
     justify-content: flex-start
     padding-left: 0px
-    margin-bottom: 5px
+    margin-bottom: 2px
     margin-right: 5px
 
   .kf-keep-card-title
     margin-left: 0px
     overflow: hidden
     text-overflow: ellipsis
+    margin-right: 5px
 
   .kf-keep-title-link[href]
-    font: bold 15px/18px Lato,sans-serif
+    font: bold 14px/17px Lato,sans-serif
+    white-space: nowrap
+
+  .kf-keep-source
+    margin-top: 4px
+    font-size: 12px
+    color: textGreyColor
 
   .kf-knf
     margin-top: 0px

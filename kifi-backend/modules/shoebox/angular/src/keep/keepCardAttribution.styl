@@ -14,6 +14,8 @@
   align-items: center
   font-size: 14px
   color: textGreyColor
+  font-weight normal
+  font-smoothing: antialiased
 
   .kf-privacy-icon
     display: inline-block
@@ -34,9 +36,12 @@
 
 .kf-keep-card-attribution-message
   display: block
+  width: 1px
+  flex-grow: 1
 
 .kf-keep-card-attribution-keeper-pic
   display: inline-block
+  flex-shrink: 0
   height: 34px
   width: 34px
   border-radius: 50%
@@ -53,19 +58,6 @@
     height: 24px
     width: 24px
     margin-right: 6px
-
-.kf-keep-card-attribution-keeper-name
-  color: accentGreen
-  font-weight: bold
-
-  @media (max-width: maxWidthForNarrowKeep)
-    font-size: 14px
-
-  &:hover
-    text-decoration: underline
-
-  &:focus
-    outline-color: tint(accentGreen, 50%)
 
 .kf-keep-card-attribution-slack-icon
   width: 20px
