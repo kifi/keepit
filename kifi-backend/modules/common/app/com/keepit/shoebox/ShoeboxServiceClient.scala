@@ -25,7 +25,7 @@ import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchC
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
 import com.keepit.slack.models._
-import com.keepit.social.{ BasicUserUserIdKey, _ }
+import com.keepit.social._
 import org.joda.time.DateTime
 import play.api.libs.json.Json._
 import play.api.libs.json._
@@ -160,7 +160,8 @@ case class ShoeboxCacheProvider @Inject() (
   primaryOrgForUserCache: PrimaryOrgForUserCache,
   basicKeepByIdCache: BasicKeepByIdCache,
   organizationMembersCache: OrganizationMembersCache,
-  basicOrganizationIdCache: BasicOrganizationIdCache)
+  basicOrganizationIdCache: BasicOrganizationIdCache,
+  slackIntegrationsCache: SlackChannelIntegrationsCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -847,8 +848,10 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = {
-    val payload = Json.obj("teamId" -> teamId, "channelId" -> channelId)
-    call(Shoebox.internal.getIntegrationsBySlackChannel, payload).map { _.json.as[SlackChannelIntegrations] }
+    cacheProvider.slackIntegrationsCache.getOrElseFuture(SlackChannelIntegrationsKey(teamId, channelId)) {
+      val payload = Json.obj("teamId" -> teamId, "channelId" -> channelId)
+      call(Shoebox.internal.getIntegrationsBySlackChannel, payload).map { _.json.as[SlackChannelIntegrations] }
+    }
   }
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = {

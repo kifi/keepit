@@ -11,6 +11,7 @@ import com.keepit.common.time._
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import org.joda.time.{ Period, DateTime }
+import com.keepit.common.core._
 
 case class LibraryToSlackChannel(
   id: Option[Id[LibraryToSlackChannel]] = None,
@@ -82,7 +83,8 @@ trait LibraryToSlackChannelRepo extends Repo[LibraryToSlackChannel] {
 @Singleton
 class LibraryToSlackChannelRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[LibraryToSlackChannel] with LibraryToSlackChannelRepo {
+    val clock: Clock,
+    integrationsCache: SlackChannelIntegrationsCache) extends DbRepo[LibraryToSlackChannel] with LibraryToSlackChannelRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -174,8 +176,10 @@ class LibraryToSlackChannelRepoImpl @Inject() (
 
   def table(tag: Tag) = new LibraryToSlackChannelTable(tag)
   initTable()
-  override def deleteCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {}
-  override def invalidateCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {}
+  override def deleteCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = {
+    info.slackChannelId.foreach(channelId => integrationsCache.remove(SlackChannelIntegrationsKey(info.slackTeamId, channelId)))
+  }
+  override def invalidateCache(info: LibraryToSlackChannel)(implicit session: RSession): Unit = deleteCache(info)
 
   private def activeRows = rows.filter(row => row.state === LibraryToSlackChannelStates.ACTIVE)
   private def workingRows = activeRows.filter(row => row.status === (SlackIntegrationStatus.On: SlackIntegrationStatus))
@@ -248,6 +252,8 @@ class LibraryToSlackChannelRepoImpl @Inject() (
   }
 
   def fillInMissingChannelId(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName, channelId: SlackChannelId)(implicit session: RWSession): Int = {
-    activeRows.filter(r => r.slackUserId === userId && r.slackTeamId === teamId && r.slackChannelName === channelName && r.slackChannelId.isEmpty).map(r => (r.updatedAt, r.slackChannelId)).update((clock.now, Some(channelId)))
+    activeRows.filter(r => r.slackUserId === userId && r.slackTeamId === teamId && r.slackChannelName === channelName && r.slackChannelId.isEmpty).map(r => (r.updatedAt, r.slackChannelId)).update((clock.now, Some(channelId))) tap { updated =>
+      if (updated > 0) integrationsCache.remove(SlackChannelIntegrationsKey(teamId, channelId))
+    }
   }
 }

@@ -1,14 +1,18 @@
 package com.keepit.slack.models
 
+import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
 import com.keepit.common.db.Id
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
 import com.keepit.model.KeepAttributionType._
-import com.keepit.model.Library
+import com.keepit.model.{ Keep, Library }
+import com.keepit.rover.model.BasicImages
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.kifi.macros.json
 
+import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 
 object KifiSlackApp {
@@ -278,3 +282,11 @@ object SlackChannelIntegrations {
   def none(teamId: SlackTeamId, channelId: SlackChannelId) = SlackChannelIntegrations(teamId, channelId, Set.empty, Set.empty, Set.empty)
 }
 
+case class SlackChannelIntegrationsKey(teamId: SlackTeamId, channelId: SlackChannelId) extends Key[SlackChannelIntegrations] {
+  override val version = 1
+  val namespace = "slack_channel_integrations"
+  def toKey(): String = s"${teamId.value}-${channelId.value}"
+}
+
+class SlackChannelIntegrationsCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SlackChannelIntegrationsKey, SlackChannelIntegrations](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)

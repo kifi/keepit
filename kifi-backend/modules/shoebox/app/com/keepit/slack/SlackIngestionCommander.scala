@@ -170,16 +170,6 @@ class SlackIngestionCommanderImpl @Inject() (
     lastMessageTimestamp.foreach { timestamp =>
       db.readWrite { implicit session =>
         integrationRepo.updateLastMessageTimestamp(integration.id.get, timestamp)
-
-        // todo(Léo): hacky, move this backfilling somewhere else
-        if (integration.slackChannelId.isEmpty) {
-          messages.map(_.channel.id).headOption.foreach { channelId =>
-            val latestIntegration = integrationRepo.get(integration.id.get)
-            if (latestIntegration.slackChannelId.isEmpty) {
-              integrationRepo.save(latestIntegration.copy(slackChannelId = Some(channelId)))
-            }
-          }
-        }
       }
     }
     (lastMessageTimestamp, ingestedMessages)
