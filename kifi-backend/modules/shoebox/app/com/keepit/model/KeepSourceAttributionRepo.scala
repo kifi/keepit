@@ -12,7 +12,7 @@ import play.api.libs.json._
 
 @ImplementedBy(classOf[KeepSourceAttributionRepoImpl])
 trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
-  def getByIds(ids: Set[Id[KeepSourceAttribution]])(implicit session: RSession): Map[Id[KeepSourceAttribution], KeepSourceAttribution]
+  def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
 }
 
 @Singleton
@@ -35,13 +35,13 @@ class KeepSourceAttributionRepoImpl @Inject() (
     Some((attr.id, attr.createdAt, attr.updatedAt, attr.keepId, attrType, js, attr.state))
   }
 
-  def applyFromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Option[Id[Keep]], attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
+  def applyFromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Id[Keep], attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
     val attr = SourceAttribution.fromJson(attrType, attrJson).get
     KeepSourceAttribution(id, createdAt, updatedAt, keepId, attr, state)
   }
 
   class KeepSourceAttributionTable(tag: Tag) extends RepoTable[KeepSourceAttribution](db, tag, "keep_source_attribution") {
-    def keepId = column[Option[Id[Keep]]]("keep_id", O.Nullable)
+    def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def attributionType = column[KeepAttributionType]("attr_type", O.NotNull)
     def attributionJson = column[JsValue]("attr_json", O.NotNull)
     def * = (id.?, createdAt, updatedAt, keepId, attributionType, attributionJson, state) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
@@ -54,8 +54,10 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   def deleteCache(uri: KeepSourceAttribution)(implicit session: RSession): Unit = {}
 
-  def getByIds(ids: Set[Id[KeepSourceAttribution]])(implicit session: RSession): Map[Id[KeepSourceAttribution], KeepSourceAttribution] = {
-    rows.filter(_.id inSet ids).list.map(att => att.id.get -> att).toMap
+  private def activeRows = rows.filter(row => row.state === KeepSourceAttributionStates.ACTIVE)
+
+  def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
+    activeRows.filter(_.keepId inSet keepIds).list.map(att => att.keepId -> att.attribution).toMap
   }
 }
 
