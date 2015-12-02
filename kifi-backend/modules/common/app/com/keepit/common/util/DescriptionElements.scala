@@ -74,16 +74,20 @@ object DescriptionElements {
       case _ => throw new IllegalArgumentException(s"intersperse expects lists with length (n, n-1). it got (${xs.length}, ${ins.length})")
     }
   }
-  def unlines(els: Seq[DescriptionElements]): DescriptionElements = {
-    if (els.isEmpty) SequenceOfElements.empty
-    else SequenceOfElements(intersperse(els, Seq.fill(els.length - 1)("\n")))
+  private def intersperseWith[T](xs: Seq[T], x: T): Seq[T] = {
+    if (xs.isEmpty) xs
+    else intersperse(xs, Seq.fill(xs.length - 1)(x))
   }
+
+  def mkElements(els: Seq[DescriptionElements], e: BasicElement): DescriptionElements = SequenceOfElements(intersperseWith(els, e))
+  def unlines(els: Seq[DescriptionElements]): DescriptionElements = mkElements(els, "\n")
+
   private def interpolatePunctuation(els: Seq[BasicElement]): Seq[BasicElement] = {
     val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
 
-    val leftEnds = Set("'", "\n", "[")
-    val rightStarts = Set(".", "'", "\n", "]")
+    val leftEnds = Set("'", "\n", "[", "`")
+    val rightStarts = Set(".", "'", "\n", "]", "`")
     val interpolatedPunctuation = wordPairs.map {
       case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
       case _ => " "
