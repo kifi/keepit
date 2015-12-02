@@ -39,6 +39,7 @@ import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
 class BookmarkImporter @Inject() (
+    db: Database,
     val userActionsHelper: UserActionsHelper,
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
@@ -106,9 +107,11 @@ class BookmarkImporter @Inject() (
     log.info(s"[TweetSync] Got ${parsed.length} Bookmarks out of ${tweets.length} tweets")
     val tagSet = parsed.flatMap { bm => bm.tags }.toSet
 
-    val tags = tagSet.map { tagStr =>
-      tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)(context)
-    }.toMap
+    val tags = db.readWrite { implicit s =>
+      tagSet.map { tagStr =>
+        tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)
+      }.toMap
+    }
     val taggedKeeps = parsed.map {
       case Bookmark(t, h, tagNames, createdDate, originalJson) =>
         val keepTagNames = tagNames.flatMap(tags.get).map(_.name.tag)
@@ -133,11 +136,17 @@ class BookmarkImporter @Inject() (
         }
       }
 
-      val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "imported-links")(context)
+      val importTag = db.readWrite { implicit s =>
+        keepsCommander.getOrCreateTag(lf.request.userId, "imported-links")
+      }
 
-      val tags = tagMap.values.toSeq.map { tagStr =>
-        tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
-      }.toMap
+      val tags = db.readWrite { implicit s =>
+        tagMap.values.toSeq.map { tagStr =>
+          tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) {
+            keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)
+          }
+        }.toMap
+      }
       val taggedKeeps = parsed.map {
         case Bookmark(t, h, tagNames, createdDate, originalJson) =>
           val keepTags = tagNames.flatMap(tags.get) :+ importTag

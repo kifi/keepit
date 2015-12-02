@@ -556,19 +556,6 @@ class LibraryController @Inject() (
     }
   }
 
-  // TODO(ryan): This seems to only update the keep title. Is it supposed to do other things?
-  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
-    val libraryId = Library.decodePublicId(libraryPubId).get
-    val body = request.body
-    val title = (body \ "title").asOpt[String]
-
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
-      case Left((status, code)) => Status(status)(Json.obj("error" -> code))
-      case Right(keep) => NoContent
-    }
-  }
-
   def editKeepNote(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(keepExtId)

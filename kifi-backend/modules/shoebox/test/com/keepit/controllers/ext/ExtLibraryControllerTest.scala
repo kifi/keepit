@@ -606,56 +606,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
       }
     }
 
-    "tag and untag keep in library" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val (user1, user2, lib, mem1, mem2, keep1, keep2) = db.readWrite { implicit s =>
-          val user1 = UserFactory.user().withName("U", "1").withUsername("test").saved
-          val user2 = UserFactory.user().withName("U", "2").withUsername("test").saved
-          val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
-          val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
-          val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
-          val keep1 = keepInLibrary(user1, lib, "http://foo.com", "Foo")
-          val keep2 = keepInLibrary(user1, lib, "http://bar.com", "Bar", Seq("aa aa", "b b"))
-          (user1, user2, lib, mem1, mem2, keep1, keep2)
-        }
-        val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
-
-        // user can tag own keeps in own library
-        status(tagKeep(user1, libPubId, keep1.externalId, "c")) === OK
-        status(tagKeep(user1, libPubId, keep1.externalId, "c")) === OK // idempotent
-        status(tagKeep(user1, libPubId, keep1.externalId, "dd")) === OK
-        status(tagKeep(user1, libPubId, keep2.externalId, "e e e")) === OK
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set(Hashtag("c"), Hashtag("dd"))
-          collectionRepo.getHashtagsByKeepId(keep2.id.get) === Set(Hashtag("aa aa"), Hashtag("b b"), Hashtag("e e e"))
-        }
-
-        // user can untag own keeps in own library
-        status(untagKeep(user1, libPubId, keep1.externalId, "dd")) === NO_CONTENT
-        status(untagKeep(user1, libPubId, keep1.externalId, "dd")) === NO_CONTENT // idempotent
-        status(untagKeep(user1, libPubId, keep1.externalId, "xyz")) === NO_CONTENT // succeeds when a no-op
-        status(untagKeep(user1, libPubId, keep2.externalId, "b b")) === NO_CONTENT
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set(Hashtag("c"))
-          collectionRepo.getHashtagsByKeepId(keep2.id.get) === Set(Hashtag("aa aa"), Hashtag("e e e"))
-        }
-
-        // invalid keep ID
-        status(tagKeep(user1, libPubId, ExternalId(), "zzz")) === NOT_FOUND
-
-        // other user with read-only library access cannot tag or untag keep
-        status(tagKeep(user2, libPubId, keep1.externalId, "pwned")) === FORBIDDEN
-        status(untagKeep(user2, libPubId, keep1.externalId, "c")) === FORBIDDEN
-        db.readOnlyMaster { implicit s => collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
-
-        // other user with write access cannot yet tag or untag keep. TODO: fix when tags are in libraries
-        db.readWrite { implicit s => libraryMembershipRepo.save(mem2.copy(access = LibraryAccess.READ_WRITE)) }
-        status(tagKeep(user2, libPubId, keep1.externalId, "collab")) === FORBIDDEN
-        status(untagKeep(user2, libPubId, keep1.externalId, "c")) === FORBIDDEN
-        db.readOnlyMaster { implicit s => collectionRepo.getHashtagsByKeepId(keep1.id.get) === Set(Hashtag("c")) }
-      }
-    }
-
     "search tags" in {
       withDb(controllerTestModules: _*) { implicit injector =>
         val (user1, user2, lib, mem1, mem2, keep1, keep2) = db.readWrite { implicit s =>
@@ -664,22 +614,16 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
           val lib = libraryRepo.save(Library(name = "L", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("l"), memberCount = 1))
           val mem1 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
           val mem2 = libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = user2.id.get, access = LibraryAccess.READ_ONLY))
-          val keep1 = keepInLibrary(user1, lib, "http://foo.com", "Foo")
+          val keep1 = keepInLibrary(user1, lib, "http://foo.com", "Foo", Seq("animal", "aardvark", "Awesome"))
           val keep2 = keepInLibrary(user1, lib, "http://bar.com", "Bar")
           (user1, user2, lib, mem1, mem2, keep1, keep2)
         }
         val libPubId = Library.publicId(lib.id.get)(inject[PublicIdConfiguration])
-        status(tagKeep(user1, libPubId, keep1.externalId, "animal")) === OK
-        status(tagKeep(user1, libPubId, keep1.externalId, "aardvark")) === OK
-        status(tagKeep(user1, libPubId, keep1.externalId, "Awesome")) === OK
 
         // user can search new tags for keeps
         contentAsString(searchTags(user1, libPubId, keep1.externalId, "a", 2)) === """[]"""
         contentAsString(searchTags(user1, libPubId, keep2.externalId, "a", 2)) === """[{"tag":"aardvark","matches":[[0,1]]},{"tag":"animal","matches":[[0,1]]}]"""
         contentAsString(searchTags(user1, libPubId, keep2.externalId, "s", 2)) === """[]"""
-
-        status(tagKeep(user1, libPubId, keep2.externalId, "aardvark")) === OK
-        contentAsString(searchTags(user1, libPubId, keep2.externalId, "a", 2)) === """[{"tag":"animal","matches":[[0,1]]},{"tag":"Awesome","matches":[[0,1]]}]"""
 
         /* todo(Léo): reconsider when tags have been figured out from a product perspective
         // other user with read access to library can search tags
@@ -747,16 +691,6 @@ class ExtLibraryControllerTest extends Specification with ShoeboxTestInjector wi
   private def editKeepNote(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], body: JsObject)(implicit injector: Injector): Future[Result] = {
     inject[FakeUserActionsHelper].setUser(user)
     controller.editKeepNote(libraryId, keepId)(request(routes.ExtLibraryController.editKeepNote(libraryId, keepId)).withBody(body))
-  }
-
-  private def tagKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], tag: String)(implicit injector: Injector): Future[Result] = {
-    inject[FakeUserActionsHelper].setUser(user)
-    controller.tagKeep(libraryId, keepId, tag)(request(routes.ExtLibraryController.tagKeep(libraryId, keepId, tag)))
-  }
-
-  private def untagKeep(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], tag: String)(implicit injector: Injector): Future[Result] = {
-    inject[FakeUserActionsHelper].setUser(user)
-    controller.untagKeep(libraryId, keepId, tag)(request(routes.ExtLibraryController.untagKeep(libraryId, keepId, tag)))
   }
 
   private def searchTags(user: User, libraryId: PublicId[Library], keepId: ExternalId[Keep], q: String, n: Int)(implicit injector: Injector): Future[Result] = {
