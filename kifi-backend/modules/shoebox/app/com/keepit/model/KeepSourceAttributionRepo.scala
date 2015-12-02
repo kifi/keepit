@@ -32,18 +32,19 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   def unapplyToDbRow(attr: KeepSourceAttribution) = {
     val (attrType, js) = SourceAttribution.toJson(attr.attribution)
-    Some((attr.id, attr.createdAt, attr.updatedAt, attrType, js, attr.state))
+    Some((attr.id, attr.createdAt, attr.updatedAt, attr.keepId, attrType, js, attr.state))
   }
 
-  def applyFromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
+  def applyFromDbRow(id: Option[Id[KeepSourceAttribution]], createdAt: DateTime, updatedAt: DateTime, keepId: Option[Id[Keep]], attrType: KeepAttributionType, attrJson: JsValue, state: State[KeepSourceAttribution]) = {
     val attr = SourceAttribution.fromJson(attrType, attrJson).get
-    KeepSourceAttribution(id, createdAt, updatedAt, attr, state)
+    KeepSourceAttribution(id, createdAt, updatedAt, keepId, attr, state)
   }
 
   class KeepSourceAttributionTable(tag: Tag) extends RepoTable[KeepSourceAttribution](db, tag, "keep_source_attribution") {
+    def keepId = column[Option[Id[Keep]]]("keep_id", O.Nullable)
     def attributionType = column[KeepAttributionType]("attr_type", O.NotNull)
     def attributionJson = column[JsValue]("attr_json", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, attributionType, attributionJson, state) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, keepId, attributionType, attributionJson, state) <> ((applyFromDbRow _).tupled, unapplyToDbRow _)
   }
 
   def table(tag: Tag) = new KeepSourceAttributionTable(tag)

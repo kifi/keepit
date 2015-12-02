@@ -23,6 +23,7 @@ case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
+    keepId: Option[Id[Keep]],
     attribution: SourceAttribution,
     state: State[KeepSourceAttribution] = KeepSourceAttributionStates.ACTIVE) extends ModelWithState[KeepSourceAttribution] {
 
