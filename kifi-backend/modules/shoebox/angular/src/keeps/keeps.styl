@@ -263,39 +263,10 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
 
 .kf-keep-top-menu-btn
   position: relative
-  width: 18px
-  height: 13px
-  border: 0
-  background: transparent
+  padding: 5px
 
-  &::before
-  &::after
-    content: ''
-    position: absolute;
-    left: 50%
-    width: 3px;
-    top: 4px
-    bottom: 4px
-    border-top-left-radius: 2px
-    border-top-right-radius: 2px
-    background: #c7c7c7
-    font-size: 0
-
-  &::before
-    transform: translate(-4px) rotate(-45deg)
-
-  &::after
-    transform: translate(2px) rotate(45deg)
-
-  &:hover::before
-  &:hover::after
-  &:focus::before
-  &:focus::after
-    background: #aaa
-
-  &:active::before
-  &:active::after
-   background: #888
+  svg
+    fill: #c7c7c7
 
 .kf-keep-keeper-pic
   display: table-cell
