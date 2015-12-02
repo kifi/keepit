@@ -40,6 +40,8 @@ class MessageThreadRepoImpl @Inject() (
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
 
+  private def activeRows = rows.filter(_.state === MessageThreadStates.ACTIVE)
+
   override def invalidateCache(thread: MessageThread)(implicit session: RSession): Unit = {
     threadExternalIdCache.set(MessageThreadExternalIdKey(thread.externalId), thread)
   }
@@ -53,25 +55,23 @@ class MessageThreadRepoImpl @Inject() (
   def getOrCreate(userParticipants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean) = {
     //Note (stephen): This has a race condition: When two threads that would normally be merged are created at the exact same time two different conversations will be the result
     val mtps = MessageThreadParticipants(userParticipants.toSet, nonUserParticipants.toSet)
-    val candidates: Seq[MessageThread] = (for (row <- rows if row.participantsHash === mtps.userHash && row.uriId === uriIdOpt) yield row).list.filter { thread =>
-      thread.uriId.isDefined &&
-        thread.participants.isDefined &&
-        thread.participants.get == mtps
+    val candidates: Seq[MessageThread] = activeRows.filter(row => row.participantsHash === mtps.userHash && row.uriId === uriIdOpt).list.filter { thread =>
+      thread.uriId.isDefined && thread.participants.isDefined && thread.participants.get == mtps
     }
-    if (candidates.length > 0) {
-      (candidates.head, false)
-    } else {
-      val thread = MessageThread(
-        id = None,
-        uriId = uriIdOpt,
-        url = urlOpt,
-        nUrl = nUriOpt,
-        pageTitle = pageTitleOpt,
-        participants = Some(mtps),
-        participantsHash = Some(mtps.userHash),
-        keepId = None
-      )
-      (save(thread), true)
+    candidates.headOption match {
+      case Some(cand) => (cand, false)
+      case None =>
+        val thread = MessageThread(
+          id = None,
+          uriId = uriIdOpt,
+          url = urlOpt,
+          nUrl = nUriOpt,
+          pageTitle = pageTitleOpt,
+          participants = Some(mtps),
+          participantsHash = Some(mtps.userHash),
+          keepId = None
+        )
+        (save(thread), true)
     }
   }
 
@@ -80,7 +80,7 @@ class MessageThreadRepoImpl @Inject() (
   }
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
-    rows.filter(_.keepId.inSet(keepIds)).list.groupBy(_.keepId).collect { case (Some(kid), Seq(thread)) => kid -> thread }
+    activeRows.filter(_.keepId.inSet(keepIds)).list.groupBy(_.keepId).collect { case (Some(kid), Seq(thread)) => kid -> thread }
   }
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread] = {
     getByKeepIds(Set(keepId)).get(keepId)
@@ -89,8 +89,8 @@ class MessageThreadRepoImpl @Inject() (
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit = {
     updates.foreach {
       case (oldId, newNUri) =>
-        val updateIds = (for (row <- rows if row.uriId === oldId) yield row.externalId).list //Note: race condition if there is an insert after this?
-        (for (row <- rows if row.uriId === oldId) yield (row.uriId, row.nUrl)).update((newNUri.id.get, newNUri.url))
+        val updateIds = rows.filter(row => row.uriId === oldId).map(_.externalId).list //Note: race condition if there is an insert after this?
+        rows.filter(row => row.uriId === oldId).map(row => (row.uriId, row.nUrl)).update((newNUri.id.get, newNUri.url))
         updateIds.foreach { extId =>
           threadExternalIdCache.remove(MessageThreadExternalIdKey(extId))
         }
