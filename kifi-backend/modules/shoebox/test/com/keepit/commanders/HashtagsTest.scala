@@ -25,25 +25,25 @@ class HashtagsTest extends Specification {
     }
 
     "add list of hashtags to string" in {
-      Hashtags.appendHashtagNamesToString("", Seq.empty) === ""
-      Hashtags.appendHashtagNamesToString("a", Seq.empty) === "a"
-      Hashtags.appendHashtagNamesToString("a", Seq("b")) === "a [#b]"
-      Hashtags.appendHashtagNamesToString("a", Seq("b", "cd")) === "a [#b] [#cd]"
+      Hashtags.addTagsToString("", Seq.empty) === ""
+      Hashtags.addTagsToString("a", Seq.empty) === "a"
+      Hashtags.addTagsToString("a", Seq("b")) === "a [#b]"
+      Hashtags.addTagsToString("a", Seq("b", "cd")) === "a [#b] [#cd]"
 
-      Hashtags.appendHashtagNamesToString("", Seq("a", "b", "cd")) === "[#a] [#b] [#cd]"
-      Hashtags.appendHashtagNamesToString("[#a]", Seq("b", "cd")) === "[#a] [#b] [#cd]"
+      Hashtags.addTagsToString("", Seq("a", "b", "cd")) === "[#a] [#b] [#cd]"
+      Hashtags.addTagsToString("[#a]", Seq("b", "cd")) === "[#a] [#b] [#cd]"
 
-      Hashtags.appendHashtagNamesToString("a", Seq("\\b")) === "a [#\\\\b]"
-      Hashtags.appendHashtagNamesToString("a", Seq("[b")) === "a [#[b]"
-      Hashtags.appendHashtagNamesToString("a", Seq("b]")) === "a [#b\\]]"
+      Hashtags.addTagsToString("a", Seq("\\b")) === "a [#\\\\b]"
+      Hashtags.addTagsToString("a", Seq("[b")) === "a [#[b]"
+      Hashtags.addTagsToString("a", Seq("b]")) === "a [#b\\]]"
     }
 
     "add new hashtags to string" in {
-      Hashtags.addNewHashtagNamesToString("", Seq.empty) === ""
-      Hashtags.addNewHashtagNamesToString("a", Seq.empty) === "a"
-      Hashtags.addNewHashtagNamesToString("a", Seq("b")) === "a [#b]"
-      Hashtags.addNewHashtagNamesToString("[#b] a", Seq("b")) === "[#b] a"
-      Hashtags.addNewHashtagNamesToString("[#b] a", Seq("b", "c")) === "[#b] a [#c]"
+      Hashtags.addTagsToString("", Seq.empty) === ""
+      Hashtags.addTagsToString("a", Seq.empty) === "a"
+      Hashtags.addTagsToString("a", Seq("b")) === "a [#b]"
+      Hashtags.addTagsToString("[#b] a", Seq("b")) === "[#b] a"
+      Hashtags.addTagsToString("[#b] a", Seq("b", "c")) === "[#b] a [#c]"
     }
 
     "remove all hashtags from a string" in {

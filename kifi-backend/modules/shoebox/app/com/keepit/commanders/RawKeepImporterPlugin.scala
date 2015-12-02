@@ -203,7 +203,7 @@ class KeepTagImportHelper @Inject() (
 
   }
 
-  private def genLowerCaseTagNameToCollectionMap(userId: Id[User], rawKeepGroup: Seq[RawKeep])(context: HeimdalContext): Map[String, Collection] = {
+  private def genLowerCaseTagNameToCollectionMap(userId: Id[User], rawKeepGroup: Seq[RawKeep])(implicit context: HeimdalContext): Map[String, Collection] = {
     // create a set of all tags
     val keepTagNamesMap = scala.collection.mutable.Map.empty[String, String]
     rawKeepGroup.foreach { rk =>
@@ -214,10 +214,12 @@ class KeepTagImportHelper @Inject() (
       }
     }
     // map tagNames to keepTags
-    val keepTagMap = keepTagNamesMap.values.toSet.map { tagName: String =>
-      val keepTag = keepsCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
-      (tagName.toLowerCase, keepTag)
-    }.toMap
+    val keepTagMap = db.readWrite { implicit s =>
+      keepTagNamesMap.values.toSet.map { tagName: String =>
+        val keepTag = keepsCommanderProvider.get.getOrCreateTag(userId, tagName)
+        (tagName.toLowerCase, keepTag)
+      }.toMap
+    }
 
     keepTagMap
   }
@@ -252,7 +254,9 @@ class KeepTagImportHelper @Inject() (
     val tagName = db.readOnlyReplica { implicit session =>
       "Imported" + kifiInstallationRepo.getOpt(installationId).map(v => s" from ${v.userAgent.name}").getOrElse("")
     }
-    val tag = keepsCommanderProvider.get.getOrCreateTag(userId, tagName)(context)
+    val tag = db.readWrite { implicit s =>
+      keepsCommanderProvider.get.getOrCreateTag(userId, tagName)
+    }
     keepsCommanderProvider.get.addToCollection(tag.id.get, keeps, updateIndex = false)(context)
   }
 
