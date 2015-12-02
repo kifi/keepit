@@ -217,13 +217,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def getUserIdsByExternalIds(ids: String) = Action { request =>
-    val extUserIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[User])
-    val users = db.readOnlyMaster { implicit s => //using cache
-      extUserIds.flatMap(userRepo.getOpt(_).map(_.id.get.id))
-    }
-    Ok(Json.toJson(users))
-  }
   def getUserIdsByExternalIdsNew() = Action(parse.tolerantJson) { request =>
     implicit val extIdToIdMapFormat = TraversableFormat.mapFormat[ExternalId[User], Id[User]](_.id, s => Try(ExternalId[User](s)).toOption)
     val extUserIds = request.body.as[Set[ExternalId[User]]]

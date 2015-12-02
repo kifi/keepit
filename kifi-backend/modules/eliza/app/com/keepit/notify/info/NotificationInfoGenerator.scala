@@ -62,7 +62,7 @@ class NotificationInfoGenerator @Inject() (
 
     val userIdsFromExternalF = for {
       externalIds <- externalUserIdsF
-      userIds <- shoeboxServiceClient.getUserIdsByExternalIdsNew(externalIds).map(_.values.toSet)
+      userIds <- shoeboxServiceClient.getUserIdsByExternalIds(externalIds).map(_.values.toSet)
     } yield userIds
 
     val batchedInfosF = for {

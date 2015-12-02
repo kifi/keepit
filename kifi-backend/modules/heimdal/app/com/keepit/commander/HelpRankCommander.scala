@@ -45,7 +45,7 @@ class HelpRankCommander @Inject() (
         case Some(hit) => Future.successful(Unit)
         case None =>
           kifiHitCache.set(SearchHitReportKey(discoverer, kifiHit.uriId), kifiHit)
-          shoeboxClient.getUserIdsByExternalIdsNew(keepers.toSet) map { idMap =>
+          shoeboxClient.getUserIdsByExternalIds(keepers.toSet) map { idMap =>
             idMap.values.foreach { keeperId =>
               db.readWrite { implicit s =>
                 userKeepInfoRepo.increaseCounts(keeperId, kifiHit.uriId, isSelf = false)
