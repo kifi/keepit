@@ -118,7 +118,7 @@ class KeepsController @Inject() (
         }
         keepOpt match {
           case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-          case Some(keep) => keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize, withKeepTime = true, sanitizeUrls = false).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
+          case Some(keep) => keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize, sanitizeUrls = false).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
         }
     }
   }
