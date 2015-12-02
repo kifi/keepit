@@ -44,11 +44,12 @@ class UriIntegrityActor @Inject() (
     helpers: UriIntegrityHelpers) extends FortyTwoActor(airbrake) with UriIntegrityChecker with Logging {
 
   /** tricky point: make sure (library, uri) pair is unique.  */
-  private def handleBookmarks(oldKeeps: Seq[Keep])(implicit session: RWSession): Unit = {
+  private def handleBookmarks(oldKeepIds: Set[Id[Keep]])(implicit session: RWSession): Unit = {
     var urlToUriMap: Map[String, NormalizedURI] = Map()
 
-    oldKeeps.foreach { keep =>
+    oldKeepIds.foreach { keepId =>
       // must get the new normalized uri from NormalizedURIRepo (cannot trust URLRepo due to its case sensitivity issue)
+      val keep = keepRepo.getNoCache(keepId)
       val newUri = urlToUriMap.getOrElse(keep.url, {
         val newUri = normalizedURIInterner.internByUri(keep.url, contentWanted = true)
         urlToUriMap += (keep.url -> newUri)
@@ -111,7 +112,7 @@ class UriIntegrityActor @Inject() (
       // process keeps for each user
       bms.groupBy(_.userId).foreach {
         case (_, keeps) =>
-          db.readWrite(attempts = 3) { implicit s => handleBookmarks(keeps) }
+          db.readWrite(attempts = 3) { implicit s => handleBookmarks(keeps.map(_.id.get).toSet) }
       }
 
       // some additional sanity check right away!
@@ -125,7 +126,7 @@ class UriIntegrityActor @Inject() (
     }
 
     val t2 = System.currentTimeMillis()
-    log.info(s"one uri migration from ${oldUriId} to ${newUriId} takes ${t2 - t1} millis")
+    log.info(s"one uri migration from $oldUriId to $newUriId takes ${t2 - t1} millis")
   }
 
   /**
@@ -234,7 +235,7 @@ class UriIntegrityActor @Inject() (
           val newUriOpt = normalizedURIInterner.getByUri(keep.url)(session)
           if (newUriOpt.forall(_.id.get != keep.uriId)) {
             log.info(s"fix keep [id=${keep.id.get}, oldUriId=${keep.uriId}, newUriId=${newUriOpt.map(_.toShortString).getOrElse("missing")}]")
-            handleBookmarks(Seq(keep))(session)
+            handleBookmarks(Set(keep.id.get))(session)
             dedupedSuccessCount += 1
           }
         }
