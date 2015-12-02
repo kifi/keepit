@@ -40,6 +40,27 @@
   padding: 0
   margin: 0
 
+.kf-button-image
+  background: 0
+  border: 0
+  padding: 0
+  margin: 0
+
+  &:not([disabled]):not(.disabled)
+    &:hover
+      background: 0
+      opacity: .65
+
+    &:active
+      background: 0
+      opacity: 1
+
+  &.disabled,
+  &[disabled]
+    background: 0
+    filter: grayscale(1)
+    opacity: .5
+
 .kf-button-error
   color: errorRed
   box-shadow: 0 0 2px 0 #f00
