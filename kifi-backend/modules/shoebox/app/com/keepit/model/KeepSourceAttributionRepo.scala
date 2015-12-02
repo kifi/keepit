@@ -2,17 +2,19 @@ package com.keepit.model
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.{ State, Id }
-import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
+import com.keepit.model.SourceAttribution
 import org.joda.time.DateTime
 import play.api.libs.json._
 
 @ImplementedBy(classOf[KeepSourceAttributionRepoImpl])
 trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
+  def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution
 }
 
 @Singleton
@@ -58,6 +60,11 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
     activeRows.filter(_.keepId inSet keepIds).list.map(att => att.keepId -> att.attribution).toMap
+  }
+
+  def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution = {
+    val keepAttributionOpt = rows.filter(_.keepId === keepId).firstOption
+    save(KeepSourceAttribution(id = keepAttributionOpt.flatMap(_.id), keepId = keepId, attribution = attribution))
   }
 }
 

@@ -43,11 +43,10 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
 
     "twitter attribution persists in db" in {
       withDb() { implicit injector =>
-        val attr = TwitterAttribution.fromRawTweetJson(tweetJs)
-        val keepAttr = KeepSourceAttribution(keepId = Id(1), attribution = attr.get)
+        val twitterAttribution = TwitterAttribution.fromRawTweetJson(tweetJs)
         val attrRepo = inject[KeepSourceAttributionRepo]
         db.readWrite { implicit s =>
-          val saved = attrRepo.save(keepAttr)
+          val saved = attrRepo.save(Id(1), twitterAttribution.get)
           val model = attrRepo.get(saved.id.get)
           val attr = model.attribution
           attr === TwitterAttribution("505809542656303104", connerdelights)

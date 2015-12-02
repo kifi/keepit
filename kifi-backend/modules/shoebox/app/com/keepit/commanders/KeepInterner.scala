@@ -227,7 +227,7 @@ class KeepInternerImpl @Inject() (
         )
         val improvedKeep = try {
           keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get)) tap { improvedKeep =>
-            sourceAttribution.map { attr => sourceAttrRepo.save(KeepSourceAttribution(keepId = improvedKeep.id.get, attribution = attr)) }
+            sourceAttribution.map { attr => sourceAttrRepo.save(improvedKeep.id.get, attr) }
           }
         } catch {
           case ex: UndeclaredThrowableException =>
