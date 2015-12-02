@@ -56,8 +56,7 @@ class MessageRepoImpl @Inject() (
   }
   def table(tag: Tag) = new MessageTable(tag)
 
-  // TODO(ryan): for some reason we can't delete messages? We really need to add a `state` column
-  private def activeRows = rows
+  private def activeRows = rows.filter(_.state === ElizaMessageStates.ACTIVE)
 
   override def invalidateCache(message: ElizaMessage)(implicit session: RSession): Unit = {
     val key = MessagesForThreadIdKey(message.thread)
@@ -70,13 +69,13 @@ class MessageRepoImpl @Inject() (
   }
 
   def updateUriId(message: ElizaMessage, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit = {
-    (for (row <- rows if row.id === message.id) yield row.sentOnUriId).update(Some(uriId))
+    rows.filter(row => row.id === message.id).map(_.sentOnUriId).update(Some(uriId))
     invalidateCache(message)
   }
 
   def refreshCache(threadId: Id[MessageThread])(implicit session: RSession): Unit = {
     val key = MessagesForThreadIdKey(threadId)
-    val messages = (for (row <- rows if row.thread === threadId) yield row).sortBy(row => row.createdAt desc).list
+    val messages = activeRows.filter(row => row.thread === threadId).sortBy(row => row.createdAt desc).list
     try {
       messagesForThreadIdCache.set(key, new MessagesForThread(threadId, messages))
     } catch {
@@ -87,60 +86,56 @@ class MessageRepoImpl @Inject() (
   def get(threadId: Id[MessageThread], from: Int)(implicit session: RSession): Seq[ElizaMessage] = { //Note: Cache does not honor pagination!! -Stephen
     val key = MessagesForThreadIdKey(threadId)
     messagesForThreadIdCache.get(key) match {
-      case Some(v) => {
-        v.messages
-      }
-      case None => {
-        val query = (for (row <- rows if row.thread === threadId) yield row).drop(from)
+      case Some(v) => v.messages
+      case None =>
+        val query = activeRows.filter(row => row.thread === threadId).drop(from)
         val got = query.sortBy(row => row.createdAt desc).list
-        val mft = new MessagesForThread(threadId, got)
+        val mft = MessagesForThread(threadId, got)
         try {
           messagesForThreadIdCache.set(key, mft)
         } catch {
           case c: CacheSizeLimitExceededException => // already reported in FortyTwoCache
         }
         got
-      }
     }
   }
 
   def getAfter(threadId: Id[MessageThread], after: DateTime)(implicit session: RSession): Seq[ElizaMessage] = {
-    (for (row <- rows if row.thread === threadId && row.createdAt > after) yield row).sortBy(row => row.createdAt desc).list
+    activeRows.filter(row => row.thread === threadId && row.createdAt > after).sortBy(row => row.createdAt desc).list
   }
 
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit = { //Note: There is potentially a race condition here with updateUriId. Need to investigate.
     updates.foreach {
       case (oldId, newId) =>
-        (for (row <- rows if row.sentOnUriId === oldId) yield row.sentOnUriId).update(Some(newId))
+        rows.filter(row => row.sentOnUriId === oldId).map(_.sentOnUriId).update(Some(newId))
       //todo(stephen): do you invalidate cache here? do you?
+      // TODO(ryan): dammit Stephen :/
     }
   }
 
   def getFromIdToId(fromId: Id[ElizaMessage], toId: Id[ElizaMessage])(implicit session: RSession): Seq[ElizaMessage] = {
-    (for (row <- rows if row.id >= fromId && row.id <= toId) yield row).list
+    activeRows.filter(row => row.id >= fromId && row.id <= toId).list
   }
 
   def getMaxId()(implicit session: RSession): Id[ElizaMessage] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val sql = sql"select max(id) as max from message"
-    sql.as[Long].firstOption.map(Id[ElizaMessage]).getOrElse(Id[ElizaMessage](0))
+    rows.map(_.id).max.run.getOrElse(Id(0))
   }
 
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
     afterOpt.map { after =>
       StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
     } getOrElse {
-      val n = Query(rows.filter(row => row.thread === threadId).length).first
+      val n = rows.filter(row => row.thread === threadId).length.run
       (n, n)
     }
   }
 
   def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int] = {
-    rows.filter(row => row.thread.inSet(threadIds) && row.fromHuman).groupBy(_.thread).map { case (thread, messages) => (thread, messages.length) }.list.toMap
+    activeRows.filter(row => row.thread.inSet(threadIds) && row.fromHuman).groupBy(_.thread).map { case (thread, messages) => (thread, messages.length) }.list.toMap
   }
 
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage = {
-    (for (row <- rows if row.thread === threadId && row.from.isDefined) yield row).sortBy(row => row.id desc).first
+    activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => row.id desc).first
   }
 
   def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
@@ -148,7 +143,7 @@ class MessageRepoImpl @Inject() (
     val filteredMessages = fromId match {
       case None => threadMessages
       case Some(fid) =>
-        val fromTime = rows.filter(_.id === fid).map(_.createdAt).first
+        val fromTime = activeRows.filter(_.id === fid).map(_.createdAt).first
         threadMessages.filter(r => r.createdAt < fromTime || (r.createdAt === fromTime && r.id < fid))
     }
     filteredMessages.sortBy(r => (r.createdAt desc, r.id desc)).take(limit).list

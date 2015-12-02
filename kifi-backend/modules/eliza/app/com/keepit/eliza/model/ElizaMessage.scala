@@ -209,9 +209,9 @@ object ElizaMessage {
   }
 }
 
-case class MessagesForThread(val thread: Id[MessageThread], val messages: Seq[ElizaMessage]) {
+case class MessagesForThread(thread: Id[MessageThread], messages: Seq[ElizaMessage]) {
   override def equals(other: Any): Boolean = other match {
-    case mft: MessagesForThread => (thread.id == mft.thread.id && messages.size == mft.messages.size)
+    case mft: MessagesForThread => thread.id == mft.thread.id && messages.size == mft.messages.size
     case _ => false
   }
   override def hashCode = thread.id.hashCode
