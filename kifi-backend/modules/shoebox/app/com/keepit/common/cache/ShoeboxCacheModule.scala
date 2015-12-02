@@ -6,6 +6,7 @@ import com.keepit.controllers.core.StateTokenCache
 import com.keepit.model.cache.UserSessionViewExternalIdCache
 import com.keepit.rover.model.{ RoverArticleImagesCache, RoverArticleSummaryCache }
 import com.keepit.shoebox.model.KeepImagesCache
+import com.keepit.slack.models.SlackChannelIntegrationsCache
 
 import scala.concurrent.duration._
 import com.google.inject.{ Provides, Singleton }
@@ -442,4 +443,8 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides @Singleton
   def orgPermissionsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new OrganizationPermissionsCache(stats, accessLog, (outerRepo, 7 days))
+
+  @Provides @Singleton
+  def slackIntegrationsCache(stats: CacheStatistics, accessLog: AccessLog, innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SlackChannelIntegrationsCache(stats, accessLog, (outerRepo, 30 days))
 }

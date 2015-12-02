@@ -11,6 +11,7 @@ import com.keepit.common.time._
 import com.keepit.model.LibrarySpace.{ UserSpace, OrganizationSpace }
 import com.keepit.model.{ Organization, LibrarySpace, User, Library }
 import org.joda.time.{ Period, DateTime }
+import com.keepit.common.core._
 
 case class SlackChannelToLibrary(
   id: Option[Id[SlackChannelToLibrary]] = None,
@@ -73,7 +74,8 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
 @Singleton
 class SlackChannelToLibraryRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock) extends DbRepo[SlackChannelToLibrary] with SlackChannelToLibraryRepo {
+    val clock: Clock,
+    integrationsCache: SlackChannelIntegrationsCache) extends DbRepo[SlackChannelToLibrary] with SlackChannelToLibraryRepo {
 
   import com.keepit.common.db.slick.DBSession._
   import db.Driver.simple._
@@ -165,8 +167,10 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   private def activeRows = rows.filter(row => row.state === SlackChannelToLibraryStates.ACTIVE)
   def table(tag: Tag) = new SlackChannelToLibraryTable(tag)
   initTable()
-  override def deleteCache(info: SlackChannelToLibrary)(implicit session: RSession): Unit = {}
-  override def invalidateCache(info: SlackChannelToLibrary)(implicit session: RSession): Unit = {}
+  override def deleteCache(info: SlackChannelToLibrary)(implicit session: RSession): Unit = {
+    info.slackChannelId.foreach(channelId => integrationsCache.remove(SlackChannelIntegrationsKey(info.slackTeamId, channelId)))
+  }
+  override def invalidateCache(info: SlackChannelToLibrary)(implicit session: RSession): Unit = deleteCache(info)
 
   def getByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Map[Id[SlackChannelToLibrary], SlackChannelToLibrary] = {
     rows.filter(row => row.id.inSet(ids)).list.map(r => (r.id.get, r)).toMap
@@ -252,7 +256,9 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   }
 
   def fillInMissingChannelId(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName, channelId: SlackChannelId)(implicit session: RWSession): Int = {
-    activeRows.filter(r => r.slackUserId === userId && r.slackTeamId === teamId && r.slackChannelName === channelName && r.slackChannelId.isEmpty).map(r => (r.updatedAt, r.slackChannelId)).update((clock.now, Some(channelId)))
+    activeRows.filter(r => r.slackUserId === userId && r.slackTeamId === teamId && r.slackChannelName === channelName && r.slackChannelId.isEmpty).map(r => (r.updatedAt, r.slackChannelId)).update((clock.now, Some(channelId))) tap { updated =>
+      if (updated > 0) integrationsCache.remove(SlackChannelIntegrationsKey(teamId, channelId))
+    }
   }
 
   def deactivate(model: SlackChannelToLibrary)(implicit session: RWSession): Unit = {
