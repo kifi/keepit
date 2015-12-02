@@ -40,30 +40,6 @@ class KeepsController @Inject() (
   implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with ShoeboxServiceController {
 
-  def updateCollectionOrdering() = UserAction(parse.tolerantJson) { request =>
-    implicit val externalIdFormat = ExternalId.format[Collection]
-    val orderedIds = request.body.as[Seq[ExternalId[Collection]]]
-    val newCollectionIds = db.readWrite { implicit s => collectionCommander.setCollectionOrdering(request.userId, orderedIds) }
-    Ok(Json.obj(
-      "collectionIds" -> newCollectionIds.map { id => Json.toJson(id) }
-    ))
-  }
-
-  def updateCollectionIndexOrdering() = UserAction(parse.tolerantJson) { request =>
-    val (id, currInd) = {
-      val json = request.body
-      val tagId = (json \ "tagId").as[ExternalId[Collection]]
-      val currentIndex = (json \ "newIndex").as[Int]
-      (tagId, currentIndex)
-    }
-
-    val newCollectionIds = collectionCommander.setCollectionIndexOrdering(request.userId, id, currInd)
-
-    Ok(Json.obj(
-      "newCollection" -> newCollectionIds.map { id => Json.toJson(id) }
-    ))
-  }
-
   // todo: Talk to JP and delete this if possible
   def getScreenshotUrl() = UserAction(parse.tolerantJson) { request =>
     val urlOpt = (request.body \ "url").asOpt[String]
@@ -130,22 +106,6 @@ class KeepsController @Inject() (
     }.getOrElse(Future.successful(BadRequest))
   }
 
-  def tagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, true))
-
-  def untagKeepBulk() = UserAction(parse.tolerantJson)(editKeepTagBulk(_, false))
-
-  private def editKeepTagBulk(request: UserRequest[JsValue], isAdd: Boolean) = {
-    val res = for {
-      collectionId <- (request.body \ "collectionId").asOpt[ExternalId[Collection]]
-      keepSet <- (request.body \ "keeps").asOpt[BulkKeepSelection]
-    } yield {
-      implicit val context = heimdalContextBuilder.withRequestInfo(request).build
-      val numEdited = keepsCommander.editKeepTagBulk(collectionId, keepSet, request.userId, isAdd)
-      Ok(Json.obj("numEdited" -> numEdited))
-    }
-    res getOrElse BadRequest(Json.obj("error" -> "Could not parse keep selection and/or collection id from request body"))
-  }
-
   def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep]) = UserAction.async { request =>
     implicit val keepCompanion = Keep
     internalOrExternalId.parse match {
@@ -163,31 +123,9 @@ class KeepsController @Inject() (
     }
   }
 
-  def allCollections(sort: String) = UserAction.async { request =>
-    val numKeepsFuture = SafeFuture { db.readOnlyReplica { implicit s => keepRepo.getCountByUser(request.userId) } }
-    val collectionsFuture = SafeFuture { collectionCommander.allCollections(sort, request.userId) }
-    for {
-      numKeeps <- numKeepsFuture
-      collections <- collectionsFuture
-    } yield {
-      Ok(Json.obj(
-        "keeps" -> numKeeps,
-        "collections" -> collections
-      ))
-    }
-  }
-
   def page(sort: String, offset: Int, pageSize: Int) = UserAction { request =>
     val tags = collectionCommander.pageCollections(sort, offset, pageSize, request.userId)
     Ok(Json.obj("tags" -> tags))
-  }
-
-  def saveCollection() = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
-      case Left(newColl) => Ok(Json.toJson(newColl))
-      case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
-    }
   }
 
   def deleteCollection(id: ExternalId[Collection]) = UserAction { request =>
@@ -205,40 +143,6 @@ class KeepsController @Inject() (
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
       collectionCommander.undeleteCollection(coll)
       Ok(Json.obj("undeleted" -> coll.name))
-    } getOrElse {
-      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
-    }
-  }
-
-  def removeKeepsFromCollection(id: ExternalId[Collection]) = UserAction { request =>
-    implicit val externalIdFormat = ExternalId.format[Keep]
-    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
-      request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Keep]]](_).asOpt) map { keepExtIds =>
-        val keeps = db.readOnlyMaster { implicit s => keepExtIds.flatMap(keepRepo.getOpt(_)) }
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val removed = keepsCommander.removeFromCollection(collection, keeps)
-        Ok(Json.obj("removed" -> removed.size))
-      } getOrElse {
-        BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
-      }
-    } getOrElse {
-      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
-    }
-  }
-
-  def keepToCollection(id: ExternalId[Collection]) = UserAction { request =>
-    implicit val externalIdFormat = ExternalId.format[Keep]
-    db.readOnlyMaster { implicit s =>
-      collectionRepo.getByUserAndExternalId(request.userId, id)
-    } map { collection =>
-      request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Keep]]](_).asOpt) map { keepExtIds =>
-        val keeps = db.readOnlyMaster { implicit session => keepExtIds.map(keepRepo.get) }
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        val added = keepsCommander.addToCollection(collection.id.get, keeps)
-        Ok(Json.obj("added" -> added.size))
-      } getOrElse {
-        BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
-      }
     } getOrElse {
       NotFound(Json.obj("error" -> s"Collection not found for id $id"))
     }
