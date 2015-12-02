@@ -38,7 +38,8 @@ class KeepToUserCommanderImpl @Inject() (
 
   def internKeepInUser(keep: Keep, userId: Id[User], addedBy: Id[User])(implicit session: RWSession): KeepToUser = {
     ktuRepo.getByKeepIdAndUserId(keep.id.get, userId, excludeStateOpt = None) match {
-      case Some(existingKtu) if existingKtu.isActive => existingKtu
+      case Some(existingKtu) if existingKtu.isActive =>
+        ktuRepo.save(existingKtu.withAddedAt(clock.now))
       case existingKtuOpt =>
         val newKtuTemplate = KeepToUser(
           keepId = keep.id.get,
@@ -47,7 +48,7 @@ class KeepToUserCommanderImpl @Inject() (
           addedAt = clock.now,
           uriId = keep.uriId
         )
-        ktuRepo.save(newKtuTemplate.copy(id = existingKtuOpt.flatMap(_.id)))
+        ktuRepo.save(newKtuTemplate.copy(id = existingKtuOpt.map(_.id.get)))
     }
   }
 
