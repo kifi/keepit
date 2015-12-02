@@ -17,6 +17,7 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import org.joda.time.{ DateTime, Period }
+import com.keepit.common.strings._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.DurationConversions
@@ -58,6 +59,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   private val defaultDelayBetweenPushes = Period.minutes(30)
   private val MAX_KEEPS_TO_SEND = 7
   private val LIBRARY_BATCH_SIZE = 20
+  private val KEEP_URL_MAX_DISPLAY_LENGTH = 60
 
   @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
@@ -76,7 +78,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
   // TODO(ryan): if this hasn't been used by 2016-02-01, kill it.
   private def keepAsSlackAttachment(keep: Keep, summary: URISummary): SlackAttachment = {
-    val title = summary.title.orElse(keep.title).getOrElse(keep.url)
+    val title = summary.title.orElse(keep.title).getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH))
     SlackAttachment(
       title = Some(SlackAttachment.Title(title, Some(keep.url))),
       text = summary.description,
@@ -101,12 +103,12 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     slackMessageOpt match {
       case Some(post) =>
         DescriptionElements(
-          keep.title.getOrElse("a link") --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
+          keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
           "was added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
         )
       case None =>
         DescriptionElements(
-          getUser(keep.userId), "added", keep.title.getOrElse("a keep") --> LinkElement(keep.url),
+          getUser(keep.userId), "added", keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url),
           "to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
         )
     }
