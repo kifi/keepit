@@ -36,7 +36,6 @@ case class Keep(
     seq: SequenceNumber[Keep] = SequenceNumber.ZERO,
     libraryId: Option[Id[Library]],
     keptAt: DateTime = currentDateTime,
-    sourceAttributionId: Option[Id[KeepSourceAttribution]] = None,
     note: Option[String] = None,
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None,
@@ -120,12 +119,12 @@ object Keep extends ModelWithPublicIdCompanion[Keep] {
 
   def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
     case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId, note, originalKeeperId, organizationId, librariesHash, participantsHash)) =>
+      (userId, state, source, seq, libraryId, visibility, keptAt, note, originalKeeperId, organizationId, librariesHash, participantsHash)) =>
       _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
         uriId = uriId, isPrimary = isPrimary, url = url,
         userId = userId, state = state, source = source,
         seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
-        sourceAttributionId = sourceAttributionId, note = note, originalKeeperId = originalKeeperId,
+        note = note, originalKeeperId = originalKeeperId,
         organizationId = organizationId, librariesHash = librariesHash, participantsHash = participantsHash)
   }
 
@@ -135,9 +134,9 @@ object Keep extends ModelWithPublicIdCompanion[Keep] {
     url: String, userId: Id[User],
     state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    sourceAttributionId: Option[Id[KeepSourceAttribution]], note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], librariesHash: LibrariesHash, participantsHash: ParticipantsHash): Keep = {
+    note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], librariesHash: LibrariesHash, participantsHash: ParticipantsHash): Keep = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), url,
-      visibility, userId, state, source, seq, libraryId, keptAt, sourceAttributionId, note, originalKeeperId.orElse(Some(userId)), organizationId, librariesHash, participantsHash)
+      visibility, userId, state, source, seq, libraryId, keptAt, note, originalKeeperId.orElse(Some(userId)), organizationId, librariesHash, participantsHash)
   }
 
   def unapplyToDbRow(k: Keep) = {
@@ -145,13 +144,13 @@ object Keep extends ModelWithPublicIdCompanion[Keep] {
       (k.id, k.createdAt, k.updatedAt, k.externalId, k.title,
         k.uriId, if (k.isPrimary) Some(true) else None, k.url),
       (k.userId, k.state, k.source,
-        k.seq, k.libraryId, k.visibility, k.keptAt, k.sourceAttributionId,
+        k.seq, k.libraryId, k.visibility, k.keptAt,
         k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId, k.librariesHash, k.participantsHash)
     )
   }
 
   private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], String)
-  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[Id[KeepSourceAttribution]], Option[String], Option[Id[User]], Option[Id[Organization]], LibrariesHash, ParticipantsHash)
+  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[String], Option[Id[User]], Option[Id[Organization]], LibrariesHash, ParticipantsHash)
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
       (__ \ 'id).readNullable(Id.format[Keep]) and
@@ -170,7 +169,6 @@ object Keep extends ModelWithPublicIdCompanion[Keep] {
       (__ \ 'libraryId).readNullable(Id.format[Library]) and
       (__ \ 'visibility).read[LibraryVisibility] and
       (__ \ 'keptAt).read(DateTimeJsonFormat) and
-      (__ \ 'sourceAttributionId).readNullable(Id.format[KeepSourceAttribution]) and
       (__ \ 'note).readNullable[String] and
       (__ \ 'originalKeeperId).readNullable[Id[User]] and
       (__ \ 'organizationId).readNullable[Id[Organization]] and
@@ -205,7 +203,6 @@ object Keep extends ModelWithPublicIdCompanion[Keep] {
         "seq" -> k.seq,
         "libraryId" -> k.libraryId,
         "keptAt" -> k.keptAt,
-        "sourceAttributionId" -> k.sourceAttributionId,
         "note" -> k.note,
         "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId)),
         "organizationId" -> k.organizationId,

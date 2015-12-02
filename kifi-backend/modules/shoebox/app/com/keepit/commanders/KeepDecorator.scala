@@ -109,18 +109,9 @@ class KeepDecoratorImpl @Inject() (
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
       }.map(collectionCommander.getBasicCollections)
 
-      val sourceAttrs = db.readOnlyReplica { implicit s =>
-        val attributionById = keepSourceAttributionRepo.getByIds(keeps.flatMap(_.sourceAttributionId).toSet)
-        keeps.map { keep =>
-          try {
-            keep.sourceAttributionId.map { id => attributionById(id) }
-          } catch {
-            case ex: Exception => {
-              airbrake.notify(s"error during keep decoration: keepId = ${keep.id}, keep source attribution id = ${keep.sourceAttributionId}", ex)
-              None
-            }
-          }
-        }
+      val sourceAttrs = {
+        val attributionById = getSourceAttributionForKeeps(keeps.flatMap(_.id).toSet)
+        keeps.map { keep => attributionById.get(keep.id.get) }
       }
 
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
@@ -271,9 +262,7 @@ class KeepDecoratorImpl @Inject() (
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], SourceAttribution] = {
     db.readOnlyMaster { implicit session =>
-      val keeps = keepRepo.getByIds(keepIds).values
-      val attributionByIds = keepSourceAttributionRepo.getByIds(keeps.flatMap(_.sourceAttributionId).toSet)
-      keeps.map(keep => keep.id.get -> keep.sourceAttributionId.flatMap(attributionByIds.get)).collect { case (keepId, Some(attribution)) => keepId -> attribution.attribution }.toMap
+      keepSourceAttributionRepo.getByKeepIds(keepIds)
     }
   }
 
