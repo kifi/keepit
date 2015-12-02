@@ -58,11 +58,11 @@ class NotificationInfoGenerator @Inject() (
     val externalUserIdsF = for {
       orgs <- orgsF
       keeps <- keepsF
-    } yield (orgs.values.map(_.ownerId) ++ keeps.values.map(_.ownerId)).toSeq.distinct
+    } yield (orgs.values.map(_.ownerId) ++ keeps.values.map(_.ownerId)).toSet
 
     val userIdsFromExternalF = for {
       externalIds <- externalUserIdsF
-      userIds <- shoeboxServiceClient.getUserIdsByExternalIds(externalIds)
+      userIds <- shoeboxServiceClient.getUserIdsByExternalIdsNew(externalIds).map(_.values.toSet)
     } yield userIds
 
     val batchedInfosF = for {
@@ -71,8 +71,8 @@ class NotificationInfoGenerator @Inject() (
       keeps <- keepsF
       externalIds <- externalUserIdsF
       fromExternalIds <- userIdsFromExternalF
-      userIds = (userRequests ++ fromExternalIds).toSeq.distinct
-      users <- shoeboxServiceClient.getBasicUsers(userIds)
+      userIds = userRequests ++ fromExternalIds
+      users <- shoeboxServiceClient.getBasicUsers(userIds.toSeq)
       usersExternal = externalIds.zip(fromExternalIds).map {
         case (externalId, id) => externalId -> users(id)
       }.toMap

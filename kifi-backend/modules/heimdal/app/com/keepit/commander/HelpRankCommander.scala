@@ -37,27 +37,24 @@ class HelpRankCommander @Inject() (
     val keepers = kifiHit.keepers
     if (kifiHit.isOwnKeep || keepers.isEmpty) {
       db.readWriteAsync { implicit rw =>
-        userKeepInfoRepo.increaseCounts(discoverer, kifiHit.uriId, true)
+        userKeepInfoRepo.increaseCounts(discoverer, kifiHit.uriId, isSelf = true)
       }
     } else {
       implicit val dca = TransactionalCaching.Implicits.directCacheAccess
       kifiHitCache.get(SearchHitReportKey(discoverer, kifiHit.uriId)) match { // simple throttling
-        case Some(hit) =>
-          Future.successful(Unit)
+        case Some(hit) => Future.successful(Unit)
         case None =>
           kifiHitCache.set(SearchHitReportKey(discoverer, kifiHit.uriId), kifiHit)
-          shoeboxClient.getUserIdsByExternalIds(keepers) map { keeperIds =>
-            keeperIds foreach { keeperId =>
-              db.readWrite { implicit rw =>
-                userKeepInfoRepo.increaseCounts(keeperId, kifiHit.uriId, false)
+          shoeboxClient.getUserIdsByExternalIdsNew(keepers.toSet) map { idMap =>
+            idMap.values.foreach { keeperId =>
+              db.readWrite { implicit s =>
+                userKeepInfoRepo.increaseCounts(keeperId, kifiHit.uriId, isSelf = false)
               }
-              shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId) foreach { keepOpt =>
-                keepOpt match {
-                  case None =>
-                  case Some(keep) =>
-                    val saved = db.readWrite { implicit rw =>
-                      keepDiscoveryRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
-                    }
+              shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId).foreach { keepOpt =>
+                keepOpt.foreach { keep =>
+                  db.readWrite { implicit s =>
+                    keepDiscoveryRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
+                  }
                 }
               }
             }

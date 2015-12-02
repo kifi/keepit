@@ -7,7 +7,7 @@ import com.keepit.common.concurrent.ExecutionContext
 import com.keepit.common.core._
 import com.keepit.common.db.{ ExternalId, Id, SequenceNumber }
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.json.TupleFormat
+import com.keepit.common.json.{ TraversableFormat, TupleFormat }
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.{ ElectronicMail, EmailAddress }
@@ -33,6 +33,7 @@ import securesocial.core.IdentityId
 
 import scala.concurrent.duration._
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
+import scala.util.Try
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -43,6 +44,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUser(userId: Id[User]): Future[Option[User]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
+  def getUserIdsByExternalIdsNew(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User], BasicUser]]
   def getBasicKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], BasicKeep]]
   def getCrossServiceKeepsByIds(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], CrossServiceKeep]]
@@ -280,6 +282,17 @@ class ShoeboxServiceClientImpl @Inject() (
       userIds.map(extId2Id(_))
     }
 
+  }
+
+  def getUserIdsByExternalIdsNew(extIds: Set[ExternalId[User]]): Future[Map[ExternalId[User], Id[User]]] = {
+    implicit val extIdToIdMapFormat = TraversableFormat.mapFormat[ExternalId[User], Id[User]](_.id, s => Try(ExternalId[User](s)).toOption)
+    cacheProvider.externalUserIdCache.bulkGetOrElseFuture(extIds.map(ExternalUserIdKey)) { missingKeys =>
+      val payload = Json.toJson(missingKeys.map(_.id))
+      call(Shoebox.internal.getUserIdsByExternalIdsNew, payload).map { res =>
+        val missing = res.json.as[Map[ExternalId[User], Id[User]]]
+        missing.map { case (extId, id) => ExternalUserIdKey(extId) -> id }
+      }
+    }.map { bigMap => bigMap.map { case (key, value) => key.id -> value } }
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
