@@ -115,21 +115,26 @@ private class RawKeepImporterActor @Inject() (
     log.info(s"[RawKeepImporterActor] Interned ${successes.length + failures.length} keeps. ${successes.length} successes, ${failures.length} failures.")
 
     if (failuresRawKeep.nonEmpty) {
-      db.readWriteBatch(failuresRawKeep.toSeq) {
+      db.readWriteBatch(failuresRawKeep.toSeq, attempts = 5) {
         case (session, rk) =>
           rawKeepRepo.setState(rk.id.get, RawKeepStates.FAILED)(session)
       }
     }
 
     if (successesRawKeep.nonEmpty) {
-      // mark done
       db.readWriteBatch(successesRawKeep, attempts = 5) {
         case (session, rk) =>
           rawKeepRepo.setState(rk.id.get, RawKeepStates.IMPORTED)(session)
       }
     }
 
-    successes
+    val keepsWithTags = for {
+      keep <- successes
+      rk <- rawKeepByUrl.get(keep.url)
+      tags <- rk.keepTags.flatMap(_.asOpt[Seq[String]])
+    } yield (keep, tags)
+
+    keepsWithTags.map(_._1)
   }
 
   private def getHeimdalContext(userId: Id[User], importId: String): Option[HeimdalContext] = {

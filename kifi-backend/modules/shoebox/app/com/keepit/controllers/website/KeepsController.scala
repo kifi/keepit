@@ -163,25 +163,6 @@ class KeepsController @Inject() (
     }
   }
 
-  def allKeeps(before: Option[String], after: Option[String], collectionOpt: Option[String], helprankOpt: Option[String], count: Int, withPageInfo: Boolean) = UserAction.async { request =>
-    keepsCommander.allKeeps(before map ExternalId[Keep], after map ExternalId[Keep], collectionOpt map ExternalId[Collection], helprankOpt, count, request.userId) map { res =>
-      val basicCollection = collectionOpt.flatMap { collStrExtId =>
-        ExternalId.asOpt[Collection](collStrExtId).flatMap { collExtId =>
-          db.readOnlyMaster(collectionRepo.getByUserAndExternalId(request.userId, collExtId)(_)).map { c =>
-            BasicCollection.fromCollection(c.summary)
-          }
-        }
-      }
-      val helprank = helprankOpt map (selector => Json.obj("helprank" -> selector)) getOrElse Json.obj()
-      Ok(Json.obj(
-        "collection" -> basicCollection,
-        "before" -> before,
-        "after" -> after,
-        "keeps" -> Json.toJson(res)
-      ) ++ helprank)
-    }
-  }
-
   def allCollections(sort: String) = UserAction.async { request =>
     val numKeepsFuture = SafeFuture { db.readOnlyReplica { implicit s => keepRepo.getCountByUser(request.userId) } }
     val collectionsFuture = SafeFuture { collectionCommander.allCollections(sort, request.userId) }
@@ -261,12 +242,6 @@ class KeepsController @Inject() (
     } getOrElse {
       NotFound(Json.obj("error" -> s"Collection not found for id $id"))
     }
-  }
-
-  def numKeeps() = UserAction { request =>
-    Ok(Json.obj(
-      "numKeeps" -> keepsCommander.numKeeps(request.userId)
-    ))
   }
 
   def searchUserTags(query: String, limit: Option[Int] = None) = UserAction.async { request =>
