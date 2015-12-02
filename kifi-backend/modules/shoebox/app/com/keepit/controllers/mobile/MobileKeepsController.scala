@@ -258,12 +258,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def numKeeps() = UserAction { request =>
-    Ok(Json.obj(
-      "numKeeps" -> keepsCommander.numKeeps(request.userId)
-    ))
-  }
-
   def getKeepStream(limit: Int, beforeId: Option[String], afterId: Option[String]) = UserAction.async { request =>
     val beforeExtId = beforeId.flatMap(id => ExternalId.asOpt[Keep](id))
     val afterExtId = afterId.flatMap(id => ExternalId.asOpt[Keep](id))
