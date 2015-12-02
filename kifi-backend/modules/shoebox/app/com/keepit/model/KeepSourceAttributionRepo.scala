@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.model.SourceAttribution
 import org.joda.time.DateTime
 import play.api.libs.json._
 
