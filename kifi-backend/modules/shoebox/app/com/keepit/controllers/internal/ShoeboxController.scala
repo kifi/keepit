@@ -217,7 +217,7 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
-  def getUserIdsByExternalIdsNew() = Action(parse.tolerantJson) { request =>
+  def getUserIdsByExternalIds() = Action(parse.tolerantJson) { request =>
     implicit val extIdToIdMapFormat = TraversableFormat.mapFormat[ExternalId[User], Id[User]](_.id, s => Try(ExternalId[User](s)).toOption)
     val extUserIds = request.body.as[Set[ExternalId[User]]]
     val idMap = db.readOnlyMaster { implicit s => userRepo.convertExternalIds(extUserIds) }
