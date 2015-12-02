@@ -36,7 +36,7 @@ import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
-import com.keepit.common.json.{ EitherFormat, TupleFormat }
+import com.keepit.common.json.{ TraversableFormat, EitherFormat, TupleFormat }
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -218,11 +218,17 @@ class ShoeboxController @Inject() (
   }
 
   def getUserIdsByExternalIds(ids: String) = Action { request =>
-    val extUserIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[User](_))
+    val extUserIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[User])
     val users = db.readOnlyMaster { implicit s => //using cache
-      extUserIds.map { userRepo.getOpt(_).map(_.id.get.id) }.flatten
+      extUserIds.flatMap(userRepo.getOpt(_).map(_.id.get.id))
     }
     Ok(Json.toJson(users))
+  }
+  def getUserIdsByExternalIdsNew() = Action(parse.tolerantJson) { request =>
+    implicit val extIdToIdMapFormat = TraversableFormat.mapFormat[ExternalId[User], Id[User]](_.id, s => Try(ExternalId[User](s)).toOption)
+    val extUserIds = request.body.as[Set[ExternalId[User]]]
+    val idMap = db.readOnlyMaster { implicit s => userRepo.convertExternalIds(extUserIds) }
+    Ok(Json.toJson(idMap))
   }
 
   def getBasicUsers() = Action(parse.tolerantJson) { request =>
