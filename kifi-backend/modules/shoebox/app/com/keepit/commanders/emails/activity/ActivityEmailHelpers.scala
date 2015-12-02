@@ -30,7 +30,7 @@ trait ActivityEmailLibraryHelpers extends ActivityEmailHelpers {
       showPublishedLibraries = true, maxKeepsShown = 10,
       maxMembersShown = 0, idealKeepImageSize = ProcessedImageSize.Large.idealSize,
       idealLibraryImageSize = ProcessedImageSize.Large.idealSize,
-      libraries = libraries, withKeepTime = true, sanitizeUrls = true)
+      libraries = libraries, sanitizeUrls = true)
   }
 }
 

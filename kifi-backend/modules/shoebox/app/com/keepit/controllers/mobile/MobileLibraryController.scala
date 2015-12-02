@@ -208,7 +208,7 @@ class MobileLibraryController @Inject() (
         LibraryViewAction(Library.publicId(library.id.get)).invokeBlock(request, { _: MaybeUserRequest[_] =>
           request.userIdOpt.foreach { userId => libraryCommander.updateLastView(userId, library.id.get) }
           val idealSize = imageSize.flatMap { s => Try(ImageSize(s)).toOption }.getOrElse(MobileLibraryController.defaultLibraryImageSize)
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize, None, withKeepTime = true, sanitizeUrls = true).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, false, library, idealSize, None, sanitizeUrls = true).map { libInfo =>
             val editedLibInfo = libInfo.copy(keeps = libInfo.keeps.map { k =>
               k.copy(note = Hashtags.formatMobileNote(k.note, v1))
             })
@@ -551,7 +551,7 @@ class MobileLibraryController @Inject() (
         } getOrElse ProcessedImageSize.Large.idealSize
         for {
           keeps <- libraryInfoCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, withKeepTime = true, sanitizeUrls = true)
+          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, false, keeps, idealImageSize, sanitizeUrls = true)
         } yield {
           val editedKeepInfos = keepInfos.map { kInfo =>
             kInfo.copy(note = Hashtags.formatMobileNote(kInfo.note, v1))
