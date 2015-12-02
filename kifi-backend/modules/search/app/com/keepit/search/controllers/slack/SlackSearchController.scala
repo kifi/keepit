@@ -93,7 +93,7 @@ class SlackSearchController @Inject() (
             "```", listLibraries(integrations.toLibraries), "```"
           )
 
-          val moreHelp = Elements(s"Learn more about Kifi and Slack", "here" --> supportLink)
+          val moreHelp = Elements(s"Learn more about Kifi and Slack", "here" --> supportLink, ".")
           Elements.mkElements(Seq(allLibraries, fromLibraries, toLibraries, moreHelp), "\n\n")
         }
       }
