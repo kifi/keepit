@@ -79,22 +79,22 @@ class SlackSearchController @Inject() (
             lib.name --> LinkElement(lib.url)
           })
           val allLibraries: Elements = Elements(
-            s"The following Kifi libraries are connected with #${channelName.value}:", "\n",
+            s"The following Kifi libraries are connected with #${channelName.value}, use */kifi* to search them:", "\n",
             "```", listLibraries(integrations.allLibraries), "```"
           )
 
-          val fromLibraries: Elements = if (integrations.fromLibraries.isEmpty) s"No Kifi library is currently pushing keeps to #${channelName.value}" else Elements(
+          val fromLibraries: Elements = if (integrations.fromLibraries.isEmpty) s"No library is pushing keeps to #${channelName.value}." else Elements(
             s"Keeps from the following libraries are pushed to #${channelName.value}:", "\n",
             "```", listLibraries(integrations.fromLibraries), "```"
           )
 
-          val toLibraries: Elements = if (integrations.toLibraries.isEmpty) s"Links posted in #${channelName.value} are currently not being kept in any library." else Elements(
+          val toLibraries: Elements = if (integrations.toLibraries.isEmpty) s"Links posted in #${channelName.value} are not being kept in any library." else Elements(
             s"Links posted in #${channelName.value} are kept in the following libraries:", "\n",
             "```", listLibraries(integrations.toLibraries), "```"
           )
 
-          val moreHelp = Elements("\n", s"Learn more about Kifi and Slack", "here" --> supportLink)
-          Elements.unlines(Seq(allLibraries, fromLibraries, toLibraries, moreHelp))
+          val moreHelp = Elements(s"Learn more about Kifi and Slack", "here" --> supportLink)
+          Elements.mkElements(Seq(allLibraries, fromLibraries, toLibraries, moreHelp), "\n\n")
         }
       }
     }
