@@ -78,14 +78,10 @@ trait KeepCommander {
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
 
   // Tagging
-  def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int
   def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection]
-  def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection]
   def tagUrl(tag: Collection, rawBookmark: Seq[RawBookmarkRepresentation], userId: Id[User], libraryId: Id[Library], source: KeepSource, kifiInstallationId: Option[ExternalId[KifiInstallation]])(implicit context: HeimdalContext): Unit
   def getOrCreateTag(userId: Id[User], name: String)(implicit context: HeimdalContext): Collection
   def removeTag(id: ExternalId[Collection], url: String, userId: Id[User])(implicit context: HeimdalContext): Unit
-  def clearTags(url: String, userId: Id[User]): Unit
-  def tagsByUrl(url: String, userId: Id[User]): Seq[Collection]
   def keepWithSelectedTags(userId: Id[User], rawBookmark: RawBookmarkRepresentation, libraryId: Id[Library], source: KeepSource, selectedTagNames: Seq[String], socialShare: SocialShare)(implicit context: HeimdalContext): Either[String, (Keep, Seq[Collection])]
   def persistHashtagsForKeepAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext)
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
@@ -104,6 +100,7 @@ trait KeepCommander {
 
   // On the way out, hopefully.
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
+  def removeFromCollection(collection: Collection, keeps: Seq[Keep])(implicit context: HeimdalContext): Set[KeepToCollection]
 
 }
 
@@ -487,17 +484,6 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def editKeepTagBulk(collectionId: ExternalId[Collection], selection: BulkKeepSelection, userId: Id[User], isAdd: Boolean)(implicit context: HeimdalContext): Int = {
-    db.readOnlyReplica { implicit s =>
-      collectionRepo.getByUserAndExternalId(userId, collectionId)
-    } map { collection =>
-      val keeps = getKeepsInBulkSelection(selection, userId)
-      assert(collection.id.nonEmpty, s"Collection id is undefined: $collection")
-      if (isAdd) addToCollection(collection.id.get, keeps) else removeFromCollection(collection, keeps)
-      keeps.length
-    } getOrElse 0
-  }
-
   def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${allKeeps.length})") {
     val trace = new StackTrace()
     val result: Iterator[KeepToCollection] = allKeeps.grouped(50) flatMap { keeps =>
@@ -672,11 +658,11 @@ class KeepCommanderImpl @Inject() (
         case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
         case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
       }
-      collectionRepo.collectionChanged(tagId, true, inactivateIfEmpty = false)
+      collectionRepo.collectionChanged(tagId, isNewKeep = true, inactivateIfEmpty = false)
     }
     tagIdsToRemove.map { tagId =>
       keepToCollectionRepo.remove(keep.id.get, tagId)
-      collectionRepo.collectionChanged(tagId, false, inactivateIfEmpty = true)
+      collectionRepo.collectionChanged(tagId, isNewKeep = false, inactivateIfEmpty = true)
     }
 
     // go through note field and find all hashtags
