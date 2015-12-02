@@ -26,6 +26,7 @@ case class KeepToLibrary(
   def withState(newState: State[KeepToLibrary]): KeepToLibrary = this.copy(state = newState)
   def withVisibility(newVisibility: LibraryVisibility): KeepToLibrary = this.copy(visibility = newVisibility)
   def withOrganizationId(newOrgIdOpt: Option[Id[Organization]]): KeepToLibrary = this.copy(organizationId = newOrgIdOpt)
+  def withAddedAt(time: DateTime): KeepToLibrary = this.copy(addedAt = time)
   def withAddedBy(newOwnerId: Id[User]): KeepToLibrary = this.copy(addedBy = newOwnerId)
   def withUriId(newUriId: Id[NormalizedURI]) = this.copy(uriId = newUriId)
   def withPrimary(isPrimary: Boolean): KeepToLibrary = this.copy(isPrimary = isPrimary)
