@@ -62,7 +62,7 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Handling read/unread
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession): Unit
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession): Unit
-  def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
+  def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Boolean
   def markAllReadAtOrBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
   def markRead(userId: Id[User], threadId: Id[MessageThread], msg: ElizaMessage)(implicit session: RWSession): Unit
   def markAllRead(user: Id[User])(implicit session: RWSession): Unit
@@ -116,6 +116,10 @@ class UserThreadRepoImpl @Inject() (
 
   override def invalidateCache(model: UserThread)(implicit session: RSession): Unit = {
     userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
+  }
+
+  def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {
+    (for (row <- rows if row.threadId === threadId) yield row).list
   }
 
   def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
@@ -173,7 +177,7 @@ class UserThreadRepoImpl @Inject() (
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession) = {
     val now = clock.now
-    rows.filter(row => row.id === userThreadId).map(row => (row.muted, row.updatedAt)).update((muted, now))
+    rows.filter(row => row.id === userThreadId).map(row => (row.muted, row.updatedAt)).update((muted, now)) > 0
   }
 
   def getThreadNotificationsForUser(userId: Id[User], utq: UserThreadQuery)(implicit session: RSession): List[RawNotification] = {
@@ -284,10 +288,6 @@ class UserThreadRepoImpl @Inject() (
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
     val uriSet = (for (row <- rows if row.user === userId && row.uriId.isDefined) yield row.uriId).list.toSet.flatten
     uriIds.map(uriId => uriSet.contains(uriId))
-  }
-
-  def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {
-    (for (row <- rows if row.threadId === threadId) yield row).list
   }
 
   def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User] = {

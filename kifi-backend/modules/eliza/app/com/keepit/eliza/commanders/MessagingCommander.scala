@@ -519,47 +519,34 @@ class MessagingCommander @Inject() (
   }
 
   def muteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, mute = true)
-
   def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, mute = false)
-
   def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = true)
-
   def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = false)
 
-  private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext) = {
+  private def setUserThreadMuteState(userId: Id[User], extId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext): Boolean = {
     val stateChanged = db.readWrite { implicit session =>
-      val thread = threadRepo.get(threadId)
-      thread.id.exists { threadId =>
-        val userThread = userThreadRepo.getUserThread(userId, threadId)
-        if (userThread.muted != mute) {
-          userThreadRepo.setMuteState(userThread.id.get, mute)
-          true
-        } else {
-          false
-        }
+      val thread = threadRepo.get(extId)
+      userThreadRepo.getUserThread(userId, thread.id.get) match {
+        case ut if ut.muted != mute =>
+          userThreadRepo.setMuteState(ut.id.get, mute)
+        case _ => false
       }
     }
     if (stateChanged) {
-      notificationDeliveryCommander.notifyUserAboutMuteChange(userId, threadId, mute)
-      messagingAnalytics.changedMute(userId, threadId, mute, context)
+      notificationDeliveryCommander.notifyUserAboutMuteChange(userId, extId, mute)
+      messagingAnalytics.changedMute(userId, extId, mute, context)
     }
     stateChanged
   }
 
   def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean = {
     db.readWrite { implicit session =>
-      getNonUserThreadOptWithSession(id) map { nonUserThread =>
-        if (nonUserThread.muted != mute) {
-          nonUserThreadRepo.setMuteState(nonUserThread.id.get, mute)
+      getNonUserThreadOptWithSession(id).collect {
+        case nut if nut.muted != mute =>
+          nonUserThreadRepo.setMuteState(nut.id.get, mute)
           true
-        } else {
-          false
-        }
       }
-    } map { stateChanged =>
-      // TODO(martin) analytics for non users
-      stateChanged
-    } getOrElse (false)
+    }.contains(true)
   }
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {
@@ -567,13 +554,12 @@ class MessagingCommander @Inject() (
     TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
       case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
     }.map { res =>
-      val urlMsgCount = db.readOnlyReplica { implicit session =>
-        res.filter(_._2.isDefined).map {
-          case (url, nuri) =>
-            url -> userThreadRepo.getThreadIds(userId, Some(nuri.get.id.get))
+      db.readOnlyReplica { implicit session =>
+        res.collect {
+          case (url, Some(nuri)) =>
+            url -> userThreadRepo.getThreadIds(userId, Some(nuri.id.get))
         }
-      }
-      Map(urlMsgCount: _*)
+      }.toMap
     }
   }
 

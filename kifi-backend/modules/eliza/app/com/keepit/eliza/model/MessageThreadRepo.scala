@@ -12,6 +12,7 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
   def getOrCreate(participants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean)
   override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread
   override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread
+  def getActiveByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread]
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit
 
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread]
@@ -77,6 +78,10 @@ class MessageThreadRepoImpl @Inject() (
 
   override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread = {
     threadExternalIdCache.getOrElse(MessageThreadExternalIdKey(id))(super.get(id))
+  }
+
+  def getActiveByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread] = {
+    activeRows.filter(_.id.inSet(ids)).list.map(x => x.id.get -> x).toMap
   }
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
