@@ -200,7 +200,6 @@ class SlackIngestionCommanderImpl @Inject() (
           RawBookmarkRepresentation(
             title = title,
             url = url,
-            isPrivate = None,
             canonical = None,
             openGraph = None,
             keptAt = Some(message.timestamp.toDateTime),

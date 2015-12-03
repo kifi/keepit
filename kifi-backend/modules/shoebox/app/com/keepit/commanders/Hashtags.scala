@@ -12,7 +12,7 @@ object Hashtags {
     }.toSet
   }
 
-  def addNewHashtagsToString(str: String, hashtags: Seq[Hashtag]): String = {
+  def addHashtagsToString(str: String, hashtags: Seq[Hashtag]): String = {
     addTagsToString(str, hashtags.map(_.tag))
   }
 
@@ -22,7 +22,7 @@ object Hashtags {
     appendHashtagNamesToString(str, tagsToAppend)
   }
 
-  def appendHashtagNamesToString(str: String, hashtagNames: Seq[String]): String = {
+  private def appendHashtagNamesToString(str: String, hashtagNames: Seq[String]): String = {
     val tagsStr = hashtagNames.filter(_.nonEmpty).map { tag =>
       "[#" + backslashEscapeRe.replaceAllIn(tag, """\\$0""") + "]"
     }.mkString(" ")
@@ -45,7 +45,6 @@ object Hashtags {
   def formatMobileNoteV1(note: Option[String]) = {
     note.map { noteStr =>
       val noteWithoutHashtags = Hashtags.removeAllHashtagsFromString(noteStr)
-
       // todo(jared|aaron): remove false below once notes + hashtags are launched on any platform
       val note2 = if (false && noteWithoutHashtags.nonEmpty && noteWithoutHashtags != noteStr) {
         hashTagRe.replaceAllIn(noteStr, m => {
@@ -67,6 +66,12 @@ object Hashtags {
     }
   }
 
+  // Takes an external note, such as from Twitter or any other string "Formatted like #this #winning"
+  // and converts to a string "Formatted like [#this] [#winning]"
+  def formatExternalNote(note: String): String = {
+    externalHashTagRe.replaceAllIn(note, "[$1$2]")
+  }
+
   // matches '[#...]'.
   // A literal '[#' indicates the start of a hashtag
   // A literal ']' indicates the end of the hashtag
@@ -74,5 +79,6 @@ object Hashtags {
   private val hashTagRe = """\[#((?:\\[\\\]]|[^\]])+)\]""".r
   private val backslashEscapeRe = """[\]\\]""".r
   private val backslashUnescapeRe = """\\(.)""".r
+  private val externalHashTagRe = """(?:\[(#\D[\w\-_ ]+[\w])\])|(#\D[\w\-_]{2,})""".r // Matches [#hash tag] and #hashtags
 
 }

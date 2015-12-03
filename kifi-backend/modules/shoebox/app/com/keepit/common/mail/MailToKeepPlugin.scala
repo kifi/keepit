@@ -115,7 +115,7 @@ class MailToKeepActor @Inject() (
                     main
                   }
                 }
-                val bms = uris.map(uri => RawBookmarkRepresentation(url = uri.toString(), isPrivate = None, keptAt = Some(clock.now)))
+                val bms = uris.map(uri => RawBookmarkRepresentation(url = uri.toString(), keptAt = Some(clock.now)))
                 implicit val context = HeimdalContext.empty
                 val (bookmarks, _) = bookmarkInterner.internRawBookmarks(bms, user.id.get, library, KeepSource.email)
                 val bmText = bookmarks.map { bm =>

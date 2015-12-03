@@ -53,8 +53,6 @@ class CollectionCommander @Inject() (
     }
     log.info(s"Sorting collections for $userId")
     val collections = sort match {
-      case "user" =>
-        userSort(userId, unsortedCollections)
       case "num_keeps" =>
         unsortedCollections.sortBy(_.keeps)(Ordering[Option[Int]].reverse)
       case _ => // default is "last_kept"
@@ -79,32 +77,6 @@ class CollectionCommander @Inject() (
     setCollectionOrdering(uid, getCollectionOrdering(uid))
   }
 
-  private def userSort(uid: Id[User], unsortedCollections: Seq[BasicCollection]): Seq[BasicCollection] = {
-    implicit val externalIdFormat = ExternalId.format[Collection]
-    log.info(s"Getting collection ordering for user $uid")
-    val ordering = db.readOnlyMaster { implicit s => userValueRepo.getValueStringOpt(uid, UserValueName.USER_COLLECTION_ORDERING) }
-    ordering.map {
-      value => Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
-    } match {
-      case Some(orderedCollectionIds) =>
-        val buf = new ArrayBuffer[BasicCollection](unsortedCollections.size)
-        val collectionMap = unsortedCollections.map(c => c.id.get -> c).toMap
-        val newCollectionIds = (collectionMap.keySet -- orderedCollectionIds)
-        if (newCollectionIds.nonEmpty) {
-          unsortedCollections.foreach { c => if (newCollectionIds.contains(c.id.get)) buf += c }
-        }
-        orderedCollectionIds.foreach { id => collectionMap.get(id).foreach { c => buf += c } }
-        buf
-      case None =>
-        val allCollectionIds = unsortedCollections.map(_.id.get)
-        log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
-        db.readWrite(attempts = 3) { implicit s =>
-          userValueRepo.setValue(uid, UserValueName.USER_COLLECTION_ORDERING, Json.stringify(Json.toJson(allCollectionIds)))
-        }
-        unsortedCollections
-    }
-  }
-
   private def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
     implicit val externalIdFormat = ExternalId.format[Collection]
     log.info(s"Getting collection ordering for user $uid")
@@ -125,31 +97,6 @@ class CollectionCommander @Inject() (
     val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
     userValueRepo.setValue(uid, UserValueName.USER_COLLECTION_ORDERING, Json.stringify(Json.toJson(newCollectionIds)))
     newCollectionIds
-  }
-
-  def saveCollection(userId: Id[User], collectionOpt: Option[BasicCollection])(implicit context: HeimdalContext): Either[BasicCollection, CollectionSaveFail] = {
-    val saved: Option[Either[BasicCollection, CollectionSaveFail]] = collectionOpt map { basicCollection =>
-      val name = Hashtag(basicCollection.name.trim.replaceAll("""\s+""", " "))
-      if (name.tag.length <= Collection.MaxNameLength) {
-        db.readWrite { implicit s =>
-          val existingCollection = collectionRepo.getByUserAndName(userId, name, None)
-          val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
-          if (existingExternalId.isEmpty) {
-            s.onTransactionSuccess { searchClient.updateKeepIndex() }
-            val newColl = collectionRepo.save(Collection(userId = userId, name = name))
-            updateCollectionOrdering(userId)
-            Left(BasicCollection.fromCollection(newColl.summary))
-          } else {
-            Right(CollectionSaveFail(s"Tag '$name' already exists"))
-          }
-        }
-      } else {
-        Right(CollectionSaveFail(s"Name '$name' is too long (maximum ${Collection.MaxNameLength} characters)"))
-      }
-    }
-    saved.getOrElse {
-      Right(CollectionSaveFail("Could not parse tag from body"))
-    }
   }
 
   def deleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {

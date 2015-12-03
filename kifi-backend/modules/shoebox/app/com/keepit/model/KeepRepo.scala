@@ -69,7 +69,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
-  def deactivate(model: Keep)(implicit session: RWSession): Unit
+  def deactivate(model: Keep)(implicit session: RWSession): Keep
 }
 
 @Singleton
@@ -163,7 +163,7 @@ class KeepRepoImpl @Inject() (
     super.save(newModel.clean())
   }
 
-  def deactivate(model: Keep)(implicit session: RWSession): Unit = {
+  def deactivate(model: Keep)(implicit session: RWSession) = {
     save(model.sanitizeForDelete)
   }
 

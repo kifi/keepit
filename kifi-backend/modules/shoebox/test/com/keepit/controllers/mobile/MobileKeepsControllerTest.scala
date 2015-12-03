@@ -57,7 +57,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
   // NOTE: No attemp to write the trait SourceAttribution
   implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {
     def writes(keep: RawBookmarkRepresentation): JsValue = {
-      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.isPrivate, keep.canonical, keep.openGraph, keep.keptAt, keep.note)
+      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.canonical, keep.openGraph, keep.keptAt, keep.note)
       Json.toJson(tmp)
     }
   }
@@ -409,34 +409,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
     }
   }
 
-  "saveCollection create mode" in {
-    withDb(controllerTestModules: _*) { implicit injector =>
-      val user = db.readWrite { implicit session =>
-        UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
-      }
-
-      val path = com.keepit.controllers.mobile.routes.MobileKeepsController.saveCollection().url
-      path === "/m/1/collections/create"
-
-      val json = Json.obj("name" -> JsString("my tag"))
-      inject[FakeUserActionsHelper].setUser(user)
-      val request = FakeRequest("POST", path).withJsonBody(json)
-      val result = inject[MobileKeepsController].saveCollection()(request)
-      status(result) must equalTo(OK);
-      contentType(result) must beSome("application/json");
-
-      val collection = db.readWrite { implicit session =>
-        val collections = inject[CollectionRepo].getUnfortunatelyIncompleteTagSummariesByUser(user.id.get)
-        collections.size === 1
-        collections.head
-      }
-      collection.name.tag === "my tag"
-
-      val expected = Json.parse(s"""{"id":"${collection.externalId}","name":"my tag"}""")
-      Json.parse(contentAsString(result)) must equalTo(expected)
-    }
-  }
-
   "MobileKeepsController" should {
 
     "allCollections" in {
@@ -474,53 +446,6 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                {"id":"${ext2}","name":"myCollaction2","keeps":0},
                {"id":"${ext3}","name":"myCollaction3","keeps":0}
             ]}
-        """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
-      }
-    }
-
-    "keepMultiple" in {
-      withDb(controllerTestModules: _*) { implicit injector =>
-        val user = db.readWrite { implicit session =>
-          UserFactory.user().withName("Eishay", "Smith").withUsername("test").saved
-        }
-        inject[LibraryCommander].internSystemGeneratedLibraries(user.id.get)
-
-        val withCollection =
-          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
-            Nil
-        val keepsAndCollections = RawBookmarksWithCollection(Some(Right("myTag")), withCollection)
-
-        val path = com.keepit.controllers.mobile.routes.MobileKeepsController.keepMultiple().url
-        path === "/m/1/keeps/add"
-
-        val json = Json.obj(
-          "collectionName" -> JsString(keepsAndCollections.collection.get.right.get),
-          "keeps" -> JsArray(keepsAndCollections.keeps map { k => Json.toJson(k) })
-        )
-        inject[FakeUserActionsHelper].setUser(user)
-        val request = FakeRequest("POST", path).withBody(json)
-        val result = inject[MobileKeepsController].keepMultiple()(request)
-        status(result) must equalTo(OK);
-        contentType(result) must beSome("application/json");
-
-        val keeps = db.readOnlyMaster { implicit session =>
-          val keeps = keepRepo.all
-          keeps.length === 3
-          keeps.map(_.source) === Seq(KeepSource.mobile, KeepSource.mobile, KeepSource.mobile)
-          keeps.map(_.state.value) === Seq("active", "active", "active")
-          keeps
-        }
-
-        val expected = Json.parse(s"""
-          {
-            "keeps":[{"id":"${keeps(0).externalId.id}","pubId":"${Keep.publicId(keeps(0).id.get).id}","path":"${keeps(0).path.relative}","title":"title 11","url":"http://www.hi.com11","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-                     {"id":"${keeps(1).externalId.id}","pubId":"${Keep.publicId(keeps(1).id.get).id}","path":"${keeps(1).path.relative}","title":"title 21","url":"http://www.hi.com21","isPrivate":false,"libraryId":"l7jlKlnA36Su"},
-                     {"id":"${keeps(2).externalId.id}","pubId":"${Keep.publicId(keeps(2).id.get).id}","path":"${keeps(2).path.relative}","title":"title 31","url":"http://www.hi.com31","isPrivate":false,"libraryId":"l7jlKlnA36Su"}],
-            "addedToCollection":3
-          }
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)
       }

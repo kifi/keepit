@@ -307,37 +307,6 @@ class LibraryAnalytics @Inject() (
     }
   }
 
-  def updatedKeep(oldKeep: Keep, updatedKeep: Keep, context: HeimdalContext): Unit = SafeFuture {
-    val contextBuilder = new HeimdalContextBuilder
-    contextBuilder.data ++= context.data
-    contextBuilder += ("action", "updatedKeep")
-    contextBuilder += ("uriId", updatedKeep.uriId.toString)
-    if (oldKeep.isPrivate != updatedKeep.isPrivate) {
-      if (updatedKeep.isPrivate) {
-        contextBuilder += ("updatedPrivacy", "private")
-        userPropertyUpdateActor.ref ! (updatedKeep.userId, UserPropertyUpdateInstruction.KeepCounts)
-      } else {
-        contextBuilder += ("updatedPrivacy", "public")
-        userPropertyUpdateActor.ref ! (updatedKeep.userId, UserPropertyUpdateInstruction.KeepCounts)
-      }
-    }
-
-    if (oldKeep.title != updatedKeep.title) {
-      val updatedTitle = if (oldKeep.title.isEmpty) "missing" else "different"
-      contextBuilder += ("updatedTitle", updatedTitle)
-    }
-
-    heimdal.trackEvent(UserEvent(updatedKeep.userId, contextBuilder.build, UserEventTypes.KEPT, updatedKeep.updatedAt))
-
-    // Anonymized event with page information
-    if (contextBuilder.data.contains("updatedPrivacy")) {
-      anonymise(contextBuilder)
-      contextBuilder.addUrlInfo(updatedKeep.url)
-      heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.KEPT, updatedKeep.updatedAt))
-    }
-
-  }
-
   private def getDaysSinceLibraryCreated(library: Library): Float = {
     val daysSinceLibraryCreated = (currentDateTime.getMillis.toFloat - library.createdAt.getMillis) / (24 * 3600 * 1000)
     (daysSinceLibraryCreated - daysSinceLibraryCreated % 0.0001).toFloat
