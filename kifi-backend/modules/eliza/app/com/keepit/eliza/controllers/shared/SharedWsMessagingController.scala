@@ -78,22 +78,22 @@ class SharedWsMessagingController @Inject() (
     "get_thread" -> {
       case JsString(threadId) +: _ =>
         log.info(s"[get_thread] user ${socket.userId} thread $threadId")
-        for {
+        new SafeFuture(for {
           (thread, msgs) <- basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId))
           keepOpt <- thread.keepId.map(kid => shoebox.getBasicKeepsByIds(Set(kid)).map(res => res.values.headOption)).getOrElse(Future.successful(None))
           libOpt <- keepOpt.flatMap(k => Library.decodePublicId(k.libraryId).toOption).map { libId =>
             shoebox.getBasicLibraryDetails(Set(libId), idealImageSize = ProcessedImageSize.Small.idealSize, viewerId = Some(socket.userId)).map(res => res.values.headOption)
           }.getOrElse(Future.successful(None))
-        } {
-          SafeFuture(socket.channel.push(Json.arr(
+        } yield {
+          socket.channel.push(Json.arr(
             "thread", Json.obj(
               "id" -> threadId,
               "uri" -> thread.url,
               "keep" -> keepOpt,
               "library" -> libOpt,
               "messages" -> msgs.reverse
-            ))))
-        }
+            )))
+        })
     },
     "add_participants_to_thread" -> {
       case JsString(threadId) +: (data: JsValue) +: _ =>
