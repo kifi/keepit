@@ -1,11 +1,12 @@
 package com.keepit.eliza.controllers.shared
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.HttpClient
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
 import com.keepit.common.db.{ ExternalId, State }
-import com.keepit.model.{ NotificationCategory, UserExperimentType, KifiExtVersion }
+import com.keepit.model.{ Library, NotificationCategory, UserExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.model.Recipient
@@ -16,7 +17,7 @@ import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.heimdal._
 import com.keepit.common.akka.SafeFuture
-import com.keepit.commanders.RemoteUserExperimentCommander
+import com.keepit.commanders.{ ProcessedImageSize, RemoteUserExperimentCommander }
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -38,6 +39,7 @@ class SharedWsMessagingController @Inject() (
   legacyNotificationCheck: LegacyNotificationCheck,
   val userActionsHelper: UserActionsHelper,
   protected val websocketRouter: WebSocketRouter,
+  private implicit val publicIdConfig: PublicIdConfiguration,
   amazonInstanceInfo: AmazonInstanceInfo,
   val kifInstallationStore: KifiInstallationStore,
   protected val shoebox: ShoeboxServiceClient,
@@ -79,12 +81,16 @@ class SharedWsMessagingController @Inject() (
         for {
           (thread, msgs) <- basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId))
           keepOpt <- thread.keepId.map(kid => shoebox.getBasicKeepsByIds(Set(kid)).map(res => res.values.headOption)).getOrElse(Future.successful(None))
+          libOpt <- keepOpt.flatMap(k => Library.decodePublicId(k.libraryId).toOption).map { libId =>
+            shoebox.getBasicLibraryDetails(Set(libId), idealImageSize = ProcessedImageSize.Small.idealSize, viewerId = Some(socket.userId)).map(res => res.values.headOption)
+          }.getOrElse(Future.successful(None))
         } {
           SafeFuture(socket.channel.push(Json.arr(
             "thread", Json.obj(
               "id" -> threadId,
               "uri" -> thread.url,
               "keep" -> keepOpt,
+              "library" -> libOpt,
               "messages" -> msgs.reverse
             ))))
         }
