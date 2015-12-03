@@ -164,9 +164,9 @@ class KeepDecoratorImpl @Inject() (
               libraries = Some(libraries),
               librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
               librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
-              collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
-              tags = Some(collsForKeep.toSet),
-              hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
+              collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is not used by any client
+              tags = Some(collsForKeep.toSet), // Used by site
+              hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }), // Used by both mobile clients
               summary = Some(pageInfoForKeep),
               siteName = DomainToNameMapper.getNameFromUrl(keep.url),
               libraryId = keep.libraryId.map(Library.publicId),

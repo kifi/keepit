@@ -17,6 +17,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
 import views.html
+import com.keepit.common.core._
 
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap => MutableMap }
@@ -220,17 +221,79 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  // TODO(ryan): slap whoever named this method
-  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = UserAction {
+  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = AdminUserAction {
     db.readWrite { implicit session =>
       keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
     }
     Ok
   }
 
-  def checkLibraryKeepVisibility(libId: Id[Library]) = UserAction { request =>
+  def checkLibraryKeepVisibility(libId: Id[Library]) = AdminUserAction { request =>
     val numFix = libraryChecker.keepVisibilityCheck(libId)
     Ok(JsNumber(numFix))
+  }
+
+  def reprocessNotesOfKeeps() = AdminUserAction(parse.json) { implicit request =>
+    val updated = db.readWrite { implicit session =>
+      val keeps = {
+        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
+        keepRepo.getByIds(keepIds.toSet).values.toList
+      }
+      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
+        keepRepo.getByUser(Id[User](u)).toList
+      }
+      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
+        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
+      }
+      (keeps ++ userKeeps ++ libKeeps).distinctBy(_.id.get).map { keep =>
+        keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse(""))
+      }
+    }
+
+    Ok(updated.size.toString)
+  }
+
+  def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
+    val tagToRemove = (request.body \ "tagToRemove").as[String]
+
+    val keepIds = db.readWrite { implicit session =>
+      val keeps = {
+        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
+        keepRepo.getByIds(keepIds.toSet).values.toList
+      }
+      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
+        keepRepo.getByUser(Id[User](u)).toList
+      }
+      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
+        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
+      }
+      (keeps ++ userKeeps ++ libKeeps).map(_.id.get).toSet
+    }
+    val updated = keepCommander.removeTagFromKeeps(keepIds, Hashtag(tagToRemove))
+
+    Ok(updated.toString)
+  }
+
+  def replaceTagOnKeeps() = AdminUserAction(parse.json) { implicit request =>
+    val newTag = (request.body \ "newTag").as[String]
+    val oldTag = (request.body \ "oldTag").as[String]
+
+    val keepIds = db.readWrite { implicit session =>
+      val keeps = {
+        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
+        keepRepo.getByIds(keepIds.toSet).values.toList
+      }
+      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
+        keepRepo.getByUser(Id[User](u)).toList
+      }
+      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
+        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
+      }
+      (keeps ++ userKeeps ++ libKeeps).map(_.id.get).toSet
+    }
+    val updated = keepCommander.replaceTagOnKeeps(keepIds, Hashtag(oldTag), Hashtag(newTag))
+
+    Ok(updated.toString)
   }
 
 }

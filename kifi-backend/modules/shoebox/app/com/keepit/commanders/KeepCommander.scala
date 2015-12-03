@@ -80,7 +80,8 @@ trait KeepCommander {
   // Tagging
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
   def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
-  // todo: def removeTag() // Remove tag entirely
+  def removeTagFromKeeps(keeps: Set[Id[Keep]], tag: Hashtag): Int
+  def replaceTagOnKeeps(keeps: Set[Id[Keep]], oldTag: Hashtag, newTag: Hashtag): Int
 
   // Destroying
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo]
@@ -437,9 +438,12 @@ class KeepCommanderImpl @Inject() (
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
     val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
     val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
-    val keep = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)
+    val (keep, colls) = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)
     session.onTransactionSuccess {
       searchClient.updateKeepIndex()
+    }
+    colls.foreach { c =>
+      collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)
     }
     keep
   }
@@ -454,11 +458,46 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  // You have a keep, and want tags removed from it. Use: removeTagFromKeep
-  def removeTagFromKeep() = {}
+  // You have keeps, and want tags removed from it.
+  def removeTagFromKeeps(keeps: Set[Id[Keep]], tag: Hashtag): Int = {
+    db.readWrite { implicit session =>
+      val updated = keepRepo.getByIds(keeps).flatMap {
+        case ((_, k)) =>
+          val tags = Hashtags.findAllHashtagNames(k.note.getOrElse(""))
+          if (tags.contains(tag.tag)) {
+            val newTags = tags - tag.tag
+            Some(syncTagsToNoteAndSaveKeep(k.userId, k, newTags.toSeq))
+          } else None
+      }
+      updated.values.flatten.distinctBy(_.id).map { c =>
+        collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)
+      }
+      updated.size
+    }
+  }
+
+  def replaceTagOnKeeps(keeps: Set[Id[Keep]], oldTag: Hashtag, newTag: Hashtag): Int = {
+    db.readWrite { implicit session =>
+      val updated = keepRepo.getByIds(keeps).flatMap {
+        case ((_, k)) =>
+          val tags = Hashtags.findAllHashtagNames(k.note.getOrElse(""))
+          if (tags.contains(oldTag.tag)) {
+            val newTags = tags - oldTag.tag + newTag.tag
+            val newNote = k.note.map(_.replaceAllLiterally("#" + oldTag, "#" + newTag))
+            Some(syncTagsToNoteAndSaveKeep(k.userId, k.withNote(newNote), newTags.toSeq))
+          } else None
+      }
+      updated.values.flatten.distinctBy(_.id).map { c =>
+        collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)
+      }
+      updated.size
+    }
+  }
 
   // Given set of tags and keep, update keep note to reflect tag seq (create tags, remove tags, insert into note, remove from note)
   // i.e., source of tag truth is the tag seq, note will be brought in sync
+  // Important: Caller's responsibility to call collectionRepo.collectionChanged from the return value for collections that changed
+  case class ChangedCollection(id: Id[Collection], isNewKeep: Boolean, inactivateIfEmpty: Boolean)
   private def syncTagsToNoteAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String])(implicit session: RWSession) = {
     // get all tags from hashtag names list
     val selectedTags = allTagsKeepShouldHave.map { getOrCreateTag(userId, _) }
@@ -467,6 +506,7 @@ class KeepCommanderImpl @Inject() (
     val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet
     val tagIdsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
     val tagIdsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
+    var changedCollections = scala.collection.mutable.Set.empty[ChangedCollection]
 
     // fix k2c for tagsToAdd & tagsToRemove
     tagIdsToAdd.map { tagId =>
@@ -474,11 +514,11 @@ class KeepCommanderImpl @Inject() (
         case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
         case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
       }
-      collectionRepo.collectionChanged(tagId, isNewKeep = true, inactivateIfEmpty = false)
+      changedCollections += ChangedCollection(tagId, isNewKeep = true, inactivateIfEmpty = false)
     }
     tagIdsToRemove.map { tagId =>
       keepToCollectionRepo.remove(keep.id.get, tagId)
-      collectionRepo.collectionChanged(tagId, isNewKeep = false, inactivateIfEmpty = true)
+      changedCollections += ChangedCollection(tagId, isNewKeep = false, inactivateIfEmpty = true)
     }
 
     // go through note field and find all hashtags
@@ -493,7 +533,7 @@ class KeepCommanderImpl @Inject() (
     val noteWithHashtagsAppended = Hashtags.addTagsToString(noteWithHashtagsRemoved, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 
-    keepRepo.save(keep.withNote(finalNote))
+    (keepRepo.save(keep.withNote(finalNote)), changedCollections)
   }
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
