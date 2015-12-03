@@ -3,7 +3,7 @@
     <span class="kf-upl-create-card-add-icon"><svg kf-symbol-sprite icon="plus"></svg></span>
     <span class="kf-upl-create-card-text kf-link kf-link-black">Create a library</span>
   </button>
-  <div kf-loading-spinner hide="loaded"></div>
+  <div kf-loading-spinner hide="loaded" class="kf-upl-loading-spinner"></div>
   <div kf-user-profile-library-card="library" ng-repeat="library in libraries"
     current-page-name="{{::currentPageName}}" current-page-origin="{{::currentPageOrigin}}" library-type="{{::libraryType}}" profile-id="{{::profile.id}}">
   </div>
