@@ -75,7 +75,7 @@ object SlackChannelToLibraryFactory {
     val owner = Id[User](idx.incrementAndGet())
     PartialSlackChannelToLibrary(SlackChannelToLibrary(
       ownerId = owner,
-      space = UserSpace(owner),
+      organizationId = None,
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
@@ -100,7 +100,7 @@ object LibraryToSlackChannelFactory {
     val owner = Id[User](idx.incrementAndGet())
     PartialLibraryToSlackChannel(LibraryToSlackChannel(
       ownerId = owner,
-      space = UserSpace(owner),
+      organizationId = None,
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
