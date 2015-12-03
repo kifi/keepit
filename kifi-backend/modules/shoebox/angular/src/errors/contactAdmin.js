@@ -9,6 +9,7 @@ angular.module('kifi')
       restrict: 'A',
       replace: true,
       scope: {
+        getStatus: '&status',
         getState: '&state',
         getParams: '&params'
       },
@@ -16,13 +17,17 @@ angular.module('kifi')
       link: function ($scope) {
         var stateParams = $scope.getParams();
 
-        orgProfileService
-        .userOrOrg(stateParams.handle)
-        .then(function (userOrOrgData) {
-          if (userOrOrgData.type === 'org') {
-            $scope.org = userOrOrgData.result.organization;
-          }
-        });
+        if ($scope.getStatus() === 403) {
+          orgProfileService
+          .userOrOrg(stateParams.handle)
+          .then(function (userOrOrgData) {
+            if (userOrOrgData.type === 'org') {
+              $scope.org = userOrOrgData.result.organization;
+            } else {
+              $scope.user = userOrOrgData.result;
+            }
+          });
+        }
       }
     };
   }

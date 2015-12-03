@@ -1,4 +1,9 @@
 <div>
-  <p class="kf-error-header">Whoa! You need to be a member of <a class="kf-link kf-link-underline kf-link-blue" ui-sref="orgProfile.libraries({ handle: org.handle })" ng-bind="org | name"></a> to see this.</p>
-  <p ng-if="org">Contact the administrator of <span ng-bind="org | name"></span> to join this team.</p>
+  <span kf-loading-spinner hide="getStatus() !== 403 || user || org" class="kf-loading-spinner-center"></span>
+  <div ng-if="org">
+    <p class="kf-error-header">Whoa! You need to be a member of <a class="kf-link kf-link-underline kf-link-blue" ui-sref="orgProfile.libraries({ handle: org.handle })" ng-bind="org | name"></a> to see this.</p>
+    <p ng-if="org">Contact the administrator of <span ng-bind="org | name"></span> to join this team.</p>
+  </div>
+  <div ng-if="getStatus() !== 403 || user" ng-include="'errors/whomp.tpl.html'">
+  </div>
 </div>
