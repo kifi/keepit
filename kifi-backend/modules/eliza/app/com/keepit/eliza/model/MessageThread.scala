@@ -55,12 +55,12 @@ object MessageThreadParticipants {
                 case (uid, timestamp) => (Id[User](uid.toLong), timestamp.as[DateTime])
               }.toMap
               (obj \ "nus").asOpt[JsArray].map { nonUsers =>
-                nonUsers.value.map(_.asOpt[JsArray]).flatten.map { v =>
+                nonUsers.value.flatMap(_.asOpt[JsArray]).flatMap { v =>
                   (v(0).asOpt[NonUserParticipant], v(1).asOpt[DateTime]) match {
                     case (Some(_n), Some(_d)) => Some(_n -> _d)
                     case _ => None
                   }
-                }.flatten.toMap
+                }.toMap
               } match {
                 case Some(nonUserParticipants) =>
                   JsSuccess(MessageThreadParticipants(userParticipants, nonUserParticipants))
@@ -110,14 +110,14 @@ case class MessageThread(
   updatedAt: DateTime = currentDateTime,
   state: State[MessageThread] = MessageThreadStates.ACTIVE,
   externalId: ExternalId[MessageThread] = ExternalId(),
-  uriId: Option[Id[NormalizedURI]],
-  url: Option[String],
-  nUrl: Option[String],
+  uriId: Id[NormalizedURI],
+  url: String,
+  nUrl: String,
+  participants: MessageThreadParticipants,
   pageTitle: Option[String],
-  participants: Option[MessageThreadParticipants],
-  participantsHash: Option[Int],
   keepId: Option[Id[Keep]] = None)
     extends ModelWithExternalId[MessageThread] {
+  def participantsHash: Int = participants.hash
   def deepLocator: DeepLocator = DeepLocator(s"/messages/$externalId")
 
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
@@ -129,19 +129,18 @@ case class MessageThread(
   def withParticipants(when: DateTime, userIds: Seq[Id[User]], nonUsers: Seq[NonUserParticipant] = Seq.empty) = {
     val newUsers = userIds.map(_ -> when).toMap
     val newNonUsers = nonUsers.map(_ -> when).toMap
-    val newParticipants = participants.map(ps => MessageThreadParticipants(ps.userParticipants ++ newUsers, ps.nonUserParticipants ++ newNonUsers))
-    this.copy(participants = newParticipants, participantsHash = newParticipants.map(_.hash))
+    val newParticipants = MessageThreadParticipants(participants.userParticipants ++ newUsers, participants.nonUserParticipants ++ newNonUsers)
+    this.copy(participants = newParticipants)
   }
-
   def withoutParticipant(userId: Id[User]) = {
-    val newParticpiants = participants.map(ps => MessageThreadParticipants(ps.userParticipants - userId, ps.nonUserParticipants))
-    this.copy(participants = newParticpiants, participantsHash = newParticpiants.map(_.hash))
+    val newParticpiants = MessageThreadParticipants(participants.userParticipants - userId, participants.nonUserParticipants)
+    this.copy(participants = newParticpiants)
   }
 
-  def containsUser(user: Id[User]): Boolean = participants.exists(_.contains(user))
-  def containsNonUser(nonUser: NonUserParticipant): Boolean = participants.exists(_.contains(nonUser))
-  def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.map(_.allUsersExcept(user)).getOrElse(Set[Id[User]]()) //Todo: add in nonuser participants?
-  def allParticipants: Set[Id[User]] = participants.map(_.allUsers).getOrElse(Set[Id[User]]())
+  def containsUser(user: Id[User]): Boolean = participants.contains(user)
+  def containsNonUser(nonUser: NonUserParticipant): Boolean = participants.contains(nonUser)
+  def allParticipantsExcept(user: Id[User]): Set[Id[User]] = participants.allUsersExcept(user)
+  def allParticipants: Set[Id[User]] = participants.allUsers
 }
 
 object MessageThreadStates extends States[MessageThread]
@@ -152,19 +151,18 @@ object MessageThread {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format[State[MessageThread]] and
-    (__ \ 'externalId).format(ExternalId.format[MessageThread]) and
-    (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
-    (__ \ 'url).formatNullable[String] and
-    (__ \ 'nUrl).formatNullable[String] and
+    (__ \ 'externalId).format[ExternalId[MessageThread]] and
+    (__ \ 'uriId).format[Id[NormalizedURI]] and
+    (__ \ 'url).format[String] and
+    (__ \ 'nUrl).format[String] and
+    (__ \ 'participants).format[MessageThreadParticipants] and
     (__ \ 'pageTitle).formatNullable[String] and
-    (__ \ 'participants).formatNullable[MessageThreadParticipants] and
-    (__ \ 'participantsHash).formatNullable[Int] and
     (__ \ 'keep).formatNullable[Id[Keep]]
   )(MessageThread.apply, unlift(MessageThread.unapply))
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 5
+  override val version = 6
   val namespace = "message_thread_by_external_id"
   def toKey(): String = externalId.id
 }
