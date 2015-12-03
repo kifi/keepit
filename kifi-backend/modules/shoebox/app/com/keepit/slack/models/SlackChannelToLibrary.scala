@@ -19,7 +19,7 @@ case class SlackChannelToLibrary(
   updatedAt: DateTime = currentDateTime,
   state: State[SlackChannelToLibrary] = SlackChannelToLibraryStates.ACTIVE,
   ownerId: Id[User],
-  space: LibrarySpace,
+  organizationId: Option[Id[Organization]],
   slackUserId: SlackUserId,
   slackTeamId: SlackTeamId,
   slackChannelId: Option[SlackChannelId],
@@ -34,7 +34,6 @@ case class SlackChannelToLibrary(
   def withId(id: Id[SlackChannelToLibrary]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackChannelToLibraryStates.ACTIVE
-  def withSpace(newSpace: LibrarySpace) = this.copy(space = newSpace)
   def withStatus(newStatus: SlackIntegrationStatus) = copy(status = newStatus, nextIngestionAt = if (newStatus == SlackIntegrationStatus.On) Some(currentDateTime) else None)
 
   def withModifications(mods: SlackIntegrationModification) = {
@@ -43,6 +42,12 @@ case class SlackChannelToLibrary(
       .maybeCopy(_.space, mods.space, _.withSpace)
   }
   def sanitizeForDelete = copy(state = SlackChannelToLibraryStates.INACTIVE, status = SlackIntegrationStatus.Off)
+
+  def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
+  def withSpace(newSpace: LibrarySpace) = newSpace match {
+    case OrganizationSpace(orgId) => copy(organizationId = Some(orgId))
+    case UserSpace(userId) => copy(ownerId = userId, organizationId = None)
+  }
 }
 
 object SlackChannelToLibraryStates extends States[SlackChannelToLibrary]
@@ -110,7 +115,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
       updatedAt,
       state,
       ownerId,
-      LibrarySpace(ownerId, organizationId),
+      organizationId,
       slackUserId,
       slackTeamId,
       slackChannelId,
@@ -130,10 +135,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     stl.updatedAt,
     stl.state,
     stl.ownerId,
-    stl.space match {
-      case OrganizationSpace(orgId) => Some(orgId)
-      case UserSpace(_) => None
-    },
+    stl.organizationId,
     stl.slackUserId,
     stl.slackTeamId,
     stl.slackChannelId,
@@ -205,7 +207,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
         val newIntegration = SlackChannelToLibrary(
           id = inactiveIntegrationOpt.flatMap(_.id),
           ownerId = request.userId,
-          space = request.space,
+          organizationId = request.organizationId,
           slackUserId = request.slackUserId,
           slackTeamId = request.slackTeamId,
           slackChannelId = request.slackChannelId,

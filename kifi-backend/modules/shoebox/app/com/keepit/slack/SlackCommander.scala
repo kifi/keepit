@@ -111,14 +111,10 @@ class SlackCommanderImpl @Inject() (
 
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
     db.readWrite { implicit s =>
-      val defaultSpace = libRepo.get(libId).organizationId match {
-        case Some(orgId) if orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined =>
-          LibrarySpace.fromOrganizationId(orgId)
-        case _ => LibrarySpace.fromUserId(userId)
-      }
+      val organizationId = libRepo.get(libId).organizationId
       libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         userId = userId,
-        space = defaultSpace,
+        organizationId = organizationId,
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
@@ -127,7 +123,7 @@ class SlackCommanderImpl @Inject() (
       ))
       channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
         userId = userId,
-        space = defaultSpace,
+        organizationId = organizationId,
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
