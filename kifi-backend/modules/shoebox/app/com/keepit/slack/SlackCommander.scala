@@ -337,12 +337,14 @@ class SlackCommanderImpl @Inject() (
     db.readOnlyMaster { implicit session =>
       val channelToLibIntegrations = channelToLibRepo.getBySlackTeamAndChannel(teamId, channelId)
       val libToChannelIntegrations = libToChannelRepo.getBySlackTeamAndChannel(teamId, channelId)
+      val integrationSpaces = (channelToLibIntegrations.map(stl => stl.libraryId -> stl.space) ++ libToChannelIntegrations.map(lts => lts.libraryId -> lts.space)).groupBy(_._1).mapValues(_.map(_._2).toSet)
       SlackChannelIntegrations(
         teamId = teamId,
         channelId = channelId,
         allLibraries = channelToLibIntegrations.map(_.libraryId).toSet ++ libToChannelIntegrations.map(_.libraryId),
         toLibraries = channelToLibIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
-        fromLibraries = libToChannelIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet
+        fromLibraries = libToChannelIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
+        spaces = integrationSpaces
       )
     }
   }

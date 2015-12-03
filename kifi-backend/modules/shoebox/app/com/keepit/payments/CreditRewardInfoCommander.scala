@@ -78,7 +78,7 @@ class CreditRewardInfoCommanderImpl @Inject() (
       case Reward(kind, _, _) if kind == RewardKind.OrganizationDescriptionAdded => DescriptionElements("you added a description for your team.")
       case Reward(kind, _, _) if kind == RewardKind.OrganizationGeneralLibraryKeepsReached50 => DescriptionElements("your team added 50 keeps into the General library.")
       case Reward(kind, _, referredOrgId: Id[Organization] @unchecked) if kind == RewardKind.OrganizationReferral =>
-        DescriptionElements("you referred", getOrg(referredOrgId), ". Thank you!")
+        DescriptionElements("you referred", getOrg(referredOrgId).map(DescriptionElements.fromBasicOrg).getOrElse("a team"), ". Thank you!")
       case Reward(kind, _, _) if kind == RewardKind.ReferralApplied =>
         val referrerOpt = for {
           codeInfo <- creditCodeInfoRepo.getByCode(creditReward.code.get.code)
