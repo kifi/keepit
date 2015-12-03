@@ -73,36 +73,9 @@ class CollectionCommander @Inject() (
     }.map { case (collectionSummary, keepCount) => BasicCollection.fromCollection(collectionSummary, Some(keepCount)) }
   }
 
-  private def updateCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
-    setCollectionOrdering(uid, getCollectionOrdering(uid))
-  }
-
-  private def getCollectionOrdering(uid: Id[User])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
-    implicit val externalIdFormat = ExternalId.format[Collection]
-    log.info(s"Getting collection ordering for user $uid")
-    userValueRepo.getValueStringOpt(uid, UserValueName.USER_COLLECTION_ORDERING).map { value =>
-      Json.fromJson[Seq[ExternalId[Collection]]](Json.parse(value)).get
-    } getOrElse {
-      val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
-      log.info(s"Updating collection ordering for user $uid: $allCollectionIds")
-      userValueRepo.setValue(uid, UserValueName.USER_COLLECTION_ORDERING, Json.stringify(Json.toJson(allCollectionIds)))
-      allCollectionIds
-    }
-  }
-
-  private def setCollectionOrdering(uid: Id[User],
-    order: Seq[ExternalId[Collection]])(implicit s: RWSession): Seq[ExternalId[Collection]] = {
-    implicit val externalIdFormat = ExternalId.format[Collection]
-    val allCollectionIds = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(uid).map(_.externalId)
-    val newCollectionIds = allCollectionIds.sortBy(order.indexOf(_))
-    userValueRepo.setValue(uid, UserValueName.USER_COLLECTION_ORDERING, Json.stringify(Json.toJson(newCollectionIds)))
-    newCollectionIds
-  }
-
   def deleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {
     db.readWrite { implicit s =>
       collectionRepo.save(collection.copy(state = CollectionStates.INACTIVE))
-      updateCollectionOrdering(collection.userId)
     }
     searchClient.updateKeepIndex()
   }
@@ -110,7 +83,6 @@ class CollectionCommander @Inject() (
   def undeleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {
     db.readWrite { implicit s =>
       collectionRepo.save(collection.copy(state = CollectionStates.ACTIVE, createdAt = clock.now()))
-      updateCollectionOrdering(collection.userId)
     }
     searchClient.updateKeepIndex()
   }

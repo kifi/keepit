@@ -256,6 +256,7 @@ class KeepInternerImpl @Inject() (
           Some(Try(keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse(""))(s)))
         } else None
     }
+
     res.collect {
       case ((k, Failure(ex))) => (k.id, ex)
       case ((k, Success(Some(Failure(ex))))) => (k.id, ex)

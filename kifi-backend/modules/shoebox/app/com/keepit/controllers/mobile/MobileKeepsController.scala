@@ -116,30 +116,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def editKeepInfoV1(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    db.readOnlyMaster { implicit s =>
-      keepRepo.getOpt(id).filter(_.isActive)
-    } match {
-      case None =>
-        NotFound(Json.obj("error" -> "not_found"))
-      case Some(keep) =>
-        val json = request.body
-        val titleOpt = (json \ "title").asOpt[String]
-        val noteOpt = (json \ "note").asOpt[String]
-
-        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
-        val noteToPersist = noteOpt map { note =>
-          KeepDecorator.escapeMarkupNotes(note).trim
-        } orElse keep.note filter (_.nonEmpty)
-
-        db.readWrite { implicit s =>
-          val updatedKeep = keepRepo.save(keep.copy(title = titleToPersist))
-          keepsCommander.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
-        }
-        NoContent
-    }
-  }
-
   def editKeepInfoV2(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(id).filter(_.isActive)
@@ -156,7 +132,7 @@ class MobileKeepsController @Inject() (
 
         if (titleToPersist != keep.title || noteToPersist != keep.note) {
           db.readWrite { implicit s =>
-            val updatedKeep = keep.copy(title = titleToPersist)
+            val updatedKeep = keepRepo.save(keep.withTitle(titleToPersist))
             keepsCommander.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
           }
         }

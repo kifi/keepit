@@ -57,7 +57,7 @@ private class RawKeepImporterActor @Inject() (
       } else 0
 
       val totalProcessed = activeBatch.length + oldBatchSize
-      if (totalProcessed >= batchSize) { // batch was non-empty, so there may be more to process
+      if (totalProcessed >= batchSize / 2) { // batch was pretty full, so there may be more to process
         log.info(s"[RawKeepImporterActor] Looks like there may be more. Self-calling myself.")
         self ! ProcessKeeps
       }
@@ -84,12 +84,7 @@ private class RawKeepImporterActor @Inject() (
 
         val ctx = importIdOpt.flatMap(importId => getHeimdalContext(userId, importId)).getOrElse(HeimdalContext.empty)
 
-        val successes = internKeeps(userId, libraryId.get, rawKeepGroup, source, ctx)
-
-        if (successes.nonEmpty) {
-          //process tags: create collections, put keeps into collections.
-          //tagHelper.process(RawKeepGroupImportContext(userId, source, installationId, rawKeepGroup, successes, ctx))
-        }
+        internKeeps(userId, libraryId.get, rawKeepGroup, source, ctx)
     }
   }
 
@@ -168,7 +163,7 @@ class RawKeepImporterPluginImpl @Inject() (
   }
 
   override def onStart() {
-    scheduleTaskOnOneMachine(system, 127 seconds, 71 seconds, actor.ref, ProcessKeeps, ProcessKeeps.getClass.getSimpleName)
+    scheduleTaskOnOneMachine(system, 127 seconds, 11 seconds, actor.ref, ProcessKeeps, ProcessKeeps.getClass.getSimpleName)
     super.onStart()
   }
 }

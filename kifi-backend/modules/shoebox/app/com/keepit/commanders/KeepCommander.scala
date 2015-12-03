@@ -85,7 +85,7 @@ trait KeepCommander {
   // Destroying
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo]
   def unkeepManyFromLibrary(keepIds: Seq[ExternalId[Keep]], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, (Seq[KeepInfo], Seq[ExternalId[Keep]])]
-  def deactivateKeep(keep: Keep)(implicit session: RWSession): Keep
+  def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
 
   // Data integrity
   def refreshLibrariesHash(keep: Keep)(implicit session: RWSession): Keep
@@ -368,6 +368,7 @@ class KeepCommanderImpl @Inject() (
             // just uncomment the line below this and rework some of this
             // ktlCommander.removeKeepFromLibrary(k.id.get, libId)
             deactivateKeep(k)
+            k
           }
           finalizeUnkeeping(keeps, userId)
 
@@ -434,15 +435,13 @@ class KeepCommanderImpl @Inject() (
   def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep = {
     // todo IMPORTANT: check permissions here, this lets anyone edit anyone's keep.
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
-    if (noteToPersist != oldKeep.note) {
-      val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
-      val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
-      val keep = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)
-      session.onTransactionSuccess {
-        searchClient.updateKeepIndex()
-      }
-      keep
-    } else oldKeep
+    val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
+    val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
+    val keep = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)
+    session.onTransactionSuccess {
+      searchClient.updateKeepIndex()
+    }
+    keep
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
@@ -611,7 +610,7 @@ class KeepCommanderImpl @Inject() (
         ktuCommander.syncKeep(soonToBeDeadKeep)
 
         mergeableKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(soonToBeDeadKeep, k)
+          collectionCommander.copyKeepTags(soonToBeDeadKeep, k) // todo: Handle notes! You can't just combine tags!
         }
         collectionCommander.deactivateKeepTags(soonToBeDeadKeep)
         deactivateKeep(soonToBeDeadKeep)
@@ -619,7 +618,7 @@ class KeepCommanderImpl @Inject() (
         val soonToBeDeadKeeps = similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(keep))
         log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
         soonToBeDeadKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(k, keep)
+          collectionCommander.copyKeepTags(k, keep) // todo: Handle notes! You can't just combine tags!
           deactivateKeep(k)
         }
 
@@ -630,7 +629,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def deactivateKeep(keep: Keep)(implicit session: RWSession): Keep = {
+  def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit = {
     ktlCommander.removeKeepFromAllLibraries(keep)
     ktuCommander.removeKeepFromAllUsers(keep)
     collectionCommander.deactivateKeepTags(keep)
