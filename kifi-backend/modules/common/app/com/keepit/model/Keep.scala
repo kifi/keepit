@@ -43,7 +43,7 @@ case class Keep(
     participantsHash: ParticipantsHash = ParticipantsHash.EMPTY) extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def withPrimary(newPrimary: Boolean) = this.copy(isPrimary = newPrimary)
-  def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, isPrimary = false, librariesHash = LibrariesHash.EMPTY, participantsHash = ParticipantsHash.EMPTY, note = None)
+  def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, isPrimary = false, librariesHash = LibrariesHash.EMPTY, participantsHash = ParticipantsHash.EMPTY)
 
   def clean(): Keep = copy(title = title.map(_.trimAndRemoveLineBreaks()))
 
