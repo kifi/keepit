@@ -515,9 +515,7 @@ class MessagingCommander @Inject() (
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
-    db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadUnmutedThreadCount(userId)
-    }
+    db.readOnlyReplica { implicit session => userThreadRepo.getUnreadThreadCounts(userId).unmuted }
   }
 
   def muteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, mute = true)

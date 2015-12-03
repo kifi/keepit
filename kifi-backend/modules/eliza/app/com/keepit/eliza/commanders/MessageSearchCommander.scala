@@ -39,9 +39,9 @@ class MessageSearchCommander @Inject() (
     resultExtIdsFut.flatMap { protoExtIds =>
       val notifs = db.readOnlyReplica { implicit session =>
         val threads = protoExtIds.map { s => threadRepo.get(ExternalId[MessageThread](s)) }
-        threads.map { thread =>
+        threads.flatMap { thread =>
           userThreadRepo.getNotificationByThread(userId, thread.id.get)
-        }.filter(_.isDefined).map(_.get)
+        }
       }
       notificationJsonMaker.make(notifs)
     }
