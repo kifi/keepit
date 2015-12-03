@@ -17,6 +17,7 @@ import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import org.joda.time.{ DateTime, Period }
+import com.keepit.common.strings._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.DurationConversions
@@ -58,6 +59,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   private val defaultDelayBetweenPushes = Period.minutes(30)
   private val MAX_KEEPS_TO_SEND = 7
   private val LIBRARY_BATCH_SIZE = 20
+  private val KEEP_URL_MAX_DISPLAY_LENGTH = 60
 
   @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
@@ -76,7 +78,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   private def getUser(id: Id[User])(implicit session: RSession): BasicUser = basicUserRepo.load(id)
   // TODO(ryan): if this hasn't been used by 2016-02-01, kill it.
   private def keepAsSlackAttachment(keep: Keep, summary: URISummary): SlackAttachment = {
-    val title = summary.title.orElse(keep.title).getOrElse(keep.url)
+    val title = summary.title.orElse(keep.title).getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH))
     SlackAttachment(
       title = Some(SlackAttachment.Title(title, Some(keep.url))),
       text = summary.description,
@@ -91,22 +93,22 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       fromUrl = None
     )
   }
-  private def keepAsDescriptionElements(keep: Keep, lib: Library)(implicit session: RSession): DescriptionElements = {
+  private def keepAsDescriptionElements(keep: Keep, lib: Library, attribution: Option[SourceAttribution])(implicit session: RSession): DescriptionElements = {
     import DescriptionElements._
 
-    val slackMessageOpt = keep.sourceAttributionId.map(keepSourceAttributionRepo.get(_).attribution).collect {
+    val slackMessageOpt = attribution.collect {
       case sa: SlackAttribution => sa.message
     }
 
     slackMessageOpt match {
       case Some(post) =>
         DescriptionElements(
-          keep.title.getOrElse("a link") --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
+          keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url), "from", s"#${post.channel.name.value}" --> LinkElement(post.permalink),
           "was added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
         )
       case None =>
         DescriptionElements(
-          getUser(keep.userId), "added", keep.title.getOrElse("a keep") --> LinkElement(keep.url),
+          getUser(keep.userId), "added", keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url),
           "to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
         )
     }
@@ -116,7 +118,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     keeps match {
       case NoKeeps =>
         None
-      case SomeKeeps(ks, lib) if withAttachments =>
+      case SomeKeeps(ks, lib, attribution) if withAttachments =>
         val msg = DescriptionElements(ks.length, "keeps have been added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
         val summariesFut = keepDecorator.getKeepSummaries(ks, ProcessedImageSize.Small.idealSize)
         Some(summariesFut.map { summaries =>
@@ -125,14 +127,14 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           }
           SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(msg), attachments = attachments)
         })
-      case SomeKeeps(ks, lib) if !withAttachments =>
+      case SomeKeeps(ks, lib, attribution) if !withAttachments =>
         val msgs = db.readOnlyMaster { implicit s =>
-          ks.map(k => keepAsDescriptionElements(k, lib))
+          ks.map(k => keepAsDescriptionElements(k, lib, attribution.get(k.id.get)))
         }
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(DescriptionElements.unlines(msgs))
         )))
-      case ManyKeeps(ks, lib) =>
+      case ManyKeeps(ks, lib, attribution) =>
         val msg = DescriptionElements(ks.length, "keeps have been added to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
         Some(Future.successful(SlackMessageRequest.fromKifi(
           DescriptionElements.formatForSlack(msg)
@@ -142,8 +144,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   sealed abstract class KeepsToPush
   case object NoKeeps extends KeepsToPush
-  case class SomeKeeps(keeps: Seq[Keep], lib: Library) extends KeepsToPush
-  case class ManyKeeps(keeps: Seq[Keep], lib: Library) extends KeepsToPush
+  case class SomeKeeps(keeps: Seq[Keep], lib: Library, attribution: Map[Id[Keep], SourceAttribution]) extends KeepsToPush
+  case class ManyKeeps(keeps: Seq[Keep], lib: Library, attribution: Map[Id[Keep], SourceAttribution]) extends KeepsToPush
 
   def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
     val (lib, integrationsToProcess) = db.readWrite { implicit s =>
@@ -162,17 +164,20 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       val (webhookOpt, ktls, keepsToPush) = db.readOnlyReplica { implicit s =>
         val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
         val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
-        val keepsById = keepRepo.getByIds(ktls.map(_.keepId).toSet)
-        val keeps = ktls.flatMap(ktl => keepsById.get(ktl.keepId)).filterNot { k =>
-          def comesFromDestinationChannel = k.sourceAttributionId.map(attrId => keepSourceAttributionRepo.get(attrId).attribution).collect {
-            case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
-          }.getOrElse(false)
-          k.source == KeepSource.slack && comesFromDestinationChannel
+        val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(ktls.map(_.keepId).toSet)
+        def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
+          case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
+          case _ => false
         }
-        val keepsToPush: KeepsToPush = keeps match {
+        val relevantKeepIds = ktls.collect { case ktl if !comesFromDestinationChannel(ktl.keepId) => ktl.keepId }
+        val relevantKeeps = {
+          val keepById = keepRepo.getByIds(relevantKeepIds.toSet)
+          relevantKeepIds.map(id => keepById(id))
+        }
+        val keepsToPush: KeepsToPush = relevantKeeps match {
           case Seq() => NoKeeps
-          case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib)
-          case ks => ManyKeeps(ks, lib)
+          case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, attributionByKeepId)
+          case ks => ManyKeeps(ks, lib, attributionByKeepId)
         }
         (webhook, ktls, keepsToPush)
       }

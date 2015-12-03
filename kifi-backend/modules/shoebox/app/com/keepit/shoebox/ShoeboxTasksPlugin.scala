@@ -31,11 +31,11 @@ class ShoeboxTasksPlugin @Inject() (
       twitterSyncCommander.syncAll()
     }
 
-    scheduleTaskOnLeader(system, 3 minute, 1 minutes, "slack ingestion") {
+    scheduleTaskOnLeader(system, 3 minute, 20 seconds, "slack ingestion") {
       slackIngestionCommander.ingestAllDue()
     }
 
-    scheduleTaskOnLeader(system, 1 minute, 30 minutes, "fetching missing Slack channel ids") {
+    scheduleTaskOnLeader(system, 1 minute, 30 seconds, "fetching missing Slack channel ids") {
       slackCommander.fetchMissingChannelIds()
     }
 

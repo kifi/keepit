@@ -173,7 +173,9 @@ angular.module('kifi')
     };
 
     function renderNextKeep(keeps) {
-      $scope.resultKeeps.push(keeps.shift());
+      var keep = keeps.shift();
+      keep.library = $scope.library || keep.library;
+      $scope.resultKeeps.push(keep);
       if (keeps.length) {
         renderTimeout = $timeout(angular.bind(null, renderNextKeep, keeps));
       } else {

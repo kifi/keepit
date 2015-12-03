@@ -133,7 +133,6 @@ case class LibraryModifications(
   space: Option[LibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
 object LibraryModifications {
-  implicit val spaceReads = LibrarySpace.adminReads
   val adminReads: Reads[LibraryModifications] = (
     (__ \ 'name).readNullable[String] and
     (__ \ 'slug).readNullable[String] and

@@ -17,12 +17,13 @@ import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
+import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[KeepDecoratorImpl])
 trait KeepDecorator {
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean, sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, sanitizeUrls: Boolean, getTimestamp: Keep => DateTime = _.keptAt): Future[Seq[KeepInfo]]
   def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo]
   def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]]
   def getKeepSummaries(keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[URISummary]]
@@ -53,7 +54,7 @@ class KeepDecoratorImpl @Inject() (
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepDecorator with Logging {
 
-  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, withKeepTime: Boolean, sanitizeUrls: Boolean): Future[Seq[KeepInfo]] = {
+  def decorateKeepsIntoKeepInfos(perspectiveUserIdOpt: Option[Id[User]], showPublishedLibraries: Boolean, keepsSeq: Seq[Keep], idealImageSize: ImageSize, sanitizeUrls: Boolean, getTimestamp: Keep => DateTime = _.keptAt): Future[Seq[KeepInfo]] = {
     val keeps = keepsSeq match {
       case k: List[Keep] => k
       case other =>
@@ -109,18 +110,9 @@ class KeepDecoratorImpl @Inject() (
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
       }.map(collectionCommander.getBasicCollections)
 
-      val sourceAttrs = db.readOnlyReplica { implicit s =>
-        val attributionById = keepSourceAttributionRepo.getByIds(keeps.flatMap(_.sourceAttributionId).toSet)
-        keeps.map { keep =>
-          try {
-            keep.sourceAttributionId.map { id => attributionById(id) }
-          } catch {
-            case ex: Exception => {
-              airbrake.notify(s"error during keep decoration: keepId = ${keep.id}, keep source attribution id = ${keep.sourceAttributionId}", ex)
-              None
-            }
-          }
-        }
+      val sourceAttrs = {
+        val attributionById = getSourceAttributionForKeeps(keeps.flatMap(_.id).toSet)
+        keeps.map { keep => attributionById.get(keep.id.get) }
       }
 
       val allMyKeeps = perspectiveUserIdOpt.map { userId => getPersonalKeeps(userId, keeps.map(_.uriId).toSet) } getOrElse Map.empty[Id[NormalizedURI], Set[PersonalKeep]]
@@ -156,13 +148,6 @@ class KeepDecoratorImpl @Inject() (
               augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId, keptAt) if doShowLibrary(libraryId) => (BasicLibraryWithKeptAt(idToBasicLibrary(libraryId), keptAt), idToBasicUser(contributorId)) }
             }
 
-            val keptAt = if (withKeepTime) {
-              //rather use the kept at, if not exist using the created at
-              Some(keep.keptAt)
-            } else {
-              None
-            }
-
             KeepInfo(
               id = Some(keep.externalId),
               pubId = Some(Keep.publicId(keep.id.get)),
@@ -171,7 +156,7 @@ class KeepDecoratorImpl @Inject() (
               path = keep.path.relative,
               isPrivate = keep.isPrivate,
               user = Some(idToBasicUser(keep.userId)),
-              createdAt = keptAt,
+              createdAt = Some(getTimestamp(keep)),
               keeps = Some(keeps),
               keepers = Some(keepers.map { case (keeperId, _) => idToBasicUser(keeperId) }),
               keepersOmitted = Some(augmentationInfoForKeep.keepersOmitted),
@@ -271,9 +256,7 @@ class KeepDecoratorImpl @Inject() (
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], SourceAttribution] = {
     db.readOnlyMaster { implicit session =>
-      val keeps = keepRepo.getByIds(keepIds).values
-      val attributionByIds = keepSourceAttributionRepo.getByIds(keeps.flatMap(_.sourceAttributionId).toSet)
-      keeps.map(keep => keep.id.get -> keep.sourceAttributionId.flatMap(attributionByIds.get)).collect { case (keepId, Some(attribution)) => keepId -> attribution.attribution }.toMap
+      keepSourceAttributionRepo.getByKeepIds(keepIds)
     }
   }
 

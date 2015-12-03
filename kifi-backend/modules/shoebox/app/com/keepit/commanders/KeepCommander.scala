@@ -307,7 +307,7 @@ class KeepCommanderImpl @Inject() (
     keepsF.flatMap {
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
-        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true, sanitizeUrls = false)
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
     }
   }
 
@@ -716,14 +716,15 @@ class KeepCommanderImpl @Inject() (
   }
 
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]] = {
-    val keeps: Seq[Keep] = db.readOnlyReplica { implicit session =>
+    val (keeps, firstAddedAt): (Seq[Keep], Map[Id[Keep], DateTime]) = db.readOnlyReplica { implicit session =>
       keepRepo.getRecentKeeps(userId, limit, beforeExtId, afterExtId)
-    }.foldRight((List.empty[Keep], Set.empty[Id[NormalizedURI]])) {
-      case (keep, (acc, seenUriIds)) =>
-        if (seenUriIds(keep.uriId)) (acc, seenUriIds) else (keep :: acc, seenUriIds + keep.uriId)
+    }.foldRight(((List.empty[Keep], Map.empty[Id[Keep], DateTime]), Set.empty[Id[NormalizedURI]])) {
+      case ((keep, firstAddedAt), ((previousKeeps, previousLastAddedAt), seenUriIds)) =>
+        if (seenUriIds(keep.uriId)) ((previousKeeps, previousLastAddedAt), seenUriIds) else ((keep :: previousKeeps, previousLastAddedAt + (keep.id.get -> firstAddedAt)), seenUriIds + keep.uriId)
     }._1
 
-    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, true, sanitizeUrls = sanitizeUrls)
+    def getKeepTimestamp(keep: Keep) = firstAddedAt(keep.id.get)
+    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = sanitizeUrls, getTimestamp = getKeepTimestamp)
   }
 }
 

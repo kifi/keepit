@@ -199,7 +199,7 @@ class LibraryController @Inject() (
             case _ => false
           }
           if (useMultilibLogic) log.info(s"[KTL-EXP] Serving up library ${library.id.get} using new logic for user ${request.userIdOpt.get}")
-          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, authTokenOpt, withKeepTime = true, sanitizeUrls = false, useMultilibLogic).map { libInfo =>
+          libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, authTokenOpt, sanitizeUrls = false, useMultilibLogic).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
             val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(library.id.get).map { sub => LibrarySubscription.toSubKey(sub) } }
 
@@ -378,7 +378,7 @@ class LibraryController @Inject() (
         val numKeepsF = libraryInfoCommander.getKeepsCount(libraryId)
         for {
           keeps <- libraryInfoCommander.getKeeps(libraryId, offset, limit)
-          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize, withKeepTime = true, sanitizeUrls = false)
+          keepInfos <- keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, showPublishedLibraries, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
           numKeeps <- numKeepsF
         } yield {
           Ok(Json.obj("keeps" -> Json.toJson(keepInfos), "numKeeps" -> numKeeps))

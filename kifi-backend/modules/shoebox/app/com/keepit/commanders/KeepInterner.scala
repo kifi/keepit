@@ -219,7 +219,6 @@ class KeepInternerImpl @Inject() (
           }
         (false, wasInactiveKeep, savedKeep)
       case None =>
-        val savedAttr = sourceAttribution.map { attr => sourceAttrRepo.save(KeepSourceAttribution(attribution = attr)) }
         val keep = Keep(
           title = trimmedTitle orElse uri.title,
           userId = userId,
@@ -229,12 +228,13 @@ class KeepInternerImpl @Inject() (
           visibility = library.visibility,
           libraryId = Some(library.id.get),
           keptAt = keptAt,
-          sourceAttributionId = savedAttr.flatMap { _.id },
           note = note,
           originalKeeperId = Some(userId)
         )
         val improvedKeep = try {
-          keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get))
+          keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get)) tap { improvedKeep =>
+            sourceAttribution.map { attr => sourceAttrRepo.save(improvedKeep.id.get, attr) }
+          }
         } catch {
           case ex: UndeclaredThrowableException =>
             log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)

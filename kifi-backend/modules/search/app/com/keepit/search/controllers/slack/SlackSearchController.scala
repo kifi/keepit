@@ -8,15 +8,15 @@ import com.keepit.common.db.Id
 import com.keepit.common.domain.DomainToNameMapper
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ DirectUrl, HttpClient }
+import com.keepit.common.net.HttpClient
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.common.util.LinkElement
+import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.{ BasicImages, RoverUriSummary }
 import com.keepit.search.controllers.util.SearchControllerUtil
 import com.keepit.search._
-import com.keepit.search.index.graph.keep.{ KeepFields }
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.slack.models.SlackCommandResponse.ResponseType
 import com.keepit.slack.models._
@@ -74,9 +74,24 @@ class SlackSearchController @Inject() (
         Elements.unlines(Seq(s"You don't have any Kifi library connected with #${channelName.value} yet.", "Add one maybe?" --> supportLink))
       }
       else {
-        shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None).map { libraries =>
-          def listLibraries(ids: Set[Id[Library]]): Elements = Elements.unlines(ids.flatMap(libraries.get(_)).toSeq.sortBy(_.name).map { lib =>
-            lib.name --> LinkElement(lib.url)
+        val futureLibraries = shoeboxClient.getBasicLibraryDetails(integrations.allLibraries, idealImageSize, None)
+        val futureUsers = shoeboxClient.getBasicUsers(integrations.spaces.values.flatten.collect { case UserSpace(userId) => userId }.toSeq)
+        val futureOrgs = shoeboxClient.getBasicOrganizationsByIds(integrations.spaces.values.flatten.collect { case OrganizationSpace(orgId) => orgId }.toSet)
+        for {
+          libraries <- futureLibraries
+          users <- futureUsers
+          orgs <- futureOrgs
+        } yield {
+          def listLibraries(ids: Set[Id[Library]]): Elements = Elements.unlines(ids.flatMap(id => libraries.get(id).map(id -> _)).toSeq.sortBy(_._2.name).map {
+            case (libId, lib) =>
+              val spaces = integrations.spaces.get(libId).map { spaces =>
+                val spaceElements = Elements(spaces.map {
+                  case UserSpace(userId) => users.get(userId): Elements
+                  case OrganizationSpace(orgId) => orgs.get(orgId): Elements
+                }.toSeq: _*)
+                Elements("(", Elements.mkElements(spaceElements.flatten.sortBy(_.text), ","), ")")
+              }
+              Elements(lib.name --> LinkElement(lib.url), spaces)
           })
           val allLibraries: Elements = Elements(
             s"The following Kifi libraries are connected with #${channelName.value}, use */kifi* to search them:", "\n",

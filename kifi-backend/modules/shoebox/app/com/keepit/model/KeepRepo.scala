@@ -2,7 +2,7 @@ package com.keepit.model
 
 import scala.collection.mutable
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ KeepVisibilityCount, LibraryMetadataCache, LibraryMetadataKey }
+import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey }
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
@@ -65,7 +65,7 @@ trait KeepRepo extends Repo[Keep] with ExternalIdColumnFunction[Keep] with SeqNu
   def getByLibraryIdAndExcludingVisibility(libId: Id[Library], excludeVisibility: Option[LibraryVisibility], limit: Int)(implicit session: RSession): Seq[Keep]
   def getByLibraryWithInconsistentOrgId(libraryId: Id[Library], expectedOrgId: Option[Id[Organization]], limit: Limit)(implicit session: RSession): Set[Id[Keep]]
   def getKeepsFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[Keep]
-  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep]
+  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[(Keep, DateTime)]
   def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)]
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]]
   def latestKeptAtByLibraryIds(libraryIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], Option[DateTime]]
@@ -100,7 +100,6 @@ class KeepRepoImpl @Inject() (
     def libraryId = column[Option[Id[Library]]]("library_id", O.Nullable)
     def visibility = column[LibraryVisibility]("visibility", O.NotNull)
     def keptAt = column[DateTime]("kept_at", O.NotNull)
-    def sourceAttributionId = column[Option[Id[KeepSourceAttribution]]]("source_attribution_id", O.Nullable)
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
@@ -108,7 +107,7 @@ class KeepRepoImpl @Inject() (
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (userId, state, source, seq, libraryId, visibility, keptAt, sourceAttributionId,
+      (userId, state, source, seq, libraryId, visibility, keptAt,
         note, originalKeeperId, organizationId, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
 
     def isPrivate: Column[Boolean] = {
@@ -143,7 +142,6 @@ class KeepRepoImpl @Inject() (
       libraryId = r.<<[Option[Id[Library]]],
       visibility = r.<<[LibraryVisibility],
       keptAt = r.<<[DateTime],
-      sourceAttributionId = r.<<[Option[Id[KeepSourceAttribution]]],
       note = r.<<[Option[String]],
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],
@@ -536,7 +534,7 @@ class KeepRepoImpl @Inject() (
     keeps.list.toSet
   }
 
-  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[Keep] = {
+  def getRecentKeeps(userId: Id[User], limit: Int, beforeIdOpt: Option[ExternalId[Keep]], afterIdOpt: Option[ExternalId[Keep]])(implicit session: RSession): Seq[(Keep, DateTime)] = {
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
 
     val ktl_JOIN_lm_WHERE_THIS_USER = s"""keep_to_library ktl inner join library_membership lm on (ktl.library_id = lm.library_id) where lm.state = 'active' and ktl.state = 'active' and lm.user_id = $userId"""
@@ -587,7 +585,7 @@ class KeepRepoImpl @Inject() (
 
     val keepIds = keepsAndFirstAddedAt.map { case (keepId, _) => keepId }
     val keepsById = getByIds(keepIds.toSet)
-    keepIds.map(keepsById(_))
+    keepsAndFirstAddedAt.map { case (keepId, firstAddedAt) => keepsById(keepId) -> firstAddedAt }
   }
 
   def getMaxKeepSeqNumForLibraries(libIds: Set[Id[Library]])(implicit session: RSession): Map[Id[Library], SequenceNumber[Keep]] = {

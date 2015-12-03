@@ -279,6 +279,7 @@ trait SeqNumberDbFunction[M <: ModelWithSeqNumber[M]] extends SeqNumberFunction[
 trait ExternalIdColumnFunction[M <: ModelWithExternalId[M]] { self: Repo[M] =>
   def get(id: ExternalId[M])(implicit session: RSession): M
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
+  def convertExternalIds(ids: Set[ExternalId[M]])(implicit session: RSession): Map[ExternalId[M], Id[M]]
 }
 
 trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalIdColumnFunction[M] { self: DbRepo[M] =>
@@ -295,6 +296,10 @@ trait ExternalIdColumnDbFunction[M <: ModelWithExternalId[M]] extends ExternalId
   }
 
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M] = getByExtIdCompiled(id).firstOption
+
+  def convertExternalIds(ids: Set[ExternalId[M]])(implicit session: RSession): Map[ExternalId[M], Id[M]] = {
+    rowsWithExternalIdColumn.filter(r => r.externalId.inSet(ids)).map(r => (r.externalId, r.id)).list.toMap
+  }
 }
 
 /**
