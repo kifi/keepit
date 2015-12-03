@@ -5,7 +5,7 @@ import java.util.concurrent.TimeoutException
 import com.google.inject.Inject
 import com.keepit.abook.ABookServiceClient
 import com.keepit.common.akka.{ SafeFuture, TimeoutFuture }
-import com.keepit.common.core.anyExtensionOps
+import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
@@ -404,8 +404,8 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
-    val newUserParticipantsFuture = shoebox.getUserIdsByExternalIds(newParticipantsExtIds.toSet).map(_.values.toSeq)
+  def addParticipantsToThread(adderUserId: Id[User], threadExtId: ExternalId[MessageThread], newParticipantsExtIds: Set[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
+    val newUserParticipantsFuture = shoebox.getUserIdsByExternalIds(newParticipantsExtIds).map(_.values.toSeq)
     val newNonUserParticipantsFuture = constructNonUserRecipients(adderUserId, emailContacts)
 
     val orgIds = orgs.map(o => Organization.decodePublicId(o)).filter(_.isSuccess).map(_.get)
@@ -524,9 +524,9 @@ class MessagingCommander @Inject() (
 
   def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, mute = false)
 
-  def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = true)
+  def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, muted = true)
 
-  def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = false)
+  def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, muted = false)
 
   private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext) = {
     val stateChanged = db.readWrite { implicit session =>
@@ -548,20 +548,15 @@ class MessagingCommander @Inject() (
     stateChanged
   }
 
-  def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean = {
+  def setNonUserThreadMuteState(id: Id[NonUserThread], muted: Boolean): Boolean = {
     db.readWrite { implicit session =>
-      getNonUserThreadOptWithSession(id) map { nonUserThread =>
-        if (nonUserThread.muted != mute) {
-          nonUserThreadRepo.setMuteState(nonUserThread.id.get, mute)
+      getNonUserThreadOptWithSession(id) match {
+        case Some(thread) if thread.muted != muted =>
+          nonUserThreadRepo.setMuteState(id, muted)
           true
-        } else {
-          false
-        }
+        case _ => false
       }
-    } map { stateChanged =>
-      // TODO(martin) analytics for non users
-      stateChanged
-    } getOrElse (false)
+    }
   }
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {
@@ -655,20 +650,20 @@ class MessagingCommander @Inject() (
           (acc._1 ++ ExternalId.asOpt[User](id), acc._2, acc._3)
         case _ => // Starting in v XXXX `kind` is always sent (9/2/2015). Above can be removed after a good while.
           recipient.asOpt[JsObject].flatMap {
-            case recip if (recip \ "kind").asOpt[String].exists(_ == "user") =>
+            case recip if (recip \ "kind").asOpt[String].contains("user") =>
               (recip \ "id").asOpt[ExternalId[User]].map { userExtId =>
                 (acc._1 :+ userExtId, acc._2, acc._3)
               }
-            case recip if (recip \ "kind").asOpt[String].exists(_ == "org") =>
+            case recip if (recip \ "kind").asOpt[String].contains("org") =>
               (recip \ "id").asOpt[PublicId[Organization]].map { orgPubId =>
                 (acc._1, acc._2, acc._3 :+ orgPubId)
               }
-            case recip if (recip \ "kind").asOpt[String].exists(_ == "email") =>
+            case recip if (recip \ "kind").asOpt[String].contains("email") =>
               (recip \ "email").asOpt[BasicContact].map { contact => // this is weird as heck
                 (acc._1, acc._2 :+ contact, acc._3)
               }
           }.getOrElse {
-            log.warn(s"[validateRecipients] Could not determine what ${recipient.toString} is supposed to be.")
+            log.warn(s"[validateRecipients] Could not determine what $recipient is supposed to be.")
             (acc._1, acc._2, acc._3)
           }
       }

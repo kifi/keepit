@@ -132,6 +132,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
+  def internKeep(req: KeepCreateRequest): Future[CrossServiceKeep]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -851,4 +852,8 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getSourceAttributionForKeeps, payload).map { _.json.as[Map[Id[Keep], SourceAttribution]] }
   }
 
+  def internKeep(req: KeepCreateRequest): Future[CrossServiceKeep] = {
+    val payload = Json.toJson(req)
+    call(Shoebox.internal.internKeep, payload).map { _.json.as[CrossServiceKeep] }
+  }
 }

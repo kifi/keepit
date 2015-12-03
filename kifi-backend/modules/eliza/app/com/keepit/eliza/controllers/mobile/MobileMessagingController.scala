@@ -308,10 +308,10 @@ class MobileMessagingController @Inject() (
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         contextBuilder += ("source", "mobile")
 
-        val (validUserIds, validOrgIds) = addReq.users.foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
+        val (validUserIds, validOrgIds) = addReq.users.foldRight((Set[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
           ExternalId.asOpt[User](id) match {
-            case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
-            case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
+            case Some(userId) if userId.id.length == 36 => (acc._1 + userId, acc._2)
+            case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId(id))
           }
         }
         messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, addReq.emails, validOrgIds)(contextBuilder.build)
@@ -327,11 +327,11 @@ class MobileMessagingController @Inject() (
       contextBuilder += ("source", "mobile")
       //assuming the client does the proper checks!
       val validEmails = emailContacts.split(",").map(_.trim).filterNot(_.isEmpty).map { email => BasicContact.fromString(email).get }
-      val (validUserIds, validOrgIds) = users.split(",").map(_.trim).filterNot(_.isEmpty).foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
+      val (validUserIds, validOrgIds) = users.split(",").map(_.trim).filterNot(_.isEmpty).foldRight((Set[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
         // This API is basically insane. Passing comma separated entities in URL params on a POST?
         ExternalId.asOpt[User](id) match {
-          case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
-          case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
+          case Some(userId) if userId.id.length == 36 => (acc._1 + userId, acc._2)
+          case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId(id))
         }
       }
       messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)

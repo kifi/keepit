@@ -34,7 +34,7 @@ class HelpRankCommander @Inject() (
 
   def processSearchHitAttribution(kifiHit: SearchHitReport): Future[Unit] = {
     val discoverer = kifiHit.userId
-    val keepers = kifiHit.keepers
+    val keepers = kifiHit.keepers.toSet
     if (kifiHit.isOwnKeep || keepers.isEmpty) {
       db.readWriteAsync { implicit rw =>
         userKeepInfoRepo.increaseCounts(discoverer, kifiHit.uriId, isSelf = true)
@@ -52,8 +52,8 @@ class HelpRankCommander @Inject() (
               }
               shoeboxClient.getBookmarkByUriAndUser(kifiHit.uriId, keeperId).foreach { keepOpt =>
                 keepOpt.foreach { keep =>
-                  db.readWrite { implicit s =>
-                    keepDiscoveryRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.length, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
+                  db.readWrite { implicit rw =>
+                    keepDiscoveryRepo.save(KeepDiscovery(hitUUID = kifiHit.uuid, numKeepers = keepers.size, keeperId = keeperId, keepId = keep.id.get, uriId = keep.uriId, origin = Some(kifiHit.origin)))
                   }
                 }
               }

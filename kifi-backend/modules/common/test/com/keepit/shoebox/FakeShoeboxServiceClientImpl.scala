@@ -683,4 +683,18 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = Future.successful(SlackChannelIntegrations.none(teamId, channelId))
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
+
+  def internKeep(req: KeepCreateRequest): Future[CrossServiceKeep] = Future.successful {
+    CrossServiceKeep(
+      id = Id[Keep](1),
+      owner = req.owner,
+      users = req.users,
+      libraries = req.libraries,
+      url = "http://www.kifi.com",
+      uriId = Id[NormalizedURI](1),
+      keptAt = req.keptAt.getOrElse(currentDateTime.minusHours(10)),
+      title = Some("Kifi!"),
+      note = Some("is great")
+    )
+  }
 }

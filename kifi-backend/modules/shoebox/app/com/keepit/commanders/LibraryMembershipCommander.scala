@@ -201,7 +201,7 @@ class LibraryMembershipCommanderImpl @Inject() (
     db.readOnlyMaster { implicit s =>
       libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId, None)
     } match {
-      case None => Right((): Unit)
+      case None => Right(Unit)
       case Some(mem) if mem.access == LibraryAccess.OWNER => Left(LibraryFail(BAD_REQUEST, "cannot_leave_own_library"))
       case Some(mem) =>
         val lib = db.readWrite { implicit s =>
@@ -217,7 +217,7 @@ class LibraryMembershipCommanderImpl @Inject() (
             refreshLibraryCollaboratorsTypeahead(libraryId)
           }
         }
-        Right((): Unit)
+        Right(Unit)
     }
   }
 

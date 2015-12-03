@@ -92,8 +92,10 @@ trait SearchControllerUtil {
     userIdStr.map(getUserScope(_).imap(Some(_))) getOrElse Future.successful(None)
   }
   private def getUserScope(userIdStr: String): Future[UserScope] = {
+    // What is the point of this? We're wrapping the ExternalId in a Try, but then we just
+    // throw the exception anyways?
     Try(ExternalId[User](userIdStr)) match {
-      case Success(extUserId) => shoeboxClient.getUserIdsByExternalIds(Set(extUserId)).imap { case idMap => UserScope(idMap.values.head) }
+      case Success(extUserId) => shoeboxClient.getUserIdsByExternalIds(Set(extUserId)).imap { idMap => UserScope(idMap(extUserId)) }
       case Failure(e) => Future.failed(e)
     }
   }
