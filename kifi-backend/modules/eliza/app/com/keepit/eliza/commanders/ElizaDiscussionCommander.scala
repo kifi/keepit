@@ -54,7 +54,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       val senderOpt: Option[BasicUserLikeEntity] = em.from.fold(
         None,
         { uid => Some(BasicUserLikeEntity(basicUsers(uid))) },
-        { nu => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu))) }
+        { nu => Some(BasicUserLikeEntity(basicNonUsers(nu))) }
       )
       senderOpt.map { sender =>
         em.id.get -> Message(

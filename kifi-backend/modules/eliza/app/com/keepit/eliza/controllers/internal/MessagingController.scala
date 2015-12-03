@@ -78,7 +78,7 @@ class MessagingController @Inject() (
   }
 
   def setNonUserThreadMuteState(token: String, muted: Boolean) = Action {
-    // returns wether the mute state was modified
+    // returns whether the mute state was modified
     val result = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(token)) match {
       case Some(nut) => messagingCommander.setNonUserThreadMuteState(nut.id.get, muted)
       case _ => false
