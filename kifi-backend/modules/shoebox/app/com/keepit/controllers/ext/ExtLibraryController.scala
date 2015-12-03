@@ -313,8 +313,9 @@ class ExtLibraryController @Inject() (
         case Some(keep) =>
           val body = request.body.as[JsObject]
           val newNote = (body \ "note").as[String]
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-          keepsCommander.updateKeepNote(request.userId, keep, newNote)
+          db.readWrite { implicit session =>
+            keepsCommander.updateKeepNote(request.userId, keep, newNote)
+          }
           NoContent
       }
     }

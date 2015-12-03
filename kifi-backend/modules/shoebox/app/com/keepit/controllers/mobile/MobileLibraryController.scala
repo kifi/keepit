@@ -573,10 +573,6 @@ class MobileLibraryController @Inject() (
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     val (keep, _) = keepsCommander.keepOne(rawKeep, request.userId, libraryId, source, SocialShare(jsonBody))
-    val hashtagNamesToPersist = Hashtags.findAllHashtagNames(keep.note.getOrElse(""))
-    db.readWrite { implicit s =>
-      keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, keep, hashtagNamesToPersist.toSeq)(s, context)
-    }
     imageUrlOpt.map { imageUrl =>
       keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserPicked)
     }

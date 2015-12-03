@@ -22,7 +22,7 @@ class SuggestedSearchTermUpdaterTest extends Specification with ShoeboxTestInjec
       LibraryFactory.library().withId(Id[Library](1)).saved
 
       (0 until N).map { i =>
-        hashtag = Hashtags.addNewHashtagsToString(hashtag, Seq(Hashtag(s"h${i + 1}")))
+        hashtag = Hashtags.addHashtagsToString(hashtag, Seq(Hashtag(s"h${i + 1}")))
         keeps(i).withNote(hashtag).withLibrary(Id[Library](1)).withUser(Id[User](1)).saved
       }
     }

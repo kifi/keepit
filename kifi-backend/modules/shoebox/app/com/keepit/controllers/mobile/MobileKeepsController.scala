@@ -78,34 +78,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def keepMultiple() = UserAction(parse.tolerantJson) { request =>
-    val fromJson = request.body.as[RawBookmarksWithCollection]
-    val source = KeepSource.mobile
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val libraryId = {
-      db.readWrite { implicit session =>
-        val (main, secret) = libraryInfoCommander.getMainAndSecretLibrariesForUser(request.userId)
-        fromJson.keeps.headOption.flatMap(_.isPrivate).map { priv =>
-          if (priv) secret.id.get else main.id.get
-        }.getOrElse(main.id.get)
-      }
-    }
-    fromJson.keeps.headOption
-    val (keeps, addedToCollection, _) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection)
-    Ok(Json.obj(
-      "keeps" -> keeps,
-      "addedToCollection" -> addedToCollection
-    ))
-  }
-
-  def saveCollection() = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
-      case Left(newColl) => Ok(Json.toJson(newColl))
-      case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
-    }
-  }
-
   def suggestTags(keepIdOptStringHack: Option[String], query: Option[String], limit: Int) = UserAction.async { request =>
     val keepIdOpt = keepIdOptStringHack.map(ExternalId.apply[Keep])
     keepsCommander.suggestTags(request.userId, keepIdOpt, query, limit).imap { tagsAndMatches =>
@@ -144,38 +116,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def editKeepInfoV1(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    db.readOnlyMaster { implicit s =>
-      keepRepo.getOpt(id).filter(_.isActive)
-    } match {
-      case None =>
-        NotFound(Json.obj("error" -> "not_found"))
-      case Some(keep) =>
-        val json = request.body
-        val titleOpt = (json \ "title").asOpt[String]
-        val noteOpt = (json \ "note").asOpt[String]
-        val tagsOpt = (json \ "tags").asOpt[Seq[String]]
-
-        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
-        val noteToPersist = noteOpt map { note =>
-          KeepDecorator.escapeMarkupNotes(note).trim
-        } orElse keep.note filter (_.nonEmpty)
-
-        val tagsToPersist = tagsOpt.getOrElse(
-          db.readOnlyMaster { implicit s =>
-            collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag).toSeq
-          }
-        )
-        val updatedKeep = keep.copy(title = titleToPersist, note = noteToPersist)
-
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        db.readWrite { implicit s =>
-          keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
-        }
-        NoContent
-    }
-  }
-
   def editKeepInfoV2(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(id).filter(_.isActive)
@@ -191,11 +131,9 @@ class MobileKeepsController @Inject() (
         val noteToPersist = (noteOpt orElse keep.note) map (_.trim) filterNot (_.isEmpty)
 
         if (titleToPersist != keep.title || noteToPersist != keep.note) {
-          val updatedKeep = keep.copy(title = titleToPersist, note = noteToPersist)
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-          val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
           db.readWrite { implicit s =>
-            keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
+            val updatedKeep = keepRepo.save(keep.withTitle(titleToPersist))
+            keepsCommander.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
           }
         }
 

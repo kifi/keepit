@@ -61,28 +61,26 @@ trait KeepCommander {
   // Getting
   def idsToKeeps(ids: Seq[Id[Keep]])(implicit session: RSession): Seq[Keep]
   def getBasicKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], BasicKeep] // for notifications
-  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep]
-  def getKeepsCountFuture(): Future[Int] // for discussions
+  def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
+  def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
-  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]])(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String])
+  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
   def persistKeep(k: Keep, users: Set[Id[User]], libraries: Set[Id[Library]])(implicit session: RWSession): Keep
 
   // Updating / managing
   def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
-  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext)
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
 
   // Tagging
-  def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection]
-  def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection
-  def persistHashtagsForKeepAndSaveKeep(userId: Id[User], keep: Keep, selectedTagNames: Seq[String])(implicit session: RWSession, context: HeimdalContext)
   def searchTags(userId: Id[User], query: String, limit: Option[Int]): Future[Seq[HashtagHit]]
   def suggestTags(userId: Id[User], keepIdOpt: Option[ExternalId[Keep]], query: Option[String], limit: Int): Future[Seq[(Hashtag, Seq[(Int, Int)])]]
+  // todo: def removeTag() // Remove tag entirely
 
   // Destroying
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo]
@@ -325,7 +323,7 @@ class KeepCommanderImpl @Inject() (
     (keep, isNewKeep)
   }
 
-  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource, collection: Option[Either[ExternalId[Collection], String]])(implicit context: HeimdalContext): (Seq[KeepInfo], Option[Int], Seq[String]) = {
+  def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String]) = {
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
@@ -335,16 +333,8 @@ class KeepCommanderImpl @Inject() (
 
     val keeps = internResponse.successes
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")
-    val addedToCollection = collection flatMap {
-      case Left(collectionId) => db.readOnlyReplica { implicit s => collectionRepo.getOpt(collectionId) }
-      case Right(name) => db.readWrite { implicit s => Some(getOrCreateTag(userId, name)) }
-    } map { coll =>
-      addToCollection(coll.id.get, keeps).size
-    }
-    SafeFuture {
-      searchClient.updateKeepIndex()
-    }
-    (keeps.map(KeepInfo.fromKeep), addedToCollection, internResponse.failures.map(_.url))
+
+    (keeps.map(KeepInfo.fromKeep), internResponse.failures.map(_.url))
   }
 
   def unkeepOneFromLibrary(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User])(implicit context: HeimdalContext): Either[String, KeepInfo] = {
@@ -378,7 +368,7 @@ class KeepCommanderImpl @Inject() (
             // just uncomment the line below this and rework some of this
             // ktlCommander.removeKeepFromLibrary(k.id.get, libId)
             deactivateKeep(k)
-            k.withState(KeepStates.INACTIVE).withNote(None)
+            k
           }
           finalizeUnkeeping(keeps, userId)
 
@@ -410,7 +400,9 @@ class KeepCommanderImpl @Inject() (
         libraryRepo.save(library.copy(keepCount = keepRepo.getCountByLibrary(libId)))
         libraryAnalytics.unkeptPages(userId, keeps, library, context)
     }
-    searchClient.updateKeepIndex()
+    session.onTransactionSuccess {
+      searchClient.updateKeepIndex()
+    }
   }
 
   def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep] = {
@@ -423,8 +415,9 @@ class KeepCommanderImpl @Inject() (
           keepRepo.getByExtIdandLibraryId(keepId, libId) match {
             case Some(keep) if normTitle.isDefined && normTitle != keep.title =>
               val keep2 = keepRepo.save(keep.withTitle(normTitle))
-              searchClient.updateKeepIndex()
-              libraryAnalytics.updatedKeep(keep, keep2, context)
+              s.onTransactionSuccess {
+                searchClient.updateKeepIndex()
+              }
               Right(keep2)
             case Some(keep) =>
               Right(keep)
@@ -437,61 +430,18 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit context: HeimdalContext) = {
+  // Updates note on keep, making sure tags are in sync.
+  // i.e., the note is the source of truth, and tags are added/removed appropriately
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep = {
+    // todo IMPORTANT: check permissions here, this lets anyone edit anyone's keep.
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
-    if (noteToPersist != oldKeep.note) {
-      val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
-      val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
-      db.readWrite { implicit s =>
-        persistHashtagsForKeepAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
-      }
-    }
-  }
-
-  def addToCollection(collectionId: Id[Collection], allKeeps: Seq[Keep], updateIndex: Boolean = true)(implicit context: HeimdalContext): Set[KeepToCollection] = timing(s"addToCollection($collectionId,${allKeeps.length})") {
-    val trace = new StackTrace()
-    val result: Iterator[KeepToCollection] = allKeeps.grouped(50) flatMap { keeps =>
-      try {
-        db.readWrite(attempts = 3) { implicit s =>
-          val keepsById = keeps.map(keep => keep.id.get -> keep).toMap
-          val collection = collectionRepo.get(collectionId)
-          val existing = keepToCollectionRepo.getByCollection(collectionId, excludeState = None).toSet
-          val newKeepIds = keepsById.keySet -- existing.map(_.keepId)
-          val newK2C = newKeepIds map { kId => KeepToCollection(keepId = kId, collectionId = collectionId) }
-          timing(s"addToCollection($collectionId,${keeps.length}) -- keepToCollection.insertAll", 50) {
-            keepToCollectionRepo.insertAll(newK2C.toSeq)
-          }
-          val activated = existing collect {
-            case ktc if ktc.isInactive && keepsById.contains(ktc.keepId) =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE, createdAt = clock.now()))
-          }
-
-          val updatedCollection = timing(s"addToCollection($collectionId,${keeps.length}) -- collection.modelChanged", 50) {
-            collectionRepo.collectionChanged(collectionId, (newK2C.size + activated.size) > 0, inactivateIfEmpty = false)
-          }
-          val tagged: Set[KeepToCollection] = (activated ++ newK2C).toSet
-          val taggingAt = currentDateTime
-          tagged.foreach { ktc =>
-            val targetKeep = keepsById(ktc.keepId)
-            val noteStr = targetKeep.note.getOrElse("")
-            val persistedNote = Some(Hashtags.addNewHashtagsToString(noteStr, Seq(collection.name))).filter(_.nonEmpty)
-            if (persistedNote != targetKeep.note) {
-              val updatedKeep = updateNote(targetKeep, persistedNote) // notify keep index
-              libraryAnalytics.taggedPage(updatedCollection, updatedKeep, context, taggingAt)
-            }
-          }
-          tagged
-        }
-      } catch {
-        case t: Throwable =>
-          airbrake.notify(s"error attaching collection id $collectionId to a batch of ${keeps.length} of ${allKeeps.length} keeps. 3 sample keeps: ${allKeeps.take(3)}", trace.withCause(t))
-          Set.empty[KeepToCollection]
-      }
-    }
-    if (updateIndex) {
+    val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
+    val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
+    val keep = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)
+    session.onTransactionSuccess {
       searchClient.updateKeepIndex()
     }
-    result.toSet
+    keep
   }
 
   def getOrCreateTag(userId: Id[User], name: String)(implicit session: RWSession): Collection = {
@@ -504,14 +454,12 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  // Given set of tags and keep, update keep note to reflect tag set (create tags, remove tags, insert into note, remove from note)
-  def persistHashtagsForKeepAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
-    persistHashtagsAndSaveKeep(userId, keep, allTagsKeepShouldHave)(session, context)
-    searchClient.updateKeepIndex()
-  }
+  // You have a keep, and want tags removed from it. Use: removeTagFromKeep
+  def removeTagFromKeep() = {}
 
-  // Changes a keep's notes based on the hashtags to persist!
-  private def persistHashtagsAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String])(implicit session: RWSession, context: HeimdalContext) = {
+  // Given set of tags and keep, update keep note to reflect tag seq (create tags, remove tags, insert into note, remove from note)
+  // i.e., source of tag truth is the tag seq, note will be brought in sync
+  private def syncTagsToNoteAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String])(implicit session: RWSession) = {
     // get all tags from hashtag names list
     val selectedTags = allTagsKeepShouldHave.map { getOrCreateTag(userId, _) }
     val selectedTagIds = selectedTags.map(_.id.get).toSet
@@ -545,8 +493,7 @@ class KeepCommanderImpl @Inject() (
     val noteWithHashtagsAppended = Hashtags.addTagsToString(noteWithHashtagsRemoved, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 
-    val updatedKeep = updateNote(keep, finalNote)
-    libraryAnalytics.updatedKeep(keep, updatedKeep, context)
+    keepRepo.save(keep.withNote(finalNote))
   }
 
   private def postSingleKeepReporting(keep: Keep, isNewKeep: Boolean, library: Library, socialShare: SocialShare): Unit = SafeFuture {
@@ -625,9 +572,6 @@ class KeepCommanderImpl @Inject() (
     val users = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
     keepRepo.save(keep.withParticipants(users))
   }
-  private def updateNote(keep: Keep, newNote: Option[String])(implicit session: RWSession): Keep = {
-    keepRepo.save(keep.withNote(newNote))
-  }
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep = {
     require(keep.libraryId == library.id, "keep.libraryId does not match library id!")
     ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get).foreach { ktl => ktlCommander.syncWithLibrary(ktl, library) }
@@ -666,7 +610,7 @@ class KeepCommanderImpl @Inject() (
         ktuCommander.syncKeep(soonToBeDeadKeep)
 
         mergeableKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(soonToBeDeadKeep, k)
+          collectionCommander.copyKeepTags(soonToBeDeadKeep, k) // todo: Handle notes! You can't just combine tags!
         }
         collectionCommander.deactivateKeepTags(soonToBeDeadKeep)
         deactivateKeep(soonToBeDeadKeep)
@@ -674,7 +618,7 @@ class KeepCommanderImpl @Inject() (
         val soonToBeDeadKeeps = similarKeeps.filter(_.hasStrictlyLessValuableMetadataThan(keep))
         log.info(s"[URI-MIG] Since no keeps are mergeable, we looked and found these other keeps which should die: ${soonToBeDeadKeeps.map(_.id.get)}")
         soonToBeDeadKeeps.foreach { k =>
-          collectionCommander.copyKeepTags(k, keep)
+          collectionCommander.copyKeepTags(k, keep) // todo: Handle notes! You can't just combine tags!
           deactivateKeep(k)
         }
 
@@ -756,6 +700,7 @@ class KeepCommanderImpl @Inject() (
 
   // combine tag info on both keeps & saves difference on the new Keep
   private def combineTags(oldKeepId: Id[Keep], newKeepId: Id[Keep])(implicit s: RWSession) = {
+    // todo: Awwww crud, this doesn't edit note
     val oldSet = keepToCollectionRepo.getCollectionsForKeep(oldKeepId).toSet
     val existingSet = keepToCollectionRepo.getCollectionsForKeep(newKeepId).toSet
     val tagsToAdd = oldSet.diff(existingSet)

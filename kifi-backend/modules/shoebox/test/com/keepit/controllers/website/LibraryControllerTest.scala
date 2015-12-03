@@ -77,7 +77,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
   // NOTE: No attemp to write the trait SourceAttribution
   implicit val rawBookmarkRepwrites = new Writes[RawBookmarkRepresentation] {
     def writes(keep: RawBookmarkRepresentation): JsValue = {
-      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.isPrivate, keep.canonical, keep.openGraph, keep.keptAt, keep.note)
+      val tmp = RawBookmarkRepresentationWithoutAttribution(keep.title, keep.url, keep.canonical, keep.openGraph, keep.keptAt, keep.note)
       Json.toJson(tmp)
     }
   }
@@ -1280,9 +1280,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPath2 = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId2).url
 
         val keepsToAdd =
-          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11") ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21") ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31") ::
             Nil
 
         inject[FakeUserActionsHelper].setUser(user1)
@@ -1341,7 +1341,7 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
 
         val request3 = FakeRequest("POST", testPath2).withBody(
           Json.obj(
-            "keeps" -> Json.toJson(Seq(RawBookmarkRepresentation(title = Some("title 11zzz"), url = "http://www.hi.com11", isPrivate = None)))
+            "keeps" -> Json.toJson(Seq(RawBookmarkRepresentation(title = Some("title 11zzz"), url = "http://www.hi.com11")))
           ))
         val result3 = libraryController.addKeeps(pubId2)(request3)
         status(result3) must equalTo(OK)
@@ -1375,9 +1375,9 @@ class LibraryControllerTest extends Specification with ShoeboxTestInjector {
         val testPathAdd = com.keepit.controllers.website.routes.LibraryController.addKeeps(pubId1).url
 
         val keepsToAdd =
-          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21", isPrivate = None) ::
-            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31", isPrivate = None) ::
+          RawBookmarkRepresentation(title = Some("title 11"), url = "http://www.hi.com11") ::
+            RawBookmarkRepresentation(title = Some("title 21"), url = "http://www.hi.com21") ::
+            RawBookmarkRepresentation(title = Some("title 31"), url = "http://www.hi.com31") ::
             Nil
 
         inject[FakeUserActionsHelper].setUser(user1)

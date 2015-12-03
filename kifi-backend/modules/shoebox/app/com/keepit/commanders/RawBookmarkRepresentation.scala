@@ -17,17 +17,19 @@ import play.api.libs.json._
  * LibraryId is purposely not in this, it should be provided separately.
  */
 case class RawBookmarkRepresentation(
-  title: Option[String] = None,
-  url: String,
-  isPrivate: Option[Boolean],
-  canonical: Option[String] = None,
-  openGraph: Option[String] = None,
-  keptAt: Option[DateTime] = None,
-  sourceAttribution: Option[SourceAttribution] = None, // clients can't provide this. probably a bad idea to have here
-  note: Option[String] = None)
+    title: Option[String] = None,
+    url: String,
+    canonical: Option[String] = None,
+    openGraph: Option[String] = None,
+    keptAt: Option[DateTime] = None,
+    sourceAttribution: Option[SourceAttribution] = None, // clients can't provide this. probably a bad idea to have here
+    note: Option[String] = None // supports strings "Formatted like #this"
+    ) {
+  def noteFormattedLikeOurNotes: Option[String] = note.map(n => Hashtags.formatExternalNote(n)).filter(_.nonEmpty)
+}
 
 object RawBookmarkRepresentation {
-  case class RawBookmarkRepresentationWithoutAttribution(title: Option[String], url: String, isPrivate: Option[Boolean], canonical: Option[String], openGraph: Option[String], keptAt: Option[DateTime], note: Option[String])
+  case class RawBookmarkRepresentationWithoutAttribution(title: Option[String], url: String, canonical: Option[String], openGraph: Option[String], keptAt: Option[DateTime], note: Option[String])
 
   implicit val helperFormat = Json.format[RawBookmarkRepresentationWithoutAttribution]
 
@@ -35,14 +37,13 @@ object RawBookmarkRepresentation {
   implicit val reads = new Reads[RawBookmarkRepresentation] {
     def reads(js: JsValue): JsResult[RawBookmarkRepresentation] = {
       val x = js.as[RawBookmarkRepresentationWithoutAttribution]
-      JsSuccess(RawBookmarkRepresentation(x.title, x.url, x.isPrivate, x.canonical, x.openGraph, x.keptAt, None))
+      JsSuccess(RawBookmarkRepresentation(x.title, x.url, x.canonical, x.openGraph, x.keptAt, None))
     }
   }
 
   def fromCreateRequest(req: KeepCreateRequest): RawBookmarkRepresentation = RawBookmarkRepresentation(
     title = req.title,
     url = req.url,
-    isPrivate = None, // TODO(ryan): kill isPrivate
     canonical = req.canonical,
     openGraph = req.openGraph,
     keptAt = req.keptAt,
@@ -70,10 +71,9 @@ class RawBookmarkFactory @Inject() (
   def toRawBookmark(json: JsObject): RawBookmarkRepresentation = {
     val title = (json \ "title").asOpt[String].map(_.take(URLFactory.MAX_URL_SIZE))
     val url = (json \ "url").asOpt[String].map(_.take(URLFactory.MAX_URL_SIZE)).getOrElse(throw new Exception(s"json $json did not have a url"))
-    val isPrivate = (json \ "isPrivate").asOpt[Boolean]
     val canonical = (json \ Normalization.CANONICAL.scheme).asOpt[String]
     val openGraph = (json \ Normalization.OPENGRAPH.scheme).asOpt[String]
-    RawBookmarkRepresentation(title = title, url = url, isPrivate = isPrivate, canonical = canonical, openGraph = openGraph, keptAt = Some(clock.now), sourceAttribution = None, note = None)
+    RawBookmarkRepresentation(title = title, url = url, canonical = canonical, openGraph = openGraph, keptAt = Some(clock.now), sourceAttribution = None, note = None)
   }
 }
 

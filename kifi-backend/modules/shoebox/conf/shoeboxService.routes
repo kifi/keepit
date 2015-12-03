@@ -164,7 +164,6 @@ POST    /m/1/user/friends/:id/hide          @com.keepit.controllers.mobile.Mobil
 POST    /m/1/page/details                   @com.keepit.controllers.mobile.MobilePageController.getPageDetails()
 POST    /m/1/page/extensionQuery            @com.keepit.controllers.mobile.MobilePageController.queryExtension(page: Int ?= 0, pageSize: Int ?= 1000)
 
-POST    /m/1/keeps/add                      @com.keepit.controllers.mobile.MobileKeepsController.keepMultiple()
 GET     /m/1/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV1(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 GET     /m/2/keeps/all                      @com.keepit.controllers.mobile.MobileKeepsController.allKeepsV2(before: Option[String], after: Option[String], collection: Option[String], helprank: Option[String], count: Int ?= Integer.MAX_VALUE, withPageInfo: Boolean ?= false)
 
@@ -172,11 +171,8 @@ GET     /m/1/keeps/stream                   @com.keepit.controllers.mobile.Mobil
 
 GET     /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
 GET     /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.getKeepInfoV2(id: ExternalId[Keep], withFullInfo: Boolean ?= false, imageWidth: Option[Int] ?= None, imageHeight: Option[Int] ?= None)
-POST    /m/1/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV1(id: ExternalId[Keep])
 POST    /m/2/keeps/:id                      @com.keepit.controllers.mobile.MobileKeepsController.editKeepInfoV2(id: ExternalId[Keep])
 
-
-POST    /m/1/collections/create             @com.keepit.controllers.mobile.MobileKeepsController.saveCollection()
 GET     /m/1/collections/all                @com.keepit.controllers.mobile.MobileKeepsController.allCollections(sort: String ?= "last_kept")
 GET     /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.currentUser()
 POST    /m/1/user/me                        @com.keepit.controllers.mobile.MobileUserController.updateCurrentUser()
