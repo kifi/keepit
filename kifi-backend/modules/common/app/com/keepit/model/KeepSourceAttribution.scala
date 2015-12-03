@@ -39,6 +39,7 @@ sealed abstract class KeepAttributionType(val name: String)
 
 object KeepAttributionType extends Enumerator[KeepAttributionType] {
   case object Twitter extends KeepAttributionType("twitter")
+  case object TwitterPartial extends KeepAttributionType("twitter-partial")
   case object Slack extends KeepAttributionType("slack")
   def all = _all
   def fromString(name: String): Try[KeepAttributionType] = {
@@ -58,14 +59,14 @@ object SourceAttribution {
   import KeepAttributionType._
   def toJson(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
     attr match {
-      case x: TwitterAttribution => (Twitter, TwitterAttribution.format.writes(x))
+      case x: PartialTwitterAttribution => (TwitterPartial, PartialTwitterAttribution.format.writes(x))
       case s: SlackAttribution => (Slack, SlackAttribution.format.writes(s))
     }
   }
 
   def fromJson(attrType: KeepAttributionType, attrJson: JsValue): JsResult[SourceAttribution] = {
     attrType match {
-      case Twitter => TwitterAttribution.format.reads(attrJson)
+      case Twitter | TwitterPartial => PartialTwitterAttribution.format.reads(attrJson)
       case Slack => SlackAttribution.format.reads(attrJson)
     }
   }
@@ -90,23 +91,27 @@ object SourceAttribution {
   implicit val deprecatedWrites = new Writes[SourceAttribution] {
     def writes(x: SourceAttribution): JsValue = {
       val (attrType, attrJs) = toJson(x)
-      Json.obj(attrType.name -> attrJs)
+      val attrTypeString = attrType match {
+        case Twitter | TwitterPartial => Twitter.name
+        case Slack => Slack.name
+      }
+      Json.obj(attrTypeString -> attrJs)
     }
   }
 }
 
-case class TwitterAttribution(idString: String, screenName: TwitterHandle) extends SourceAttribution {
+case class PartialTwitterAttribution(idString: String, screenName: TwitterHandle) extends SourceAttribution {
   def getOriginalURL: String = s"https://twitter.com/${screenName.value}/status/$idString"
 }
 
-object TwitterAttribution {
-  implicit val format = Json.format[TwitterAttribution]
+object PartialTwitterAttribution {
+  implicit val format = Json.format[PartialTwitterAttribution]
 
-  def fromRawTweetJson(js: JsValue): JsResult[TwitterAttribution] = {
+  def fromRawTweetJson(js: JsValue): JsResult[PartialTwitterAttribution] = {
     for {
       idString <- (js \ "id_str").validate[String]
       screenName <- (js \ "user" \ "screen_name").validate[TwitterHandle]
-    } yield TwitterAttribution(idString, screenName)
+    } yield PartialTwitterAttribution(idString, screenName)
   }
 }
 
