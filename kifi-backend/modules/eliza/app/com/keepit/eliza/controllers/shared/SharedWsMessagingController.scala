@@ -27,6 +27,8 @@ import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.store.KifiInstallationStore
 
+import scala.concurrent.Future
+
 class SharedWsMessagingController @Inject() (
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
@@ -74,10 +76,17 @@ class SharedWsMessagingController @Inject() (
     "get_thread" -> {
       case JsString(threadId) +: _ =>
         log.info(s"[get_thread] user ${socket.userId} thread $threadId")
-        basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {
-          case (thread, msgs) =>
-            val url = thread.url
-            SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
+        for {
+          (thread, msgs) <- basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId))
+          keepOpt <- thread.keepId.map(kid => shoebox.getBasicKeepsByIds(Set(kid)).map(res => res.values.headOption)).getOrElse(Future.successful(None))
+        } {
+          SafeFuture(socket.channel.push(Json.arr(
+            "thread", Json.obj(
+              "id" -> threadId,
+              "uri" -> thread.url,
+              "keep" -> keepOpt,
+              "messages" -> msgs.reverse
+            ))))
         }
     },
     "add_participants_to_thread" -> {
