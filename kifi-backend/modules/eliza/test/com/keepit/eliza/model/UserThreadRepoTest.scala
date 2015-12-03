@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import org.specs2.mutable.Specification
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{ MessageThreadFactory, NormalizedURI, User }
 import com.keepit.common.db.Id
 import play.api.libs.json.JsNull
 import com.keepit.shoebox.FakeShoeboxServiceModule
@@ -60,14 +60,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
           userThreadRepo.getUserThreadsForEmailing(clock.now()).size === 0
           userThreadRepo.getUserStats(user1) === UserThreadStats(0, 0, 0)
           userThreadRepo.getUserStats(user2) === UserThreadStats(0, 0, 0)
-          val thread1 = messageThreadRepo.save(MessageThread(
-            uriId = None,
-            url = None,
-            nUrl = None,
-            pageTitle = None,
-            participants = None,
-            participantsHash = None
-          ))
+          val thread1 = MessageThreadFactory.thread().saved
           userThreadRepo.save(UserThread(
             user = user1,
             threadId = thread1.id.get,
@@ -88,14 +81,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
           userThreadRepo.getUserThreadsForEmailing(clock.now()).size === 1
         }
         db.readWrite { implicit s =>
-          val thread1 = messageThreadRepo.save(MessageThread(
-            uriId = None,
-            url = None,
-            nUrl = None,
-            pageTitle = None,
-            participants = None,
-            participantsHash = None
-          ))
+          val thread1 = MessageThreadFactory.thread().saved
           userThreadRepo.save(UserThread(
             user = user1,
             threadId = thread1.id.get,
@@ -113,14 +99,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
           toMail.size === 1
         }
         db.readWrite { implicit s =>
-          val thread1 = messageThreadRepo.save(MessageThread(
-            uriId = None,
-            url = None,
-            nUrl = None,
-            pageTitle = None,
-            participants = None,
-            participantsHash = None
-          ))
+          val thread1 = MessageThreadFactory.thread().saved
           userThreadRepo.save(UserThread(
             user = user1,
             threadId = thread1.id.get,
