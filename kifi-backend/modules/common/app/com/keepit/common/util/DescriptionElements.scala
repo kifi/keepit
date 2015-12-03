@@ -59,7 +59,6 @@ object DescriptionElements {
   implicit def fromInt(x: Int): BasicElement = x.toString
   implicit def fromBasicUser(user: BasicUser): BasicElement = user.firstName --> LinkElement(user.path.absolute)
   implicit def fromBasicOrg(org: BasicOrganization): BasicElement = org.name --> LinkElement(org.path.absolute)
-  implicit def fromBasicOrgOpt(orgOpt: Option[BasicOrganization]): BasicElement = orgOpt.map(fromBasicOrg).getOrElse(fromText("a team"))
   implicit def fromEmailAddress(email: EmailAddress): BasicElement = email.address
   implicit def fromDollarAmount(v: DollarAmount): BasicElement = v.toDollarString
   implicit def fromRole(role: OrganizationRole): BasicElement = role.value
@@ -86,8 +85,8 @@ object DescriptionElements {
     val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
 
-    val leftEnds = Set("'", "\n", "[", "`")
-    val rightStarts = Set(".", "'", "\n", "]", "`")
+    val leftEnds = Set("'", "\n", "[", "(", "`")
+    val rightStarts = Set(".", ",", "'", "\n", "]", ")", "`")
     val interpolatedPunctuation = wordPairs.map {
       case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
       case _ => " "

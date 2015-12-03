@@ -48,6 +48,15 @@ object LibrarySpace {
   implicit def fromUserId(userId: Id[User]): UserSpace = UserSpace(userId)
   implicit def fromOrganizationId(organizationId: Id[Organization]): OrganizationSpace = OrganizationSpace(organizationId)
 
+  def fromEither(either: Either[Id[User], Id[Organization]]): LibrarySpace = either match {
+    case Left(userId) => UserSpace(userId)
+    case Right(orgId) => OrganizationSpace(orgId)
+  }
+  def toEither(space: LibrarySpace): Either[Id[User], Id[Organization]] = space match {
+    case UserSpace(userId) => Left(userId)
+    case OrganizationSpace(orgId) => Right(orgId)
+  }
+
   def apply(ownerId: Id[User], organizationId: Option[Id[Organization]]): LibrarySpace = organizationId.map(OrganizationSpace) getOrElse UserSpace(ownerId)
 
   def prettyPrint(space: LibrarySpace): String = space match {
@@ -55,12 +64,8 @@ object LibrarySpace {
     case UserSpace(userId) => s"user $userId"
   }
 
-  val adminReads: Reads[LibrarySpace] = Reads[LibrarySpace] { payload =>
-    payload.validate[Either[Id[User], Id[Organization]]](EitherFormat.keyedReads("user", "org")).map {
-      case Left(userId) => UserSpace(userId)
-      case Right(orgId) => OrganizationSpace(orgId)
-    }
-  }
+  private val eitherFormat = EitherFormat.keyedFormat[Id[User], Id[Organization]]("user", "org")
+  implicit val format: Format[LibrarySpace] = eitherFormat.inmap(fromEither, toEither)
 }
 
 sealed trait ExternalLibrarySpace

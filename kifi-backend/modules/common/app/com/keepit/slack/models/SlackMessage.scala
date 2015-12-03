@@ -5,7 +5,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
 import com.keepit.model.KeepAttributionType._
-import com.keepit.model.{ Keep, Library }
+import com.keepit.model.{ LibrarySpace, Keep, Library }
 import com.keepit.rover.model.BasicImages
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -276,14 +276,16 @@ case class SlackChannelIntegrations(
   channelId: SlackChannelId,
   allLibraries: Set[Id[Library]],
   toLibraries: Set[Id[Library]],
-  fromLibraries: Set[Id[Library]])
+  fromLibraries: Set[Id[Library]],
+  spaces: Map[Id[Library], Set[LibrarySpace]] // there's currently no unique constraint on (teamId: SlackTeamId, channelId: SlackChannelId, libraryId: Id[Library])
+  )
 
 object SlackChannelIntegrations {
-  def none(teamId: SlackTeamId, channelId: SlackChannelId) = SlackChannelIntegrations(teamId, channelId, Set.empty, Set.empty, Set.empty)
+  def none(teamId: SlackTeamId, channelId: SlackChannelId) = SlackChannelIntegrations(teamId, channelId, Set.empty, Set.empty, Set.empty, Map.empty)
 }
 
 case class SlackChannelIntegrationsKey(teamId: SlackTeamId, channelId: SlackChannelId) extends Key[SlackChannelIntegrations] {
-  override val version = 1
+  override val version = 2
   val namespace = "slack_channel_integrations"
   def toKey(): String = s"${teamId.value}-${channelId.value}"
 }
