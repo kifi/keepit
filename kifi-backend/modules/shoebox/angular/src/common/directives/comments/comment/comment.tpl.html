@@ -12,7 +12,25 @@
             ng-attr-datetime="{{::comment.sentAt}}" am-time-ago="::comment.sentAt"
             title="{{::comment.sentAt|localTime}}" ng-if="::comment.sentAt"></time>
     </div>
-    <span class="kf-keep-comment-commenter-text" ng-bind="comment.text">thing</span>
+    <div class="kf-keep-comment-commenter-text">
+      <div ng-repeat="part in commentParts" class="kf-keep-comment-inline">
+
+        <div  ng-if="part.type === 'IMAGE'" class="kf-keep-comment-block" ng-class="{'kf-keep-comment-v-space': !$last, 'kf-keep-comment-v-space-top': $index - 1 >= 0 && commentParts[$index - 1].type !== 'IMAGE'}">
+          <img width="100px" height="100px" src="{{part.data.src}}"/>
+        </div>
+
+        <div ng-if="part.type === 'TEXT_PLAIN'" ng-bind="part.data.text" class="kf-keep-comment-inline"></div>
+
+        <div ng-if="part.type === 'EMAIL'" class="kf-keep-comment-inline">
+          <a href="mail-to:{{part.data.text}}" ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
+        </div>
+
+        <div ng-if="part.type === 'LINK'" class="kf-keep-comment-inline">
+          <a  href="{{part.data.link}}"  ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
+        </div>
+
+      </div>
+    </div>
 
   </div>
 
