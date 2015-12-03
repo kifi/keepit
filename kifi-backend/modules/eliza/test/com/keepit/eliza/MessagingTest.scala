@@ -165,14 +165,14 @@ class MessagingTest extends Specification with ElizaTestInjector {
         val messagingCommander = inject[MessagingCommander]
         val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "https://kifi.com", Some("title"), "Search!", None))
 
-        val user2Threads = db.readOnlyMaster { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId.get) }
+        val user2Threads = db.readOnlyMaster { implicit ro => userThreadRepo.getUserThreads(user2, thread1.uriId) }
         user2Threads.size === 1
         messagingCommander.setLastSeen(user2, user2Threads.head.threadId)
 
-        val otherStarters1 = messagingCommander.keepAttribution(user1, thread1.uriId.get)
+        val otherStarters1 = messagingCommander.keepAttribution(user1, thread1.uriId)
         otherStarters1.isEmpty === true
 
-        val otherStarters2 = messagingCommander.keepAttribution(user2, thread1.uriId.get)
+        val otherStarters2 = messagingCommander.keepAttribution(user2, thread1.uriId)
         otherStarters2.isEmpty === false
         otherStarters2.head === user1
       }

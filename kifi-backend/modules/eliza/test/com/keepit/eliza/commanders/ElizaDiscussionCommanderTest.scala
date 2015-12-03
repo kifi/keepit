@@ -98,20 +98,17 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
 
           Await.result(discussionCommander.sendMessageOnKeep(user1, "First post!", keep), Duration.Inf)
           db.readOnlyMaster { implicit s =>
-            messageThreadRepo.getByKeepId(keep) must beSome
             val th = messageThreadRepo.getByKeepId(keep).get
-            th.participants must beSome
-            th.participants.get.allUsers === Set(user1)
-            th.participants.get.allNonUsers must beEmpty
+            th.participants.allUsers === Set(user1)
+            th.participants.allNonUsers must beEmpty
             userThreadRepo.getByThread(th.id.get) must haveSize(1)
           }
 
           Await.result(discussionCommander.sendMessageOnKeep(user2, "Second post", keep), Duration.Inf)
           db.readOnlyMaster { implicit s =>
             val th = messageThreadRepo.getByKeepId(keep).get
-            th.participants must beSome
-            th.participants.get.allUsers === Set(user1, user2)
-            th.participants.get.allNonUsers must beEmpty
+            th.participants.allUsers === Set(user1, user2)
+            th.participants.allNonUsers must beEmpty
             userThreadRepo.getByThread(th.id.get) must haveSize(2)
           }
 

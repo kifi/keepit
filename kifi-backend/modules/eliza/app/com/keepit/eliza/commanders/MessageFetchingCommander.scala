@@ -42,13 +42,13 @@ class MessageFetchingCommander @Inject() (
 
   def getThreadMessagesWithBasicUser(userId: Id[User], thread: MessageThread): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
     if (!thread.containsUser(userId)) throw NotAuthorizedException(s"User $userId not authorized to view messages of thread ${thread.id.get}")
-    val userParticipantSet = thread.participants.map(_.allUsers).getOrElse(Set())
+    val userParticipantSet = thread.participants.allUsers
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     val messagesFut: Future[Seq[MessageWithBasicUser]] = new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
       val messages = getThreadMessages(thread)
       log.info(s"[get_thread] got raw messages for extId ${thread.externalId}: ${messages.length}")
       messages.map { message =>
-        val nonUsers = thread.participants.map(_.allNonUsers.map(NonUserParticipant.toBasicNonUser)).getOrElse(Set.empty)
+        val nonUsers = thread.participants.allNonUsers.map(NonUserParticipant.toBasicNonUser)
         MessageWithBasicUser(
           id = message.externalId,
           createdAt = message.createdAt,
@@ -56,7 +56,7 @@ class MessageFetchingCommander @Inject() (
           source = message.source,
           auxData = message.auxData,
           url = message.sentOnUrl.getOrElse(""),
-          nUrl = thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
+          nUrl = thread.nUrl,
           user = message.from match {
             case MessageSender.User(id) => Some(BasicUserLikeEntity(id2BasicUser(id)))
             case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))

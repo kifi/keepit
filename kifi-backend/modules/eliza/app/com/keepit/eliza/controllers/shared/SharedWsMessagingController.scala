@@ -76,23 +76,21 @@ class SharedWsMessagingController @Inject() (
         log.info(s"[get_thread] user ${socket.userId} thread $threadId")
         basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId)) map {
           case (thread, msgs) =>
-            val url = thread.url.getOrElse("") // needs to change when we have detached threads
+            val url = thread.url
             SafeFuture(socket.channel.push(Json.arr("thread", Json.obj("id" -> threadId, "uri" -> url, "messages" -> msgs.reverse))))
         }
     },
     "add_participants_to_thread" -> {
       case JsString(threadId) +: (data: JsValue) +: _ =>
         val (users, emailContacts, orgs) = data match {
-          case JsArray(whoDat) => {
-            val (users, emailContacts, orgs) = messagingCommander.parseRecipients(whoDat)
+          case JsArray(participantsJson) =>
+            val (users, emailContacts, orgs) = messagingCommander.parseRecipients(participantsJson)
             (users, emailContacts, orgs)
-          }
-          case _ => {
+          case _ =>
             val (users, _, _) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
             val (_, _, orgs) = messagingCommander.parseRecipients((data \ "users").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
             val (_, contacts, _) = messagingCommander.parseRecipients((data \ "nonUsers").asOpt[Seq[JsValue]].getOrElse(Seq.empty))
             (users, contacts, orgs)
-          }
         }
 
         if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {
