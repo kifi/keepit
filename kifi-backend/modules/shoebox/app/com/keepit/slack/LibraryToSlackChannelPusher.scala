@@ -175,7 +175,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           val relevantKeepIds = ktls.collect { case ktl if !comesFromDestinationChannel(ktl.keepId) => ktl.keepId }
           val relevantKeeps = {
             val keepById = keepRepo.getByIds(relevantKeepIds.toSet)
-            relevantKeepIds.map(id => keepById(id))
+            relevantKeepIds.flatMap(keepById.get)
           }
           val keepsToPush: KeepsToPush = relevantKeeps match {
             case Seq() => NoKeeps
