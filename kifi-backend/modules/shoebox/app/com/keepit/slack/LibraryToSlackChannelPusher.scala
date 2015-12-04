@@ -195,7 +195,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           (webhook, ktls, keepsToPush)
         }
 
-        log.info(s"[LTSCP] About to push ${ktls.length} keeps to ${webhookOpt.map(_.url)} for integration ${lts.id.get}")
+        log.info(s"[LTSCP] About to push ${ktls.length} keeps to ${webhookOpt.map(_.webhook.url)} for integration ${lts.id.get}")
         val slackPush = webhookOpt match {
           case None =>
             log.error(s"[LTSCP] Could not find a webhook for $lts")
