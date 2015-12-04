@@ -8,7 +8,8 @@
           <div kf-keep-card-attribution
                keep="keep"
                show-library-attribution="::(currentPageOrigin !== 'libraryPage' || showOriginLibrary)"
-               is-first-item="::isFirstItem"></div>
+               is-first-item="::isFirstItem"
+               is-admin="::isAdmin"></div>
         </section>
         <div class="kf-keep-top-menu-container" kf-click-menu
              ng-if="menuItems.length > 0">
@@ -112,7 +113,8 @@
              keep="keep"
              class="kf-keep-card-attribution-compact"
              show-library-attribution="::currentPageOrigin !== 'libraryPage'"
-             is-first-item="::isFirstItem"></div>
+             is-first-item="::isFirstItem"
+             is-admin="::isAdmin"></div>
         <div class="kf-keep-card-menu-container" kf-click-menu ng-if="menuItems.length > 0">
           <!-- This controls who gets the controls -->
           <button class="kf-keep-top-menu-btn kf-button kf-button-image">

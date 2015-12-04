@@ -252,7 +252,7 @@ angular.module('kifi')
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
           // Don't change until the link is updated to be a bit more secure:
-          scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1;
+          scope.isAdmin = (profileService.me.experiments || []).indexOf('admin') !== -1;
           scope.galleryView = !profileService.prefs.use_minimal_keep_card;
 
           var permissions = (keep.library && keep.library.permissions) || [];

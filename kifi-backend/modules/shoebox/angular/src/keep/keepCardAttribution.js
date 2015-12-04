@@ -8,7 +8,8 @@ angular.module('kifi')
       scope: {
         keep: '=keep',
         showLibraryAttribution: '=',
-        isFirstItem: '='
+        isFirstItem: '=',
+        isAdmin: '='
       },
       replace: true,
       restrict: 'A',
