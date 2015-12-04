@@ -5,21 +5,23 @@ angular.module('kifi')
   .factory('messageFormattingService', ['emojiService',
     function (emojiService) {
 
-      var entityMap = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;', // jshint ignore:line
-        '/': '&#x2F;',
-        '`': '&#x60;',
-        '=': '&#x3D;'
-      };
+      //var entityMap = {
+      //  '&': '&amp;',
+      //  '<': '&lt;',
+      //  '>': '&gt;',
+      //  '"': '&quot;',
+      //  "'": '&#39;', // jshint ignore:line
+      //  '/': '&#x2F;',
+      //  '`': '&#x60;',
+      //  '=': '&#x3D;'
+      //};
 
       function escapeHtml (string) {
-        return String(string).replace(/[&<>"'`=\/]/g, function fromEntityMap (s) {
-          return entityMap[s];
-        });
+        return string;
+        // trying not escaping for now
+        //return String(string).replace(/[&<>"'`=\/]/g, function fromEntityMap (s) {
+        //  return entityMap[s];
+        //});
       }
 
       var kifiSelMarkdownToLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/;
@@ -189,9 +191,9 @@ angular.module('kifi')
 
         var finalText = null;
         if (emojiService) {
-          finalText = escapeHtml(emojiService.supported() ? emojiService.decode(text) : text);
+          finalText = emojiService.supported() ? emojiService.decode(text) : text;
         } else {
-          finalText = escapeHtml(text);
+          finalText = text;
         }
 
         return [
