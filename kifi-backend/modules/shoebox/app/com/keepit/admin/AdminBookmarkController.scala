@@ -22,6 +22,7 @@ import com.keepit.common.core._
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap => MutableMap }
 import scala.concurrent._
+import scala.util.Success
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -253,19 +254,25 @@ class AdminBookmarksController @Inject() (
       val tagsToAddToKeeps = collectionRepo.getHashtagsByKeepIds(allKeeps.map(_.id.get).toSet)
 
       allKeeps.map { keep =>
-        val newNote = if (appendTagsToNote) {
-          tagsToAddToKeeps.get(keep.id.get) match {
-            case Some(tagsToAdd) =>
-              Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsToAdd)
-            case None =>
-              keep.note.getOrElse("")
-          }
-        } else keep.note.getOrElse("")
-        if (keep.note.getOrElse("") != newNote) {
-          log.info(s"[reprocessNotesOfKeeps] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
-          keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
-          1
-        } else 0
+        val attempt = scala.util.Try {
+          val newNote = if (appendTagsToNote) {
+            tagsToAddToKeeps.get(keep.id.get) match {
+              case Some(tagsToAdd) =>
+                Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsToAdd)
+              case None =>
+                keep.note.getOrElse("")
+            }
+          } else keep.note.getOrElse("")
+          if (!appendTagsToNote || keep.note.getOrElse("") != newNote) {
+            log.info(s"[reprocessNotesOfKeeps] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
+            keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
+            1
+          } else 0
+        }
+        attempt.recover { case ex: Throwable =>
+          log.warn(s"[reprocessNotesOfKeeps] Exception, yoloing anyways", ex)
+          0
+        }.getOrElse(0)
       }
     }
 
