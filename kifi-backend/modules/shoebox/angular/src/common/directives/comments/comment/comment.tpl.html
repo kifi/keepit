@@ -29,6 +29,10 @@
           <a  href="{{part.data.link}}"  ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
         </div>
 
+        <div ng-if="part.type === 'LOOK_HERE'" class="kf-keep-comment-inline">
+          <a  href="{{part.data.link}}"  title="{{part.data.title}}" ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
+        </div>
+
       </div>
     </div>
 
