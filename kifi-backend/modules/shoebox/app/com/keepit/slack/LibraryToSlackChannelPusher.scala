@@ -1,7 +1,10 @@
 package com.keepit.slack
 
+import java.util.concurrent.ExecutionException
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -21,7 +24,7 @@ import com.keepit.common.strings._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.DurationConversions
-import scala.util.Success
+import scala.util.{ Failure, Try, Success }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
@@ -63,12 +66,18 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
-  def findAndPushUpdatesForRipestLibraries(): Unit = {
+  def findAndPushUpdatesForRipestLibraries(): Unit = Try {
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
       libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
     }
-    librariesThatNeedToBeProcessed.foreach(pushUpdatesToSlack)
-  }
+    log.info(s"[LTSCP] Processing libraries $librariesThatNeedToBeProcessed for slack pushing")
+    FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recover {
+      case boxFail: ExecutionException => Future.failed(boxFail.getCause)
+    }.recover {
+      case fail => airbrake.notify(s"Pushing slack updates to ripest libraries failed because of $fail")
+    }
+  }.recover { case fail => airbrake.notify("[LTSCP] Boom", fail) }
+
   def scheduleLibraryToBePushed(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
     libToChannelRepo.getActiveByLibrary(libId).foreach { lts =>
       libToChannelRepo.save(lts.withNextPushAtLatest(when))
@@ -148,7 +157,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   case class ManyKeeps(keeps: Seq[Keep], lib: Library, attribution: Map[Id[Keep], SourceAttribution]) extends KeepsToPush
 
   def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
-    val (lib, integrationsToProcess) = db.readWrite { implicit s =>
+    log.info(s"[LTSCP] Processing $libId")
+    db.readWriteAsync { implicit s =>
       val lib = libRepo.get(libId)
       val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
 
@@ -158,68 +168,72 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       integrations.map(libToChannelRepo.get).filter(isIllegal).foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
 
       val integrationsToProcess = integrations.flatMap(ltsId => libToChannelRepo.markAsProcessing(ltsId))
+      log.info(s"[LTSCP] For $libId we need to push for integrations ${integrationsToProcess.map(_.id.get)}")
       (lib, integrationsToProcess)
-    }
-    val slackPushes = integrationsToProcess.map { lts =>
-      val (webhookOpt, ktls, keepsToPush) = db.readOnlyReplica { implicit s =>
-        val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
-        val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
-        val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(ktls.map(_.keepId).toSet)
-        def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
-          case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
-          case _ => false
-        }
-        val relevantKeepIds = ktls.collect { case ktl if !comesFromDestinationChannel(ktl.keepId) => ktl.keepId }
-        val relevantKeeps = {
-          val keepById = keepRepo.getByIds(relevantKeepIds.toSet)
-          relevantKeepIds.map(id => keepById(id))
-        }
-        val keepsToPush: KeepsToPush = relevantKeeps match {
-          case Seq() => NoKeeps
-          case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, attributionByKeepId)
-          case ks => ManyKeeps(ks, lib, attributionByKeepId)
-        }
-        (webhook, ktls, keepsToPush)
-      }
-
-      val slackPush = webhookOpt match {
-        case None => Future.successful(false)
-        case Some(wh) =>
-          describeKeeps(keepsToPush) match {
-            case None => Future.successful(true)
-            case Some(msgFut) =>
-              msgFut.flatMap { msg =>
-                slackClient.sendToSlack(wh.webhook, msg.quiet).imap { _ => true }
-                  .recover {
-                    case f: SlackAPIFailure =>
-                      log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
-                      false
-                  }
-              }
+    }.flatMap {
+      case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
+        val (webhookOpt, ktls, keepsToPush) = db.readOnlyReplica { implicit s =>
+          val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
+          val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
+          val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(ktls.map(_.keepId).toSet)
+          def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
+            case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
+            case _ => false
           }
-      }
-      slackPush.andThen {
-        case Success(false) => db.readWrite { implicit s =>
-          libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
+          val relevantKeepIds = ktls.collect { case ktl if !comesFromDestinationChannel(ktl.keepId) => ktl.keepId }
+          val relevantKeeps = {
+            val keepById = keepRepo.getByIds(relevantKeepIds.toSet)
+            relevantKeepIds.flatMap(keepById.get)
+          }
+          if (relevantKeepIds.nonEmpty) log.info(s"[LTSCP] For integration ${lts.id.get} we are pushing keeps $relevantKeepIds")
+          val keepsToPush: KeepsToPush = relevantKeeps match {
+            case Seq() => NoKeeps
+            case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, attributionByKeepId)
+            case ks => ManyKeeps(ks, lib, attributionByKeepId)
+          }
+          (webhook, ktls, keepsToPush)
         }
-        case _ => db.readWrite { implicit s =>
-          // To make sure we don't spam a channel, we ALWAYS register a push as "processed"
-          // Sometimes this may lead to Slack messages getting lost
-          // This is a better alternative than spamming a channel because Slack (or our HttpClient)
-          // keeps saying we aren't succeeding even though the channel is getting messages
-          libToChannelRepo.save(
-            lts
-              .finishedProcessing
-              .withLastProcessedKeep(ktls.lastOption.map(_.id.get))
-              .withNextPushAt(clock.now plus defaultDelayBetweenPushes)
-          )
+
+        val slackPush = webhookOpt match {
+          case None =>
+            log.error(s"[LTSCP] Could not find a webhook for $lts")
+            Future.successful(false)
+          case Some(wh) =>
+            describeKeeps(keepsToPush) match {
+              case None => Future.successful(true)
+              case Some(msgFut) =>
+                msgFut.flatMap { msg =>
+                  slackClient.sendToSlack(wh.webhook, msg.quiet).imap { _ => true }
+                    .recover {
+                      case f: SlackAPIFailure =>
+                        log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
+                        false
+                    }
+                }
+            }
         }
-      }.recover {
-        case fail =>
-          airbrake.notify(fail)
-          false
-      }.imap { res => lts.id.get -> res }
+        slackPush.andThen {
+          case Success(false) => db.readWrite { implicit s =>
+            libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
+          }
+          case maybeFail => db.readWrite { implicit s =>
+            // To make sure we don't spam a channel, we ALWAYS register a push as "processed"
+            // Sometimes this may lead to Slack messages getting lost
+            // This is a better alternative than spamming a channel because Slack (or our HttpClient)
+            // keeps saying we aren't succeeding even though the channel is getting messages
+            libToChannelRepo.save(
+              lts
+                .finishedProcessing
+                .withLastProcessedKeep(ktls.lastOption.map(_.id.get))
+                .withNextPushAt(clock.now plus defaultDelayBetweenPushes)
+            )
+            maybeFail match {
+              case Failure(f) => airbrake.notify(f)
+              case _ =>
+            }
+          }
+        }
+      }.imap { result => result.map { case (lts, b) => lts.id.get -> b } }
     }
-    Future.sequence(slackPushes).imap(_.toMap)
   }
 }
