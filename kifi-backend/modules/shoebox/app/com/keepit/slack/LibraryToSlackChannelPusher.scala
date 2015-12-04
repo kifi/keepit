@@ -163,7 +163,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       val integrationsToProcess = integrations.flatMap(ltsId => libToChannelRepo.markAsProcessing(ltsId))
       (lib, integrationsToProcess)
     }.flatMap {
-      case (lib, integrationsToProcess) => FutureHelpers.sequentialAccum(integrationsToProcess) { lts =>
+      case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
         val (webhookOpt, ktls, keepsToPush) = db.readOnlyReplica { implicit s =>
           val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
           val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
@@ -218,7 +218,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             )
           }
         }
-      }.map { res => res.map { case (lts, success) => lts.id.get -> success }.toMap }
+      }.imap { result => result.map { case (lts, b) => lts.id.get -> b } }
     }
   }
 }
