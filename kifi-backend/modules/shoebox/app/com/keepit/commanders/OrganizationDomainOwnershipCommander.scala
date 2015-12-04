@@ -25,7 +25,6 @@ trait OrganizationDomainOwnershipCommander {
   def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit
   def addPendingOwnershipByEmail(orgId: Id[Organization], userId: Id[User], emailAddress: EmailAddress): Option[OrganizationFail]
   def addOwnershipsForPendingOrganizations(userId: Id[User], emailAddress: EmailAddress): Map[Id[Organization], Option[OrganizationFail]]
-  def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit
 }
 
 object OrganizationDomainOwnershipCommander {
@@ -180,16 +179,5 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
         case Right(success) => orgId -> None
       }
     }.toMap
-  }
-
-  def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
-    NormalizedHostname.fromHostname(verifiedEmail.address.hostname)
-      .map(domain => orgDomainOwnershipRepo.getOwnershipsForDomain(domain).map(_.organizationId)).getOrElse(Set.empty)
-      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(verifiedEmail.userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
-      .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
-      .foreach { orgId =>
-        val addRequest = OrganizationMembershipAddRequest(orgId, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
-        orgMembershipCommander.addMembershipHelper(addRequest)
-      }
   }
 }

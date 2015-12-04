@@ -2,7 +2,7 @@ package com.keepit.controllers.core
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper, UserRequest, MaybeUserRequest, NonUserRequest, SecureSocialHelper }
-import com.keepit.common.crypto.PublicId
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -123,7 +123,8 @@ class AuthController @Inject() (
     heimdalServiceClient: HeimdalServiceClient,
     config: FortyTwoConfig,
     userIdentityHelper: UserIdentityHelper,
-    implicit val secureSocialClientIds: SecureSocialClientIds) extends UserActions with ShoeboxServiceController with Logging with SecureSocialHelper {
+    implicit val secureSocialClientIds: SecureSocialClientIds,
+    implicit val publicIdConfig: PublicIdConfiguration) extends UserActions with ShoeboxServiceController with Logging with SecureSocialHelper {
 
   // path is an Angular route
   val LinkRedirects = Map("recommendations" -> s"${config.applicationBaseUrl}/recommendations") // todo: Is this needed?
@@ -584,8 +585,9 @@ class AuthController @Inject() (
   def OkStreamFile(filename: String) =
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
-  def verifyEmail(code: EmailVerificationCode) = MaybeUserAction { implicit request =>
-    authHelper.doVerifyEmail(code)
+  def verifyEmail(code: EmailVerificationCode, orgPubId: Option[String]) = MaybeUserAction { implicit request =>
+    val orgIdOpt = orgPubId.flatMap(pubId => Organization.decodePublicId(PublicId[Organization](pubId)).toOption)
+    authHelper.doVerifyEmail(code, orgIdOpt)
   }
 
   def forgotPassword() = MaybeUserAction.async(parse.tolerantJson) { implicit request =>

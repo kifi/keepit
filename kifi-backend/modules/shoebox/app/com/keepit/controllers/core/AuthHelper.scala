@@ -69,6 +69,7 @@ class AuthHelper @Inject() (
     userEmailAddressCommander: UserEmailAddressCommander,
     userCommander: UserCommander,
     orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
+    orgMembershipCommander: OrganizationMembershipCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient,
     implicit val secureSocialClientIds: SecureSocialClientIds,
@@ -498,24 +499,24 @@ class AuthHelper @Inject() (
     Authenticator.create(identity).fold(onError, onSuccess)
   }
 
-  def doVerifyEmail(code: EmailVerificationCode)(implicit request: MaybeUserRequest[_]): Result = {
+  def doVerifyEmail(code: EmailVerificationCode, orgIdOpt: Option[Id[Organization]])(implicit request: MaybeUserRequest[_]): Result = {
     db.readOnlyMaster { implicit session => userEmailAddressRepo.getByCode(code) } match {
       case Some(email) =>
-        verifyEmailForMaybeUser(email)
+        verifyEmailForMaybeUser(email, orgIdOpt)
       case None =>
         BadRequest(views.html.website.verifyEmailError(error = "invalid_code", secureSocialClientIds)) //#verifymail case 1
     }
   }
 
-  private def verifyEmailForMaybeUser(email: UserEmailAddress)(implicit request: MaybeUserRequest[_]): Result = request match {
-    case userRequest: UserRequest[_] => verifyEmailForUser(email, userRequest)
-    case nonUserRequest: NonUserRequest[_] => verifyEmailForNonUser(email, nonUserRequest)
+  private def verifyEmailForMaybeUser(email: UserEmailAddress, orgIdOpt: Option[Id[Organization]])(implicit request: MaybeUserRequest[_]): Result = request match {
+    case userRequest: UserRequest[_] => verifyEmailForUser(email, userRequest, orgIdOpt)
+    case nonUserRequest: NonUserRequest[_] => verifyEmailForNonUser(email, nonUserRequest, orgIdOpt)
   }
 
-  private def verifyEmailForUser(email: UserEmailAddress, request: UserRequest[_]): Result = {
+  private def verifyEmailForUser(email: UserEmailAddress, request: UserRequest[_], orgIdOpt: Option[Id[Organization]]): Result = {
     val mobile = request.userAgentOpt.exists(_.isMobile)
     if (request.userId == email.userId || mobile) {
-      unsafeVerifyEmail(email)
+      unsafeVerifyEmail(email, orgIdOpt)
       val userId = email.userId
       val installations = db.readOnlyReplica { implicit s => kifiInstallationRepo.all(userId) }
       if (!mobile && !installations.exists { installation => installation.platform == KifiInstallationPlatform.Extension }) {
@@ -526,17 +527,21 @@ class AuthHelper @Inject() (
     } else BadRequest(views.html.website.verifyEmailError(error = "invalid_user", secureSocialClientIds)) //#verifymail case 4
   }
 
-  private def verifyEmailForNonUser(email: UserEmailAddress, request: NonUserRequest[_]): Result = request.userAgentOpt match {
+  private def verifyEmailForNonUser(email: UserEmailAddress, request: NonUserRequest[_], orgIdOpt: Option[Id[Organization]]): Result = request.userAgentOpt match {
     case Some(agent) if agent.isMobile => //let it pass ...
-      unsafeVerifyEmail(email)
+      unsafeVerifyEmail(email, orgIdOpt)
       Ok(views.html.mobile.mobileAppRedirect("/email/verified")) //#verifymail case 5
     case _ =>
       val newSession = request.session + (SecureSocial.OriginalUrlKey -> request.path)
       Redirect("/login").withSession(newSession) //#verifymail case 6
   }
 
-  private def unsafeVerifyEmail(email: UserEmailAddress): Unit = {
+  private def unsafeVerifyEmail(email: UserEmailAddress, orgToAdd: Option[Id[Organization]]): Unit = {
     db.readWrite(attempts = 3)(implicit s => userEmailAddressCommander.saveAsVerified(email))
+    orgToAdd.foreach { orgId =>
+      val request = OrganizationMembershipAddRequest(orgId, requesterId = email.userId, targetId = email.userId)
+      orgMembershipCommander.addMembership(request)
+    }
     orgDomainOwnershipCommander.addOwnershipsForPendingOrganizations(email.userId, email.address).map(_ => ())
   }
 
