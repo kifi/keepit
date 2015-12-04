@@ -269,9 +269,10 @@ class AdminBookmarksController @Inject() (
             1
           } else 0
         }
-        attempt.recover { case ex: Throwable =>
-          log.warn(s"[reprocessNotesOfKeeps] Exception, yoloing anyways", ex)
-          0
+        attempt.recover {
+          case ex: Throwable =>
+            log.warn(s"[reprocessNotesOfKeeps] Exception, yoloing anyways", ex)
+            0
         }.getOrElse(0)
       }
     }
