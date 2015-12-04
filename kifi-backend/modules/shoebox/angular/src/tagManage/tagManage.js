@@ -11,7 +11,7 @@ angular.module('kifi')
     $window.document.title = 'Kifi • Manage Your Tags';
 
     $scope.selected = {};
-    $scope.selectedSort = 'name';
+    $scope.selectedSort = 'num_keeps';
     $scope.tagList = [];
     $scope.selectedTag = {};
     $scope.more = false;
@@ -62,22 +62,6 @@ angular.module('kifi')
         }
       });
     }
-
-    //
-    // Watchers & Listeners
-    //
-    $scope.$watch(function () {
-      return $window.innerWidth;
-    }, function (width) {
-      if (width < 1220) {
-        $scope.copyToLibraryDisplay = 'Copy';
-        $scope.moveToLibraryDisplay = 'Move';
-      } else {
-        $scope.copyToLibraryDisplay = 'Copy to Library';
-        $scope.moveToLibraryDisplay = 'Move to Library';
-      }
-    });
-
 
     //
     // Filtering Stuff
@@ -185,6 +169,22 @@ angular.module('kifi')
     $scope.deleteTag = function () {
       manageTagService.remove($scope.selectedTag).then(function () {
         _.remove($scope.tagsToShow, $scope.selectedTag);
+      });
+    };
+
+    $scope.showRenameTagModal = function (tag) {
+      $scope.changeSelection(tag);
+      $scope.selectedTag.renamed = tag.name;
+      $scope.numKeepsInTag = tag.keeps;
+      modalService.open({
+        template: 'tagManage/renameTagModal.tpl.html',
+        scope: $scope
+      });
+    };
+
+    $scope.renameTag = function () {
+      manageTagService.rename($scope.selectedTag).then(function () {
+        $scope.selectedTag.name = $scope.selectedTag.renamed;
       });
     };
   }

@@ -124,7 +124,7 @@ class KeepsController @Inject() (
     }
   }
 
-  def page(sort: String, offset: Int, pageSize: Int) = UserAction { request =>
+  def pageCollections(sort: String, offset: Int, pageSize: Int) = UserAction { request =>
     val tags = collectionCommander.pageCollections(sort, offset, pageSize, request.userId)
     Ok(Json.obj("tags" -> tags))
   }
@@ -151,7 +151,7 @@ class KeepsController @Inject() (
         keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
       }
       val cnt = keepsCommander.replaceTagOnKeeps(keepIds, coll.name, Hashtag(newTagName))
-      Ok(Json.obj("deleted" -> coll.name, "cnt" -> cnt))
+      Ok(Json.obj("renamed" -> coll.name, "cnt" -> cnt))
     } getOrElse {
       NotFound(Json.obj("error" -> s"Collection not found for id $id"))
     }
