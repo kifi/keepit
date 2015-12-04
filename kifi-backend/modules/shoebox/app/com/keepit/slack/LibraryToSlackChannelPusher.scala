@@ -68,6 +68,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
       libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
     }
+    log.info(s"[LTSCP] Processing libraries $librariesThatNeedToBeProcessed for slack pushing")
     FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recover {
       case fail => airbrake.notify(s"Pushing slack updates to ripest libraries failed because of $fail")
     }
@@ -151,6 +152,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   case class ManyKeeps(keeps: Seq[Keep], lib: Library, attribution: Map[Id[Keep], SourceAttribution]) extends KeepsToPush
 
   def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]] = {
+    log.info(s"[LTSCP] Processing $libId")
     db.readWriteAsync { implicit s =>
       val lib = libRepo.get(libId)
       val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
@@ -161,6 +163,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       integrations.map(libToChannelRepo.get).filter(isIllegal).foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
 
       val integrationsToProcess = integrations.flatMap(ltsId => libToChannelRepo.markAsProcessing(ltsId))
+      log.info(s"[LTSCP] For $libId we need to push for integrations ${integrationsToProcess.map(_.id.get)}")
       (lib, integrationsToProcess)
     }.flatMap {
       case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
@@ -175,8 +178,9 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           val relevantKeepIds = ktls.collect { case ktl if !comesFromDestinationChannel(ktl.keepId) => ktl.keepId }
           val relevantKeeps = {
             val keepById = keepRepo.getByIds(relevantKeepIds.toSet)
-            relevantKeepIds.map(id => keepById(id))
+            relevantKeepIds.flatMap(keepById.get)
           }
+          if (relevantKeepIds.nonEmpty) log.info(s"[LTSCP] For integration ${lts.id.get} we are pushing keeps $relevantKeepIds")
           val keepsToPush: KeepsToPush = relevantKeeps match {
             case Seq() => NoKeeps
             case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, attributionByKeepId)
