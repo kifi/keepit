@@ -65,6 +65,10 @@ object FutureHelpers {
     foldLeft(items)(()) { case ((), nextItem) => f(nextItem).imap { _ => () } }
   }
 
+  def sequentialAccum[I, T](items: Iterable[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Seq[(I, T)]] = {
+    foldLeft(items)(Seq.empty[(I,T)]) { case (acc, nextItem) => f(nextItem).imap(res => acc :+ (nextItem -> res)) }
+  }
+
   private val noopChunkCB: Int => Unit = _ => Unit
 
   // sequential execute in chunks + callback (optional)
