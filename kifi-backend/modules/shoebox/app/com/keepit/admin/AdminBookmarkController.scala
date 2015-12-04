@@ -261,7 +261,7 @@ class AdminBookmarksController @Inject() (
               keep.note.getOrElse("")
           }
         } else keep.note.getOrElse("")
-        if (keep.note.getOrElse("") != newNote) {
+        if (!appendTagsToNote || keep.note.getOrElse("") != newNote) {
           log.info(s"[reprocessNotesOfKeeps] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
           keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
           1
