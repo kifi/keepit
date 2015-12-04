@@ -5,24 +5,6 @@ angular.module('kifi')
   .factory('messageFormattingService', ['emojiService',
     function (emojiService) {
 
-      //var entityMap = {
-      //  '&': '&amp;',
-      //  '<': '&lt;',
-      //  '>': '&gt;',
-      //  '"': '&quot;',
-      //  "'": '&#39;', // jshint ignore:line
-      //  '/': '&#x2F;',
-      //  '`': '&#x60;',
-      //  '=': '&#x3D;'
-      //};
-
-      function escapeHtml (string) {
-        return string;
-        // trying not escaping for now
-        //return String(string).replace(/[&<>"'`=\/]/g, function fromEntityMap (s) {
-        //  return entityMap[s];
-        //});
-      }
 
       var kifiSelMarkdownToLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/;
       //var kifiSelMarkdownToTextRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/;
@@ -36,6 +18,30 @@ angular.module('kifi')
 
       var stringIsEmpty = function(str) {
         return !str || str.length === 0;
+      };
+
+      var trimExtraSpaces = function(items) {
+        if (!items) {
+          return [];
+        }
+
+        for (var i = items.length - 1; i >= 0; i--) {
+          var before = items[i - 1];
+          var after = items[i + 1];
+          var beforeAndAfterAreImages = before && before.type === 'IMAGE' && after && after.type === 'IMAGE';
+
+          // remove spaces that are in between images
+          if (beforeAndAfterAreImages) {
+            var item = items[i];
+            if (item.data && item.data.text) {
+              item.data.text = item.data.text.trim();
+              if (item.data.text.length === 0) {
+                items.splice(i, 1);
+              }
+            }
+          }
+        }
+        return items;
       };
 
       var format = function(text) {
@@ -67,20 +73,8 @@ angular.module('kifi')
           }
         }
 
-        //for (i = items.length - 1; i >= 0; i--) {
-        //  var item = items[i];
-        //  if (item.data && item.data.text) {
-        //    item.data.text = item.data.text.trim();
-        //    if (item.data.text.length === 0) {
-        //      items.splice(i, 1);
-        //    }
-        //  }
-        //
-        //}
-
         // now we want to combine
         return items;
-
       };
 
       var processKifiMarkdown = function(markdownData) {
@@ -89,8 +83,8 @@ angular.module('kifi')
           {
             type: 'LOOK_HERE',
             data: {
-              link: 'x-kifi-sel:' + escapeHtml(selector),
-              title: escapeHtml(formatKifiSelRangeText(selector)),
+              link: 'x-kifi-sel:' + selector,
+              title: formatKifiSelRangeText(selector),
               text: markdownData.presented.replace(escapedBackslashOrRightBracketRe, '$1')
             }
           }
@@ -109,7 +103,7 @@ angular.module('kifi')
           for (var i = 0; i < parts.length; i += 2) {
             items = items.concat(processPlainTextForEmojis(parts[i]));
             if (i + 1 < parts.length) {
-              var escapedAddr = escapeHtml(parts[i + 1]);
+              var escapedAddr = parts[i + 1];
               var data = {
                 text: escapedAddr
               };
@@ -219,7 +213,8 @@ angular.module('kifi')
       }());
 
       return {
-        full: format
+        full: format,
+        trimExtraSpaces: trimExtraSpaces
       };
     }
   ]);
