@@ -159,7 +159,7 @@ class CollectionRepoImpl @Inject() (
   }
 
   def getHashtagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]] = {
-    if (keepIds.nonEmpty) {
+    if (keepIds.isEmpty) {
       Map.empty[Id[Keep], Seq[Hashtag]]
     } else {
       import com.keepit.common.db.slick.StaticQueryFixed.interpolation
