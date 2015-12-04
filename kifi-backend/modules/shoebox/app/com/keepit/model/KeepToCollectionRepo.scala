@@ -69,7 +69,7 @@ class KeepToCollectionRepoImpl @Inject() (
         k <- keepRepo.rows if k.id === kc.bookmarkId && k.state === KeepStates.ACTIVE
       } yield kc
 
-      query.sortBy(_.updatedAt).map(_.collectionId).list // todo: we should add a column for explicit ordering of tags
+      query.sortBy(_.updatedAt).map(_.collectionId).list
     }
   }
 

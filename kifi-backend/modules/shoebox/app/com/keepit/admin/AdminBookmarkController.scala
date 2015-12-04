@@ -256,12 +256,14 @@ class AdminBookmarksController @Inject() (
         val newNote = if (appendTagsToNote) {
           tagsToAddToKeeps.get(keep.id.get) match {
             case Some(tagsToAdd) =>
+              log.info(s"[andrewlog] (${keep.id.get}) Total tags: $tagsToAdd")
               Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsToAdd)
             case None =>
               keep.note.getOrElse("")
           }
         } else keep.note.getOrElse("")
-        keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
+        log.info(s"[andrewlog] (${keep.id.get}) Previous note: '${keep.note}', new: '$newNote'")
+        //keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
       }
     }
 
