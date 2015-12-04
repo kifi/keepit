@@ -148,12 +148,17 @@ class KeepDecoratorImpl @Inject() (
               augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId, keptAt) if doShowLibrary(libraryId) => (BasicLibraryWithKeptAt(idToBasicLibrary(libraryId), keptAt), idToBasicUser(contributorId)) }
             }
 
+            val bestEffortPath = (keep.title, pageInfoForKeep.title) match {
+              case (None, Some(title)) => keep.copy(title = Some(title)).path.relative
+              case _ => keep.path.relative
+            }
+
             KeepInfo(
               id = Some(keep.externalId),
               pubId = Some(Keep.publicId(keep.id.get)),
               title = keep.title,
               url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
-              path = keep.path.relative,
+              path = bestEffortPath,
               isPrivate = keep.isPrivate,
               user = Some(idToBasicUser(keep.userId)),
               createdAt = Some(getTimestamp(keep)),
