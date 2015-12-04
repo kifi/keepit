@@ -24,7 +24,7 @@ import com.keepit.common.strings._
 
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration.DurationConversions
-import scala.util.Success
+import scala.util.{ Failure, Try, Success }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
@@ -66,7 +66,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
-  def findAndPushUpdatesForRipestLibraries(): Unit = {
+  def findAndPushUpdatesForRipestLibraries(): Unit = Try {
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
       libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
     }
@@ -76,7 +76,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }.recover {
       case fail => airbrake.notify(s"Pushing slack updates to ripest libraries failed because of $fail")
     }
-  }
+  }.recover { case fail => airbrake.notify("[LTSCP] Boom", fail) }
+
   def scheduleLibraryToBePushed(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
     libToChannelRepo.getActiveByLibrary(libId).foreach { lts =>
       libToChannelRepo.save(lts.withNextPushAtLatest(when))
@@ -194,7 +195,9 @@ class LibraryToSlackChannelPusherImpl @Inject() (
         }
 
         val slackPush = webhookOpt match {
-          case None => Future.successful(false)
+          case None =>
+            log.error(s"[LTSCP] Could not find a webhook for $lts")
+            Future.successful(false)
           case Some(wh) =>
             describeKeeps(keepsToPush) match {
               case None => Future.successful(true)
@@ -213,7 +216,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           case Success(false) => db.readWrite { implicit s =>
             libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
           }
-          case _ => db.readWrite { implicit s =>
+          case maybeFail => db.readWrite { implicit s =>
             // To make sure we don't spam a channel, we ALWAYS register a push as "processed"
             // Sometimes this may lead to Slack messages getting lost
             // This is a better alternative than spamming a channel because Slack (or our HttpClient)
@@ -224,6 +227,10 @@ class LibraryToSlackChannelPusherImpl @Inject() (
                 .withLastProcessedKeep(ktls.lastOption.map(_.id.get))
                 .withNextPushAt(clock.now plus defaultDelayBetweenPushes)
             )
+            maybeFail match {
+              case Failure(f) => airbrake.notify(f)
+              case _ =>
+            }
           }
         }
       }.imap { result => result.map { case (lts, b) => lts.id.get -> b } }
