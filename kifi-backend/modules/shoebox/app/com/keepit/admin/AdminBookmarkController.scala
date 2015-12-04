@@ -38,6 +38,7 @@ class AdminBookmarksController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
   clock: Clock,
+  keepToCollectionRepo: KeepToCollectionRepo,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
 
@@ -233,7 +234,10 @@ class AdminBookmarksController @Inject() (
     Ok(JsNumber(numFix))
   }
 
-  def reprocessNotesOfKeeps() = AdminUserAction(parse.json) { implicit request =>
+  // This attempts to fix keep notes whenever they may be off.
+  // updateKeepNote takes the responsibility of making sure the note and internal tags are in sync (note is source of truth).
+  // `appendTagsToNote` will additionally check existing tags and verify that they are in the note.
+  def reprocessNotesOfKeeps(appendTagsToNote: Boolean) = AdminUserAction(parse.json) { implicit request =>
     val updated = db.readWrite { implicit session =>
       val keeps = {
         val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
@@ -245,8 +249,19 @@ class AdminBookmarksController @Inject() (
       val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
         keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
       }
-      (keeps ++ userKeeps ++ libKeeps).distinctBy(_.id.get).map { keep =>
-        keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse(""))
+      val allKeeps = (keeps ++ userKeeps ++ libKeeps).distinctBy(_.id.get)
+      val tagsToAddToKeeps = collectionRepo.getHashtagsByKeepIds(allKeeps.map(_.id.get).toSet)
+
+      allKeeps.map { keep =>
+        val newNote = if (appendTagsToNote) {
+          tagsToAddToKeeps.get(keep.id.get) match {
+            case Some(tagsToAdd) =>
+              Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsToAdd)
+            case None =>
+              keep.note.getOrElse("")
+          }
+        } else keep.note.getOrElse("")
+        keepCommander.updateKeepNote(keep.userId, keep, newNote)
       }
     }
 
