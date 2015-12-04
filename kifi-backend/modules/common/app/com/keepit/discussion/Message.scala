@@ -4,7 +4,7 @@ import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.Keep
+import com.keepit.model.{ DeepLocator, Keep }
 import com.keepit.social.BasicUserLikeEntity
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
@@ -32,11 +32,13 @@ object Message extends ModelWithPublicIdCompanion[Message] {
 case class Discussion(
   startedAt: DateTime,
   numMessages: Int,
+  locator: DeepLocator,
   messages: Seq[Message])
 object Discussion {
   implicit val format: Format[Discussion] = (
     (__ \ 'startedAt).format[DateTime] and
     (__ \ 'numMessages).format[Int] and
+    (__ \ 'locator).format[DeepLocator] and
     (__ \ 'messages).format[Seq[Message]]
   )(Discussion.apply, unlift(Discussion.unapply))
 }

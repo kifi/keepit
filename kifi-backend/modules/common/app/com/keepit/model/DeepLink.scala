@@ -1,9 +1,9 @@
 package com.keepit.model
 
 import com.keepit.common.db._
-import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import play.api.libs.json._
 
 case class DeepLinkToken(value: String) extends AnyVal
 object DeepLinkToken {
@@ -11,6 +11,12 @@ object DeepLinkToken {
 }
 
 case class DeepLocator(value: String) extends AnyVal
+object DeepLocator {
+  implicit val format: Format[DeepLocator] = Format(
+    Reads { j => j.validate[String].map(DeepLocator(_)) },
+    Writes { o => JsString(o.value) }
+  )
+}
 
 case class DeepLink(
     id: Option[Id[DeepLink]] = None,

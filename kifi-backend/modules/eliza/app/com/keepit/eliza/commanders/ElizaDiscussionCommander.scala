@@ -92,6 +92,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           kid -> Discussion(
             startedAt = thread.createdAt,
             numMessages = countsByThread.getOrElse(thread.id.get, 0),
+            locator = thread.deepLocator,
             messages = recentsByThread(thread.id.get).flatMap(em => extMessageMap.get(em.id.get))
           )
       }
