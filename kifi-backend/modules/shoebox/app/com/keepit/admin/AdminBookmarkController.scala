@@ -256,18 +256,20 @@ class AdminBookmarksController @Inject() (
         val newNote = if (appendTagsToNote) {
           tagsToAddToKeeps.get(keep.id.get) match {
             case Some(tagsToAdd) =>
-              log.info(s"[andrewlog] (${keep.id.get}) Total tags: $tagsToAdd")
               Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsToAdd)
             case None =>
               keep.note.getOrElse("")
           }
         } else keep.note.getOrElse("")
-        log.info(s"[andrewlog] (${keep.id.get}) Previous note: '${keep.note}', new: '$newNote'")
-        keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
+        if (keep.note.getOrElse("") != newNote) {
+          log.info(s"[reprocessNotesOfKeeps] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
+          keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
+          1
+        } else 0
       }
     }
 
-    Ok(updated.size.toString)
+    Ok(updated.sum.toString)
   }
 
   def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
