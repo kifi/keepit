@@ -1,5 +1,7 @@
 package com.keepit.commanders
 
+import java.net.URLEncoder
+
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
@@ -8,7 +10,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.path.Path
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
-import org.apache.commons.lang3.RandomStringUtils
 
 @Singleton
 class PathCommander @Inject() (
@@ -50,6 +51,8 @@ class PathCommander @Inject() (
   def orgPlanPage(org: BasicOrganization): Path = orgPlanPageByHandle(org.handle)
   def orgPlanPageById(orgId: Id[Organization])(implicit session: RSession): Path = orgPlanPage(orgRepo.get(orgId))
 
+  def tagSearchPath(tag: String) = PathCommander.tagSearchPath(tag)
+
   // todo: remove these and replace with Path-returning versions
   def getPathForLibrary(lib: Library): String = {
     val (user, org) = db.readOnlyMaster { implicit s =>
@@ -70,5 +73,8 @@ class PathCommander @Inject() (
 
     LibraryPathHelper.formatLibraryPathUrlEncoded(user, org.map(_.handle), lib.slug)
   }
+}
 
+object PathCommander {
+  def tagSearchPath(tag: String) = Path("find?q=" + URLEncoder.encode(s"""tag:"$tag"""", "ascii"))
 }

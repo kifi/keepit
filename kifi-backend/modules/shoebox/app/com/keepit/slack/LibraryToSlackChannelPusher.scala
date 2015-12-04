@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ KeepDecorator, PathCommander, PermissionCommander, ProcessedImageSize }
+import com.keepit.commanders._
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
@@ -109,7 +109,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       case None =>
         DescriptionElements(
           getUser(keep.userId), "added", keep.title.getOrElse(keep.url.abbreviate(KEEP_URL_MAX_DISPLAY_LENGTH)) --> LinkElement(keep.url),
-          "to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "."
+          "to", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), keep.note.map(n => DescriptionElements("—", "_“", Hashtags.format(n), "”_")), "."
         )
     }
   }
