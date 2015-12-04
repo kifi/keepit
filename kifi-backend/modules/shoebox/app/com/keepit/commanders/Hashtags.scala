@@ -45,7 +45,7 @@ object Hashtags {
     import DescriptionElements._
     val linkedTags = hashTagRe.findAllMatchIn(note).toList.map { m =>
       val tag = m.group(1)
-      tag --> LinkElement(PathCommander.tagSearchPath(tag))
+      s"#$tag" --> LinkElement(PathCommander.tagSearchPath(tag))
     }
     val surroundingText = hashTagRe.split(note).toList.map(DescriptionElements.fromText)
     assert(surroundingText.length == linkedTags.length + 1)
