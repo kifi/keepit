@@ -73,7 +73,7 @@ trait KeepCommander {
 
   // Updating / managing
   def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
-  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean = true)(implicit session: RWSession): Keep
   def moveKeep(k: Keep, toLibrary: Library, userId: Id[User])(implicit session: RWSession): Either[LibraryError, Keep]
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep]
 
@@ -433,12 +433,12 @@ class KeepCommanderImpl @Inject() (
 
   // Updates note on keep, making sure tags are in sync.
   // i.e., the note is the source of truth, and tags are added/removed appropriately
-  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String)(implicit session: RWSession): Keep = {
+  def updateKeepNote(userId: Id[User], oldKeep: Keep, newNote: String, freshTag: Boolean)(implicit session: RWSession): Keep = {
     // todo IMPORTANT: check permissions here, this lets anyone edit anyone's keep.
     val noteToPersist = Some(newNote.trim).filter(_.nonEmpty)
     val updatedKeep = oldKeep.copy(userId = userId, note = noteToPersist)
     val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
-    val (keep, colls) = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq)
+    val (keep, colls) = syncTagsToNoteAndSaveKeep(userId, updatedKeep, hashtagNamesToPersist.toSeq, freshTag = freshTag)
     session.onTransactionSuccess {
       searchClient.updateKeepIndex()
     }
@@ -498,7 +498,7 @@ class KeepCommanderImpl @Inject() (
   // i.e., source of tag truth is the tag seq, note will be brought in sync
   // Important: Caller's responsibility to call collectionRepo.collectionChanged from the return value for collections that changed
   case class ChangedCollection(id: Id[Collection], isNewKeep: Boolean, inactivateIfEmpty: Boolean)
-  private def syncTagsToNoteAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String])(implicit session: RWSession) = {
+  private def syncTagsToNoteAndSaveKeep(userId: Id[User], keep: Keep, allTagsKeepShouldHave: Seq[String], freshTag: Boolean = false)(implicit session: RWSession) = {
     // get all tags from hashtag names list
     val selectedTags = allTagsKeepShouldHave.map { getOrCreateTag(userId, _) }
     val selectedTagIds = selectedTags.map(_.id.get).toSet
@@ -514,7 +514,7 @@ class KeepCommanderImpl @Inject() (
         case None => keepToCollectionRepo.save(KeepToCollection(keepId = keep.id.get, collectionId = tagId))
         case Some(k2c) => keepToCollectionRepo.save(k2c.copy(state = KeepToCollectionStates.ACTIVE))
       }
-      changedCollections += ChangedCollection(tagId, isNewKeep = true, inactivateIfEmpty = false)
+      changedCollections += ChangedCollection(tagId, isNewKeep = freshTag, inactivateIfEmpty = false)
     }
     tagIdsToRemove.map { tagId =>
       keepToCollectionRepo.remove(keep.id.get, tagId)

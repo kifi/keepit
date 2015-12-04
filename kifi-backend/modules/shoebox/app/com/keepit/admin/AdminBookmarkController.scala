@@ -261,7 +261,7 @@ class AdminBookmarksController @Inject() (
               keep.note.getOrElse("")
           }
         } else keep.note.getOrElse("")
-        keepCommander.updateKeepNote(keep.userId, keep, newNote)
+        keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
       }
     }
 
