@@ -177,12 +177,11 @@ class MobileMessagingController @Inject() (
   def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(request.userId, ExternalId[MessageThread](threadId)) map {
       case (thread, allMsgs) =>
-        val url = thread.url.map(URISanitizer.sanitize).getOrElse("") // needs to change when we have detached threads
-        val nUrl = thread.nUrl.map(URISanitizer.sanitize).getOrElse("") // needs to change when we have detached threads
-        val participants: Set[BasicUserLikeEntity] = allMsgs.map(_.participants).flatten.toSet
+        val url = URISanitizer.sanitize(thread.url)
+        val nUrl = URISanitizer.sanitize(thread.nUrl)
+        val participants: Set[BasicUserLikeEntity] = allMsgs.flatMap(_.participants).toSet
         val page = fromMessageId match {
-          case None =>
-            allMsgs.take(pageSize)
+          case None => allMsgs.take(pageSize)
           case Some(idString) =>
             val id = ExternalId[ElizaMessage](idString)
             val afterId = allMsgs.dropWhile(_.id != id)
@@ -226,9 +225,9 @@ class MobileMessagingController @Inject() (
   def getCompactThread(threadId: String) = UserAction.async { request =>
     basicMessageCommander.getThreadMessagesWithBasicUser(request.userId, ExternalId[MessageThread](threadId)) map {
       case (thread, msgs) =>
-        val url = thread.url.map(URISanitizer.sanitize).getOrElse("") // needs to change when we have detached threads
-        val nUrl = thread.nUrl.map(URISanitizer.sanitize).getOrElse("") // needs to change when we have detached threads
-        val participants: Set[BasicUserLikeEntity] = msgs.map(_.participants).flatten.toSet
+        val url = URISanitizer.sanitize(thread.url)
+        val nUrl = URISanitizer.sanitize(thread.nUrl)
+        val participants: Set[BasicUserLikeEntity] = msgs.flatMap(_.participants).toSet
         Ok(Json.obj(
           "id" -> threadId,
           "uri" -> url,

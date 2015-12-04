@@ -23,9 +23,23 @@
     background: whitesmoke
 
 .kf-org-members-autojoin
+  margin: 0
   font-size: 15px
   color: textBlackColor
-  margin: 0
+  overflow: hidden
+  transition: .45s
+
+  &.ng-enter
+    max-height: 0
+    line-height: 0
+    opacity: 0
+    margin-bottom: -15px
+
+  &.ng-enter-active
+    max-height: 2.4em
+    line-height: 1.2em
+    opacity: 1
+    margin-bottom: 0
 
 .kf-org-member-invite-row
   position: relative

@@ -6,8 +6,10 @@ import com.keepit.common.db.slick.{ Repo, RepoWithDelete, DbRepo, DbRepoWithDele
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.common.core.anyExtensionOps
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.SQLInterpolation_WarningsFixed
+import com.keepit.eliza.commanders.{ UnreadThreadCounts, UserThreadQuery }
 import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.model.{ User, NormalizedURI }
 
@@ -23,49 +25,54 @@ object UserThreadRepo {
 
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
-  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
-  def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
-  def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]]
-  def markAllRead(user: Id[User])(implicit session: RWSession): Unit
-  def markAllReadAtOrBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
-  def setNotification(user: Id[User], thread: Id[MessageThread], message: ElizaMessage, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit
-  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession): Unit
-  def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
-  def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Int
-  def getRawNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification
-  def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
-  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
-  def getLatestUnreadRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
-  def getUnreadRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
-  def getLatestRawNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification]
-  def getRawNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
-  def getLatestRawNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): List[RawNotification]
-  def getRawNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification]
-  def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int)
-  def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int
-  def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int)
-  def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int
-  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
-  def markRead(userId: Id[User], threadId: Id[MessageThread], msg: ElizaMessage)(implicit session: RWSession): Unit
-  def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession): Seq[UserThread]
-  def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit
-  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
-  def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession): Boolean
-  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[ElizaMessage], newJson: JsValue)(implicit session: RWSession): Unit
-  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
-  def isMuted(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Boolean
-  def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession): Unit
-  def getThreadActivity(theadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity]
-  def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats
-  def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
-  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
+  // Simple lookup queries
   def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread]
-  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User]
+  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread]
-  def getNotificationByThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[RawNotification]
+
+  // Complex lookup queries
+  def getThreadNotificationsForUser(userId: Id[User], utq: UserThreadQuery)(implicit session: RSession): List[RawNotification]
+
+  // Stats queries
+  def getUserStats(userId: Id[User])(implicit session: RSession): UserThreadStats
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
   def getSharedThreadsForGroup(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]])(implicit session: RSession): Seq[GroupThreadStats]
+
+  // Things that need to be replaced with a single "rpb"-style query
+  def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession): Seq[UserThread]
+  def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): UnreadThreadCounts
+  def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): UnreadThreadCounts
+  def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
+  def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
+  def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
+
+  // Things that ought to go on MessageThread instead of being insane
+  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User]
+
+  // Single-use queries that are actually slower than just doing the sane thing
+  def getThreadActivity(theadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity]
+  def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]]
+  def isMuted(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Boolean
+  def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean]
+  def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean
+  def getNotificationByThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[RawNotification]
+
+  // Handling read/unread
+  def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession): Unit
+  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession): Unit
+  def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession): Boolean
+  def markAllReadAtOrBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
+  def markRead(userId: Id[User], threadId: Id[MessageThread], msg: ElizaMessage)(implicit session: RWSession): Unit
+  def markAllRead(user: Id[User])(implicit session: RWSession): Unit
+  def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession): Boolean
+
+  // Mutating threads in-place
+  def setNotification(user: Id[User], thread: Id[MessageThread], message: ElizaMessage, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit
+  def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit
+  def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
+  def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[ElizaMessage], newJson: JsValue)(implicit session: RWSession): Unit
 }
 
 /**
@@ -111,12 +118,8 @@ class UserThreadRepoImpl @Inject() (
     userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
   }
 
-  //recording persisted user threads only for the sake of understanding why user messages are sent very late in ElizaEmailNotifierActor
-  //once we'll figure it out this save method can be removed
-  override def save(model: UserThread)(implicit session: RWSession): UserThread = {
-    val saved = super.save(model)
-    log.info(s"persisting: ${model.summary}")
-    saved
+  def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {
+    (for (row <- rows if row.threadId === threadId) yield row).list
   }
 
   def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
@@ -174,94 +177,36 @@ class UserThreadRepoImpl @Inject() (
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession) = {
     val now = clock.now
-    rows.filter(row => row.id === userThreadId).map(row => (row.muted, row.updatedAt)).update((muted, now))
+    rows.filter(row => row.id === userThreadId).map(row => (row.muted, row.updatedAt)).update((muted, now)) > 0
   }
 
-  def getRawNotification(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): RawNotification = {
-    rows.filter(row => row.user === userId && row.threadId === threadId).map(row => (row.lastNotification, row.unread, row.uriId)).first
+  def getThreadNotificationsForUser(userId: Id[User], utq: UserThreadQuery)(implicit session: RSession): List[RawNotification] = {
+    val desiredThreads = rows |> { rs => // by user
+      rs.filter(r => r.user === userId && r.lastNotification =!= (JsNull: JsValue))
+    } |> { rs => // by uri
+      utq.onUri.map(uriId => rs.filter(r => r.uriId === uriId)).getOrElse(rs)
+    } |> { rs => // by time
+      utq.beforeTime.map(fromTime => rs.filter(r => r.notificationUpdatedAt < fromTime)).getOrElse(rs)
+    } |> { rs => // by unread
+      utq.onlyUnread.map(unread => rs.filter(r => r.unread === unread)).getOrElse(rs)
+    } |> { rs => // by started
+      utq.onlyStarted.map(started => rs.filter(r => r.started === started)).getOrElse(rs)
+    }
+
+    desiredThreads
+      .sortBy(_.notificationUpdatedAt desc)
+      .map(r => (r.lastNotification, r.unread, r.uriId))
+      .take(utq.limit).list
   }
 
-  def getLatestRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    rows
-      .filter(row => row.user === userId && row.lastNotification =!= (JsNull: JsValue))
-      .sortBy(row => row.notificationUpdatedAt desc)
-      .map(row => (row.lastNotification, row.unread, row.uriId))
-      .take(howMany)
-      .list
+  def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): UnreadThreadCounts = {
+    val (total, unmuted) = StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(notification_pending and not muted) from user_thread where user_id = $userId and uri_id = $uriId").first
+    UnreadThreadCounts(total, unmuted)
   }
 
-  def getRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    rows
-      .filter(row => row.user === userId && row.notificationUpdatedAt < time && row.lastNotification =!= (JsNull: JsValue))
-      .sortBy(row => row.notificationUpdatedAt desc)
-      .map(row => (row.lastNotification, row.unread, row.uriId))
-      .take(howMany)
-      .list
-  }
-
-  def getLatestUnreadRawNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    rows
-      .filter(row => row.user === userId && row.unread && row.lastNotification =!= (JsNull: JsValue))
-      .sortBy(row => row.notificationUpdatedAt desc)
-      .map(row => (row.lastNotification, row.unread, row.uriId))
-      .take(howMany)
-      .list
-  }
-
-  def getUnreadRawNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    rows
-      .filter(row => row.user === userId && row.unread && row.notificationUpdatedAt < time && row.lastNotification =!= (JsNull: JsValue))
-      .sortBy(row => row.notificationUpdatedAt desc)
-      .map(row => (row.lastNotification, row.unread, row.uriId))
-      .take(howMany)
-      .list
-  }
-
-  def getLatestRawNotificationsForStartedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    rows
-      .filter(row => row.user === userId && row.started && row.lastNotification =!= (JsNull: JsValue))
-      .sortBy(row => row.notificationUpdatedAt desc)
-      .map(row => (row.lastNotification, row.unread, row.uriId))
-      .take(howMany)
-      .list
-  }
-
-  def getRawNotificationsForStartedThreadsBefore(userId: Id[User], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    rows
-      .filter(row => row.user === userId && row.started && row.notificationUpdatedAt < time && row.lastNotification =!= (JsNull: JsValue))
-      .sortBy(row => row.notificationUpdatedAt desc)
-      .map(row => (row.lastNotification, row.unread, row.uriId))
-      .take(howMany)
-      .list
-  }
-
-  def getLatestRawNotificationsForUri(userId: Id[User], uriId: Id[NormalizedURI], howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    rows
-      .filter(row => row.user === userId && row.uriId === uriId && row.lastNotification =!= (JsNull: JsValue))
-      .sortBy(row => row.notificationUpdatedAt desc)
-      .map(row => (row.lastNotification, row.unread, row.uriId))
-      .take(howMany)
-      .list
-  }
-
-  def getRawNotificationsForUriBefore(userId: Id[User], uriId: Id[NormalizedURI], time: DateTime, howMany: Int)(implicit session: RSession): List[RawNotification] = {
-    rows
-      .filter(row => row.user === userId && row.uriId === uriId && row.notificationUpdatedAt < time && row.lastNotification =!= (JsNull: JsValue))
-      .sortBy(row => row.notificationUpdatedAt desc)
-      .map(row => (row.lastNotification, row.unread, row.uriId))
-      .take(howMany)
-      .list
-  }
-
-  def getThreadCountsForUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): (Int, Int) = {
-    StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(notification_pending and not muted) from user_thread where user_id = $userId and uri_id = $uriId").first
-  }
-
-  def getUnreadThreadCount(userId: Id[User])(implicit session: RSession): Int = getUnreadThreadCounts(userId)._1
-  def getUnreadUnmutedThreadCount(userId: Id[User])(implicit session: RSession): Int = getUnreadThreadCounts(userId)._2
-
-  def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): (Int, Int) = {
-    StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending").first
+  def getUnreadThreadCounts(userId: Id[User])(implicit session: RSession): UnreadThreadCounts = {
+    val (total, unmuted) = StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(not muted) from user_thread where user_id = $userId and notification_pending").first
+    UnreadThreadCounts(total, unmuted)
   }
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
@@ -343,10 +288,6 @@ class UserThreadRepoImpl @Inject() (
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
     val uriSet = (for (row <- rows if row.user === userId && row.uriId.isDefined) yield row.uriId).list.toSet.flatten
     uriIds.map(uriId => uriSet.contains(uriId))
-  }
-
-  def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {
-    (for (row <- rows if row.threadId === threadId) yield row).list
   }
 
   def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User] = {

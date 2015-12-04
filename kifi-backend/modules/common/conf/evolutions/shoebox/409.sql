@@ -61,7 +61,7 @@ CREATE TABLE library_to_slack_channel (
 
   PRIMARY KEY(id),
   UNIQUE KEY library_to_slack_channel_u_team_id_channel_id_library_id (slack_team_id, slack_channel_id, library_id),
-  CONSTRAINT library_to_slack_channel_f_slack_team_membership FOREIGN KEY (owner_id, slack_user_id, slack_team_id) REFERENCES slack_team_membership(user_id, slack_user_id, slack_team_id)
+  CONSTRAINT library_to_slack_channel_f_slack_team_membership FOREIGN KEY (slack_team_id, slack_user_id) REFERENCES slack_team_membership(slack_team_id, slack_user_id)
 );
 
 CREATE TABLE slack_channel_to_library (
@@ -84,7 +84,7 @@ CREATE TABLE slack_channel_to_library (
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_channel_to_library_u_team_id_channel_id_library_id (slack_team_id, slack_channel_id, library_id),
-  CONSTRAINT slack_channel_library_f_slack_team_membership FOREIGN KEY (owner_id, slack_user_id, slack_team_id) REFERENCES slack_team_membership(user_id, slack_user_id, slack_team_id)
+  CONSTRAINT slack_channel_to_library_f_slack_team_membership FOREIGN KEY (slack_team_id, slack_user_id) REFERENCES slack_team_membership(slack_team_id, slack_user_id)
 );
 
 insert into evolutions(name, description) values('409.sql', 'create tables slack_team_membership, slack_incoming_webhook_info, library_to_slack_channel, slack_channel_to_library');

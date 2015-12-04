@@ -185,8 +185,8 @@ class MessagingAnalytics @Inject() (
       if (newNonUserParticipants.nonEmpty) { contextBuilder += ("newNonUserParticipants", newNonUserParticipants.map(_.identifier)) }
       contextBuilder += ("newParticipantKinds", newUserParticipants.map(_ => "user") ++ newNonUserParticipants.map(_.kind.name))
       contextBuilder += ("participantsAdded", newNonUserParticipants.length)
-      thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
-      thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
+      contextBuilder += ("uriId", thread.uriId.toString)
+      addParticipantsInfo(contextBuilder, thread.participants)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.MESSAGED, addedAt))
     }
   }
@@ -207,15 +207,14 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("threadId", thread.externalId.id)
       contextBuilder += ("messageId", message.externalId.id)
       message.source.foreach { source => contextBuilder += ("source", source.value) }
-      thread.uriId.foreach { uriId => contextBuilder += ("uriId", uriId.toString) }
-      thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
+      contextBuilder += ("uriId", thread.uriId.toString)
+      addParticipantsInfo(contextBuilder, thread.participants)
       sender match {
-        case MessageSender.User(userId) => {
-          val uriId = thread.uriId.get
+        case MessageSender.User(userId) =>
+          val uriId = thread.uriId
           shoebox.getPersonalKeeps(userId, Set(uriId)).foreach { basicKeeps =>
             contextBuilder += ("isKeep", basicKeeps.get(uriId).exists(_.nonEmpty))
-            thread.participants.map(getOrganizationsSharedByParticipants)
-              .getOrElse(Future.successful(Set.empty))
+            getOrganizationsSharedByParticipants(thread.participants)
               .foreach { sharedOrgs =>
                 if (sharedOrgs.nonEmpty) contextBuilder += ("allParticipantsInOrgId", Random.shuffle(sharedOrgs).head.toString)
                 val context = contextBuilder.build
@@ -226,11 +225,10 @@ class MessagingAnalytics @Inject() (
 
                 // Anonymized event with page information
                 anonymise(contextBuilder)
-                thread.url foreach contextBuilder.addUrlInfo
+                contextBuilder.addUrlInfo(thread.url)
                 heimdal.trackEvent(AnonymousEvent(contextBuilder.build, AnonymousEventTypes.MESSAGED, sentAt))
               }
           }
-        }
 
         case MessageSender.NonUser(nonUser) => heimdal.trackEvent(NonUserEvent(nonUser.identifier, nonUser.kind, contextBuilder.build, NonUserEventTypes.MESSAGED, sentAt))
 
@@ -248,7 +246,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("action", action)
       contextBuilder += ("threadId", threadExternalId.id)
       val thread = db.readOnlyReplica { implicit session => threadRepo.get(threadExternalId) }
-      thread.participants.foreach(addParticipantsInfo(contextBuilder, _))
+      addParticipantsInfo(contextBuilder, thread.participants)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
     }
   }

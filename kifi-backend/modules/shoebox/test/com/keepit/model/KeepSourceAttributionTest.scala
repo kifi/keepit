@@ -12,8 +12,8 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
 
   "KeepSourceAttribution" should {
     "twitter parsing works" in {
-      val attr = TwitterAttribution.fromRawTweetJson(tweetJs)
-      attr.get === TwitterAttribution("505809542656303104", connerdelights)
+      val attr = PartialTwitterAttribution.fromRawTweetJson(tweetJs)
+      attr.get === PartialTwitterAttribution("505809542656303104", connerdelights)
       attr.get.getOriginalURL === "https://twitter.com/connerdelights/status/505809542656303104"
       attr.get.screenName === connerdelights
     }
@@ -26,7 +26,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
         libraryId = None)
 
       val attr = RawKeep.extractKeepSourceAttribtuion(rawKeep)
-      attr.get === TwitterAttribution("505809542656303104", connerdelights)
+      attr.get === PartialTwitterAttribution("505809542656303104", connerdelights)
 
       val rawKeep2 = rawKeep.copy(originalJson = Some(JsString("{}")))
       RawKeep.extractKeepSourceAttribtuion(rawKeep2) === None
@@ -36,20 +36,20 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
 
     }
 
-    "source attribtuion serialize" in {
-      val attr = TwitterAttribution("505809542656303104", connerdelights)
+    "source attribution serialize" in {
+      val attr = PartialTwitterAttribution("505809542656303104", connerdelights)
       SourceAttribution.deprecatedWrites.writes(attr) === Json.obj("twitter" -> Json.obj("idString" -> "505809542656303104", "screenName" -> connerdelights))
     }
 
     "twitter attribution persists in db" in {
       withDb() { implicit injector =>
-        val twitterAttribution = TwitterAttribution.fromRawTweetJson(tweetJs)
+        val twitterAttribution = PartialTwitterAttribution.fromRawTweetJson(tweetJs)
         val attrRepo = inject[KeepSourceAttributionRepo]
         db.readWrite { implicit s =>
           val saved = attrRepo.save(Id(1), twitterAttribution.get)
           val model = attrRepo.get(saved.id.get)
           val attr = model.attribution
-          attr === TwitterAttribution("505809542656303104", connerdelights)
+          attr === PartialTwitterAttribution("505809542656303104", connerdelights)
         }
       }
     }

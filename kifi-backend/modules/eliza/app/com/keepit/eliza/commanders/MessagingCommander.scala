@@ -62,7 +62,7 @@ class MessagingCommander @Inject() (
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Future[Seq[ElizaThreadInfo]] = {
     //get all involved users
-    val allInvolvedUsers = threads.flatMap { _.participants.map(_.allUsers).getOrElse(Set()) }
+    val allInvolvedUsers = threads.flatMap(_.participants.allUsers)
     //get all basic users
     val userId2BasicUserF = shoebox.getBasicUsers(allInvolvedUsers.toSeq)
     //get all messages
@@ -87,10 +87,10 @@ class MessagingCommander @Inject() (
           (message.externalId, message.createdAt)
         }.toMap
 
-        val nonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set())
+        val nonUsers = thread.participants.allNonUsers
           .map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu))).toSeq
 
-        val basicUsers = thread.participants.map(_.allUsers).getOrElse(Set())
+        val basicUsers = thread.participants.allUsers
           .map(u => BasicUserLikeEntity(userId2BasicUser(u))).toSeq
 
         ElizaThreadInfo(
@@ -103,7 +103,7 @@ class MessagingCommander @Inject() (
           createdAt = thread.createdAt,
           lastCommentedAt = lastMessage.createdAt,
           lastMessageRead = userThreads(thread.id.get).lastSeen,
-          nUrl = thread.nUrl,
+          nUrl = Some(thread.nUrl),
           url = requestUrl,
           muted = userThreads(thread.id.get).muted)
       }
@@ -187,7 +187,7 @@ class MessagingCommander @Inject() (
         statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ONE_IN_THOUSAND)
 
         val (thread, isNew) = db.readWrite { implicit session =>
-          val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, Some(url), Some(nUriId), Some(nUrl), titleOpt.orElse(nTitleOpt))
+          val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt))
           if (isNew) {
             checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
             nonUserRecipients.foreach { nonUser =>
@@ -284,16 +284,16 @@ class MessagingCommander @Inject() (
         threadExtId = thread.externalId,
         messageText = messageText,
         source = source,
-        sentOnUrl = urlOpt.flatMap(_.raw).orElse(thread.url),
-        sentOnUriId = thread.uriId
+        sentOnUrl = urlOpt.flatMap(_.raw).orElse(Some(thread.url)),
+        sentOnUriId = Some(thread.uriId)
       ))
     }
     SafeFuture {
       db.readOnlyMaster { implicit session => messageRepo.refreshCache(thread.id.get) }
     }
 
-    val participantSet = thread.participants.map(_.allUsers).getOrElse(Set())
-    val nonUserParticipantsSet = thread.participants.map(_.allNonUsers).getOrElse(Set())
+    val participantSet = thread.participants.allUsers
+    val nonUserParticipantsSet = thread.participants.allNonUsers
     val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1.seconds) // todo: remove await
     val basicNonUserParticipants = nonUserParticipantsSet.map(NonUserParticipant.toBasicNonUser)
       .map(nu => BasicUserLikeEntity(nu))
@@ -305,7 +305,7 @@ class MessagingCommander @Inject() (
       source,
       None,
       message.sentOnUrl.getOrElse(""),
-      thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
+      thread.nUrl,
       message.from match {
         case MessageSender.User(id) => Some(BasicUserLikeEntity(id2BasicUser(id)))
         case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
@@ -315,9 +315,9 @@ class MessagingCommander @Inject() (
     )
 
     // send message through websockets immediately
-    thread.participants.foreach(_.allUsers.foreach { user =>
+    thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, thread, messageWithBasicUser)
-    })
+    }
 
     // update user thread of the sender
     from.asUser.foreach { sender =>
@@ -428,7 +428,7 @@ class MessagingCommander @Inject() (
 
         checkEmailParticipantRateLimits(adderUserId, oldThread, newNonUserParticipants)
 
-        if (!oldThread.participants.exists(_.contains(adderUserId))) {
+        if (!oldThread.participants.contains(adderUserId)) {
           throw NotAuthorizedException(s"User $adderUserId not authorized to add participants to thread ${oldThread.id.get}")
         }
 
@@ -487,7 +487,7 @@ class MessagingCommander @Inject() (
     }
     messagingAnalytics.clearedNotification(userId, message.externalId, thread.externalId, context)
 
-    notificationDeliveryCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt)
+    notificationDeliveryCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl, message.createdAt)
   }
 
   def setUnread(userId: Id[User], msgExtId: ExternalId[ElizaMessage]): Unit = {
@@ -499,7 +499,7 @@ class MessagingCommander @Inject() (
       userThreadRepo.markUnread(userId, thread.id.get)
     }
     if (changed) {
-      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl.getOrElse(""), message.createdAt)
+      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl, message.createdAt)
     }
   }
 
@@ -515,53 +515,38 @@ class MessagingCommander @Inject() (
   }
 
   def getUnreadUnmutedThreadCount(userId: Id[User]): Int = {
-    db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUnreadUnmutedThreadCount(userId)
-    }
+    db.readOnlyReplica { implicit session => userThreadRepo.getUnreadThreadCounts(userId).unmuted }
   }
 
   def muteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, mute = true)
-
   def unmuteThread(userId: Id[User], threadId: ExternalId[MessageThread])(implicit context: HeimdalContext): Boolean = setUserThreadMuteState(userId, threadId, mute = false)
-
   def muteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = true)
-
   def unmuteThreadForNonUser(id: Id[NonUserThread]): Boolean = setNonUserThreadMuteState(id, mute = false)
 
-  private def setUserThreadMuteState(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext) = {
+  private def setUserThreadMuteState(userId: Id[User], extId: ExternalId[MessageThread], mute: Boolean)(implicit context: HeimdalContext): Boolean = {
     val stateChanged = db.readWrite { implicit session =>
-      val thread = threadRepo.get(threadId)
-      thread.id.exists { threadId =>
-        val userThread = userThreadRepo.getUserThread(userId, threadId)
-        if (userThread.muted != mute) {
-          userThreadRepo.setMuteState(userThread.id.get, mute)
-          true
-        } else {
-          false
-        }
+      val thread = threadRepo.get(extId)
+      userThreadRepo.getUserThread(userId, thread.id.get) match {
+        case ut if ut.muted != mute =>
+          userThreadRepo.setMuteState(ut.id.get, mute)
+        case _ => false
       }
     }
     if (stateChanged) {
-      notificationDeliveryCommander.notifyUserAboutMuteChange(userId, threadId, mute)
-      messagingAnalytics.changedMute(userId, threadId, mute, context)
+      notificationDeliveryCommander.notifyUserAboutMuteChange(userId, extId, mute)
+      messagingAnalytics.changedMute(userId, extId, mute, context)
     }
     stateChanged
   }
 
   def setNonUserThreadMuteState(id: Id[NonUserThread], mute: Boolean): Boolean = {
     db.readWrite { implicit session =>
-      getNonUserThreadOptWithSession(id) map { nonUserThread =>
-        if (nonUserThread.muted != mute) {
-          nonUserThreadRepo.setMuteState(nonUserThread.id.get, mute)
+      getNonUserThreadOptWithSession(id).collect {
+        case nut if nut.muted != mute =>
+          nonUserThreadRepo.setMuteState(nut.id.get, mute)
           true
-        } else {
-          false
-        }
       }
-    } map { stateChanged =>
-      // TODO(martin) analytics for non users
-      stateChanged
-    } getOrElse (false)
+    }.contains(true)
   }
 
   def getChatter(userId: Id[User], urls: Seq[String]) = {
@@ -569,13 +554,12 @@ class MessagingCommander @Inject() (
     TimeoutFuture(Future.sequence(urls.map(u => shoebox.getNormalizedURIByURL(u).map(n => u -> n)))).recover {
       case ex: TimeoutException => Seq[(String, Option[NormalizedURI])]()
     }.map { res =>
-      val urlMsgCount = db.readOnlyReplica { implicit session =>
-        res.filter(_._2.isDefined).map {
-          case (url, nuri) =>
-            url -> userThreadRepo.getThreadIds(userId, Some(nuri.get.id.get))
+      db.readOnlyReplica { implicit session =>
+        res.collect {
+          case (url, Some(nuri)) =>
+            url -> userThreadRepo.getThreadIds(userId, Some(nuri.id.get))
         }
-      }
-      Map(urlMsgCount: _*)
+      }.toMap
     }
   }
 
@@ -681,7 +665,7 @@ class MessagingCommander @Inject() (
 
     // Check rate limit for this discussion
     val distinctEmailRecipients = nonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }.toSet
-    val existingEmailParticipants = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
+    val existingEmailParticipants = thread.participants.allNonUsers.collect { case emailParticipant: NonUserEmailParticipant => emailParticipant.address }
 
     val totalEmailParticipants = (existingEmailParticipants ++ distinctEmailRecipients).size
     val newEmailParticipants = totalEmailParticipants - existingEmailParticipants.size
@@ -691,7 +675,7 @@ class MessagingCommander @Inject() (
     }
 
     if (totalEmailParticipants >= MessagingCommander.WARNING_NON_USER_PARTICIPANTS_PER_THREAD && newEmailParticipants > 0) {
-      val warning = s"Discussion ${thread.id.get} ${thread.uriId.map("on uri " + _).getOrElse("")} has $totalEmailParticipants non user participants after user $user reached to $newEmailParticipants new people."
+      val warning = s"Discussion ${thread.id.get} on uri ${thread.uriId} has $totalEmailParticipants non user participants after user $user reached to $newEmailParticipants new people."
       airbrake.notify(new ExternalMessagingRateLimitException(warning))
     }
 

@@ -57,8 +57,8 @@ class ElizaEmailCommander @Inject() (
   case class ProtoEmail(digestHtml: Html, initialHtml: Html, addedHtml: Html, starterName: String, pageTitle: String)
 
   def getUriSummary(thread: MessageThread): Future[Option[RoverUriSummary]] = {
-    val uriId = thread.uriId.get
-    val normalizedUrl = thread.nUrl.get // be careful to call Rover with the *normalized* url here
+    val uriId = thread.uriId
+    val normalizedUrl = thread.nUrl
     rover.getOrElseFetchUriSummary(uriId, normalizedUrl)
   }
 
@@ -83,13 +83,13 @@ class ElizaEmailCommander @Inject() (
     val starterUser = allUsers(starterUserId)
     val participants = allUsers.values.map { _.fullName } ++ nuts.map { _.participant.fullName }
 
-    val pageName = thread.nUrl.flatMap(DomainToNameMapper.getNameFromUrl).getOrElse("")
+    val pageName = DomainToNameMapper.getNameFromUrl(thread.nUrl).getOrElse("")
 
     ThreadEmailInfo(
-      uriId = thread.uriId.get,
+      uriId = thread.uriId,
       threadId = thread.externalId,
       pageName = pageName,
-      pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl.get).abbreviate(80),
+      pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl).abbreviate(80),
       isInitialEmail = isInitialEmail,
       heroImageUrl = uriSummary.flatMap(_.images.get(idealImageSize).map(_.path.getUrl)),
       pageDescription = uriSummary.flatMap(_.article.description.map(_.take(190) + "...")),
@@ -134,7 +134,7 @@ class ElizaEmailCommander @Inject() (
    */
   def getThreadEmailData(thread: MessageThread): Future[ThreadEmailData] = {
 
-    val allUserIds: Set[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set.empty)
+    val allUserIds: Set[Id[User]] = thread.participants.allUsers
     val allUsersFuture: Future[Map[Id[User], User]] = new SafeFuture(shoebox.getUsers(allUserIds.toSeq).map(s => s.map(u => u.id.get -> u).toMap))
     val allUserImageUrlsFuture: Future[Map[Id[User], String]] = new SafeFuture(FutureHelpers.map(allUserIds.map(u => u -> shoebox.getUserImageUrl(u, 73)).toMap))
     val uriSummaryFuture = getUriSummary(thread)
@@ -168,7 +168,7 @@ class ElizaEmailCommander @Inject() (
     )
   }
 
-  def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.exists(_.allNonUsers.nonEmpty)) {
+  def notifyEmailUsers(thread: MessageThread): Unit = if (thread.participants.allNonUsers.nonEmpty) {
     getThreadEmailData(thread) map { threadEmailData =>
       val nuts = db.readOnlyMaster { implicit session =>
         nonUserThreadRepo.getByMessageThreadId(thread.id.get)
@@ -184,7 +184,7 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-  def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.exists(!_.allNonUsers.isEmpty)) {
+  def notifyAddedEmailUsers(thread: MessageThread, addedNonUsers: Seq[NonUserParticipant]): Unit = if (thread.participants.allNonUsers.nonEmpty) {
     getThreadEmailData(thread) map { threadEmailData =>
       val nuts = db.readOnlyMaster { implicit session => //redundant right now but I assume we will want to let everyone in the thread know that someone was added?
         nonUserThreadRepo.getByMessageThreadId(thread.id.get).map { nut =>

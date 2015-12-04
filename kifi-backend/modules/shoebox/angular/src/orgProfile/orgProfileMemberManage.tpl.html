@@ -1,5 +1,5 @@
 <div class="kf-org-profile-members-wrapper">
-  <p ng-if="hasManagePermission" class="kf-org-members-autojoin">
+  <p ng-if="hasManagePermission && emailDomains.length === 0" class="kf-org-members-autojoin">
     <svg kf-symbol-sprite icon="add-collaborators"></svg>
     Enable coworkers to join automatically using their company email.
     <a

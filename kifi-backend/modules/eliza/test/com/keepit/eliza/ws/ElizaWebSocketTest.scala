@@ -14,7 +14,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.notify.WsTestBehavior
 import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
-import com.keepit.model.{ User, SocialUserInfo }
+import com.keepit.model.{ MessageThreadFactory, User, SocialUserInfo }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
@@ -78,33 +78,14 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
         val messageThreadRepo = inject[MessageThreadRepo]
         val uuid = UUID.randomUUID().toString
 
-        db.readWrite { implicit session =>
-          messageThreadRepo.save(MessageThread(
-            externalId = ExternalId(uuid),
-            uriId = None,
-            url = None,
-            nUrl = None,
-            pageTitle = None,
-            participants = None,
-            participantsHash = None))
-        }
+        db.readWrite { implicit s => MessageThreadFactory.thread().saved }
 
         socket.in {
           Json.arr("get_thread", uuid)
         }
 
-        val uuid2 = UUID.randomUUID().toString
-
-        db.readWrite { implicit session =>
-          messageThreadRepo.save(MessageThread(
-            externalId = ExternalId(uuid2),
-            uriId = None,
-            url = None,
-            nUrl = None,
-            pageTitle = None,
-            participants = Some(MessageThreadParticipants(Set(Id(1)))),
-            participantsHash = None))
-        }
+        val thread2 = db.readWrite { implicit session => MessageThreadFactory.thread().withUsers(Id(1)).saved }
+        val uuid2 = thread2.externalId.id
 
         socket.in {
           Json.arr("get_thread", uuid2)
@@ -131,18 +112,9 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
 
         val messageThreadRepo = inject[MessageThreadRepo]
         val userThreadRepo = inject[UserThreadRepo]
-        val uuid = UUID.randomUUID().toString
 
         val (messageThread, userThread) = db.readWrite { implicit session =>
-
-          val messageThread = messageThreadRepo.save(MessageThread(
-            externalId = ExternalId(uuid),
-            uriId = Some(Id(1)),
-            url = None,
-            nUrl = None,
-            pageTitle = None,
-            participants = Some(MessageThreadParticipants(Set(Id(1), Id(2)))),
-            participantsHash = None))
+          val messageThread = MessageThreadFactory.thread().withUri(Id(1)).withUsers(Id(1), Id(2)).saved
 
           val userThread = userThreadRepo.save(UserThread(
             user = Id(1),
@@ -157,6 +129,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
 
           (messageThread, userThread)
         }
+        val uuid = messageThread.externalId.id
 
         implicit val context = new HeimdalContext(Map())
 

@@ -1,11 +1,11 @@
 package com.keepit.commanders
 
+import com.keepit.common.util.{ LinkElement, DescriptionElements }
 import com.keepit.model.Hashtag
 
 import scala.util.matching.Regex
 
 object Hashtags {
-
   def findAllHashtagNames(s: String): Set[String] = {
     hashTagRe.findAllMatchIn(s).map(_ group 1).map { escapedName =>
       backslashUnescapeRe.replaceAllIn(escapedName, "$1")
@@ -39,6 +39,17 @@ object Hashtags {
 
   def removeHashtagNamesFromString(str: String, hashtagNames: Set[String]): String = {
     hashTagRe.replaceSomeIn(str, m => if (hashtagNames.contains(m.group(1))) Some("") else None).trim
+  }
+
+  def format(note: String): DescriptionElements = {
+    import DescriptionElements._
+    val linkedTags = hashTagRe.findAllMatchIn(note).toList.map { m =>
+      val tag = m.group(1)
+      s"#$tag" --> LinkElement(PathCommander.tagSearchPath(tag))
+    }
+    val surroundingText = hashTagRe.split(note).toList.map(DescriptionElements.fromText)
+    assert(surroundingText.length == linkedTags.length + 1)
+    DescriptionElements.intersperse(surroundingText, linkedTags)
   }
 
   // gives back a note with hashtags stripped out & markups unescaped (reverted back to normal)

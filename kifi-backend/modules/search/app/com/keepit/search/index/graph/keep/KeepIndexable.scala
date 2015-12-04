@@ -49,7 +49,7 @@ object KeepFields {
     def apply(channelId: SlackChannelId): String = s"slack|${channelId.value}"
     def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
     def apply(source: SourceAttribution): String = source match {
-      case twitter: TwitterAttribution => Source(twitter.screenName)
+      case twitter: PartialTwitterAttribution => Source(twitter.screenName)
       case slack: SlackAttribution => Source(slack.message.channel.id)
     }
   }

@@ -2,16 +2,16 @@
 
 angular.module('kifi')
 
-  .directive('kfKeepComment', [
-    function () {
+  .directive('kfKeepComment', ['messageFormattingService',
+    function (messageFormattingService) {
       return {
         restrict: 'A',
         scope: {
           comment: '='
         },
         templateUrl: 'common/directives/comments/comment/comment.tpl.html',
-        link: function () {
-
+        link: function (scope) {
+          scope.commentParts = messageFormattingService.full(scope.comment.text);
         }
       };
     }

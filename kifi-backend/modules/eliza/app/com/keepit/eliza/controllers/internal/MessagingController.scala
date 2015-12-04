@@ -56,11 +56,11 @@ class MessagingController @Inject() (
     SafeFuture {
       log.warn("Starting notification verification!")
       val userThreads: Seq[UserThread] = db.readOnlyMaster { implicit session => userThreadRepo.all }
-      val nUrls: Map[Id[MessageThread], Option[String]] = db.readOnlyMaster { implicit session => threadRepo.all } map { thread => (thread.id.get, thread.url) } toMap
+      val nUrls: Map[Id[MessageThread], String] = db.readOnlyMaster { implicit session => threadRepo.all } map { thread => (thread.id.get, thread.url) } toMap
 
       userThreads.foreach { userThread =>
         if (userThread.uriId.isDefined) {
-          nUrls(userThread.threadId).foreach { correctNUrl =>
+          nUrls.get(userThread.threadId).foreach { correctNUrl =>
             log.warn(s"Verifying notification on user thread ${userThread.id.get}")
             uriNormalizationUpdater.fixLastNotificationJson(userThread, correctNUrl)
           }
@@ -71,14 +71,14 @@ class MessagingController @Inject() (
   }
 
   def getNonUserThreadMuteInfo(token: String) = Action { request =>
-    val result = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(token)) map { (nonUserThread: NonUserThread) =>
-      Some((nonUserThread.participant.identifier, nonUserThread.muted))
-    } getOrElse (None)
+    val result = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(token)).map { nonUserThread =>
+      (nonUserThread.participant.identifier, nonUserThread.muted)
+    }
     Ok(Json.toJson(result))
   }
 
   def setNonUserThreadMuteState(token: String, muted: Boolean) = Action {
-    // returns wether the mute state was modified
+    // returns whether the mute state was modified
     val result = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(token)) match {
       case Some(nut) => messagingCommander.setNonUserThreadMuteState(nut.id.get, muted)
       case _ => false

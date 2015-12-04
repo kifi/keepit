@@ -286,8 +286,14 @@ angular.module('kifi')
       });
     };
 
-
-    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:members' });
+    orgProfileService
+    .getOrgDomains(organization.id)
+    .then(function (emailDomainData) {
+      $scope.emailDomains = emailDomainData;
+    })
+    ['catch'](function () {
+      $scope.emailDomains = null;
+    });
 
     if ($stateParams.openInviteModal) {
       $scope.openInviteModal();
@@ -299,5 +305,7 @@ angular.module('kifi')
     } else {
       $rootScope.$emit('errorImmediately');
     }
+
+    $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:members' });
   }
 ]);
