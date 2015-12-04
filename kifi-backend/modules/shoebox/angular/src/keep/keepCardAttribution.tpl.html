@@ -64,12 +64,11 @@
     <span ng-if="isAdmin && keep.summary.hasContent"><a
       ng-href="https://www.kifi.com/k/cached?id={{keep.id}}" target="_blank">Saved</a></span>
     <span ng-if="::keep.createdAt">·</span>
-    <span>
-      <a class="kf-keep-card-attribution-page-link" ng-href="{{ isAdmin ? keep.path : '' }}">
-        <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
-              title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
-      </a>
-    </span>
+    <a class="kf-keep-card-attribution-page-link" ng-if="isAdmin" ng-href="{{::keep.path}}">
+      <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
+            title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
+    </a>
+    <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
+           title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt && !isAdmin"></time>
   </div>
 </div>
-g
