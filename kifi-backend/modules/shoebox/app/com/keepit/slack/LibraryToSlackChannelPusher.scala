@@ -1,5 +1,7 @@
 package com.keepit.slack
 
+import java.util.concurrent.ExecutionException
+
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.concurrent.FutureHelpers
@@ -70,6 +72,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
     log.info(s"[LTSCP] Processing libraries $librariesThatNeedToBeProcessed for slack pushing")
     FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recover {
+      case boxFail: ExecutionException => Future.failed(boxFail.getCause)
+    }.recover {
       case fail => airbrake.notify(s"Pushing slack updates to ripest libraries failed because of $fail")
     }
   }
