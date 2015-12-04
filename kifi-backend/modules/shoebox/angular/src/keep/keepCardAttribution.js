@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfKeepCardAttribution', [
-  function () {
+.directive('kfKeepCardAttribution', [ 'profileService',
+  function (profileService) {
     return {
       scope: {
         keep: '=keep',
@@ -12,7 +12,10 @@ angular.module('kifi')
       },
       replace: true,
       restrict: 'A',
-      templateUrl: 'keep/keepCardAttribution.tpl.html'
+      templateUrl: 'keep/keepCardAttribution.tpl.html',
+      link: function (scope) {
+        scope.isAdmin = (profileService.me.experiments || []).indexOf('admin') !== -1;
+      }
     };
   }
 ]);
