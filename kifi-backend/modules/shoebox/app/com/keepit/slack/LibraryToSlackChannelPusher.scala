@@ -172,6 +172,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       (lib, integrationsToProcess)
     }.flatMap {
       case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
+        log.info(s"[LTSCP] Processing integration ${lts.id.get}")
         val (webhookOpt, ktls, keepsToPush) = db.readOnlyReplica { implicit s =>
           val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
           val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
@@ -194,15 +195,20 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           (webhook, ktls, keepsToPush)
         }
 
+        log.info(s"[LTSCP] About to push ${ktls.length} keeps to ${webhookOpt.map(_.url)} for integration ${lts.id.get}")
         val slackPush = webhookOpt match {
           case None =>
             log.error(s"[LTSCP] Could not find a webhook for $lts")
             Future.successful(false)
           case Some(wh) =>
+            log.info(s"[LTSCP] Trying to describe keeps ${ktls.map(_.keepId)} for integrations ${lts.id.get}")
             describeKeeps(keepsToPush) match {
-              case None => Future.successful(true)
+              case None =>
+                log.info("[LTSCP] Empty description, not pushing anything")
+                Future.successful(true)
               case Some(msgFut) =>
                 msgFut.flatMap { msg =>
+                  log.info(s"[LTSCP] Non-empty description for integration ${lts.id.get}: ${msg.text}")
                   slackClient.sendToSlack(wh.webhook, msg.quiet).imap { _ => true }
                     .recover {
                       case f: SlackAPIFailure =>
@@ -213,9 +219,11 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             }
         }
         slackPush.andThen {
-          case Success(false) => db.readWrite { implicit s =>
-            libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
-          }
+          case Success(false) =>
+            log.info(s"[LTSCP] Integration ${lts.id.get} is broken!")
+            db.readWrite { implicit s =>
+              libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
+            }
           case maybeFail => db.readWrite { implicit s =>
             // To make sure we don't spam a channel, we ALWAYS register a push as "processed"
             // Sometimes this may lead to Slack messages getting lost
