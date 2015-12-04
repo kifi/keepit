@@ -4,20 +4,12 @@ import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.slack.models.SlackMessage
+import com.keepit.social.twitter.TwitterHandle
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 
 import scala.util.{ Failure, Success, Try }
-
-@json case class TwitterHandle(value: String) {
-  override def toString = value
-}
-
-@json case class TwitterId(id: Long) {
-  // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
-  override def toString = id.toString
-}
 
 case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,

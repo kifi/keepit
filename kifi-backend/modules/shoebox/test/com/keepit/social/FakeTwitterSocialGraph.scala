@@ -17,6 +17,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
+import com.keepit.social.twitter.{ TwitterHandle, TwitterId }
 import play.api.libs.json.{ JsNull, JsArray, JsValue, JsObject }
 import play.api.libs.ws.WSResponse
 import securesocial.core.{ IdentityId, OAuth2Settings }

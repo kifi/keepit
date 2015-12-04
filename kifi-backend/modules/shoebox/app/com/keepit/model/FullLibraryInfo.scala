@@ -7,6 +7,7 @@ import com.keepit.discussion.Message
 import com.keepit.slack.LibrarySlackInfo
 import com.keepit.slack.models.{ SlackIntegrationStatus, SlackChannelToLibrary, LibraryToSlackChannel, SlackChannelName }
 import com.keepit.social.BasicUser
+import com.keepit.social.twitter.TwitterHandle
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._

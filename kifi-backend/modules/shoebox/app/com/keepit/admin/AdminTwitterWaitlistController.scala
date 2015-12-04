@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.{ SystemEmailAddress, EmailAddress }
 import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.model._
+import com.keepit.social.twitter.TwitterHandle
 import play.twirl.api.Html
 import views.html
 

@@ -2,8 +2,8 @@ package com.keepit.controllers.website
 
 import java.util.concurrent.TimeoutException
 import java.util.zip.{ ZipEntry, ZipInputStream, ZipFile }
-import com.keepit.common.social.twitter.RawTweet
 import com.keepit.common.time
+import com.keepit.social.twitter.RawTweet
 import org.joda.time.format.{ DateTimeFormat, DateTimeParser, ISODateTimeFormat, DateTimeFormatterBuilder }
 
 import scala.collection.JavaConversions._

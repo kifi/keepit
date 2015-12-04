@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
+import com.keepit.social.twitter.TwitterHandle
 import org.joda.time.DateTime
 
 import scala.slick.jdbc.StaticQuery

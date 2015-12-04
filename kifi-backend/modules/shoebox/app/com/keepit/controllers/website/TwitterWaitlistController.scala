@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time.Clock
 import com.keepit.model._
+import com.keepit.social.twitter.TwitterHandle
 import com.keepit.social.{ SocialGraphPlugin, SocialNetworks }
 import play.api.libs.json.Json
 import play.twirl.api.Html

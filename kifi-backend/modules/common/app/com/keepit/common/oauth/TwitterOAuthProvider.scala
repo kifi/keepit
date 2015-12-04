@@ -4,7 +4,8 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.auth.AuthException
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.model.{ TwitterHandle, OAuth1TokenInfo }
+import com.keepit.model.OAuth1TokenInfo
+import com.keepit.social.twitter.TwitterHandle
 import com.kifi.macros.json
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.Play.current

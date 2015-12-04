@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db.Id
+import com.keepit.social.twitter.TwitterHandle
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json._

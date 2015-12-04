@@ -1,7 +1,7 @@
 package com.keepit.social
 
 import com.keepit.common.oauth.TwitterUserInfo
-import com.keepit.model.TwitterId
+import com.keepit.social.twitter.TwitterId
 import play.api.libs.json.Json
 
 trait TwitterGraphTestHelper {

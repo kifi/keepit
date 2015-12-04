@@ -1,11 +1,20 @@
-package com.keepit.common.social.twitter
+package com.keepit.social.twitter
 
 import java.util.Locale
 
-import com.keepit.model.TwitterId
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.kifi.macros.json
+
+@json case class TwitterId(id: Long) {
+  // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
+  override def toString = id.toString
+}
+
+@json case class TwitterHandle(value: String) {
+  override def toString = value
+}
 
 case class RawTweet(
   id: TwitterId,
@@ -107,7 +116,7 @@ object RawTweet {
   }
 
   // https://dev.twitter.com/overview/api/entities-in-twitter-objects
-  import Entity._
+  import com.keepit.social.twitter.RawTweet.Entity._
   case class Entities(
     userMentions: Seq[UserMentionsEntity],
     media: Seq[MediaEntity],
