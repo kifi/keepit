@@ -10,12 +10,8 @@ angular.module('kifi')
           comment: '='
         },
         templateUrl: 'common/directives/comments/comment/comment.tpl.html',
-        link: function (scope, element) {
-          //var queryResult = element[0].querySelector('.kf-keep-comment-commenter-text');
-          //var wrappedQueryResult = angular.element(queryResult);
+        link: function (scope) {
           scope.commentParts = messageFormattingService.full(scope.comment.text);
-          //wrappedQueryResult.append(messageFormattingService.full(scope.comment.text));
-
         }
       };
     }
