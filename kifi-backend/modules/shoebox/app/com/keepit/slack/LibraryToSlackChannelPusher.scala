@@ -214,6 +214,10 @@ class LibraryToSlackChannelPusherImpl @Inject() (
               .withNextPushAt(clock.now plus defaultDelayBetweenPushes)
           )
         }
+      }.recover {
+        case fail =>
+          airbrake.notify(fail)
+          false
       }.imap { res => lts.id.get -> res }
     }
     Future.sequence(slackPushes).imap(_.toMap)
