@@ -395,7 +395,7 @@ GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsCo
 
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.page(sort: String ?= "used", offset : Int ?= 0, pageSize: Int ?= 0)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
-POST    /site/collections/:id/undelete @com.keepit.controllers.website.KeepsController.undeleteCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/rename @com.keepit.controllers.website.KeepsController.renameCollection(id: ExternalId[Collection])
 GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
 #### Deprecated: use /site/user-or-org/:handle/libraries/:slug

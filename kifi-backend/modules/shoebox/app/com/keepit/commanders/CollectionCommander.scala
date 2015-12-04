@@ -80,13 +80,6 @@ class CollectionCommander @Inject() (
     searchClient.updateKeepIndex()
   }
 
-  def undeleteCollection(collection: Collection)(implicit context: HeimdalContext): Unit = {
-    db.readWrite { implicit s =>
-      collectionRepo.save(collection.copy(state = CollectionStates.ACTIVE, createdAt = clock.now()))
-    }
-    searchClient.updateKeepIndex()
-  }
-
   def getBasicCollections(ids: Seq[Id[Collection]]): Seq[BasicCollection] = {
     db.readOnlyMaster { implicit session =>
       ids.map { id =>
