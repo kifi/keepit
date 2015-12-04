@@ -13,6 +13,7 @@
             <div class="manage-tag-sort-text">Sort by:</div>
             <div class="manage-tag-sort-button" ng-class="{'on': selectedSort == 'num_keeps'}" ng-click="selectedSort = 'num_keeps'">Most used</div>
             <div class="manage-tag-sort-button" ng-class="{'on': selectedSort == 'name'}" ng-click="selectedSort = 'name'">ABC</div>
+            <div class="manage-tag-sort-button" ng-class="{'on': selectedSort == 'last_kept'}" ng-click="selectedSort = 'last_kept'">Last used</div>
           </div>
         </div>
         <div class="manage-tag-content" smart-scroll scroll-distance="tagsScrollDistance" scroll-disabled="isTagScrollDisabled()" scroll-next="manageTagScrollNext()">
@@ -26,13 +27,16 @@
                 <span class="manage-tag-row-link-convert manage-tag-copy" title="Copy tagged keeps to a library" ng-click="changeSelection(tag)"
                   kf-keep-to-library-widget widget-action-text="Copy" library-click-action="onWidgetCopyLibraryClicked(clickedLibrary)" widget-exit-action="onWidgetExit()"
                   lib-select-down-offset="0" lib-select-max-up-offset="50" lib-select-left-offset="100">
-                  {{copyToLibraryDisplay}}
+                  Copy to Library
                 </span>&middot;&nbsp;
                 <span class="manage-tag-row-link-convert manage-tag-move" title="Move tagged keeps to a library" ng-click="changeSelection(tag)"
                   kf-keep-to-library-widget widget-action-text="Move" library-click-action="onWidgetMoveLibraryClicked(clickedLibrary)" widget-exit-action="onWidgetExit()"
                   lib-select-down-offset="0" lib-select-max-up-offset="50" lib-select-left-offset="100">
-                  {{moveToLibraryDisplay}}
+                  Move to Library
                 </span>&middot;
+                <span class="manage-tag-row-link-rename" ng-click="showRenameTagModal(tag)">
+                  Rename
+                </span> &middot;
                 <span class="manage-tag-row-link-delete" ng-click="showRemoveTagModal(tag)">
                   Delete
                 </span>
