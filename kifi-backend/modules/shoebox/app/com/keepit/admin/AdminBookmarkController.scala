@@ -263,7 +263,7 @@ class AdminBookmarksController @Inject() (
           }
         } else keep.note.getOrElse("")
         log.info(s"[andrewlog] (${keep.id.get}) Previous note: '${keep.note}', new: '$newNote'")
-        //keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
+        keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
       }
     }
 
