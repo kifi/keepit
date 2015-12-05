@@ -1,7 +1,5 @@
 package com.keepit.slack
 
-import java.util.concurrent.ExecutionException
-
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.concurrent.FutureHelpers
@@ -11,7 +9,6 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.NonOKResponseException
 import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
@@ -23,7 +20,6 @@ import org.joda.time.{ DateTime, Period }
 import com.keepit.common.strings._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.duration.DurationConversions
 import scala.util.{ Failure, Try, Success }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
@@ -72,7 +68,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
     log.info(s"[LTSCP] Processing libraries $librariesThatNeedToBeProcessed for slack pushing")
     FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recoverWith {
-      case boxFail: ExecutionException => Future.failed(boxFail.getCause)
+      case boxFail: java.util.concurrent.ExecutionException => Future.failed(new Exception(boxFail.getCause.getStackTrace.toList.mkString("\n")))
     }.recover {
       case fail => airbrake.notify(s"Pushing slack updates to ripest libraries failed because of $fail")
     }
