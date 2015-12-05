@@ -2,16 +2,22 @@
 
 angular.module('kifi')
 
-  .directive('kfKeepComment', ['messageFormattingService',
-    function (messageFormattingService) {
+  .directive('kfKeepComment', ['messageFormattingService', 'extensionLiaison',
+    function (messageFormattingService, extensionLiaison) {
       return {
         restrict: 'A',
         scope: {
-          comment: '='
+          keep: '=',
+          comment: '=',
+          threadId: '='
         },
         templateUrl: 'common/directives/comments/comment/comment.tpl.html',
-        link: function (scope) {
-          scope.commentParts = messageFormattingService.full(scope.comment.text);
+        link: function ($scope) {
+          $scope.commentParts = messageFormattingService.trimExtraSpaces(messageFormattingService.full($scope.comment.text));
+
+          $scope.openLookHere = function() {
+            extensionLiaison.openDeepLink($scope.keep.url, $scope.keep.discussion.locator);
+          };
         }
       };
     }
