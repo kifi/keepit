@@ -91,7 +91,7 @@ case class Keep(
       ).forall(b => b))
   }
 
-  def titlePathString = this.title.map(_.trim.replaceAll(" ", "-")).getOrElse(this.url.trim.replaceAll("[./]", "-")).take(40)
+  def titlePathString = this.title.map(_.trim.replaceAll(" ", "-")).getOrElse(this.url.trim.replaceAll("^https?://", "").replaceAll("\\?.*", "").replaceAll("[./]", "-")).take(40)
 
   def path(implicit config: PublicIdConfiguration) = Path(s"k/$titlePathString/${Keep.publicId(this.id.get).id}")
 }

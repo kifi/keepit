@@ -60,13 +60,15 @@
        href="https://www.twitter.com/{{::keep.sourceAttribution.twitter.screenName}}/status/{{::keep.sourceAttribution.twitter.idString}}"
        target="_blank" ng-click="trackTweet()"><span class="kf-keep-twitter-logo svg-twitter-blue"></span>View the tweet
     </a>
-
+    <span ng-if="isAdmin && keep.summary.hasContent">·</span>
+    <span ng-if="isAdmin && keep.summary.hasContent"><a
+      ng-href="https://www.kifi.com/k/cached?id={{keep.id}}" target="_blank">Saved</a></span>
     <span ng-if="::keep.createdAt">·</span>
-    <span ng-if="showSaved && keep.summary.hasContent"><a
-      ng-href="https://www.kifi.com/k/cached?id={{keep.id}}">Saved</a></span>
-    <span>
+    <a class="kf-keep-card-attribution-page-link" ng-if="isAdmin" ng-href="{{::keep.path}}">
       <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
             title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt"></time>
-    </span>
+    </a>
+    <time ng-attr-datetime="{{::keep.createdAt}}" am-time-ago="::keep.createdAt"
+           title="{{::keep.createdAt|localTime}}" ng-if="::keep.createdAt && !isAdmin"></time>
   </div>
 </div>
