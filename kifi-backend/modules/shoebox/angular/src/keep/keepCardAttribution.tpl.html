@@ -1,13 +1,14 @@
 <div class="kf-keep-card-attribution">
-  <a class="kf-keep-card-attribution-keeper-pic" ng-if="::keep.user" ng-href="{{::keep.user|profileUrl}}"
+  <a class="kf-keep-card-attribution-keeper-pic" ng-if="::keep.user && !keep.sourceAttribution.slack" ng-href="{{::keep.user|profileUrl}}"
      ng-attr-style="background-image:url({{::keep.user|pic:100}})"></a>
-
+  <span class="svg-slack kf-keep-card-attribution-keeper-pic kf-keep-card-attribution-no-border" ng-if="::keep.sourceAttribution.slack"></span>
   <div class="kf-keep-card-attribution-message">
     <!--This is wrapped in a span to make sure there is a space after the name in safari :(-->
-    <span><a class="kf-link" ng-if="::keep.user"
+    <span ng-if="::keep.user && !keep.sourceAttribution.slack"><a class="kf-link"
        ng-href="{{::keep.user|profileUrl}}">{{::keep.user|name}}
     </a></span>
-    <span>kept this</span>
+    <span ng-if="::keep.sourceAttribution.slack">@<span ng-bind="keep.sourceAttribution.slack.message.username"></span> added this</span>
+    <span ng-if="::!keep.sourceAttribution.slack">kept this</span>
     <span ng-if="::showLibraryAttribution && keep.library && keep.library.visibility !== 'discoverable' && keep.library.path.slice(-7) !== '/secret'">
     into
     </span>
@@ -49,9 +50,8 @@
        click-action="clickedOrganization"></a>
 
     <span class="kf-keep-card-attribution-slack" ng-if="::keep.sourceAttribution.slack">
-      using
-      <a class="kf-keep-card-attribution-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
-        <span class="svg-slack kf-keep-card-attribution-slack-icon"></span>via @<span ng-bind="keep.sourceAttribution.slack.message.username"></span>
+      <a class="kf-link" ng-href="{{::keep.sourceAttribution.slack.message.permalink}}" target="_blank" ng-click="trackSlack()">
+        <span class="svg-slack kf-keep-card-attribution-slack-icon"></span>#<span ng-bind="keep.sourceAttribution.slack.message.channel.name">
       </a>
     </span>
 
