@@ -1,7 +1,8 @@
 package com.keepit.slack
 
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.{ FutureHelpers, FakeExecutionContextModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time
 import com.keepit.heimdal.HeimdalContext
@@ -19,7 +20,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.Period
 import org.specs2.mutable.SpecificationLike
 
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
 class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
@@ -200,6 +201,31 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("https://www.kifi.com/find?q=tag%3A%22in+the+world%22")
+        }
+      }
+      "let me figure out if weird shit is happening" in {
+        withDb(modules: _*) { implicit injector =>
+          val z = db.readOnlyMasterAsync { implicit s =>
+            Set(1, 2, 3)
+          }.flatMap { xs =>
+            FutureHelpers.accumulateOneAtATime(xs) { x =>
+              Future.successful(
+                if (x % 2 == 0) throw new Exception("even = boom")
+                else 2 * x
+              ).recover { case f => println(f); -1 }
+            }
+          }.recoverWith {
+            case f =>
+              println("about to kick a null into the mix")
+              Future.failed(null)
+          }.recover {
+            case failure =>
+              println(s"waaaaaaaah, failed because of $failure")
+              Map.empty
+          }
+          val zhere = Await.result(z, Duration.Inf)
+          println(zhere)
+          1 === 1
         }
       }
     }
