@@ -147,7 +147,7 @@ angular.module('kifi')
             }
           );
           showVerificationAlert(email);
-          profileService.resendVerificationEmail(email);
+          profileService.sendMemberConfirmationEmail(email);
         };
 
         scope.hideOrgDomain = function(org) {

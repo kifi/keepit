@@ -585,7 +585,7 @@ class AuthController @Inject() (
   def OkStreamFile(filename: String) =
     Status(200).chunked(Enumerator.fromStream(Play.resourceAsStream(filename).get)) as HTML
 
-  def verifyEmail(code: EmailVerificationCode, orgPubId: Option[String]) = MaybeUserAction { implicit request =>
+  def verifyEmail(code: EmailVerificationCode, orgPubId: Option[String] = None) = MaybeUserAction { implicit request =>
     val orgIdOpt = orgPubId.flatMap(pubId => Organization.decodePublicId(PublicId[Organization](pubId)).toOption)
     authHelper.doVerifyEmail(code, orgIdOpt)
   }

@@ -37,6 +37,9 @@ case class OrganizationDomainAddRequest(requesterId: Id[User], orgId: Id[Organiz
 case class OrganizationDomainAddResponse(request: OrganizationDomainAddRequest, domain: NormalizedHostname)
 
 case class OrganizationDomainPendingAddRequest(requesterId: Id[User], orgId: Id[Organization], domain: String) extends OrganizationDomainRequest
+case class OrganizationDomainSendMemberConfirmationRequest(requesterId: Id[User], orgId: Id[Organization], email: EmailAddress) extends OrganizationDomainRequest {
+  def domain = email.hostname
+}
 
 case class OrganizationDomainRemoveRequest(requesterId: Id[User], orgId: Id[Organization], domain: String) extends OrganizationDomainRequest
 case class OrganizationDomainRemoveResponse(request: OrganizationDomainRemoveRequest, domain: NormalizedHostname)
@@ -103,6 +106,7 @@ object OrganizationFail {
   case object DOMAIN_IS_EMAIL_PROVIDER extends OrganizationFail(FORBIDDEN, "domain_is_email_provider")
   case object DOMAIN_OWNERSHIP_NOT_FOUND extends OrganizationFail(NOT_FOUND, "domain_ownership_not_found")
   case object UNVERIFIED_EMAIL_DOMAIN extends OrganizationFail(FORBIDDEN, "unverified_email_domain")
+  case object EMAIL_NOT_FOUND extends OrganizationFail(NOT_FOUND, "email_not_found")
 
   def apply(str: String): OrganizationFail = {
     str match {
@@ -124,6 +128,7 @@ object OrganizationFail {
       case DOMAIN_IS_EMAIL_PROVIDER.message => DOMAIN_IS_EMAIL_PROVIDER
       case DOMAIN_OWNERSHIP_NOT_FOUND.message => DOMAIN_OWNERSHIP_NOT_FOUND
       case UNVERIFIED_EMAIL_DOMAIN.message => UNVERIFIED_EMAIL_DOMAIN
+      case EMAIL_NOT_FOUND.message => EMAIL_NOT_FOUND
     }
   }
 }

@@ -1,6 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.google.inject.Inject
+import com.keepit.commanders.OrganizationDomainOwnershipCommander
 import com.keepit.commanders.emails._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -22,7 +23,8 @@ class EmailTestController @Inject() (
     db: Database,
     emailRepo: ElectronicMailRepo,
     emailSenderProvider: EmailSenderProvider,
-    emailTemplateSender: EmailTemplateSender) extends ShoeboxServiceController {
+    emailTemplateSender: EmailTemplateSender,
+    orgDomainCommander: OrganizationDomainOwnershipCommander) extends ShoeboxServiceController {
 
   def sendableAction(name: String)(body: => Html) = Action { request =>
     val result = body
@@ -48,7 +50,7 @@ class EmailTestController @Inject() (
     def friendId = Id[User](request.getQueryString("friendId").get.toLong)
     def sendTo = EmailAddress(request.getQueryString("sendTo").get)
     def libraryId = Id[Library](request.getQueryString("libraryId").get.toLong)
-    def orgId: Option[Id[Organization]] = request.getQueryString("organizationId").map(orgId => Id[Organization](orgId.toLong))
+    def orgId = Id[Organization](request.getQueryString("organizationId").get.toLong)
     def msg = request.getQueryString("msg")
     def tip = request.getQueryString("tip")
     def installs = request.getQueryString("installs").map(_.split(",").toSeq).getOrElse(Seq.empty).map(k => KifiInstallationPlatform(k))
@@ -56,7 +58,7 @@ class EmailTestController @Inject() (
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
-      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, None, verificationCode = Some(verificationCode), domainOwnerIds = orgId.toSet, installs = installs.toSet)
+      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, None, verificationCode = Some(verificationCode), domainOwnerIds = Set(orgId), installs = installs.toSet)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
         val sender = emailSenderProvider.waitList
@@ -89,6 +91,8 @@ class EmailTestController @Inject() (
         }
       case "twitterWaitlist" =>
         emailSenderProvider.twitterWaitlist.sendToUser(sendTo, userId)
+      case "joinByVerifying" =>
+        Future.successful(orgDomainCommander.sendMembershipConfirmationEmail(OrganizationDomainSendMemberConfirmationRequest(userId, orgId, sendTo)).right.get)
     }
 
     emailOptF.map(_.map(email => Ok(email.htmlBody.value))).

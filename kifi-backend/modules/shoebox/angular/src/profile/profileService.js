@@ -151,6 +151,10 @@ angular.module('kifi')
       });
     }
 
+    function sendMemberConfirmationEmail(orgId, email) {
+      return net.sendMemberConfirmationEmail(orgId, email);
+    }
+
     function cancelPendingPrimary() {
       getMe().then(function (me) {
         if (me.primaryEmail && me.primaryEmail.isPendingPrimary) {
@@ -322,6 +326,7 @@ angular.module('kifi')
       setNewPrimaryEmail: setNewPrimaryEmail,
       makePrimary: makePrimary,
       resendVerificationEmail: resendVerificationEmail,
+      sendMemberConfirmationEmail: sendMemberConfirmationEmail,
       cancelPendingPrimary: cancelPendingPrimary,
       changeBiography: changeBiography,
       addEmailAccount: addEmailAccount,
