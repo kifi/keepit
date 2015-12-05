@@ -1,5 +1,7 @@
 package com.keepit.slack
 
+import java.util.concurrent.ExecutionException
+
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, FakeExecutionContextModule }
@@ -210,14 +212,16 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           }.flatMap { xs =>
             FutureHelpers.accumulateOneAtATime(xs) { x =>
               Future.successful(
-                if (x % 2 == 0) throw new Exception("even = boom")
+                if (x % 2 == 0) throw new Error("boom, hardfail")
                 else 2 * x
               ).recover { case f => println(f); -1 }
             }
           }.recoverWith {
-            case f =>
+            case f: scala.concurrent.ExecutionException =>
               println("about to kick a null into the mix")
-              Future.failed(null)
+              println(f)
+              println(f.getCause)
+              Future.failed(new Exception(f.getCause.getStackTrace.toList.mkString("\n")))
           }.recover {
             case failure =>
               println(s"waaaaaaaah, failed because of $failure")
