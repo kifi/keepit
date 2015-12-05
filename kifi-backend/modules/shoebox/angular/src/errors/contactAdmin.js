@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfContactAdmin', [
-  'orgProfileService',
-  function (orgProfileService) {
+  '$rootScope', 'orgProfileService',
+  function ($rootScope, orgProfileService) {
     return {
       restrict: 'A',
       replace: true,
@@ -28,6 +28,8 @@ angular.module('kifi')
             }
           });
         }
+
+        $scope.userLoggedIn = $rootScope.userLoggedIn;
       }
     };
   }
