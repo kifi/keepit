@@ -70,9 +70,9 @@ object DescriptionElements {
 
   def intersperse[T](xs: Seq[T], ins: Seq[T]): Seq[T] = {
     (xs, ins) match {
-      case (x +: Seq(), Seq()) => x +: Seq()
+      case (x, Seq()) => x
+      case (Seq(), in) => in
       case (x +: xr, in +: inr) => x +: in +: intersperse(xr, inr)
-      case _ => throw new IllegalArgumentException(s"intersperse expects lists with length (n, n-1). it got (${xs.length}, ${ins.length})")
     }
   }
   private def intersperseWith[T](xs: Seq[T], x: T): Seq[T] = {

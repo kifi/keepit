@@ -48,7 +48,6 @@ object Hashtags {
       s"#$tag" --> LinkElement(PathCommander.tagSearchPath(tag))
     }
     val surroundingText = hashTagRe.split(note).toList.map(DescriptionElements.fromText)
-    assert(surroundingText.length == linkedTags.length + 1)
     DescriptionElements.intersperse(surroundingText, linkedTags)
   }
 
