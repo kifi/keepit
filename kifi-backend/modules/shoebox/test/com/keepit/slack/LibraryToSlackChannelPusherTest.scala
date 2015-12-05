@@ -205,33 +205,6 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("https://www.kifi.com/find?q=tag%3A%22in+the+world%22")
         }
       }
-      "let me figure out if weird shit is happening" in {
-        withDb(modules: _*) { implicit injector =>
-          val z = db.readOnlyMasterAsync { implicit s =>
-            Set(1, 2, 3)
-          }.flatMap { xs =>
-            FutureHelpers.accumulateOneAtATime(xs) { x =>
-              Future.successful(
-                if (x % 2 == 0) throw new Error("boom, hardfail")
-                else 2 * x
-              ).recover { case f => println(f); -1 }
-            }
-          }.recoverWith {
-            case f: scala.concurrent.ExecutionException =>
-              println("about to kick a null into the mix")
-              println(f)
-              println(f.getCause)
-              Future.failed(new Exception(f.getCause.getStackTrace.toList.mkString("\n")))
-          }.recover {
-            case failure =>
-              println(s"waaaaaaaah, failed because of $failure")
-              Map.empty
-          }
-          val zhere = Await.result(z, Duration.Inf)
-          println(zhere)
-          1 === 1
-        }
-      }
     }
   }
 }
