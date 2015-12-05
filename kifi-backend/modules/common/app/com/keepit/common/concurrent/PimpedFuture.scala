@@ -66,7 +66,10 @@ object FutureHelpers {
   }
 
   def accumulateOneAtATime[I, T](items: Set[I])(f: I => Future[T])(implicit ec: ScalaExecutionContext): Future[Map[I, T]] = {
-    foldLeft(items)(Map.empty[I,T]) { case (acc, nextItem) => f(nextItem).imap(res => acc + (nextItem -> res)) }
+    foldLeft(items)(Map.empty[I,T]) { case (acc, nextItem) => Try(f(nextItem)) match {
+      case Success(resFut) => resFut.imap(res => acc + (nextItem -> res))
+      case Failure(fail) => Future.failed(fail)
+    }
   }
 
   private val noopChunkCB: Int => Unit = _ => Unit
