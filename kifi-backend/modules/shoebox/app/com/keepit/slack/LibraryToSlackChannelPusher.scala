@@ -71,7 +71,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
     }
     log.info(s"[LTSCP] Processing libraries $librariesThatNeedToBeProcessed for slack pushing")
-    FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recover {
+    FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recoverWith {
       case boxFail: ExecutionException => Future.failed(boxFail.getCause)
     }.recover {
       case fail => airbrake.notify(s"Pushing slack updates to ripest libraries failed because of $fail")
