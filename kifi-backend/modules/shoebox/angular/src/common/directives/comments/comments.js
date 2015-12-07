@@ -40,7 +40,7 @@ angular.module('kifi')
               var msg = {
                 sentAt: new Date().getTime(),
                 sentBy: profileService.me,
-                text: inputDiv.innerText
+                text: inputDiv.textContent
               };
               scope.visibleComments.splice(0, 0, msg);
               scope.myAddedComments.push(msg);
@@ -51,7 +51,7 @@ angular.module('kifi')
               event.preventDefault();
               // resetting the caret on a contenteditable div is not so trivial, see link
               // http://stackoverflow.com/a/24117242/3381000
-              inputDiv.innerText = '';
+              inputDiv.textContent = '';
               var textNode = inputDiv;
               var caret = 0; // insert caret after the 10th character say
               var range = document.createRange();
