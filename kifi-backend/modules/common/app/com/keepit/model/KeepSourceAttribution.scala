@@ -4,7 +4,7 @@ import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.slack.models.SlackMessage
-import com.keepit.social.twitter.TwitterHandle
+import com.keepit.social.twitter.{ RawTweet, TwitterHandle }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -51,6 +51,7 @@ object SourceAttribution {
   import KeepAttributionType._
   def toJson(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
     attr match {
+      case t: TwitterAttribution => (Twitter, TwitterAttribution.format.writes(t))
       case x: PartialTwitterAttribution => (TwitterPartial, PartialTwitterAttribution.format.writes(x))
       case s: SlackAttribution => (Slack, SlackAttribution.format.writes(s))
     }
@@ -58,7 +59,8 @@ object SourceAttribution {
 
   def fromJson(attrType: KeepAttributionType, attrJson: JsValue): JsResult[SourceAttribution] = {
     attrType match {
-      case Twitter | TwitterPartial => PartialTwitterAttribution.format.reads(attrJson)
+      case Twitter => TwitterAttribution.format.reads(attrJson)
+      case TwitterPartial => PartialTwitterAttribution.format.reads(attrJson)
       case Slack => SlackAttribution.format.reads(attrJson)
     }
   }
@@ -82,10 +84,12 @@ object SourceAttribution {
 
   implicit val deprecatedWrites = new Writes[SourceAttribution] {
     def writes(x: SourceAttribution): JsValue = {
-      val (attrType, attrJs) = toJson(x)
-      val attrTypeString = attrType match {
-        case Twitter | TwitterPartial => Twitter.name
-        case Slack => Slack.name
+      val (attrTypeString, attrJs) = toJson(x) match {
+        case (TwitterPartial, value) => (Twitter.name, value)
+        case (Twitter, value) =>
+          val partialTwitterFields = PartialTwitterAttribution.format.writes(PartialTwitterAttribution.fromRawTweetJson(value).get)
+          (Twitter.name, value.as[JsObject] ++ partialTwitterFields.as[JsObject])
+        case (Slack, value) => (Slack.name, value)
       }
       Json.obj(attrTypeString -> attrJs)
     }
@@ -110,4 +114,9 @@ object PartialTwitterAttribution {
 case class SlackAttribution(message: SlackMessage) extends SourceAttribution
 object SlackAttribution {
   implicit val format = Json.format[SlackAttribution]
+}
+
+case class TwitterAttribution(tweet: RawTweet) extends SourceAttribution
+object TwitterAttribution {
+  implicit val format = Json.format[TwitterAttribution]
 }

@@ -99,7 +99,7 @@ private class RawKeepImporterActor @Inject() (
     rawKeepGroup.map { rk =>
       val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
       val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
-      val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
+      val attribution = RawKeep.extractKeepSourceAttribution(rk)
       RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, isPrivate = None, keptAt = rk.createdDate, sourceAttribution = attribution)
     }.distinctBy(_.url)
   }
