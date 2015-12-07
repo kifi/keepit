@@ -7,17 +7,34 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.kifi.macros.json
 
-@json case class TwitterId(id: Long) {
-  // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
-  override def toString = id.toString
+import scala.util.Try
+
+sealed trait TwitterId[I <: TwitterId[I]] {
+  val id: Long
 }
+
+sealed trait TwitterIdCompanion[I <: TwitterId[I]] {
+  // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
+  def apply(id: Long): I
+  implicit val longFormat: Format[I] = Format(Reads(id => id.validate[Long].map(apply)), Writes(id => JsNumber(id.id)))
+  val stringReads: Reads[I] = Reads(value => value.validate[String].flatMap(idStr => Try(idStr.toLong).map(id => JsSuccess(apply(id))) getOrElse JsError(s"Invalid $this: $idStr")))
+} 
+
+case class TwitterUserId(id: Long) extends TwitterId[TwitterUserId]
+object TwitterUserId extends TwitterIdCompanion[TwitterUserId]
+
+case class TwitterStatusId(id: Long) extends TwitterId[TwitterStatusId]
+object TwitterStatusId extends TwitterIdCompanion[TwitterStatusId]
+
+case class TwitterMediaId(id: Long) extends TwitterId[TwitterMediaId]
+object TwitterMediaId extends TwitterIdCompanion[TwitterMediaId]
 
 @json case class TwitterHandle(value: String) {
   override def toString = value
 }
 
 case class RawTweet(
-  id: TwitterId,
+  id: TwitterStatusId,
   createdAt: DateTime,
   text: String,
   source: String,
@@ -26,15 +43,15 @@ case class RawTweet(
   retweetedStatus: Option[RawTweet.RawRetweet],
   favoriteCount: Option[Int],
   retweetCount: Option[Int],
-  inReplyToStatusId: Option[TwitterId],
-  inReplyToUserId: Option[TwitterId],
-  inReplyToScreenName: Option[String],
+  inReplyToStatusId: Option[TwitterStatusId],
+  inReplyToUserId: Option[TwitterUserId],
+  inReplyToScreenName: Option[TwitterHandle],
   lang: Option[String], // BCP 47
   possiblySensitive: Option[Boolean],
   originalJson: JsValue)
 object RawTweet {
   implicit val reads: Reads[RawTweet] = (
-    (__ \ 'id).read[TwitterId] and
+    (__ \ 'id_str).read(TwitterStatusId.stringReads) and
     (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
     (__ \ 'text).read[String] and
     (__ \ 'source).read[String] and
@@ -43,9 +60,9 @@ object RawTweet {
     (__ \ 'retweeted_status).readNullable[RawRetweet] and
     (__ \ 'favorite_count).readNullable[Int] and
     (__ \ 'retweet_count).readNullable[Int] and
-    (__ \ 'in_reply_to_status_id).readNullable[TwitterId] and
-    (__ \ 'in_reply_to_user_id).readNullable[TwitterId] and
-    (__ \ 'in_reply_to_screen_name).readNullable[String] and
+    (__ \ 'in_reply_to_status_id_str).readNullable(TwitterStatusId.stringReads) and
+    (__ \ 'in_reply_to_user_id_str).readNullable(TwitterUserId.stringReads) and
+    (__ \ 'in_reply_to_screen_name).readNullable[TwitterHandle] and
     (__ \ 'lang).readNullable[String] and
     (__ \ 'possibly_sensitive).readNullable[Boolean] and
     Reads(JsSuccess(_))
@@ -56,7 +73,7 @@ object RawTweet {
 
   // This is because Play json has a bug with recursive types
   case class RawRetweet(
-    id: TwitterId,
+    id: TwitterStatusId,
     createdAt: DateTime,
     text: String,
     source: String,
@@ -64,15 +81,15 @@ object RawTweet {
     entities: Entities,
     favoriteCount: Option[Int],
     retweetCount: Option[Int],
-    inReplyToStatusId: Option[TwitterId],
-    inReplyToUserId: Option[TwitterId],
-    inReplyToScreenName: Option[String],
+    inReplyToStatusId: Option[TwitterStatusId],
+    inReplyToUserId: Option[TwitterUserId],
+    inReplyToScreenName: Option[TwitterHandle],
     lang: Option[String], // BCP 47
     possiblySensitive: Option[Boolean])
 
   object RawRetweet {
     implicit val reads: Reads[RawRetweet] = (
-      (__ \ 'id).read[TwitterId] and
+      (__ \ 'id_str).read(TwitterStatusId.stringReads) and
       (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
       (__ \ 'text).read[String] and
       (__ \ 'source).read[String] and
@@ -80,9 +97,9 @@ object RawTweet {
       (__ \ 'entities).read[RawTweet.Entities] and
       (__ \ 'favorite_count).readNullable[Int] and
       (__ \ 'retweet_count).readNullable[Int] and
-      (__ \ 'in_reply_to_status_id).readNullable[TwitterId] and
-      (__ \ 'in_reply_to_user_id).readNullable[TwitterId] and
-      (__ \ 'in_reply_to_screen_name).readNullable[String] and
+      (__ \ 'in_reply_to_status_id_str).readNullable(TwitterStatusId.stringReads) and
+      (__ \ 'in_reply_to_user_id_str).readNullable(TwitterUserId.stringReads) and
+      (__ \ 'in_reply_to_screen_name).readNullable[TwitterHandle] and
       (__ \ 'lang).readNullable[String] and
       (__ \ 'possibly_sensitive).readNullable[Boolean]
     )(RawRetweet.apply _)
@@ -134,18 +151,18 @@ object RawTweet {
 
   sealed trait Entity
   object Entity {
-    case class UserMentionsEntity(name: String, screenName: String, indices: TweetIndices, id: TwitterId) extends Entity
+    case class UserMentionsEntity(name: String, screenName: TwitterHandle, indices: TweetIndices, id: TwitterUserId) extends Entity
     object UserMentionsEntity {
       implicit val reads: Reads[UserMentionsEntity] = (
         (__ \ 'name).read[String] and
-        (__ \ 'screen_name).read[String] and
+        (__ \ 'screen_name).read[TwitterHandle] and
         (__ \ 'indices).read[TweetIndices] and
-        (__ \ 'id).read[TwitterId]
+        (__ \ 'id_str).read(TwitterUserId.stringReads)
       )(UserMentionsEntity.apply _)
     }
 
     // type is only "photo" for now, per Twitter docs. May change in the future.
-    case class MediaEntity(id: TwitterId, indices: TweetIndices, mediaUrlHttps: String, url: String, displayUrl: String, expandedUrl: String, sizes: Map[String, MediaEntity.Size])
+    case class MediaEntity(id: TwitterMediaId, indices: TweetIndices, mediaUrlHttps: String, url: String, displayUrl: String, expandedUrl: String, sizes: Map[String, MediaEntity.Size])
     object MediaEntity {
       // Sizes key can be "medium", "thumb", "small", or "large"
       case class Size(w: Int, h: Int, resize: String)
@@ -154,7 +171,7 @@ object RawTweet {
       }
 
       implicit val reads: Reads[MediaEntity] = (
-        (__ \ 'id).read[TwitterId] and
+        (__ \ 'id_str).read(TwitterMediaId.stringReads) and
         (__ \ 'indices).read[TweetIndices] and
         (__ \ 'media_url_https).read[String] and
         (__ \ 'url).read[String] and
@@ -202,13 +219,13 @@ object RawTweet {
   case class User(
     name: String,
     screenName: TwitterHandle,
-    id: TwitterId,
+    id: TwitterUserId,
     profileImageUrlHttps: String)
   object User {
     implicit val reads: Reads[User] = (
       (__ \ 'name).read[String] and
       (__ \ 'screen_name).read[TwitterHandle] and
-      (__ \ 'id).read[TwitterId] and
+      (__ \ 'id_str).read(TwitterUserId.stringReads) and
       (__ \ 'profile_image_url_https).read[String]
     )(User.apply _)
   }

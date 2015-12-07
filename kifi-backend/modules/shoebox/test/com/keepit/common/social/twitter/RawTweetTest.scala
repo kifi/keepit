@@ -1,6 +1,6 @@
 package com.keepit.common.social.twitter
 
-import com.keepit.social.twitter.{ TwitterId, RawTweet }
+import com.keepit.social.twitter.{ TwitterStatusId, RawTweet }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 
@@ -13,10 +13,10 @@ class RawTweetTest extends Specification {
   "abook controller" should {
     "support mobile (ios) upload" in {
       val maybeTweet1 = RawTweet.format.reads(Json.parse(rawString))
-      maybeTweet1.get.id === TwitterId(586410263194157000L)
+      maybeTweet1.get.id === TwitterStatusId(586410263194157056L)
 
       val maybeTweet2 = RawTweet.format.reads(Json.parse(rawString2))
-      maybeTweet2.get.id === TwitterId(360813238411214850L)
+      maybeTweet2.get.id === TwitterStatusId(360813238411214850L)
     }
   }
 }
