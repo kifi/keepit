@@ -113,6 +113,7 @@ case class MessageThread(
   uriId: Id[NormalizedURI],
   url: String,
   nUrl: String,
+  startedBy: Option[Id[User]], // to smooth the transition
   participants: MessageThreadParticipants,
   pageTitle: Option[String],
   keepId: Option[Id[Keep]] = None)
@@ -124,6 +125,11 @@ case class MessageThread(
 
   def withId(id: Id[MessageThread]): MessageThread = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
+  def withStartedBy(owner: Id[User]) = if (participants.contains(owner)) {
+    this.copy(startedBy = Some(owner))
+  } else {
+    this.copy(startedBy = Some(owner)).withParticipants(currentDateTime, Seq(owner))
+  }
   def withKeepId(keepId: Id[Keep]): MessageThread = this.copy(keepId = Some(keepId))
 
   def withParticipants(when: DateTime, userIds: Seq[Id[User]], nonUsers: Seq[NonUserParticipant] = Seq.empty) = {
@@ -155,6 +161,7 @@ object MessageThread {
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'url).format[String] and
     (__ \ 'nUrl).format[String] and
+    (__ \ 'startedBy).formatNullable[Id[User]] and
     (__ \ 'participants).format[MessageThreadParticipants] and
     (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'keep).formatNullable[Id[Keep]]
@@ -162,7 +169,7 @@ object MessageThread {
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 6
+  override val version = 7
   val namespace = "message_thread_by_external_id"
   def toKey(): String = externalId.id
 }

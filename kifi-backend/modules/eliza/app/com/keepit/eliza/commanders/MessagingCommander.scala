@@ -187,7 +187,7 @@ class MessagingCommander @Inject() (
         statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ONE_IN_THOUSAND)
 
         val (thread, isNew) = db.readWrite { implicit session =>
-          val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt))
+          val (thread, isNew) = threadRepo.getOrCreate(from, userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt))
           if (isNew) {
             checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
             nonUserRecipients.foreach { nonUser =>

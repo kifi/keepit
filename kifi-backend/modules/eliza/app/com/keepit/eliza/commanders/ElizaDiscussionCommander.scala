@@ -116,6 +116,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
               url = csKeep.url,
               nUrl = csKeep.url,
               pageTitle = csKeep.title,
+              startedBy = Some(csKeep.owner),
               participants = MessageThreadParticipants(Set(csKeep.owner)),
               keepId = Some(csKeep.id)
             ))
