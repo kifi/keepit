@@ -20,7 +20,7 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[Social
   def doNotUseSave(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def get(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): SocialUserInfo
-  def getBySocialIds(ids: Seq[SocialId])(implicit session: RSession): Seq[SocialUserInfo]
+  def getByNetworkAndSocialIds(network: SocialNetworkType, ids: Set[SocialId])(implicit session: RSession): Map[SocialId, SocialUserInfo]
   def getUnprocessed()(implicit session: RSession): Seq[SocialUserInfo]
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo]
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo]
@@ -116,8 +116,8 @@ class SocialUserInfoRepoImpl @Inject() (
     (for (f <- rows if f.userId.inSet(ids)) yield f).list
   }
 
-  def getBySocialIds(socialIds: Seq[SocialId])(implicit session: RSession): Seq[SocialUserInfo] = {
-    (for (f <- rows if f.socialId.inSet(socialIds)) yield f).list
+  def getByNetworkAndSocialIds(network: SocialNetworkType, ids: Set[SocialId])(implicit session: RSession): Map[SocialId, SocialUserInfo] = {
+    (for (f <- rows if f.socialId.inSet(ids) && f.networkType === network) yield f).list.map(r => (r.socialId, r)).toMap
   }
 
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =

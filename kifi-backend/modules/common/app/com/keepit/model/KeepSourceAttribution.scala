@@ -4,6 +4,7 @@ import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.slack.models.SlackMessage
+import com.keepit.social.BasicUser
 import com.keepit.social.twitter.{ RawTweet, TwitterHandle }
 import com.kifi.macros.json
 import org.joda.time.DateTime
@@ -82,9 +83,10 @@ object SourceAttribution {
     }
   }
 
-  implicit val deprecatedWrites = new Writes[SourceAttribution] {
-    def writes(x: SourceAttribution): JsValue = {
-      val (attrTypeString, attrJs) = toJson(x) match {
+  implicit val deprecatedWrites = new Writes[(SourceAttribution, Option[BasicUser])] {
+    def writes(x: (SourceAttribution, Option[BasicUser])): JsValue = {
+      val (source, userOpt) = x
+      val (attrTypeString, attrJs) = toJson(source) match {
         case (TwitterPartial, value) => (Twitter.name, value)
         case (Twitter, value) =>
           val updatedValue = for {
@@ -97,7 +99,7 @@ object SourceAttribution {
           (Twitter.name, updatedValue getOrElse value)
         case (Slack, value) => (Slack.name, value)
       }
-      Json.obj(attrTypeString -> attrJs)
+      Json.obj(attrTypeString -> attrJs, "kifi" -> userOpt)
     }
   }
 }

@@ -214,9 +214,9 @@ class TwitterSocialGraphImpl @Inject() (
       log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
       friendIds.grouped(100) foreach { userIds =>
         val socialUserInfos = db.readOnlyReplica { implicit s =>
-          socialUserInfoRepo.getBySocialIds(userIds.map(id => SocialId(id.toString)))
+          socialUserInfoRepo.getByNetworkAndSocialIds(SocialNetworks.TWITTER, userIds.map(id => SocialId(id.toString)).toSet)
         }
-        val twitterHandles = socialUserInfos.flatMap(_.username.map(TwitterHandle(_))).toSet
+        val twitterHandles = socialUserInfos.values.flatMap(_.username.map(TwitterHandle(_))).toSet
         db.readOnlyMaster { implicit s =>
           twitterSyncStateRepo.getTwitterSyncsByFriendIds(twitterHandles)
         } map { twitterSyncState =>
