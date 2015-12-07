@@ -132,10 +132,37 @@ angular.module('kifi')
         //console.log(parts);
         //console.log('\n');
         for (var i = 0; i < parts.length; i += 3) {
-          // first item is actually plain text no matter what
+
+
+          var item;
+          if (imageUrlRe.test(parts[i])) {
+            item = {
+              type: 'IMAGE',
+              data: {
+                src: parts[i]
+              }
+            };
+            items.push(item);
+          } else if (uriRe.test(parts[i])) {
+            item = {
+              type: 'LINK',
+              data: {
+                link: parts[i],
+                text: parts[i]
+              }
+            };
+            items.push(item);
+          } else {
+            items = items.concat(processPlainTextForEmojis(parts[i]));
+          }
+
+
+
           // format emoji
           var uri = parts[i + 1];
           var scheme = parts[i + 2];
+
+
           if (!scheme && uri && uri.indexOf('/') < 0 || parts[i].slice(-1) === '@') {
             var ambiguous = parts[i] + uri;
             var processed = processEmail(ambiguous);
@@ -148,13 +175,11 @@ angular.module('kifi')
             }
           }
 
-          // add plain text
-          items = items.concat(processPlainTextForEmojis(parts[i]));
+
           if (uri) {
             //var escapedUri = escapeHtml(uri);
             //var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
             var basicUrl = (scheme ? '' : 'http://') + uri;
-            var item;
             if (imageUrlRe.test(uri)) {
               item = {
                 type: 'IMAGE',
@@ -209,7 +234,8 @@ angular.module('kifi')
         }
         // var decodeURIComponent = function(t) {return t;};
         return function (selector) {
-          return decodeURIComponent(selector.split('|')[6]).replace(replaceRe, replace);
+          var selParts = selector.split('|');
+          return decodeURIComponent(selParts[selParts[0] === 'i' ? 4 : 6]).replace(replaceRe, replace);
         };
       }());
 
