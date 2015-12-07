@@ -214,7 +214,6 @@ angular.module('kifi')
       }());
 
       var formatKifiSelRangeTextToParts = (function () {
-        'use strict';
         var replaceRe = /([\u001e\u001f])/g;
         function replace(replacements, ch) {
           return replacements[ch];
@@ -224,7 +223,7 @@ angular.module('kifi')
         return function (selector) {
           var selParts = selector.split('|');
           // "i" is image, url located at position 4, "r" seems to be for normal text, positioned at 6
-          var decoded = decodeURIComponent(selParts[selParts[0] === "i" ? 4 : 6]).replace(replaceRe, replace);
+          var decoded = decodeURIComponent(selParts[selParts[0] === 'i' ? 4 : 6]).replace(replaceRe, replace);
           return processPlainText(decoded);
         };
       }());
