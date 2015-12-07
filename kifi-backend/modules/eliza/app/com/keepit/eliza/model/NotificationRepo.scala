@@ -56,25 +56,26 @@ class NotificationRepoImpl @Inject() (
   def table(tag: Tag): NotificationTable = new NotificationTable(tag)
   initTable()
 
-  def deleteCache(model: Notification)(implicit session: RSession): Unit = {}
+  private def activeRows = rows.filter(_.state === NotificationStates.ACTIVE)
 
+  def deleteCache(model: Notification)(implicit session: RSession): Unit = {}
   def invalidateCache(model: Notification)(implicit session: RSession): Unit = {}
 
   def getLastByRecipientAndKind(recipient: Recipient, kind: NKind)(implicit session: RSession): Option[Notification] = {
     val kindStr = kind.name
-    val query = (for (row <- rows if row.recipient === recipient && row.kind === kindStr) yield row).sortBy(_.lastEvent.desc)
+    val query = (for (row <- activeRows if row.recipient === recipient && row.kind === kindStr) yield row).sortBy(_.lastEvent.desc)
     query.firstOption
   }
 
   def getByGroupIdentifier(recipient: Recipient, kind: NKind, identifier: String)(implicit session: RSession): Option[Notification] = {
     val kindStr = kind.name
-    val q = for (row <- rows if row.recipient === recipient && row.groupIdentifier === identifier && row.kind === kindStr) yield row
+    val q = for (row <- activeRows if row.recipient === recipient && row.groupIdentifier === identifier && row.kind === kindStr) yield row
     q.firstOption
   }
 
   def getNotificationsWithNewEventsCount(recipient: Recipient)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.hasNewEvent
+      row <- activeRows if row.recipient === recipient && row.hasNewEvent
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -82,7 +83,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadNotificationsCount(recipient: Recipient)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.unread
+      row <- activeRows if row.recipient === recipient && row.unread
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -90,7 +91,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadNotificationsCountForKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.kind === kind && row.unread
+      row <- activeRows if row.recipient === recipient && row.kind === kind && row.unread
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -98,7 +99,7 @@ class NotificationRepoImpl @Inject() (
 
   def getUnreadNotificationsCountExceptKind(recipient: Recipient, kind: String)(implicit session: RSession): Int = {
     val unread = for (
-      row <- rows if row.recipient === recipient && row.kind =!= kind && row.unread
+      row <- activeRows if row.recipient === recipient && row.kind =!= kind && row.unread
     ) yield row
     val unreadCount = unread.length
     unreadCount.run
@@ -106,42 +107,42 @@ class NotificationRepoImpl @Inject() (
 
   def setAllReadBefore(recipient: Recipient, time: DateTime)(implicit session: RWSession): Unit = {
     val q = for (
-      row <- rows if row.recipient === recipient && row.hasNewEvent && row.lastEvent <= time
+      row <- activeRows if row.recipient === recipient && row.hasNewEvent && row.lastEvent <= time
     ) yield row.lastChecked
     q.update(Some(clock.now()))
   }
 
   def setAllRead(recipient: Recipient)(implicit session: RWSession): Unit = {
     val q = for (
-      row <- rows if row.recipient === recipient && row.hasNewEvent
+      row <- activeRows if row.recipient === recipient && row.hasNewEvent
     ) yield row.lastChecked
     q.update(Some(clock.now()))
   }
 
   def getNotificationsWithNewEvents(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient && notif.hasNewEvent
+      notif <- activeRows if notif.recipient === recipient && notif.hasNewEvent
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
   def getNotificationsWithNewEventsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient && notif.lastEvent < time && notif.hasNewEvent
+      notif <- activeRows if notif.recipient === recipient && notif.lastEvent < time && notif.hasNewEvent
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
   def getLatestNotifications(recipient: Recipient, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient
+      notif <- activeRows if notif.recipient === recipient
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }
 
   def getLatestNotificationsBefore(recipient: Recipient, time: DateTime, howMany: Int)(implicit session: RSession): Seq[Notification] = {
     val q = for {
-      notif <- rows if notif.recipient === recipient && notif.lastEvent < time
+      notif <- activeRows if notif.recipient === recipient && notif.lastEvent < time
     } yield notif
     q.sortBy(_.lastEvent.desc).take(howMany).list
   }

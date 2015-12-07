@@ -118,14 +118,14 @@ class MessageRepoImpl @Inject() (
   }
 
   def getMaxId()(implicit session: RSession): Id[ElizaMessage] = {
-    rows.map(_.id).max.run.getOrElse(Id(0))
+    activeRows.map(_.id).max.run.getOrElse(Id(0))
   }
 
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int) = {
     afterOpt.map { after =>
       StaticQuery.queryNA[(Int, Int)](s"select count(*), sum(created_at > '$after') from message where thread_id = $threadId").first
     } getOrElse {
-      val n = rows.filter(row => row.thread === threadId).length.run
+      val n = activeRows.filter(row => row.thread === threadId).length.run
       (n, n)
     }
   }
