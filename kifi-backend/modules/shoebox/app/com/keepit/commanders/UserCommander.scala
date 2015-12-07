@@ -402,29 +402,24 @@ class UserCommanderImpl @Inject() (
       userValueRepo.getValue(userId, UserValues.welcomeEmailSent)
     }
     if (!welcomeEmailAlreadySent) {
-      val (verificationCode, domainOwnerIds, installs) = db.readWrite { implicit session =>
-        val verifyCodeWithOrganizations = for {
+      val (verificationCode, installs) = db.readWrite { implicit session =>
+        val verifyCode = for {
           emailAddress <- targetEmailOpt if withVerification
           emailRecord <- emailRepo.getByAddressAndUser(userId, emailAddress)
           code <- emailRecord.verificationCode orElse emailRepo.save(emailRecord.withVerificationCode(clock.now())).verificationCode
         } yield {
-          val domainOwnerIds = NormalizedHostname.fromHostname(emailRecord.address.hostname)
-            .map(organizationDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
-            .diff(userValueRepo.getValue(emailRecord.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
-            .filter(orgId => !organizationMembershipRepo.getAllByOrgId(orgId).exists(_.userId == emailRecord.userId))
-            .filter(orgId => canVerifyToJoin(orgId))
-          (code, domainOwnerIds)
+          code
         }
 
         val installs = kifiInstallationRepo.all(userId).groupBy(_.platform).keys.toSet
 
-        verifyCodeWithOrganizations match {
-          case Some(v) => (Some(v._1), v._2, installs)
-          case None => (None, Set.empty[Id[Organization]], installs)
+        verifyCode match {
+          case Some(v) => (Some(v), installs)
+          case None => (None, installs)
         }
       }
 
-      val emailF = welcomeEmailSender.get.sendToUser(userId, targetEmailOpt, verificationCode, domainOwnerIds, installs)
+      val emailF = welcomeEmailSender.get.sendToUser(userId, targetEmailOpt, verificationCode, installs)
       emailF.map { email =>
         db.readWrite { implicit rw => userValueRepo.setValue(userId, UserValues.welcomeEmailSent.name, true) }
         ()

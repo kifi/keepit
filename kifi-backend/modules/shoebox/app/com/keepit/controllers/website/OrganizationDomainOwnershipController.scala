@@ -6,7 +6,7 @@ import com.keepit.common.controller.{ UserActionsHelper, ShoeboxServiceControlle
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ OrganizationDomainRemoveRequest, OrganizationDomainAddRequest, OrganizationPermission, Organization }
+import com.keepit.model.{ OrganizationDomainSendMemberConfirmationRequest, OrganizationDomainRemoveRequest, OrganizationDomainAddRequest, OrganizationPermission, Organization }
 import com.keepit.shoebox.controllers.OrganizationAccessActions
 import play.api.libs.json.{ JsSuccess, Json, JsError }
 
@@ -57,6 +57,14 @@ class OrganizationDomainOwnershipController @Inject() (
           case Some(fail) => fail.asErrorResponse
           case None => Ok
         }
+    }
+  }
+
+  def sendMemberConfirmationEmail(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.JOIN_BY_VERIFYING)(parse.tolerantJson) { implicit request =>
+    val email = (request.body \ "email").as[EmailAddress]
+    orgDomainOwnershipCommander.sendMembershipConfirmationEmail(OrganizationDomainSendMemberConfirmationRequest(request.request.userId, request.orgId, email)) match {
+      case Left(fail) => fail.asErrorResponse
+      case Right(_) => Ok
     }
   }
 }

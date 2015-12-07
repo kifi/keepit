@@ -511,6 +511,8 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
           (org, owner, user)
         }
 
+        val orgPubId = Organization.publicId(org.id.get)
+
         val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.JoinByVerifying -> FeatureSetting.DISABLED) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, initOrgSettings)) must beRight
 
@@ -521,8 +523,8 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val authController = inject[AuthController]
         inject[FakeUserActionsHelper].setUser(user)
-        val request = FakeRequest(com.keepit.controllers.core.routes.AuthController.verifyEmail(userEmail.verificationCode.get))
-        val response = authController.verifyEmail(userEmail.verificationCode.get)(request)
+        val request = FakeRequest(com.keepit.controllers.core.routes.AuthController.verifyEmail(userEmail.verificationCode.get, Some(orgPubId.id)))
+        val response = authController.verifyEmail(userEmail.verificationCode.get, Some(orgPubId.id))(request)
         Await.ready(response, Duration(5, "seconds"))
 
         val membershipRepo = inject[OrganizationMembershipRepo]
@@ -538,7 +540,8 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val newOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, newOrgSettings)) must beRight
 
-        val response2 = authController.verifyEmail(userEmail.verificationCode.get)(request)
+
+        val response2 = authController.verifyEmail(userEmail.verificationCode.get, Some(orgPubId.id))(request)
         Await.ready(response2, Duration(5, "seconds"))
 
         val someMembership = db.readOnlyMaster { implicit s => membershipRepo.getByOrgIdAndUserId(org.id.get, user.id.get) }

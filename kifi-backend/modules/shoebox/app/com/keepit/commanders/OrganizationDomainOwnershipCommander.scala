@@ -2,16 +2,18 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.EmailAddress
+import com.keepit.common.mail.{ LocalPostOffice, SystemEmailAddress, ElectronicMail, EmailAddress }
 import com.keepit.common.mail.EmailAddress._
+import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.libs.json._
-import com.keepit.common.time.{ currentDateTime, DEFAULT_DATE_TIME_ZONE }
+import com.keepit.common.time.{ Clock, currentDateTime, DEFAULT_DATE_TIME_ZONE }
 
 import scala.concurrent.{ ExecutionContext => ScalaExecutionContext }
 
@@ -25,7 +27,7 @@ trait OrganizationDomainOwnershipCommander {
   def hideOrganizationForUser(userId: Id[User], orgId: Id[Organization]): Unit
   def addPendingOwnershipByEmail(orgId: Id[Organization], userId: Id[User], emailAddress: EmailAddress): Option[OrganizationFail]
   def addOwnershipsForPendingOrganizations(userId: Id[User], emailAddress: EmailAddress): Map[Id[Organization], Option[OrganizationFail]]
-  def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit
+  def sendMembershipConfirmationEmail(request: OrganizationDomainSendMemberConfirmationRequest): Either[OrganizationFail, ElectronicMail]
 }
 
 object OrganizationDomainOwnershipCommander {
@@ -35,6 +37,7 @@ object OrganizationDomainOwnershipCommander {
 @Singleton
 class OrganizationDomainOwnershipCommanderImpl @Inject() (
     db: Database,
+    orgRepo: OrganizationRepo,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
     orgConfigurationRepo: OrganizationConfigurationRepo,
     domainRepo: DomainRepo,
@@ -45,7 +48,11 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     orgMembershipCommander: OrganizationMembershipCommander,
     userValueRepo: UserValueRepo,
     airbrake: AirbrakeNotifier,
-    implicit val executionContext: ScalaExecutionContext) extends OrganizationDomainOwnershipCommander with Logging {
+    postOffice: LocalPostOffice,
+    fortytwoConfig: FortyTwoConfig,
+    clock: Clock,
+    implicit val executionContext: ScalaExecutionContext,
+    implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationDomainOwnershipCommander with Logging {
 
   def getDomainsOwned(orgId: Id[Organization]): Set[NormalizedHostname] = db.readOnlyReplica { implicit session =>
     orgDomainOwnershipRepo.getOwnershipsForOrganization(orgId).map(_.normalizedHostname).toSet
@@ -53,26 +60,34 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
 
   private def getValidationError(request: OrganizationDomainRequest)(implicit session: RSession): Option[OrganizationFail] = {
     val (requesterId, orgId, domainName) = (request.requesterId, request.orgId, request.domain)
-    val domainFailOpt = NormalizedHostname.fromHostname(domainName) match {
-      case None => Some(OrganizationFail.INVALID_DOMAIN_NAME)
-      case Some(validDomain) => {
-        domainRepo.get(validDomain).collect {
-          case domain if domain.isEmailProvider => OrganizationFail.DOMAIN_IS_EMAIL_PROVIDER
-        }
+
+    val invalidDomain = Some(OrganizationFail.INVALID_DOMAIN_NAME).filter(_ => NormalizedHostname.fromHostname(domainName).isEmpty)
+    lazy val emailProvider = Some(OrganizationFail.DOMAIN_IS_EMAIL_PROVIDER).filter { _ =>
+      NormalizedHostname.fromHostname(domainName).flatMap(domainRepo.get(_)).exists(_.isEmailProvider)
+    }
+    lazy val domainNotOwned = Some(OrganizationFail.DOMAIN_OWNERSHIP_NOT_FOUND).filter { _ =>
+      !NormalizedHostname.fromHostname(domainName).exists { hostname =>
+        orgDomainOwnershipRepo.getOwnershipsForOrganization(orgId).exists(_.normalizedHostname == hostname)
       }
     }
-    lazy val permissionFailOpt = {
-      Some(OrganizationFail.INSUFFICIENT_PERMISSIONS)
-        .filter(_ => !permissionCommander.getOrganizationPermissions(orgId, Some(requesterId)).contains(OrganizationPermission.MANAGE_PLAN))
+    lazy val managePermission = Some(OrganizationFail.INSUFFICIENT_PERMISSIONS).filter { _ =>
+      !permissionCommander.getOrganizationPermissions(orgId, Some(requesterId)).contains(OrganizationPermission.MANAGE_PLAN)
     }
-    lazy val verifiedEmailOpt = {
+    lazy val joinViaEmailPermission = Some(OrganizationFail.INSUFFICIENT_PERMISSIONS).filter { _ =>
+      !permissionCommander.getOrganizationPermissions(orgId, Some(requesterId)).contains(OrganizationPermission.JOIN_BY_VERIFYING)
+    }
+
+    lazy val verifiedEmail = {
       Some(OrganizationFail.UNVERIFIED_EMAIL_DOMAIN).filter { _ =>
         !userEmailAddressRepo.getAllByUser(requesterId).exists(email => email.address.hostname.trim.toLowerCase == domainName.trim.toLowerCase && email.verified)
       }
     }
+
     request match {
-      case _: OrganizationDomainAddRequest => domainFailOpt.orElse(permissionFailOpt).orElse(verifiedEmailOpt)
-      case _ => domainFailOpt.orElse(permissionFailOpt)
+      case _: OrganizationDomainAddRequest => managePermission.orElse(invalidDomain).orElse(emailProvider).orElse(verifiedEmail)
+      case _: OrganizationDomainRemoveRequest => managePermission.orElse(invalidDomain).orElse(domainNotOwned)
+      case _: OrganizationDomainPendingAddRequest => managePermission.orElse(invalidDomain).orElse(emailProvider)
+      case _: OrganizationDomainSendMemberConfirmationRequest => joinViaEmailPermission.orElse(invalidDomain).orElse(domainNotOwned)
     }
   }
 
@@ -96,22 +111,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
       }
     }
 
-    db.readWriteAsync { implicit session =>
-      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
-      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
-    }
-
     ownership
-  }
-
-  private def sendVerificationEmailsToAllPotentialMembers(ownership: OrganizationDomainOwnership)(implicit session: RWSession): Unit = {
-    lazy val orgMembers = orgMembershipRepo.getAllByOrgId(ownership.organizationId)
-    val usersToEmail = userEmailAddressRepo.getByDomain(ownership.normalizedHostname)
-      .filter { userEmail =>
-        !userEmail.address.address.contains("+test@kifi.com") && userEmail.lastVerificationSent.forall(lastSent => lastSent.plusDays(1).isBefore(currentDateTime)) &&
-          !orgMembers.exists(_.userId == userEmail.userId) && !userValueRepo.getValue(userEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(ownership.organizationId)
-      }
-    usersToEmail.foreach(userEmailAddressCommander.sendVerificationEmailHelper)
   }
 
   def removeDomainOwnership(request: OrganizationDomainRemoveRequest): Option[OrganizationFail] = {
@@ -182,14 +182,39 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     }.toMap
   }
 
-  def autoJoinOrgViaEmail(verifiedEmail: UserEmailAddress)(implicit session: RWSession): Unit = {
-    NormalizedHostname.fromHostname(verifiedEmail.address.hostname)
-      .map(domain => orgDomainOwnershipRepo.getOwnershipsForDomain(domain).map(_.organizationId)).getOrElse(Set.empty)
-      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(verifiedEmail.userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
-      .diff(userValueRepo.getValue(verifiedEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
-      .foreach { orgId =>
-        val addRequest = OrganizationMembershipAddRequest(orgId, requesterId = verifiedEmail.userId, targetId = verifiedEmail.userId)
-        orgMembershipCommander.addMembershipHelper(addRequest)
-      }
+  def sendMembershipConfirmationEmail(request: OrganizationDomainSendMemberConfirmationRequest): Either[OrganizationFail, ElectronicMail] = {
+    db.readOnlyReplica(implicit s => getValidationError(request)) match {
+      case Some(fail) => Left(fail)
+      case None =>
+        db.readWrite { implicit s =>
+          userEmailAddressRepo.getByAddressAndUser(request.requesterId, request.email) match {
+            case Some(userEmail) =>
+              val org = orgRepo.get(request.orgId)
+
+              val emailWithCode = userEmailAddressRepo.save(userEmail.withVerificationCode(clock.now()))
+              val siteUrl = fortytwoConfig.applicationBaseUrl
+              val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(emailWithCode.verificationCode.get, Some(Organization.publicId(org.id.get)))}"
+
+              Right(postOffice.sendMail(ElectronicMail(
+                from = SystemEmailAddress.NOTIFICATIONS,
+                fromName = Some("Kifi"),
+                to = Seq(userEmail.address),
+                subject = s"Join ${org.name} on Kifi",
+                htmlBody =
+                  s"""
+                       |Per your request, you can join <a href="www.kifi.com/${org.handle.value}" target="_blank">${org.name}</a> on Kifi by <a href=${verifyUrl} target="_blank">clicking here</a>.
+                       |This will give you access to all of their team libraries, discussions, and other Kifi for Teams features.
+                    """.stripMargin,
+                textBody = Some(
+                  s"""
+                       |Per your request, you can join ${org.name} on Kifi by clicking here - ${verifyUrl}.
+                       |This will give you access to all of their team libraries, discussions, and other Kifi for Teams features.
+                     """.stripMargin),
+                category = NotificationCategory.User.JOIN_BY_VERIFYING
+              )))
+            case None => Left(OrganizationFail.EMAIL_NOT_FOUND)
+          }
+        }
+    }
   }
 }

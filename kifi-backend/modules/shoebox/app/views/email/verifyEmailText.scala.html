@@ -1,18 +1,10 @@
-@(toUserId: Id[User], verifyUrl: String, domainOwnerIds: Set[Id[Organization]])
+@(toUserId: Id[User], verifyUrl: String)
 @import com.keepit.common.mail.template.helpers._
-@orgNames = @{domainOwnerIds.map(orgId => organizationName(orgId))}
 
 Hi @firstName(toUserId),
 
 To protect your privacy and security, please confirm your email address by clicking the link below:
 @verifyUrl
-
-@if(orgNames.nonEmpty) {
-Upon confirmation, you'll become a member of these teams:
-@for(orgName <- orgNames) {
-  @orgName
-}
-}
 
 We look forward seeing you on Kifi,
 

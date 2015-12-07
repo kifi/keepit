@@ -55,7 +55,7 @@ GET     /signup/:provider           @com.keepit.controllers.core.AuthController.
 # do we still use this endpoint?
 POST    /mobileauth/:provider       @com.keepit.controllers.mobile.MobileAuthController.accessTokenLogin(provider)
 
-GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code: EmailVerificationCode)
+GET     /verify/:code               @com.keepit.controllers.core.AuthController.verifyEmail(code: EmailVerificationCode, orgPubId: Option[String] ?= None)
 
 POST    /password/forgot            @com.keepit.controllers.core.AuthController.forgotPassword()
 GET     /password/:code             @com.keepit.controllers.core.AuthController.setPasswordPage(code: String)
@@ -533,6 +533,7 @@ GET           /site/organizations/:id/getDomains                @com.keepit.cont
 POST          /site/organizations/:id/addDomain                 @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomain(id: PublicId[Organization])
 POST          /site/organizations/:id/removeDomain              @com.keepit.controllers.website.OrganizationDomainOwnershipController.removeDomain(id: PublicId[Organization])
 POST          /site/organizations/:id/addDomainAfterVerification  @com.keepit.controllers.website.OrganizationDomainOwnershipController.addDomainOwnershipAfterVerification(id: PublicId[Organization])
+POST          /site/organizations/:id/sendMemberConfirmationEmail @com.keepit.controllers.website.OrganizationDomainOwnershipController.sendMemberConfirmationEmail(id: PublicId[Organization])
 
 GET           /site/organizations/:id/referralCode              @com.keepit.controllers.website.PaymentsController.getReferralCode(id: PublicId[Organization])
 POST          /site/organizations/:id/redeemCode                @com.keepit.controllers.website.PaymentsController.redeemCreditCode(id: PublicId[Organization])
