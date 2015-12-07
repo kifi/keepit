@@ -76,7 +76,7 @@ class ElizaEmailCommander @Inject() (
     val (nuts, starterUserId) = db.readOnlyMaster { implicit session =>
       (
         nonUserThreadRepo.getByMessageThreadId(thread.id.get),
-        userThreadRepo.getThreadStarter(thread.id.get)
+        thread.startedBy
       )
     }
 

@@ -13,13 +13,13 @@ object MessageThreadFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
   def thread(): PartialMessageThread = {
     val url = s"www.${RandomStringUtils.randomAlphabetic(10)}.com"
-    val starter = Id[User](idx.incrementAndGet())
+    val starter = Id[User](-idx.incrementAndGet()) // impossible user id
     PartialMessageThread(MessageThread(
       uriId = Id(idx.incrementAndGet()),
       url = url,
       nUrl = url,
       pageTitle = Some(RandomStringUtils.randomAlphabetic(5).toUpperCase),
-      startedBy = Some(starter),
+      startedBy = starter,
       participants = MessageThreadParticipants(Set(starter)),
       keepId = None
     ))
@@ -29,8 +29,8 @@ object MessageThreadFactory {
     def withKeep(keepId: Id[Keep]) = this.copy(th = th.copy(keepId = Some(keepId)))
     def withTitle(newTitle: String) = this.copy(th = th.copy(pageTitle = Some(newTitle)))
     def withUri(uriId: Id[NormalizedURI]) = this.copy(th = th.copy(uriId = uriId))
-    def withOnlyStarter(startedBy: Id[User]) = this.copy(th = th.copy(startedBy = Some(startedBy), participants = MessageThreadParticipants(Set(startedBy))))
-    def withUsers(users: Id[User]*) = this.copy(th = th.withParticipants(currentDateTime, users))
+    def withOnlyStarter(startedBy: Id[User]) = this.copy(th = th.copy(startedBy = startedBy, participants = MessageThreadParticipants(Set(startedBy))))
+    def withUsers(users: Id[User]*) = this.copy(th = th.withParticipants(currentDateTime, users.toSet))
     def saved(implicit injector: Injector, session: RWSession): MessageThread = {
       injector.getInstance(classOf[MessageThreadRepo]).save(th)
     }

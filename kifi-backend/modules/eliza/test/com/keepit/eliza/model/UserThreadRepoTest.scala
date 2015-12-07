@@ -17,37 +17,6 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
     FakeShoeboxServiceModule()
   )
 
-  def setup() = {
-    val thread1 = UserThread(
-      user = Id[User](42),
-      threadId = Id[MessageThread](1),
-      uriId = Some(Id[NormalizedURI](1)),
-      lastSeen = None,
-      lastMsgFromOther = None,
-      lastNotification = JsNull,
-      lastActive = Some(currentDateTime)
-    )
-    val thread2 = UserThread(
-      user = Id[User](42),
-      threadId = Id[MessageThread](2),
-      uriId = Some(Id[NormalizedURI](2)),
-      lastSeen = None,
-      lastMsgFromOther = None,
-      lastNotification = JsNull,
-      lastActive = Some(currentDateTime)
-    )
-    val thread3 = UserThread(
-      user = Id[User](43),
-      threadId = Id[MessageThread](3),
-      uriId = Some(Id[NormalizedURI](3)),
-      lastSeen = None,
-      lastMsgFromOther = None,
-      lastNotification = JsNull,
-      lastActive = Some(currentDateTime)
-    )
-    Seq(thread1, thread2, thread3)
-  }
-
   "UserThreadRepo" should {
     "get stats" in {
       withDb(modules: _*) { implicit injector =>
@@ -61,15 +30,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
           userThreadRepo.getUserStats(user1) === UserThreadStats(0, 0, 0)
           userThreadRepo.getUserStats(user2) === UserThreadStats(0, 0, 0)
           val thread1 = MessageThreadFactory.thread().saved
-          userThreadRepo.save(UserThread(
-            user = user1,
-            threadId = thread1.id.get,
-            uriId = None,
-            lastSeen = None,
-            lastMsgFromOther = None,
-            lastNotification = JsNull,
-            unread = true
-          ))
+          userThreadRepo.save(UserThread.forMessageThread(thread1)(user1))
           userThreadRepo.count === 1
           val toMail = userThreadRepo.getUserThreadsForEmailing(clock.now().plusMinutes(16))
           toMail.size === 1
@@ -82,15 +43,7 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
         }
         db.readWrite { implicit s =>
           val thread1 = MessageThreadFactory.thread().saved
-          userThreadRepo.save(UserThread(
-            user = user1,
-            threadId = thread1.id.get,
-            uriId = None,
-            lastSeen = None,
-            lastMsgFromOther = None,
-            lastNotification = JsNull,
-            lastActive = Some(inject[Clock].now)
-          ))
+          userThreadRepo.save(UserThread.forMessageThread(thread1)(user1).copy(lastActive = Some(inject[Clock].now), unread = false))
         }
         db.readOnlyMaster { implicit s =>
           userThreadRepo.getUserStats(user1) === UserThreadStats(2, 1, 0)
@@ -99,18 +52,8 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
           toMail.size === 1
         }
         db.readWrite { implicit s =>
-          val thread1 = MessageThreadFactory.thread().saved
-          userThreadRepo.save(UserThread(
-            user = user1,
-            threadId = thread1.id.get,
-            uriId = None,
-            lastSeen = None,
-            lastMsgFromOther = None,
-            lastNotification = JsNull,
-            lastActive = Some(inject[Clock].now),
-            started = true,
-            unread = true
-          ))
+          val thread1 = MessageThreadFactory.thread().withOnlyStarter(user1).saved
+          userThreadRepo.save(UserThread.forMessageThread(thread1)(user1).copy(lastActive = Some(inject[Clock].now)))
         }
         db.readOnlyMaster { implicit s =>
           userThreadRepo.getUserStats(user1) === UserThreadStats(3, 2, 1)
@@ -123,20 +66,17 @@ class UserThreadRepoTest extends Specification with ElizaTestInjector {
 
     "check batch threads" in {
       withDb(modules: _*) { implicit injector =>
-        val userThreadRepo = inject[UserThreadRepo]
-        val threads = setup()
-
+        val user = Id[User](42)
+        val rando = Id[User](43)
+        val uris = Seq(Id[NormalizedURI](1), Id[NormalizedURI](4), Id[NormalizedURI](3))
         db.readWrite { implicit s =>
-          userThreadRepo.save(threads(0))
-          userThreadRepo.save(threads(1))
-          userThreadRepo.save(threads(2))
+          val Seq(mt1, mt2, mt3) = (1 to 3).toList.map { x => MessageThreadFactory.thread().withUri(Id(x)).saved }
+          userThreadRepo.save(UserThread.forMessageThread(mt1)(user))
+          userThreadRepo.save(UserThread.forMessageThread(mt2)(user))
+          userThreadRepo.save(UserThread.forMessageThread(mt3)(rando))
+          // uris {1,2} are both discussed by user. uri3 is discussed by rando. uri4 is never discussed
 
-          val uris = Seq(Id[NormalizedURI](1), Id[NormalizedURI](4), Id[NormalizedURI](3))
-          val result = userThreadRepo.checkUrisDiscussed(Id[User](42), uris)
-          result.size === 3
-          result(0) === true
-          result(1) === false
-          result(2) === false
+          userThreadRepo.checkUrisDiscussed(user, uris) === Seq(true, false, false)
         }
       }
     }
