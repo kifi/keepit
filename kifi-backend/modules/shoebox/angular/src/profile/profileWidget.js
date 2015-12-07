@@ -139,7 +139,7 @@ angular.module('kifi')
           org.notDeclined = false;
         };
 
-        scope.sendVerificationEmail = function(email, org) {
+        scope.sendMemberConfirmationEmail = function(email, org) {
           orgProfileService.trackEvent('user_clicked_page', org,
             {
               'type': 'homeFeed',
@@ -147,7 +147,7 @@ angular.module('kifi')
             }
           );
           showVerificationAlert(email);
-          profileService.sendMemberConfirmationEmail(email);
+          profileService.sendMemberConfirmationEmail(org.id, email);
         };
 
         scope.hideOrgDomain = function(org) {

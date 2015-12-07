@@ -152,7 +152,7 @@ angular.module('kifi')
     }
 
     function sendMemberConfirmationEmail(orgId, email) {
-      return net.sendMemberConfirmationEmail(orgId, email);
+      return net.sendMemberConfirmationEmail(orgId, { email: email });
     }
 
     function cancelPendingPrimary() {

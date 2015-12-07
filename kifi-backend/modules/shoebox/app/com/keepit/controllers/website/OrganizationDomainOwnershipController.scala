@@ -60,7 +60,8 @@ class OrganizationDomainOwnershipController @Inject() (
     }
   }
 
-  def sendMemberConfirmationEmail(pubId: PublicId[Organization], email: EmailAddress) = OrganizationUserAction(pubId, OrganizationPermission.JOIN_BY_VERIFYING) { implicit request =>
+  def sendMemberConfirmationEmail(pubId: PublicId[Organization]) = OrganizationUserAction(pubId, OrganizationPermission.JOIN_BY_VERIFYING)(parse.tolerantJson) { implicit request =>
+    val email = (request.body \ "email").as[EmailAddress]
     orgDomainOwnershipCommander.sendMembershipConfirmationEmail(OrganizationDomainSendMemberConfirmationRequest(request.request.userId, request.orgId, email)) match {
       case Left(fail) => fail.asErrorResponse
       case Right(_) => Ok

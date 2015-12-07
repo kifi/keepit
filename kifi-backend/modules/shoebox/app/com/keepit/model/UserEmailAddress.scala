@@ -4,6 +4,7 @@ import java.math.BigInteger
 import java.security.SecureRandom
 
 import com.keepit.classify.NormalizedHostname
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.AirbrakeNotifierStatic
 import com.keepit.common.mail.{ EmailAddressHash, EmailAddress }
@@ -26,7 +27,7 @@ object EmailVerificationCode {
     override def unbind(key: String, code: EmailVerificationCode): String = code.value
   }
 
-  def verifyPath(code: EmailVerificationCode): String = com.keepit.controllers.core.routes.AuthController.verifyEmail(code).url
+  def verifyPath(code: EmailVerificationCode, orgPubId: Option[PublicId[Organization]] = None): String = com.keepit.controllers.core.routes.AuthController.verifyEmail(code, orgPubId.map(_.id)).url
 
 }
 
