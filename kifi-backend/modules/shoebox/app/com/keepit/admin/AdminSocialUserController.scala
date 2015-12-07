@@ -88,21 +88,24 @@ class AdminSocialUserController @Inject() (
   def smoothLastGraphRefreshTimes(minutesFromNow: Int) = AdminUserAction { implicit request =>
     Ok {
       val now = clock.now()(DateTimeZone.UTC)
-      val socialIds = db.readOnlyReplica { implicit s =>
-        socialUserInfoRepo.getAllUsersToRefresh().map(_.socialId)
+      val socialIdsByNetwork = {
+        val infos = db.readOnlyReplica { implicit s => socialUserInfoRepo.getAllUsersToRefresh() }
+        infos.groupBy(_.networkType).mapValues(_.map(_.socialId).toSet).toMap
       }
 
-      socialIds.grouped(10).foreach { idGroup =>
-        db.readWrite { implicit s =>
-          socialUserInfoRepo.getBySocialIds(idGroup).foreach { socialUser =>
-            val minutesToSubtract = Random.nextInt(minutesFromNow)
-            val updatedUser = socialUser.withLastGraphRefresh(Some(now.minusMinutes(minutesToSubtract)))
-            socialUserInfoRepo.save(updatedUser)
+      socialIdsByNetwork.foreach {
+        case (networkType, socialIds) =>
+          socialIds.grouped(10).foreach { idGroup =>
+            db.readWrite { implicit s =>
+              socialUserInfoRepo.getByNetworkAndSocialIds(networkType, idGroup).values.foreach { socialUser =>
+                val minutesToSubtract = Random.nextInt(minutesFromNow)
+                val updatedUser = socialUser.withLastGraphRefresh(Some(now.minusMinutes(minutesToSubtract)))
+                socialUserInfoRepo.save(updatedUser)
+              }
+            }
           }
-        }
       }
-
-      JsString(s"updated ${socialIds.size} records")
+      JsString(s"updated ${socialIdsByNetwork.values.map(_.size).sum} records")
     }
   }
 }

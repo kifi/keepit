@@ -39,7 +39,7 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
 
     "source attribution serialize" in {
       val attr = PartialTwitterAttribution("505809542656303104", connerdelights)
-      SourceAttribution.deprecatedWrites.writes(attr) === Json.obj("twitter" -> Json.obj("idString" -> "505809542656303104", "screenName" -> connerdelights))
+      SourceAttribution.deprecatedWrites.writes((attr, None)) === Json.obj("twitter" -> Json.obj("idString" -> "505809542656303104", "screenName" -> connerdelights), "kifi" -> JsNull)
     }
 
     "twitter attribution persists in db" in {

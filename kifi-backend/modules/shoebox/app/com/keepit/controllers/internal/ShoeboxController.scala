@@ -52,6 +52,7 @@ class ShoeboxController @Inject() (
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   keepDecorator: KeepDecorator,
+  keepSourceCommander: KeepSourceCommander,
   keepImageCommander: KeepImageCommander,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
@@ -587,7 +588,9 @@ class ShoeboxController @Inject() (
 
   def getSourceAttributionForKeeps() = Action(parse.tolerantJson) { request =>
     val keepIds = (request.body \ "keepIds").as[Set[Id[Keep]]]
-    val attributions = keepDecorator.getSourceAttributionForKeeps(keepIds)
+    val attributions = db.readOnlyMaster { implicit session =>
+      keepSourceCommander.getSourceAttributionForKeeps(keepIds)
+    }
     Ok(Json.toJson(attributions))
   }
 }

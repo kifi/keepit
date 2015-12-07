@@ -41,7 +41,7 @@ case class KeepInfo(
   libraryId: Option[PublicId[Library]] = None, // deprecated, use .library.id instead
   library: Option[LibraryCardInfo] = None,
   organization: Option[BasicOrganization] = None,
-  sourceAttribution: Option[SourceAttribution],
+  sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
   note: Option[String] = None,
   discussion: Option[Discussion])
 
