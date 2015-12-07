@@ -772,7 +772,7 @@ class KeepCommanderImpl @Inject() (
   def autoFixKeepNoteAndTags(keepId: Id[Keep]): Future[Unit] = {
     autoFixNoteLimiter.withLock {
       db.readWrite(attempts = 3) { implicit session =>
-        val keep = keepRepo.get(keepId)
+        val keep = keepRepo.getNoCache(keepId)
         val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
         val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
         if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized)) {
