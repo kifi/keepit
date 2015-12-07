@@ -111,22 +111,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
       }
     }
 
-    //    db.readWriteAsync { implicit session =>
-    //      val canVerifyToJoin = orgConfigurationRepo.getByOrgId(orgId).settings.settingFor(Feature.JoinByVerifying).contains(FeatureSetting.NONMEMBERS)
-    //      if (canVerifyToJoin) sendVerificationEmailsToAllPotentialMembers(ownership)
-    //    }
-
     ownership
-  }
-
-  private def sendVerificationEmailsToAllPotentialMembers(ownership: OrganizationDomainOwnership)(implicit session: RWSession): Unit = {
-    lazy val orgMembers = orgMembershipRepo.getAllByOrgId(ownership.organizationId)
-    val usersToEmail = userEmailAddressRepo.getByDomain(ownership.normalizedHostname)
-      .filter { userEmail =>
-        !userEmail.address.address.contains("+test@kifi.com") && userEmail.lastVerificationSent.forall(lastSent => lastSent.plusDays(1).isBefore(currentDateTime)) &&
-          !orgMembers.exists(_.userId == userEmail.userId) && !userValueRepo.getValue(userEmail.userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]].contains(ownership.organizationId)
-      }
-    usersToEmail.foreach(???)
   }
 
   def removeDomainOwnership(request: OrganizationDomainRemoveRequest): Option[OrganizationFail] = {
