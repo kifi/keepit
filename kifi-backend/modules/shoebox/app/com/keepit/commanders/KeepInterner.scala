@@ -251,12 +251,7 @@ class KeepInternerImpl @Inject() (
     def tryFixKeepNote(keep: Keep)(implicit session: RWSession) = {
       Try(keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse("")))
     }
-    def tryFixNoteSlowly(keepId: Id[Keep]) = Try {
-      db.readWrite { implicit session =>
-        val keep = keepRepo.getNoCache(keepId) // Reload keep from db
-        tryFixKeepNote(keep)
-      }
-    }.flatten
+
     // Attach tags to keeps
     val res = db.readWriteBatch(keeps, attempts = 5) {
       case ((s, keep)) =>
@@ -269,15 +264,10 @@ class KeepInternerImpl @Inject() (
 
     res.collect {
       case ((k, Failure(ex))) => (k.id.get, ex)
-    }.map {
-      case k =>
-        k._1 -> tryFixNoteSlowly(k._1)
     }.foreach {
-      case (keepId, Success(_)) =>
-        log.info(s"[keepinterner] ($keepId) Second try worked.")
-      case (keepId, Failure(failure: UndeclaredThrowableException)) =>
+      case (keepId, failure: UndeclaredThrowableException) =>
         log.warn(s"[keepinterner] Failed updating keep note for $keepId", failure.getUndeclaredThrowable)
-      case (keepId, Failure(failure)) =>
+      case (keepId, failure) =>
         log.warn(s"[keepinterner] Failed updating keep note for $keepId", failure)
     }
   }
