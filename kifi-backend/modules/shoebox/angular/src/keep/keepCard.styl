@@ -8,7 +8,13 @@ maxWidthForNarrowKeep = 559px // see derivation in keeps.styl
 minWidthForBoxed = maxWidthForNarrowKeep + 1px
 
 .kf-keep-container
-  margin-bottom: 15px
+  display: inline-block
+  width: 100%
+  margin: 0 auto
+
+.kf-my-keeps
+  > * + *
+    margin-top: 15px
 
 .kf-keep-body
   &.kf-side-by-side

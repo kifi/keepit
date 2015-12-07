@@ -78,58 +78,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def keepMultiple() = UserAction(parse.tolerantJson) { request =>
-    val fromJson = request.body.as[RawBookmarksWithCollection]
-    val source = KeepSource.mobile
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val libraryId = {
-      db.readWrite { implicit session =>
-        val (main, secret) = libraryInfoCommander.getMainAndSecretLibrariesForUser(request.userId)
-        fromJson.keeps.headOption.flatMap(_.isPrivate).map { priv =>
-          if (priv) secret.id.get else main.id.get
-        }.getOrElse(main.id.get)
-      }
-    }
-    fromJson.keeps.headOption
-    val (keeps, addedToCollection, _) = keepsCommander.keepMultiple(fromJson.keeps, libraryId, request.userId, source, fromJson.collection)
-    Ok(Json.obj(
-      "keeps" -> keeps,
-      "addedToCollection" -> addedToCollection
-    ))
-  }
-
-  def addKeepWithTags() = UserAction(parse.tolerantJson) { request =>
-    val json = request.body
-    val rawBookmark = (json \ "keep").as[RawBookmarkRepresentation]
-    val collectionNames = (json \ "tagNames").as[Seq[String]]
-    val source = KeepSource.mobile
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    val libraryId = {
-      db.readWrite { implicit session =>
-        val (main, secret) = libraryInfoCommander.getMainAndSecretLibrariesForUser(request.userId)
-        rawBookmark.isPrivate.map { priv =>
-          if (priv) secret.id.get else main.id.get
-        }.getOrElse(main.id.get)
-      }
-    }
-    keepsCommander.keepWithSelectedTags(request.userId, rawBookmark, libraryId, source, collectionNames, SocialShare(json)) match {
-      case Left(msg) => BadRequest(msg)
-      case Right((keep, tags)) =>
-        Ok(Json.obj(
-          "keep" -> Json.toJson(KeepInfo.fromKeep(keep)),
-          "tags" -> tags.map(tag => Json.obj("name" -> tag.name, "id" -> tag.externalId))
-        ))
-    }
-  }
-
-  def saveCollection() = UserAction { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    collectionCommander.saveCollection(request.userId, request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt)) match {
-      case Left(newColl) => Ok(Json.toJson(newColl))
-      case Right(CollectionSaveFail(message)) => BadRequest(Json.obj("error" -> message))
-    }
-  }
-
   def suggestTags(keepIdOptStringHack: Option[String], query: Option[String], limit: Int) = UserAction.async { request =>
     val keepIdOpt = keepIdOptStringHack.map(ExternalId.apply[Keep])
     keepsCommander.suggestTags(request.userId, keepIdOpt, query, limit).imap { tagsAndMatches =>
@@ -137,37 +85,6 @@ class MobileKeepsController @Inject() (
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
     }
-  }
-
-  def addTag(id: ExternalId[Collection]) = UserAction(parse.tolerantJson) { request =>
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    db.readOnlyMaster { implicit s => collectionRepo.getOpt(id) } map { tag =>
-      val rawBookmarks = rawBookmarkFactory.toRawBookmarks(request.body)
-      val libraryId = {
-        db.readWrite { implicit session =>
-          val libIdOpt = for {
-            url <- rawBookmarks.headOption.map(_.url)
-            uri <- normalizedURIInterner.getByUri(url)
-            keep <- keepRepo.getByUriAndUser(uri.id.get, request.userId)
-            libraryId <- keep.libraryId
-          } yield libraryId
-          libIdOpt.getOrElse {
-            libraryInfoCommander.getMainAndSecretLibrariesForUser(request.userId)._2.id.get // default to secret library if we can't find the keep
-          }
-        }
-      }
-      keepsCommander.tagUrl(tag, rawBookmarks, request.userId, libraryId, KeepSource.mobile, request.kifiInstallationId)
-      Ok(Json.toJson(SendableTag from tag.summary))
-    } getOrElse {
-      BadRequest(Json.obj("error" -> "noSuchTag"))
-    }
-  }
-
-  def removeTag(id: ExternalId[Collection]) = UserAction(parse.tolerantJson) { request =>
-    val url = (request.body \ "url").as[String]
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-    keepsCommander.removeTag(id, url, request.userId)
-    Ok(Json.obj())
   }
 
   def getKeepInfoV1(id: ExternalId[Keep], withFullInfo: Boolean, idealImageWidth: Option[Int], idealImageHeight: Option[Int]) = UserAction.async { request =>
@@ -199,38 +116,6 @@ class MobileKeepsController @Inject() (
     }
   }
 
-  def editKeepInfoV1(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
-    db.readOnlyMaster { implicit s =>
-      keepRepo.getOpt(id).filter(_.isActive)
-    } match {
-      case None =>
-        NotFound(Json.obj("error" -> "not_found"))
-      case Some(keep) =>
-        val json = request.body
-        val titleOpt = (json \ "title").asOpt[String]
-        val noteOpt = (json \ "note").asOpt[String]
-        val tagsOpt = (json \ "tags").asOpt[Seq[String]]
-
-        val titleToPersist = (titleOpt orElse keep.title) map (_.trim) filterNot (_.isEmpty)
-        val noteToPersist = noteOpt map { note =>
-          KeepDecorator.escapeMarkupNotes(note).trim
-        } orElse keep.note filter (_.nonEmpty)
-
-        val tagsToPersist = tagsOpt.getOrElse(
-          db.readOnlyMaster { implicit s =>
-            collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.tag).toSeq
-          }
-        )
-        val updatedKeep = keep.copy(title = titleToPersist, note = noteToPersist)
-
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-        db.readWrite { implicit s =>
-          keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, updatedKeep, tagsToPersist)(s, context)
-        }
-        NoContent
-    }
-  }
-
   def editKeepInfoV2(id: ExternalId[Keep]) = UserAction(parse.tolerantJson) { request =>
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(id).filter(_.isActive)
@@ -246,11 +131,9 @@ class MobileKeepsController @Inject() (
         val noteToPersist = (noteOpt orElse keep.note) map (_.trim) filterNot (_.isEmpty)
 
         if (titleToPersist != keep.title || noteToPersist != keep.note) {
-          val updatedKeep = keep.copy(title = titleToPersist, note = noteToPersist)
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.mobile).build
-          val hashtagNamesToPersist = Hashtags.findAllHashtagNames(noteToPersist.getOrElse(""))
           db.readWrite { implicit s =>
-            keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, updatedKeep, hashtagNamesToPersist.toSeq)(s, context)
+            val updatedKeep = keepRepo.save(keep.withTitle(titleToPersist))
+            keepsCommander.updateKeepNote(request.userId, updatedKeep, noteToPersist.getOrElse(""))
           }
         }
 

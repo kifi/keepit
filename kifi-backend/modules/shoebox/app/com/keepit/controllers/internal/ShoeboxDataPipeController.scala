@@ -1,9 +1,11 @@
 package com.keepit.controllers.internal
 
 import com.keepit.classify.{ NormalizedHostname, DomainInfo, DomainRepo, Domain }
+import com.keepit.commanders.Hashtags
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
+import org.joda.time.DateTime
 import play.api.libs.json._
 import com.google.inject.{ Inject }
 import com.keepit.common.db.slick.Database
@@ -189,7 +191,17 @@ class ShoeboxDataPipeController @Inject() (
         val changedKeeps = keepRepo.getBySequenceNumber(seqNum, fetchSize)
         val attributionById = sourceRepo.getByKeepIds(changedKeeps.flatMap(_.id).toSet)
         changedKeeps.map { keep =>
-          val (source, tags) = if (keep.isActive) (attributionById.get(keep.id.get), collectionRepo.getHashtagsByKeepId(keep.id.get)) else (None, Set.empty[Hashtag])
+          val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
+          val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
+          if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized)) {
+            // For my own edification for now. Our data is messed up, so this will happen for most imported, tagged keeps.
+            // I want to read what sort of differences there are. Until I add an auto-fixer, just log it
+            // and let search benefit from the combined set.
+            log.info(s"[getKeepsAndTagsChanged] Tag mismatch for ${keep.id.get}: $tagsFromHashtags vs $tagsFromCollections")
+          }
+
+          val allTags = tagsFromHashtags ++ tagsFromCollections
+          val (source, tags) = if (keep.isActive) (attributionById.get(keep.id.get), allTags) else (None, Set.empty[Hashtag])
           KeepAndTags(keep, source, tags)
         }
       }

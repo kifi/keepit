@@ -62,8 +62,8 @@ angular.module('kifi')
       deleteTag: function (tagId) {
         return route('/collections/' + tagId + '/delete');
       },
-      undeleteTag: function (tagId) {
-        return route('/collections/' + tagId + '/undelete');
+      renameTag: function (tagId) {
+        return route('/collections/' + tagId + '/rename');
       },
 
       whoToInvite: route('/user/invite/recommended'),

@@ -101,9 +101,9 @@ class NonUserThreadRepoImpl @Inject() (
     }
 
   def setMuteState(muteToken: String, muted: Boolean)(implicit session: RWSession): Boolean =
-    muteTokenToNonUserThreadId(muteToken).map { id =>
+    muteTokenToNonUserThreadId(muteToken).exists { id =>
       setMuteState(id, muted)
-    }.getOrElse(false)
+    }
 
   def setMuteState(nonUserThreadId: Id[NonUserThread], muted: Boolean)(implicit session: RWSession): Boolean =
     (for (row <- rows if row.id === nonUserThreadId) yield row.muted).update(muted) > 0
@@ -137,12 +137,9 @@ class NonUserThreadRepoImpl @Inject() (
   }
 
   def getRecentRecipientsByUser(userId: Id[User], since: DateTime)(implicit session: RSession): Map[EmailAddress, Int] = {
-    val relevantThreads = (for (row <- rows if row.createdBy === userId && row.createdAt > since) yield row)
+    val relevantThreads = for (row <- rows if row.createdBy === userId && row.createdAt > since) yield row
     val recentRecipients = relevantThreads.groupBy(_.emailAddress).map { case (recipient, threads) => (recipient, threads.length) }
-    recentRecipients.run.toMap.collect {
-      case (k, v) if k.isDefined =>
-        k.get -> v
-    }
+    recentRecipients.run.toMap.collect { case (Some(k), v) => k -> v }
   }
 
 }

@@ -25,15 +25,13 @@ class ChatterController @Inject() (
   def getChatter() = UserAction.async(parse.tolerantJson) { request =>
     val url = (request.body \ "url").as[String]
     messagingCommander.getChatter(request.user.id.get, Seq(url)).map { res =>
-      Ok(res.headOption.map {
-        case (url, msgs) =>
-          if (msgs.size == 1) {
-            db.readOnlyReplica { implicit session =>
-              Json.obj("threads" -> 1, "threadId" -> threadRepo.get(msgs.head).externalId.id)
-            }
-          } else {
-            Json.obj("threads" -> msgs.size)
+      Ok(res.get(url).map {
+        case Seq(threadId) =>
+          db.readOnlyReplica { implicit session =>
+            Json.obj("threads" -> 1, "threadId" -> threadRepo.get(threadId).externalId)
           }
+        case threadIds =>
+          Json.obj("threads" -> threadIds.size)
       }.getOrElse(Json.obj()))
     }
   }

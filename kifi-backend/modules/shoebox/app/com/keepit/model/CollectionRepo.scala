@@ -134,19 +134,6 @@ class CollectionRepoImpl @Inject() (
 
   override def save(model: Collection)(implicit session: RWSession): Collection = {
     val newModel = model.copy(seq = deferredSeqNum())
-    session.onTransactionSuccess {
-      Try {
-        val tag = SendableTag.from(model.summary)
-        if (model.state == CollectionStates.INACTIVE) {
-          elizaServiceClient.sendToUser(model.userId, Json.arr("remove_tag", tag))
-        } else if (model.id == None) {
-          elizaServiceClient.sendToUser(model.userId, Json.arr("create_tag", tag))
-        } else {
-          //elizaServiceClient.sendToUser(model.userId, Json.arr("rename_tag", tag))
-          // Do not update clients right now.
-        }
-      }
-    }
     super.save(newModel)
   }
 
@@ -172,7 +159,7 @@ class CollectionRepoImpl @Inject() (
   }
 
   def getHashtagsByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], Seq[Hashtag]] = {
-    if (keepIds.size == 0) {
+    if (keepIds.isEmpty) {
       Map.empty[Id[Keep], Seq[Hashtag]]
     } else {
       import com.keepit.common.db.slick.StaticQueryFixed.interpolation

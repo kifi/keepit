@@ -1,5 +1,7 @@
 package com.keepit.common.util
 
+import java.net.URLEncoder
+
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.path.Path
 import com.keepit.model.{ BasicOrganization, OrganizationRole }
@@ -66,11 +68,11 @@ object DescriptionElements {
   private val prettyTime = new PrettyTime()
   implicit def fromDateTime(time: DateTime): BasicElement = prettyTime.format(time.toDate)
 
-  private def intersperse[T](xs: Seq[T], ins: Seq[T]): Seq[T] = {
+  def intersperse[T](xs: Seq[T], ins: Seq[T]): Seq[T] = {
     (xs, ins) match {
-      case (x +: Seq(), Seq()) => x +: Seq()
+      case (x, Seq()) => x
+      case (Seq(), in) => in
       case (x +: xr, in +: inr) => x +: in +: intersperse(xr, inr)
-      case _ => throw new IllegalArgumentException(s"intersperse expects lists with length (n, n-1). it got (${xs.length}, ${ins.length})")
     }
   }
   private def intersperseWith[T](xs: Seq[T], x: T): Seq[T] = {
@@ -85,8 +87,8 @@ object DescriptionElements {
     val words = els.map(_.text)
     val wordPairs = words.init zip words.tail
 
-    val leftEnds = Set("'", "\n", "[", "(", "`")
-    val rightStarts = Set(".", ",", "'", "\n", "]", ")", "`")
+    val leftEnds = Set("'", "\n", "[", "(", "`", " ", "“")
+    val rightStarts = Set(".", ",", "'", "\n", "]", ")", "`", " ", "”")
     val interpolatedPunctuation = wordPairs.map {
       case (l, r) if leftEnds.exists(l.endsWith) || rightStarts.exists(r.startsWith) => ""
       case _ => " "

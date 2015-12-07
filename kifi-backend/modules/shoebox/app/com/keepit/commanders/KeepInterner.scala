@@ -40,6 +40,8 @@ trait KeepInterner {
   def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit
 
   def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
+
+  // Because we're nice, you get some extras:
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
     val response = internRawBookmarksWithStatus(rawBookmarks, ownerId, library, source)
     (response.successes, response.failures)
@@ -106,7 +108,7 @@ class KeepInternerImpl @Inject() (
         val bulkAttempt = db.readWrite(attempts = 4) { implicit session =>
           rawKeepRepo.insertAll(rawKeepGroup)
         }
-        if (bulkAttempt.isFailure) {
+        if (bulkAttempt.isFailure) { // fyi, this doesn't really happen in prod often
           log.info(s"[persistRawKeeps] Failed bulk. Trying one at a time")
           val singleAttempt = db.readWrite { implicit session =>
             rawKeepGroup.toList.map { rawKeep =>
@@ -146,12 +148,16 @@ class KeepInternerImpl @Inject() (
         internUriAndBookmark(bm, ownerId, library, source).get // Exception caught by readWriteBatch
     }.partition { case (bm, res) => res.isSuccess }
 
+    val keeps = persisted.values.map(_.get).toSeq
+
+    updateKeepTagsUsingNote(keeps.map(_.keep))
+
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks (${validUrls.size} valid): look app.log for urls"), userId = Some(ownerId)))
       failed.foreach { f => log.warn(s"failed to persist raw bookmarks of user $ownerId from $source: ${f._1.url}", f._2.failed.get) }
     }
     val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
-    (persisted.values.map(_.get).toSeq, failedRaws)
+    (keeps, failedRaws)
   }
 
   private val httpPrefix = "https?://".r
@@ -165,7 +171,7 @@ class KeepInternerImpl @Inject() (
       }
 
       log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")
-      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, ownerId, library, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.note)
+      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, ownerId, library, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.noteFormattedLikeOurNotes)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
       Failure(new Exception(s"bookmark url is not an http protocol: ${rawBookmark.url}"))
@@ -231,21 +237,36 @@ class KeepInternerImpl @Inject() (
           }
         } catch {
           case ex: UndeclaredThrowableException =>
-            log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex)
+            log.warn(s"[keepinterner] Persisting keep failed of ${keep.url}", ex.getUndeclaredThrowable)
             throw ex.getUndeclaredThrowable
         }
 
         (true, false, improvedKeep)
     }
-    if (wasInactiveKeep) {
-      // A inactive keep may have had tags already. Index them if any.
-      keepToCollectionRepo.getCollectionsForKeep(internedKeep.id.get) foreach { cid => collectionRepo.collectionChanged(cid, inactivateIfEmpty = false) }
-    }
 
     (isNewKeep, wasInactiveKeep, internedKeep)
   }
 
-  private def reportNewKeeps(keeperUserId: Id[User], keeps: Seq[Keep], library: Library, ctx: HeimdalContext, notifyExternalSources: Boolean) = {
+  private def updateKeepTagsUsingNote(keeps: Seq[Keep]) = {
+    // Attach tags to keeps
+    val res = db.readWriteBatch(keeps, attempts = 5) {
+      case ((s, keep)) =>
+        if (keep.note.nonEmpty) {
+          // Don't blow if something messes up, try our best to just get through
+          Some(Try(keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse(""))(s)))
+        } else None
+    }
+
+    res.collect {
+      case ((k, Failure(ex))) => (k.id, ex)
+      case ((k, Success(Some(Failure(ex))))) => (k.id, ex)
+    }.foreach {
+      case (keepId, failure) =>
+        log.warn(s"[keepinterner] Failed updating keep note for $keepId", failure)
+    }
+  }
+
+  private def reportNewKeeps(keeperUserId: Id[User], keeps: Seq[Keep], library: Library, ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
     if (keeps.nonEmpty) {
       // Analytics
       libraryAnalytics.keptPages(keeperUserId, keeps, library, ctx)

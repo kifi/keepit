@@ -1,0 +1,9 @@
+<div kf-modal class="kf-rename-tag-confirm-modal">
+  <div kf-basic-modal-content with-cancel="true" title="Rename tag" action-text="Rename tag" action="renameTag()">
+    You can replace all usages of #{{selectedTag.name}} in keeps created by you, and will edit the note accordingly.
+    <p>If you have many keeps with this tag, this may take a couple minutes.</p>
+    <div>
+      <input ng-value="selectedTag.name" ng-model="selectedTag.renamed" class="manage-tag-input-box">
+    </div>
+  </div>
+</div>

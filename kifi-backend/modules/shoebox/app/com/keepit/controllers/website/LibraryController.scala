@@ -520,7 +520,7 @@ class LibraryController @Inject() (
       val existingKeeps = db.readOnlyMaster { implicit s =>
         keepRepo.getByLibrary(libraryId, 0, Int.MaxValue).map(_.externalId).toSet
       }
-      val (keeps, _, failures) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source, None)
+      val (keeps, failures) = keepsCommander.keepMultiple(fromJson, libraryId, request.userId, source)
       val (alreadyKept, newKeeps) = keeps.partition(k => existingKeeps.contains(k.id.get))
 
       log.info(s"kept ${keeps.size} keeps")
@@ -556,19 +556,6 @@ class LibraryController @Inject() (
     }
   }
 
-  // TODO(ryan): This seems to only update the keep title. Is it supposed to do other things?
-  def updateKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
-    val libraryId = Library.decodePublicId(libraryPubId).get
-    val body = request.body
-    val title = (body \ "title").asOpt[String]
-
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-    keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
-      case Left((status, code)) => Status(status)(Json.obj("error" -> code))
-      case Right(keep) => NoContent
-    }
-  }
-
   def editKeepNote(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep]) = (UserAction andThen LibraryWriteAction(libraryPubId))(parse.tolerantJson) { request =>
     db.readOnlyMaster { implicit s =>
       keepRepo.getOpt(keepExtId)
@@ -578,8 +565,9 @@ class LibraryController @Inject() (
       case Some(keep) =>
         val body = request.body.as[JsObject]
         val newNote = (body \ "note").as[String]
-        implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
-        keepsCommander.updateKeepNote(request.userId, keep, newNote)
+        db.readWrite { implicit session =>
+          keepsCommander.updateKeepNote(request.userId, keep, newNote)
+        }
         NoContent
     }
   }

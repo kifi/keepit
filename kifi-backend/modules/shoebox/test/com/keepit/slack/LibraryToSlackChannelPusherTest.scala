@@ -1,7 +1,10 @@
 package com.keepit.slack
 
+import java.util.concurrent.ExecutionException
+
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.{ FutureHelpers, FakeExecutionContextModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time
 import com.keepit.heimdal.HeimdalContext
@@ -19,7 +22,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.Period
 import org.specs2.mutable.SpecificationLike
 
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
 class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {
@@ -180,6 +183,26 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("#eng")
 
           1 === 1
+        }
+      }
+      "format notes, if there are any" in {
+        withDb(modules: _*) { implicit injector =>
+          fakeClock.setTimeValue(currentDateTime.minusDays(10))
+          val (user, lib, integration, webhook) = db.readWrite { implicit session =>
+            val user = UserFactory.user().withName("Ryan", "Brewster").withUsername("ryanpbrewster").saved
+            val lib = LibraryFactory.library().withOwner(user).withName("Random Keeps").withSlug("random-keeps").saved
+            val slackTeam = SlackTeamFactory.team()
+            val stm = SlackTeamMembershipFactory.membership().withUser(user).withTeam(slackTeam).saved
+            val siw = SlackIncomingWebhookFactory.webhook().withMembership(stm).withChannelName("#eng").saved
+            val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
+            KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("Keep Without Note").saved
+            KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("Keep With Note").withNote("My [#favorite] keep [#in the world] is this one").saved
+            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get, fakeClock.now)
+            (user, lib, lts, siw.webhook)
+          }
+          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
+          slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
+          slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("https://www.kifi.com/find?q=tag%3A%22in+the+world%22")
         }
       }
     }

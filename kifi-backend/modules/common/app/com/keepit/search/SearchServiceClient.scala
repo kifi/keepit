@@ -297,7 +297,7 @@ class SearchServiceClientImpl(
 
   private val _debounceBroadcast = {
     def b(c: ServiceRoute) = broadcast(c)
-    extras.debounce(1.second)(b)
+    extras.debounce(3.second)(b)
   }
   private def debounceBroadcast(call: ServiceRoute): Unit = {
     _debounceBroadcast(call)

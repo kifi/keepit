@@ -1,0 +1,13 @@
+<div>
+  <span kf-loading-spinner hide="getStatus() !== 403 || user || org" class="kf-loading-spinner-center"></span>
+  <div ng-if="org && userLoggedIn">
+    <p class="kf-error-header">Whoa! You need to be a member of <a class="kf-link kf-link-underline kf-link-blue" ui-sref="orgProfile.libraries({ handle: org.handle })" ng-bind="org | name"></a> to see these keeps.</p>
+    <p>Contact the administrator of <span ng-bind="org | name"></span> to join this team.</p>
+  </div>
+  <div ng-if="org && !userLoggedIn">
+    <p class="kf-error-header">Whoa! You need to <a class="kf-link kf-link-underline kf-link-blue" href="https://www.kifi.com/signup">sign up for Kifi</a> to see these keeps.</p>
+    <p>Sign up with your <span ng-bind="org | name"></span> company email to get an invite after you join.</p>
+  </div>
+  <div ng-if="getStatus() !== 403 || user" ng-include="'errors/whomp.tpl.html'">
+  </div>
+</div>

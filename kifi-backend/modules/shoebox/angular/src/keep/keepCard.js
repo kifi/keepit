@@ -118,8 +118,9 @@ angular.module('kifi')
           var editor = keepEl.find('.kf-knf-editor');
           if (!editor.length) {
             var noteEl = keepEl.find(scope.galleryView ? '.kf-keep-note' : '.kf-keep-card-note');
-            var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keep.library.id; })[0];
-            $injector.get('keepNoteForm').init(noteEl, keep.note, keep.library.id, distinctKeep.id, function update(noteText) {
+            var keepLibraryId = keep.library && keep.library.id;
+            var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keepLibraryId; })[0];
+            $injector.get('keepNoteForm').init(noteEl, keep.note, keepLibraryId, distinctKeep.id, function update(noteText) {
               keep.note = noteText;
             });
           } else {
@@ -251,12 +252,14 @@ angular.module('kifi')
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
           // Don't change until the link is updated to be a bit more secure:
-          scope.showSaved = (profileService.me.experiments || []).indexOf('admin') !== -1;
           scope.galleryView = !profileService.prefs.use_minimal_keep_card;
 
           var permissions = (keep.library && keep.library.permissions) || [];
-          scope.canEditKeep = (keep.user.id === scope.me.id &&
-            permissions.indexOf('edit_own_keeps') !== -1) || permissions.indexOf('remove_other_keeps') !== -1;
+          var keepUserId = keep.user && keep.user.id;
+          scope.canEditKeep = (
+            (keepUserId === scope.me.id && permissions.indexOf('edit_own_keeps') !== -1) ||
+            permissions.indexOf('remove_other_keeps') !== -1
+          );
 
           var setImage = function(galleryView) {
             scope.image = scope.youtubeId ? null : calcImageSize(keep.summary, scope.displayTitle, galleryView);
@@ -274,21 +277,23 @@ angular.module('kifi')
             // TODO: The controller should not decide what data is SHOWN, that's
             // the template's responsibility...
             _.remove(keep.libraries, function (pair) {
-              return pair[0].id === keep.libraryId;
+              return (pair[0] && pair[0].id) === keep.libraryId;
             });
           }
           if (keep.libraries) {
             // associate libraries with connected keepers
             var libsByUserId = _(keep.libraries).reverse().indexBy(function (pair) { return pair[1].id; }).mapValues(0).value();
             _.each(keep.keepers, function (keeper) {
-              keeper.library = libsByUserId[keeper.id];
+              var keeperId = keeper && keeper.id;
+              keeper.library = libsByUserId[keeperId];
             });
             // show additional libraries after connected keepers
             var keepersById = _.indexBy(keep.keepers, 'id');
             _.each(keep.libraries, function (pair) {
               var user = pair[1];
-              if (!keepersById[user.id]) {
-                keepersById[user.id] = user;
+              var userId = user && user.id;
+              if (!keepersById[userId]) {
+                keepersById[userId] = user;
                 user.library = pair[0];
                 keep.keepers.push(user);
               }

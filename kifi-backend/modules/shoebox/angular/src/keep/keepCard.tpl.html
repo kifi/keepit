@@ -13,7 +13,9 @@
         <div class="kf-keep-top-menu-container" kf-click-menu
              ng-if="menuItems.length > 0">
           <!-- This controls who gets the controls -->
-          <button class="kf-keep-top-menu-btn"></button>
+          <button class="kf-keep-top-menu-btn kf-button kf-button-image">
+            <svg kf-symbol-sprite icon="dropdown-arrow"></svg>
+          </button>
           <menu class="kf-dropdown-menu">
             <button class="kf-dropdown-menu-item"
                     ng-click="item.action($event, keep)"
@@ -99,6 +101,7 @@
           </div>
         </div>
       </div>
+      <div ng-if="hasKeepCommentsPermission" kf-keep-comments keep="keep"></div>
     </div>
     <!-- end Gallery card -->
 
@@ -113,7 +116,9 @@
              is-first-item="::isFirstItem"></div>
         <div class="kf-keep-card-menu-container" kf-click-menu ng-if="menuItems.length > 0">
           <!-- This controls who gets the controls -->
-          <button class="kf-keep-top-menu-btn"></button>
+          <button class="kf-keep-top-menu-btn kf-button kf-button-image">
+            <svg kf-symbol-sprite icon="dropdown-arrow"></svg>
+          </button>
           <menu class="kf-dropdown-menu">
             <button class="kf-dropdown-menu-item"
                     ng-click="item.action($event, keep)"
@@ -176,6 +181,6 @@
 
   </div>
 
-  <div ng-if="hasKeepCommentsPermission" kf-keep-comments keep="keep"></div>
+
 </div>
 

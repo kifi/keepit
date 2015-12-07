@@ -561,32 +561,6 @@ class MobileLibraryController @Inject() (
     }
   }
 
-  def keepToLibraryV1(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId)).async(parse.tolerantJson) { request =>
-    val libraryId = Library.decodePublicId(pubId).get
-    val jsonBody = request.body
-    val title = (jsonBody \ "title").asOpt[String]
-    val url = (jsonBody \ "url").as[String]
-    val tagNames = (jsonBody \ "hashtags").as[Seq[String]]
-    val imageUrlOpt = (jsonBody \ "imageUrl").asOpt[String]
-    val note = (jsonBody \ "note").asOpt[String]
-    val rawKeep = RawBookmarkRepresentation(title, url, None, keptAt = Some(clock.now), note = note)
-    val source = KeepSource.mobile
-    implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
-    keepsCommander.keepWithSelectedTags(request.userId, rawKeep, libraryId, source, tagNames, SocialShare(jsonBody)) match {
-      case Left(msg) =>
-        Future.successful(BadRequest(msg))
-      case Right((keep, tags)) =>
-        val returnObj = Json.obj(
-          "keep" -> Json.toJson(KeepInfo.fromKeep(keep)),
-          "hashtags" -> tags.map(_.name)
-        )
-        imageUrlOpt.map { imageUrl =>
-          keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserPicked)
-        }
-        Future.successful(Ok(returnObj))
-    }
-  }
-
   def keepToLibraryV2(pubId: PublicId[Library]) = (UserAction andThen LibraryWriteAction(pubId))(parse.tolerantJson) { request =>
     val libraryId = Library.decodePublicId(pubId).get
     val jsonBody = request.body
@@ -599,10 +573,6 @@ class MobileLibraryController @Inject() (
 
     implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, source).build
     val (keep, _) = keepsCommander.keepOne(rawKeep, request.userId, libraryId, source, SocialShare(jsonBody))
-    val hashtagNamesToPersist = Hashtags.findAllHashtagNames(keep.note.getOrElse(""))
-    db.readWrite { implicit s =>
-      keepsCommander.persistHashtagsForKeepAndSaveKeep(request.userId, keep, hashtagNamesToPersist.toSeq)(s, context)
-    }
     imageUrlOpt.map { imageUrl =>
       keepImageCommander.setKeepImageFromUrl(imageUrl, keep.id.get, ImageSource.UserPicked)
     }

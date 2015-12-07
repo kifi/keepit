@@ -17,10 +17,12 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
 import views.html
+import com.keepit.common.core._
 
 import scala.collection.mutable
 import scala.collection.mutable.{ HashMap => MutableMap }
 import scala.concurrent._
+import scala.util.Success
 
 class AdminBookmarksController @Inject() (
   val userActionsHelper: UserActionsHelper,
@@ -37,6 +39,7 @@ class AdminBookmarksController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   libraryChecker: LibraryChecker,
   clock: Clock,
+  keepToCollectionRepo: KeepToCollectionRepo,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
 
@@ -220,17 +223,104 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  // TODO(ryan): slap whoever named this method
-  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = UserAction {
+  def www$youtube$com$watch$v$otCpCn0l4Wo(keepId: Id[Keep]) = AdminUserAction {
     db.readWrite { implicit session =>
       keepRepo.save(keepRepo.get(keepId).copy(keptAt = clock.now().plusDays(1000)))
     }
     Ok
   }
 
-  def checkLibraryKeepVisibility(libId: Id[Library]) = UserAction { request =>
+  def checkLibraryKeepVisibility(libId: Id[Library]) = AdminUserAction { request =>
     val numFix = libraryChecker.keepVisibilityCheck(libId)
     Ok(JsNumber(numFix))
+  }
+
+  // This attempts to fix keep notes whenever they may be off.
+  // updateKeepNote takes the responsibility of making sure the note and internal tags are in sync (note is source of truth).
+  // `appendTagsToNote` will additionally check existing tags and verify that they are in the note.
+  def reprocessNotesOfKeeps(appendTagsToNote: Boolean) = AdminUserAction(parse.json) { implicit request =>
+    val updated = db.readWrite { implicit session =>
+      val keeps = {
+        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
+        keepRepo.getByIds(keepIds.toSet).values.toList
+      }
+      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
+        keepRepo.getByUser(Id[User](u)).toList
+      }
+      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
+        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
+      }
+      val allKeeps = (keeps ++ userKeeps ++ libKeeps).distinctBy(_.id.get)
+      val tagsToAddToKeeps = collectionRepo.getHashtagsByKeepIds(allKeeps.map(_.id.get).toSet)
+
+      allKeeps.map { keep =>
+        val attempt = scala.util.Try {
+          val newNote = if (appendTagsToNote) {
+            tagsToAddToKeeps.get(keep.id.get) match {
+              case Some(tagsToAdd) =>
+                Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsToAdd)
+              case None =>
+                keep.note.getOrElse("")
+            }
+          } else keep.note.getOrElse("")
+          if (!appendTagsToNote || keep.note.getOrElse("") != newNote) {
+            log.info(s"[reprocessNotesOfKeeps] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
+            keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
+            1
+          } else 0
+        }
+        attempt.recover {
+          case ex: Throwable =>
+            log.warn(s"[reprocessNotesOfKeeps] Exception, yoloing anyways", ex)
+            0
+        }.getOrElse(0)
+      }
+    }
+
+    Ok(updated.sum.toString)
+  }
+
+  def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
+    val tagToRemove = (request.body \ "tagToRemove").as[String]
+
+    val keepIds = db.readWrite { implicit session =>
+      val keeps = {
+        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
+        keepRepo.getByIds(keepIds.toSet).values.toList
+      }
+      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
+        keepRepo.getByUser(Id[User](u)).toList
+      }
+      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
+        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
+      }
+      (keeps ++ userKeeps ++ libKeeps).map(_.id.get).toSet
+    }
+    val updated = keepCommander.removeTagFromKeeps(keepIds, Hashtag(tagToRemove))
+
+    Ok(updated.toString)
+  }
+
+  def replaceTagOnKeeps() = AdminUserAction(parse.json) { implicit request =>
+    val newTag = (request.body \ "newTag").as[String]
+    val oldTag = (request.body \ "oldTag").as[String]
+
+    val keepIds = db.readWrite { implicit session =>
+      val keeps = {
+        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
+        keepRepo.getByIds(keepIds.toSet).values.toList
+      }
+      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
+        keepRepo.getByUser(Id[User](u)).toList
+      }
+      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
+        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
+      }
+      (keeps ++ userKeeps ++ libKeeps).map(_.id.get).toSet
+    }
+    val updated = keepCommander.replaceTagOnKeeps(keepIds, Hashtag(oldTag), Hashtag(newTag))
+
+    Ok(updated.toString)
   }
 
 }

@@ -296,7 +296,7 @@ class ExtLibraryController @Inject() (
       val body = request.body.as[JsObject]
       val title = (body \ "title").asOpt[String]
       implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-      keepsCommander.updateKeepInLibrary(keepExtId, libraryId, request.userId, title) match {
+      keepsCommander.updateKeepTitle(keepExtId, libraryId, request.userId, title) match {
         case Left((status, code)) => Status(status)(Json.obj("error" -> code))
         case Right(keep) => NoContent
       }
@@ -313,57 +313,10 @@ class ExtLibraryController @Inject() (
         case Some(keep) =>
           val body = request.body.as[JsObject]
           val newNote = (body \ "note").as[String]
-          implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-          keepsCommander.updateKeepNote(request.userId, keep, newNote)
+          db.readWrite { implicit session =>
+            keepsCommander.updateKeepNote(request.userId, keep, newNote)
+          }
           NoContent
-      }
-    }
-  }
-
-  def tagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = UserAction { request =>
-    decode(libraryPubId) { libraryId =>
-      db.readOnlyMaster { implicit session =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
-      } match {
-        case Some(mem) if mem.isOwner => // TODO: change to .canWrite
-          keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
-            case Right(keep) if (tag == "Add a tag") =>
-              log.warn(s"user ${request.userId} attempted to apply 'Add a tag'") // airbrake instead once these have stopped?
-              BadRequest(Json.obj("error" -> "disallowed_tag_name"))
-            case Right(keep) =>
-              implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-              val coll = keepsCommander.getOrCreateTag(request.userId, tag) // TODO: library ID, not user ID
-              keepsCommander.addToCollection(coll.id.get, Seq(keep))
-              Ok(Json.obj("tag" -> coll.name))
-            case Left((status, code)) =>
-              Status(status)(Json.obj("error" -> code))
-          }
-        case _ =>
-          Forbidden(Json.obj("error" -> "permission_denied"))
-      }
-    }
-  }
-
-  def untagKeep(libraryPubId: PublicId[Library], keepExtId: ExternalId[Keep], tag: String) = UserAction { request =>
-    decode(libraryPubId) { libraryId =>
-      db.readOnlyMaster { implicit session =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
-      } match {
-        case Some(mem) if mem.isOwner => // TODO: change to .canWrite
-          keepsCommander.getKeep(libraryId, keepExtId, request.userId) match {
-            case Right(keep) =>
-              db.readOnlyReplica { implicit s =>
-                collectionRepo.getByUserAndName(request.userId, Hashtag(tag)) // TODO: library ID, not user ID
-              } foreach { coll =>
-                implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.keeper).build
-                keepsCommander.removeFromCollection(coll, Seq(keep))
-              }
-              NoContent
-            case Left((status, code)) =>
-              Status(status)(Json.obj("error" -> code))
-          }
-        case _ =>
-          Forbidden(Json.obj("error" -> "permission_denied"))
       }
     }
   }
@@ -373,24 +326,6 @@ class ExtLibraryController @Inject() (
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
       val result = JsArray(tagsAndMatches.map { case (tag, matches) => json.aggressiveMinify(Json.obj("tag" -> tag, "matches" -> matches)) })
       Ok(result)
-    }
-  }
-
-  def deprecatedSearchTags(libraryPubId: PublicId[Library], query: String, limit: Option[Int]) = UserAction.async { request =>
-    Library.decodePublicId(libraryPubId).toOption map { libraryId =>
-      db.readOnlyMaster { implicit session =>
-        libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, request.userId)
-      } map { _ =>
-        keepsCommander.searchTags(request.userId, query, limit) map { hits =>
-          implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]
-          val result = JsArray(hits.map { hit => json.aggressiveMinify(Json.obj("tag" -> hit.tag, "matches" -> hit.matches)) })
-          Ok(result)
-        }
-      } getOrElse {
-        Future.successful(Forbidden(Json.obj("error" -> "permission_denied")))
-      }
-    } getOrElse {
-      Future.successful(BadRequest(Json.obj("error" -> "invalid_library_id")))
     }
   }
 

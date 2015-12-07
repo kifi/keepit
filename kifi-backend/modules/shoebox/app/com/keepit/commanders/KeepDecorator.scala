@@ -148,12 +148,17 @@ class KeepDecoratorImpl @Inject() (
               augmentationInfoForKeep.libraries.collect { case (libraryId, contributorId, keptAt) if doShowLibrary(libraryId) => (BasicLibraryWithKeptAt(idToBasicLibrary(libraryId), keptAt), idToBasicUser(contributorId)) }
             }
 
+            val bestEffortPath = (keep.title, pageInfoForKeep.title) match {
+              case (None, Some(title)) => keep.copy(title = Some(title)).path.relative
+              case _ => keep.path.relative
+            }
+
             KeepInfo(
               id = Some(keep.externalId),
               pubId = Some(Keep.publicId(keep.id.get)),
               title = keep.title,
               url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
-              path = keep.path.relative,
+              path = bestEffortPath,
               isPrivate = keep.isPrivate,
               user = Some(idToBasicUser(keep.userId)),
               createdAt = Some(getTimestamp(keep)),
@@ -164,9 +169,9 @@ class KeepDecoratorImpl @Inject() (
               libraries = Some(libraries),
               librariesOmitted = Some(augmentationInfoForKeep.librariesOmitted),
               librariesTotal = Some(augmentationInfoForKeep.librariesTotal),
-              collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is this still used?
-              tags = Some(collsForKeep.toSet),
-              hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }),
+              collections = Some(collsForKeep.map(_.id.get.id).toSet), // Is not used by any client
+              tags = Some(collsForKeep.toSet), // Used by site
+              hashtags = Some(collsForKeep.toSet.map { c: BasicCollection => Hashtag(c.name) }), // Used by both mobile clients
               summary = Some(pageInfoForKeep),
               siteName = DomainToNameMapper.getNameFromUrl(keep.url),
               libraryId = keep.libraryId.map(Library.publicId),

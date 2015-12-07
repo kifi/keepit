@@ -17,7 +17,7 @@ import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.controllers.internal.MessagingController
 import com.keepit.eliza.model._
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.model.{ MessageThreadFactory, NormalizedURI, User }
 import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -57,9 +57,7 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
   def nextTime = initialDateTime.minusSeconds(seconds.getAndIncrement)
 
   def createMessageThread(title: String)(implicit rw: RWSession, injector: Injector) = {
-    inject[MessageThreadRepo].save(MessageThread(
-      uriId = None, url = None, nUrl = None, pageTitle = Some(title),
-      participants = None, participantsHash = None, keepId = None))
+    MessageThreadFactory.thread().withTitle(title).saved
   }
 
   def createUserThread(thread: MessageThread, userId: Id[User])(implicit rw: RWSession, injector: Injector) = {

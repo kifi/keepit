@@ -33,19 +33,13 @@ class MessagingIndexCommander @Inject() (
   private def getThreadContentsForThreadWithSequenceNumber(threadId: Id[MessageThread], seq: SequenceNumber[ThreadContent]): Future[ThreadContent] = {
     log.info(s"getting content for thread $threadId seq $seq")
     val thread = db.readOnlyReplica { implicit session => threadRepo.get(threadId) }
-    val userParticipants: Seq[Id[User]] = thread.participants.map(_.allUsers).getOrElse(Set[Id[User]]()).toSeq
+    val userParticipants: Seq[Id[User]] = thread.participants.allUsers.toSeq
     val participantBasicUsersFuture = shoebox.getBasicUsers(userParticipants)
-    val participantBasicNonUsers = thread.participants.map(_.allNonUsers).getOrElse(Set.empty).map(NonUserParticipant.toBasicNonUser)
-      .map(BasicUserLikeEntity.apply)
+    val participantBasicNonUsers = thread.participants.allNonUsers.map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu)))
 
     val messages: Seq[ElizaMessage] = db.readOnlyReplica { implicit session =>
       messageRepo.get(threadId, 0)
-    } sortWith {
-      case (m1, m2) =>
-        m1.createdAt.isAfter(m2.createdAt)
-    } filter { message =>
-      !message.from.isSystem
-    }
+    }.filterNot(_.from.isSystem).sortBy(-_.createdAt.getMillis)
 
     val digest = try {
       MessageFormatter.toText(messages.head.messageText).slice(0, 255)
@@ -71,7 +65,7 @@ class MessagingIndexCommander @Inject() (
         seq = seq,
         participants = participantBasicUsers.values.toSeq.map(BasicUserLikeEntity.apply) ++ participantBasicNonUsers,
         updatedAt = messages.head.createdAt,
-        url = thread.url.getOrElse(""),
+        url = thread.url,
         threadExternalId = thread.externalId.id,
         pageTitleOpt = thread.pageTitle,
         digest = digest,

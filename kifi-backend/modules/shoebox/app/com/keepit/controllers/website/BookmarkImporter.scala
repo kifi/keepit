@@ -39,6 +39,7 @@ import org.joda.time.DateTime
 import scala.concurrent.duration.Duration
 
 class BookmarkImporter @Inject() (
+    db: Database,
     val userActionsHelper: UserActionsHelper,
     keepInterner: KeepInterner,
     heimdalContextBuilderFactoryBean: HeimdalContextBuilderFactory,
@@ -103,19 +104,8 @@ class BookmarkImporter @Inject() (
   def processDirectTwitterData(userId: Id[User], libraryId: Id[Library], tweets: Seq[JsObject]): Unit = {
     implicit val context = heimdalContextBuilderFactoryBean().build
     val (sourceOpt, parsed) = twitterArchiveParser.parseTwitterJson(tweets)
-    log.info(s"[TweetSync] Got ${parsed.length} Bookmarks out of ${tweets.length} tweets")
-    val tagSet = parsed.flatMap { bm => bm.tags }.toSet
 
-    val tags = tagSet.map { tagStr =>
-      tagStr.trim -> keepsCommander.getOrCreateTag(userId, tagStr.trim)(context)
-    }.toMap
-    val taggedKeeps = parsed.map {
-      case Bookmark(t, h, tagNames, createdDate, originalJson) =>
-        val keepTagNames = tagNames.flatMap(tags.get).map(_.name.tag)
-        Bookmark(t, h, keepTagNames, createdDate, originalJson)
-    }
-
-    val (importId, rawKeeps) = createRawKeeps(userId, sourceOpt, taggedKeeps, libraryId)
+    val (importId, rawKeeps) = createRawKeeps(userId, sourceOpt, parsed, libraryId)
 
     keepInterner.persistRawKeeps(rawKeeps, Some(importId))
   }
@@ -126,35 +116,15 @@ class BookmarkImporter @Inject() (
     implicit val context = heimdalContextBuilderFactoryBean.withRequestInfoAndSource(lf.request, sourceOpt.getOrElse(KeepSource.bookmarkFileImport)).build
     SafeFuture("processBookmarkExtraction") {
       log.info(s"[bmFileImport:${lf.id}] Parsed in ${clock.getMillis() - lf.startMillis}ms")
-      val tagMap = scala.collection.mutable.Map.empty[String, String]
-      parsed.foreach { bm =>
-        bm.tags.map { tagName =>
-          tagMap += (tagName.toLowerCase -> tagName)
-        }
-      }
 
-      val importTag = keepsCommander.getOrCreateTag(lf.request.userId, "imported-links")(context)
-
-      val tags = tagMap.values.toSeq.map { tagStr =>
-        tagStr.trim -> timing(s"uploadBookmarkFile(${lf.request.userId}) -- getOrCreateTag(${tagStr.trim})", 50) { keepsCommander.getOrCreateTag(lf.request.userId, tagStr.trim)(context) }
-      }.toMap
-      val taggedKeeps = parsed.map {
-        case Bookmark(t, h, tagNames, createdDate, originalJson) =>
-          val keepTags = tagNames.flatMap(tags.get) :+ importTag
-          Bookmark(t, h, keepTags.map(_.name.tag), createdDate, originalJson)
-      }
-      log.info(s"[bmFileImport:${lf.id}] Tags extracted in ${clock.getMillis() - lf.startMillis}ms")
-
-      val (importId, rawKeeps) = createRawKeeps(lf.request.userId, sourceOpt, taggedKeeps, Library.decodePublicId(pubId).get)
+      val (importId, rawKeeps) = createRawKeeps(lf.request.userId, sourceOpt, parsed, Library.decodePublicId(pubId).get)
 
       log.info(s"[bmFileImport:${lf.id}] Raw keep start persisting in ${clock.getMillis() - lf.startMillis}ms")
       keepInterner.persistRawKeeps(rawKeeps, Some(importId))
+      log.info(s"[bmFileImport:${lf.id}] Done in ${clock.getMillis() - lf.startMillis}ms. Successfully processed bookmark file import for ${lf.request.userId}. ${rawKeeps.length} keeps processed.")
 
-      log.info(s"[bmFileImport:${lf.id}] Raw keep finished persisting in ${clock.getMillis() - lf.startMillis}ms")
-
-      log.info(s"[bmFileImport:${lf.id}] Done in ${clock.getMillis() - lf.startMillis}ms. Successfully processed bookmark file import for ${lf.request.userId}. ${rawKeeps.length} keeps processed, ${tags.size} tags.")
-
-      Some((rawKeeps.length, tags.size))
+      val tagSize = parsed.flatMap(_.tags).toSet.size
+      Some((rawKeeps.length, tagSize))
     }
   }
 

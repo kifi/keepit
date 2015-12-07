@@ -54,7 +54,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       val senderOpt: Option[BasicUserLikeEntity] = em.from.fold(
         None,
         { uid => Some(BasicUserLikeEntity(basicUsers(uid))) },
-        { nu => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu))) }
+        { nu => Some(BasicUserLikeEntity(basicNonUsers(nu))) }
       )
       senderOpt.map { sender =>
         em.id.get -> Message(
@@ -92,6 +92,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           kid -> Discussion(
             startedAt = thread.createdAt,
             numMessages = countsByThread.getOrElse(thread.id.get, 0),
+            locator = thread.deepLocator,
             messages = recentsByThread(thread.id.get).flatMap(em => extMessageMap.get(em.id.get))
           )
       }
@@ -111,18 +112,17 @@ class ElizaDiscussionCommanderImpl @Inject() (
           // sigh, shrug, and use that message thread. Sad waste of effort, but cést la vie
           messageThreadRepo.getByKeepId(keepId).getOrElse {
             val mt = messageThreadRepo.save(MessageThread(
-              uriId = Some(csKeep.uriId),
-              url = Some(csKeep.url),
-              nUrl = None,
+              uriId = csKeep.uriId,
+              url = csKeep.url,
+              nUrl = csKeep.url,
               pageTitle = csKeep.title,
-              participants = Some(MessageThreadParticipants(Set(csKeep.owner))),
-              participantsHash = None,
+              participants = MessageThreadParticipants(Set(csKeep.owner)),
               keepId = Some(csKeep.id)
             ))
             val ut = userThreadRepo.save(UserThread(
               user = csKeep.owner,
               threadId = mt.id.get,
-              uriId = mt.uriId,
+              uriId = Some(mt.uriId),
               lastSeen = None,
               lastMsgFromOther = None,
               lastNotification = JsNull,
@@ -143,7 +143,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
           val ut = userThreadRepo.save(UserThread(
             user = userId,
             threadId = thread.id.get,
-            uriId = thread.uriId,
+            uriId = Some(thread.uriId),
             lastSeen = None,
             lastMsgFromOther = None,
             lastNotification = JsNull
