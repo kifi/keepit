@@ -2,6 +2,7 @@ package com.keepit.commanders
 
 import com.google.inject.{ ImplementedBy, Singleton, Inject }
 import com.keepit.classify.{ NormalizedHostname, Domain, DomainRepo }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
@@ -50,7 +51,8 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
     postOffice: LocalPostOffice,
     fortytwoConfig: FortyTwoConfig,
     clock: Clock,
-    implicit val executionContext: ScalaExecutionContext) extends OrganizationDomainOwnershipCommander with Logging {
+    implicit val executionContext: ScalaExecutionContext,
+    implicit val publicIdConfig: PublicIdConfiguration) extends OrganizationDomainOwnershipCommander with Logging {
 
   def getDomainsOwned(orgId: Id[Organization]): Set[NormalizedHostname] = db.readOnlyReplica { implicit session =>
     orgDomainOwnershipRepo.getOwnershipsForOrganization(orgId).map(_.normalizedHostname).toSet
@@ -206,7 +208,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
 
               val emailWithCode = userEmailAddressRepo.save(userEmail.withVerificationCode(clock.now()))
               val siteUrl = fortytwoConfig.applicationBaseUrl
-              val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(emailWithCode.verificationCode.get)}"
+              val verifyUrl = s"$siteUrl${EmailVerificationCode.verifyPath(emailWithCode.verificationCode.get, Some(Organization.publicId(org.id.get)))}"
 
               Right(postOffice.sendMail(ElectronicMail(
                 from = SystemEmailAddress.NOTIFICATIONS,
@@ -215,7 +217,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
                 subject = s"Join ${org.name} on Kifi",
                 htmlBody =
                   s"""
-                       |Per your request, you can join ${org.name} on Kifi by <a href=${verifyUrl}>clicking here</a>.
+                       |Per your request, you can join <a href="www.kifi.com/${org.handle.value}" target="_blank">${org.name}</a> on Kifi by <a href=${verifyUrl} target="_blank">clicking here</a>.
                        |This will give you access to all of their team libraries, discussions, and other Kifi for Teams features.
                     """.stripMargin,
                 textBody = Some(

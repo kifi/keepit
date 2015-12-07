@@ -58,7 +58,7 @@ class EmailTestController @Inject() (
 
     val emailOptF: Option[Future[ElectronicMail]] = Some(name) collect {
       case "kifiInvite" => emailSenderProvider.kifiInvite(sendTo, userId, ExternalId[Invitation]())
-      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, None, verificationCode = Some(verificationCode), domainOwnerIds = Set(orgId), installs = installs.toSet)
+      case "welcome" => emailSenderProvider.welcome.sendToUser(userId, None, verificationCode = Some(verificationCode), installs = installs.toSet)
       case "resetPassword" => emailSenderProvider.resetPassword.sendToUser(userId, sendTo)
       case "mobileWaitlist" =>
         val sender = emailSenderProvider.waitList

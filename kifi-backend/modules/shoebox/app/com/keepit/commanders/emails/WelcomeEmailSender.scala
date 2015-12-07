@@ -18,7 +18,7 @@ class WelcomeEmailSender @Inject() (
     fortytwoConfig: FortyTwoConfig,
     protected val airbrake: AirbrakeNotifier) extends Logging {
 
-  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress], verificationCode: Option[EmailVerificationCode], domainOwnerIds: Set[Id[Organization]], installs: Set[KifiInstallationPlatform]): Future[ElectronicMail] = {
+  def sendToUser(userId: Id[User], toAddress: Option[EmailAddress], verificationCode: Option[EmailVerificationCode], installs: Set[KifiInstallationPlatform]): Future[ElectronicMail] = {
 
     val verifyUrl = verificationCode.map(code => s"${fortytwoConfig.applicationBaseUrl}${EmailVerificationCode.verifyPath(code)}")
 
@@ -29,8 +29,8 @@ class WelcomeEmailSender @Inject() (
       subject = "Let's get started with Kifi",
       to = toAddress.map(Right.apply).getOrElse(Left(userId)),
       category = NotificationCategory.User.WELCOME,
-      htmlTemplate = views.html.email.black.welcomePlain(userId, verifyUrl, domainOwnerIds, installs),
-      textTemplate = Some(views.html.email.black.welcomeText(userId, verifyUrl, domainOwnerIds, installs)),
+      htmlTemplate = views.html.email.black.welcomePlain(userId, verifyUrl, installs),
+      textTemplate = Some(views.html.email.black.welcomeText(userId, verifyUrl, installs)),
       templateOptions = Map("layout" -> CustomLayout),
       tips = Seq.empty
     )

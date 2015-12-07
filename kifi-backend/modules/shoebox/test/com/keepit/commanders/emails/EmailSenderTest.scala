@@ -87,7 +87,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           toUser
         }
 
-        val email = Await.result(sender.sendToUser(userId = toUser.id.get, toAddress = None, verificationCode = None, domainOwnerIds = Set.empty, installs = Set.empty), Duration(5, "seconds"))
+        val email = Await.result(sender.sendToUser(userId = toUser.id.get, toAddress = None, verificationCode = None, installs = Set.empty), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
@@ -124,7 +124,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
           toUser
         }
 
-        val email = Await.result(sender.sendToUser(userId = toUser.id.get, toAddress = None, verificationCode = None, domainOwnerIds = Set.empty, installs = Set.empty), Duration(5, "seconds"))
+        val email = Await.result(sender.sendToUser(userId = toUser.id.get, toAddress = None, verificationCode = None, installs = Set.empty), Duration(5, "seconds"))
         outbox.size === 1
         outbox(0) === email
 
