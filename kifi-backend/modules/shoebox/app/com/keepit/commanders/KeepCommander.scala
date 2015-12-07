@@ -7,6 +7,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.CollectionHelpers
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.cache.TransactionalCaching.Implicits._
+import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.common.core._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db._
@@ -96,6 +97,7 @@ trait KeepCommander {
 
   // On the way out, hopefully.
   def allKeeps(before: Option[ExternalId[Keep]], after: Option[ExternalId[Keep]], collectionId: Option[ExternalId[Collection]], helprankOpt: Option[String], count: Int, userId: Id[User]): Future[Seq[KeepInfo]]
+  def autoFixKeepNoteAndTags(keepId: Id[Keep]): Future[Unit]
 }
 
 @Singleton
@@ -443,7 +445,7 @@ class KeepCommanderImpl @Inject() (
       searchClient.updateKeepIndex()
     }
     colls.foreach { c =>
-      collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)
+      Try(collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)) // deadlock prone
     }
     keep
   }
@@ -764,6 +766,26 @@ class KeepCommanderImpl @Inject() (
 
     def getKeepTimestamp(keep: Keep) = firstAddedAt(keep.id.get)
     keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = sanitizeUrls, getTimestamp = getKeepTimestamp)
+  }
+
+  private val autoFixNoteLimiter = new ReactiveLock()
+  def autoFixKeepNoteAndTags(keepId: Id[Keep]): Future[Unit] = {
+    autoFixNoteLimiter.withLock {
+      db.readWrite(attempts = 3) { implicit session =>
+        val keep = keepRepo.get(keepId)
+        val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
+        val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
+        if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized)) {
+          val newNote = Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)
+          if (keep.note.getOrElse("").toLowerCase != newNote.toLowerCase) {
+            log.info(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
+            Try(updateKeepNote(keep.userId, keep, newNote, freshTag = false)).recover { case ex: Throwable =>
+              log.warn(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Couldn't update note", ex)
+            }
+          }
+        }
+      }
+    }
   }
 }
 

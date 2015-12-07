@@ -248,12 +248,15 @@ class KeepInternerImpl @Inject() (
   }
 
   private def updateKeepTagsUsingNote(keeps: Seq[Keep]) = {
+    def tryFixNote(keep: Keep)(implicit session: RWSession) = {
+      Try(keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse("")))
+    }
     // Attach tags to keeps
     val res = db.readWriteBatch(keeps, attempts = 5) {
       case ((s, keep)) =>
         if (keep.note.nonEmpty) {
           // Don't blow if something messes up, try our best to just get through
-          Some(Try(keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse(""))(s)))
+          Some(tryFixNote(keep)(s).recoverWith { case _: Throwable => tryFixNote(keep)(s) })
         } else None
     }
 
@@ -261,6 +264,8 @@ class KeepInternerImpl @Inject() (
       case ((k, Failure(ex))) => (k.id, ex)
       case ((k, Success(Some(Failure(ex))))) => (k.id, ex)
     }.foreach {
+      case (keepId, failure: UndeclaredThrowableException) =>
+        log.warn(s"[keepinterner] Failed updating keep note for $keepId", failure.getUndeclaredThrowable)
       case (keepId, failure) =>
         log.warn(s"[keepinterner] Failed updating keep note for $keepId", failure)
     }
