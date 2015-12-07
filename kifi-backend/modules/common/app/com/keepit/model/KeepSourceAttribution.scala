@@ -87,8 +87,9 @@ object SourceAttribution {
       val (attrTypeString, attrJs) = toJson(x) match {
         case (TwitterPartial, value) => (Twitter.name, value)
         case (Twitter, value) =>
-          val partialTwitterFields = PartialTwitterAttribution.format.writes(PartialTwitterAttribution.fromRawTweetJson(value).get)
-          (Twitter.name, value.as[JsObject] ++ partialTwitterFields.as[JsObject])
+          val partialTwitterFields = PartialTwitterAttribution.fromRawTweetJson(value).map(PartialTwitterAttribution.format.writes(_).as[JsObject])
+          val augmentedValue = partialTwitterFields.map(value.as[JsObject] ++ _) getOrElse value
+          (Twitter.name, augmentedValue)
         case (Slack, value) => (Slack.name, value)
       }
       Json.obj(attrTypeString -> attrJs)
