@@ -26,6 +26,7 @@ class KeepChecker @Inject() (
     ktuRepo: KeepToUserRepo,
     ktlCommander: KeepToLibraryCommander,
     ktuCommander: KeepToUserCommander,
+    libraryRepo: LibraryRepo,
     systemValueRepo: SystemValueRepo,
     implicit val executionContext: ExecutionContext) extends Logging with Debouncing {
 
@@ -47,6 +48,7 @@ class KeepChecker @Inject() (
           ensureUriIntegrity(keep.id.get)
           ensureLibrariesHashIntegrity(keep.id.get)
           ensureParticipantsHashIntegrity(keep.id.get)
+          ensureOrganizationIdIntegrity(keep.id.get)
         }
         systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, keeps.map(_.seq).max)
       }
@@ -105,6 +107,14 @@ class KeepChecker @Inject() (
     if (keep.participantsHash != expectedHash) {
       airbrake.notify(s"[KTU-HASH-MATCH] Keep $keepId's participants hash (${keep.participantsHash}) != $users ($expectedHash)")
       keepCommander.refreshParticipantsHash(keep)
+    }
+  }
+
+  private def ensureOrganizationIdIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
+    val keep = keepRepo.getNoCache(keepId)
+    ktlRepo.getAllByKeepId(keepId).map(_.libraryId).foreach { libId =>
+      val library = libraryRepo.get(libId)
+      if (keep.organizationId != library.organizationId) keepCommander.syncWithLibrary(keep, library)
     }
   }
 }

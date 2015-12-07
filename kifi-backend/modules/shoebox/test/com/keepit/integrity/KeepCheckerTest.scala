@@ -13,6 +13,7 @@ import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.KeepSequenceNumberAssigner
@@ -136,6 +137,33 @@ class KeepCheckerTest extends TestKitSupport with SpecificationLike with Shoebox
 
         db.readOnlyMaster { implicit session =>
           keepRepo.get(keep.id.get).participantsHash === ParticipantsHash(Set(user.id.get))
+        }
+      }
+    }
+
+    "fix broken keep.organizationIds" in {
+      withDb(modules: _*) { implicit injector =>
+        val (keep, organization) = db.readWrite { implicit session =>
+          val user = UserFactory.user().saved
+          val organization = OrganizationFactory.organization().withOwner(user).saved
+          val library = LibraryFactory.library().withOwner(user).withOrganization(organization).saved
+          val keep = KeepFactory.keep().withUser(user).withLibrary(library).saved
+          // the above should not set brokenKeep.organizationId properly
+
+          val brokenKeep = keepRepo.save(keep.copy(organizationId = None))
+
+          (brokenKeep, organization)
+        }
+
+        db.readOnlyMaster { implicit session =>
+          keepRepo.get(keep.id.get).organizationId !=== organization.id
+        }
+
+        inject[KeepSequenceNumberAssigner].assignSequenceNumbers()
+        keepChecker.check()
+
+        db.readOnlyMaster { implicit session =>
+          keepRepo.get(keep.id.get).organizationId === organization.id
         }
       }
     }
