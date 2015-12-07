@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.cache._
 import com.keepit.common.db.slick.DataBaseComponent
 import com.keepit.common.logging.AccessLog
+import com.keepit.social.twitter.TwitterHandle
 import org.joda.time.DateTime
 
 import com.keepit.common.db.{ ModelWithState, State, Id, States }

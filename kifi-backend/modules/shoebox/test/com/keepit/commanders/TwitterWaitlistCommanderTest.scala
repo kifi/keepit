@@ -11,10 +11,11 @@ import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule }
-import com.keepit.model.{ TwitterHandle, TwitterWaitlistEntry, TwitterWaitlistEntryStates, TwitterWaitlistRepo }
+import com.keepit.model.{ TwitterWaitlistEntry, TwitterWaitlistEntryStates, TwitterWaitlistRepo }
 import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.search.FakeSearchServiceClientModule
+import com.keepit.social.twitter.TwitterHandle
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import scala.concurrent._

@@ -1,11 +1,20 @@
-package com.keepit.common.social.twitter
+package com.keepit.social.twitter
 
 import java.util.Locale
 
-import com.keepit.model.TwitterId
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.kifi.macros.json
+
+@json case class TwitterId(id: Long) {
+  // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
+  override def toString = id.toString
+}
+
+@json case class TwitterHandle(value: String) {
+  override def toString = value
+}
 
 case class RawTweet(
   id: TwitterId,
@@ -24,7 +33,7 @@ case class RawTweet(
   possiblySensitive: Option[Boolean],
   originalJson: JsValue)
 object RawTweet {
-  implicit def format: Reads[RawTweet] = (
+  implicit val reads: Reads[RawTweet] = (
     (__ \ 'id).read[TwitterId] and
     (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
     (__ \ 'text).read[String] and
@@ -39,10 +48,11 @@ object RawTweet {
     (__ \ 'in_reply_to_screen_name).readNullable[String] and
     (__ \ 'lang).readNullable[String] and
     (__ \ 'possibly_sensitive).readNullable[Boolean] and
-    new Reads[JsValue] {
-      def reads(json: JsValue): JsResult[JsValue] = JsSuccess(json)
-    }
+    Reads(JsSuccess(_))
   )(RawTweet.apply _)
+
+  implicit val writes: Writes[RawTweet] = Writes(r => r.originalJson)
+  implicit val format = Format(reads, writes)
 
   // This is because Play json has a bug with recursive types
   case class RawRetweet(
@@ -61,7 +71,7 @@ object RawTweet {
     possiblySensitive: Option[Boolean])
 
   object RawRetweet {
-    implicit def format: Reads[RawRetweet] = (
+    implicit val reads: Reads[RawRetweet] = (
       (__ \ 'id).read[TwitterId] and
       (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
       (__ \ 'text).read[String] and
@@ -103,18 +113,18 @@ object RawTweet {
 
   case class TweetIndices(start: Int, end: Int)
   object TweetIndices {
-    implicit def format: Reads[TweetIndices] = __.read[JsArray].map(r => TweetIndices(r(0).as[Int], r(1).as[Int]))
+    implicit val reads: Reads[TweetIndices] = __.read[JsArray].map(r => TweetIndices(r(0).as[Int], r(1).as[Int]))
   }
 
   // https://dev.twitter.com/overview/api/entities-in-twitter-objects
-  import Entity._
+  import com.keepit.social.twitter.RawTweet.Entity._
   case class Entities(
     userMentions: Seq[UserMentionsEntity],
     media: Seq[MediaEntity],
     hashtags: Seq[HashtagEntity],
     urls: Seq[UrlEntity])
   object Entities {
-    implicit def format: Reads[Entities] = (
+    implicit val reads: Reads[Entities] = (
       (__ \ 'user_mentions).read[Seq[UserMentionsEntity]] and
       ((__ \ 'media).read[Seq[MediaEntity]].orElse(Reads.pure(Seq.empty))) and
       (__ \ 'hashtags).read[Seq[HashtagEntity]] and
@@ -126,7 +136,7 @@ object RawTweet {
   object Entity {
     case class UserMentionsEntity(name: String, screenName: String, indices: TweetIndices, id: TwitterId) extends Entity
     object UserMentionsEntity {
-      implicit def format: Reads[UserMentionsEntity] = (
+      implicit val reads: Reads[UserMentionsEntity] = (
         (__ \ 'name).read[String] and
         (__ \ 'screen_name).read[String] and
         (__ \ 'indices).read[TweetIndices] and
@@ -140,10 +150,10 @@ object RawTweet {
       // Sizes key can be "medium", "thumb", "small", or "large"
       case class Size(w: Int, h: Int, resize: String)
       object Size {
-        implicit def format: Reads[Size] = Json.reads[Size]
+        implicit val reads: Reads[Size] = Json.reads[Size]
       }
 
-      implicit def format: Reads[MediaEntity] = (
+      implicit val reads: Reads[MediaEntity] = (
         (__ \ 'id).read[TwitterId] and
         (__ \ 'indices).read[TweetIndices] and
         (__ \ 'media_url_https).read[String] and
@@ -172,7 +182,7 @@ object RawTweet {
 
     case class HashtagEntity(text: String, indices: TweetIndices)
     object HashtagEntity {
-      implicit def format: Reads[HashtagEntity] = (
+      implicit val reads: Reads[HashtagEntity] = (
         (__ \ 'text).read[String] and
         (__ \ 'indices).read[TweetIndices]
       )(HashtagEntity.apply _)
@@ -180,7 +190,7 @@ object RawTweet {
 
     case class UrlEntity(indices: TweetIndices, url: String, expandedUrl: String, displayUrl: String)
     object UrlEntity {
-      implicit def format: Reads[UrlEntity] = (
+      implicit val reads: Reads[UrlEntity] = (
         (__ \ 'indices).read[TweetIndices] and
         (__ \ 'url).read[String] and
         (__ \ 'expanded_url).read[String] and
@@ -195,7 +205,7 @@ object RawTweet {
     id: TwitterId,
     profileImageUrlHttps: String)
   object User {
-    implicit def format: Reads[User] = (
+    implicit val reads: Reads[User] = (
       (__ \ 'name).read[String] and
       (__ \ 'screen_name).read[String] and
       (__ \ 'id).read[TwitterId] and

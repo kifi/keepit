@@ -9,6 +9,7 @@ import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
 import com.keepit.slack.models.SlackChannelId
+import com.keepit.social.twitter.TwitterHandle
 import org.apache.lucene.index.Term
 
 object KeepFields {

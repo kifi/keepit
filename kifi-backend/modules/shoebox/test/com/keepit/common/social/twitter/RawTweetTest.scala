@@ -1,6 +1,6 @@
 package com.keepit.common.social.twitter
 
-import com.keepit.model.TwitterId
+import com.keepit.social.twitter.{ TwitterId, RawTweet }
 import org.specs2.mutable.Specification
 import play.api.libs.json.Json
 

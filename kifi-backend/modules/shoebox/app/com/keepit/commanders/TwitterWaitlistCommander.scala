@@ -12,6 +12,7 @@ import com.keepit.common.oauth.{ TwitterUserShow, TwitterOAuthProvider }
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContextBuilder
 import com.keepit.model._
+import com.keepit.social.twitter.TwitterHandle
 import com.keepit.social.{ SocialNetworks, SocialNetworkType }
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Iteratee

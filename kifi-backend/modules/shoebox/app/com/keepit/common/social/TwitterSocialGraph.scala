@@ -22,6 +22,7 @@ import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.notify.NotificationInfoModel
 import com.keepit.social._
+import com.keepit.social.twitter.{ TwitterHandle, TwitterId }
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.http.Status._
 import play.api.Play.current

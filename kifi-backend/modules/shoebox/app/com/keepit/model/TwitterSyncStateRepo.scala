@@ -5,6 +5,7 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.slick.{ Repo, DbRepo, DataBaseComponent }
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
+import com.keepit.social.twitter.TwitterHandle
 
 import org.joda.time.DateTime
 

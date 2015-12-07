@@ -92,7 +92,7 @@ private class RawKeepImporterActor @Inject() (
     rawKeepGroup.map { rk =>
       val canonical = rk.originalJson.flatMap(json => (json \ Normalization.CANONICAL.scheme).asOpt[String])
       val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
-      val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
+      val attribution = RawKeep.extractKeepSourceAttribution(rk)
       val note = rk.originalJson.flatMap(json => (json \ "note").asOpt[String]).map(Hashtags.formatExternalNote)
       val tags = rk.keepTags.flatMap(_.asOpt[Seq[String]]).getOrElse(Seq.empty)
       val noteWithTags = Option(Hashtags.addTagsToString(note.getOrElse(""), tags)).filter(_.trim.nonEmpty)

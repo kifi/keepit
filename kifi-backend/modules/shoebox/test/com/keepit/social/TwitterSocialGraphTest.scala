@@ -12,6 +12,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
+import com.keepit.social.twitter.TwitterId
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsArray, Json, JsNull, JsValue }

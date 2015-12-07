@@ -2,7 +2,8 @@ package com.keepit.common.oauth
 
 import com.google.inject.{ Singleton, Provides }
 import com.keepit.common.mail.EmailAddress
-import com.keepit.model.{ TwitterHandle, OAuth1TokenInfo, OAuth2TokenInfo }
+import com.keepit.model.{ OAuth1TokenInfo, OAuth2TokenInfo }
+import com.keepit.social.twitter.TwitterHandle
 import play.api.libs.json.JsValue
 import play.api.libs.oauth.ConsumerKey
 import play.api.libs.ws.WSResponse
