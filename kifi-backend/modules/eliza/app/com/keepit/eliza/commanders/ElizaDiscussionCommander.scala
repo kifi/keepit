@@ -116,7 +116,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
               url = csKeep.url,
               nUrl = csKeep.url,
               pageTitle = csKeep.title,
-              startedBy = Some(csKeep.owner),
+              startedBy = csKeep.owner,
               participants = MessageThreadParticipants(Set(csKeep.owner)),
               keepId = Some(csKeep.id)
             ))
@@ -140,7 +140,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     getOrCreateMessageThreadForKeep(keepId).imap { thread =>
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
-          messageThreadRepo.save(thread.withParticipants(clock.now, Seq(userId)))
+          messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId)))
           val ut = userThreadRepo.save(UserThread(
             user = userId,
             threadId = thread.id.get,

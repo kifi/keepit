@@ -40,7 +40,7 @@ class MessageThreadRepoImpl @Inject() (
     uriId: Id[NormalizedURI],
     url: String,
     nUrl: String,
-    startedBy: Option[Id[User]],
+    startedBy: Id[User],
     participants: MessageThreadParticipants,
     participantsHash: Int, // exists only in the db, will not be put into the model
     pageTitle: Option[String],
@@ -58,7 +58,7 @@ class MessageThreadRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def nUrl = column[String]("nUrl", O.NotNull)
-    def startedBy = column[Option[Id[User]]]("started_by", O.Nullable)
+    def startedBy = column[Id[User]]("started_by", O.NotNull)
     def participants = column[MessageThreadParticipants]("participants", O.NotNull)
     def participantsHash = column[Int]("participants_hash", O.NotNull)
     def pageTitle = column[Option[String]]("page_title", O.Nullable)
@@ -96,7 +96,7 @@ class MessageThreadRepoImpl @Inject() (
           url = url,
           nUrl = nUrl,
           pageTitle = pageTitleOpt,
-          startedBy = Some(starter),
+          startedBy = starter,
           participants = mtps,
           keepId = None
         )

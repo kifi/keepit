@@ -438,7 +438,7 @@ class MessagingCommander @Inject() (
         if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
           None
         } else {
-          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers, actuallyNewNonUsers))
+          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
           val message = messageRepo.save(ElizaMessage(
             from = MessageSender.System,
             thread = thread.id.get,
