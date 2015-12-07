@@ -246,8 +246,8 @@ class AdminBookmarksController @Inject() (
         end <- (request.body \ "endUser").asOpt[Long]
       } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
       (userIds ++ rangeIds).flatMap { u =>
-        keepRepo.getByUser(u).map(_.id.get)
-      }.sortBy(_.id)
+        keepRepo.getByUser(u)
+      }.sortBy(_.userId.id).map(_.id.get)
     }
 
     keepIds.foreach(k => keepCommander.autoFixKeepNoteAndTags(k).onComplete { _ =>
