@@ -245,12 +245,16 @@ class AdminBookmarksController @Inject() (
         start <- (request.body \ "startUser").asOpt[Long]
         end <- (request.body \ "endUser").asOpt[Long]
       } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
-      (userIds ++ rangeIds).distinct.flatMap { u =>
+      (userIds ++ rangeIds).flatMap { u =>
         keepRepo.getByUser(u).map(_.id.get)
-      }
+      }.sortBy(_.id)
     }
 
-    keepIds.foreach(keepCommander.autoFixKeepNoteAndTags)
+    keepIds.foreach(k => keepCommander.autoFixKeepNoteAndTags(k).onComplete { _ =>
+      if (k.id % 1000 == 0) {
+        log.info(s"[reprocessNotesOfKeeps] Still running, keep $k")
+      }
+    })
 
     Ok(s"Running for ${keepIds.length} keeps!")
   }
