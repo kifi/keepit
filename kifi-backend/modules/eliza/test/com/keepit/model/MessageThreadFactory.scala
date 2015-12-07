@@ -13,7 +13,7 @@ object MessageThreadFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
   def thread(): PartialMessageThread = {
     val url = s"www.${RandomStringUtils.randomAlphabetic(10)}.com"
-    val starter = Id[User](idx.incrementAndGet())
+    val starter = Id[User](-idx.incrementAndGet()) // impossible user id
     PartialMessageThread(MessageThread(
       uriId = Id(idx.incrementAndGet()),
       url = url,

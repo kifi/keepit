@@ -97,7 +97,7 @@ class UserThreadRepoImpl @Inject() (
     def notificationLastSeen = column[Option[DateTime]]("notification_last_seen", O.Nullable)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
-    def startedBy = column[Id[User]]("startedBy", O.NotNull)
+    def startedBy = column[Id[User]]("started_by", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
@@ -264,7 +264,7 @@ class UserThreadRepoImpl @Inject() (
   def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
     rows
       .filter(row => row.threadId === threadId)
-      .map(row => (row.id, row.threadId, row.user, row.lastActive, row.startedBy == row.user, row.lastSeen))
+      .map(row => (row.id, row.threadId, row.user, row.lastActive, row.startedBy === row.user, row.lastSeen))
       .list.map { tuple => (UserThreadActivity.apply _).tupled(tuple) }
   }
 
@@ -272,9 +272,10 @@ class UserThreadRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     userThreadStatsForUserIdCache.getOrElse(UserThreadStatsForUserIdKey(userId)) {
       UserThreadStats(
-        all = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id}""".as[Int].first,
-        active = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND last_active IS NOT NULL""".as[Int].first,
-        started = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND started = TRUE""".as[Int].first)
+        all = rows.filter(row => row.user === userId).length.run,
+        active = rows.filter(row => row.user === userId && row.lastActive.isDefined).length.run,
+        started = rows.filter(row => row.user === userId && row.startedBy === userId).length.run
+      )
     }
   }
 

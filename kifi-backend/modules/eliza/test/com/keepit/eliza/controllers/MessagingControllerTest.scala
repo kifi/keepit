@@ -56,14 +56,12 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
   val seconds = new AtomicInteger(0)
   def nextTime = initialDateTime.minusSeconds(seconds.getAndIncrement)
 
-  def createMessageThread(title: String)(implicit rw: RWSession, injector: Injector) = {
-    MessageThreadFactory.thread().withTitle(title).saved
+  def createMessageThread(title: String, creator: Id[User])(implicit rw: RWSession, injector: Injector) = {
+    MessageThreadFactory.thread().withOnlyStarter(creator).withTitle(title).saved
   }
 
   def createUserThread(thread: MessageThread, userId: Id[User])(implicit rw: RWSession, injector: Injector) = {
-    inject[UserThreadRepo].save(UserThread(notificationUpdatedAt = nextTime,
-      user = userId, threadId = thread.id.get, uriId = None, unread = true,
-      lastMsgFromOther = None, lastNotification = JsNull, lastSeen = None))
+    inject[UserThreadRepo].save(UserThread.forMessageThread(thread)(userId).copy(notificationUpdatedAt = nextTime))
   }
 
   def createMessage(thread: MessageThread, senderUserId: Id[User], text: String)(implicit rw: RWSession, injector: Injector) = {
@@ -108,21 +106,20 @@ class MessagingControllerTest extends TestKitSupport with SpecificationLike with
         val sender2 = Id[User](44)
 
         val threadList = db.readWrite { implicit rw =>
-          ("Reddit" :: "HackerNews" :: Nil).zipWithIndex.map {
+          Seq("Reddit", "HackerNews").zipWithIndex.map {
             case (title, idx) =>
-              val thread = createMessageThread(title)
+              val thread = createMessageThread(title, sender1)
               val userThread = createUserThread(thread, userId)
-              val messages = createMessage(thread, sender1, s"check out $title") ::
-                createMessage(thread, sender2, s"look here $title") :: Nil
-
+              val messages = Seq(
+                createMessage(thread, sender1, s"check out $title"),
+                createMessage(thread, sender2, s"look here $title")
+              )
               (thread, userThread, messages)
           }
         }
 
         val result2 = messagingController.getUnreadNotifications(userId, 10)(FakeRequest(call))
-        val threadListJson = Json.fromJson[Seq[UserThreadView]](contentAsJson(result2))
-        val userThreadViews = threadListJson.get
-        val t1 :: t2 :: Nil = userThreadViews
+        val Seq(t1, t2) = contentAsJson(result2).as[Seq[UserThreadView]]
 
         def assertSender(view: MessageView)(p: Any => MatchResult[Any]): MatchResult[Any] = view.from match {
           case MessageSenderUserView(id) => p(id)

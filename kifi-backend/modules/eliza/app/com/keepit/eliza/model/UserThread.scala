@@ -56,6 +56,7 @@ object UserThread {
     threadId = mt.id.get,
     uriId = Some(mt.uriId),
     lastSeen = None,
+    unread = true,
     lastMsgFromOther = None,
     lastNotification = JsNull,
     startedBy = mt.startedBy
