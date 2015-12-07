@@ -239,45 +239,20 @@ class AdminBookmarksController @Inject() (
   // updateKeepNote takes the responsibility of making sure the note and internal tags are in sync (note is source of truth).
   // `appendTagsToNote` will additionally check existing tags and verify that they are in the note.
   def reprocessNotesOfKeeps(appendTagsToNote: Boolean) = AdminUserAction(parse.json) { implicit request =>
-    val updated = db.readWrite { implicit session =>
-      val keeps = {
-        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).values.toList
-      }
-      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
-        keepRepo.getByUser(Id[User](u)).toList
-      }
-      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
-        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
-      }
-      val allKeeps = (keeps ++ userKeeps ++ libKeeps).distinctBy(_.id.get)
-      val tagsToAddToKeeps = collectionRepo.getHashtagsByKeepIds(allKeeps.map(_.id.get).toSet)
-
-      allKeeps.map { keep =>
-        val attempt = scala.util.Try {
-          val newNote = if (appendTagsToNote) {
-            tagsToAddToKeeps.get(keep.id.get) match {
-              case Some(tagsToAdd) =>
-                Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsToAdd)
-              case None =>
-                keep.note.getOrElse("")
-            }
-          } else keep.note.getOrElse("")
-          if (!appendTagsToNote || keep.note.getOrElse("") != newNote) {
-            log.info(s"[reprocessNotesOfKeeps] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
-            keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
-            1
-          } else 0
-        }
-        attempt.recover {
-          case ex: Throwable =>
-            log.warn(s"[reprocessNotesOfKeeps] Exception, yoloing anyways", ex)
-            0
-        }.getOrElse(0)
+    val keepIds = db.readOnlyReplica { implicit session =>
+      val userIds = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).map(Id.apply[User])
+      val rangeIds = (for {
+        start <- (request.body \ "startUser").asOpt[Long]
+        end <- (request.body \ "endUser").asOpt[Long]
+      } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
+      (userIds ++ rangeIds).distinct.flatMap { u =>
+        keepRepo.getByUser(u).map(_.id.get)
       }
     }
 
-    Ok(updated.sum.toString)
+    keepIds.foreach(keepCommander.autoFixKeepNoteAndTags)
+
+    Ok(s"Running for ${keepIds.length} keeps!")
   }
 
   def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
