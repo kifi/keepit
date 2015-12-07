@@ -320,7 +320,7 @@ class AdminBookmarksController @Inject() (
             rawKeep.originalJson.foreach { sourceJson =>
               TwitterAttribution.format.reads(sourceJson).foreach { twitterAttribution =>
                 uriInterner.getByUri(rawKeep.url).foreach { uri =>
-                  val keepIds = keepRepo.getByUri(uri.id.get, excludeState = None).map(_.id.get).toSet
+                  val keepIds = keepRepo.getByUri(uri.id.get, excludeState = None).collect { case keep if isFromTwitter(keep.source) => keep.id.get }.toSet
                   sourceRepo.getByKeepIds(keepIds).foreach {
                     case (keepId, PartialTwitterAttribution(tweetIdStr, _)) if twitterAttribution.tweet.id.id == tweetIdStr =>
                       sourceRepo.save(keepId, twitterAttribution)
