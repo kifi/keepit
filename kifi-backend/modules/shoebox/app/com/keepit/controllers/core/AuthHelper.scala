@@ -536,10 +536,7 @@ class AuthHelper @Inject() (
   }
 
   private def unsafeVerifyEmail(email: UserEmailAddress): Unit = {
-    db.readWrite(attempts = 3) { implicit s =>
-      userEmailAddressCommander.saveAsVerified(email)
-      orgDomainOwnershipCommander.autoJoinOrgViaEmail(email)
-    }
+    db.readWrite(attempts = 3)(implicit s => userEmailAddressCommander.saveAsVerified(email))
     orgDomainOwnershipCommander.addOwnershipsForPendingOrganizations(email.userId, email.address).map(_ => ())
   }
 
