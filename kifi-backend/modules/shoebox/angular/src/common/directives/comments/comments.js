@@ -87,7 +87,6 @@ angular.module('kifi')
                     messages = messages.splice(0, messages.length - 1);
                   }
                   $scope.visibleComments = $scope.visibleComments.concat(messages);
-                  $scope.$apply();
                 });
             }
           };
