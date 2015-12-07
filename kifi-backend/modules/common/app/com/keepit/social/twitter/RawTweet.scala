@@ -201,13 +201,13 @@ object RawTweet {
 
   case class User(
     name: String,
-    screenName: String,
+    screenName: TwitterHandle,
     id: TwitterId,
     profileImageUrlHttps: String)
   object User {
     implicit val reads: Reads[User] = (
       (__ \ 'name).read[String] and
-      (__ \ 'screen_name).read[String] and
+      (__ \ 'screen_name).read[TwitterHandle] and
       (__ \ 'id).read[TwitterId] and
       (__ \ 'profile_image_url_https).read[String]
     )(User.apply _)
