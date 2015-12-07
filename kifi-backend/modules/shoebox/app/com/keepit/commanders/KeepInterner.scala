@@ -140,7 +140,7 @@ class KeepInternerImpl @Inject() (
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource) = {
     // For batches, if we can't prenormalize, silently drop. This is a low bar, and usually means it couldn't *ever* be a valid keep.
-    val validUrls = bms.filter(b => httpPrefix.findPrefixOf(b.url.toLowerCase).isDefined && normalizationService.prenormalize(b.url).isSuccess)
+    val (validUrls, invalidUrls) = bms.partition(b => httpPrefix.findPrefixOf(b.url.toLowerCase).isDefined && normalizationService.prenormalize(b.url).isSuccess)
 
     val (persisted, failed) = db.readWriteBatch(validUrls, attempts = 5) {
       case ((session, bm)) =>
@@ -156,7 +156,7 @@ class KeepInternerImpl @Inject() (
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks (${validUrls.size} valid): look app.log for urls"), userId = Some(ownerId)))
       failed.foreach { f => log.warn(s"failed to persist raw bookmarks of user $ownerId from $source: ${f._1.url}", f._2.failed.get) }
     }
-    val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
+    val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList ++ invalidUrls
     (keeps, failedRaws)
   }
 
