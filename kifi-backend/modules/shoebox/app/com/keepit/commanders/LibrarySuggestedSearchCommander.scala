@@ -28,27 +28,29 @@ class LibrarySuggestedSearchCommanderImpl @Inject() (
 
   // overwrite existing, create new, deactivate the rest
   def saveSuggestedSearchTermsForLibrary(libId: Id[Library], terms: SuggestedSearchTerms, kind: SuggestedSearchTermKind): Unit = {
+
     db.readWrite { implicit s =>
-      val current = suggestedSearchRepo.getByLibraryId(libId, kind)
-      val currentMap = current.groupBy(_.term).map { case (term, models) => (term, models.head) }
-      val normTerms = terms.normalized()
-      val (overwrite, deactivate, create) = (currentMap.keySet & normTerms.terms.keySet, currentMap.keySet -- normTerms.terms.keySet, normTerms.terms.keySet -- currentMap.keySet)
+      val existing = suggestedSearchRepo.getByLibraryId(libId, kind)
+      val existingByNormalizedTerm = existing.groupBy(m => SuggestedSearchTerms.normalized(m.term)).mapValues(_.head)
+      val toBeInternedByNormalizedTerm = terms.terms.map { case (term, weight) => SuggestedSearchTerms.normalized(term) -> (term, weight) }
+      val toBeDeactivatedByNormalizedTerm = existingByNormalizedTerm -- toBeInternedByNormalizedTerm.keys
 
-      overwrite.foreach { term =>
-        val toSave = currentMap(term).activateWithWeight(normTerms.terms(term))
-        suggestedSearchRepo.save(toSave)
-      }
-
-      deactivate.foreach { term =>
-        val m = currentMap(term)
-        if (m.state == LibrarySuggestedSearchStates.ACTIVE) {
-          suggestedSearchRepo.save(m.copy(state = LibrarySuggestedSearchStates.INACTIVE))
+      toBeDeactivatedByNormalizedTerm.values.foreach { suggestedTerm =>
+        if (suggestedTerm.state == LibrarySuggestedSearchStates.ACTIVE) {
+          suggestedSearchRepo.save(suggestedTerm.copy(state = LibrarySuggestedSearchStates.INACTIVE))
         }
       }
 
-      create.foreach { term =>
-        val m = LibrarySuggestedSearch(term = term, weight = normTerms.terms(term), libraryId = libId, termKind = kind)
-        suggestedSearchRepo.save(m)
+      toBeInternedByNormalizedTerm.foreach {
+        case (normalizedTerm, (term, weight)) =>
+          val termToBePersisted = SuggestedSearchTerms.toBePersisted(term)
+          val existingOpt = existingByNormalizedTerm.get(normalizedTerm)
+          val hasBeenDeactivated = toBeDeactivatedByNormalizedTerm.contains(normalizedTerm)
+          val hasNotBeenPersisted = !existingOpt.exists(m => m.term == termToBePersisted && m.weight == weight && m.termKind == kind)
+          if (hasBeenDeactivated || hasNotBeenPersisted) {
+            val toBePersisted = LibrarySuggestedSearch(id = existingOpt.flatMap(_.id), term = termToBePersisted, weight = weight, libraryId = libId, termKind = kind)
+            suggestedSearchRepo.save(toBePersisted)
+          }
       }
     }
   }
