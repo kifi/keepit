@@ -150,7 +150,7 @@ class KeepInternerImpl @Inject() (
 
     val keeps = persisted.values.map(_.get).toSeq
 
-    updateKeepTagsUsingNote(keeps.map(_.keep))
+    updateKeepTagsUsingNote(keeps.map(_.keep).filter(_.note.exists(_.nonEmpty)))
 
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks (${validUrls.size} valid): look app.log for urls"), userId = Some(ownerId)))
