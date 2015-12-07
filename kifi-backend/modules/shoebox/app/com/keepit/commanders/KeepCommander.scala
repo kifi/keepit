@@ -779,8 +779,9 @@ class KeepCommanderImpl @Inject() (
           val newNote = Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)
           if (keep.note.getOrElse("").toLowerCase != newNote.toLowerCase) {
             log.info(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
-            Try(updateKeepNote(keep.userId, keep, newNote, freshTag = false)).recover { case ex: Throwable =>
-              log.warn(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Couldn't update note", ex)
+            Try(updateKeepNote(keep.userId, keep, newNote, freshTag = false)).recover {
+              case ex: Throwable =>
+                log.warn(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Couldn't update note", ex)
             }
           }
         }
