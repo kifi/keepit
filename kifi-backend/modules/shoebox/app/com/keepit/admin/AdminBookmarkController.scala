@@ -240,8 +240,13 @@ class AdminBookmarksController @Inject() (
   // `appendTagsToNote` will additionally check existing tags and verify that they are in the note.
   def reprocessNotesOfKeeps(appendTagsToNote: Boolean) = AdminUserAction(parse.json) { implicit request =>
     val keepIds = db.readOnlyReplica { implicit session =>
-      (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
-        keepRepo.getByUser(Id[User](u)).map(_.id.get)
+      val userIds = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).map(Id.apply[User])
+      val rangeIds = (for {
+        start <- (request.body \ "startUser").asOpt[Long]
+        end <- (request.body \ "endUser").asOpt[Long]
+      } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
+      (userIds ++ rangeIds).distinct.flatMap { u =>
+        keepRepo.getByUser(u).map(_.id.get)
       }
     }
 
