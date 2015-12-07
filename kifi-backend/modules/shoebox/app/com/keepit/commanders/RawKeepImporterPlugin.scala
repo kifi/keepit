@@ -94,7 +94,7 @@ private class RawKeepImporterActor @Inject() (
       val openGraph = rk.originalJson.flatMap(json => (json \ Normalization.OPENGRAPH.scheme).asOpt[String])
       val attribution = RawKeep.extractKeepSourceAttribtuion(rk)
       val note = rk.originalJson.flatMap(json => (json \ "note").asOpt[String]).map(Hashtags.formatExternalNote)
-      val tags = rk.keepTags.flatMap(_.asOpt[Seq[String]]).getOrElse(Seq.empty)
+      val tags = rk.keepTags.flatMap(_.asOpt[Seq[String]]).getOrElse(Seq.empty).filterNot(_ == "no_tag")
       val noteWithTags = Option(Hashtags.addTagsToString(note.getOrElse(""), tags)).filter(_.trim.nonEmpty)
       RawBookmarkRepresentation(title = rk.title, url = rk.url, canonical = canonical, openGraph = openGraph, keptAt = rk.createdDate, sourceAttribution = attribution, note = noteWithTags)
     }.distinctBy(_.url)
