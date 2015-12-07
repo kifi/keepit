@@ -238,14 +238,16 @@ class KifiSiteRouter @Inject() (
         case Failure(ex) => notFound(request)
         case Success((id, keep)) => {
           val canSeeKeep = db.readOnlyReplica { implicit s =>
-            libraryRepo.get(keep.libraryId.get).visibility match {
+            val library = libraryRepo.get(keep.libraryId.get)
+
+            library.visibility match {
               case LibraryVisibility.SECRET => request.userIdOpt.exists { userId =>
                 keep.libraryId.exists { libraryId =>
                   libraryMembershipRepo.getWithLibraryId(libraryId).exists(_.userId == userId)
                 }
               }
               case LibraryVisibility.ORGANIZATION => request.userIdOpt.exists { userId =>
-                keep.organizationId.exists { orgId =>
+                library.organizationId.exists { orgId =>
                   orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId)
                 }
               }
