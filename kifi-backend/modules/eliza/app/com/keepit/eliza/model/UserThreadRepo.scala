@@ -48,9 +48,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
 
-  // Things that ought to go on MessageThread instead of being insane
-  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User]
-
   // Single-use queries that are actually slower than just doing the sane thing
   def getThreadActivity(theadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity]
   def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]]
@@ -100,9 +97,9 @@ class UserThreadRepoImpl @Inject() (
     def notificationLastSeen = column[Option[DateTime]]("notification_last_seen", O.Nullable)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
-    def started = column[Boolean]("started", O.NotNull)
+    def startedBy = column[Id[User]]("startedBy", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, started, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user, threadId), unique = true)
   }
@@ -190,7 +187,7 @@ class UserThreadRepoImpl @Inject() (
     } |> { rs => // by unread
       utq.onlyUnread.map(unread => rs.filter(r => r.unread === unread)).getOrElse(rs)
     } |> { rs => // by started
-      utq.onlyStarted.map(started => rs.filter(r => r.started === started)).getOrElse(rs)
+      utq.onlyStartedBy.map(starter => rs.filter(r => r.startedBy === starter)).getOrElse(rs)
     }
 
     desiredThreads
@@ -267,7 +264,7 @@ class UserThreadRepoImpl @Inject() (
   def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
     rows
       .filter(row => row.threadId === threadId)
-      .map(row => (row.id, row.threadId, row.user, row.lastActive, row.started, row.lastSeen))
+      .map(row => (row.id, row.threadId, row.user, row.lastActive, row.startedBy == row.user, row.lastSeen))
       .list.map { tuple => (UserThreadActivity.apply _).tupled(tuple) }
   }
 
@@ -288,10 +285,6 @@ class UserThreadRepoImpl @Inject() (
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
     val uriSet = (for (row <- rows if row.user === userId && row.uriId.isDefined) yield row.uriId).list.toSet.flatten
     uriIds.map(uriId => uriSet.contains(uriId))
-  }
-
-  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User] = {
-    (for (row <- rows if row.threadId === threadId && row.started === true) yield row.user).first
   }
 
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread] = {

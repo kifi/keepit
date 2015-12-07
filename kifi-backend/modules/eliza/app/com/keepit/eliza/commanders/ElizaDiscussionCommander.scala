@@ -120,15 +120,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
               participants = MessageThreadParticipants(Set(csKeep.owner)),
               keepId = Some(csKeep.id)
             ))
-            val ut = userThreadRepo.save(UserThread(
-              user = csKeep.owner,
-              threadId = mt.id.get,
-              uriId = Some(mt.uriId),
-              lastSeen = None,
-              lastMsgFromOther = None,
-              lastNotification = JsNull,
-              started = true
-            ))
+            val ut = userThreadRepo.save(UserThread.forMessageThread(mt)(csKeep.owner))
             log.info(s"[DISC-CMDR] Created message thread ${mt.id.get} for keep $keepId, owned by ${csKeep.owner}")
             mt
           }
@@ -141,14 +133,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId)))
-          val ut = userThreadRepo.save(UserThread(
-            user = userId,
-            threadId = thread.id.get,
-            uriId = Some(thread.uriId),
-            lastSeen = None,
-            lastMsgFromOther = None,
-            lastNotification = JsNull
-          ))
+          val ut = userThreadRepo.save(UserThread.forMessageThread(thread)(userId))
           log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId. They're new so we added user thread ${ut.id.get} for them.")
         }
       } else { log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId, they were already part of the thread.") }

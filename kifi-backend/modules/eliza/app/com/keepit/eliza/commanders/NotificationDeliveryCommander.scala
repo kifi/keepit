@@ -26,7 +26,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 case class UserThreadQuery(
   beforeTime: Option[DateTime] = None,
-  onlyStarted: Option[Boolean] = None,
+  onlyStartedBy: Option[Id[User]] = None,
   onlyUnread: Option[Boolean] = None,
   onUri: Option[Id[NormalizedURI]] = None,
   limit: Int)
@@ -113,16 +113,7 @@ class NotificationDeliveryCommander @Inject() (
       )
       db.readWrite { implicit session =>
         newParticipants.map { pUserId =>
-          userThreadRepo.save(UserThread(
-            id = None,
-            user = pUserId,
-            threadId = thread.id.get,
-            uriId = Some(thread.uriId),
-            lastSeen = None,
-            unread = true,
-            lastMsgFromOther = None,
-            lastNotification = JsNull
-          ))
+          userThreadRepo.save(UserThread.forMessageThread(thread)(user = pUserId))
         }
 
         newNonUserParticipants.foreach { nup =>
@@ -456,13 +447,13 @@ class NotificationDeliveryCommander @Inject() (
 
   def getLatestSentSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onlyStarted = Some(true), limit = howMany))
+      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onlyStartedBy = Some(userId), limit = howMany))
     }, includeUriSummary)
   }
 
   def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onlyStarted = Some(true), beforeTime = Some(time), limit = howMany))
+      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onlyStartedBy = Some(userId), beforeTime = Some(time), limit = howMany))
     }, includeUriSummary)
   }
 
