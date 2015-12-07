@@ -70,6 +70,7 @@ class AuthHelper @Inject() (
     userCommander: UserCommander,
     orgDomainOwnershipCommander: OrganizationDomainOwnershipCommander,
     orgMembershipCommander: OrganizationMembershipCommander,
+    permissionCommander: PermissionCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     heimdal: HeimdalServiceClient,
     implicit val secureSocialClientIds: SecureSocialClientIds,
@@ -538,10 +539,14 @@ class AuthHelper @Inject() (
 
   private def unsafeVerifyEmail(email: UserEmailAddress, orgToAdd: Option[Id[Organization]]): Unit = {
     db.readWrite(attempts = 3)(implicit s => userEmailAddressCommander.saveAsVerified(email))
-    orgToAdd.foreach { orgId =>
+
+    orgToAdd.filter { orgId =>
+      db.readOnlyReplica(implicit s => permissionCommander.getOrganizationPermissions(orgId, Some(email.userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
+    }.foreach { orgId =>
       val request = OrganizationMembershipAddRequest(orgId, requesterId = email.userId, targetId = email.userId)
       orgMembershipCommander.addMembership(request)
     }
+
     orgDomainOwnershipCommander.addOwnershipsForPendingOrganizations(email.userId, email.address).map(_ => ())
   }
 

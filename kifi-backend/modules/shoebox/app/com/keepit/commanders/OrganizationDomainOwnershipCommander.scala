@@ -59,7 +59,7 @@ class OrganizationDomainOwnershipCommanderImpl @Inject() (
   private def getValidationError(request: OrganizationDomainRequest)(implicit session: RSession): Option[OrganizationFail] = {
     val (requesterId, orgId, domainName) = (request.requesterId, request.orgId, request.domain)
 
-    val invalidDomain = Some(OrganizationFail.INVALID_DOMAIN_NAME).filter(_ => NormalizedHostname.fromHostname(domainName).isDefined)
+    val invalidDomain = Some(OrganizationFail.INVALID_DOMAIN_NAME).filter(_ => NormalizedHostname.fromHostname(domainName).isEmpty)
     lazy val emailProvider = Some(OrganizationFail.DOMAIN_IS_EMAIL_PROVIDER).filter { _ =>
       NormalizedHostname.fromHostname(domainName).flatMap(domainRepo.get(_)).exists(_.isEmailProvider)
     }
