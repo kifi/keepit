@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession._
@@ -13,6 +14,7 @@ import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
+import com.keepit.normalizer.NormalizedURIInterner
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
@@ -40,6 +42,9 @@ class AdminBookmarksController @Inject() (
   libraryChecker: LibraryChecker,
   clock: Clock,
   keepToCollectionRepo: KeepToCollectionRepo,
+  rawKeepRepo: RawKeepRepo,
+  sourceRepo: KeepSourceAttributionRepo,
+  uriInterner: NormalizedURIInterner,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
 
@@ -298,4 +303,35 @@ class AdminBookmarksController @Inject() (
     Ok(updated.toString)
   }
 
+  def backfillTwitterAttribution(fromPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
+    SafeFuture {
+      def isFromTwitter(source: KeepSource) = source == KeepSource.twitterSync || source == KeepSource.twitterFileImport
+      var page = fromPage
+      var lastProcessed = 0
+      do {
+        db.readWrite { implicit session =>
+          val rawKeeps = rawKeepRepo.page(page = page, size = pageSize)
+          val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
+          rawKeepsFromTwitter.foreach { rawKeep =>
+            rawKeep.originalJson.foreach { sourceJson =>
+              TwitterAttribution.format.reads(sourceJson).foreach { twitterAttribution =>
+                uriInterner.getByUri(rawKeep.url).foreach { uri =>
+                  val keepIds = keepRepo.getByUri(uri.id.get, excludeState = None).map(_.id.get).toSet
+                  sourceRepo.getByKeepIds(keepIds).foreach {
+                    case (keepId, PartialTwitterAttribution(tweetIdStr, _)) if twitterAttribution.tweet.id.id == tweetIdStr =>
+                      sourceRepo.save(keepId, twitterAttribution)
+                    case _ => ()
+                  }
+                }
+              }
+            }
+          }
+          if (page % 10 == 0) log.info(s"[backfillTwitterAttribution] Done processing page $page of size $pageSize.")
+          page += 1
+          lastProcessed = rawKeeps.length
+        }
+      } while (lastProcessed > 0)
+    }
+    Ok(s"Starting from page $fromPage by batch of $pageSize. It's gonna take a while.")
+  }
 }
