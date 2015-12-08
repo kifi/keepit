@@ -27,7 +27,6 @@ case class UserThread(
   unread: Boolean = false,
   muted: Boolean = false,
   lastMsgFromOther: Option[Id[ElizaMessage]],
-  lastNotification: JsValue, // Option[JsObject] would have been a better choice (using database null instead of 'null')
   notificationUpdatedAt: DateTime = currentDateTime,
   notificationLastSeen: Option[DateTime] = None,
   notificationEmailed: Boolean = false,
@@ -55,7 +54,6 @@ object UserThread {
     lastSeen = None,
     unread = true,
     lastMsgFromOther = None,
-    lastNotification = JsNull,
     startedBy = mt.startedBy
   )
   def toUserThreadView(userThread: UserThread, messages: Seq[ElizaMessage], messageThread: MessageThread): UserThreadView = {
