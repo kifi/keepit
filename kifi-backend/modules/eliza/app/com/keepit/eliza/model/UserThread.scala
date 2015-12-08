@@ -44,8 +44,6 @@ case class UserThread(
   lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, thread = $threadId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed]"
-
-  def toRawNotification: RawNotification = (lastNotification, unread, uriId)
 }
 
 object UserThreadStates extends States[UserThread]

@@ -66,9 +66,9 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession): Boolean
 
   // Mutating threads in-place
-  def setNotification(user: Id[User], thread: Id[MessageThread], message: ElizaMessage, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit
   def setNotificationEmailed(id: Id[UserThread], relevantMessage: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit
   def updateUriIds(updates: Seq[(Id[NormalizedURI], Id[NormalizedURI])])(implicit session: RWSession): Unit
+  def setNotification(user: Id[User], thread: Id[MessageThread], message: ElizaMessage, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit
   def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[ElizaMessage], newJson: JsValue)(implicit session: RWSession): Unit
 }
 

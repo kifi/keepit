@@ -203,7 +203,7 @@ class NotificationDeliveryCommander @Inject() (
       "url" -> message.sentOnUrl,
       "title" -> thread.pageTitle,
       "author" -> messageWithBasicUser.user,
-      "participants" -> messageWithBasicUser.participants,
+      "participants" -> messageWithBasicUser.participants.sortBy(x => x.fold(nu => (nu.firstName.getOrElse(""), nu.lastName.getOrElse("")), u => (u.firstName, u.lastName))),
       "locator" -> locator,
       "unread" -> unread,
       "category" -> NotificationCategory.User.MESSAGE.category,
@@ -236,6 +236,57 @@ class NotificationDeliveryCommander @Inject() (
     sendPushNotification(request.userId, notification, request.force)
   }
 
+  def buildNotificationForMessageThread(userId: Id[User], thread: MessageThread, message: ElizaMessage): Future[JsValue] = {
+    // RPB: wtf is happening in my life
+    require(message.thread == thread.id.get)
+    shoebox.getBasicUsers(thread.allParticipants.toSeq).map { basicUserByIdMap =>
+      def basicUserById(id: Id[User]) = basicUserByIdMap.getOrElse(id, throw new Exception(s"Could not get basic user data for $id in MessageThread ${thread.id.get}"))
+      val basicNonUserParticipants = thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+      val messageWithBasicUser = MessageWithBasicUser(
+        id = message.externalId,
+        createdAt = message.createdAt,
+        text = message.messageText,
+        source = message.source,
+        auxData = None,
+        url = message.sentOnUrl.getOrElse(thread.url),
+        nUrl = thread.nUrl,
+        message.from match {
+          case MessageSender.User(id) => Some(BasicUserLikeEntity(basicUserById(id)))
+          case MessageSender.NonUser(nup) => Some(BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
+          case _ => None
+        },
+        thread.allParticipants.toSeq.map(u => BasicUserLikeEntity(basicUserById(u))) ++ basicNonUserParticipants.toSeq
+      )
+      val (numMessages: Int, numUnread: Int, threadActivity: Seq[UserThreadActivity], muted: Boolean) = db.readOnlyMaster { implicit session =>
+        val threadActivity = userThreadRepo.getThreadActivity(thread.id.get).sortBy { uta =>
+          (-uta.lastActive.getOrElse(START_OF_TIME).getMillis, uta.id.id)
+        }
+        val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
+        val (numMessages, numUnread) = messageRepo.getMessageCounts(thread.id.get, lastSeenOpt)
+        val muted = userThreadRepo.isMuted(userId, thread.id.get)
+        (numMessages, numUnread, threadActivity, muted)
+      }
+      val authorActivityInfos = threadActivity.filter(_.lastActive.isDefined)
+
+      val lastSeenOpt: Option[DateTime] = threadActivity.find(_.userId == userId).flatMap(_.lastSeen)
+      val unseenAuthors: Int = lastSeenOpt match {
+        case Some(lastSeen) => authorActivityInfos.count(_.lastActive.get.isAfter(lastSeen))
+        case None => authorActivityInfos.length
+      }
+      buildMessageNotificationJson(
+        message = message,
+        thread = thread,
+        messageWithBasicUser = messageWithBasicUser,
+        locator = thread.deepLocator.value,
+        unread = !message.from.asUser.contains(userId),
+        originalAuthorIdx = 0,
+        unseenAuthors = unseenAuthors,
+        numAuthors = authorActivityInfos.length,
+        numMessages = numMessages,
+        numUnread = numUnread,
+        muted = muted)
+    }
+  }
   def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
     SafeFuture {
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
@@ -288,7 +339,6 @@ class NotificationDeliveryCommander @Inject() (
         val notification = MessageThreadPushNotification(thread.externalId, unreadMessages + unreadNotifications, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
         sendPushNotification(userId, notification)
       }
-
     }
 
     //This is mostly for testing and monitoring

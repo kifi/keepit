@@ -48,24 +48,6 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
     FakeCortexServiceClientModule()
   )
 
-  def deepTest(a: JsValue, b: JsValue, path: Option[String] = None): Option[String] = {
-    (a.asOpt[JsObject], b.asOpt[JsObject]) match {
-      case (Some(aObj), Some(bObj)) =>
-        (aObj.keys ++ bObj.keys).flatMap(k => deepTest(aObj \ k, bObj \ k, path.map(_ + k))).headOption
-      case _ =>
-        (a.asOpt[JsArray], b.asOpt[JsArray]) match {
-          case (Some(aArr), Some(bArr)) if aArr.value.length != bArr.value.length =>
-            Some(s"${path.getOrElse("")}: lengths unequal")
-          case (Some(aArr), Some(bArr)) =>
-            (aArr.value zip bArr.value).flatMap { case (av, bv) => deepTest(av, bv, path.map(_ + "[i]")) }.headOption
-          case _ if a != b =>
-            println(s"Found discrepancy: $a != $b")
-            Some(s"${path.getOrElse("")}: $a != $b")
-          case _ => None
-        }
-    }
-  }
-
   def externalIdForTitle(title: String)(implicit injector: Injector): String = forTitle(title).externalId.id
   def externalIdForCollection(userId: Id[User], name: String)(implicit injector: Injector): String = forCollection(userId, name).externalId.id
 
