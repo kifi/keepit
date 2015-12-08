@@ -540,7 +540,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
         val newOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, newOrgSettings)) must beRight
 
-
         val response2 = authController.verifyEmail(userEmail.verificationCode.get, Some(orgPubId.id))(request)
         Await.ready(response2, Duration(5, "seconds"))
 
