@@ -113,20 +113,10 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
         val messageThreadRepo = inject[MessageThreadRepo]
         val userThreadRepo = inject[UserThreadRepo]
 
+        val user = Id[User](1)
         val (messageThread, userThread) = db.readWrite { implicit session =>
-          val messageThread = MessageThreadFactory.thread().withUri(Id(1)).withUsers(Id(1), Id(2)).saved
-
-          val userThread = userThreadRepo.save(UserThread(
-            user = Id(1),
-            threadId = messageThread.id.get,
-            uriId = Some(Id(1)),
-            lastSeen = None,
-            lastMsgFromOther = None,
-            lastNotification = JsNull,
-            lastActive = Some(currentDateTime),
-            started = true
-          ))
-
+          val messageThread = MessageThreadFactory.thread().withUri(Id(1)).withOnlyStarter(user).withUsers(Id(2)).saved
+          val userThread = userThreadRepo.save(UserThread.forMessageThread(messageThread)(user))
           (messageThread, userThread)
         }
         val uuid = messageThread.externalId.id

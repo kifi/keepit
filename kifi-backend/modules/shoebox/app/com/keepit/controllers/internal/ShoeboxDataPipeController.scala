@@ -1,7 +1,7 @@
 package com.keepit.controllers.internal
 
 import com.keepit.classify.{ NormalizedHostname, DomainInfo, DomainRepo, Domain }
-import com.keepit.commanders.Hashtags
+import com.keepit.commanders.{ KeepCommander, Hashtags }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.common.service.RequestConsolidator
@@ -15,6 +15,7 @@ import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import com.keepit.common.core._
 
 class DataPipelineExecutor(val context: ExecutionContext)
 
@@ -40,6 +41,7 @@ class ShoeboxDataPipeController @Inject() (
     userIpAddressRepo: UserIpAddressRepo,
     domainRepo: DomainRepo,
     orgDomainOwnershipRepo: OrganizationDomainOwnershipRepo,
+    keepCommander: KeepCommander, // just for autofixer, can be removed after notes are good
     executor: DataPipelineExecutor) extends ShoeboxServiceController with Logging {
 
   implicit val context = executor.context
@@ -194,13 +196,12 @@ class ShoeboxDataPipeController @Inject() (
           val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
           val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
           if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized)) {
-            // For my own edification for now. Our data is messed up, so this will happen for most imported, tagged keeps.
-            // I want to read what sort of differences there are. Until I add an auto-fixer, just log it
-            // and let search benefit from the combined set.
-            log.info(s"[getKeepsAndTagsChanged] Tag mismatch for ${keep.id.get}: $tagsFromHashtags vs $tagsFromCollections")
+            // Auto-fixes bad data. Hijacking the data injestion since it'll help catch remaining problems, and let me know if it's still happening.
+            log.info(s"[getKeepsAndTagsChanged] Tag mismatch for ${keep.id.get}: $tagsFromHashtags vs $tagsFromCollections. Autofixing.")
+            keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, uses max 1 thread
           }
 
-          val allTags = tagsFromHashtags ++ tagsFromCollections
+          val allTags = (tagsFromHashtags ++ tagsFromCollections).distinctBy(_.normalized)
           val (source, tags) = if (keep.isActive) (attributionById.get(keep.id.get), allTags) else (None, Set.empty[Hashtag])
           KeepAndTags(keep, source, tags)
         }

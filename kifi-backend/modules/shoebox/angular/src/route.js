@@ -299,7 +299,8 @@ angular.module('kifi')
       })
       .state('library.keeps', {
         url: '',
-        templateUrl: 'libraries/libraryKeeps.tpl.html'
+        templateUrl: 'libraries/libraryKeeps.tpl.html',
+        errorView: 'kf-contact-admin'
       })
       .state('library.search', {
         url: '/find?q&f',

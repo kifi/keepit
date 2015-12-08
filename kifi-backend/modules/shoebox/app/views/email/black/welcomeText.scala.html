@@ -1,7 +1,6 @@
-@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]], installs: Set[KifiInstallationPlatform])
+@(toUserId: Id[User], verifyUrl: Option[String], installs: Set[KifiInstallationPlatform])
 @import com.keepit.common.mail.template.helpers._
 @import com.keepit.model.KifiInstallationPlatform
-@orgNames = @{domainOwnerIds.map { orgId => organizationName(orgId) } }
 @platformSpiel = @{
   val hasExt = installs.contains(KifiInstallationPlatform.Extension)
   val hasMobile = installs.contains(KifiInstallationPlatform.IPhone) || installs.contains(KifiInstallationPlatform.Android)
@@ -16,28 +15,13 @@
   }
   Html(spiel)
 }
-@orgs = @{
-  val links = orgNames.toList.map(_.toString)
-  val orgStr = if (links.length > 2) {
-    val pre = links.take(links.length - 2)
-    val last = links.last
-    pre.mkString(", ") + ", and " + last
-  } else if (links.length == 2) {
-    links.head + " and " + links.last
-  } else if (links.length == 1) {
-    links.head
-  } else {
-    ""
-  }
-  Html(orgStr)
-}
 Hey @firstName(toUserId),
 
 Thank you for signing up for Kifi. We built Kifi to make keeping and sharing web pages from any device a snap. @platformSpiel
 
 You can check out our getting started page (https://www.kifi.com/getting-started), or you can view your profile at: @profileUrl(toUserId). If you would like to have a different profile URL, please reply and let me know.
 @verifyUrl.map { url =>
-To protect your privacy and security, please confirm your email address by clicking the following link: @url.@if(orgNames.nonEmpty) { @if(orgNames.size == 1) { You’ll be added to the @orgs team. } else { You’ll be added to the @orgs teams. } }
+To protect your privacy and security, please confirm your email address by clicking the following link: @url.
 }
 Eishay Smith, CEO
 http://www.kifi.com/eishay

@@ -1,6 +1,5 @@
-@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]])
+@(toUserId: Id[User], verifyUrl: Option[String])
 @import com.keepit.common.mail.template.helpers._
-@orgNamesAndLinks = @{domainOwnerIds.map { orgId => (organizationName(orgId), organizationLink(orgId, None, "domainOwnerOrg")) } }
 <table width="100%" border="0" cellspacing="0" cellpadding="0" align="center" style="border-collapse: collapse; mso-table-lspace: 0px; mso-table-rspace: 0px;">
   <tr><td height="18" style="line-height: 1px; font-size: 1px; border-collapse: collapse; mso-line-height-rule: exactly;">&nbsp;</td></tr>
   <tr>
@@ -33,12 +32,6 @@
         <a href='@url' target="_blank" style="font-family:Arial,sans-serif;font-size:20px;line-height:26px;color:#ffffff;font-weight:normal;text-decoration:none;display:block;">
           @url
         </a>
-        @if(orgNamesAndLinks.nonEmpty) {
-        <p>Upon confirmation, you'll be added to these teams:</p>
-        @for(org <- orgNamesAndLinks) {
-        <p><a href="@{org._2}">@{org._1}</a></p>
-        }
-        }
       </td>
     </tr>
   }

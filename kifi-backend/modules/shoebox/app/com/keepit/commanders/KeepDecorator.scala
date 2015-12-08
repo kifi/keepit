@@ -17,6 +17,7 @@ import com.keepit.model._
 import com.keepit.rover.RoverServiceClient
 import com.keepit.search.SearchServiceClient
 import com.keepit.search.augmentation.{ AugmentableItem, LimitedAugmentationInfo }
+import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -27,7 +28,6 @@ trait KeepDecorator {
   def filterLibraries(infos: Seq[LimitedAugmentationInfo]): Seq[LimitedAugmentationInfo]
   def getPersonalKeeps(userId: Id[User], uriIds: Set[Id[NormalizedURI]], useMultilibLogic: Boolean = false): Map[Id[NormalizedURI], Set[PersonalKeep]]
   def getKeepSummaries(keeps: Seq[Keep], idealImageSize: ImageSize): Future[Seq[URISummary]]
-  def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], SourceAttribution]
 }
 
 @Singleton
@@ -46,7 +46,7 @@ class KeepDecoratorImpl @Inject() (
     userCommander: Provider[UserCommander],
     organizationInfoCommander: OrganizationInfoCommander,
     searchClient: SearchServiceClient,
-    keepSourceAttributionRepo: KeepSourceAttributionRepo,
+    keepSourceCommander: KeepSourceCommander,
     eliza: ElizaServiceClient,
     rover: RoverServiceClient,
     airbrake: AirbrakeNotifier,
@@ -110,8 +110,8 @@ class KeepDecoratorImpl @Inject() (
         keepToCollectionRepo.getCollectionsForKeeps(keeps) //cached
       }.map(collectionCommander.getBasicCollections)
 
-      val sourceAttrs = {
-        val attributionById = getSourceAttributionForKeeps(keeps.flatMap(_.id).toSet)
+      val sourceAttrs = db.readOnlyMaster { implicit s =>
+        val attributionById = keepSourceCommander.getSourceAttributionWithBasicUserForKeeps(keeps.flatMap(_.id).toSet)
         keeps.map { keep => attributionById.get(keep.id.get) }
       }
 
@@ -258,13 +258,6 @@ class KeepDecoratorImpl @Inject() (
       }
     }.toMap
   }
-
-  def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Map[Id[Keep], SourceAttribution] = {
-    db.readOnlyMaster { implicit session =>
-      keepSourceAttributionRepo.getByKeepIds(keepIds)
-    }
-  }
-
 }
 
 object KeepDecorator {

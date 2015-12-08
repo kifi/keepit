@@ -266,13 +266,14 @@ if __name__=="__main__":
         build_id = curr_build['id']
         is_building = True
         count = 1
-        while is_building and count < 600:
+        while is_building and count < 800:
           curr_build = requests.get('http://localhost:8080/job/all-quick-s3/%s/api/json' % build_id).json()
           is_building = curr_build['building']
           time.sleep(1)
           count = count + 1
         if curr_build['result']=='SUCCESS':
           log("Build complete, carrying on")
+          time.sleep(2) # Fixing Jenkins race condition with builds
         else:
           log("Build failed, bailing. Sorry.")
           sys.exit(0)
@@ -295,7 +296,7 @@ if __name__=="__main__":
     if args.version == 'latest':
 
       last_build = requests.get('http://localhost:8080/job/all-quick-s3/lastStableBuild/api/json').json()
-      log("Uploading assets for build %s" % (last_build['fullDisplayName']))
+      log("Uploading assets for build %s/%s" % (last_build['fullDisplayName'], args.serviceType))
 
       latest_asset = None
       for artifact in last_build['artifacts']:

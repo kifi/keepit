@@ -48,9 +48,6 @@ trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread]
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification]
 
-  // Things that ought to go on MessageThread instead of being insane
-  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User]
-
   // Single-use queries that are actually slower than just doing the sane thing
   def getThreadActivity(theadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity]
   def getThreadIds(user: Id[User], uriId: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]]
@@ -100,15 +97,17 @@ class UserThreadRepoImpl @Inject() (
     def notificationLastSeen = column[Option[DateTime]]("notification_last_seen", O.Nullable)
     def notificationEmailed = column[Boolean]("notification_emailed", O.NotNull)
     def lastActive = column[Option[DateTime]]("last_active", O.Nullable)
-    def started = column[Boolean]("started", O.NotNull)
+    def startedBy = column[Id[User]]("started_by", O.NotNull)
     def accessToken = column[ThreadAccessToken]("access_token", O.NotNull)
-    def * = (id.?, createdAt, updatedAt, state, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, started, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
+    def * = (id.?, createdAt, updatedAt, state, user, threadId, uriId, lastSeen, unread, muted, lastMsgFromOther, lastNotification, notificationUpdatedAt, notificationLastSeen, notificationEmailed, lastActive, startedBy, accessToken) <> ((UserThread.apply _).tupled, UserThread.unapply _)
 
     def userThreadIndex = index("user_thread", (user, threadId), unique = true)
   }
 
   def table(tag: Tag) = new UserThreadTable(tag)
   initTable()
+
+  private def activeRows = rows.filter(_.state === UserThreadStates.ACTIVE)
 
   override def deleteCache(model: UserThread)(implicit session: RSession): Unit = {
     userThreadStatsForUserIdCache.remove(UserThreadStatsForUserIdKey(model.user))
@@ -119,15 +118,15 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread] = {
-    (for (row <- rows if row.threadId === threadId) yield row).list
+    (for (row <- activeRows if row.threadId === threadId) yield row).list
   }
 
   def getUserThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
-    rows.filter(r => r.user === userId && r.uriId === uriId).list
+    activeRows.filter(r => r.user === userId && r.uriId === uriId).list
   }
 
   def getLatestUnreadUnmutedThreads(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[UserThread] = {
-    rows
+    activeRows
       .filter(row => row.user === userId && row.unread && !row.muted)
       .sortBy(row => row.notificationUpdatedAt desc)
       .take(howMany)
@@ -135,53 +134,53 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getThreadIds(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]] = None)(implicit session: RSession): Seq[Id[MessageThread]] = {
-    uriIdOpt.map { uriId => rows.filter(row => row.user === userId && row.uriId === uriId) }
-      .getOrElse { rows.filter(row => row.user === userId) }
+    uriIdOpt.map { uriId => activeRows.filter(row => row.user === userId && row.uriId === uriId) }
+      .getOrElse { activeRows.filter(row => row.user === userId) }
       .map(_.threadId).list
   }
 
   def markAllRead(user: Id[User])(implicit session: RWSession): Unit = {
     val now = clock.now
-    rows.filter(row => row.user === user && row.unread).map(row => (row.unread, row.updatedAt)).update((false, now))
+    activeRows.filter(row => row.user === user && row.unread).map(row => (row.unread, row.updatedAt)).update((false, now))
   }
 
   def markAllReadAtOrBefore(userId: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit = {
     val now = clock.now
-    rows.filter(row => row.user === userId && row.notificationUpdatedAt <= timeCutoff).map(row => (row.unread, row.updatedAt)).update((false, now))
+    activeRows.filter(row => row.user === userId && row.notificationUpdatedAt <= timeCutoff).map(row => (row.unread, row.updatedAt)).update((false, now))
   }
 
   def setNotification(userId: Id[User], threadId: Id[MessageThread], message: ElizaMessage, notifJson: JsValue, unread: Boolean)(implicit session: RWSession): Unit = {
     val now = clock.now
-    rows.filter(row => (row.user === userId && row.threadId === threadId) && (row.lastMsgFromOther.isEmpty || row.lastMsgFromOther < message.id.get))
+    activeRows.filter(row => (row.user === userId && row.threadId === threadId) && (row.lastMsgFromOther.isEmpty || row.lastMsgFromOther < message.id.get))
       .map(row => (row.lastNotification, row.lastMsgFromOther, row.unread, row.notificationUpdatedAt, row.notificationEmailed, row.updatedAt))
       .update((notifJson, Some(message.id.get), unread, message.createdAt, false, now))
 
-    rows.filter(row => (row.user === userId && row.threadId === threadId) && row.lastMsgFromOther === message.id.get)
+    activeRows.filter(row => (row.user === userId && row.threadId === threadId) && row.lastMsgFromOther === message.id.get)
       .map(row => (row.lastNotification, row.notificationEmailed, row.updatedAt))
       .update((notifJson, false, now))
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession): Unit = { // Note: minor race condition
     val now = clock.now
-    rows
+    activeRows
       .filter(row => row.user === userId && row.threadId === threadId && (row.lastSeen < timestamp || row.lastSeen.isEmpty))
       .map(row => (row.lastSeen, row.updatedAt))
       .update((Some(timestamp), now))
   }
 
   def getUnreadThreadNotifications(userId: Id[User])(implicit session: RSession): Seq[UserThreadNotification] = {
-    rows.filter(row => row.user === userId && row.unread).map(row => (row.threadId, row.lastMsgFromOther)).list.map {
+    activeRows.filter(row => row.user === userId && row.unread).map(row => (row.threadId, row.lastMsgFromOther)).list.map {
       case (thread, message) => UserThreadNotification(thread, message.get)
     }
   }
 
   def setMuteState(userThreadId: Id[UserThread], muted: Boolean)(implicit session: RWSession) = {
     val now = clock.now
-    rows.filter(row => row.id === userThreadId).map(row => (row.muted, row.updatedAt)).update((muted, now)) > 0
+    activeRows.filter(row => row.id === userThreadId).map(row => (row.muted, row.updatedAt)).update((muted, now)) > 0
   }
 
   def getThreadNotificationsForUser(userId: Id[User], utq: UserThreadQuery)(implicit session: RSession): List[RawNotification] = {
-    val desiredThreads = rows |> { rs => // by user
+    val desiredThreads = activeRows |> { rs => // by user
       rs.filter(r => r.user === userId && r.lastNotification =!= (JsNull: JsValue))
     } |> { rs => // by uri
       utq.onUri.map(uriId => rs.filter(r => r.uriId === uriId)).getOrElse(rs)
@@ -190,7 +189,7 @@ class UserThreadRepoImpl @Inject() (
     } |> { rs => // by unread
       utq.onlyUnread.map(unread => rs.filter(r => r.unread === unread)).getOrElse(rs)
     } |> { rs => // by started
-      utq.onlyStarted.map(started => rs.filter(r => r.started === started)).getOrElse(rs)
+      utq.onlyStartedBy.map(starter => rs.filter(r => r.startedBy === starter)).getOrElse(rs)
     }
 
     desiredThreads
@@ -210,28 +209,28 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
-    rows.filter(row => row.user === userId && row.threadId === threadId).first
+    activeRows.filter(row => row.user === userId && row.threadId === threadId).first
   }
 
   def markRead(userId: Id[User], threadId: Id[MessageThread], message: ElizaMessage)(implicit session: RWSession): Unit = {
     // Potentially updating lastMsgFromOther (and notificationUpdatedAt for consistency) b/c notification JSON may not have been persisted yet.
     // Note that this method works properly even if the message is from this user. TODO: Rename lastMsgFromOther => lastMsgId ?
     val now = clock.now
-    rows
+    activeRows
       .filter(row => (row.user === userId && row.threadId === threadId) && (row.lastMsgFromOther.isEmpty || row.lastMsgFromOther <= message.id.get))
       .map(row => (row.lastMsgFromOther, row.unread, row.notificationUpdatedAt, row.updatedAt))
       .update((Some(message.id.get), false, message.createdAt, now))
   }
 
   def getUserThreadsForEmailing(lastNotifiedBefore: DateTime)(implicit session: RSession): Seq[UserThread] = {
-    rows.filter(row => row.unread && !row.notificationEmailed && row.notificationUpdatedAt < lastNotifiedBefore).list
+    activeRows.filter(row => row.unread && !row.notificationEmailed && row.notificationUpdatedAt < lastNotifiedBefore).list
   }
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[ElizaMessage]])(implicit session: RWSession): Unit = {
     val now = clock.now
     relevantMessageOpt match {
-      case Some(relevantMessage) => rows.filter(row => row.id === id && row.lastMsgFromOther === relevantMessage).map(_.notificationEmailed).update(true)
-      case None => rows.filter(row => row.id === id).map(row => (row.notificationEmailed, row.updatedAt)).update((true, now))
+      case Some(relevantMessage) => activeRows.filter(row => row.id === id && row.lastMsgFromOther === relevantMessage).map(_.notificationEmailed).update(true)
+      case None => activeRows.filter(row => row.id === id).map(row => (row.notificationEmailed, row.updatedAt)).update((true, now))
     }
   }
 
@@ -243,31 +242,31 @@ class UserThreadRepoImpl @Inject() (
 
   def markUnread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession): Boolean = {
     val now = clock.now
-    rows.filter(row => row.user === userId && row.threadId === threadId && !row.unread).map(row => (row.unread, row.updatedAt)).update((true, now)) > 0
+    activeRows.filter(row => row.user === userId && row.threadId === threadId && !row.unread).map(row => (row.unread, row.updatedAt)).update((true, now)) > 0
   }
 
   def updateLastNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], messageId: Id[ElizaMessage], newJson: JsValue)(implicit session: RWSession): Unit = {
     val now = clock.now
-    rows.filter(row => row.user === userId && row.threadId === threadId && row.lastMsgFromOther === messageId).map(row => (row.lastNotification, row.updatedAt)).update((newJson, now))
+    activeRows.filter(row => row.user === userId && row.threadId === threadId && row.lastMsgFromOther === messageId).map(row => (row.lastNotification, row.updatedAt)).update((newJson, now))
   }
 
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread] = {
-    rows.filter(row => row.uriId === uriId).list
+    activeRows.filter(row => row.uriId === uriId).list
   }
 
   def isMuted(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Boolean = {
-    rows.filter(row => row.user === userId && row.threadId === threadId).map(_.muted).firstOption.getOrElse(false)
+    activeRows.filter(row => row.user === userId && row.threadId === threadId).map(_.muted).firstOption.getOrElse(false)
   }
 
   def setLastActive(userId: Id[User], threadId: Id[MessageThread], lastActive: DateTime)(implicit session: RWSession): Unit = {
     val now = clock.now
-    rows.filter(row => row.user === userId && row.threadId === threadId).map(row => (row.lastActive, row.updatedAt)).update((Some(lastActive), now))
+    activeRows.filter(row => row.user === userId && row.threadId === threadId).map(row => (row.lastActive, row.updatedAt)).update((Some(lastActive), now))
   }
 
   def getThreadActivity(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThreadActivity] = {
-    rows
+    activeRows
       .filter(row => row.threadId === threadId)
-      .map(row => (row.id, row.threadId, row.user, row.lastActive, row.started, row.lastSeen))
+      .map(row => (row.id, row.threadId, row.user, row.lastActive, row.startedBy === row.user, row.lastSeen))
       .list.map { tuple => (UserThreadActivity.apply _).tupled(tuple) }
   }
 
@@ -275,31 +274,28 @@ class UserThreadRepoImpl @Inject() (
     import com.keepit.common.db.slick.StaticQueryFixed.interpolation
     userThreadStatsForUserIdCache.getOrElse(UserThreadStatsForUserIdKey(userId)) {
       UserThreadStats(
-        all = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id}""".as[Int].first,
-        active = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND last_active IS NOT NULL""".as[Int].first,
-        started = sql"""SELECT count(*) FROM user_thread WHERE user_id=${userId.id} AND started = TRUE""".as[Int].first)
+        all = activeRows.filter(row => row.user === userId).length.run,
+        active = activeRows.filter(row => row.user === userId && row.lastActive.isDefined).length.run,
+        started = activeRows.filter(row => row.user === userId && row.startedBy === userId).length.run
+      )
     }
   }
 
   def hasThreads(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Boolean = {
-    (for (row <- rows if row.user === userId && row.uriId === uriId) yield row.id).firstOption.isDefined
+    (for (row <- activeRows if row.user === userId && row.uriId === uriId) yield row.id).firstOption.isDefined
   }
 
   def checkUrisDiscussed(userId: Id[User], uriIds: Seq[Id[NormalizedURI]])(implicit session: RSession): Seq[Boolean] = {
-    val uriSet = (for (row <- rows if row.user === userId && row.uriId.isDefined) yield row.uriId).list.toSet.flatten
+    val uriSet = (for (row <- activeRows if row.user === userId && row.uriId.isDefined) yield row.uriId).list.toSet.flatten
     uriIds.map(uriId => uriSet.contains(uriId))
   }
 
-  def getThreadStarter(threadId: Id[MessageThread])(implicit session: RSession): Id[User] = {
-    (for (row <- rows if row.threadId === threadId && row.started === true) yield row.user).first
-  }
-
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread] = {
-    (for (row <- rows if row.accessToken === token) yield row).firstOption
+    (for (row <- activeRows if row.accessToken === token) yield row).firstOption
   }
 
   def getNotificationByThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[RawNotification] = {
-    rows
+    activeRows
       .filter(row => row.user === userId && row.threadId === threadId && row.lastNotification =!= (JsNull: JsValue))
       .map(row => (row.lastNotification, row.unread, row.uriId))
       .firstOption

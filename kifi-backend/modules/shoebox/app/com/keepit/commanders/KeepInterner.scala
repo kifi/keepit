@@ -140,7 +140,7 @@ class KeepInternerImpl @Inject() (
 
   private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource) = {
     // For batches, if we can't prenormalize, silently drop. This is a low bar, and usually means it couldn't *ever* be a valid keep.
-    val validUrls = bms.filter(b => httpPrefix.findPrefixOf(b.url.toLowerCase).isDefined && normalizationService.prenormalize(b.url).isSuccess)
+    val (validUrls, invalidUrls) = bms.partition(b => httpPrefix.findPrefixOf(b.url.toLowerCase).isDefined && normalizationService.prenormalize(b.url).isSuccess)
 
     val (persisted, failed) = db.readWriteBatch(validUrls, attempts = 5) {
       case ((session, bm)) =>
@@ -150,13 +150,13 @@ class KeepInternerImpl @Inject() (
 
     val keeps = persisted.values.map(_.get).toSeq
 
-    updateKeepTagsUsingNote(keeps.map(_.keep))
+    updateKeepTagsUsingNote(keeps.map(_.keep).filter(_.note.exists(_.nonEmpty)))
 
     if (failed.nonEmpty) {
       airbrake.notify(AirbrakeError(message = Some(s"failed to persist ${failed.size} of ${bms.size} raw bookmarks (${validUrls.size} valid): look app.log for urls"), userId = Some(ownerId)))
       failed.foreach { f => log.warn(s"failed to persist raw bookmarks of user $ownerId from $source: ${f._1.url}", f._2.failed.get) }
     }
-    val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList
+    val failedRaws: Seq[RawBookmarkRepresentation] = failed.keys.toList ++ invalidUrls
     (keeps, failedRaws)
   }
 
@@ -250,19 +250,25 @@ class KeepInternerImpl @Inject() (
   }
 
   private def updateKeepTagsUsingNote(keeps: Seq[Keep]) = {
+    def tryFixKeepNote(keep: Keep)(implicit session: RWSession) = {
+      Try(keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse("")))
+    }
+
     // Attach tags to keeps
     val res = db.readWriteBatch(keeps, attempts = 5) {
       case ((s, keep)) =>
         if (keep.note.nonEmpty) {
-          // Don't blow if something messes up, try our best to just get through
-          Some(Try(keepCommander.updateKeepNote(keep.userId, keep, keep.note.getOrElse(""))(s)))
-        } else None
+          tryFixKeepNote(keep)(s) // Don't blow if something messes up, try our best to just get through
+        } else Success(keep)
+    }.map { k =>
+      (k._1, k._2.flatten)
     }
 
     res.collect {
-      case ((k, Failure(ex))) => (k.id, ex)
-      case ((k, Success(Some(Failure(ex))))) => (k.id, ex)
+      case ((k, Failure(ex))) => (k.id.get, ex)
     }.foreach {
+      case (keepId, failure: UndeclaredThrowableException) =>
+        log.warn(s"[keepinterner] Failed updating keep note for $keepId", failure.getUndeclaredThrowable)
       case (keepId, failure) =>
         log.warn(s"[keepinterner] Failed updating keep note for $keepId", failure)
     }

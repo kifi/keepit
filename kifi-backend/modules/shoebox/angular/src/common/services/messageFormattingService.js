@@ -5,24 +5,6 @@ angular.module('kifi')
   .factory('messageFormattingService', ['emojiService',
     function (emojiService) {
 
-      //var entityMap = {
-      //  '&': '&amp;',
-      //  '<': '&lt;',
-      //  '>': '&gt;',
-      //  '"': '&quot;',
-      //  "'": '&#39;', // jshint ignore:line
-      //  '/': '&#x2F;',
-      //  '`': '&#x60;',
-      //  '=': '&#x3D;'
-      //};
-
-      function escapeHtml (string) {
-        return string;
-        // trying not escaping for now
-        //return String(string).replace(/[&<>"'`=\/]/g, function fromEntityMap (s) {
-        //  return entityMap[s];
-        //});
-      }
 
       var kifiSelMarkdownToLinkRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/;
       //var kifiSelMarkdownToTextRe = /\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)/;
@@ -36,6 +18,30 @@ angular.module('kifi')
 
       var stringIsEmpty = function(str) {
         return !str || str.length === 0;
+      };
+
+      var trimExtraSpaces = function(items) {
+        if (!items) {
+          return [];
+        }
+
+        for (var i = items.length - 1; i >= 0; i--) {
+          var before = items[i - 1];
+          var after = items[i + 1];
+          var beforeAndAfterAreImages = before && before.type === 'IMAGE' && after && after.type === 'IMAGE';
+
+          // remove spaces that are in between images
+          if (beforeAndAfterAreImages) {
+            var item = items[i];
+            if (item.data && item.data.text) {
+              item.data.text = item.data.text.trim();
+              if (item.data.text.length === 0) {
+                items.splice(i, 1);
+              }
+            }
+          }
+        }
+        return items;
       };
 
       var format = function(text) {
@@ -67,20 +73,8 @@ angular.module('kifi')
           }
         }
 
-        //for (i = items.length - 1; i >= 0; i--) {
-        //  var item = items[i];
-        //  if (item.data && item.data.text) {
-        //    item.data.text = item.data.text.trim();
-        //    if (item.data.text.length === 0) {
-        //      items.splice(i, 1);
-        //    }
-        //  }
-        //
-        //}
-
         // now we want to combine
         return items;
-
       };
 
       var processKifiMarkdown = function(markdownData) {
@@ -89,8 +83,9 @@ angular.module('kifi')
           {
             type: 'LOOK_HERE',
             data: {
-              link: 'x-kifi-sel:' + escapeHtml(selector),
-              title: escapeHtml(formatKifiSelRangeText(selector)),
+              link: 'x-kifi-sel:' + selector,
+              title: formatKifiSelRangeText(selector),
+              parts: formatKifiSelRangeTextToParts(selector),
               text: markdownData.presented.replace(escapedBackslashOrRightBracketRe, '$1')
             }
           }
@@ -109,9 +104,9 @@ angular.module('kifi')
           for (var i = 0; i < parts.length; i += 2) {
             items = items.concat(processPlainTextForEmojis(parts[i]));
             if (i + 1 < parts.length) {
-              var escapedAddr = escapeHtml(parts[i + 1]);
+              var addr = parts[i + 1];
               var data = {
-                text: escapedAddr
+                text: addr
               };
               items.push({
                 type: 'EMAIL',
@@ -137,10 +132,12 @@ angular.module('kifi')
         //console.log(parts);
         //console.log('\n');
         for (var i = 0; i < parts.length; i += 3) {
-          // first item is actually plain text no matter what
+
           // format emoji
           var uri = parts[i + 1];
           var scheme = parts[i + 2];
+
+
           if (!scheme && uri && uri.indexOf('/') < 0 || parts[i].slice(-1) === '@') {
             var ambiguous = parts[i] + uri;
             var processed = processEmail(ambiguous);
@@ -153,13 +150,37 @@ angular.module('kifi')
             }
           }
 
-          // add plain text
-          items = items.concat(processPlainTextForEmojis(parts[i]));
+
+          var item;
+          if (imageUrlRe.test(parts[i])) {
+            item = {
+              type: 'IMAGE',
+              data: {
+                src: parts[i]
+              }
+            };
+            items.push(item);
+          } else if (uriRe.test(parts[i])) {
+            item = {
+              type: 'LINK',
+              data: {
+                link: parts[i],
+                text: parts[i]
+              }
+            };
+            items.push(item);
+          } else {
+            items = items.concat(processPlainTextForEmojis(parts[i]));
+          }
+
+
+
+
+
           if (uri) {
             //var escapedUri = escapeHtml(uri);
             //var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
             var basicUrl = (scheme ? '' : 'http://') + uri;
-            var item;
             if (imageUrlRe.test(uri)) {
               item = {
                 type: 'IMAGE',
@@ -214,12 +235,31 @@ angular.module('kifi')
         }
         // var decodeURIComponent = function(t) {return t;};
         return function (selector) {
-          return decodeURIComponent(selector.split('|')[1]).replace(replaceRe, replace);
+          var selParts = selector.split('|');
+          return decodeURIComponent(selParts[selParts[0] === 'i' ? 4 : 6]).replace(replaceRe, replace);
         };
       }());
 
+      var formatKifiSelRangeTextToParts = (function () {
+        var replaceRe = /([\u001e\u001f])/g;
+        function replace(replacements, ch) {
+          return replacements[ch];
+        }
+
+        // var decodeURIComponent = function(t) {return t;};
+        return function (selector) {
+          var selParts = selector.split('|');
+          // "i" is image, url located at position 4, "r" seems to be for normal text, positioned at 6
+          var decoded = decodeURIComponent(selParts[selParts[0] === 'i' ? 4 : 6]).replace(replaceRe, replace);
+          return processPlainText(decoded);
+        };
+      }());
+
+
       return {
-        full: format
+        full: format,
+        trimExtraSpaces: trimExtraSpaces,
+        formatPlainText: formatKifiSelRangeTextToParts
       };
     }
   ]);

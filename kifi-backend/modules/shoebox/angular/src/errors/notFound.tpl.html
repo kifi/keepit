@@ -1,10 +1,6 @@
 <div class="kf-error-body-wrap">
-  <div class="kf-error-header">Whomp. We can’t find the page you’re looking for.</div>
-  <p class="kf-error-para">
-    It may have been removed or had its name changed. In the meantime,
-    check out our <a href="http://support.kifi.com/" class="kf-error-link">support center</a> or
-    head back to our <a href="https://www.kifi.com/" class="kf-error-link">homepage</a>.
-  </p>
+  <div ng-if="!errorState.errorView" ng-include="'errors/whomp.tpl.html'"></div>
+  <div ng-if="errorState.errorView" proxy="errorState.errorView" state="errorState" params="errorParams" status="errorStatus"></div>
   <footer>
     <a href="http://support.kifi.com/hc/en-us/requests/new" class="kf-error-link">Contact support</a> —
     <a href="https://www.kifi.com/" class="kf-error-link" target="_self">Homepage</a> —

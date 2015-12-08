@@ -2,6 +2,7 @@ package com.keepit.controllers.admin
 
 import com.google.inject.Inject
 import com.keepit.commanders._
+import com.keepit.common.akka.SafeFuture
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper, UserRequest }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession._
@@ -13,6 +14,8 @@ import com.keepit.common.time._
 import com.keepit.heimdal._
 import com.keepit.integrity.LibraryChecker
 import com.keepit.model.{ KeepStates, _ }
+import com.keepit.normalizer.NormalizedURIInterner
+import com.keepit.social.twitter.RawTweet
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent }
@@ -40,6 +43,9 @@ class AdminBookmarksController @Inject() (
   libraryChecker: LibraryChecker,
   clock: Clock,
   keepToCollectionRepo: KeepToCollectionRepo,
+  rawKeepRepo: RawKeepRepo,
+  sourceRepo: KeepSourceAttributionRepo,
+  uriInterner: NormalizedURIInterner,
   implicit val imageConfig: S3ImageConfig)
     extends AdminUserActions {
 
@@ -239,45 +245,24 @@ class AdminBookmarksController @Inject() (
   // updateKeepNote takes the responsibility of making sure the note and internal tags are in sync (note is source of truth).
   // `appendTagsToNote` will additionally check existing tags and verify that they are in the note.
   def reprocessNotesOfKeeps(appendTagsToNote: Boolean) = AdminUserAction(parse.json) { implicit request =>
-    val updated = db.readWrite { implicit session =>
-      val keeps = {
-        val keepIds = (request.body \ "keeps").asOpt[Seq[Long]].getOrElse(Seq.empty).map(j => Id[Keep](j))
-        keepRepo.getByIds(keepIds.toSet).values.toList
-      }
-      val userKeeps = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { u =>
-        keepRepo.getByUser(Id[User](u)).toList
-      }
-      val libKeeps = (request.body \ "libs").asOpt[Seq[Long]].getOrElse(Seq.empty).flatMap { l =>
-        keepRepo.getByLibrary(Id[Library](l), 0, 1000).toList
-      }
-      val allKeeps = (keeps ++ userKeeps ++ libKeeps).distinctBy(_.id.get)
-      val tagsToAddToKeeps = collectionRepo.getHashtagsByKeepIds(allKeeps.map(_.id.get).toSet)
-
-      allKeeps.map { keep =>
-        val attempt = scala.util.Try {
-          val newNote = if (appendTagsToNote) {
-            tagsToAddToKeeps.get(keep.id.get) match {
-              case Some(tagsToAdd) =>
-                Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsToAdd)
-              case None =>
-                keep.note.getOrElse("")
-            }
-          } else keep.note.getOrElse("")
-          if (!appendTagsToNote || keep.note.getOrElse("") != newNote) {
-            log.info(s"[reprocessNotesOfKeeps] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
-            keepCommander.updateKeepNote(keep.userId, keep, newNote, freshTag = false)
-            1
-          } else 0
-        }
-        attempt.recover {
-          case ex: Throwable =>
-            log.warn(s"[reprocessNotesOfKeeps] Exception, yoloing anyways", ex)
-            0
-        }.getOrElse(0)
-      }
+    val keepIds = db.readOnlyReplica { implicit session =>
+      val userIds = (request.body \ "users").asOpt[Seq[Long]].getOrElse(Seq.empty).map(Id.apply[User])
+      val rangeIds = (for {
+        start <- (request.body \ "startUser").asOpt[Long]
+        end <- (request.body \ "endUser").asOpt[Long]
+      } yield (start to end).map(Id.apply[User])).getOrElse(Seq.empty)
+      (userIds ++ rangeIds).flatMap { u =>
+        keepRepo.getByUser(u)
+      }.sortBy(_.userId.id).map(_.id.get)
     }
 
-    Ok(updated.sum.toString)
+    keepIds.foreach(k => keepCommander.autoFixKeepNoteAndTags(k).onComplete { _ =>
+      if (k.id % 1000 == 0) {
+        log.info(s"[reprocessNotesOfKeeps] Still running, keep $k")
+      }
+    })
+
+    Ok(s"Running for ${keepIds.length} keeps!")
   }
 
   def removeTagFromKeeps() = AdminUserAction(parse.json) { implicit request =>
@@ -323,4 +308,35 @@ class AdminBookmarksController @Inject() (
     Ok(updated.toString)
   }
 
+  def backfillTwitterAttribution(fromPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
+    SafeFuture {
+      def isFromTwitter(source: KeepSource) = source == KeepSource.twitterSync || source == KeepSource.twitterFileImport
+      var page = fromPage
+      var lastProcessed = 0
+      do {
+        db.readWrite { implicit session =>
+          val rawKeeps = rawKeepRepo.pageAscending(page = page, size = pageSize)
+          val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
+          rawKeepsFromTwitter.foreach { rawKeep =>
+            rawKeep.originalJson.foreach { sourceJson =>
+              RawTweet.reads.reads(sourceJson).foreach { tweet =>
+                uriInterner.getByUri(rawKeep.url).foreach { uri =>
+                  val keepIds = keepRepo.getByUri(uri.id.get, excludeState = None).collect { case keep if isFromTwitter(keep.source) => keep.id.get }.toSet
+                  sourceRepo.getByKeepIds(keepIds).foreach {
+                    case (keepId, PartialTwitterAttribution(tweetIdStr, _)) if tweet.id.id.toString == tweetIdStr =>
+                      sourceRepo.save(keepId, TwitterAttribution(tweet))
+                    case (keepId, source) =>
+                  }
+                }
+              }
+            }
+          }
+          if (page % 10 == 0) log.info(s"[backfillTwitterAttribution] Done processing page $page of size $pageSize.")
+          page += 1
+          lastProcessed = rawKeeps.length
+        }
+      } while (lastProcessed > 0)
+    }
+    Ok(s"Starting from page $fromPage by batch of $pageSize. It's gonna take a while.")
+  }
 }

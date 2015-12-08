@@ -1,6 +1,7 @@
 package com.keepit.model
 
 import com.keepit.common.db.Id
+import com.keepit.social.twitter.{ RawTweet, TwitterHandle }
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json._
@@ -25,20 +26,20 @@ class KeepSourceAttributionTest extends Specification with ShoeboxTestInjector {
         originalJson = Some(tweetJs),
         libraryId = None)
 
-      val attr = RawKeep.extractKeepSourceAttribtuion(rawKeep)
-      attr.get === PartialTwitterAttribution("505809542656303104", connerdelights)
+      val attr = RawKeep.extractKeepSourceAttribution(rawKeep)
+      attr.get === TwitterAttribution(RawTweet.reads.reads(tweetJs).get)
 
       val rawKeep2 = rawKeep.copy(originalJson = Some(JsString("{}")))
-      RawKeep.extractKeepSourceAttribtuion(rawKeep2) === None
+      RawKeep.extractKeepSourceAttribution(rawKeep2) === None
 
       val rawKeep3 = rawKeep.copy(source = KeepSource.bookmarkFileImport)
-      RawKeep.extractKeepSourceAttribtuion(rawKeep3) === None
+      RawKeep.extractKeepSourceAttribution(rawKeep3) === None
 
     }
 
     "source attribution serialize" in {
       val attr = PartialTwitterAttribution("505809542656303104", connerdelights)
-      SourceAttribution.deprecatedWrites.writes(attr) === Json.obj("twitter" -> Json.obj("idString" -> "505809542656303104", "screenName" -> connerdelights))
+      SourceAttribution.deprecatedWrites.writes((attr, None)) === Json.obj("twitter" -> Json.obj("idString" -> "505809542656303104", "screenName" -> connerdelights), "kifi" -> JsNull)
     }
 
     "twitter attribution persists in db" in {

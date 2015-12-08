@@ -1,7 +1,5 @@
 package com.keepit.slack
 
-import java.util.concurrent.ExecutionException
-
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders._
 import com.keepit.common.concurrent.FutureHelpers
@@ -11,7 +9,6 @@ import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.NonOKResponseException
 import com.keepit.common.performance.{ AlertingTimer, StatsdTiming }
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
@@ -23,13 +20,12 @@ import org.joda.time.{ DateTime, Period }
 import com.keepit.common.strings._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import scala.concurrent.duration.DurationConversions
-import scala.util.Success
+import scala.util.{ Failure, Try, Success }
 
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
   // Method called by scheduled plugin
-  def findAndPushUpdatesForRipestLibraries(): Unit
+  def findAndPushUpdatesForRipestLibraries(): Future[Unit]
 
   // Method to be called if something happens in a library, meant to be called from within other db sessions
   def scheduleLibraryToBePushed(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit
@@ -66,17 +62,19 @@ class LibraryToSlackChannelPusherImpl @Inject() (
 
   @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
-  def findAndPushUpdatesForRipestLibraries(): Unit = {
+  def findAndPushUpdatesForRipestLibraries(): Future[Unit] = {
     val librariesThatNeedToBeProcessed = db.readOnlyReplica { implicit s =>
       libToChannelRepo.getLibrariesRipeForProcessing(Limit(LIBRARY_BATCH_SIZE), overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
     }
-    log.info(s"[LTSCP] Processing libraries $librariesThatNeedToBeProcessed for slack pushing")
-    FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recover {
-      case boxFail: ExecutionException => Future.failed(boxFail.getCause)
+    FutureHelpers.sequentialExec(librariesThatNeedToBeProcessed)(pushUpdatesToSlack).recoverWith {
+      // PSA: exceptions inside of Futures are sometimes wrapped in this obnoxious ExecutionException box,
+      // and that swallows the stack trace. This hack will manually expose the stack trace
+      case boxFail: java.util.concurrent.ExecutionException => Future.failed(new Exception(boxFail.getCause.getStackTrace.toList.mkString("\n")))
     }.recover {
       case fail => airbrake.notify(s"Pushing slack updates to ripest libraries failed because of $fail")
     }
   }
+
   def scheduleLibraryToBePushed(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
     libToChannelRepo.getActiveByLibrary(libId).foreach { lts =>
       libToChannelRepo.save(lts.withNextPushAtLatest(when))
@@ -167,7 +165,6 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       integrations.map(libToChannelRepo.get).filter(isIllegal).foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
 
       val integrationsToProcess = integrations.flatMap(ltsId => libToChannelRepo.markAsProcessing(ltsId))
-      log.info(s"[LTSCP] For $libId we need to push for integrations ${integrationsToProcess.map(_.id.get)}")
       (lib, integrationsToProcess)
     }.flatMap {
       case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
@@ -184,7 +181,6 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             val keepById = keepRepo.getByIds(relevantKeepIds.toSet)
             relevantKeepIds.flatMap(keepById.get)
           }
-          if (relevantKeepIds.nonEmpty) log.info(s"[LTSCP] For integration ${lts.id.get} we are pushing keeps $relevantKeepIds")
           val keepsToPush: KeepsToPush = relevantKeeps match {
             case Seq() => NoKeeps
             case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, attributionByKeepId)
@@ -213,7 +209,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
           case Success(false) => db.readWrite { implicit s =>
             libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
           }
-          case _ => db.readWrite { implicit s =>
+          case maybeFail => db.readWrite { implicit s =>
             // To make sure we don't spam a channel, we ALWAYS register a push as "processed"
             // Sometimes this may lead to Slack messages getting lost
             // This is a better alternative than spamming a channel because Slack (or our HttpClient)
@@ -224,6 +220,10 @@ class LibraryToSlackChannelPusherImpl @Inject() (
                 .withLastProcessedKeep(ktls.lastOption.map(_.id.get))
                 .withNextPushAt(clock.now plus defaultDelayBetweenPushes)
             )
+            maybeFail match {
+              case Failure(f) => airbrake.notify(f)
+              case _ =>
+            }
           }
         }
       }.imap { result => result.map { case (lts, b) => lts.id.get -> b } }

@@ -12,6 +12,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
+import com.keepit.social.twitter.TwitterUserId
 import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable.Specification
 import play.api.libs.json.{ JsArray, Json, JsNull, JsValue }
@@ -39,7 +40,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
       }
     }
     val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, inject[S3ImageStore], clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, inject[LibraryImageCommander], libPathCommander, inject[PublicIdConfiguration], inject[WatchableExecutionContext], inject[UserRepo]) {
-      override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
+      override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterUserId]): Future[JsValue] = Future.successful {
         socialUserInfo.socialId.id.toLong match {
           case tweetfortytwoInfo.id =>
             JsArray(infos.values.collect { case (json, info) if info.id != tweetfortytwoInfo.id => json }.toSeq)
@@ -48,7 +49,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
         }
       }
 
-      override def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterId, endpoint: String): Future[Seq[TwitterId]] = Future.successful {
+      override def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterUserId, endpoint: String): Future[Seq[TwitterUserId]] = Future.successful {
         socialUserInfo.socialId.id.toLong match {
           case tweetfortytwoInfo.id =>
             if (endpoint.contains("followers")) tweetfortytwoFollowerIds
@@ -56,9 +57,9 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
             else Seq.empty
           case _ =>
             if (endpoint.contains("followers")) {
-              Seq(1L, 2L, 3L, 4L).map(TwitterId(_))
+              Seq(1L, 2L, 3L, 4L).map(TwitterUserId(_))
             } else if (endpoint.contains("friends")) {
-              Seq(2L, 3L).map(TwitterId(_))
+              Seq(2L, 3L).map(TwitterUserId(_))
             } else Seq.empty
         }
       }
@@ -119,7 +120,7 @@ class TwitterSocialGraphTest extends Specification with ShoeboxTestInjector with
         val jsonSeq = raw.jsons.head.as[JsArray].value // ok for small data set
         val expectedMutualIds = tweetfortytwoFollowerIds.intersect(tweetfortytwoFriendIds)
         jsonSeq.length === expectedMutualIds.length
-        val extractedIds = jsonSeq.map(json => (json \ "id").as[Long]).map(TwitterId(_)).toSet
+        val extractedIds = jsonSeq.map(json => (json \ "id").as[Long]).map(TwitterUserId(_)).toSet
         extractedIds === expectedMutualIds.toSet
       }
     }

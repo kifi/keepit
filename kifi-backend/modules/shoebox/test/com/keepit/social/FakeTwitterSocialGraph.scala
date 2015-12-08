@@ -17,6 +17,7 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time.Clock
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.model._
+import com.keepit.social.twitter.{ TwitterHandle, TwitterUserId }
 import play.api.libs.json.{ JsNull, JsArray, JsValue, JsObject }
 import play.api.libs.ws.WSResponse
 import securesocial.core.{ IdentityId, OAuth2Settings }
@@ -52,7 +53,7 @@ class FakeTwitterSocialGraph @Inject() (
   }
 
   val twtrGraph: TwitterSocialGraphImpl = new TwitterSocialGraphImpl(airbrake, db, s3ImageStore, clock, oauth1Config, twtrOAuthProvider, userValueRepo, twitterSyncStateRepo, libraryMembershipRepo, libraryRepo, basicUserRepo, socialUserInfoRepo, libraryImageCommander, libPathCommander, publicIdConfig, executionContext, userRepo) {
-    override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = Future.successful {
+    override protected def lookupUsers(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterUserId]): Future[JsValue] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
           JsArray(infos.values.collect { case (json, info) if info.id != tweetfortytwoInfo.id => json }.toSeq)
@@ -61,7 +62,7 @@ class FakeTwitterSocialGraph @Inject() (
       }
     }
 
-    protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[TwitterId]] = Future.successful {
+    protected def fetchIds(socialUserInfo: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: Long, endpoint: String): Future[Seq[TwitterUserId]] = Future.successful {
       socialUserInfo.socialId.id.toLong match {
         case tweetfortytwoInfo.id =>
           if (endpoint.contains("followers")) tweetfortytwoFollowerIds
@@ -69,9 +70,9 @@ class FakeTwitterSocialGraph @Inject() (
           else Seq.empty
         case _ =>
           if (endpoint.contains("followers")) {
-            Seq(1L, 2L, 3L, 4L).map(TwitterId(_))
+            Seq(1L, 2L, 3L, 4L).map(TwitterUserId(_))
           } else if (endpoint.contains("friends")) {
-            Seq(2L, 3L).map(TwitterId(_))
+            Seq(2L, 3L).map(TwitterUserId(_))
           } else Seq.empty
       }
     }

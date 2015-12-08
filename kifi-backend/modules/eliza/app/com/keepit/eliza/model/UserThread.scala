@@ -33,7 +33,7 @@ case class UserThread(
   notificationLastSeen: Option[DateTime] = None,
   notificationEmailed: Boolean = false,
   lastActive: Option[DateTime] = None, //Contains the 'createdAt' timestamp of the last message this user sent on this thread
-  started: Boolean = false, //Whether or not this thread was started by this user
+  startedBy: Id[User], // denormalized from MessageThread
   accessToken: ThreadAccessToken = ThreadAccessToken())
     extends Model[UserThread] with ParticipantThread {
 
@@ -51,6 +51,16 @@ case class UserThread(
 object UserThreadStates extends States[UserThread]
 
 object UserThread {
+  def forMessageThread(mt: MessageThread)(user: Id[User]) = UserThread(
+    user = user,
+    threadId = mt.id.get,
+    uriId = Some(mt.uriId),
+    lastSeen = None,
+    unread = true,
+    lastMsgFromOther = None,
+    lastNotification = JsNull,
+    startedBy = mt.startedBy
+  )
   def toUserThreadView(userThread: UserThread, messages: Seq[ElizaMessage], messageThread: MessageThread): UserThreadView = {
     UserThreadView(
       pageTitle = messageThread.pageTitle,

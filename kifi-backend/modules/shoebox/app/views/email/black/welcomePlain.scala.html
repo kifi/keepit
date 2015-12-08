@@ -1,11 +1,10 @@
-@(toUserId: Id[User], verifyUrl: Option[String], domainOwnerIds: Set[Id[Organization]], installs: Set[KifiInstallationPlatform])
+@(toUserId: Id[User], verifyUrl: Option[String], installs: Set[KifiInstallationPlatform])
 @import com.keepit.common.mail.template.helpers._
 @import play.api.libs.json._
 @import com.keepit.model.KifiInstallationPlatform
 
 @homeUrl = @{kifiUrl("kifiHome")}
 @kifiGuideUrl = @{htmlUrl("https://www.kifi.com/getting-started?", "kifiTutorials", false)}
-@orgNamesAndLinks = @{domainOwnerIds.map { orgId => (organizationName(orgId), organizationLink(orgId, None, "domainOwnerOrg")) } }
 @platformSpiel = @{
   val hasExt = installs.contains(KifiInstallationPlatform.Extension)
   val hasMobile = installs.contains(KifiInstallationPlatform.IPhone) || installs.contains(KifiInstallationPlatform.Android)
@@ -19,21 +18,6 @@
     ""
   }
   Html(spiel)
-}
-@orgs = @{
-  val links = orgNamesAndLinks.toList.map(org => s"""<a href="${org._2}">${org._1}</a>""")
-  val orgStr = if (links.length > 2) {
-    val pre = links.take(links.length - 2)
-    val last = links.last
-    pre.mkString(", ") + ", and " + last
-  } else if (links.length == 2) {
-    links.head + " and " + links.last
-  } else if (links.length == 1) {
-    links.head
-  } else {
-    ""
-  }
-  Html(orgStr)
 }
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -56,15 +40,7 @@
 
 
     @verifyUrl.map { url =>
-      <p>To protect your privacy and security, please confirm your email address by clicking the following link: <a href="@url">@url</a>.
-      @if(orgNamesAndLinks.nonEmpty) {
-        @if(orgNamesAndLinks.size == 1) {
-          You’ll be added to the @orgs team.
-        } else {
-          You’ll be added to the @orgs teams.
-        }
-      }
-      </p>
+      <p>To protect your privacy and security, please confirm your email address by clicking the following link: <a href="@url">@url</a>.</p>
     }
 
     <p>Eishay Smith, CEO<br>

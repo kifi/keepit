@@ -68,19 +68,18 @@ class MessagingTest extends Specification with ElizaTestInjector {
 
     "send correctly" in {
       withDb(modules: _*) { implicit injector =>
-
         val (user1, user2, user3, user2n3Seq, shoebox) = setup()
         val messagingCommander = inject[MessagingCommander]
         val messageFetchingCommanger = inject[MessageFetchingCommander]
         val notificationCommander = inject[NotificationDeliveryCommander]
+
         val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://thenextgoogle.com", Some("title"), "World!", None))
-
         val (thread2, msg2) = messagingCommander.sendMessage(user1, msg1.thread, "Domination!", None, None)
-
+        inject[WatchableExecutionContext].drain()
         waitFor(notificationCommander.getLatestSendableNotifications(user1, 20, includeUriSummary = false)).length === 1
 
-        val messageIds: Seq[Option[Id[ElizaMessage]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.id)
-        val messageContents: Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages(_)).map(_.messageText)
+        val messageIds: Seq[Option[Id[ElizaMessage]]] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages).map(_.id)
+        val messageContents: Seq[String] = messagingCommander.getThreads(user2).flatMap(messageFetchingCommanger.getThreadMessages).map(_.messageText)
 
         messageIds.contains(msg1.id) === true
         messageIds.contains(msg2.id) === true
@@ -101,7 +100,6 @@ class MessagingTest extends Specification with ElizaTestInjector {
           var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()
 
           inject[WebSocketRouter].onNotification { (userId, notification) =>
-            // println(s"Got Notification $notification for $userId")
             if (notified.isDefinedAt(userId.get)) {
               notified(userId.get) = notified(userId.get) + 1
             } else {
@@ -125,7 +123,6 @@ class MessagingTest extends Specification with ElizaTestInjector {
           val notifications: Seq[JsObject] = Await.result(notificationCommander.getLatestUnreadSendableNotifications(user3, 20, includeUriSummary = false), Duration(4, "seconds"))._1.map(_.obj)
           notifications.length === 1
           val participants = (notifications.head \ "participants").as[Seq[BasicUser]].sortBy(_.lastName)
-          // println(participants) // can be removed?
           participants.length === 3
           participants(0).lastName.endsWith(user1.id.toString) === true
           participants(1).lastName.endsWith(user2.id.toString) === true

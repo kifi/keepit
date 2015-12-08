@@ -65,6 +65,7 @@ angular.module('kifi')
       addOrgDomain: post(shoebox, '/organizations/:id/addDomain'),
       addDomainAfterVerification: post(shoebox, '/organizations/:id/addDomainAfterVerification'),
       removeOrgDomain: post(shoebox, '/organizations/:id/removeDomain'),
+      sendMemberConfirmationEmail: post(shoebox, '/organizations/:id/sendMemberConfirmationEmail'),
 
       getKeepStream: get(shoebox, '/keeps/stream?limit=:limit&beforeId=:beforeId&afterId=:afterId', 60),
 

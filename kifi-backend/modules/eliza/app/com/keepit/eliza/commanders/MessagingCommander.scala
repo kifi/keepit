@@ -128,17 +128,15 @@ class MessagingCommander @Inject() (
     })
   }
 
-  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = {
-    val threads = db.readOnlyReplica { implicit session =>
-      userThreadRepo.getUserThreads(userId, uriId)
-    }
+  def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = db.readOnlyReplica { implicit session =>
+    val threads = userThreadRepo.getUserThreads(userId, uriId)
     val otherStarters = threads.filter { userThread =>
       userThread.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) // tweak
-    } map { userThread =>
-      db.readOnlyReplica { implicit session =>
-        userThreadRepo.getThreadStarter(userThread.threadId)
-      }
-    } filter { _ != userId }
+    }.map { userThread =>
+      threadRepo.get(userThread.threadId).startedBy
+    }.filter {
+      _ != userId
+    }
     log.info(s"[keepAttribution($userId,$uriId)] threads=${threads.map(_.id.get)} otherStarters=$otherStarters")
     otherStarters
   }
@@ -187,7 +185,7 @@ class MessagingCommander @Inject() (
         statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ONE_IN_THOUSAND)
 
         val (thread, isNew) = db.readWrite { implicit session =>
-          val (thread, isNew) = threadRepo.getOrCreate(userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt))
+          val (thread, isNew) = threadRepo.getOrCreate(from, userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt))
           if (isNew) {
             checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
             nonUserRecipients.foreach { nonUser =>
@@ -203,16 +201,7 @@ class MessagingCommander @Inject() (
               ))
             }
             userParticipants.foreach { userId =>
-              userThreadRepo.save(UserThread(
-                user = userId,
-                threadId = thread.id.get,
-                uriId = Some(nUriId),
-                lastSeen = None,
-                lastMsgFromOther = None,
-                lastNotification = JsNull,
-                unread = false,
-                started = userId == from
-              ))
+              userThreadRepo.save(UserThread.forMessageThread(thread)(userId))
             }
           } else {
             log.info(s"Not actually a new thread. Merging.")
@@ -438,7 +427,7 @@ class MessagingCommander @Inject() (
         if (actuallyNewNonUsers.isEmpty && actuallyNewUsers.isEmpty) {
           None
         } else {
-          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers, actuallyNewNonUsers))
+          val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
           val message = messageRepo.save(ElizaMessage(
             from = MessageSender.System,
             thread = thread.id.get,

@@ -1,7 +1,10 @@
 package com.keepit.slack
 
+import java.util.concurrent.ExecutionException
+
 import com.keepit.common.actor.TestKitSupport
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.akka.SafeFuture
+import com.keepit.common.concurrent.{ FutureHelpers, FakeExecutionContextModule }
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time
 import com.keepit.heimdal.HeimdalContext
@@ -19,7 +22,7 @@ import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.Period
 import org.specs2.mutable.SpecificationLike
 
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
 class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationLike with ShoeboxTestInjector {

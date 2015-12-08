@@ -1,6 +1,3 @@
-.kf-keep-comment-embedded-img
-  height: 100px
-
 .kf-keep-comment-embedded-data
   display: flex
   flex-direction: column
@@ -28,12 +25,42 @@
     flex-direction: column
     font-size: 14px
 
+    .kf-keep-comment-look-here-container
+      margin-top: 5px
+      margin-bottom: 5px
+      background-color: #F9F6DE
+      display: flex
+      flex-direction: row
+      padding: 10px
+      color: #898989
+      font-style: italic
+
+      .kf-keep-comment-look-here-inside
+        width: 1px
+        flex-grow: 1
+
+    .kf-keep-comment-look-here-left-divider
+      background-color: #CDCDCD
+      width: 3px
+      height: auto
+      margin-right: 10px
+
+
+    .kf-keep-comment-look-here-link
+      font-weight: bold
+      font-style: italic
+
+
+    .kf-keep-comment-embedded-img
+      max-width: 100px
+      max-height: 100px
+
     .kf-keep-comment-commenter-text
       white-space: pre-wrap
       word-wrap: break-word
       flex-grow: 1
-      color: #3E4955FF
-      margin-top: 5px
+      color: #333333
+      margin-top: 2px
 
     .kf-keep-comment-inline
       display: inline
@@ -42,10 +69,10 @@
       display: block
 
     .kf-keep-comment-v-space
-      margin-bottom: 6px
+      margin-bottom: 4px
 
     .kf-keep-comment-v-space-top
-      margin-top: 6px
+      margin-top: 4px
 
     .kf-keep-comment-commenter-name
       font-weight: bold
@@ -57,5 +84,6 @@
         cursor: pointer
 
     .kf-keep-comment-time
-      color: #BCBCBC
+      color: #ABABAB
       font-size: 12px
+      -webkit-font-smoothing: antialiased

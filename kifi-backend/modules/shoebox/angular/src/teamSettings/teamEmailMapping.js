@@ -16,10 +16,8 @@ angular.module('kifi')
       },
       templateUrl: 'teamSettings/teamEmailMapping.tpl.html',
       link: function ($scope) {
-        $scope.enabled = (
-          $scope.getViewer().permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1 &&
-          $scope.getOrg().config.settings.join_by_verifying.setting !== ORG_SETTING_VALUE.DISABLED
-        );
+        $scope.visible = $scope.getViewer().permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1;
+        $scope.enabled = $scope.visible && $scope.getOrg().config.settings.join_by_verifying.setting !== ORG_SETTING_VALUE.DISABLED;
         $scope.open = $scope.enabled && !!$stateParams.openDomains; // initial
         $scope.me = profileService.me;
         $scope.emailDomains = null;

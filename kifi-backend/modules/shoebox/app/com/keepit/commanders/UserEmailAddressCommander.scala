@@ -57,15 +57,9 @@ class UserEmailAddressCommanderImpl @Inject() (db: Database,
   }
 
   def sendVerificationEmailHelper(emailAddress: UserEmailAddress)(implicit session: RWSession): Future[Unit] = {
-    val userId = emailAddress.userId
-    val domainOwnerIds = NormalizedHostname.fromHostname(emailAddress.address.hostname)
-      .map(orgDomainOwnershipRepo.getOwnershipsForDomain(_).map(_.organizationId)).getOrElse(Set.empty)
-      .diff(userValueRepo.getValue(userId, UserValues.hideEmailDomainOrganizations).as[Set[Id[Organization]]])
-      .filter(orgId => !orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId))
-      .filter(orgId => permissionCommander.getOrganizationPermissions(orgId, Some(userId)).contains(OrganizationPermission.JOIN_BY_VERIFYING))
     val emailWithCode = userEmailAddressRepo.save(emailAddress.withVerificationCode(clock.now()))
     session.onTransactionSuccess {
-      emailConfirmationSender(emailWithCode, domainOwnerIds) recoverWith {
+      emailConfirmationSender(emailWithCode) recoverWith {
         case error => {
           db.readWrite { implicit session => userEmailAddressRepo.save(emailWithCode.clearVerificationCode) }
           Future.failed(error)

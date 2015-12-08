@@ -4,20 +4,13 @@ import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.slack.models.SlackMessage
+import com.keepit.social.BasicUser
+import com.keepit.social.twitter.{ RawTweet, TwitterHandle }
 import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 
 import scala.util.{ Failure, Success, Try }
-
-@json case class TwitterHandle(value: String) {
-  override def toString = value
-}
-
-@json case class TwitterId(id: Long) {
-  // https://groups.google.com/forum/#!topic/twitter-development-talk/ahbvo3VTIYI
-  override def toString = id.toString
-}
 
 case class KeepSourceAttribution(
     id: Option[Id[KeepSourceAttribution]] = None,
@@ -59,6 +52,7 @@ object SourceAttribution {
   import KeepAttributionType._
   def toJson(attr: SourceAttribution): (KeepAttributionType, JsValue) = {
     attr match {
+      case t: TwitterAttribution => (Twitter, TwitterAttribution.format.writes(t))
       case x: PartialTwitterAttribution => (TwitterPartial, PartialTwitterAttribution.format.writes(x))
       case s: SlackAttribution => (Slack, SlackAttribution.format.writes(s))
     }
@@ -66,7 +60,8 @@ object SourceAttribution {
 
   def fromJson(attrType: KeepAttributionType, attrJson: JsValue): JsResult[SourceAttribution] = {
     attrType match {
-      case Twitter | TwitterPartial => PartialTwitterAttribution.format.reads(attrJson)
+      case Twitter => TwitterAttribution.format.reads(attrJson)
+      case TwitterPartial => PartialTwitterAttribution.format.reads(attrJson)
       case Slack => SlackAttribution.format.reads(attrJson)
     }
   }
@@ -88,14 +83,23 @@ object SourceAttribution {
     }
   }
 
-  implicit val deprecatedWrites = new Writes[SourceAttribution] {
-    def writes(x: SourceAttribution): JsValue = {
-      val (attrType, attrJs) = toJson(x)
-      val attrTypeString = attrType match {
-        case Twitter | TwitterPartial => Twitter.name
-        case Slack => Slack.name
+  implicit val deprecatedWrites = new Writes[(SourceAttribution, Option[BasicUser])] {
+    def writes(x: (SourceAttribution, Option[BasicUser])): JsValue = {
+      val (source, userOpt) = x
+      val (attrTypeString, attrJs) = toJson(source) match {
+        case (TwitterPartial, value) => (Twitter.name, value)
+        case (Twitter, value) =>
+          val updatedValue = for {
+            obj <- value.validate[JsObject]
+            sourceObj <- (value \ "source").validate[JsObject]
+            oldFields <- PartialTwitterAttribution.fromRawTweetJson(sourceObj).flatMap(PartialTwitterAttribution.format.writes(_).validate[JsObject])
+          } yield {
+            (obj - "source") + ("source" -> (sourceObj ++ oldFields))
+          }
+          (Twitter.name, updatedValue getOrElse value)
+        case (Slack, value) => (Slack.name, value)
       }
-      Json.obj(attrTypeString -> attrJs)
+      Json.obj(attrTypeString -> attrJs, "kifi" -> userOpt)
     }
   }
 }
@@ -118,4 +122,9 @@ object PartialTwitterAttribution {
 case class SlackAttribution(message: SlackMessage) extends SourceAttribution
 object SlackAttribution {
   implicit val format = Json.format[SlackAttribution]
+}
+
+case class TwitterAttribution(tweet: RawTweet) extends SourceAttribution
+object TwitterAttribution {
+  implicit val format = Json.format[TwitterAttribution]
 }

@@ -15,23 +15,52 @@
     <div class="kf-keep-comment-commenter-text">
       <div ng-repeat="part in commentParts" class="kf-keep-comment-inline">
 
-        <div  ng-if="part.type === 'IMAGE'" class="kf-keep-comment-block" ng-class="{'kf-keep-comment-v-space': !$last, 'kf-keep-comment-v-space-top': $index - 1 >= 0 && commentParts[$index - 1].type !== 'IMAGE'}">
-          <img width="100px" height="100px" src="{{part.data.src}}"/>
+        <div  ng-if="part.type === 'IMAGE'"
+              class="kf-keep-comment-block"
+              ng-class="{'kf-keep-comment-v-space': !$last, 'kf-keep-comment-v-space-top': $index - 1 >= 0 && commentParts[$index - 1].type !== 'IMAGE'}">
+          <img class="kf-keep-comment-embedded-img" ng-src="{{part.data.src}}"/>
         </div>
 
         <div ng-if="part.type === 'TEXT_PLAIN'" ng-bind="part.data.text" class="kf-keep-comment-inline"></div>
 
         <div ng-if="part.type === 'EMAIL'" class="kf-keep-comment-inline">
-          <a href="mail-to:{{part.data.text}}" ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
+          <a ng-href="mail-to:{{part.data.text}}" ng-bind="part.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
         </div>
 
         <div ng-if="part.type === 'LINK'" class="kf-keep-comment-inline">
-          <a  href="{{part.data.link}}"  ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
+          <a  ng-href="{{part.data.link}}"  ng-bind="part.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
         </div>
 
         <div ng-if="part.type === 'LOOK_HERE'" class="kf-keep-comment-inline">
-          <a  href="{{part.data.link}}"  title="{{part.data.title}}" ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
+          <a   ng-href="#" ng-click="openLookHere($event)" title="{{part.data.title}}" ng-bind="part.data.text" class="kf-link-blue kf-keep-comment-look-here-link kf-keep-comment-inline"/>
         </div>
+        <div ng-if="part.type === 'LOOK_HERE'" >
+
+          <div class="kf-keep-comment-look-here-container">
+            <div class="kf-keep-comment-look-here-left-divider"></div>
+            <div class="kf-keep-comment-look-here-inside">
+              <div ng-repeat="lookHerePart in part.data.parts" class="kf-keep-comment-inline">
+                <div  ng-if="lookHerePart.type === 'IMAGE'"
+                      class="kf-keep-comment-block"
+                      ng-class="{'kf-keep-comment-v-space': !$last, 'kf-keep-comment-v-space-top': $index - 1 >= 0 && part.data.parts[$index - 1].type !== 'IMAGE'}">
+                  <img class="kf-keep-comment-embedded-img" ng-src="{{lookHerePart.data.src}}"/>
+                </div>
+
+                <div ng-if="lookHerePart.type === 'TEXT_PLAIN'" ng-bind="lookHerePart.data.text" class="kf-keep-comment-inline"></div>
+
+                <div ng-if="lookHerePart.type === 'EMAIL'" class="kf-keep-comment-inline">
+                  <a ng-href="mail-to:{{part.data.text}}" ng-bind="lookHerePart.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
+                </div>
+
+                <div ng-if="lookHerePart.type === 'LINK'" class="kf-keep-comment-inline">
+                  <a  ng-href="{{lookHerePart.data.link}}"  ng-bind="lookHerePart.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
 
       </div>
     </div>

@@ -1,9 +1,9 @@
 package com.keepit.commanders
 
-import com.keepit.common.social.twitter.RawTweet
 import com.keepit.common.util.UrlClassifier
 import com.keepit.controllers.website.Bookmark
 import com.keepit.model._
+import com.keepit.social.twitter.RawTweet
 
 import play.api.libs.json._
 

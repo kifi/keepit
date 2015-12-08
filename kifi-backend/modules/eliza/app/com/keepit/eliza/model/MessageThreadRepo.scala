@@ -3,6 +3,7 @@ package com.keepit.eliza.model
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
 import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.time._
 import com.keepit.common.db.{ State, Id, ExternalId }
 import com.keepit.model.{ Keep, User, NormalizedURI }
@@ -10,7 +11,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
-  def getOrCreate(participants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], url: String, uriId: Id[NormalizedURI], nUrl: String, pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean)
+  def getOrCreate(starter: Id[User], participants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], url: String, uriId: Id[NormalizedURI], nUrl: String, pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean)
   override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread
   override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread
   def getActiveByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread]
@@ -22,6 +23,7 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
 
 @Singleton
 class MessageThreadRepoImpl @Inject() (
+  airbrake: AirbrakeNotifier,
   val clock: Clock,
   val db: DataBaseComponent,
   val threadExternalIdCache: MessageThreadExternalIdCache)
@@ -38,15 +40,16 @@ class MessageThreadRepoImpl @Inject() (
     uriId: Id[NormalizedURI],
     url: String,
     nUrl: String,
+    startedBy: Id[User],
     participants: MessageThreadParticipants,
-    participantsHash: Int, // explicitly ignored
+    participantsHash: Int, // exists only in the db, will not be put into the model
     pageTitle: Option[String],
     keepId: Option[Id[Keep]]): MessageThread = {
-    MessageThread(id, createdAt, updatedAt, state, externalId, uriId, url, nUrl, participants, pageTitle, keepId)
+    MessageThread(id, createdAt, updatedAt, state, externalId, uriId, url, nUrl, startedBy, participants, pageTitle, keepId)
   }
   private def messageThreadToDbRow(mt: MessageThread) = {
     Some((
-      mt.id, mt.createdAt, mt.updatedAt, mt.state, mt.externalId, mt.uriId, mt.url, mt.nUrl, mt.participants, mt.participantsHash, mt.pageTitle, mt.keepId
+      mt.id, mt.createdAt, mt.updatedAt, mt.state, mt.externalId, mt.uriId, mt.url, mt.nUrl, mt.startedBy, mt.participants, mt.participantsHash, mt.pageTitle, mt.keepId
     ))
   }
 
@@ -55,11 +58,12 @@ class MessageThreadRepoImpl @Inject() (
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def nUrl = column[String]("nUrl", O.NotNull)
+    def startedBy = column[Id[User]]("started_by", O.NotNull)
     def participants = column[MessageThreadParticipants]("participants", O.NotNull)
     def participantsHash = column[Int]("participants_hash", O.NotNull)
     def pageTitle = column[Option[String]]("page_title", O.Nullable)
     def keepId = column[Option[Id[Keep]]]("keep_id", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, externalId, uriId, url, nUrl, participants, participantsHash, pageTitle, keepId) <> ((messageThreadFromDbRow _).tupled, messageThreadToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, externalId, uriId, url, nUrl, startedBy, participants, participantsHash, pageTitle, keepId) <> ((messageThreadFromDbRow _).tupled, messageThreadToDbRow _)
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
 
@@ -75,11 +79,13 @@ class MessageThreadRepoImpl @Inject() (
 
   override def save(messageThread: MessageThread)(implicit session: RWSession) = super.save(messageThread.clean())
 
-  def getOrCreate(userParticipants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], url: String, uriId: Id[NormalizedURI], nUrl: String, pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean) = {
-    //Note (stephen): This has a race condition: When two threads that would normally be merged are created at the exact same time two different conversations will be the result
+  def getOrCreate(starter: Id[User], userParticipants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], url: String, uriId: Id[NormalizedURI], nUrl: String, pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean) = {
+    airbrake.verify(userParticipants.contains(starter), s"Called getOrCreate with starter $starter and users $userParticipants")
     val mtps = MessageThreadParticipants(userParticipants.toSet, nonUserParticipants.toSet)
-    // TODO(ryan): why is this checking participantsHash == mtps.userHash? Don't we care about the non-users?
-    val candidates: Seq[MessageThread] = activeRows.filter(row => row.participantsHash === mtps.userHash && row.uriId === uriId).list.filter { thread =>
+
+    // This will find any thread with the same participants set (on the correct page). It does not check who owns the thread
+    // Passing in a starter is only to indicate who will own the thread if a NEW one must be created
+    val candidates: Seq[MessageThread] = activeRows.filter(row => row.participantsHash === mtps.hash && row.uriId === uriId).list.filter { thread =>
       thread.participants == mtps
     }
     candidates.headOption match {
@@ -90,6 +96,7 @@ class MessageThreadRepoImpl @Inject() (
           url = url,
           nUrl = nUrl,
           pageTitle = pageTitleOpt,
+          startedBy = starter,
           participants = mtps,
           keepId = None
         )

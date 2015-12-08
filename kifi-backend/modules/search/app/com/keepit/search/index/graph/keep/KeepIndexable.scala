@@ -9,6 +9,7 @@ import com.keepit.search.index.sharding.Shard
 import com.keepit.search.index.graph.library.LibraryFields
 import com.keepit.search.util.MultiStringReader
 import com.keepit.slack.models.SlackChannelId
+import com.keepit.social.twitter.TwitterHandle
 import org.apache.lucene.index.Term
 
 object KeepFields {
@@ -49,7 +50,8 @@ object KeepFields {
     def apply(channelId: SlackChannelId): String = s"slack|${channelId.value}"
     def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
     def apply(source: SourceAttribution): String = source match {
-      case twitter: PartialTwitterAttribution => Source(twitter.screenName)
+      case twitter: TwitterAttribution => Source(twitter.tweet.user.screenName)
+      case twitterPartial: PartialTwitterAttribution => Source(twitterPartial.screenName)
       case slack: SlackAttribution => Source(slack.message.channel.id)
     }
   }

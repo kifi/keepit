@@ -13,6 +13,7 @@ import com.keepit.social.SocialNetworks
 import com.keepit.model._
 import com.keepit.common.concurrent.ReactiveLock
 import com.keepit.controllers.website.BookmarkImporter
+import com.keepit.social.twitter.TwitterHandle
 
 import play.api.libs.json.JsObject
 import scala.concurrent.{ ExecutionContext, Future }

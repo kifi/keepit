@@ -22,6 +22,7 @@ import com.keepit.model.SocialUserInfoStates._
 import com.keepit.model._
 import com.keepit.notify.NotificationInfoModel
 import com.keepit.social._
+import com.keepit.social.twitter.{ TwitterHandle, TwitterUserId }
 import com.ning.http.client.providers.netty.NettyResponse
 import play.api.http.Status._
 import play.api.Play.current
@@ -42,15 +43,15 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class PagedIds(
-  prev: TwitterId,
-  ids: Seq[TwitterId],
-  next: TwitterId)
+  prev: TwitterUserId,
+  ids: Seq[TwitterUserId],
+  next: TwitterUserId)
 
 object PagedIds {
   implicit val format = (
-    (__ \ 'previous_cursor).format[TwitterId] and
-    (__ \ 'ids).format[Seq[TwitterId]] and
-    (__ \ 'next_cursor).format[TwitterId]
+    (__ \ 'previous_cursor).format[TwitterUserId] and
+    (__ \ 'ids).format[Seq[TwitterUserId]] and
+    (__ \ 'next_cursor).format[TwitterUserId]
   )(PagedIds.apply _, unlift(PagedIds.unapply))
 }
 
@@ -165,7 +166,7 @@ class TwitterSocialGraphImpl @Inject() (
     val credentials = socialUserInfo.credentials.getOrElse(throw new Exception(s"Can't find credentials for $socialUserInfo"))
     credentials.oAuth1Info.getOrElse(throw new Exception(s"Can't find oAuth1Info for $socialUserInfo"))
   }
-  private def getTwtrUserId(socialUserInfo: SocialUserInfo): TwitterId = TwitterId(socialUserInfo.socialId.id.toLong)
+  private def getTwtrUserId(socialUserInfo: SocialUserInfo): TwitterUserId = TwitterUserId(socialUserInfo.socialId.id.toLong)
 
   // make this async
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
@@ -208,14 +209,14 @@ class TwitterSocialGraphImpl @Inject() (
     )
   }
 
-  private def fetchTwitterSyncs(userId: Id[User], socialUserInfo: SocialUserInfo, friendIds: Seq[TwitterId]) = {
+  private def fetchTwitterSyncs(userId: Id[User], socialUserInfo: SocialUserInfo, friendIds: Seq[TwitterUserId]) = {
     SafeFuture {
       log.info(s"[fetchSocialUserInfo(${socialUserInfo.socialId})] fetching twitter_syncs for ${friendIds.length} friends...")
       friendIds.grouped(100) foreach { userIds =>
         val socialUserInfos = db.readOnlyReplica { implicit s =>
-          socialUserInfoRepo.getBySocialIds(userIds.map(id => SocialId(id.toString)))
+          socialUserInfoRepo.getByNetworkAndSocialIds(SocialNetworks.TWITTER, userIds.map(id => SocialId(id.toString)).toSet)
         }
-        val twitterHandles = socialUserInfos.flatMap(_.username.map(TwitterHandle(_))).toSet
+        val twitterHandles = socialUserInfos.values.flatMap(_.username.map(TwitterHandle(_))).toSet
         db.readOnlyMaster { implicit s =>
           twitterSyncStateRepo.getTwitterSyncsByFriendIds(twitterHandles)
         } map { twitterSyncState =>
@@ -238,7 +239,7 @@ class TwitterSocialGraphImpl @Inject() (
     }
   }
 
-  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterId, resp: WSResponse, params: Any): Unit = {
+  protected def handleError(tag: String, endpoint: String, sui: SocialUserInfo, uvName: UserValueName, cursor: TwitterUserId, resp: WSResponse, params: Any): Unit = {
     val nettyResp = resp.underlying[NettyResponse]
     def warn(notify: Boolean): Unit = {
       val errorMessage = resp.status match {
@@ -264,11 +265,11 @@ class TwitterSocialGraphImpl @Inject() (
     }
   }
 
-  protected def lookupUsers(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterId]): Future[JsValue] = {
+  protected def lookupUsers(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, mutualFollows: Set[TwitterUserId]): Future[JsValue] = {
     log.info(s"[lookupUsers] mutualFollows(len=${mutualFollows.size}): ${mutualFollows.take(20).mkString(",")}... sui=$sui")
     val endpoint = "https://api.twitter.com/1.1/users/lookup.json"
     val sorted = mutualFollows.toSeq.sortBy(_.id) // expensive
-    val accF = FutureHelpers.foldLeftUntil[Seq[TwitterId], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
+    val accF = FutureHelpers.foldLeftUntil[Seq[TwitterUserId], JsArray](sorted.grouped(100).toIterable)(JsArray()) { (a, c) =>
       val params = Map("user_id" -> c.map(_.id).mkString(","), "include_entities" -> false.toString)
       val serializedParams = params.map(kv => (kv._1, Seq(kv._2)))
       val chunkF = WS.url(endpoint)
@@ -295,8 +296,8 @@ class TwitterSocialGraphImpl @Inject() (
     }
   }
 
-  def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterId, endpoint: String): Future[Seq[TwitterId]] = {
-    def pagedFetchIds(page: Int, cursor: TwitterId, count: Long): Future[Seq[TwitterId]] = {
+  def fetchIds(sui: SocialUserInfo, accessToken: OAuth1TokenInfo, userId: TwitterUserId, endpoint: String): Future[Seq[TwitterUserId]] = {
+    def pagedFetchIds(page: Int, cursor: TwitterUserId, count: Long): Future[Seq[TwitterUserId]] = {
       log.info(s"[pagedFetchIds] userId=$userId endpoint=$endpoint count=$count cursor=$cursor")
       val queryStrings = Seq("user_id" -> userId.id.toString, "cursor" -> cursor.id.toString, "count" -> count.toString)
       val call = WS.url(endpoint)
@@ -319,11 +320,11 @@ class TwitterSocialGraphImpl @Inject() (
           case _ =>
             val name = if (endpoint.contains("friends")) UserValueName.TWITTER_FRIENDS_CURSOR else UserValueName.TWITTER_FOLLOWERS_CURSOR
             handleError(s"pagedFetchIds#$page", endpoint, sui, name, cursor, resp, queryStrings)
-            Future.successful(Seq.empty[TwitterId])
+            Future.successful(Seq.empty[TwitterUserId])
         }
       }
     }
-    pagedFetchIds(0, TwitterId(-1), 5000)
+    pagedFetchIds(0, TwitterUserId(-1), 5000)
   }
 
   def extractUserValues(json: JsValue): Map[UserValueName, String] = Map.empty
