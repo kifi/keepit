@@ -124,7 +124,8 @@ class SharedWsMessagingController @Inject() (
           socket.channel.push(Json.arr(requestId.toLong, json.obj))
         }
         fut.onFailure {
-          case _ =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
@@ -147,7 +148,8 @@ class SharedWsMessagingController @Inject() (
             socket.channel.push(Json.arr(requestId.toLong, notices, numTotal, numUnread))
         }
         fut.onFailure {
-          case e =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
@@ -166,7 +168,8 @@ class SharedWsMessagingController @Inject() (
           socket.channel.push(Json.arr(requestId.toLong, notices))
         }
         fut.onFailure {
-          case _ =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
@@ -186,7 +189,8 @@ class SharedWsMessagingController @Inject() (
             socket.channel.push(Json.arr(requestId.toLong, notices, numTotal))
         }
         fut.onFailure {
-          case _ =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
@@ -205,7 +209,8 @@ class SharedWsMessagingController @Inject() (
           socket.channel.push(Json.arr(requestId.toLong, notices))
         }
         fut.onFailure {
-          case _ =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
@@ -216,7 +221,8 @@ class SharedWsMessagingController @Inject() (
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
-          case _ =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
@@ -228,7 +234,8 @@ class SharedWsMessagingController @Inject() (
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
-          case _ =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
@@ -240,7 +247,8 @@ class SharedWsMessagingController @Inject() (
             socket.channel.push(Json.arr(requestId.toLong, nUriStr, notices.map(_.obj), numTotal, numUnread))
         }
         fut.onFailure {
-          case _ =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
@@ -252,7 +260,8 @@ class SharedWsMessagingController @Inject() (
           socket.channel.push(Json.arr(requestId.toLong, notices.map(_.obj)))
         }
         fut.onFailure {
-          case _ =>
+          case f =>
+            airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
         }
     },
