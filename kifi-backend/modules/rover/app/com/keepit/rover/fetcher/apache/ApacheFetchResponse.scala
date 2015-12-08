@@ -7,12 +7,15 @@ import org.apache.http.StatusLine
 import org.apache.http.client.methods.CloseableHttpResponse
 import org.apache.http.util.EntityUtils
 import org.apache.http.entity.ContentType
+import org.apache.http.Consts.UTF_8
+
+import scala.util.Try
 
 class ApacheFetchResponse(response: CloseableHttpResponse) {
   def getStatusLine: StatusLine = response.getStatusLine
 
   def info: FetchResponseInfo = {
-    val contentType = ContentType.getOrDefault(response.getEntity)
+    val contentType = Try(ContentType.getOrDefault(response.getEntity)).getOrElse(new ContentType("text/html", UTF_8))
     FetchResponseInfo(
       getStatusLine.getStatusCode,
       getStatusLine.toString,
