@@ -15,7 +15,7 @@ class ApacheFetchResponse(response: CloseableHttpResponse) {
   def getStatusLine: StatusLine = response.getStatusLine
 
   def info: FetchResponseInfo = {
-    val contentType = Try(ContentType.getOrDefault(response.getEntity)).getOrElse(new ContentType("text/html", UTF_8))
+    val contentType = Try(ContentType.getOrDefault(response.getEntity)).getOrElse(ContentType.create("text/html", UTF_8))
     FetchResponseInfo(
       getStatusLine.getStatusCode,
       getStatusLine.toString,
