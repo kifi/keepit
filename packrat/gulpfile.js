@@ -335,7 +335,7 @@ gulp.task('meta', function () {
       return 'exports.contentScripts =' + data[0] +
         ';\nexports.styleDeps = ' + data[1] +
         ';\nexports.scriptDeps = ' + data[2] +
-        ";\nconst {Ci, Cc} = require('chrome');\nif (/^Mac/.test(Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler).platform)) {\n  exports.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
+        ";\nif (/^Mac/.test(require('sdk/system').platform)) {\n  exports.styleDeps['scripts/keeper_scout.js'] = ['styles/mac.css'];\n}\n";
     }))
     .pipe(gulp.dest(outDir + '/firefox/lib'));
 
