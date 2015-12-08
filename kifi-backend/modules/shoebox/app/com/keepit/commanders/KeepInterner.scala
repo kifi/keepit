@@ -203,7 +203,8 @@ class KeepInternerImpl @Inject() (
           libraryId = Some(library.id.get),
           keptAt = keptAt,
           note = kNote,
-          url = url
+          url = url,
+          organizationId = library.organizationId
         ) |> { keep =>
             if (wasInactiveKeep) {
               keep.copy(createdAt = clock.now)
@@ -229,7 +230,8 @@ class KeepInternerImpl @Inject() (
           libraryId = Some(library.id.get),
           keptAt = keptAt,
           note = note,
-          originalKeeperId = Some(userId)
+          originalKeeperId = Some(userId),
+          organizationId = library.organizationId
         )
         val improvedKeep = try {
           keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get)) tap { improvedKeep =>
