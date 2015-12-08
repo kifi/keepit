@@ -312,19 +312,28 @@ class AdminBookmarksController @Inject() (
       def isFromTwitter(source: KeepSource) = source == KeepSource.twitterSync || source == KeepSource.twitterFileImport
       var page = fromPage
       var lastProcessed = 0
+      def logMaybe(message: String) = if (page % 100 == 0) log.info("[backfillTwitterAttribution] " + message)
       do {
         db.readWrite { implicit session =>
           val rawKeeps = rawKeepRepo.page(page = page, size = pageSize)
           val rawKeepsFromTwitter = rawKeeps.filter(r => isFromTwitter(r.source))
+          logMaybe(s"Found ${rawKeepsFromTwitter.length}/${rawKeeps.length} Twitter raw keeps in page $page.")
           rawKeepsFromTwitter.foreach { rawKeep =>
+            logMaybe(s"Processing ${rawKeep.id.get}:${rawKeep.url}")
             rawKeep.originalJson.foreach { sourceJson =>
+              logMaybe(s"Source json: $sourceJson")
               TwitterAttribution.format.reads(sourceJson).foreach { twitterAttribution =>
+                logMaybe(s"Attribution: $twitterAttribution")
                 uriInterner.getByUri(rawKeep.url).foreach { uri =>
+                  logMaybe(s"URI: ${uri.id.get}:${uri.url}")
                   val keepIds = keepRepo.getByUri(uri.id.get, excludeState = None).collect { case keep if isFromTwitter(keep.source) => keep.id.get }.toSet
+                  logMaybe(s"Keeps: $keepIds")
                   sourceRepo.getByKeepIds(keepIds).foreach {
                     case (keepId, PartialTwitterAttribution(tweetIdStr, _)) if twitterAttribution.tweet.id.id.toString == tweetIdStr =>
+                      logMaybe(s"Updating source for keep $keepId")
                       sourceRepo.save(keepId, twitterAttribution)
-                    case _ => ()
+                    case (keepId, source) =>
+                      logMaybe(s"Ignoring source for keep $keepId, leaving in: $source")
                   }
                 }
               }
