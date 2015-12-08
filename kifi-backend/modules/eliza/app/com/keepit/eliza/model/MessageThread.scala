@@ -1,6 +1,7 @@
 package com.keepit.eliza.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
@@ -13,6 +14,7 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import com.keepit.common.time.{ DateTimeJsonFormat }
 
+import scala.util.{ Success, Failure }
 import scala.util.hashing.MurmurHash3
 import scala.concurrent.duration.Duration
 import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin }
@@ -166,6 +168,26 @@ object MessageThread {
     (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'keep).formatNullable[Id[Keep]]
   )(MessageThread.apply, unlift(MessageThread.unapply))
+}
+
+sealed trait MessageThreadId
+case class ThreadExternalId(threadId: ExternalId[MessageThread]) extends MessageThreadId
+case class ThreadKeepId(keepId: Id[Keep]) extends MessageThreadId
+object MessageThreadId {
+  implicit def format()(implicit publicIdConfiguration: PublicIdConfiguration) = {
+    val reads: Reads[MessageThreadId] = ExternalId.format[MessageThread].map[MessageThreadId](ThreadExternalId(_)) orElse Reads(value => Keep.formatPublicId.reads(value).flatMap { publicId =>
+      Keep.decodePublicId(publicId) match {
+        case Success(keepId) => JsSuccess(ThreadKeepId(keepId))
+        case Failure(_) => JsError(s"Invalid thread keepId: $value")
+      }
+    })
+
+    val writes: Writes[MessageThreadId] = Writes {
+      case ThreadExternalId(threadId) => Json.toJson(threadId)
+      case ThreadKeepId(keepId) => Json.toJson(Keep.publicId(keepId))
+    }
+    Format(reads, writes)
+  }
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
