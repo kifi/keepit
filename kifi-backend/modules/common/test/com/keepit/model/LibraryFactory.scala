@@ -54,7 +54,7 @@ object LibraryFactory {
     def withOrganizationIdOpt(id: Option[Id[Organization]]) = this.copy(library = library.copy(organizationId = id))
     def withOrganization(org: Organization) = this.copy(library = library.copy(organizationId = Some(org.id.get), visibility = LibraryVisibility.ORGANIZATION))
     def withOrgMemberCollaborativePermission(access: Option[LibraryAccess]) = this.copy(library = library.copy(organizationMemberAccess = access))
-
+    def withLibraryCommentPermissions(permission: LibraryCommentPermissions) = this.copy(library = library.copy(whoCanComment = permission))
     def withFollowers(users: Seq[User]) = this.copy(followers = users)
     def withCollaborators(users: Seq[User]) = this.copy(collaborators = users)
     def withInvitedUsers(users: Seq[User]) = this.copy(invitedUsers = users)

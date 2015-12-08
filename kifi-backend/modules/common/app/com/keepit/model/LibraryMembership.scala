@@ -114,6 +114,7 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
   case object REMOVE_OTHER_KEEPS extends LibraryPermission("remove_other_keeps")
   case object EXPORT_KEEPS extends LibraryPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends LibraryPermission("create_slack_integration")
+  case object ADD_COMMENTS extends LibraryPermission("add_comments")
 
   implicit val format: Format[LibraryPermission] = Format(
     EnumFormat.reads(get, all.map(_.value)),

@@ -53,7 +53,8 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
-                LibraryPermission.REMOVE_OWN_KEEPS
+                LibraryPermission.REMOVE_OWN_KEEPS,
+                LibraryPermission.ADD_COMMENTS
               )
               permissionCommander.getLibraryPermissions(lib.id.get, Some(rando.id.get)) === Set.empty
               permissionCommander.getLibraryPermissions(lib.id.get, None) === Set.empty
@@ -79,14 +80,16 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
                 LibraryPermission.CREATE_SLACK_INTEGRATION,
-                LibraryPermission.REMOVE_OWN_KEEPS
+                LibraryPermission.REMOVE_OWN_KEEPS,
+                LibraryPermission.ADD_COMMENTS
               )
               permissionCommander.getLibraryPermissions(lib.id.get, Some(member.id.get)) === Set(
                 LibraryPermission.VIEW_LIBRARY,
                 LibraryPermission.ADD_KEEPS,
                 LibraryPermission.EDIT_OWN_KEEPS,
                 LibraryPermission.CREATE_SLACK_INTEGRATION,
-                LibraryPermission.REMOVE_OWN_KEEPS
+                LibraryPermission.REMOVE_OWN_KEEPS,
+                LibraryPermission.ADD_COMMENTS
               )
               permissionCommander.getLibraryPermissions(lib.id.get, Some(rando.id.get)) === Set.empty
               permissionCommander.getLibraryPermissions(lib.id.get, None) === Set.empty
@@ -128,6 +131,20 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
 
             Set(publicLib, secretLib).foreach { lib =>
               val whoCanKeep = all.filter { x => permissionCommander.getLibraryPermissions(publicLib.id.get, x).contains(LibraryPermission.ADD_KEEPS) }
+              whoCanKeep === Set(owner, collab)
+            }
+          }
+          1 === 1
+        }
+      }
+      "add comment permissions" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val (owner, collab, follower, rando, noone, publicLib, secretLib) = setupLibs()
+            val all = Set(owner, collab, follower, rando, noone)
+
+            Set(publicLib, secretLib).foreach { lib =>
+              val whoCanKeep = all.filter { x => permissionCommander.getLibraryPermissions(publicLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
               whoCanKeep === Set(owner, collab)
             }
           }
@@ -233,12 +250,14 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
         val publicLib = LibraryFactory.library().withKind(LibraryKind.USER_CREATED).withOrganization(org).withVisibility(LibraryVisibility.PUBLISHED).withOwner(libOwner).withCollaborators(Seq(collab)).withFollowers(Seq(follower)).saved
         val orgLib = LibraryFactory.library().withKind(LibraryKind.USER_CREATED).withOrganization(org).withVisibility(LibraryVisibility.ORGANIZATION).withOwner(libOwner).withCollaborators(Seq(collab)).withFollowers(Seq(follower)).saved
         val secretLib = LibraryFactory.library().withKind(LibraryKind.USER_CREATED).withOrganization(org).withVisibility(LibraryVisibility.SECRET).withOwner(libOwner).withCollaborators(Seq(collab)).withFollowers(Seq(follower)).saved
-        (orgOwner.id, libOwner.id, collab.id, follower.id, member.id, rando.id, Option.empty[Id[User]], publicLib, orgLib, secretLib)
+        val openCollabLib = LibraryFactory.library().withOwner(libOwner).withCollaborators(Seq(collab)).withOrganization(org).withOrgMemberCollaborativePermission(Some(LibraryAccess.READ_WRITE)).saved
+        val openCommentLib = LibraryFactory.library().withOwner(libOwner).published().withLibraryCommentPermissions(LibraryCommentPermissions.ANYONE).saved
+        (orgOwner.id, libOwner.id, collab.id, follower.id, member.id, rando.id, Option.empty[Id[User]], publicLib, orgLib, secretLib, openCollabLib, openCommentLib)
       }
       "view permissions" in {
         withDb(modules: _*) { implicit injector =>
           db.readWrite { implicit session =>
-            val (orgOwner, libOwner, collab, follower, member, rando, noone, publicLib, orgLib, secretLib) = setupLibs()
+            val (orgOwner, libOwner, collab, follower, member, rando, noone, publicLib, orgLib, secretLib, _, _) = setupLibs()
             val all = Set(orgOwner, libOwner, collab, follower, member, rando, noone)
 
             val whoCanViewPublic = all.filter { x => permissionCommander.getLibraryPermissions(publicLib.id.get, x).contains(LibraryPermission.VIEW_LIBRARY) }
@@ -255,7 +274,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
       "edit library permissions" in {
         withDb(modules: _*) { implicit injector =>
           db.readWrite { implicit session =>
-            val (orgOwner, libOwner, collab, follower, member, rando, noone, publicLib, orgLib, secretLib) = setupLibs()
+            val (orgOwner, libOwner, collab, follower, member, rando, noone, publicLib, orgLib, secretLib, _, _) = setupLibs()
             val all = Set(orgOwner, libOwner, collab, follower, member, rando, noone)
 
             Set(publicLib, orgLib, secretLib).foreach { lib =>
@@ -263,6 +282,25 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
               whoCanEdit === Set(libOwner)
             }
             1 === 1
+          }
+        }
+      }
+      "add comment permissions" in {
+        withDb(modules: _*) { implicit injector =>
+          db.readWrite { implicit session =>
+            val (orgOwner, libOwner, collab, follower, member, rando, noone, publicLib, orgLib, secretLib, openCollabLib, openCommentLib) = setupLibs()
+            val all = Set(orgOwner, libOwner, collab, follower, member, rando, noone)
+
+            Set(publicLib, orgLib, secretLib).foreach { lib =>
+              val whoCanEdit = all.filter { x => permissionCommander.getLibraryPermissions(lib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
+              whoCanEdit === Set(libOwner, collab)
+            }
+
+            val whoCanEdit2 = all.filter { x => permissionCommander.getLibraryPermissions(openCollabLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
+            whoCanEdit2 === Set(orgOwner, libOwner, collab, member, follower) // all org members can comment
+
+            val whoCanEdit3 = all.filter { x => permissionCommander.getLibraryPermissions(openCommentLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
+            whoCanEdit3 === all // anyone can comment on a public library
           }
         }
       }
