@@ -108,6 +108,24 @@ object LibraryInvitePermissions {
   }
 }
 
+sealed abstract class LibraryCommentPermissions(val value: String)
+object LibraryCommentPermissions {
+  case object COLLABORATOR extends LibraryCommentPermissions("collaborator") // collaborators and if Library.organizationMemberAccess == READ_WRITE, org-members
+  case object ANYONE extends LibraryCommentPermissions("anyone") // anyone with view permissions
+
+  implicit val format: Format[LibraryCommentPermissions] = Format(
+    Reads { j => j.validate[String].map(LibraryCommentPermissions(_)) },
+    Writes { o => JsString(o.value) }
+  )
+
+  def apply(str: String): LibraryCommentPermissions = {
+    str match {
+      case COLLABORATOR.value => COLLABORATOR
+      case ANYONE.value => ANYONE
+    }
+  }
+}
+
 // Not sure we need this cache?
 case class LibraryInviteIdKey(id: Id[LibraryInvite]) extends Key[LibraryInvite] {
   val namespace = "library_invite_by_id"
