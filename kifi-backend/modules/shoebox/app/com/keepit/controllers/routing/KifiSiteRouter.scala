@@ -248,7 +248,7 @@ class KifiSiteRouter @Inject() (
               }
               case LibraryVisibility.ORGANIZATION => request.userIdOpt.exists { userId =>
                 library.organizationId.exists { orgId =>
-                  orgMembershipRepo.getAllByOrgId(orgId).exists(_.userId == userId)
+                  orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined
                 }
               }
               case _ => true
