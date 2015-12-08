@@ -15,7 +15,8 @@ angular.module('kifi')
         link: function ($scope) {
           $scope.commentParts = messageFormattingService.trimExtraSpaces(messageFormattingService.full($scope.comment.text));
 
-          $scope.openLookHere = function() {
+          $scope.openLookHere = function(event) {
+            event.preventDefault();
             extensionLiaison.openDeepLink($scope.keep.url, $scope.keep.discussion.locator);
           };
         }
