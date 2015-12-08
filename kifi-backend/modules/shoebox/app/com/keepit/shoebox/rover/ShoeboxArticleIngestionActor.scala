@@ -80,7 +80,7 @@ class ShoeboxArticleIngestionActor @Inject() (
             }
           }
           processRedirectsAndNormalizationInfo(verifiedAtricles).map { partiallyProcessedUpdatesByUri =>
-            db.readWrite { implicit session =>
+            db.readWrite(attempts = 3) { implicit session =>
               updateActiveUris(partiallyProcessedUpdatesByUri)
               systemValueRepo.setSequenceNumber(shoeboxArticleInfoSeq, maxSeq)
             }
