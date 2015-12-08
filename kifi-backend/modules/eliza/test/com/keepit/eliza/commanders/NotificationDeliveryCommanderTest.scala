@@ -76,19 +76,17 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
             "messages", "muted", "unreadMessages"
           ) subsetOf notif.as[JsObject].keys
 
-          db.readOnlyMaster { implicit s =>
-            (notif \ "id").as[ExternalId[Message]] === msg.externalId
-            (notif \ "time").as[DateTime] === msg.createdAt
-            (notif \ "thread").as[ExternalId[MessageThread]] === thread.externalId
-            (notif \ "text").as[String] === "I need this to work"
-            (notif \ "url").as[String] === "http://idgaf.com"
-            (notif \ "title") === JsNull
-            (notif \ "unread").as[Boolean] === false
-            (notif \ "category").as[String] === "message"
-            (notif \ "messages").as[Int] === 1
-            (notif \ "muted").as[Boolean] === false
-            (notif \ "unreadMessages").as[Int] === 0
-          }
+          (notif \ "id").as[ExternalId[Message]] === msg.externalId
+          (notif \ "time").as[DateTime] === msg.createdAt
+          (notif \ "thread").as[ExternalId[MessageThread]] === thread.externalId
+          (notif \ "text").as[String] === "I need this to work"
+          (notif \ "url").as[String] === "http://idgaf.com"
+          (notif \ "title") === JsNull
+          (notif \ "unread").as[Boolean] === false
+          (notif \ "category").as[String] === "message"
+          (notif \ "messages").as[Int] === 1
+          (notif \ "muted").as[Boolean] === false
+          (notif \ "unreadMessages").as[Int] === 0
         }
       }
       "for a hilarious sequence of back-and-forths" in {
@@ -125,19 +123,17 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
             "messages", "muted", "unreadMessages"
           ) subsetOf notif.as[JsObject].keys
 
-          db.readOnlyMaster { implicit s =>
-            (notif \ "id").as[ExternalId[Message]] === msg.externalId
-            (notif \ "time").as[DateTime] === msg.createdAt
-            (notif \ "thread").as[ExternalId[MessageThread]] === initThread.externalId
-            (notif \ "text").as[String] === s"Ruining Ryan's life! Yeah! ${uniqueTokens.last}"
-            (notif \ "url").as[String] === "http://idgaf.com"
-            (notif \ "title") === JsNull
-            (notif \ "unread").as[Boolean] === true
-            (notif \ "category").as[String] === "message"
-            (notif \ "messages").as[Int] === 6
-            (notif \ "muted").as[Boolean] === false
-            (notif \ "unreadMessages").as[Int] === 4
-          }
+          (notif \ "id").as[ExternalId[Message]] === msg.externalId
+          (notif \ "time").as[DateTime] === msg.createdAt
+          (notif \ "thread").as[ExternalId[MessageThread]] === initThread.externalId
+          (notif \ "text").as[String] === s"Ruining Ryan's life! Yeah! ${uniqueTokens.last}"
+          (notif \ "url").as[String] === "http://idgaf.com"
+          (notif \ "title") === JsNull
+          (notif \ "unread").as[Boolean] === true
+          (notif \ "category").as[String] === "message"
+          (notif \ "messages").as[Int] === 6
+          (notif \ "muted").as[Boolean] === false
+          (notif \ "unreadMessages").as[Int] === 4
 
           1 === 1
         }
