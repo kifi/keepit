@@ -2,7 +2,6 @@ package com.keepit.eliza.model
 
 import com.keepit.common.time._
 import com.keepit.common.db.{ State, States, Model, Id }
-import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.model.{ User, NormalizedURI }
 
 import play.api.libs.json._
@@ -44,8 +43,6 @@ case class UserThread(
   lazy val summary = s"UserThread[id = $id, created = $createdAt, update = $updatedAt, user = $user, thread = $threadId, " +
     s"uriId = $uriId, lastSeen = $lastSeen, unread = $unread, notificationUpdatedAt = $notificationUpdatedAt, " +
     s"notificationLastSeen = $notificationLastSeen, notificationEmailed = $notificationEmailed]"
-
-  def toRawNotification: RawNotification = (lastNotification, unread, uriId)
 }
 
 object UserThreadStates extends States[UserThread]

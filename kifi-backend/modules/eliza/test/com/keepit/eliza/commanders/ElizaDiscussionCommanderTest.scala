@@ -117,23 +117,6 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           ans.get.numMessages === 2
         }
       }
-      "make sure that new users have their stupid lastNotification set" in {
-        withDb(modules: _*) { implicit injector =>
-          val keep = Id[Keep](1)
-          val user1 = Id[User](1)
-          val user2 = Id[User](2)
-
-          db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
-
-          discussionCommander.sendMessageOnKeep(user2, "First post!", keep)
-          inject[WatchableExecutionContext].drain()
-          db.readOnlyMaster { implicit s =>
-            val th = messageThreadRepo.getByKeepId(keep).get
-            userThreadRepo.getByThread(th.id.get).foreach { uth => uth.lastNotification !== JsNull }
-          }
-          1 === 1
-        }
-      }
     }
   }
 }

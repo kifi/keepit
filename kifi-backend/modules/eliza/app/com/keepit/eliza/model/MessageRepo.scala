@@ -135,7 +135,7 @@ class MessageRepoImpl @Inject() (
   }
 
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage = {
-    activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => row.id desc).first
+    activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => (row.createdAt desc, row.id desc)).first
   }
 
   def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
