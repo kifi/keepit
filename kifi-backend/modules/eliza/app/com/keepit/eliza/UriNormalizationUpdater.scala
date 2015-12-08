@@ -57,30 +57,10 @@ class UriNormalizationUpdater @Inject() (
   }
 
   private def applyUpdates(updates: Seq[(Id[NormalizedURI], NormalizedURI)], reapply: Boolean = false): Unit = {
-    val userThreadUpdates = db.readOnlyMaster { implicit session =>
-      updates.map { //Note: This will need to change when we have detached threads!
-        case (oldId, newNUri) => (userThreadRepo.getByUriId(oldId), newNUri.url)
-      }
-    }
     updateTables(updates)
-    userThreadUpdates.map {
-      case (userThreads, newNUrl) => userThreads.map(fixLastNotificationJson(_, newNUrl))
-    }
     if (reapply) {
       system.scheduler.scheduleOnce(1 minutes) {
         applyUpdates(updates)
-      }
-    }
-  }
-
-  def fixLastNotificationJson(userThread: UserThread, newNUrl: String): Unit = {
-    val newJson = userThread.lastNotification match {
-      case obj: JsObject => obj.deepMerge(Json.obj("url" -> newNUrl))
-      case x => x
-    }
-    userThread.lastMsgFromOther.foreach { msgId =>
-      db.readWrite { implicit session =>
-        userThreadRepo.updateLastNotificationForMessage(userThread.user, userThread.threadId, msgId, newJson)
       }
     }
   }

@@ -71,7 +71,6 @@ GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers
 
 GET  /internal/eliza/keepAttribution            @com.keepit.eliza.controllers.internal.MessagingController.keepAttribution(userId: Id[User], uriId: Id[NormalizedURI])
 
-GET   /internal/eliza/verifyAllNotifications    @com.keepit.eliza.controllers.internal.MessagingController.verifyAllNotifications
 GET   /internal/eliza/getNonUserThreadMuteInfo  @com.keepit.eliza.controllers.internal.MessagingController.getNonUserThreadMuteInfo(publicId: String)
 POST  /internal/eliza/setNonUserThreadMuteState @com.keepit.eliza.controllers.internal.MessagingController.setNonUserThreadMuteState(publicId: String, muted: Boolean)
 POST  /internal/eliza/checkUrisDiscussed         @com.keepit.eliza.controllers.internal.MessagingController.checkUrisDiscussed(userId: Id[User])

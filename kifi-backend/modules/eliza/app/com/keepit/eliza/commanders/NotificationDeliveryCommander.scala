@@ -25,6 +25,7 @@ import play.api.libs.json.{ JsArray, _ }
 import scala.concurrent.{ ExecutionContext, Future }
 
 case class UserThreadQuery(
+  threadIds: Option[Set[Id[MessageThread]]] = None,
   beforeTime: Option[DateTime] = None,
   onlyStartedBy: Option[Id[User]] = None,
   onlyUnread: Option[Boolean] = None,
@@ -62,9 +63,6 @@ class NotificationDeliveryCommander @Inject() (
       numMessages = numMessages,
       numUnread = numUnread,
       muted = false)
-    db.readWrite(attempts = 2) { implicit session =>
-      userThreadRepo.setNotification(from, thread.id.get, message, notifJson, unread = false)
-    }
     sendToUser(from, Json.arr("notification", notifJson))
   }
 
@@ -287,6 +285,19 @@ class NotificationDeliveryCommander @Inject() (
         muted = muted)
     }
   }
+  def getNotificationsByUser(userId: Id[User], utq: UserThreadQuery, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
+    val (uts, mts) = db.readOnlyReplica { implicit session =>
+      val uts = userThreadRepo.getThreadsForUser(userId, utq)
+      val mtMap = threadRepo.getActiveByIds(uts.map(_.threadId).toSet)
+      (uts, mtMap)
+    }
+    val notifJsonsByThreadFut = Future.sequence(mts.map { case (mtId, mt) => buildNotificationForMessageThread(userId, mt).map { mtId -> _ } }).map(_.toMap)
+    notifJsonsByThreadFut.flatMap { notifJsonsByThread =>
+      val inputs = uts.map { ut => (notifJsonsByThread(ut.threadId), ut.unread, ut.uriId) }
+      notificationJsonMaker.make(inputs, includeUriSummary)
+    }
+  }
+
   def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
     SafeFuture {
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
@@ -313,10 +324,6 @@ class NotificationDeliveryCommander @Inject() (
         numMessages = numMessages,
         numUnread = numUnread,
         muted = muted)
-
-      db.readWrite(attempts = 2) { implicit session =>
-        userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, !muted)
-      }
 
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted)
       shoebox.createDeepLink(message.from.asUser, userId, thread.uriId, thread.deepLocator)
@@ -403,10 +410,6 @@ class NotificationDeliveryCommander @Inject() (
         muted = false
       )
 
-      db.readWrite(attempts = 2) { implicit session =>
-        userThreadRepo.setNotification(userId, thread.id.get, message, notifJson, unread = true)
-      }
-
       messagingAnalytics.sentNotificationForMessage(userId, message, thread, muted = false)
       shoebox.createDeepLink(message.from.asUser, userId, thread.uriId, thread.deepLocator)
 
@@ -451,10 +454,8 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   def getSendableNotification(userId: Id[User], threadExtId: ExternalId[MessageThread], includeUriSummary: Boolean): Future[NotificationJson] = {
-    notificationJsonMaker.makeOne(db.readOnlyReplica { implicit session =>
-      val thread = threadRepo.get(threadExtId)
-      userThreadRepo.getNotificationByThread(userId, thread.id.get).get
-    }, includeUriSummary)
+    val threadId = db.readOnlyReplica { implicit s => threadRepo.get(threadExtId).id.get }
+    getNotificationsByUser(userId, UserThreadQuery(threadIds = Some(Set(threadId)), limit = 1), includeUriSummary).map(_.head)
   }
 
   def getUnreadThreadNotifications(userId: Id[User]): Seq[UserThreadNotification] = {
@@ -462,21 +463,15 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
-    notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(limit = howMany))
-    }, includeUriSummary)
+    getNotificationsByUser(userId, UserThreadQuery(limit = howMany), includeUriSummary)
   }
 
   def getSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
-    notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(beforeTime = Some(time), limit = howMany))
-    }, includeUriSummary)
+    getNotificationsByUser(userId, UserThreadQuery(beforeTime = Some(time), limit = howMany), includeUriSummary)
   }
 
   def getLatestUnreadSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[(Seq[NotificationJson], Int)] = {
-    val noticesFuture = notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onlyUnread = Some(true), limit = howMany))
-    }, includeUriSummary)
+    val noticesFuture = getNotificationsByUser(userId, UserThreadQuery(onlyUnread = Some(true), limit = howMany), includeUriSummary)
     new SafeFuture(noticesFuture map { notices =>
       val numTotal = if (notices.length < howMany) {
         notices.length
@@ -490,21 +485,15 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   def getUnreadSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
-    notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(beforeTime = Some(time), onlyUnread = Some(true), limit = howMany))
-    }, includeUriSummary)
+    getNotificationsByUser(userId, UserThreadQuery(beforeTime = Some(time), onlyUnread = Some(true), limit = howMany), includeUriSummary)
   }
 
   def getLatestSentSendableNotifications(userId: Id[User], howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
-    notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onlyStartedBy = Some(userId), limit = howMany))
-    }, includeUriSummary)
+    getNotificationsByUser(userId, UserThreadQuery(onlyStartedBy = Some(userId), limit = howMany), includeUriSummary)
   }
 
   def getSentSendableNotificationsBefore(userId: Id[User], time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
-    notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-      userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onlyStartedBy = Some(userId), beforeTime = Some(time), limit = howMany))
-    }, includeUriSummary)
+    getNotificationsByUser(userId, UserThreadQuery(onlyStartedBy = Some(userId), beforeTime = Some(time), limit = howMany), includeUriSummary)
   }
 
   def getLatestSendableNotificationsForPage(userId: Id[User], url: String, howMany: Int, includeUriSummary: Boolean): Future[(String, Seq[NotificationJson], Int, Int)] = {
@@ -512,9 +501,7 @@ class NotificationDeliveryCommander @Inject() (
       case Right(prenormalizedUrl) =>
         Future.successful(prenormalizedUrl, Seq.empty, 0, 0)
       case Left(nUri) =>
-        val noticesFuture = notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-          userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onUri = Some(nUri.id.get), limit = howMany))
-        }, includeUriSummary)
+        val noticesFuture = getNotificationsByUser(userId, UserThreadQuery(onUri = Some(nUri.id.get), limit = howMany), includeUriSummary)
         noticesFuture.map { notices =>
           val unreadCounts = db.readOnlyReplica { implicit session =>
             userThreadRepo.getThreadCountsForUri(userId, nUri.id.get)
@@ -527,9 +514,7 @@ class NotificationDeliveryCommander @Inject() (
   def getSendableNotificationsForPageBefore(userId: Id[User], url: String, time: DateTime, howMany: Int, includeUriSummary: Boolean): Future[Seq[NotificationJson]] = {
     new SafeFuture(shoebox.getNormalizedURIByURL(url) flatMap {
       case Some(nUri) =>
-        notificationJsonMaker.make(db.readOnlyReplica { implicit session =>
-          userThreadRepo.getThreadNotificationsForUser(userId, UserThreadQuery(onUri = Some(nUri.id.get), beforeTime = Some(time), limit = howMany))
-        }, includeUriSummary)
+        getNotificationsByUser(userId, UserThreadQuery(onUri = Some(nUri.id.get), beforeTime = Some(time), limit = howMany), includeUriSummary)
       case _ => Future.successful(Seq.empty)
     })
   }
