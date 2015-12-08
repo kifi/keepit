@@ -236,10 +236,10 @@ class NotificationDeliveryCommander @Inject() (
     sendPushNotification(request.userId, notification, request.force)
   }
 
-  def buildNotificationForMessageThread(userId: Id[User], thread: MessageThread, message: ElizaMessage): Future[JsValue] = {
+  def buildNotificationForMessageThread(userId: Id[User], thread: MessageThread): Future[JsValue] = {
     // RPB: wtf is happening in my life
-    require(message.thread == thread.id.get)
     shoebox.getBasicUsers(thread.allParticipants.toSeq).map { basicUserByIdMap =>
+      val message = db.readOnlyMaster { implicit session => messageRepo.getLatest(thread.id.get) }
       def basicUserById(id: Id[User]) = basicUserByIdMap.getOrElse(id, throw new Exception(s"Could not get basic user data for $id in MessageThread ${thread.id.get}"))
       val basicNonUserParticipants = thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
       val messageWithBasicUser = MessageWithBasicUser(
