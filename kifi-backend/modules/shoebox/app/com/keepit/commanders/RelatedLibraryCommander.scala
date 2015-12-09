@@ -180,7 +180,7 @@ class RelatedLibrariesCache(stats: CacheStatistics, accessLog: AccessLog, innerm
 @json case class TopFollowedLibraries(libs: Seq[RelatedLibrary])
 
 case class TopFollowedLibrariesKey() extends Key[TopFollowedLibraries] {
-  override val version = 1
+  override val version = 2
   val namespace = "top_followed_libraries_key"
   def toKey(): String = version.toString
 }
