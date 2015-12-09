@@ -59,11 +59,16 @@ class MobileUserProfileController @Inject() (
           val numConnections = userConnectionRepo.getConnectionCount(profile.userId)
           val numFollowers = userProfileCommander.countFollowers(profile.userId, viewerOpt.map(_.id.get))
           val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
-          val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
-          val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
-            organizationInfoCommander.getOrganizationInfo(orgId, viewerOpt.flatMap(_.id))
+          val (orgInfos, pendingOrgs) = {
+            viewerOpt.map(_.id.get).filter(_ == profile.userId).map { userId =>
+              val orgMemberships = orgMembershipRepo.getAllByUserId(userId)
+              val orgs = orgMemberships.map { orgMembership => organizationInfoCommander.getOrganizationInfo(orgMembership.organizationId, Some(userId)) }
+              val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
+                organizationInfoCommander.getOrganizationInfo(orgId, Some(userId))
+              }
+              (orgs, pendingOrgs)
+            }.getOrElse(Seq.empty, Set.empty)
           }
-          val orgInfos = orgMemberships.map { orgMembership => organizationInfoCommander.getOrganizationInfo(orgMembership.organizationId, viewerOpt.flatMap(_.id)) }
           (numConnections, numFollowers, userBio, orgInfos, pendingOrgs)
         }
 

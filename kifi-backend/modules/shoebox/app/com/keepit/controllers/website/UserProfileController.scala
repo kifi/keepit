@@ -63,14 +63,14 @@ class UserProfileController @Inject() (
         val numFollowers = userProfileCommander.countFollowers(profile.userId, viewer.map(_.id.get))
         val userBio = userValueRepo.getValueStringOpt(profile.userId, UserValueName.USER_DESCRIPTION)
         val (orgInfos, pendingOrgs) = {
-          if (viewer.flatMap(_.id).contains(profile.userId)) {
-            val orgMemberships = orgMembershipRepo.getAllByUserId(profile.userId)
-            val orgs = orgMemberships.map { orgMembership => organizationInfoCommander.getOrganizationInfo(orgMembership.organizationId, viewer.flatMap(_.id)) }
-            val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(profile.userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
-              organizationInfoCommander.getOrganizationInfo(orgId, viewer.flatMap(_.id))
+          viewer.map(_.id.get).filter(_ == profile.userId).map { userId =>
+            val orgMemberships = orgMembershipRepo.getAllByUserId(userId)
+            val orgs = orgMemberships.map { orgMembership => organizationInfoCommander.getOrganizationInfo(orgMembership.organizationId, Some(userId)) }
+            val pendingOrgs = orgInviteRepo.getByInviteeIdAndDecision(userId, InvitationDecision.PENDING).groupBy(_.organizationId).keys.map { orgId =>
+              organizationInfoCommander.getOrganizationInfo(orgId, Some(userId))
             }
             (orgs, pendingOrgs)
-          } else (Seq.empty, Set.empty)
+          }.getOrElse(Seq.empty, Set.empty)
         }
         (numConnections, numFollowers, userBio, orgInfos, pendingOrgs)
       }
