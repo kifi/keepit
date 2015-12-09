@@ -20,7 +20,7 @@ case class OrganizationInfo(
     members: Seq[BasicUser],
     numMembers: Int,
     numLibraries: Int,
-    config: ExternalOrganizationConfiguration) {
+    config: Option[ExternalOrganizationConfiguration]) {
   def toBasicOrganization: BasicOrganization = BasicOrganization(this.orgId, this.ownerId, this.handle, this.name, this.description, this.avatarPath)
 }
 object OrganizationInfo {
@@ -35,7 +35,7 @@ object OrganizationInfo {
     (__ \ 'members).write[Seq[BasicUser]] and
     (__ \ 'numMembers).write[Int] and
     (__ \ 'numLibraries).write[Int] and
-    (__ \ 'config).write[ExternalOrganizationConfiguration]
+    (__ \ 'config).writeNullable[ExternalOrganizationConfiguration]
   )(unlift(OrganizationInfo.unapply))
 }
 

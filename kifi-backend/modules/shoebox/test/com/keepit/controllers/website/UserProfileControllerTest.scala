@@ -260,13 +260,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
         val validatedOrgs = (res1 \ "orgs").validate[Seq[JsObject]]
         validatedOrgs.isSuccess === true
-        val org1Response = validatedOrgs.get.head
-        (org1Response \ "id").as[PublicId[Organization]] === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
-        (org1Response \ "members").as[Seq[JsValue]].exists(json => (json \ "id").as[ExternalId[User]] == user1.externalId) === true
+        validatedOrgs.get.length === 0 // we don't expose a user's orgs to anyone but themselves
 
         val validatedPendingOrgs = (res1 \ "pendingOrgs").validate[Seq[JsObject]]
         validatedPendingOrgs.isSuccess === true
-        validatedPendingOrgs.get.length === 1
+        validatedPendingOrgs.get.length === 0
 
         //seeing a profile of my own
         val selfViewer = getProfile(Some(user1), user1.username)
