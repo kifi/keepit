@@ -1,15 +1,13 @@
 'use strict';
 
-const {Cc, Ci} = require('chrome');
-const AppShellService = Cc['@mozilla.org/appshell/appShellService;1'].getService(Ci.nsIAppShellService);
-
+const {Services} = require('resource://gre/modules/Services.jsm');
 const {getMostRecentBrowserWindow} = require('sdk/window/utils');
 const {getActiveTab, getTabContentWindow} = require('sdk/tabs/utils');
 
 const NS = 'http://www.w3.org/1999/xhtml';
 
 function newCanvas() {
-  return AppShellService.hiddenDOMWindow.document.createElementNS(NS, 'canvas');
+  return Services.appShell.hiddenDOMWindow.document.createElementNS(NS, 'canvas');
 }
 
 exports.createBlankCanvas = newCanvas;
