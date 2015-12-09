@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.cache._
 import com.keepit.common.db._
-import com.keepit.common.json.EnumFormat
+import com.keepit.common.json.{ TraversableFormat, EnumFormat }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
@@ -116,10 +116,10 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
   case object CREATE_SLACK_INTEGRATION extends LibraryPermission("create_slack_integration")
   case object ADD_COMMENTS extends LibraryPermission("add_comments")
 
-  implicit val format: Format[LibraryPermission] = Format(
-    EnumFormat.reads(get, all.map(_.value)),
-    Writes { o => JsString(o.value) }
-  )
+  private val soloReads = EnumFormat.reads(get, all.map(_.value))
+  implicit val setReads: Reads[Set[LibraryPermission]] = TraversableFormat.safeSetReads[LibraryPermission](soloReads)
+  implicit val setWrites: Writes[Set[LibraryPermission]] = Writes { ps => JsArray(ps.toSeq.map(p => JsString(p.value))) }
+  implicit val format = Format(setReads, setWrites)
 
   def all = _all.toSet
   def get(str: String): Option[LibraryPermission] = all.find(_.value == str)
