@@ -3,6 +3,9 @@ package com.keepit.eliza.controllers.site
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.json.{ TraversableFormat, KeyFormat, TupleFormat }
 import com.keepit.discussion.Message
+import play.api.mvc.Results.Status
+import play.api.http.Status._
+import com.keepit.common.core.futureExtensionOps
 import com.keepit.eliza.commanders.{ ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.time._
@@ -16,7 +19,17 @@ import play.api.libs.json._
 import com.google.inject.Inject
 
 import scala.concurrent.Future
+import scala.util.control.NoStackTrace
 import scala.util.{ Try, Success, Failure }
+
+sealed abstract class DiscussionFail(status: Int, msg: String) extends Exception with NoStackTrace {
+  def asErrorResponse = Status(status)(Json.obj("error" -> msg))
+}
+object DiscussionFail {
+  case class BadKeepId(kid: PublicId[Keep]) extends DiscussionFail(BAD_REQUEST, s"keep id $kid is invalid")
+  case object BadPayload extends DiscussionFail(BAD_REQUEST, "could not parse a .text (string) out of the payload")
+  case class CannotComment(kid: PublicId[Keep]) extends DiscussionFail(FORBIDDEN, s"insufficient permissions to comment on keep $kid")
+}
 
 class WebsiteMessagingController @Inject() (
     notificationCommander: NotificationDeliveryCommander,
@@ -57,16 +70,15 @@ class WebsiteMessagingController @Inject() (
   }
 
   def sendMessageOnKeep(keepPubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
+
+    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     (for {
-      keepId <- Keep.decodePublicId(keepPubId).toOption
-      txt <- (request.body \ "text").asOpt[String]
-    } yield {
-      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-      discussionCommander.sendMessageOnKeep(request.userId, txt, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { _ =>
-        NoContent
-      }
-    }).getOrElse {
-      Future.successful(BadRequest(Json.obj("hint" -> "pass in a valid keep id and make sure your request has .text string")))
+      keepId <- Keep.decodePublicId(keepPubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.BadKeepId(keepPubId)))
+      txt <- (request.body \ "text").asOpt[String].map(Future.successful).getOrElse(Future.failed(DiscussionFail.BadPayload))
+      _ <- Future.successful(true).collectWith { case false => Future.failed(DiscussionFail.CannotComment(keepPubId)) }
+      result <- discussionCommander.sendMessageOnKeep(request.userId, txt, keepId, source = Some(MessageSource.SITE))(contextBuilder.build)
+    } yield NoContent).recover {
+      case fail: DiscussionFail => fail.asErrorResponse
     }
   }
 
