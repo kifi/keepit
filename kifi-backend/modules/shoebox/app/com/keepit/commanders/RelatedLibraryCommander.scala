@@ -169,7 +169,7 @@ object RelatedLibraryKind {
 @json case class RelatedLibraries(libs: Seq[RelatedLibrary])
 
 case class RelatedLibariesKey(id: Id[Library]) extends Key[RelatedLibraries] {
-  override val version = 3
+  override val version = 4
   val namespace = "related_libraries_by_id"
   def toKey(): String = id.id.toString
 }
