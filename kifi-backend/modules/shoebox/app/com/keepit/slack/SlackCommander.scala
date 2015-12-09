@@ -39,7 +39,6 @@ case class SlackToLibraryIntegrationInfo(
 
 @json
 case class LibrarySlackIntegrationInfo(
-  creator: BasicUser,
   teamName: SlackTeamName,
   channelName: SlackChannelName,
   creatorName: SlackUsername,
@@ -116,10 +115,14 @@ class SlackCommanderImpl @Inject() (
 
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit = {
     db.readWrite { implicit s =>
-      val organizationId = libRepo.get(libId).organizationId
+      val defaultSpace = libRepo.get(libId).organizationId match {
+        case Some(orgId) if orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined =>
+          LibrarySpace.fromOrganizationId(orgId)
+        case _ => LibrarySpace.fromUserId(userId)
+      }
       libToChannelRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
-        userId = userId,
-        organizationId = organizationId,
+        requesterId = userId,
+        space = defaultSpace,
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
@@ -127,8 +130,8 @@ class SlackCommanderImpl @Inject() (
         slackChannelName = webhook.channelName
       ))
       channelToLibRepo.internBySlackTeamChannelAndLibrary(SlackIntegrationCreateRequest(
-        userId = userId,
-        organizationId = organizationId,
+        requesterId = userId,
+        space = defaultSpace,
         libraryId = libId,
         slackUserId = identity.userId,
         slackTeamId = identity.teamId,
@@ -167,8 +170,8 @@ class SlackCommanderImpl @Inject() (
     request match {
       case r: SlackIntegrationCreateRequest =>
         val userHasAccessToSpace = r.space match {
-          case UserSpace(uid) => r.userId == uid
-          case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.userId).isDefined
+          case UserSpace(uid) => r.requesterId == uid
+          case OrganizationSpace(orgId) => orgMembershipRepo.getByOrgIdAndUserId(orgId, r.requesterId).isDefined
         }
         if (!userHasAccessToSpace) Some(LibraryFail(FORBIDDEN, "insufficient_permissions_for_target_space"))
         else None
@@ -301,15 +304,15 @@ class SlackCommanderImpl @Inject() (
         }.toMap
       }
 
-      case class SlackIntegrationInfoKey(ownerId: Id[User], space: LibrarySpace, slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackUsername: SlackUsername, slackChannelName: SlackChannelName)
+      case class SlackIntegrationInfoKey(space: LibrarySpace, slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackUsername: SlackUsername, slackChannelName: SlackChannelName)
       object SlackIntegrationInfoKey {
         def fromSTL(stl: SlackChannelToLibrary) = {
           val username = teamMembershipMap(stl.slackUserId, stl.slackTeamId).slackUsername
-          SlackIntegrationInfoKey(stl.ownerId, stl.space, stl.slackUserId, stl.slackTeamId, username, stl.slackChannelName)
+          SlackIntegrationInfoKey(stl.space, stl.slackUserId, stl.slackTeamId, username, stl.slackChannelName)
         }
         def fromLTS(lts: LibraryToSlackChannel) = {
           val username = teamMembershipMap(lts.slackUserId, lts.slackTeamId).slackUsername
-          SlackIntegrationInfoKey(lts.ownerId, lts.space, lts.slackUserId, lts.slackTeamId, username, lts.slackChannelName)
+          SlackIntegrationInfoKey(lts.space, lts.slackUserId, lts.slackTeamId, username, lts.slackChannelName)
         }
       }
       libraryIds.map { libId =>
@@ -328,7 +331,6 @@ class SlackCommanderImpl @Inject() (
         }
         val integrations = (fromSlackGroupedInfos.keySet ++ toSlackGroupedInfos.keySet).map { key =>
           LibrarySlackIntegrationInfo(
-            creator = basicUserRepo.load(key.ownerId),
             teamName = teamNameByTeamId(key.slackTeamId),
             channelName = key.slackChannelName,
             creatorName = key.slackUsername,
