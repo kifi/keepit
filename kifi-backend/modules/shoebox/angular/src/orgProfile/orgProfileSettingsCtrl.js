@@ -8,7 +8,8 @@ angular.module('kifi')
   function ($window, $rootScope, $scope, $timeout, $state,
             profileService, orgProfileService, ORG_PERMISSION, $location) {
     $scope.state = $state;
-    $scope.settings = $scope.settings.settings;
+    $scope.settings = ($scope.settings && $scope.settings.settings) || [];
+    $scope.canViewPrivileges = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_SETTINGS) !== -1);
     $scope.canExportKeeps = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.EXPORT_KEEPS) !== -1);
     $scope.canManagePlan = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.MANAGE_PLAN) !== -1);
     $scope.canRedeemCredit = ($scope.viewer.permissions.indexOf(ORG_PERMISSION.REDEEM_CREDIT_CODE) !== -1);
@@ -34,7 +35,7 @@ angular.module('kifi')
       $window.removeEventListener('hashchange', onHashChange);
     });
 
-    if (!$scope.viewer.membership || $scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_SETTINGS) === -1) {
+    if (!$scope.viewer.membership) {
       $rootScope.$emit('errorImmediately');
     }
 

@@ -194,6 +194,8 @@ angular.module('kifi')
       scope.onCreditBannerEarnMore = function () {
         $state.go('orgProfile.settings.credits');
       };
+
+      scope.settingsRoute = scope.viewer.permissions.indexOf(ORG_PERMISSION.VIEW_SETTINGS) !== -1 ? 'orgProfile.settings.team' : 'orgProfile.settings.credits'
     }
   };
 }]);
