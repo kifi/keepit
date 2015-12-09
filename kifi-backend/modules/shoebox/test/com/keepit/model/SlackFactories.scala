@@ -31,7 +31,7 @@ object SlackTeamMembershipFactory {
       slackTeamId = SlackTeamId(ran(10)),
       slackTeamName = SlackTeamName(ran(10)),
       token = Some(SlackAccessToken(ran(30))),
-      scopes = SlackAuthScope.library
+      scopes = SlackAuthScope.push
     ))
   }
 
