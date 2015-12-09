@@ -70,7 +70,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]] = {
     val elizaMsgs = db.readOnlyReplica { implicit s =>
       messageThreadRepo.getByKeepId(keepId).map { thread =>
-        messageRepo.getByThread(thread.id.get, fromIdOpt, limit)
+        messageRepo.getByThread(thread.id.get, fromId = fromIdOpt, limit = limit)
       }.getOrElse(Seq.empty)
     }
     externalizeMessages(elizaMsgs).map { extMessageMap =>
@@ -82,7 +82,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     val threadIds = threadsByKeep.values.map(_.id.get).toSet
     val countsByThread = messageRepo.getAllMessageCounts(threadIds)
     val recentsByThread = threadIds.map { threadId =>
-      threadId -> messageRepo.getByThread(threadId, None, MESSAGES_TO_INCLUDE)
+      threadId -> messageRepo.getByThread(threadId, fromId = None, limit = MESSAGES_TO_INCLUDE)
     }.toMap
 
     val extMessageMapFut = externalizeMessages(recentsByThread.values.toSeq.flatten)
@@ -143,12 +143,13 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
+  // TODO(ryan): make this do batch processing...
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int] = db.readWrite { implicit s =>
     for {
       mt <- messageThreadRepo.getByKeepId(keepId)
       ut <- userThreadRepo.getUserThread(userId, mt.id.get)
     } yield {
-      val unreadCount = messageRepo.countByThread(mt.id.get, Some(msgId))
+      val unreadCount = messageRepo.countByThread(mt.id.get, Some(msgId), SortDirection.ASCENDING)
 
       // Marking a user thread as read is sort of insane
       // userThreadRepo.markRead does 2 things: updates the "lastActive" time for a user thread, and sets ut.unread = false

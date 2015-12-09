@@ -265,7 +265,6 @@ class MessagingCommander @Inject() (
     log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite { implicit session =>
       messageRepo.save(ElizaMessage(
-        id = None,
         from = from,
         thread = thread.id.get,
         threadExtId = thread.externalId,
@@ -304,6 +303,12 @@ class MessagingCommander @Inject() (
     // send message through websockets immediately
     thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, thread, messageWithBasicUser)
+    }
+    // For everyone except the sender, mark their thread as unread
+    db.readWrite { implicit s =>
+      (thread.participants.allUsers -- from.asUser).foreach { user =>
+        userThreadRepo.markUnread(user, thread.id.get)
+      }
     }
 
     // update user thread of the sender
