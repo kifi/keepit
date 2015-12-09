@@ -40,7 +40,8 @@ object SlackAuthScope {
   val UsersRead = SlackAuthScope("users:read")
   val UsersWrite = SlackAuthScope("users:write")
 
-  val library: Set[SlackAuthScope] = Set(IncomingWebhook, SearchRead, ReactionsWrite, Commands)
+  val push: Set[SlackAuthScope] = Set(IncomingWebhook, Commands, ReactionsWrite)
+  val ingest: Set[SlackAuthScope] = Set(SearchRead)
   val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
 
   val dbFormat: Format[SlackAuthScope] = Format(
