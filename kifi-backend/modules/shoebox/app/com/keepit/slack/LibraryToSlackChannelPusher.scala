@@ -22,13 +22,25 @@ import com.keepit.common.strings._
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Try, Success }
 
+object LibraryToSlackChannelPusher {
+  val maxAcceptableProcessingDuration = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
+  val defaultDelayBetweenPushes = Period.minutes(30)
+  val minimumDelayFromKeptAt = Period.seconds(20)
+  val maxTitleDelayFromKept = Period.seconds(40)
+  val maxDelayFromKeptAt = Period.minutes(5)
+  val delayFromUpdatedAt = Period.seconds(15)
+  val MAX_KEEPS_TO_SEND = 7
+  val LIBRARY_BATCH_SIZE = 20
+  val KEEP_URL_MAX_DISPLAY_LENGTH = 60
+}
+
 @ImplementedBy(classOf[LibraryToSlackChannelPusherImpl])
 trait LibraryToSlackChannelPusher {
   // Method called by scheduled plugin
   def findAndPushUpdatesForRipestLibraries(): Future[Unit]
 
-  // Method to be called if something happens in a library, meant to be called from within other db sessions
-  def scheduleLibraryToBePushed(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit
+  // Method to be called if something happens in a library
+  def pushLibraryPlease(libId: Id[Library]): Unit
 
   // Only call there are scheduled pushes that you want to process immediately
   def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]]
@@ -54,11 +66,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
   implicit val executionContext: ExecutionContext)
     extends LibraryToSlackChannelPusher with Logging {
 
-  private val maxAcceptableProcessingDuration = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
-  private val defaultDelayBetweenPushes = Period.minutes(30)
-  private val MAX_KEEPS_TO_SEND = 7
-  private val LIBRARY_BATCH_SIZE = 20
-  private val KEEP_URL_MAX_DISPLAY_LENGTH = 60
+  import LibraryToSlackChannelPusher._
 
   @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
@@ -75,9 +83,15 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
   }
 
-  def scheduleLibraryToBePushed(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
+  def pushLibraryPlease(libId: Id[Library]): Unit = db.readWrite { implicit session =>
+    val nextPushAt = clock.now plus minimumDelayFromKeptAt
+    pushLibraryAtLatest(libId, nextPushAt)
+  }
+
+  def pushLibraryAtLatest(libId: Id[Library], when: DateTime)(implicit session: RWSession): Unit = {
     libToChannelRepo.getActiveByLibrary(libId).foreach { lts =>
-      libToChannelRepo.save(lts.withNextPushAtLatest(when))
+      val updatedLts = lts.withNextPushAtLatest(when)
+      if (updatedLts != lts) libToChannelRepo.save(updatedLts)
     }
   }
 
@@ -170,25 +184,32 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       (lib, integrationsToProcess)
     }.flatMap {
       case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
-        val (webhookOpt, ktls, keepsToPush) = db.readOnlyReplica { implicit s =>
+        val (webhookOpt, keepsToPush, lastKtlIdOpt) = db.readOnlyReplica { implicit s =>
           val webhook = slackIncomingWebhookInfoRepo.getForIntegration(lts)
-          val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
-          val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(ktls.map(_.keepId).toSet)
+          val (keeps, lastKtlIdOpt) = {
+            val recentKtls = ktlRepo.getByLibraryAddedAfter(libId, lts.lastProcessedKeep)
+            val keepsByIds = keepRepo.getByIds(recentKtls.map(_.keepId).toSet)
+            val now = clock.now()
+            val stableRecentKeepsAndKtls = recentKtls.flatMap(ktl => keepsByIds.get(ktl.keepId).map(keep => (keep, ktl))).takeWhile {
+              case (keep, _) =>
+                val isTitleGoodEnough = keep.title.isDefined || (keep.keptAt isBefore (now minus maxTitleDelayFromKept))
+                val isKeepStable = keep.updatedAt isBefore (now minus delayFromUpdatedAt)
+                (isTitleGoodEnough && isKeepStable) || (keep.keptAt isBefore (now minus maxDelayFromKeptAt))
+            }
+            (stableRecentKeepsAndKtls.map(_._1), stableRecentKeepsAndKtls.lastOption.map(_._2.id.get))
+          }
+          val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(keeps.flatMap(_.id).toSet)
           def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
             case sa: SlackAttribution => lts.slackChannelId.contains(sa.message.channel.id)
             case _ => false
           }
-          val relevantKeepIds = ktls.collect { case ktl if !comesFromDestinationChannel(ktl.keepId) => ktl.keepId }
-          val relevantKeeps = {
-            val keepById = keepRepo.getByIds(relevantKeepIds.toSet)
-            relevantKeepIds.flatMap(keepById.get)
-          }
+          val relevantKeeps = keeps.filter(keep => !comesFromDestinationChannel(keep.id.get))
           val keepsToPush: KeepsToPush = relevantKeeps match {
             case Seq() => NoKeeps
             case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, attributionByKeepId)
             case ks => ManyKeeps(ks, lib, attributionByKeepId)
           }
-          (webhook, ktls, keepsToPush)
+          (webhook, keepsToPush, lastKtlIdOpt)
         }
 
         val slackPush = webhookOpt match {
@@ -219,7 +240,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             libToChannelRepo.save(
               lts
                 .finishedProcessing
-                .withLastProcessedKeep(ktls.lastOption.map(_.id.get))
+                .withLastProcessedKeep(lastKtlIdOpt orElse lts.lastProcessedKeep)
                 .withNextPushAt(clock.now plus defaultDelayBetweenPushes)
             )
             maybeFail match {
