@@ -166,7 +166,7 @@ class NotificationDeliveryCommander @Inject() (
         "time" -> message.createdAt,
         "thread" -> thread.externalId,
         "text" -> s"$adderUserName added you to a conversation.",
-        "url" -> message.sentOnUrl,
+        "url" -> message.sentOnUrl.getOrElse(thread.url),
         "title" -> theTitle,
         "author" -> basicUsers(adderUserId),
         "participants" -> participants,
