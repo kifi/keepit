@@ -116,7 +116,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
       createdAt,
       updatedAt,
       state,
-      LibrarySpace.fromOptions(userId, organizationId),
+      LibrarySpace.fromOptions(userId, organizationId).get,
       slackUserId,
       slackTeamId,
       slackChannelId,
