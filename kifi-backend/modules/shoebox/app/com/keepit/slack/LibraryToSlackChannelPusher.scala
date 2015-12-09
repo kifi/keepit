@@ -190,13 +190,12 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             val recentKtls = ktlRepo.getByLibraryAddedAfter(libId, lts.lastProcessedKeep)
             val keepsByIds = keepRepo.getByIds(recentKtls.map(_.keepId).toSet)
             val now = clock.now()
-            val stableRecentKeepsAndKtls = recentKtls.flatMap(ktl => keepsByIds.get(ktl.keepId).map(keep => (keep, ktl))).takeWhile {
+            recentKtls.flatMap(ktl => keepsByIds.get(ktl.keepId).map(_ -> ktl)).takeWhile {
               case (keep, _) =>
                 val isTitleGoodEnough = keep.title.isDefined || (keep.keptAt isBefore (now minus maxTitleDelayFromKept))
                 val isKeepStable = keep.updatedAt isBefore (now minus delayFromUpdatedAt)
                 (isTitleGoodEnough && isKeepStable) || (keep.keptAt isBefore (now minus maxDelayFromKeptAt))
-            }
-            (stableRecentKeepsAndKtls.map(_._1), stableRecentKeepsAndKtls.lastOption.map(_._2.id.get))
+            } unzip match { case (stableRecentKeeps, stableRecentKtls) => (stableRecentKeeps, stableRecentKtls.lastOption.map(_.id.get)) }
           }
           val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(keeps.flatMap(_.id).toSet)
           def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
