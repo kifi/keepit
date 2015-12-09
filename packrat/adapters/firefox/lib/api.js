@@ -28,15 +28,19 @@ errors.wrap = function (fn) {
 };
 
 // TODO: load some of these APIs on demand instead of up front
+const {AddonManager} = require('resource://gre/modules/AddonManager.jsm');
 const self = require('sdk/self');
 const timers = require('sdk/timers');
-const {Ci, Cc, Cu} = require('chrome');
+const pageWorker = require('sdk/page-worker');
+const workerNs = require('sdk/core/namespace').ns();
+const xulApp = require('sdk/system/xul-app');
+const windows = require('sdk/windows').browserWindows;
+const tabs = require('sdk/tabs');
+const {viewFor} = require('sdk/view/core');
+
 const {deps} = require('./deps');
 const {Listeners} = require('./listeners');
 const icon = require('./icon');
-const windows = require('sdk/windows').browserWindows;
-const tabs = require('sdk/tabs');
-const workerNs = require('sdk/core/namespace').ns();
 const screenshot = require('./screenshot');
 
 const httpRe = /^https?:/;
@@ -83,7 +87,6 @@ var onIconClick = errors.wrap(function onIconClick(win) {
 });
 
 var addon;
-Cu.import('resource://gre/modules/AddonManager.jsm');
 AddonManager.getAddonByID(self.id, function (a) {
   addon = a;
 });
@@ -137,11 +140,23 @@ exports.on = {
   search: new Listeners
 };
 
-var nsISound, nsIIO;
-exports.play = function(path) {
-  nsISound = nsISound || Cc['@mozilla.org/sound;1'].createInstance(Ci.nsISound);
-  nsIIO = nsIIO || Cc['@mozilla.org/network/io-service;1'].getService(Ci.nsIIOService);
-  nsISound.play(nsIIO.newURI(self.data.url(path), null, null));
+var soundPage;
+exports.play = function (path) {
+  if (!path) {
+    return;
+  }
+
+  if (!soundPage) {
+    soundPage = pageWorker.Page({
+      contentScriptFile: [
+        self.data.url('scripts/workers/sound_worker.js')
+      ],
+      contentScriptWhen: 'start',
+      contentURL: self.data.url('html/workers/blank_worker.html')
+    });
+  }
+
+  soundPage.port.emit('play_sound', self.data.url(path));
 };
 
 var portHandlers, portMessageTypes;
@@ -183,20 +198,20 @@ exports.util = {
 
 exports.browser = {
   name: 'Firefox',
-  userAgent: Cc['@mozilla.org/network/protocol;1?name=http'].getService(Ci.nsIHttpProtocolHandler).userAgent
+  userAgent: viewFor(windows[0]).navigator.userAgent
 };
 
 exports.requestUpdateCheck = function () {
   log('[requestUpdateCheck]');
   if (addon) {
-    var appVer = Cc['@mozilla.org/xre/app-info;1'].getService(Ci.nsIXULAppInfo).version;
-    var versions = Cc['@mozilla.org/xpcom/version-comparator;1'].getService(Ci.nsIVersionComparator);
+    var appVer = xulApp.version;
     addon.findUpdates({
         onCompatibilityUpdateAvailable: exports.noop,
         onNoCompatibilityUpdateAvailable: exports.noop,
         onUpdateAvailable: function (addon, install) {
           log('[onUpdateAvailable]', self.version, '=>', install.version, install.state);
-          if (versions.compare(self.version, install.version) < 0) {
+          // Check if our current version is out of date
+          if (!xulApp.versionInRange(self.version, install.version, '*')) {
             var listener = {
               onNewInstall: exports.noop,
               onDownloadStarted: exports.noop,
@@ -215,7 +230,7 @@ exports.requestUpdateCheck = function () {
           }
           function onDownloadEnded(install) {
             log('[onDownloadEnded]', self.version, '=>', install.version, install.state);
-            if (versions.compare(self.version, install.version) >= 0) {
+            if (xulApp.versionInRange(self.version, install.version, '*')) {
               install.cancel();
             }
           }
@@ -260,13 +275,13 @@ exports.socket = {
     if (socketPage) {
       socketPage.port.emit('open_socket', socketId, url);
     } else {
-      socketPage = require('sdk/page-worker').Page({
+      socketPage = pageWorker.Page({
         contentScriptFile: [
           self.data.url('scripts/lib/rwsocket.js'),
           self.data.url('scripts/workers/socket_worker.js')],
         contentScriptWhen: 'start',
         contentScriptOptions: {socketId: socketId, url: url},
-        contentURL: self.data.url('html/workers/socket_worker.html')
+        contentURL: self.data.url('html/workers/blank_worker.html')
       });
       socketPage.port.on('socket_connect', onSocketConnect);
       socketPage.port.on('socket_disconnect', onSocketDisconnect);
