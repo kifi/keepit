@@ -25,7 +25,7 @@ import scala.util.{ Failure, Try, Success }
 object LibraryToSlackChannelPusher {
   val maxAcceptableProcessingDuration = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
   val defaultDelayBetweenPushes = Period.minutes(30)
-  val minimumDelayFromKeptAt = Period.seconds(20)
+  val delayFromPushRequest = Period.seconds(20)
   val maxTitleDelayFromKept = Period.seconds(40)
   val maxDelayFromKeptAt = Period.minutes(5)
   val delayFromUpdatedAt = Period.seconds(15)
@@ -40,7 +40,7 @@ trait LibraryToSlackChannelPusher {
   def findAndPushUpdatesForRipestLibraries(): Future[Unit]
 
   // Method to be called if something happens in a library
-  def pushLibraryPlease(libId: Id[Library]): Unit
+  def schedule(libId: Id[Library]): Unit
 
   // Only call there are scheduled pushes that you want to process immediately
   def pushUpdatesToSlack(libId: Id[Library]): Future[Map[Id[LibraryToSlackChannel], Boolean]]
@@ -83,8 +83,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }
   }
 
-  def pushLibraryPlease(libId: Id[Library]): Unit = db.readWrite { implicit session =>
-    val nextPushAt = clock.now plus minimumDelayFromKeptAt
+  def schedule(libId: Id[Library]): Unit = db.readWrite { implicit session =>
+    val nextPushAt = clock.now plus delayFromPushRequest
     pushLibraryAtLatest(libId, nextPushAt)
   }
 
