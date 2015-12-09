@@ -49,17 +49,17 @@ case class MessageNotification(
   // user-specific information
   unread: Boolean,
   muted: Boolean,
-  // stuff that we send for no good reason
+  // stuff that we send to help clients display
   category: NotificationCategory,
   firstAuthor: Int,
   numAuthors: Int,
-  numUnreadAuthors: Int,
+  numUnseenAuthors: Int,
   numMessages: Int,
   numUnreadMessages: Int)
 object MessageNotification {
   // TODO(ryan): pray for forgiveness for this travesty
   def apply(message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser,
-    unread: Boolean, originalAuthorIdx: Int, unseenAuthors: Int, numAuthors: Int,
+    unread: Boolean, originalAuthorIdx: Int, numUnseenAuthors: Int, numAuthors: Int,
     numMessages: Int, numUnread: Int, muted: Boolean): MessageNotification = MessageNotification(
     id = message.externalId,
     time = message.createdAt,
@@ -75,7 +75,7 @@ object MessageNotification {
     category = NotificationCategory.User.MESSAGE,
     firstAuthor = originalAuthorIdx,
     numAuthors = numAuthors,
-    numUnreadAuthors = unseenAuthors,
+    numUnseenAuthors = numUnseenAuthors,
     numMessages = numMessages,
     numUnreadMessages = numUnread
   )
@@ -123,7 +123,7 @@ class NotificationDeliveryCommander @Inject() (
       messageWithBasicUser = orderedMessageWithBasicUser,
       unread = false,
       originalAuthorIdx = originalAuthor,
-      unseenAuthors = 0,
+      numUnseenAuthors = 0,
       numAuthors = numAuthors,
       numMessages = numMessages,
       numUnread = numUnread,
@@ -308,7 +308,7 @@ class NotificationDeliveryCommander @Inject() (
           messageWithBasicUser = messageWithBasicUser,
           unread = !message.from.asUser.contains(userId),
           originalAuthorIdx = 0,
-          unseenAuthors = unseenAuthors,
+          numUnseenAuthors = unseenAuthors,
           numAuthors = authorActivityInfos.length,
           numMessages = numMessages,
           numUnread = numUnread,
@@ -349,7 +349,7 @@ class NotificationDeliveryCommander @Inject() (
         messageWithBasicUser = messageWithBasicUser,
         unread = true,
         originalAuthorIdx = 0,
-        unseenAuthors = unseenAuthors,
+        numUnseenAuthors = unseenAuthors,
         numAuthors = authorActivityInfos.length,
         numMessages = numMessages,
         numUnread = numUnread,
