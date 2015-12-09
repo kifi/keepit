@@ -1,7 +1,6 @@
 /*jshint globalstrict:true */
 'use strict';
 
-const {Ci} = require('chrome');
 const {browserWindows, BrowserWindow} = require('sdk/windows');
 const tabs = require('sdk/tabs');
 const {getTabId} = require('sdk/tabs/utils');
@@ -9,6 +8,8 @@ const {windows} = require('sdk/window/utils');
 const browserNs = require('sdk/core/namespace').ns();
 const {viewFor} = require("sdk/view/core");
 
+ // Mozilla doesn't want us to use require('chrome'), so just save the value here
+const LOCATION_CHANGE_SAME_DOCUMENT = 0x00000001; // = Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT)
 
 function getTabIdForBrowser(gBrowser, browser) {
   for (let tab of gBrowser.tabs) {
@@ -28,7 +29,7 @@ function offChange(gBrowser) {
 }
 
 function change(callback, browser, progress, req, loc, flags) {
-  callback(getTabIdForBrowser(this, browser), !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT));
+  callback(getTabIdForBrowser(this, browser), !(flags & LOCATION_CHANGE_SAME_DOCUMENT));
 }
 
 function onFocus(win, callbacks) {
