@@ -25,7 +25,7 @@ object UserThreadRepo {
 trait UserThreadRepo extends Repo[UserThread] with RepoWithDelete[UserThread] {
   // Simple lookup queries
   def getByThread(threadId: Id[MessageThread])(implicit session: RSession): Seq[UserThread]
-  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
+  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[UserThread]
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[UserThread]
   def getByAccessToken(token: ThreadAccessToken)(implicit session: RSession): Option[UserThread]
 
@@ -192,8 +192,8 @@ class UserThreadRepoImpl @Inject() (
     UnreadThreadCounts(total, unmuted)
   }
 
-  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
-    activeRows.filter(row => row.user === userId && row.threadId === threadId).first
+  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): Option[UserThread] = {
+    activeRows.filter(row => row.user === userId && row.threadId === threadId).firstOption
   }
 
   def markRead(userId: Id[User], threadId: Id[MessageThread], message: ElizaMessage)(implicit session: RWSession): Unit = {

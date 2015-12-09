@@ -1,6 +1,7 @@
 package com.keepit.eliza.controllers.site
 
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.json.{ TraversableFormat, KeyFormat, TupleFormat }
 import com.keepit.discussion.Message
 import com.keepit.eliza.commanders.{ ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
@@ -15,7 +16,7 @@ import play.api.libs.json._
 import com.google.inject.Inject
 
 import scala.concurrent.Future
-import scala.util.{ Success, Failure }
+import scala.util.{ Try, Success, Failure }
 
 class WebsiteMessagingController @Inject() (
     notificationCommander: NotificationDeliveryCommander,
@@ -66,6 +67,22 @@ class WebsiteMessagingController @Inject() (
       }
     }).getOrElse {
       Future.successful(BadRequest(Json.obj("hint" -> "pass in a valid keep id and make sure your request has .text string")))
+    }
+  }
+
+  def markKeepsAsRead() = UserAction(parse.tolerantJson) { request =>
+    implicit val inputReads = KeyFormat.key2Reads[PublicId[Keep], PublicId[Message]]("keepId", "lastMessage")
+    implicit val outputWrites = TraversableFormat.mapWrites[PublicId[Keep], Int](_.id)
+    (for {
+      input <- request.body.asOpt[Seq[(PublicId[Keep], PublicId[Message])]]
+      readKeeps <- Try(input.map { case (pubKeepId, pubMsgId) => (Keep.decodePublicId(pubKeepId).get, ElizaMessage.fromMessageId(Message.decodePublicId(pubMsgId).get)) }).toOption
+    } yield {
+      val unreadMessagesByKeep = readKeeps.flatMap {
+        case (keepId, msgId) => discussionCommander.markAsRead(request.userId, keepId, msgId).map { newMsgCount => Keep.publicId(keepId) -> newMsgCount }
+      }.toMap
+      Ok(Json.toJson(unreadMessagesByKeep))
+    }).getOrElse {
+      BadRequest(Json.obj("hint" -> "pass in valid keep and message ids"))
     }
   }
 }
