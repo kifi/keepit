@@ -342,6 +342,10 @@ angular.module('kifi')
         var defaultAttributes = api.getCommonTrackingAttributes(library);
         attributes = _.extend(defaultAttributes, attributes || {});
         $analytics.eventTrack(eventName, attributes);
+      },
+
+      checkLibraryForUpdates: function (libraryId, since) {
+        return net.checkLibraryForUpdates(libraryId, since);
       }
     };
 

@@ -5,11 +5,13 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
-  'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService', 'libraryImageLoaded',
+  'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService',
+  'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService, signupService, libraryImageLoaded) {
+    platformService, profileService, originTrackingService, installService, signupService,
+    libraryImageLoaded) {
 
     //
     // Internal functions
@@ -559,6 +561,58 @@ angular.module('kifi')
         keepView: $scope.galleryView ? 'gallery' : 'list'
       });
     });
+
+    var deregisterUpdateLibrary;
+    var knownUpdatesPending = 0;
+    var updateLibrary = function (since, interval, countSinceUpdate) {
+      countSinceUpdate = countSinceUpdate || 0;
+      deregisterUpdateLibrary = $timeout(function () {
+        libraryService.checkLibraryForUpdates($scope.library.id, since).then(function (res) {
+          var status = res.data.updates;
+          if (status.updates > knownUpdatesPending) {
+            knownUpdatesPending = status.updates;
+            $scope.$broadcast('keepUpdatesPending', knownUpdatesPending);
+            updateLibrary(since, 5000, 0);
+          } else {
+            if (countSinceUpdate > 60) {
+              clickToRefresh();
+            } else {
+              updateLibrary(since, Math.min(60000, interval + 5000), countSinceUpdate + 1);
+            }
+          }
+        })['catch'](clickToRefresh);
+      }, interval);
+
+      function clickToRefresh() {
+        $timeout.cancel(deregisterUpdateLibrary);
+        knownUpdatesPending = -1;
+        $scope.$broadcast('keepUpdatesPending', -1);
+      }
+    };
+
+    $scope.$on('refreshLibrary', function () {
+      if (knownUpdatesPending <= 0 || knownUpdatesPending >= 10) { // error, or far too many
+        $state.reload();
+      } else {
+        libraryService.getKeepsInLibrary(library.id, 0, $stateParams.authToken).then(function (res) {
+          $rootScope.$emit('keepAdded', res.keeps.slice(), library);
+          $timeout.cancel(deregisterUpdateLibrary);
+          updateLibrary(res.keeps[0].createdAt || getLastUpdate(), 5000);
+        });
+      }
+
+      $scope.$broadcast('keepUpdatesPending', 0);
+      knownUpdatesPending = 0;
+    });
+
+    $scope.$on('$destroy', function () {
+      $timeout.cancel(deregisterUpdateLibrary);
+    });
+
+    var getLastUpdate = function () {
+      return $scope.keeps[0] && $scope.keeps[0].createdAt || $scope.library.lastKept || new Date();
+    };
+    updateLibrary(getLastUpdate(), 5000);
 
     // query param handling
     var showSlackDialog = initParams.getAndClear('showSlackDialog');
