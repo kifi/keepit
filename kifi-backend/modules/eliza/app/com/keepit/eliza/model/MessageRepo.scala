@@ -26,6 +26,7 @@ trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[Eliza
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Option[ElizaMessage]
 
   // PSA: please just use this method going forward, it has the cleanest API
+  def countByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]])(implicit session: RSession): Int
   def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage]
 }
 
@@ -138,15 +139,19 @@ class MessageRepoImpl @Inject() (
     activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
   }
 
-  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+  private def getByThreadHelper(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]])(implicit session: RSession) = {
     val threadMessages = activeRows.filter(row => row.thread === threadId)
-    val filteredMessages = fromId match {
+    fromId match {
       case None => threadMessages
       case Some(fid) =>
         val fromTime = activeRows.filter(_.id === fid).map(_.createdAt).first
         threadMessages.filter(r => r.createdAt < fromTime || (r.createdAt === fromTime && r.id < fid))
     }
-    filteredMessages.sortBy(r => (r.createdAt desc, r.id desc)).take(limit).list
   }
-
+  def countByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]])(implicit session: RSession): Int = {
+    getByThreadHelper(threadId, fromId).length.run
+  }
+  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+    getByThreadHelper(threadId, fromId).sortBy(r => (r.createdAt desc, r.id desc)).take(limit).list
+  }
 }

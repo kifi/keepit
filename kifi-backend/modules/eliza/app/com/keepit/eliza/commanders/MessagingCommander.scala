@@ -71,9 +71,7 @@ class MessagingCommander @Inject() (
     }.toMap
     //get user_threads
     val userThreads: Map[Id[MessageThread], UserThread] = db.readOnlyMaster { implicit session =>
-      threads.map { thread =>
-        (thread.id.get, userThreadRepo.getUserThread(userId, thread.id.get))
-      }
+      threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.id.get).get }
     }.toMap
 
     userId2BasicUserF.map { userId2BasicUser =>
@@ -519,7 +517,7 @@ class MessagingCommander @Inject() (
     val stateChanged = db.readWrite { implicit session =>
       val thread = threadRepo.get(extId)
       userThreadRepo.getUserThread(userId, thread.id.get) match {
-        case ut if ut.muted != mute =>
+        case Some(ut) if ut.muted != mute =>
           userThreadRepo.setMuteState(ut.id.get, mute)
         case _ => false
       }
