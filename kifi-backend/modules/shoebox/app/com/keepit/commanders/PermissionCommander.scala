@@ -148,7 +148,7 @@ class PermissionCommanderImpl @Inject() (
 
     def hasOrgWriteAccess(library: Library): Boolean = {
       library.organizationMemberAccess.contains(LibraryAccess.READ_WRITE) &&
-        library.organizationId.exists(orgMembershipsById(_).isDefined)
+        library.organizationId.flatMap(orgMembershipsById.get).isDefined
     }
 
     libsById.map {

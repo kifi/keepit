@@ -144,8 +144,8 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
             val all = Set(owner, collab, follower, rando, noone)
 
             Set(publicLib, secretLib).foreach { lib =>
-              val whoCanKeep = all.filter { x => permissionCommander.getLibraryPermissions(publicLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
-              whoCanKeep === Set(owner, collab)
+              val whoCanComment = all.filter { x => permissionCommander.getLibraryPermissions(publicLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
+              whoCanComment === Set(owner, collab)
             }
           }
           1 === 1
@@ -292,15 +292,15 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
             val all = Set(orgOwner, libOwner, collab, follower, member, rando, noone)
 
             Set(publicLib, orgLib, secretLib).foreach { lib =>
-              val whoCanEdit = all.filter { x => permissionCommander.getLibraryPermissions(lib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
-              whoCanEdit === Set(libOwner, collab)
+              val whoCanComment = all.filter { x => permissionCommander.getLibraryPermissions(lib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
+              whoCanComment === Set(libOwner, collab)
             }
 
-            val whoCanEdit2 = all.filter { x => permissionCommander.getLibraryPermissions(openCollabLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
-            whoCanEdit2 === Set(orgOwner, libOwner, collab, member, follower) // all org members can comment
+            val whoCanComment2 = all.filter { x => permissionCommander.getLibraryPermissions(openCollabLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
+            whoCanComment2 === Set(orgOwner, libOwner, collab, member, follower) // all org members can comment
 
-            val whoCanEdit3 = all.filter { x => permissionCommander.getLibraryPermissions(openCommentLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
-            whoCanEdit3 === all // anyone can comment on a public library
+            val whoCanComment3 = all.filter { x => permissionCommander.getLibraryPermissions(openCommentLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
+            whoCanComment3 === all // anyone can comment on a public library
           }
         }
       }
