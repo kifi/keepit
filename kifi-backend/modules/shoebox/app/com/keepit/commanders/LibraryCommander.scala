@@ -321,6 +321,7 @@ class LibraryCommanderImpl @Inject() (
       case Some(orgId) => Some(modifyReq.orgMemberAccess orElse library.organizationMemberAccess getOrElse LibraryAccess.READ_WRITE)
       case None => library.organizationMemberAccess
     }
+    val newLibraryCommentPermissions = modifyReq.whoCanComment.getOrElse(library.whoCanComment)
 
     // New library subscriptions
     newSubKeysOpt.foreach { newSubKeys =>
@@ -335,7 +336,11 @@ class LibraryCommanderImpl @Inject() (
         libraryAliasRepo.alias(currentSpace, library.slug, library.id.get) // Make a new alias for where library used to live
       }
 
-      libraryRepo.save(library.copy(name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor, whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
+      libraryRepo.save(library.copy(
+        name = newName, slug = newSlug, visibility = newVisibility, description = newDescription, color = newColor,
+        whoCanInvite = newInviteToCollab, state = LibraryStates.ACTIVE, organizationId = newOrgIdOpt,
+        organizationMemberAccess = newOrgMemberAccessOpt, whoCanComment = newLibraryCommentPermissions)
+      )
     }
 
     // Update visibility of keeps
