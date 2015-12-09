@@ -566,7 +566,6 @@ angular.module('kifi')
     var knownUpdatesPending = 0;
     var updateLibrary = function (since, interval, countSinceUpdate) {
       countSinceUpdate = countSinceUpdate || 0;
-      console.log('updatelib', since, interval, countSinceUpdate);
       deregisterUpdateLibrary = $timeout(function () {
         libraryService.checkLibraryForUpdates($scope.library.id, since).then(function (res) {
           var status = res.data.updates;
