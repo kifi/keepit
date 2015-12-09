@@ -153,9 +153,6 @@ angular.module('kifi')
       getLibraryCoverImages: function (libraryIds, w, h) {
         return route('/libraries/' + libraryIds.join('.') + '/images', {is: w && h ? w + 'x' + h : []});
       },
-      authIntoLibrary: function (handle, slug, authToken) {
-        return route('/users/' + handle + '/libraries/' + slug + '/auth', {authToken: authToken || []});
-      },
       copyKeepsFromTagToLibrary: function(libraryId, tagName) {
         return route('/libraries/' + libraryId + '/importTag', {tag: tagName});
       },
