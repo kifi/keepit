@@ -160,7 +160,9 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       val integrations = libToChannelRepo.getIntegrationsRipeForProcessingByLibrary(libId, overrideProcessesOlderThan = clock.now minus maxAcceptableProcessingDuration)
 
       def isIllegal(lts: LibraryToSlackChannel) = {
-        !permissionCommander.getLibraryPermissions(libId, Some(lts.ownerId)).contains(LibraryPermission.VIEW_LIBRARY)
+        slackTeamMembershipRepo.getBySlackTeamAndUser(lts.slackTeamId, lts.slackUserId).exists { stm =>
+          !permissionCommander.getLibraryPermissions(libId, Some(stm.userId)).contains(LibraryPermission.VIEW_LIBRARY)
+        }
       }
       integrations.map(libToChannelRepo.get).filter(isIllegal).foreach(lts => libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Off)))
 
@@ -169,7 +171,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     }.flatMap {
       case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
         val (webhookOpt, ktls, keepsToPush) = db.readOnlyReplica { implicit s =>
-          val webhook = slackIncomingWebhookInfoRepo.getByIntegration(lts)
+          val webhook = slackIncomingWebhookInfoRepo.getForIntegration(lts)
           val ktls = ktlRepo.getByLibraryFromTimeAndId(libId, lts.lastProcessedAt, lts.lastProcessedKeep)
           val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(ktls.map(_.keepId).toSet)
           def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {

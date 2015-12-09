@@ -48,6 +48,13 @@ object LibrarySpace {
   implicit def fromUserId(userId: Id[User]): UserSpace = UserSpace(userId)
   implicit def fromOrganizationId(organizationId: Id[Organization]): OrganizationSpace = OrganizationSpace(organizationId)
 
+  def fromOptions(userIdOpt: Option[Id[User]], orgIdOpt: Option[Id[Organization]]) = {
+    require(userIdOpt.isDefined || orgIdOpt.isDefined)
+    (userIdOpt, orgIdOpt) match { // org-biased, to match apply behavior
+      case (_, Some(orgId)) => OrganizationSpace(orgId)
+      case (Some(userId), _) => UserSpace(userId)
+    }
+  }
   def fromEither(either: Either[Id[User], Id[Organization]]): LibrarySpace = either match {
     case Left(userId) => UserSpace(userId)
     case Right(orgId) => OrganizationSpace(orgId)

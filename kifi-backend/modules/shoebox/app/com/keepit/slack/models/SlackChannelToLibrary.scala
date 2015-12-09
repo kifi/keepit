@@ -18,8 +18,7 @@ case class SlackChannelToLibrary(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   state: State[SlackChannelToLibrary] = SlackChannelToLibraryStates.ACTIVE,
-  ownerId: Id[User],
-  organizationId: Option[Id[Organization]],
+  space: LibrarySpace,
   slackUserId: SlackUserId,
   slackTeamId: SlackTeamId,
   slackChannelId: Option[SlackChannelId],
@@ -42,12 +41,7 @@ case class SlackChannelToLibrary(
       .maybeCopy(_.space, mods.space, _.withSpace)
   }
   def sanitizeForDelete = copy(state = SlackChannelToLibraryStates.INACTIVE, status = SlackIntegrationStatus.Off)
-
-  def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
-  def withSpace(newSpace: LibrarySpace) = newSpace match {
-    case OrganizationSpace(orgId) => copy(organizationId = Some(orgId))
-    case UserSpace(userId) => copy(ownerId = userId, organizationId = None)
-  }
+  def withSpace(newSpace: LibrarySpace) = this.copy(space = newSpace)
 }
 
 object SlackChannelToLibraryStates extends States[SlackChannelToLibrary]
@@ -61,10 +55,9 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def getByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Map[Id[SlackChannelToLibrary], SlackChannelToLibrary]
   def getActiveByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary]
-  def getActiveByOwnerAndLibrary(ownerId: Id[User], libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary]
-  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): (SlackChannelToLibrary, Boolean)
+  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary
   def getRipeForIngestion(limit: Int, ingestingForMoreThan: Period)(implicit session: RSession): Seq[Id[SlackChannelToLibrary]]
   def markAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
   def unmarkAsIngesting(ids: Id[SlackChannelToLibrary]*)(implicit session: RWSession): Unit
@@ -97,8 +90,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[SlackChannelToLibrary],
-    ownerId: Id[User],
-    organizationId: Option[Id[Organization]],
+    userId: Option[Id[User]], // either userId or organizationId must be set
+    organizationId: Option[Id[Organization]], // either userId or organizationId must be set
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: Option[SlackChannelId],
@@ -114,8 +107,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
       createdAt,
       updatedAt,
       state,
-      ownerId,
-      organizationId,
+      LibrarySpace.fromOptions(userId, organizationId),
       slackUserId,
       slackTeamId,
       slackChannelId,
@@ -134,8 +126,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     stl.createdAt,
     stl.updatedAt,
     stl.state,
-    stl.ownerId,
-    stl.organizationId,
+    Some(stl.space).collect { case UserSpace(userId) => userId },
+    Some(stl.space).collect { case OrganizationSpace(orgId) => orgId },
     stl.slackUserId,
     stl.slackTeamId,
     stl.slackChannelId,
@@ -151,7 +143,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   type RepoImpl = SlackChannelToLibraryTable
 
   class SlackChannelToLibraryTable(tag: Tag) extends RepoTable[SlackChannelToLibrary](db, tag, "slack_channel_to_library") {
-    def ownerId = column[Id[User]]("owner_id", O.NotNull)
+    def userId = column[Option[Id[User]]]("owner_id", O.Nullable) // TODO(ryan): rename "owner_id" to "user_id"
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
@@ -163,7 +155,7 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     def lastIngestingAt = column[Option[DateTime]]("last_ingesting_at", O.Nullable)
     def lastIngestedAt = column[Option[DateTime]]("last_ingested_at", O.Nullable)
     def lastMessageTimestamp = column[Option[SlackMessageTimestamp]]("last_message_timestamp", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, ownerId, organizationId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, nextIngestionAt, lastIngestingAt, lastIngestedAt, lastMessageTimestamp) <> ((stlFromDbRow _).tupled, stlToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, userId, organizationId, slackUserId, slackTeamId, slackChannelId, slackChannelName, libraryId, status, nextIngestionAt, lastIngestingAt, lastIngestedAt, lastMessageTimestamp) <> ((stlFromDbRow _).tupled, stlToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackChannelToLibraryStates.ACTIVE)
@@ -185,36 +177,32 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     activeRows.filter(_.libraryId === libraryId).list.toSet
   }
 
-  def getActiveByOwnerAndLibrary(ownerId: Id[User], libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary] = {
-    activeRows.filter(row => row.ownerId === ownerId && row.libraryId === libraryId).list.toSet
-  }
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary] = {
-    activeRows.filter(row => row.libraryId.inSet(libraryIds) && row.organizationId.inSet(orgsForUser) || (row.ownerId === userId && row.organizationId.isEmpty)).list
+    // TODO(ryan): this `row.organizationId.isEmpty` should not be necessary anymore. If the userId is set, it _should_ imply that the orgId is not
+    activeRows.filter(row => row.libraryId.inSet(libraryIds) && row.organizationId.inSet(orgsForUser) || (row.userId === userId && row.organizationId.isEmpty)).list
   }
 
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary] = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackChannelName === slackChannelName && row.libraryId === libraryId && row.state =!= excludeState.orNull).firstOption
   }
 
-  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): (SlackChannelToLibrary, Boolean) = {
+  def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary = {
     getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelName, request.libraryId, excludeState = None) match {
       case Some(integration) if integration.isActive =>
-        val isIntegrationOwner = integration.ownerId == request.userId && integration.slackUserId == request.slackUserId
         val updated = integration.copy(slackChannelName = request.slackChannelName)
         val saved = if (updated == integration) integration else save(updated)
-        (saved, isIntegrationOwner)
+        saved
       case inactiveIntegrationOpt =>
         val newIntegration = SlackChannelToLibrary(
           id = inactiveIntegrationOpt.flatMap(_.id),
-          ownerId = request.userId,
-          organizationId = request.organizationId,
+          space = request.space,
           slackUserId = request.slackUserId,
           slackTeamId = request.slackTeamId,
           slackChannelId = request.slackChannelId,
           slackChannelName = request.slackChannelName,
           libraryId = request.libraryId
         )
-        (save(newIntegration), true)
+        save(newIntegration)
     }
   }
 
