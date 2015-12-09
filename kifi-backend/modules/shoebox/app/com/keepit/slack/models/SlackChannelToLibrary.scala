@@ -66,6 +66,7 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def getBySlackTeamAndChannel(teamId: SlackTeamId, channelId: SlackChannelId)(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)]
   def fillInMissingChannelId(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName, channelId: SlackChannelId)(implicit session: RWSession): Int
+  def ingestFromChannelWithin(teamId: SlackTeamId, channelId: SlackChannelId, ingestWithin: Period)(implicit session: RWSession): Int
   def deactivate(model: SlackChannelToLibrary)(implicit session: RWSession): Unit
 }
 
@@ -249,6 +250,12 @@ class SlackChannelToLibraryRepoImpl @Inject() (
     activeRows.filter(r => r.slackUserId === userId && r.slackTeamId === teamId && r.slackChannelName === channelName && r.slackChannelId.isEmpty).map(r => (r.updatedAt, r.slackChannelId)).update((clock.now, Some(channelId))) tap { updated =>
       if (updated > 0) integrationsCache.remove(SlackChannelIntegrationsKey(teamId, channelId))
     }
+  }
+
+  def ingestFromChannelWithin(teamId: SlackTeamId, channelId: SlackChannelId, ingestWithin: Period)(implicit session: RWSession): Int = {
+    val now = clock.now()
+    val nextIngestionAtLatest = now plus ingestWithin
+    activeRows.filter(r => r.slackTeamId === teamId && r.slackChannelId === channelId && r.nextIngestionAt > nextIngestionAtLatest).map(r => (r.updatedAt, r.nextIngestionAt)).update((now, Some(nextIngestionAtLatest)))
   }
 
   def deactivate(model: SlackChannelToLibrary)(implicit session: RWSession): Unit = {

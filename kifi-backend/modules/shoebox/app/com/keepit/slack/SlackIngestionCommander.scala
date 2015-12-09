@@ -22,8 +22,9 @@ import scala.util.{ Failure, Success }
 
 object SlackIngestionCommander {
   val nextIngestionDelayAfterFailure = Period.minutes(10)
-  val nextIngestionDelayWithoutNewMessages = Period.minutes(5)
-  val nextIngestionDelayAfterNewMessages = Period.minutes(1)
+  val nextIngestionDelayWithoutNewMessages = Period.minutes(2)
+  val nextIngestionDelayAfterNewMessages = Period.seconds(30)
+  val maxIngestionDelayAfterCommand = Period.seconds(15)
 
   val ingestionTimeout = Period.minutes(30)
   val integrationBatchSize = 10
@@ -40,6 +41,7 @@ case class SlackTokenWithScopes(token: SlackAccessToken, scopes: Set[SlackAuthSc
 @ImplementedBy(classOf[SlackIngestionCommanderImpl])
 trait SlackIngestionCommander {
   def ingestAllDue(): Future[Unit]
+  def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit
 }
 
 @Singleton
@@ -235,5 +237,9 @@ class SlackIngestionCommanderImpl @Inject() (
         }
     }
 
+  }
+
+  def ingestFromChannelPlease(teamId: SlackTeamId, channelId: SlackChannelId): Unit = db.readWrite { implicit session =>
+    integrationRepo.ingestFromChannelWithin(teamId, channelId, maxIngestionDelayAfterCommand)
   }
 }

@@ -24,6 +24,7 @@ import com.kifi.macros.json
 import play.api.http.Status._
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success, Try }
+import com.keepit.common.core._
 
 @json
 case class LibraryToSlackIntegrationInfo(
@@ -76,6 +77,7 @@ class SlackCommanderImpl @Inject() (
   libToChannelRepo: LibraryToSlackChannelRepo,
   slackClient: SlackClientWrapper,
   libToSlackPusher: LibraryToSlackChannelPusher,
+  ingestionCommander: SlackIngestionCommander,
   basicUserRepo: BasicUserRepo,
   pathCommander: PathCommander,
   permissionCommander: PermissionCommander,
@@ -364,6 +366,10 @@ class SlackCommanderImpl @Inject() (
         fromLibraries = libToChannelIntegrations.collect { case integration if integration.status == SlackIntegrationStatus.On => integration.libraryId }.toSet,
         spaces = integrationSpaces
       )
+    }
+  } tap { _ =>
+    SafeFuture {
+      ingestionCommander.ingestFromChannelPlease(teamId, channelId)
     }
   }
 }
