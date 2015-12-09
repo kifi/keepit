@@ -200,7 +200,6 @@ angular.module('kifi')
     $scope.loading = true;  // whether keeps are currently loading
     $scope.hasMore = true;   // whether there may be more keeps in this library than those currently in $scope.keeps
     $scope.isMobile = platformService.isSupportedMobilePlatform();
-    $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === me.id;
     $scope.isAdminExperiment = (me.experiments || []).indexOf('admin') !== -1;
@@ -462,14 +461,6 @@ angular.module('kifi')
     [
       $rootScope.$on('keepAdded', function (e, keeps, library) {
         keeps.forEach(function (keep) {
-          // if the keep was added to the secret library from main or vice-versa, removes the keep from the current library
-          if (library.kind === 'system_secret' && $scope.librarySlug === 'main' ||
-              library.kind === 'system_main' && $scope.librarySlug === 'secret') {
-            var idx = _.findIndex($scope.keeps, { url: keep.url });
-            if (idx > -1) {
-              $scope.keeps.splice(idx, 1);
-            }
-          }
 
           var existingKeep = _.find($scope.keeps, {url: keep.url});
           if (!existingKeep && library.id === $scope.library.id) {

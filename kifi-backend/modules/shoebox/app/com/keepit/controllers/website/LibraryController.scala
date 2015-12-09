@@ -187,6 +187,12 @@ class LibraryController @Inject() (
     Ok(Json.obj("library" -> (Json.toJson(info).as[JsObject] + ("url" -> JsString(path))))) // TODO: stop adding "url" once web app stops using it
   }
 
+  def getLibraryUpdates(pubId: PublicId[Library], since: DateTime) = (MaybeUserAction andThen LibraryViewAction(pubId)) { request =>
+    val id = Library.decodePublicId(pubId).get
+    val updates = libraryCommander.getUpdatesToLibrary(id, since)
+    Ok(Json.obj("updates" -> Json.toJson(updates)))
+  }
+
   def getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authTokenOpt: Option[String] = None) = MaybeUserAction.async { request =>
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryInfoCommander.getLibraryWithHandleAndSlug(handle, slug, request.userIdOpt) match {

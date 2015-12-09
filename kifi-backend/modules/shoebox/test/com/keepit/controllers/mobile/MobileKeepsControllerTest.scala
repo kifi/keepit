@@ -421,6 +421,12 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction2"))) ::
             collectionRepo.save(Collection(userId = user.id.get, name = Hashtag("myCollaction3"))) ::
             Nil
+
+          val lib = LibraryFactory.library().saved
+          collections.map { c =>
+            val k = KeepFactory.keep().withLibrary(lib.id.get).saved
+            inject[KeepToCollectionRepo].save(KeepToCollection(keepId = k.id.get, collectionId = c.id.get))
+          }
           (user, collections)
         }
 
@@ -429,7 +435,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
 
         inject[FakeUserActionsHelper].setUser(user)
         val request = FakeRequest("GET", path)
-        val result = inject[MobileKeepsController].allCollections(sort = "last_kept")(request)
+        val result = inject[MobileKeepsController].allCollections(sort = "name")(request)
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
 
@@ -442,9 +448,9 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val expected = Json.parse(s"""
           {"keeps":0,
            "collections":[
-               {"id":"${ext1}","name":"myCollaction1","keeps":0},
-               {"id":"${ext2}","name":"myCollaction2","keeps":0},
-               {"id":"${ext3}","name":"myCollaction3","keeps":0}
+               {"id":"${ext1}","name":"myCollaction1","keeps":1},
+               {"id":"${ext2}","name":"myCollaction2","keeps":1},
+               {"id":"${ext3}","name":"myCollaction3","keeps":1}
             ]}
         """)
         Json.parse(contentAsString(result)) must equalTo(expected)

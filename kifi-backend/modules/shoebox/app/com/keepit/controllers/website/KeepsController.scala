@@ -125,7 +125,7 @@ class KeepsController @Inject() (
   }
 
   def pageCollections(sort: String, offset: Int, pageSize: Int) = UserAction { request =>
-    val tags = collectionCommander.pageCollections(sort, offset, pageSize, request.userId)
+    val tags = collectionCommander.pageCollections(request.userId, offset, pageSize, TagSorting(sort))
     Ok(Json.obj("tags" -> tags))
   }
 
