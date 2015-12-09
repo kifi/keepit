@@ -6,7 +6,7 @@ POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterCo
 GET     /eliza/site/notifications         @com.keepit.eliza.controllers.site.WebsiteMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
 POST    /eliza/site/keeps/:id/message     @com.keepit.eliza.controllers.site.WebsiteMessagingController.sendMessageOnKeep(id: PublicId[Keep])
 GET     /eliza/site/keeps/:id/messages    @com.keepit.eliza.controllers.site.WebsiteMessagingController.getMessagesOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
-GET     /eliza/site/keeps/markAsRead      @com.keepit.eliza.controllers.site.WebsiteMessagingController.getMessagesOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
+GET     /eliza/site/keeps/markAsRead      @com.keepit.eliza.controllers.site.WebsiteMessagingController.markKeepsAsRead()
 
 ##########################################
 # Extension API
