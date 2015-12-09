@@ -318,13 +318,13 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         (libs.head \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (libs.head \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.PUBLISHED)
         (libs.head \ "membership").as[Option[LibraryMembershipInfo]] must equalTo(
-          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER))))
+          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
         )
 
         (libs.last \ "id").as[PublicId[Library]] must equalTo(pubId1)
         (libs.last \ "owner" \ "id").as[ExternalId[User]] must equalTo(user1.externalId)
         (libs.last \ "membership").as[Option[LibraryMembershipInfo]] must equalTo(
-          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER))))
+          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
         )
         val result2 = getProfileLibraries(user1, 0, 10, "all")
         status(result2) must equalTo(OK)

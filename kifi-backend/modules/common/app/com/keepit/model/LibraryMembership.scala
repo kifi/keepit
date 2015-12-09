@@ -114,6 +114,7 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
   case object REMOVE_OTHER_KEEPS extends LibraryPermission("remove_other_keeps")
   case object EXPORT_KEEPS extends LibraryPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends LibraryPermission("create_slack_integration")
+  case object ADD_COMMENTS extends LibraryPermission("add_comments")
 
   implicit val format: Format[LibraryPermission] = Format(
     EnumFormat.reads(get, all.map(_.value)),
@@ -123,6 +124,21 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
   def all = _all.toSet
   def get(str: String): Option[LibraryPermission] = all.find(_.value == str)
   def apply(str: String): LibraryPermission = get(str).getOrElse(throw new Exception(s"Unknown LibraryPermission $str"))
+}
+
+sealed abstract class LibraryCommentPermissions(val value: String)
+object LibraryCommentPermissions extends Enumerator[LibraryCommentPermissions] {
+  case object COLLABORATOR extends LibraryCommentPermissions("collaborator") // collaborators and if Library.organizationMemberAccess == READ_WRITE, org-members
+  case object ANYONE extends LibraryCommentPermissions("anyone") // anyone with view permissions
+
+  implicit val format: Format[LibraryCommentPermissions] = Format(
+    Reads { j => j.validate[String].map(LibraryCommentPermissions(_)) },
+    Writes { o => JsString(o.value) }
+  )
+
+  def all = _all.toSet
+  def get(str: String): Option[LibraryCommentPermissions] = all.find(_.value == str)
+  def apply(str: String): LibraryCommentPermissions = get(str).getOrElse(throw new Exception(s"Unknown LibraryCommentPermission $str"))
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readWrite: Int, owner: Int)
