@@ -775,7 +775,7 @@ class KeepCommanderImpl @Inject() (
         val keep = keepRepo.getNoCache(keepId)
         val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
         val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
-        if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized)) {
+        if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
           val newNote = Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)
           if (keep.note.getOrElse("").toLowerCase != newNote.toLowerCase) {
             log.info(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")
