@@ -22,6 +22,7 @@ angular.module('kifi')
         $scope.orgMemberAccessWrite = $scope.library.orgMemberAccess === 'read_only' ? false : true;
 
         $scope.isUserOrgMember = (profileService.me.orgs.length > 0);
+        $scope.isUserAdmin = profileService.isAdmin();
 
         $scope.changeOrgMemberAccess = function() {
           // This gets sent to the backend

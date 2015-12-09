@@ -44,6 +44,7 @@ angular.module('kifi')
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }, 'disabled': false }; };
         scope.showError = false;
         scope.me = profileService.me;
+        scope.isAdmin = profileService.isAdmin();
         scope.libraryProps = {
           inOrg: false,
           selectedOrgId: null
@@ -59,6 +60,14 @@ angular.module('kifi')
         scope.editSlug = function () {
           scope.emptySlug = !scope.library.slug;
           scope.userHasEditedSlug = true;
+        };
+
+        scope.toggleSelector = function () {
+          scope.library.whoCanComment = scope.library.whoCanComment === 'anyone' ? 'collaborator' : 'anyone';
+        };
+
+        scope.canAnyoneComment = function() {
+          return scope.library.whoCanComment === 'anyone';
         };
 
         scope.toggleIntegrations = function (e) {
@@ -153,7 +162,8 @@ angular.module('kifi')
             color: colorNames[scope.library.color],
             subscriptions: nonEmptySubscriptions,
             orgMemberAccess: scope.library.orgMemberAccess,
-            space: owner
+            space: owner,
+            whoCanComment: scope.library.whoCanComment
           }, true).then(function (resp) {
 
             var newLibrary = resp.data.library;
@@ -319,7 +329,8 @@ angular.module('kifi')
             'description': '',
             'slug': '',
             'visibility': 'published',
-            'orgMemberAccess': 'read_write'
+            'orgMemberAccess': 'read_write',
+            'whoCanComment' : 'collaborator'
           };
           scope.library.org = scope.modalData.organization;
           scope.library.membership = {
