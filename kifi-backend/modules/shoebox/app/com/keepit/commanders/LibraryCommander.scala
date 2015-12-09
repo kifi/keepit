@@ -721,9 +721,9 @@ class LibraryCommanderImpl @Inject() (
 
   def getUpdatesToLibrary(libraryId: Id[Library], since: DateTime): LibraryUpdates = {
     db.readOnlyReplica { implicit session =>
-      val instantAfterSince = since.plusSeconds(1)
+      val instantAfterSince = since.plusSeconds(1) // slight fudge factor for races
       val lastUpdate = ktlRepo.latestKeptAtByLibraryIds(Set(libraryId)).get(libraryId).flatten
-      if (lastUpdate.exists(_.isAfter(since.plusSeconds(1)))) { // slight fudge factor for races
+      if (lastUpdate.exists(_.isAfter(instantAfterSince))) {
         val updates = ktlRepo.getFromLibrarySince(instantAfterSince, libraryId, 1).length
         LibraryUpdates(lastUpdate.getOrElse(instantAfterSince), updates)
       } else {
