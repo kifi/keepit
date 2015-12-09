@@ -102,7 +102,6 @@ class SlackCommanderImpl @Inject() (
       )).get
       auth.incomingWebhook.foreach { webhook =>
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
-          ownerId = userId,
           slackUserId = identity.userId,
           slackTeamId = identity.teamId,
           slackChannelId = None,
