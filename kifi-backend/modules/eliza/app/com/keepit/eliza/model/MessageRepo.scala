@@ -23,7 +23,7 @@ trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[Eliza
   def getMaxId()(implicit session: RSession): Id[ElizaMessage]
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
   def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int]
-  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage
+  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Option[ElizaMessage]
 
   // PSA: please just use this method going forward, it has the cleanest API
   def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage]
@@ -134,8 +134,8 @@ class MessageRepoImpl @Inject() (
     activeRows.filter(row => row.thread.inSet(threadIds) && row.fromHuman).groupBy(_.thread).map { case (thread, messages) => (thread, messages.length) }.list.toMap
   }
 
-  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage = {
-    activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => row.id desc).first
+  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Option[ElizaMessage] = {
+    activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
   }
 
   def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {

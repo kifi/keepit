@@ -247,7 +247,7 @@ object LibraryPathHelper {
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 9
+  override val version = 10
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }

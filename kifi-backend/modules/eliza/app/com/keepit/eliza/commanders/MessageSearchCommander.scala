@@ -21,6 +21,7 @@ class MessageSearchCommander @Inject() (
     db: Database,
     search: SearchServiceClient,
     notificationJsonMaker: NotificationJsonMaker,
+    notificationDeliveryCommander: NotificationDeliveryCommander,
     historyRepo: MessageSearchHistoryRepo) extends Logging {
 
   def searchMessages(userId: Id[User], query: String, page: Int, storeInHistory: Boolean): Future[Seq[NotificationJson]] = {
@@ -37,13 +38,10 @@ class MessageSearchCommander @Inject() (
       }
     }
     resultExtIdsFut.flatMap { protoExtIds =>
-      val notifs = db.readOnlyReplica { implicit session =>
-        val threads = protoExtIds.map { s => threadRepo.get(ExternalId[MessageThread](s)) }
-        threads.flatMap { thread =>
-          userThreadRepo.getNotificationByThread(userId, thread.id.get)
-        }
+      db.readOnlyReplica { implicit session =>
+        val threadIds = protoExtIds.map { s => threadRepo.get(ExternalId[MessageThread](s)).id.get }.toSet
+        notificationDeliveryCommander.getNotificationsByUser(userId, UserThreadQuery(threadIds = Some(threadIds), limit = threadIds.size), includeUriSummary = false)
       }
-      notificationJsonMaker.make(notifs)
     }
   }
 

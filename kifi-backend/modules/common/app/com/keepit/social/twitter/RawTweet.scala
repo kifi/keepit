@@ -48,8 +48,14 @@ case class RawTweet(
   inReplyToScreenName: Option[TwitterHandle],
   lang: Option[String], // BCP 47
   possiblySensitive: Option[Boolean],
-  originalJson: JsValue)
+  originalJson: JsValue) {
+  def getUrl: String = RawTweet.getUrl(user.screenName, id)
+}
+
 object RawTweet {
+
+  def getUrl(handle: TwitterHandle, statusId: TwitterStatusId): String = s"https://twitter.com/${handle.value}/status/${statusId.id}"
+
   implicit val reads: Reads[RawTweet] = (
     (__ \ 'id_str).read(TwitterStatusId.stringReads) and
     (__ \ 'created_at).read[DateTime](twitterDateReads(java.util.Locale.ENGLISH)) and
@@ -85,7 +91,9 @@ object RawTweet {
     inReplyToUserId: Option[TwitterUserId],
     inReplyToScreenName: Option[TwitterHandle],
     lang: Option[String], // BCP 47
-    possiblySensitive: Option[Boolean])
+    possiblySensitive: Option[Boolean]) {
+    def getUrl: String = RawTweet.getUrl(user.screenName, id)
+  }
 
   object RawRetweet {
     implicit val reads: Reads[RawRetweet] = (

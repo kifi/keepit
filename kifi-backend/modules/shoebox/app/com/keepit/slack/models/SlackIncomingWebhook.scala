@@ -49,9 +49,8 @@ object SlackIncomingWebhookInfoStates extends States[SlackIncomingWebhookInfo]
 
 @ImplementedBy(classOf[SlackIncomingWebhookInfoRepoImpl])
 trait SlackIncomingWebhookInfoRepo extends Repo[SlackIncomingWebhookInfo] {
-  def getByIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo]
+  def getForIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo]
   def getByWebhook(wh: SlackIncomingWebhook)(implicit session: RSession): Option[SlackIncomingWebhookInfo]
-  def getByOwnerAndTeamAndChannelName(ownerId: Id[User], teamId: SlackTeamId, channelName: SlackChannelName)(implicit session: RSession): Option[SlackIncomingWebhookInfo]
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)]
   def fillInMissingChannelId(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName, channelId: SlackChannelId)(implicit session: RWSession): Int
 }
@@ -154,11 +153,8 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     ))
   }
 
-  def getByOwnerAndTeamAndChannelName(ownerId: Id[User], teamId: SlackTeamId, channelName: SlackChannelName)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
-    workingRows.filter(whi => whi.ownerId === ownerId && whi.slackTeamId === teamId && whi.slackChannelName === channelName).firstOption
-  }
-  def getByIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
-    getByOwnerAndTeamAndChannelName(int.ownerId, int.slackTeamId, int.slackChannelName)
+  def getForIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
+    workingRows.filter(row => row.slackTeamId === int.slackTeamId && row.slackUserId === int.slackUserId && row.slackChannelName === int.slackChannelName).firstOption
   }
   def getByWebhook(wh: SlackIncomingWebhook)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
     workingRows.filter(whi => whi.slackChannelName === wh.channelName && whi.configUrl === wh.configUrl && whi.url === wh.url).firstOption

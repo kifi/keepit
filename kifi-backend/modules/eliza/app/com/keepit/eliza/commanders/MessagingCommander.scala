@@ -311,7 +311,10 @@ class MessagingCommander @Inject() (
     // update user thread of the sender
     from.asUser.foreach { sender =>
       setLastSeen(sender, thread.id.get, Some(message.createdAt))
-      db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
+      db.readWrite { implicit session =>
+        userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt)
+        userThreadRepo.markRead(sender, thread.id.get, message)
+      }
     }
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above

@@ -360,13 +360,18 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
     val basicUsers = userIds.map { id =>
-      val dummyUser = User(
-        id = Some(id),
-        firstName = "Douglas",
-        lastName = "Adams-clone-" + id.toString,
-        primaryUsername = Some(PrimaryUsername(Username("adams"), Username("adams")))
-      )
-      val user = allUsers.getOrElse(id, dummyUser)
+      val user = allUsers.get(id) match {
+        case Some(u) => u
+        case None =>
+          val dummyUser = User(
+            id = Some(id),
+            firstName = "Douglas",
+            lastName = "Adams-clone-" + id.toString,
+            primaryUsername = Some(PrimaryUsername(Username("adams"), Username("adams")))
+          )
+          allUsers.put(id, dummyUser)
+          dummyUser
+      }
       id -> BasicUser.fromUser(user)
     }.toMap
     Future.successful(basicUsers)
