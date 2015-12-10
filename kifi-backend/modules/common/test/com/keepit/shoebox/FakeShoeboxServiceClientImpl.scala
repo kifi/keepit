@@ -16,6 +16,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.discussion.DiscussionKeep
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.notify.info._
