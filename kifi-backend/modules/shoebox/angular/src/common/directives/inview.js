@@ -9,7 +9,7 @@ angular.module('kifi')
     // and adapted for use in angular
     var SCROLL_DEBOUNCE_INTERVAL = 50;
     var document = $window.document;
-    var elems = [];
+    var elementList = [];
 
     function getViewportScroll() {
       return document.documentElement.scrollTop || document.body.scrollTop;
@@ -19,7 +19,7 @@ angular.module('kifi')
       var viewportHeight = $window.innerHeight;
       var scrollTop = getViewportScroll();
 
-      elems.forEach(function ($el) {
+      elementList.forEach(function ($el) {
         var top = $el.offset().top;
         var height = $el.height();
         var inview = $el.data('inview') || false;
@@ -38,12 +38,32 @@ angular.module('kifi')
       });
     }
     var onScroll = _.debounce(_onScroll, SCROLL_DEBOUNCE_INTERVAL);
-    $window.addEventListener('scroll', onScroll);
+
+    function registerInviewChecking(element) {
+      if (elementList.length === 0) {
+        $window.addEventListener('scroll', onScroll);
+      }
+
+      elementList.push(element);
+    }
+
+    function deregisterInviewChecking(element) {
+      var index = elementList.indexOf(element);
+      if (index !== -1) {
+        elementList.splice(index, 1);
+      }
+
+      if (elementList.length === 0) {
+        // HACK(carlos): Firefox bug? It will enter this block even when elementList.length > 0
+        // Removing an already removed listener is a noop, so it's nbd, but it's weird.
+        $window.removeEventListener('scroll', onScroll);
+      }
+    }
 
     return {
       restrict: 'A',
       link: function ($scope, element, attr) {
-        elems.push(element);
+        registerInviewChecking(element);
 
         element.on('inview', function () {
           var fn = $scope.$eval(attr.kfInview);
@@ -53,11 +73,7 @@ angular.module('kifi')
         });
 
         $scope.$on('$destroy', function () {
-          var index = elems.indexOf(element);
-          if (index !== -1) {
-            elems.splice(index, 1);
-          }
-
+          deregisterInviewChecking(element);
           element.off('inview');
         });
 

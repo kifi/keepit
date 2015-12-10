@@ -11,12 +11,6 @@ angular.module('kifi')
         return a.sentAt - b.sentAt;
       }
 
-      function getSortedComments(keep) {
-        var comments = (keep.discussion && keep.discussion.messages) || [];
-        comments = comments.slice().sort(bySentAt);
-        return comments;
-      }
-
       function resetCaret(contentEditable) {
         // resetting the caret on a contenteditable div is not so trivial, see link
         // http://stackoverflow.com/a/24117242/3381000
@@ -47,8 +41,8 @@ angular.module('kifi')
           $scope.threadId = null;
 
           if ($scope.keep.discussion) {
-            $scope.threadId = $scope.keep.discussion && $scope.keep.discussion.threadId;
-            $scope.comments = getSortedComments($scope.keep);
+            $scope.threadId = $scope.keep.discussion.threadId;
+            $scope.comments = $scope.keep.discussion.messages.slice().sort(bySentAt); // don't mutate the original array, in case we need it later
             $scope.visibleCount = Math.min(3, $scope.comments.length);
             $scope.showViewPreviousComments = ($scope.visibleCount < $scope.keep.discussion.numMessages);
           }
@@ -119,7 +113,8 @@ angular.module('kifi')
               if ($scope.visibleCount < $scope.keep.discussion.numMessages) {
                 var last = $scope.comments.slice(0,1).pop();
                 if (last) {
-                  keepService.getMessagesForKeepDiscussion($scope.keep.pubId, MESSAGES_PER_LOAD + 1, last.id)
+                  keepService
+                  .getMessagesForKeepDiscussion($scope.keep.pubId, MESSAGES_PER_LOAD + 1, last.id)
                   .then(function (messageData) {
                     var messages = messageData.messages;
                     $scope.comments = messages.slice(0, MESSAGES_PER_LOAD).sort(bySentAt).concat($scope.comments);
