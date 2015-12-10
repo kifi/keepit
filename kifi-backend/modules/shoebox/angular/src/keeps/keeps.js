@@ -237,7 +237,11 @@ angular.module('kifi')
         };
 
         scope.$on('keepUpdatesPending', function (e, count) {
-          scope.keepUpdatesPending = count;
+          if (count >= 10) {
+            scope.keepUpdatesPending = '10+';
+          } else {
+            scope.keepUpdatesPending = count;
+          }
         });
 
         scope.refreshLibrary = function () {
