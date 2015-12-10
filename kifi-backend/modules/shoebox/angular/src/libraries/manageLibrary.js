@@ -44,6 +44,7 @@ angular.module('kifi')
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }, 'disabled': false }; };
         scope.showError = false;
         scope.me = profileService.me;
+        scope.hasCommentExperiment = profileService.hasExperiment('keep_comments');
         scope.libraryProps = {
           inOrg: false,
           selectedOrgId: null
@@ -61,6 +62,14 @@ angular.module('kifi')
           scope.userHasEditedSlug = true;
         };
 
+        scope.toggleSelector = function () {
+          scope.library.whoCanComment = scope.library.whoCanComment === 'anyone' ? 'collaborator' : 'anyone';
+        };
+
+        scope.canAnyoneComment = function() {
+          return scope.library.whoCanComment === 'anyone';
+        };
+
         scope.toggleIntegrations = function (e) {
           scope.integrationsOpen = !scope.integrationsOpen;
           if (scope.integrationsOpen) {
@@ -68,6 +77,17 @@ angular.module('kifi')
               scrollTop: e.target.getBoundingClientRect().top
             }, 500);
           }
+        };
+
+        scope.changeOrgMemberAccess = function() {
+          // This gets sent to the backend
+          scope.library.orgMemberAccess = scope.library.orgMemberAccess === 'read_write' ? 'read_only' : 'read_write';
+          // This binds the UI.
+          scope.orgMemberAccessWrite = !scope.orgMemberAccessWrite;
+        };
+
+        scope.disableOrgMemberAccess = function() {
+          return !(scope.library.id && scope.spaceIsOrg(scope.space.destination) && scope.library.visibility !== 'secret');
         };
 
         scope.addIfEnter = function(event) {
@@ -153,7 +173,8 @@ angular.module('kifi')
             color: colorNames[scope.library.color],
             subscriptions: nonEmptySubscriptions,
             orgMemberAccess: scope.library.orgMemberAccess,
-            space: owner
+            space: owner,
+            whoCanComment: scope.library.whoCanComment
           }, true).then(function (resp) {
 
             var newLibrary = resp.data.library;
@@ -313,13 +334,15 @@ angular.module('kifi')
           scope.modalTitle = scope.library.name;
           scope.library.subscriptions = scope.library.subscriptions || [];
           scope.library.subscriptions.push(scope.newBlankSub());
+          scope.orgMemberAccessWrite = scope.library.orgMemberAccess === 'read_only' ? false : true;
         } else {
           scope.library = {
             'name': '',
             'description': '',
             'slug': '',
             'visibility': 'published',
-            'orgMemberAccess': 'read_write'
+            'orgMemberAccess': 'read_write',
+            'whoCanComment' : 'collaborator'
           };
           scope.library.org = scope.modalData.organization;
           scope.library.membership = {

@@ -54,6 +54,28 @@
             </div>
           </div>
 
+          <div class="manage-lib-input-wrapper" ng-if="hasCommentExperiment">
+            <h3 class="manage-lib-heading">Access</h3>
+            <div class="manage-lib-input-area manage-lib-access">
+              <span class="kf-flex-row manage-lib-access-comments-container">
+                <button class="manage-lib-access-comments" ng-click="toggleSelector()">
+                  <div class="manage-lib-access-comments-toggle" ng-class="{'toggle' : canAnyoneComment() }"></div>
+                  <div class="manage-lib-access-toggle-option collab svg-collaborators-white" ng-class="{'on' : !canAnyoneComment()}"></div>
+                  <div class="manage-lib-access-toggle-option globe svg-white-globe" ng-class="{'on' : canAnyoneComment()}"></div>
+                </button>
+                <label class="manage-lib-access-comments-txt" ng-bind="canAnyoneComment() ? 'Anyone who can see this library can comment.' : 'Anyone who can keep to this library can comment.'"></label>
+              </span>
+              <span class="kf-flex-row manage-lib-access-members-wrapper" ng-class="{ 'disabled': disableOrgMemberAccess() }" ng-if="library.id && spaceIsOrg(space.destination)">
+                  <button class="manage-lib-access-members-checkbox" ng-class="{ 'checked' : orgMemberAccessWrite && !disableOrgMemberAccess(), 'disabled' : disableOrgMemberAccess() }" ng-click="changeOrgMemberAccess()">
+                    <span class="manage-lib-access-members-checkmark svg-checkmark-thin" ng-if="orgMemberAccessWrite && !disableOrgMemberAccess()"></span>
+                  </button>
+                  <label class="manage-lib-input-area manage-lib-access-members">
+                  Members of {{ space.current.name }} can join and keep to this library.
+                  </label>
+              </span>
+            </div>
+          </div>
+
           <div ng-if="modifyingExistingLibrary" class="manage-lib-input-wrapper kf-color">
             <h3 class="manage-lib-heading">Color</h3>
             <div class="manage-lib-input-area manage-lib-colors">

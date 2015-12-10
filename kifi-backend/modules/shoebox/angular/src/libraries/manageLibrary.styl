@@ -204,6 +204,83 @@ select.manage-lib-input
 .manage-lib-create-visibility-description
   color: secondaryTextGray
 
+.manage-lib-access-members-wrapper
+  &.disabled
+    color: libraryGray
+    cursor: no-drop
+
+
+.manage-lib-access-members-checkbox
+  margin-right: 2px
+  height: 12px
+  width: 7px
+  border-radius: 4px
+  border-width: 1px
+  border: 1px solid lightGrey
+  background-color: white
+
+  &.disabled
+    background-color: lightGrey
+    cursor: no-drop
+
+  &.checked
+    background-color: darkBlueColor
+    border: 1px solid darkBlueColor
+
+.manage-lib-access-members-checkmark
+  display: inline-block
+  position: relative
+  height: 8px
+  width: 12px
+  top: -3px
+  right: 2.5px
+
+.manage-lib-access-comments-container
+  margin-top: 10px
+  margin-bottom: 10px
+
+.manage-lib-access-comments
+  position: relative
+  width: 60px
+  height: 29px
+  border-radius: 7px
+  border-width: 0px
+  padding: 0
+  margin-right: 5px
+
+.manage-lib-access-comments-toggle
+  position: relative
+  width: 30px
+  height: 28px
+  border-radius: 6px
+  z-index: 2
+  background-color: darkBlueColor
+
+  &.toggle
+    left: 50%
+
+.manage-lib-access-toggle-option
+  position: absolute
+  background-size: cover
+  z-index: 3
+
+  &.collab
+    top: 8px
+    left: 4.5px
+    width: 21px
+    height: 14px
+
+  &.globe
+    top: -6px
+    right: -4.35px
+    width: 35px
+    height: 35px
+
+.manage-lib-access-comments-txt
+  font-weight: normal
+  font-size: 14px
+
+
 .manage-lib-color
   display: inline-block
   vertical-align: top
