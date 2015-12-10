@@ -73,7 +73,8 @@ object NormalizedHostname extends Logging {
   private val MaxLength = 256
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
 
-  def fromHostname(hostname: String, allowInvalid: Boolean = false): Option[NormalizedHostname] = {
+  def fromHostname(hostname: String): Option[NormalizedHostname] = fromHostname(hostname, allowInvalid = false)
+  def fromHostname(hostname: String, allowInvalid: Boolean): Option[NormalizedHostname] = {
     // “Why would you ALLOW invalid domains,” you may ask. Well, see…, this is used in weird places, such as
     // keeper position for users. They send domains, we save the position. For that case, we shouldn't be using
     // Domain at all. If they want to send garbage, there's no risk persisting that because it's user-specific.
