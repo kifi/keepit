@@ -243,7 +243,7 @@ angular.module('kifi')
         //
 
         (function (keep) {
-          scope.hasKeepCommentsPermission = profileService.hasExperiment('keep_comments') && keep.library.permissions.indexOf('add_comments') !== -1;
+          scope.hasKeepCommentsPermission = profileService.hasExperiment('keep_comments');
           scope.youtubeId = util.getYoutubeIdFromUrl(keep.url);
           scope.keepSource = keep.siteName || keep.url.replace(/^(?:[a-z]*:\/\/)?(?:www\.)?([^\/]*).*$/, '$1');
           scope.displayTitle = keep.title || keep.summary && keep.summary.title || util.formatTitleFromUrl(keep.url);
