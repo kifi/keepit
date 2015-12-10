@@ -84,7 +84,8 @@ class UserProfileCommander @Inject() (
           modifiedAt = lib.updatedAt,
           path = info.path,
           org = info.org,
-          orgMemberAccess = info.orgMemberAccess
+          orgMemberAccess = info.orgMemberAccess,
+          whoCanComment = info.whoCanComment
         )
     }
   }
