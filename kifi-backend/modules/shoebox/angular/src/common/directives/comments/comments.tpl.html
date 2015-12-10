@@ -1,9 +1,8 @@
 <div class="kf-keep-comments-container">
-  <div class="kf-keep-comments">
+  <div class="kf-keep-comments" ng-if="visibleComments.length > 0 || canAddComments">
     <span ng-if="showViewPreviousComments" ng-click="onViewPreviousComments()" class="kf-keep-comments-view-previous">View Previous Comments</span>
-    <div kf-keep-comment threadId="keep.discussion.threadId" keep="keep" comment="comment" ng-repeat="comment in visibleComments.slice().reverse() "
-         ng-class="{'kf-keep-comments-comment-v-spacing': true}"></div>
-    <div class="kf-keep-comments-input-container" >
+    <div kf-keep-comment class="kf-keep-comments-comment" threadId="keep.discussion.threadId" keep="keep" comment="comment" ng-repeat="comment in visibleComments.slice().reverse() "></div>
+    <div class="kf-keep-comments-input-container" ng-if="canAddComments">
       <img ng-src="{{me|pic:100}}" class="kf-keep-comments-input-user-img"/>
       <div class="kf-keep-comments-input ng-pristine ng-valid ng-touched" ng-keydown="keydown($event)" placeholder="Write a comment..."
            id="example-one" contenteditable="true"></div>

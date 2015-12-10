@@ -18,6 +18,7 @@ angular.module('kifi')
           $scope.myAddedComments = [];
           $scope.me = profileService.me;
           $scope.threadId = null;
+          $scope.canAddComments = $scope.keep.library.permissions.indexOf('add_comments') !== -1;
 
           if ($scope.keep.discussion) {
             $scope.threadId = $scope.keep.discussion.threadId;
