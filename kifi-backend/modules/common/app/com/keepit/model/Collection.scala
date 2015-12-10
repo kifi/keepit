@@ -12,7 +12,7 @@ import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.json.TupleFormat
-import com.keepit.serializer.{ BinaryFormat }
+import com.keepit.serializer.BinaryFormat
 import java.io.{ ByteArrayInputStream, DataInputStream, DataOutputStream, ByteArrayOutputStream }
 import scala.collection.mutable.ListBuffer
 import java.text.Normalizer

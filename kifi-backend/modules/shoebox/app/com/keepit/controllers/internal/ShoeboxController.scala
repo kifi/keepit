@@ -36,7 +36,7 @@ import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
-import com.keepit.common.json.{ TraversableFormat, EitherFormat, TupleFormat }
+import com.keepit.common.json.{ KeyFormat, TraversableFormat, EitherFormat, TupleFormat }
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -461,6 +461,28 @@ class ShoeboxController @Inject() (
     val keepIds = request.body.as[Set[Id[Keep]]]
     val keepDataById = keepCommander.getCrossServiceKeeps(keepIds)
     Ok(Json.toJson(keepDataById))
+  }
+
+  def getDiscussionKeepsByIds() = Action.async(parse.tolerantJson) { request =>
+    implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
+    val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
+
+    val keepById = db.readOnlyReplica { implicit s => keepRepo.getByIds(keepIds) }
+    val keepsSeq = keepIds.toSeq.flatMap(keepById.get)
+    val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
+      Some(viewerId),
+      showPublishedLibraries = true,
+      keepsSeq = keepsSeq,
+      idealImageSize = ProcessedImageSize.Medium.idealSize,
+      sanitizeUrls = true
+    )
+
+    keepInfosFut.map { keepInfos =>
+      val keepInfoById = (keepsSeq zip keepInfos).map {
+        case (keep, keepInfo) => keep.id.get -> keepInfo.asDiscussionKeep
+      }.toMap
+      Ok(Json.toJson(keepInfoById))
+    }
   }
 
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>

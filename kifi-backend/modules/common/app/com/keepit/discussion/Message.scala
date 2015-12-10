@@ -4,8 +4,9 @@ import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ DeepLocator, Keep }
-import com.keepit.social.BasicUserLikeEntity
+import com.keepit.common.store.ImagePath
+import com.keepit.model.{ Hashtag, LibraryCardInfo, DeepLocator, Keep }
+import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -41,4 +42,22 @@ object Discussion {
     (__ \ 'locator).format[DeepLocator] and
     (__ \ 'messages).format[Seq[Message]]
   )(Discussion.apply, unlift(Discussion.unapply))
+}
+
+// God forgive me, I'm creating yet another "_____-info" model
+// May this be the start of a new convention where keeps have
+//     `libraries: Seq[T]` instead of `library: T`
+case class DiscussionKeep(
+  id: PublicId[Keep],
+  url: String,
+  title: Option[String],
+  note: Option[String],
+  tags: Set[Hashtag],
+  keptBy: BasicUser,
+  keptAt: DateTime,
+  imagePath: Option[ImagePath],
+  libraries: Set[LibraryCardInfo])
+object DiscussionKeep {
+  private implicit val libCardFormat = LibraryCardInfo.internalFormat
+  implicit val format = Json.format[DiscussionKeep]
 }

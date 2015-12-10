@@ -3,8 +3,9 @@ package com.keepit.model
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.json.TupleFormat
+import com.keepit.common.store.ImagePath
 import com.keepit.common.time._
-import com.keepit.discussion.{ Discussion, Message }
+import com.keepit.discussion.{ DiscussionKeep, Discussion, Message }
 import com.keepit.social.BasicUser
 import org.joda.time.DateTime
 import play.api.libs.json.{ Json, OWrites, Writes }
@@ -18,32 +19,45 @@ object BasicLibraryWithKeptAt {
 }
 
 case class KeepInfo(
-  id: Option[ExternalId[Keep]] = None,
-  pubId: Option[PublicId[Keep]] = None,
-  title: Option[String],
-  url: String,
-  path: String,
-  isPrivate: Boolean, // deprecated
-  user: Option[BasicUser], // The user to be shown as associated with this keep, esp. with notes
-  createdAt: Option[DateTime] = None,
-  keeps: Option[Set[PersonalKeep]] = None,
-  keepers: Option[Seq[BasicUser]] = None,
-  keepersOmitted: Option[Int] = None,
-  keepersTotal: Option[Int] = None,
-  libraries: Option[Seq[(BasicLibraryWithKeptAt, BasicUser)]] = None,
-  librariesOmitted: Option[Int] = None,
-  librariesTotal: Option[Int] = None,
-  collections: Option[Set[String]] = None, // deprecated
-  tags: Option[Set[BasicCollection]] = None, // deprecated
-  hashtags: Option[Set[Hashtag]] = None,
-  summary: Option[URISummary] = None,
-  siteName: Option[String] = None,
-  libraryId: Option[PublicId[Library]] = None, // deprecated, use .library.id instead
-  library: Option[LibraryCardInfo] = None,
-  organization: Option[BasicOrganization] = None,
-  sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
-  note: Option[String] = None,
-  discussion: Option[Discussion])
+    id: Option[ExternalId[Keep]] = None,
+    pubId: Option[PublicId[Keep]] = None,
+    title: Option[String],
+    url: String,
+    path: String,
+    isPrivate: Boolean, // deprecated
+    user: Option[BasicUser], // The user to be shown as associated with this keep, esp. with notes
+    createdAt: Option[DateTime] = None,
+    keeps: Option[Set[PersonalKeep]] = None,
+    keepers: Option[Seq[BasicUser]] = None,
+    keepersOmitted: Option[Int] = None,
+    keepersTotal: Option[Int] = None,
+    libraries: Option[Seq[(BasicLibraryWithKeptAt, BasicUser)]] = None,
+    librariesOmitted: Option[Int] = None,
+    librariesTotal: Option[Int] = None,
+    collections: Option[Set[String]] = None, // deprecated
+    tags: Option[Set[BasicCollection]] = None, // deprecated
+    hashtags: Option[Set[Hashtag]] = None,
+    summary: Option[URISummary] = None,
+    siteName: Option[String] = None,
+    libraryId: Option[PublicId[Library]] = None, // deprecated, use .library.id instead
+    library: Option[LibraryCardInfo] = None,
+    organization: Option[BasicOrganization] = None,
+    sourceAttribution: Option[(SourceAttribution, Option[BasicUser])],
+    note: Option[String] = None,
+    discussion: Option[Discussion]) {
+
+  def asDiscussionKeep: DiscussionKeep = DiscussionKeep(
+    id = pubId.get,
+    url = url,
+    title = title,
+    note = note,
+    tags = hashtags.getOrElse(Set.empty),
+    keptBy = user.getOrElse(throw new Exception("Got a KeepInfo without a user!")),
+    keptAt = createdAt.get,
+    imagePath = summary.flatMap(_.imageUrl).map(ImagePath(_)),
+    libraries = library.toSet
+  )
+}
 
 object KeepInfo {
   val maxKeepersShown = 20
