@@ -50,7 +50,6 @@ object SlackIncomingWebhookFactory {
     val teamStr = ran(10)
     val botStr = ran(10)
     PartialSlackIncomingWebhook(SlackIncomingWebhookInfo(
-      ownerId = Id[User](idx.incrementAndGet()),
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(teamStr),
       slackChannelId = None,
@@ -63,7 +62,7 @@ object SlackIncomingWebhookFactory {
     ))
   }
   case class PartialSlackIncomingWebhook(siw: SlackIncomingWebhookInfo) {
-    def withMembership(stm: SlackTeamMembership) = this.copy(siw = siw.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
+    def withMembership(stm: SlackTeamMembership) = this.copy(siw = siw.copy(slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withChannelName(cn: String) = this.copy(siw = siw.copy(webhook = siw.webhook.copy(channelName = SlackChannelName(cn))))
   }
   def webhooks(count: Int) = List.fill(count)(webhook())

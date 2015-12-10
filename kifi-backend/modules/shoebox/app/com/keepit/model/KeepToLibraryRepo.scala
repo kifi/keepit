@@ -194,14 +194,9 @@ class KeepToLibraryRepoImpl @Inject() (
       case Some(orgId) => (for (ktl <- rows if ktl.libraryId === libraryId && (ktl.organizationId.isEmpty || ktl.organizationId =!= orgId)) yield ktl).take(limit.value).list.toSet
     }
   }
+
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary] = {
     (for (ktl <- rows if ktl.libraryId === library && ktl.state === KeepToLibraryStates.ACTIVE && ktl.addedAt > since) yield ktl).sortBy(ktl => (ktl.addedAt asc, ktl.id)).take(max).list
-  }
-  def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    // TODO(ryan): rethink this query, do we acually need the load whole set of a library's keeps?
-    // Can't we use `library.last_kept`?
-    sql"""select b.library_id, count(*) as cnt from keep_to_library b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.added_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
   def getRecentFromLibraries(libraryIds: Set[Id[Library]], limit: Limit, beforeIdOpt: Option[Id[KeepToLibrary]], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary] = {

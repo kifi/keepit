@@ -1,6 +1,6 @@
 package com.keepit.commanders
 
-import com.google.inject.{ ImplementedBy, Inject }
+import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.akka.SafeFuture
 
 import com.keepit.common.core._
@@ -10,6 +10,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time._
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
@@ -18,6 +19,7 @@ import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 import com.keepit.slack.models.{ SlackChannelToLibraryRepo, LibraryToSlackChannelRepo, SlackChannelToLibrary }
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.http.Status._
 
 import scala.concurrent._
@@ -30,6 +32,8 @@ object MarketingSuggestedLibrarySystemValue {
   // system value that persists the library IDs and additional library data for the marketing site
   def systemValueName = Name[SystemValue]("marketing_site_libraries")
 }
+
+@json case class LibraryUpdates(latestActivity: DateTime, updates: Int)
 
 @ImplementedBy(classOf[LibraryCommanderImpl])
 trait LibraryCommander {
@@ -47,6 +51,7 @@ trait LibraryCommander {
   def trackLibraryView(viewerId: Option[Id[User]], library: Library)(implicit context: HeimdalContext): Unit
   def updateLastEmailSent(userId: Id[User], keeps: Seq[Keep]): Unit
   def updateSubscribedToLibrary(userId: Id[User], libraryId: Id[Library], subscribedToUpdatesNew: Boolean): Either[LibraryFail, LibraryMembership]
+  def getUpdatesToLibrary(libraryId: Id[Library], since: DateTime): LibraryUpdates
 
   // These are "fast" methods, so they can be transactional
   def unsafeCreateLibrary(libCreateReq: LibraryInitialValues, ownerId: Id[User])(implicit session: RWSession): Library
@@ -57,6 +62,7 @@ trait LibraryCommander {
   def unsafeAsyncDeleteLibrary(libraryId: Id[Library]): Future[Unit]
 }
 
+@Singleton
 class LibraryCommanderImpl @Inject() (
     db: Database,
     libraryRepo: LibraryRepo,
@@ -509,7 +515,7 @@ class LibraryCommanderImpl @Inject() (
               if (membership.isEmpty) airbrake.notify(s"user $userId - non-existing ownership of library kind $kind (id: ${activeLib.id.get})")
               val activeMembership = membership.getOrElse(LibraryMembership(libraryId = activeLib.id.get, userId = userId, access = LibraryAccess.OWNER)).copy(state = LibraryMembershipStates.ACTIVE)
               val active = (activeMembership, activeLib)
-              if (libs.tail.length > 0) airbrake.notify(s"user $userId - duplicate active ownership of library kind $kind (ids: ${libs.tail.map(_._2.id.get)})")
+              if (libs.tail.nonEmpty) airbrake.notify(s"user $userId - duplicate active ownership of library kind $kind (ids: ${libs.tail.map(_._2.id.get)})")
               val otherLibs = libs.tail.map {
                 case (a, l) =>
                   val inactMem = libMem.find(_.libraryId == l.id.get)
@@ -712,8 +718,22 @@ class LibraryCommanderImpl @Inject() (
         Right(updatedMembership)
     }
   }
+
+  def getUpdatesToLibrary(libraryId: Id[Library], since: DateTime): LibraryUpdates = {
+    db.readOnlyReplica { implicit session =>
+      val instantAfterSince = since.plusSeconds(1) // slight fudge factor for races
+      val lastUpdate = ktlRepo.latestKeptAtByLibraryIds(Set(libraryId)).get(libraryId).flatten
+      if (lastUpdate.exists(_.isAfter(instantAfterSince))) {
+        val updates = ktlRepo.getFromLibrarySince(instantAfterSince, libraryId, 20).length
+        LibraryUpdates(lastUpdate.getOrElse(instantAfterSince), updates)
+      } else {
+        LibraryUpdates(lastUpdate.getOrElse(since), 0)
+      }
+    }
+  }
 }
 
 protected object LibraryCommanderImpl {
   val slugPrefixRegex = """^(.*)-\d+$""".r
 }
+

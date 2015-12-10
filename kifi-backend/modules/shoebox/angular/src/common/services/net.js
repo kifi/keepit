@@ -79,6 +79,7 @@ angular.module('kifi')
       changeKeepImage: post(shoebox, '/libraries/:id/keeps/:keepId/image'),
       exportOrgKeeps: post(shoebox, '/keeps/organizationExport'),
       getFtueLibraries: get(shoebox, '/libraries/marketing-suggestions'),
+      checkLibraryForUpdates: get(shoebox, '/libraries/:id/updates?since=:since'),
 
       getLibraryShareSuggest: get(shoebox, '/libraries/:id/members/suggest?n=30', 30),
       updateLibraryMembership: post(shoebox, '/libraries/:id/members/:uid/access'),

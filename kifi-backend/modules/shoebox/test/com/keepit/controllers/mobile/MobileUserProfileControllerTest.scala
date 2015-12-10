@@ -106,8 +106,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         (res1 \ "numCollabLibraries").as[Int] === 0
         (res1 \ "biography").as[String] === "First Prez yo!"
         val orgs = (res1 \ "orgs").as[Seq[JsObject]]
-        (orgs.head \ "id").as[PublicId[Organization]] === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
-        (orgs.head \ "members").as[Seq[JsValue]].length === 1
+        orgs.length === 0
 
         //seeing a profile from another user (friend)
         val friendViewer = getProfile(Some(user2), user1.username)

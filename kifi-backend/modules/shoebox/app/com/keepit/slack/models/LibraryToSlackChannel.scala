@@ -198,7 +198,7 @@ class LibraryToSlackChannelRepoImpl @Inject() (
     val now = clock.now
     getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelName, request.libraryId, excludeState = None) match {
       case Some(integration) if integration.isActive =>
-        val updated = integration.copy(slackChannelName = request.slackChannelName).withNextPushAt(now)
+        val updated = integration.copy(space = request.space, slackChannelName = request.slackChannelName).withNextPushAt(now)
         val saved = if (updated == integration) integration else save(updated)
         saved
       case inactiveIntegrationOpt =>
