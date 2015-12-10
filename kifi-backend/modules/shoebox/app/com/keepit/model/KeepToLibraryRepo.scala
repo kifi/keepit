@@ -28,7 +28,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
-  def getByLibraryFromTimeAndId(libraryId: Id[Library], fromDateOpt: Option[DateTime], fromIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
+  def getByLibraryAddedAfter(libraryId: Id[Library], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
@@ -143,14 +143,15 @@ class KeepToLibraryRepoImpl @Inject() (
     getByUserIdAndLibraryIdHelper(userId, libraryId, excludeStateOpt).list
   }
 
-  def getByLibraryFromTimeAndId(libraryId: Id[Library], fromDateOpt: Option[DateTime], fromIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary] = {
+  def getByLibraryAddedAfter(libraryId: Id[Library], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary] = {
     val inLibrary = activeRows.filter(row => row.libraryId === libraryId)
-    val filtered = (fromDateOpt, fromIdOpt) match {
-      case (None, _) => inLibrary
-      case (Some(fromDate), None) => inLibrary.filter(ktl => ktl.addedAt > fromDate)
-      case (Some(fromDate), Some(fromId)) => inLibrary.filter(ktl => ktl.addedAt > fromDate || (ktl.addedAt === fromDate && ktl.id > fromId))
+    val filtered = afterIdOpt match {
+      case None => inLibrary
+      case Some(afterId) =>
+        val afterAddedAt = get(afterId).addedAt
+        inLibrary.filter(ktl => ktl.addedAt > afterAddedAt || (ktl.addedAt === afterAddedAt && ktl.id > afterId))
     }
-    filtered.sortBy(_.addedAt asc).list
+    filtered.sortBy(r => (r.addedAt asc, r.id asc)).list
   }
 
   def getAllByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
