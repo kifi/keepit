@@ -677,6 +677,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     )).toMap
   }
 
+  def getDiscussionKeepsByIds(viewerId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], DiscussionKeep]] = Future.successful(Map.empty)
+
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = Future.successful(Map.empty)
 
   def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = Future.successful(None)
