@@ -853,6 +853,6 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = {
-    call(Shoebox.internal.canCommentOnKeep(userId, keepId)).map { response => (response.json \ "canKeep").as[Boolean] }
+    call(Shoebox.internal.canCommentOnKeep(userId, keepId)).map { response => (response.json \ "canComment").as[Boolean] }
   }
 }
