@@ -564,21 +564,21 @@ angular.module('kifi')
 
     var deregisterUpdateLibrary;
     var knownUpdatesPending = 0;
-    var updateLibrary = function (since, interval, countSinceUpdate) {
+    var updateLibrary = function (interval, countSinceUpdate) {
       countSinceUpdate = countSinceUpdate || 0;
       deregisterUpdateLibrary = $timeout(function () {
-        libraryService.checkLibraryForUpdates($scope.library.id, since).then(function (res) {
+        var lastKnownUpdate = getLastKnownUpdate();
+        libraryService.checkLibraryForUpdates($scope.library.id, lastKnownUpdate).then(function (res) {
           var status = res.data.updates;
-          if (status.updates > knownUpdatesPending) {
+          if (status.updates > knownUpdatesPending) { // An update we don't know about has occured
             knownUpdatesPending = status.updates;
             $scope.$broadcast('keepUpdatesPending', knownUpdatesPending);
-            updateLibrary(since, 5000, 0);
+            updateLibrary(10000, 0);
+          } else if (countSinceUpdate < 480) { // Roughly 8 hours
+            $scope.$broadcast('keepUpdatesPending', status.updates);
+            updateLibrary(Math.min(60000, interval + 10000), countSinceUpdate + 1);
           } else {
-            if (countSinceUpdate > 60) {
-              clickToRefresh();
-            } else {
-              updateLibrary(since, Math.min(60000, interval + 5000), countSinceUpdate + 1);
-            }
+            clickToRefresh();
           }
         })['catch'](clickToRefresh);
       }, interval);
@@ -595,9 +595,12 @@ angular.module('kifi')
         $state.reload();
       } else {
         libraryService.getKeepsInLibrary(library.id, 0, $stateParams.authToken).then(function (res) {
-          $rootScope.$emit('keepAdded', res.keeps.slice(), library);
+          var keeps = res.keeps.slice().reverse(); // reversing, because they're pushed to the top, so oldest first
+          $rootScope.$emit('keepAdded', keeps, library);
           $timeout.cancel(deregisterUpdateLibrary);
-          updateLibrary(res.keeps[0].createdAt || getLastUpdate(), 5000);
+
+          $scope.library.lastKept = (res.keeps && res.keeps[0] && res.keeps[0].createdAt) || $scope.library.lastKept || $scope.library.modifiedAt;
+          updateLibrary(10000);
         });
       }
 
@@ -609,10 +612,10 @@ angular.module('kifi')
       $timeout.cancel(deregisterUpdateLibrary);
     });
 
-    var getLastUpdate = function () {
-      return $scope.keeps[0] && $scope.keeps[0].createdAt || $scope.library.lastKept || new Date();
+    var getLastKnownUpdate = function () {
+      return ($scope.keeps && $scope.keeps[0] && $scope.keeps[0].createdAt) || $scope.library.lastKept || $scope.library.modifiedAt;
     };
-    updateLibrary(getLastUpdate(), 5000);
+    updateLibrary(10000);
 
     // query param handling
     var showSlackDialog = initParams.getAndClear('showSlackDialog');

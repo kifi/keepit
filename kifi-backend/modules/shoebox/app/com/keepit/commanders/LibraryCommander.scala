@@ -725,7 +725,7 @@ class LibraryCommanderImpl @Inject() (
       val lastUpdate = ktlRepo.latestKeptAtByLibraryIds(Set(libraryId)).get(libraryId).flatten
       if (lastUpdate.exists(_.isAfter(instantAfterSince))) {
         val updates = ktlRepo.getFromLibrarySince(instantAfterSince, libraryId, 20).length
-        LibraryUpdates(lastUpdate.getOrElse(instantAfterSince), updates)
+        LibraryUpdates(lastUpdate.get, updates)
       } else {
         LibraryUpdates(lastUpdate.getOrElse(since), 0)
       }
