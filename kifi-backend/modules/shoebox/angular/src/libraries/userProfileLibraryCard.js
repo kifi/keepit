@@ -40,7 +40,6 @@ angular.module('kifi')
               _.assign(library, _.pick(data.library, 'name', 'slug', 'description', 'visibility', 'color', 'numFollowers',
                 'membership', 'orgMemberAccess', 'whoCanComment')
               );
-              library.subscriptions = data.subscriptions;
               library.path = data.library.path || data.library.url;
               library.followers = _.take(data.library.followers, 3);
             })['catch'](modalService.openGenericErrorModal);
