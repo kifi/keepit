@@ -169,8 +169,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (lib \ "id").as[PublicId[Library]] must equalTo(pubLib1)
         (lib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (lib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (lib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER))))
-        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))
+        (lib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
+        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false))
       }
     }
 
@@ -196,8 +196,8 @@ class MobileLibraryControllerTest extends Specification with ShoeboxTestInjector
         (lib \ "id").as[PublicId[Library]] must equalTo(pubLib1)
         (lib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (lib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (lib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER))))
-        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER)))
+        (lib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
+        (lib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib1Updated, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false))
 
         // test retrieving persona library
         val personaLib = db.readWrite { implicit s =>

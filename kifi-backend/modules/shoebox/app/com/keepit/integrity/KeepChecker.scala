@@ -1,7 +1,7 @@
 package com.keepit.integrity
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ KeepCommander, KeepToLibraryCommander, KeepToUserCommander }
+import com.keepit.commanders.{ Hashtags, KeepCommander, KeepToLibraryCommander, KeepToUserCommander }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
@@ -28,6 +28,7 @@ class KeepChecker @Inject() (
     ktuCommander: KeepToUserCommander,
     libraryRepo: LibraryRepo,
     systemValueRepo: SystemValueRepo,
+    collectionRepo: CollectionRepo,
     implicit val executionContext: ExecutionContext) extends Logging with Debouncing {
 
   private[this] val lock = new AnyRef
@@ -49,6 +50,7 @@ class KeepChecker @Inject() (
           ensureLibrariesHashIntegrity(keep.id.get)
           ensureParticipantsHashIntegrity(keep.id.get)
           ensureOrganizationIdIntegrity(keep.id.get)
+          ensureNoteAndTagsAreInSync(keep.id.get)
         }
         systemValueRepo.setSequenceNumber(KEEP_INTEGRITY_SEQ, keeps.map(_.seq).max)
       }
@@ -116,5 +118,21 @@ class KeepChecker @Inject() (
       val library = libraryRepo.get(libId)
       if (keep.organizationId != library.organizationId) keepCommander.syncWithLibrary(keep, library)
     }
+  }
+
+  private def ensureNoteAndTagsAreInSync(keepId: Id[Keep])(implicit session: RWSession) = {
+    val keep = keepRepo.getNoCache(keepId)
+
+    val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
+    val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
+    if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
+      // todo: Change to airbrake.notify after we're sure this won't wake people up at night
+      log.info(s"[NOTE-TAGS-MATCH] Keep $keepId's note does not match tags. $tagsFromHashtags vs $tagsFromCollections")
+      keepCommander.autoFixKeepNoteAndTags(keep.id.get) // Async, max 1 thread system wide
+    }
+
+    // We don't want later checkers to overwrite the eventual note, so change the note they see when they load from db
+    val newNote = Option(Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)).filter(_.nonEmpty)
+    keepRepo.save(keep.withNote(newNote))
   }
 }

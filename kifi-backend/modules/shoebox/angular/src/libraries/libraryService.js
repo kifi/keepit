@@ -237,12 +237,6 @@ angular.module('kifi')
         });
       },
 
-      authIntoLibrary: function (username, slug, authToken, passPhrase) {
-        return $http.post(routeService.authIntoLibrary(username, slug, authToken), {'passPhrase': passPhrase}).then(function (resp) {
-          return resp;
-        });
-      },
-
       copyKeepsFromTagToLibrary: function (libraryId, tagName) {
         return $http.post(routeService.copyKeepsFromTagToLibrary(libraryId, tagName)).then(function(resp) {
           return resp.data;
@@ -348,6 +342,10 @@ angular.module('kifi')
         var defaultAttributes = api.getCommonTrackingAttributes(library);
         attributes = _.extend(defaultAttributes, attributes || {});
         $analytics.eventTrack(eventName, attributes);
+      },
+
+      checkLibraryForUpdates: function (libraryId, since) {
+        return net.checkLibraryForUpdates(libraryId, since);
       }
     };
 

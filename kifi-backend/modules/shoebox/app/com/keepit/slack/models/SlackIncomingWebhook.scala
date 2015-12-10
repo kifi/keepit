@@ -29,7 +29,6 @@ case class SlackIncomingWebhookInfo(
     createdAt: DateTime = currentDateTime,
     updatedAt: DateTime = currentDateTime,
     state: State[SlackIncomingWebhookInfo] = SlackIncomingWebhookInfoStates.ACTIVE,
-    ownerId: Id[User],
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: Option[SlackChannelId],
@@ -49,9 +48,8 @@ object SlackIncomingWebhookInfoStates extends States[SlackIncomingWebhookInfo]
 
 @ImplementedBy(classOf[SlackIncomingWebhookInfoRepoImpl])
 trait SlackIncomingWebhookInfoRepo extends Repo[SlackIncomingWebhookInfo] {
-  def getByIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo]
+  def getForIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo]
   def getByWebhook(wh: SlackIncomingWebhook)(implicit session: RSession): Option[SlackIncomingWebhookInfo]
-  def getByOwnerAndTeamAndChannelName(ownerId: Id[User], teamId: SlackTeamId, channelName: SlackChannelName)(implicit session: RSession): Option[SlackIncomingWebhookInfo]
   def getWithMissingChannelId()(implicit session: RSession): Set[(SlackUserId, SlackTeamId, SlackChannelName)]
   def fillInMissingChannelId(userId: SlackUserId, teamId: SlackTeamId, channelName: SlackChannelName, channelId: SlackChannelId)(implicit session: RWSession): Int
 }
@@ -75,7 +73,6 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[SlackIncomingWebhookInfo],
-    ownerId: Id[User],
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: Option[SlackChannelId],
@@ -90,7 +87,6 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
       createdAt,
       updatedAt,
       state,
-      ownerId,
       slackUserId,
       slackTeamId,
       slackChannelId,
@@ -106,7 +102,6 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     info.createdAt,
     info.updatedAt,
     info.state,
-    info.ownerId,
     info.slackUserId,
     info.slackTeamId,
     info.slackChannelId,
@@ -121,7 +116,6 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   type RepoImpl = SlackIncomingWebhookInfoTable
 
   class SlackIncomingWebhookInfoTable(tag: Tag) extends RepoTable[SlackIncomingWebhookInfo](db, tag, "slack_incoming_webhook_info") {
-    def ownerId = column[Id[User]]("owner_id", O.NotNull)
     def slackUserId = column[SlackUserId]("slack_user_id", O.NotNull)
     def slackTeamId = column[SlackTeamId]("slack_team_id", O.NotNull)
     def slackChannelId = column[Option[SlackChannelId]]("slack_channel_id", O.Nullable)
@@ -131,7 +125,7 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     def lastPostedAt = column[Option[DateTime]]("last_posted_at", O.Nullable)
     def lastFailedAt = column[Option[DateTime]]("last_failed_at", O.Nullable)
     def lastFailure = column[Option[JsValue]]("last_failure", O.Nullable)
-    def * = (id.?, createdAt, updatedAt, state, ownerId, slackUserId, slackTeamId, slackChannelId, slackChannelName, url, configUrl, lastPostedAt, lastFailedAt, lastFailure) <> ((infoFromDbRow _).tupled, infoToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, slackUserId, slackTeamId, slackChannelId, slackChannelName, url, configUrl, lastPostedAt, lastFailedAt, lastFailure) <> ((infoFromDbRow _).tupled, infoToDbRow _)
   }
 
   private def activeRows = rows.filter(row => row.state === SlackIncomingWebhookInfoStates.ACTIVE)
@@ -143,9 +137,8 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
   }
   override def invalidateCache(info: SlackIncomingWebhookInfo)(implicit session: RSession): Unit = deleteCache(info)
 
-  def add(ownerId: Id[User], slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: Option[SlackChannelId], hook: SlackIncomingWebhook, lastPostedAt: Option[DateTime] = None)(implicit session: RWSession): SlackIncomingWebhookInfo = {
+  def add(slackUserId: SlackUserId, slackTeamId: SlackTeamId, slackChannelId: Option[SlackChannelId], hook: SlackIncomingWebhook, lastPostedAt: Option[DateTime] = None)(implicit session: RWSession): SlackIncomingWebhookInfo = {
     save(SlackIncomingWebhookInfo(
-      ownerId = ownerId,
       slackUserId = slackUserId,
       slackTeamId = slackTeamId,
       slackChannelId = slackChannelId,
@@ -154,11 +147,8 @@ class SlackIncomingWebhookInfoRepoImpl @Inject() (
     ))
   }
 
-  def getByOwnerAndTeamAndChannelName(ownerId: Id[User], teamId: SlackTeamId, channelName: SlackChannelName)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
-    workingRows.filter(whi => whi.ownerId === ownerId && whi.slackTeamId === teamId && whi.slackChannelName === channelName).firstOption
-  }
-  def getByIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
-    getByOwnerAndTeamAndChannelName(int.ownerId, int.slackTeamId, int.slackChannelName)
+  def getForIntegration(int: SlackIntegration)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
+    workingRows.filter(row => row.slackTeamId === int.slackTeamId && row.slackUserId === int.slackUserId && row.slackChannelName === int.slackChannelName).firstOption
   }
   def getByWebhook(wh: SlackIncomingWebhook)(implicit session: RSession): Option[SlackIncomingWebhookInfo] = {
     workingRows.filter(whi => whi.slackChannelName === wh.channelName && whi.configUrl === wh.configUrl && whi.url === wh.url).firstOption

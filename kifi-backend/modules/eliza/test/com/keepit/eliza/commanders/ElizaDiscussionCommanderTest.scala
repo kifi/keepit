@@ -20,7 +20,7 @@ import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable.SpecificationLike
 import play.api.libs.json.{ JsNull, Json }
 
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
 class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
@@ -115,6 +115,42 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep)), Duration.Inf).get(keep)
           ans must beSome
           ans.get.numMessages === 2
+        }
+      }
+    }
+    "mark keeps as read" in {
+      "handle unread messages" in {
+        withDb(modules: _*) { implicit injector =>
+          val keep = Id[Keep](1)
+          val user1 = Id[User](1)
+          val user2 = Id[User](2)
+
+          val msgs = Await.result(Future.sequence(Seq(
+            discussionCommander.sendMessageOnKeep(user1, "First post!", keep),
+            discussionCommander.sendMessageOnKeep(user2, "My first post too!", keep),
+            discussionCommander.sendMessageOnKeep(user2, "And another post!", keep)
+          )), Duration.Inf)
+
+          inject[WatchableExecutionContext].drain()
+
+          db.readOnlyMaster { implicit s =>
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(true)
+            userThreadRepo.getUserThread(user2, mtId).map(_.unread) must beSome(false)
+          }
+
+          discussionCommander.markAsRead(user1, keep, msgs(1).id.get) must beSome(1)
+          db.readOnlyMaster { implicit s =>
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(true)
+          }
+
+          discussionCommander.markAsRead(user1, keep, msgs.last.id.get) must beSome(0)
+          db.readOnlyMaster { implicit s =>
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(false)
+          }
+          1 === 1
         }
       }
     }

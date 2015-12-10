@@ -146,27 +146,35 @@ class PermissionCommanderImpl @Inject() (
       } getOrElse libPermissions
     }
 
+    def hasOrgWriteAccess(library: Library): Boolean = {
+      library.organizationMemberAccess.contains(LibraryAccess.READ_WRITE) &&
+        library.organizationId.exists(orgMembershipsById.get(_).flatten.isDefined)
+    }
+
     libsById.map {
       case (libId, lib) =>
-        val basePermissions = libraryPermissionsByAccess(lib, libAccessById.getOrElse(libId, None))
+        val basePermissions = libraryPermissionsByAccess(lib, libAccessById.getOrElse(libId, None), hasOrgWriteAccess(lib))
         val withUser = mixInUserPermissions(lib, basePermissions)
         val withOrg = mixInOrgPermisisons(lib, withUser)
         libId -> withOrg
     }
   }
 
-  def libraryPermissionsByAccess(library: Library, accessOpt: Option[LibraryAccess]): Set[LibraryPermission] = accessOpt match {
+  def libraryPermissionsByAccess(library: Library, accessOpt: Option[LibraryAccess], includeOrgWriteAccess: Boolean): Set[LibraryPermission] = accessOpt match {
     case None =>
-      if (library.isPublished) Set(LibraryPermission.VIEW_LIBRARY) else Set.empty
-    case Some(LibraryAccess.READ_ONLY) => Set(
-      LibraryPermission.VIEW_LIBRARY
-    ) ++ (if (!library.isSecret) Set(LibraryPermission.INVITE_FOLLOWERS) else Set.empty)
+      Set(LibraryPermission.VIEW_LIBRARY).filter(_ => library.isPublished) ++
+        Set(LibraryPermission.ADD_COMMENTS).filter(_ => (library.isPublished && library.canAnyoneComment) || includeOrgWriteAccess)
+    case Some(LibraryAccess.READ_ONLY) =>
+      Set(LibraryPermission.VIEW_LIBRARY) ++
+        Set(LibraryPermission.INVITE_FOLLOWERS).filter(_ => !library.isSecret) ++
+        Set(LibraryPermission.ADD_COMMENTS).filter(_ => library.canAnyoneComment || includeOrgWriteAccess)
 
     case Some(LibraryAccess.OWNER) | Some(LibraryAccess.READ_WRITE) if library.isSystemLibrary => Set(
       LibraryPermission.VIEW_LIBRARY,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
+      LibraryPermission.REMOVE_OWN_KEEPS,
+      LibraryPermission.ADD_COMMENTS
     )
 
     case Some(LibraryAccess.READ_WRITE) if library.canBeModified => Set(
@@ -174,7 +182,8 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.INVITE_FOLLOWERS,
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
-      LibraryPermission.REMOVE_OWN_KEEPS
+      LibraryPermission.REMOVE_OWN_KEEPS,
+      LibraryPermission.ADD_COMMENTS
     ) ++ (if (!library.whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
 
     case Some(LibraryAccess.OWNER) if library.canBeModified => Set(
@@ -188,7 +197,8 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.REMOVE_OWN_KEEPS,
       LibraryPermission.REMOVE_OTHER_KEEPS,
       LibraryPermission.INVITE_FOLLOWERS,
-      LibraryPermission.INVITE_COLLABORATORS
+      LibraryPermission.INVITE_COLLABORATORS,
+      LibraryPermission.ADD_COMMENTS
     )
   }
 

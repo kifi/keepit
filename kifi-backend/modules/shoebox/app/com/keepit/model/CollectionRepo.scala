@@ -23,7 +23,6 @@ import com.keepit.typeahead.{ UserHashtagTypeaheadUserIdKey, UserHashtagTypeahea
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] with SeqNumberFunction[Collection] {
   def getByIds(ids: Set[Id[Collection]])(implicit session: RSession): Map[Id[Collection], Collection]
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
-  def getUnfortunatelyIncompleteTagSummariesByUser(userId: Id[User])(implicit session: RSession): Seq[CollectionSummary]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],
     excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))(implicit session: RSession): Option[Collection]
   def getByUserAndName(userId: Id[User], name: Hashtag,
@@ -90,16 +89,6 @@ class CollectionRepoImpl @Inject() (
   def getUnfortunatelyIncompleteTagsByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
     userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
       (for (c <- rows if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).sortBy(r => (r.lastKeptTo.desc, r.id)).take(500).list
-    }
-
-  def getUnfortunatelyIncompleteTagSummariesByUser(userId: Id[User])(implicit session: RSession): Seq[CollectionSummary] =
-    userCollectionSummariesCache.getOrElse(UserCollectionSummariesKey(userId)) {
-      import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-      import scala.collection.JavaConversions._
-      sql"select id, external_id, name from collection where user_id = $userId and state = '#${CollectionStates.ACTIVE}' order by last_kept_to desc, id limit 500".
-        as[(Id[Collection], ExternalId[Collection], Hashtag)].list.map { row =>
-          CollectionSummary(row._1, row._2, row._3)
-        }
     }
 
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection],

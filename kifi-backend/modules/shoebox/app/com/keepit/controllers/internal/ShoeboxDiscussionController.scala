@@ -4,6 +4,7 @@ import com.google.inject.{ Inject, Singleton }
 import com.keepit.commanders.{ PermissionCommander, KeepCommander, RawBookmarkRepresentation, SocialShare }
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
@@ -45,5 +46,9 @@ class ShoeboxDiscussionController @Inject() (
       val csKeep = keepCommander.getCrossServiceKeeps(Set(keep.id.get)).get(keep.id.get).get
       Ok(Json.toJson(csKeep))
     } else Forbidden(Json.obj("error" -> "cannot_write_to_library"))
+  }
+
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]) = Action { request =>
+    Ok(Json.obj("canComment" -> Json.toJson(keepCommander.canCommentOnKeep(userId, keepId))))
   }
 }

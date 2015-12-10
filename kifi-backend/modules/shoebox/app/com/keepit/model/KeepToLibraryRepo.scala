@@ -28,7 +28,7 @@ trait KeepToLibraryRepo extends Repo[KeepToLibrary] {
   def getByUserIdAndLibraryId(userId: Id[User], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary]
   def getByKeepIdAndLibraryId(keepId: Id[Keep], libraryId: Id[Library], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Option[KeepToLibrary]
 
-  def getByLibraryFromTimeAndId(libraryId: Id[Library], fromDateOpt: Option[DateTime], fromIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
+  def getByLibraryAddedAfter(libraryId: Id[Library], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary]
 
   def getVisibileFirstOrderImplicitKeeps(uriIds: Set[Id[NormalizedURI]], libraryIds: Set[Id[Library]])(implicit session: RSession): Set[KeepToLibrary]
 
@@ -143,14 +143,15 @@ class KeepToLibraryRepoImpl @Inject() (
     getByUserIdAndLibraryIdHelper(userId, libraryId, excludeStateOpt).list
   }
 
-  def getByLibraryFromTimeAndId(libraryId: Id[Library], fromDateOpt: Option[DateTime], fromIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary] = {
+  def getByLibraryAddedAfter(libraryId: Id[Library], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary] = {
     val inLibrary = activeRows.filter(row => row.libraryId === libraryId)
-    val filtered = (fromDateOpt, fromIdOpt) match {
-      case (None, _) => inLibrary
-      case (Some(fromDate), None) => inLibrary.filter(ktl => ktl.addedAt > fromDate)
-      case (Some(fromDate), Some(fromId)) => inLibrary.filter(ktl => ktl.addedAt > fromDate || (ktl.addedAt === fromDate && ktl.id > fromId))
+    val filtered = afterIdOpt match {
+      case None => inLibrary
+      case Some(afterId) =>
+        val afterAddedAt = get(afterId).addedAt
+        inLibrary.filter(ktl => ktl.addedAt > afterAddedAt || (ktl.addedAt === afterAddedAt && ktl.id > afterId))
     }
-    filtered.sortBy(_.addedAt asc).list
+    filtered.sortBy(r => (r.addedAt asc, r.id asc)).list
   }
 
   def getAllByOrganizationId(orgId: Id[Organization], excludeStateOpt: Option[State[KeepToLibrary]] = Some(KeepToLibraryStates.INACTIVE))(implicit session: RSession): Seq[KeepToLibrary] = {
@@ -193,14 +194,9 @@ class KeepToLibraryRepoImpl @Inject() (
       case Some(orgId) => (for (ktl <- rows if ktl.libraryId === libraryId && (ktl.organizationId.isEmpty || ktl.organizationId =!= orgId)) yield ktl).take(limit.value).list.toSet
     }
   }
+
   def getFromLibrarySince(since: DateTime, library: Id[Library], max: Int)(implicit session: RSession): Seq[KeepToLibrary] = {
     (for (ktl <- rows if ktl.libraryId === library && ktl.state === KeepToLibraryStates.ACTIVE && ktl.addedAt > since) yield ktl).sortBy(ktl => (ktl.addedAt asc, ktl.id)).take(max).list
-  }
-  def librariesWithMostKeepsSince(count: Int, since: DateTime)(implicit session: RSession): Seq[(Id[Library], Int)] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    // TODO(ryan): rethink this query, do we acually need the load whole set of a library's keeps?
-    // Can't we use `library.last_kept`?
-    sql"""select b.library_id, count(*) as cnt from keep_to_library b, library l where l.id = b.library_id and l.state='active' and l.visibility='published' and b.added_at > $since group by b.library_id order by count(*) desc limit $count""".as[(Id[Library], Int)].list
   }
 
   def getRecentFromLibraries(libraryIds: Set[Id[Library]], limit: Limit, beforeIdOpt: Option[Id[KeepToLibrary]], afterIdOpt: Option[Id[KeepToLibrary]])(implicit session: RSession): Seq[KeepToLibrary] = {

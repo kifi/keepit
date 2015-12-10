@@ -1,63 +1,50 @@
-// see https://developer.mozilla.org/en-US/docs/Places_Developer_Guide
+// see https://developer.mozilla.org/en-US/Add-ons/SDK/Low-Level_APIs/places_bookmarks
 /*jshint globalstrict:true */
 'use strict';
 
-var { Cc, Ci } = require('chrome')
-var bookmarks = Cc["@mozilla.org/browser/nav-bookmarks-service;1"].getService(Ci.nsINavBookmarksService);
-var history = Cc["@mozilla.org/browser/nav-history-service;1"].getService(Ci.nsINavHistoryService);
+var { search, TOOLBAR, MENU, UNSORTED } = require('sdk/places/bookmarks');
+var httpRe = /^https?:/;
 
-function identity(x) {
-  return x;
+function isFirefoxDefaultBookmark(bookmark) {
+  var hasDefaultTitle = (bookmark.group.title === 'Mozilla Firefox');
+  var isGettingStarted = (bookmark.url === 'https://www.mozilla.org/en-US/firefox/central/' && bookmark.group.id === TOOLBAR.id);
+  return hasDefaultTitle || isGettingStarted;
+}
+
+function getPath(node) {
+  var systemFolderIds = [
+    TOOLBAR.id,
+    MENU.id,
+    UNSORTED.id
+  ];
+  var path = [];
+
+  node = node.group;
+  while (node && systemFolderIds.indexOf(node.id) === -1) {
+    path = path.concat(node.title.trim());
+    node = node.group;
+  }
+
+  return path;
 }
 
 exports.getAll = function(callback) {
-  var systemFolderIds = [
-    bookmarks.placesRoot,
-    bookmarks.bookmarksMenuFolder,
-    bookmarks.toolbarFolder,
-    bookmarks.unfiledBookmarksFolder,
-  ];
+  search({
+    query: '' // wildcard
+  })
+  .on('end', function (bookmarks) {
+    var kifiBookmarks = bookmarks.map(function (b) {
+      if (httpRe.test(b.url) && !isFirefoxDefaultBookmark(b)) {
+        return {
+          title: b.title,
+          url: b.url,
+          addedAt: Math.round(b.updated / 1000),
+          path: getPath(b),
+          tags: b.tags.size ? Array.from(b.tags) : undefined // tags is a Set, so we need to Array.from it
+        };
+      }
+    }).filter(Boolean);
 
-  var query = history.getNewQuery();
-  query.setFolders([bookmarks.placesRoot], 1);
-  var root = history.executeQuery(query, history.getNewQueryOptions()).root;
-
-  var arr = [], path, httpRe = /^https?:/, commaRe = /\s*(?:,\s*)+/;
-
-  !function traverse(node) {
-    switch (node.type) {
-      case node.RESULT_TYPE_FOLDER:
-        if (node.itemId !== bookmarks.tagsFolder && !(node.title === 'Mozilla Firefox' && node.parent.itemId === bookmarks.bookmarksMenuFolder)) {
-          node.QueryInterface(Ci.nsINavHistoryContainerResultNode);
-          node.containerOpen = true;
-
-          var name = systemFolderIds.indexOf(node.itemId) < 0 && node.title.trim();
-          if (name) {
-            path = path ? path.concat([name]) : [name];
-          }
-          for (let i = 0, n = node.childCount; i < n; ++i) {
-            traverse(node.getChild(i));
-          }
-          if (name) {
-            path = path.length > 1 ? path.slice(0, -1) : undefined;
-          }
-        }
-        break;
-      case node.RESULT_TYPE_URI:
-        if (httpRe.test(node.uri) && !(node.uri === 'https://www.mozilla.org/en-US/firefox/central/' && node.parent.itemId === bookmarks.toolbarFolder)) {
-          var tags = (node.tags || '').trim();
-          tags = tags && tags.split(commaRe).filter(identity);
-          arr.push({
-            title: node.title,
-            url: node.uri,
-            addedAt: Math.round(node.dateAdded / 1000),
-            path: path,
-            tags: tags.length ? tags : undefined
-          });
-        }
-        break;
-    }
-  }(root);
-
-  callback(arr);
+    callback(kifiBookmarks);
+  });
 };

@@ -67,76 +67,7 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
       deserialized(2) === collectionSummaries(2)
       deserialized(3) === collectionSummaries(3)
     }
-    "allow the keepRepo to query by a specific collection" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
-        db.readWrite { implicit s =>
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll2.id.get))
-        }
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Apparel", "Cooking", "Scala")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Apparel", "Cooking", "Scala")
-          keepRepo.getByUserAndCollection(user1.id.get, coll1.id.get, None, None, 5) must haveLength(2)
-          keepRepo.getByUser(user1.id.get, None, None, 5) must haveLength(2)
-          keepRepo.getByUserAndCollection(user1.id.get, coll2.id.get, None, None, 5) must haveLength(1)
-          keepRepo.getByUserAndCollection(user1.id.get, coll3.id.get, None, None, 5) must beEmpty
-        }
-      }
-    }
-    "work" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
-        db.readWrite { implicit s =>
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll3.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
-        }
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 2, coll2.id.get -> 0, coll3.id.get -> 1)
-        }
-        db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Scala", "Apparel")
-          keepToCollectionRepo.count(coll1.id.get) === 2
-        }
-        db.readWrite { implicit s =>
-          keepRepo.save(bookmark1.withActive(false))
-        }
-        db.readOnlyMaster { implicit s =>
-          keepToCollectionRepo.count(coll1.id.get) === 1
-        }
 
-        sessionProvider.doWithoutCreatingSessions {
-          db.readOnlyMaster { implicit s =>
-            collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-            collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          }
-        }
-
-        db.readWrite { implicit s =>
-          keepToCollectionRepo.getByKeep(bookmark1.id.get).groupBy(_.collectionId).foreach {
-            case (collectionId, _) => collectionRepo.collectionChanged(collectionId, inactivateIfEmpty = false)
-          }
-        }
-        db.readOnlyMaster { implicit s =>
-          collectionRepo.getBookmarkCount(coll1.id.get) === 1
-          collectionRepo.getBookmarkCounts(Set(coll1.id.get, coll2.id.get, coll3.id.get)) === Map(coll1.id.get -> 1, coll2.id.get -> 0, coll3.id.get -> 1)
-        }
-
-        coll2.isActive must beTrue
-        db.readWrite { implicit s =>
-          collectionRepo.collectionChanged(coll2.id.get, inactivateIfEmpty = true)
-        }.isActive must beFalse
-
-      }
-    }
     "separate collections by user" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
@@ -152,21 +83,7 @@ class CollectionTest extends Specification with CommonTestInjector with DbInject
         }
       }
     }
-    "delete tag from keep" in {
-      withDb(modules: _*) { implicit injector =>
-        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
-        db.readWrite { implicit s =>
-          collectionRepo.getUnfortunatelyIncompleteTagsByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(user1.id.get).map(_.name.tag).toSet === Set("Cooking", "Apparel", "Scala")
-          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark1.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.save(KeepToCollection(keepId = bookmark2.id.get, collectionId = coll1.id.get))
-          keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
-          keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get)
-          keepToCollectionRepo.getKeepsForTag(coll1.id.get).toSet === Set(bookmark2.id.get)
-          keepToCollectionRepo.remove(bookmark1.id.get, coll1.id.get) should not(throwAn[Exception])
-        }
-      }
-    }
+
     "get and cache collection ids for a bookmark" in {
       withDb(modules: _*) { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()

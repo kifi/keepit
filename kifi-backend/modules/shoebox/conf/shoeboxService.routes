@@ -332,6 +332,7 @@ GET     /about/join_us.html         @com.keepit.controllers.website.HomeControll
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
 GET     /integrations/slack         @com.keepit.controllers.website.HomeController.route(path = "integrations/slack")
+GET     /integrations/slack_v2      @com.keepit.controllers.website.HomeController.route(path = "integrations/slackv2")
 GET     /imports/pinboard           @com.keepit.controllers.website.HomeController.route(path = "imports/pinboard")
 GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
 GET     /imports/instapaper         @com.keepit.controllers.website.HomeController.route(path = "imports/instapaper")
@@ -398,9 +399,6 @@ POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsContro
 POST    /site/collections/:id/rename @com.keepit.controllers.website.KeepsController.renameCollection(id: ExternalId[Collection])
 GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
-#### Deprecated: use /site/user-or-org/:handle/libraries/:slug
-GET     /site/users/:handle/libraries/:slug    @com.keepit.controllers.website.LibraryController.getLibraryByHandleAndSlug(handle: Handle, slug: LibrarySlug, authToken: Option[String] ?= None)
-
 # Profile pages
 GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.getProfile(name: Username)
 GET     /site/user/:name/libraries  @com.keepit.controllers.website.UserProfileController.getProfileLibraries(name: Username, page: Int ?= 0, size: Int ?= 12, filter: String ?= "own")
@@ -420,6 +418,7 @@ GET     /site/libraries/marketing-suggestions   @com.keepit.controllers.website.
 
 GET     /site/libraries/:id         @com.keepit.controllers.website.LibraryController.getLibraryById(id: PublicId[Library], showPublishedLibraries: Boolean ?= false, is: Option[String] ?= None)
 GET     /site/libraries/:id/summary         @com.keepit.controllers.website.LibraryController.getLibrarySummaryById(id: PublicId[Library])
+GET     /site/libraries/:id/updates         @com.keepit.controllers.website.LibraryController.getLibraryUpdates(id: PublicId[Library], since: DateTime)
 POST    /site/libraries/:id/modify  @com.keepit.controllers.website.LibraryController.modifyLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/delete  @com.keepit.controllers.website.LibraryController.removeLibrary(id: PublicId[Library])
 POST    /site/libraries/:id/invite  @com.keepit.controllers.website.LibraryController.inviteUsersToLibrary(id: PublicId[Library])
@@ -1028,6 +1027,7 @@ POST    /internal/shoebox/user/addInteractions            @com.keepit.controller
 GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
 
 POST    /internal/shoebox/database/internKeep    @com.keepit.controllers.internal.ShoeboxDiscussionController.internKeep()
+GET     /internal/shoebox/database/canCommentOnKeep @com.keepit.controllers.internal.ShoeboxDiscussionController.canCommentOnKeep(userId: Id[User], keepId: Id[Keep])
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)

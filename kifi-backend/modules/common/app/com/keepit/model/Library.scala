@@ -46,7 +46,8 @@ case class Library(
     keepCount: Int = 0,
     whoCanInvite: Option[LibraryInvitePermissions] = None,
     organizationId: Option[Id[Organization]] = None,
-    organizationMemberAccess: Option[LibraryAccess] = None) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    organizationMemberAccess: Option[LibraryAccess] = None,
+    whoCanComment: LibraryCommentPermissions = LibraryCommentPermissions.COLLABORATOR) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def sanitizeForDelete: Library = this.copy(
     name = RandomStringUtils.randomAlphanumeric(20),
@@ -63,6 +64,7 @@ case class Library(
   val isSecret: Boolean = visibility == LibraryVisibility.SECRET
   def canBeModified: Boolean = kind == LibraryKind.USER_CREATED || kind == LibraryKind.SYSTEM_PERSONA
   def isSystemLibrary: Boolean = !canBeModified
+  def canAnyoneComment: Boolean = whoCanComment == LibraryCommentPermissions.ANYONE
 
   def space: LibrarySpace = LibrarySpace(ownerId, organizationId)
 
@@ -100,8 +102,9 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     keepCount: Int,
     whoCanInvite: Option[LibraryInvitePermissions],
     organizationId: Option[Id[Organization]],
-    organizationMemberAccess: Option[LibraryAccess]) = {
-    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId, organizationMemberAccess)
+    organizationMemberAccess: Option[LibraryAccess],
+    whoCanComment: LibraryCommentPermissions) = {
+    Library(id, createdAt, updatedAt, getDisplayName(name, kind), ownerId, visibility, description, slug, color, state, seq, kind, universalLink, memberCount, lastKept, keepCount, whoCanInvite, organizationId, organizationMemberAccess, whoCanComment)
   }
 
   def unapplyToDbRow(lib: Library) = {
@@ -124,7 +127,9 @@ object Library extends ModelWithPublicIdCompanion[Library] {
       lib.keepCount,
       lib.whoCanInvite,
       lib.organizationId,
-      lib.organizationMemberAccess)
+      lib.organizationMemberAccess,
+      lib.whoCanComment
+    )
   }
 
   protected[this] val publicIdPrefix = "l"
@@ -149,7 +154,8 @@ object Library extends ModelWithPublicIdCompanion[Library] {
     (__ \ 'keepCount).format[Int] and
     (__ \ 'whoCanInvite).formatNullable[LibraryInvitePermissions] and
     (__ \ "orgId").formatNullable[Id[Organization]] and
-    (__ \ "orgMemberAccess").formatNullable[LibraryAccess]
+    (__ \ "orgMemberAccess").formatNullable[LibraryAccess] and
+    (__ \ "whoCanComment").format[LibraryCommentPermissions]
   )(Library.apply, unlift(Library.unapply))
 
   def isValidName(name: String): Boolean = {
@@ -241,7 +247,7 @@ object LibraryPathHelper {
 }
 
 case class LibraryIdKey(id: Id[Library]) extends Key[Library] {
-  override val version = 9
+  override val version = 10
   val namespace = "library_by_id"
   def toKey(): String = id.id.toString
 }

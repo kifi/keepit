@@ -260,13 +260,11 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
 
         val validatedOrgs = (res1 \ "orgs").validate[Seq[JsObject]]
         validatedOrgs.isSuccess === true
-        val org1Response = validatedOrgs.get.head
-        (org1Response \ "id").as[PublicId[Organization]] === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
-        (org1Response \ "members").as[Seq[JsValue]].exists(json => (json \ "id").as[ExternalId[User]] == user1.externalId) === true
+        validatedOrgs.get.length === 0 // we don't expose a user's orgs to anyone but themselves
 
         val validatedPendingOrgs = (res1 \ "pendingOrgs").validate[Seq[JsObject]]
         validatedPendingOrgs.isSuccess === true
-        validatedPendingOrgs.get.length === 1
+        validatedPendingOrgs.get.length === 0
 
         //seeing a profile of my own
         val selfViewer = getProfile(Some(user1), user1.username)
@@ -317,8 +315,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (ownLib \ "id").as[PublicId[Library]] must equalTo(pubId1)
         (ownLib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (ownLib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.PUBLISHED)
-        (ownLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER))))
-        (ownLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER)))
+        (ownLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
+        (ownLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false))
         (ownLib \ "followers").as[Seq[BasicUser]].head.externalId must equalTo(user2.externalId)
         (ownLib \ "collaborators").as[Seq[BasicUser]].head.externalId must equalTo(user3.externalId)
 
@@ -331,8 +329,8 @@ class UserProfileControllerTest extends Specification with ShoeboxTestInjector {
         (followingLib \ "id").as[PublicId[Library]] must equalTo(pubId3)
         (followingLib \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (followingLib \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.SECRET)
-        (followingLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.READ_ONLY, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib3, Some(LibraryAccess.READ_ONLY))))
-        (followingLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib3, Some(LibraryAccess.READ_ONLY)))
+        (followingLib \ "membership").as[LibraryMembershipInfo] must equalTo(LibraryMembershipInfo(LibraryAccess.READ_ONLY, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib3, Some(LibraryAccess.READ_ONLY), includeOrgWriteAccess = false)))
+        (followingLib \ "permissions").as[Set[LibraryPermission]] must equalTo(permissionCommander.libraryPermissionsByAccess(lib3, Some(LibraryAccess.READ_ONLY), includeOrgWriteAccess = false))
 
         // test viewing invited libraries
         val result3 = getProfileLibraries(Some(user1), user1.username, 0, 10, "invited")

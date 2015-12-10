@@ -91,10 +91,10 @@ object SourceAttribution {
         case (Twitter, value) =>
           val updatedValue = for {
             obj <- value.validate[JsObject]
-            sourceObj <- (value \ "source").validate[JsObject]
-            oldFields <- PartialTwitterAttribution.fromRawTweetJson(sourceObj).flatMap(PartialTwitterAttribution.format.writes(_).validate[JsObject])
+            tweetObj <- (value \ "tweet").validate[JsObject]
+            oldFields <- PartialTwitterAttribution.fromRawTweetJson(tweetObj).flatMap(PartialTwitterAttribution.format.writes(_).validate[JsObject])
           } yield {
-            (obj - "source") + ("source" -> (sourceObj ++ oldFields))
+            (tweetObj ++ oldFields)
           }
           (Twitter.name, updatedValue getOrElse value)
         case (Slack, value) => (Slack.name, value)

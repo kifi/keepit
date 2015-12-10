@@ -66,6 +66,7 @@ trait KeepCommander {
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
@@ -127,6 +128,7 @@ class KeepCommanderImpl @Inject() (
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
     librarySubscriptionCommander: LibrarySubscriptionCommander,
+    permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
     implicit val defaultContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends KeepCommander with Logging {
@@ -195,6 +197,24 @@ class KeepCommanderImpl @Inject() (
           }
         }
         countMap.values.sum
+      }
+    }
+  }
+
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean = {
+    db.readOnlyReplica { implicit s =>
+      keepRepo.getOption(keepId) match {
+        case None =>
+          airbrake.notify(s"no keep found for id=${keepId.id}, user ${userId.id} can't comment")
+          false
+        case Some(keep) =>
+          keep.libraryId match {
+            case None =>
+              airbrake.notify(s"no library found for keepId=${keepId.id}, user ${userId.id} can't comment")
+              false
+            case Some(libId) =>
+              permissionCommander.getLibraryPermissions(libId, Some(userId)).contains(LibraryPermission.ADD_COMMENTS)
+          }
       }
     }
   }
@@ -775,7 +795,7 @@ class KeepCommanderImpl @Inject() (
         val keep = keepRepo.getNoCache(keepId)
         val tagsFromHashtags = Hashtags.findAllHashtagNames(keep.note.getOrElse("")).map(Hashtag.apply)
         val tagsFromCollections = collectionRepo.getHashtagsByKeepId(keep.id.get)
-        if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized)) {
+        if (tagsFromHashtags.map(_.normalized) != tagsFromCollections.map(_.normalized) && keep.isActive) {
           val newNote = Hashtags.addHashtagsToString(keep.note.getOrElse(""), tagsFromCollections.toSeq)
           if (keep.note.getOrElse("").toLowerCase != newNote.toLowerCase) {
             log.info(s"[autoFixKeepNoteAndTags] (${keep.id.get}) Previous note: '${keep.note.getOrElse("")}', new: '$newNote'")

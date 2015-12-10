@@ -6,7 +6,7 @@
           <h1>Settings</h1>
         </div>
         <ul>
-          <li class="kf-ops-nav-item" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'team-settings' }">
+          <li class="kf-ops-nav-item" ng-if="canViewPrivileges" ng-class="{ 'kf-ops-nav-active': state.current.activenav === 'team-settings' }">
             <a class="kf-link" ng-click="onClickTrack($event, 'clickPrivileges', 'main')" ui-sref="orgProfile.settings.team({ '#': 's-' })">Member Privileges</a>
           </li>
           <!-- sublisting -->
