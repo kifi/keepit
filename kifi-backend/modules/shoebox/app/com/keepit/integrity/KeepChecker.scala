@@ -1,7 +1,7 @@
 package com.keepit.integrity
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{Hashtags, KeepCommander, KeepToLibraryCommander, KeepToUserCommander}
+import com.keepit.commanders.{ Hashtags, KeepCommander, KeepToLibraryCommander, KeepToUserCommander }
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, SequenceNumber }
