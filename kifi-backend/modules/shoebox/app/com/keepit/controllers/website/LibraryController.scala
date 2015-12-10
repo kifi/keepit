@@ -133,7 +133,8 @@ class LibraryController @Inject() (
         whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
         subscriptions = externalLibraryModifyRequest.subscriptions,
         space = space,
-        orgMemberAccess = externalLibraryModifyRequest.orgMemberAccess
+        orgMemberAccess = externalLibraryModifyRequest.orgMemberAccess,
+        whoCanComment = externalLibraryModifyRequest.whoCanComment
       )
     }
 

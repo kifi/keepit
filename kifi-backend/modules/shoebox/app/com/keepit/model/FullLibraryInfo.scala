@@ -120,7 +120,8 @@ case class ExternalLibraryModifications(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   externalSpace: Option[ExternalLibrarySpace] = None,
-  orgMemberAccess: Option[LibraryAccess] = None)
+  orgMemberAccess: Option[LibraryAccess] = None,
+  whoCanComment: Option[LibraryCommentPermissions] = None)
 
 case class LibraryModifications(
   name: Option[String] = None,
@@ -132,7 +133,8 @@ case class LibraryModifications(
   whoCanInvite: Option[LibraryInvitePermissions] = None,
   subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None,
-  orgMemberAccess: Option[LibraryAccess] = None)
+  orgMemberAccess: Option[LibraryAccess] = None,
+  whoCanComment: Option[LibraryCommentPermissions] = None)
 object LibraryModifications {
   val adminReads: Reads[LibraryModifications] = (
     (__ \ 'name).readNullable[String] and
@@ -144,7 +146,8 @@ object LibraryModifications {
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[LibrarySpace] and
-    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess] and
+    (__ \ 'whoCanComment).readNullable[LibraryCommentPermissions]
   )(LibraryModifications.apply _)
 }
 
@@ -159,7 +162,8 @@ object ExternalLibraryModifications {
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
     (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace] and
-    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess] and
+    (__ \ 'whoCanComment).readNullable[LibraryCommentPermissions]
   )(ExternalLibraryModifications.apply _)
 
   val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
@@ -251,6 +255,7 @@ case class FullLibraryInfo(
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
   whoCanInvite: LibraryInvitePermissions,
+  whoCanComment: LibraryCommentPermissions,
   modifiedAt: DateTime,
   path: String,
   org: Option[BasicOrganizationView],
@@ -284,6 +289,7 @@ object FullLibraryInfo {
       "numFollowers" -> o.numFollowers,
       "attr" -> o.attr,
       "whoCanInvite" -> o.whoCanInvite,
+      "whoCanComment" -> o.whoCanComment,
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
       "org" -> o.org,

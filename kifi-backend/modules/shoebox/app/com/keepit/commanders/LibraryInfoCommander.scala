@@ -309,6 +309,7 @@ class LibraryInfoCommanderImpl @Inject() (
           lastKept = lib.lastKept,
           attr = attr,
           whoCanInvite = whoCanInvite,
+          whoCanComment = lib.whoCanComment,
           modifiedAt = lib.updatedAt,
           path = LibraryPathHelper.formatLibraryPath(owner = owner, orgHandleOpt = orgViewOpt.map(_.basicOrganization.handle), slug = lib.slug),
           org = orgViewOpt,
