@@ -689,5 +689,5 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
 
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Either[String, Boolean]] = Future.successful(Right(true))
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = Future.successful(true)
 }

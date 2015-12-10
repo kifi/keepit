@@ -132,7 +132,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Either[String, Boolean]]
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -852,18 +852,7 @@ class ShoeboxServiceClientImpl @Inject() (
     call(Shoebox.internal.getSourceAttributionForKeeps, payload).map { _.json.as[Map[Id[Keep], SourceAttribution]] }
   }
 
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Either[String, Boolean]] = {
-    call(Shoebox.internal.canCommentOnKeep(userId, keepId)).map { response =>
-      val obj = response.json.as[Map[String, JsValue]]
-      obj.get("error") match {
-        case Some(error) => Left(error.as[String])
-        case None =>
-          val canComment = obj.get("canComment").flatMap(_.asOpt[Boolean]).getOrElse {
-            airbrakeNotifier.notify("[canCommentOnKeep] bad response from ShoeboxDiscussionController.canCommentOnKeep, needs either 'error' or 'canComment'")
-            false
-          }
-          Right(canComment)
-      }
-    }
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = {
+    call(Shoebox.internal.canCommentOnKeep(userId, keepId)).map { response => (response.json \ "canKeep").as[Boolean] }
   }
 }

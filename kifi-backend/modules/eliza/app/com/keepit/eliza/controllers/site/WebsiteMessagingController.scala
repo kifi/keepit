@@ -64,17 +64,14 @@ class WebsiteMessagingController @Inject() (
         (request.body \ "text").asOpt[String] match {
           case None => Future.successful(BadRequest(Json.obj("error" -> "missing_text")))
           case Some(text) =>
-            shoebox.canCommentOnKeep(request.userId, keepId).flatMap { errOrCanKeep =>
-              errOrCanKeep match {
-                case Left(error) => Future.successful(BadRequest(Json.obj("error" -> error)))
-                case Right(false) => Future.successful(Forbidden(Json.obj("error" -> "insufficient_permissions")))
-                case Right(true) =>
-                  val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+            shoebox.canCommentOnKeep(request.userId, keepId).flatMap { canComment =>
+              if (canComment) {
+                val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
 
-                  discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { _ =>
-                    NoContent
-                  }
-              }
+                discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { _ =>
+                  NoContent
+                }
+              } else Future.successful(Forbidden)
             }
         }
     }

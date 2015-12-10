@@ -66,7 +66,7 @@ trait KeepCommander {
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Either[String, Boolean]
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
@@ -201,15 +201,19 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Either[String, Boolean] = {
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean = {
     db.readOnlyReplica { implicit s =>
       keepRepo.getOption(keepId) match {
-        case None => Left("no_keep_found")
+        case None =>
+          airbrake.notify(s"no keep found for id=${keepId.id}, user ${userId.id} can't comment")
+          false
         case Some(keep) =>
           keep.libraryId match {
-            case None => Left("no_library_found") // 12/8/15 all keeps have a library_id, so fallback behavior not spec'd
+            case None =>
+              airbrake.notify(s"no library found for keepId=${keepId.id}, user ${userId.id} can't comment")
+              false
             case Some(libId) =>
-              Right(permissionCommander.getLibraryPermissions(libId, Some(userId)).contains(LibraryPermission.ADD_COMMENTS))
+              permissionCommander.getLibraryPermissions(libId, Some(userId)).contains(LibraryPermission.ADD_COMMENTS)
           }
       }
     }

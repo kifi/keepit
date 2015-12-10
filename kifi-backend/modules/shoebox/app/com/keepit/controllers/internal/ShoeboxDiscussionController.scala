@@ -49,9 +49,6 @@ class ShoeboxDiscussionController @Inject() (
   }
 
   def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]) = Action { request =>
-    keepCommander.canCommentOnKeep(userId, keepId) match {
-      case Left(err) => Ok(Json.obj("error" -> err))
-      case Right(canComment) => Ok(Json.obj("canComment" -> canComment))
-    }
+    Ok(Json.obj("canKeep" -> Json.toJson(keepCommander.canCommentOnKeep(userId, keepId))))
   }
 }
