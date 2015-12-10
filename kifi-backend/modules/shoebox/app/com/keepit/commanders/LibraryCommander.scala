@@ -71,7 +71,6 @@ class LibraryCommanderImpl @Inject() (
     libraryInviteRepo: LibraryInviteRepo,
     slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     libraryToSlackChannelRepo: LibraryToSlackChannelRepo,
-    librarySubscriptionCommander: LibrarySubscriptionCommander,
     permissionCommander: PermissionCommander,
     libraryAccessCommander: LibraryAccessCommander,
     userRepo: UserRepo,
@@ -181,10 +180,6 @@ class LibraryCommanderImpl @Inject() (
           visibility = libCreateReq.visibility, slug = newSlug, color = newColor, kind = newKind,
           memberCount = 1, keepCount = 0, whoCanInvite = newInviteToCollab, organizationId = orgIdOpt, organizationMemberAccess = newOrgMemberAccessOpt))
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER, listed = newListed, lastJoinedAt = Some(currentDateTime)))
-        libCreateReq.subscriptions match {
-          case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
-          case None =>
-        }
         lib
       case Some(lib) =>
         val newLib = libraryRepo.save(Library(id = lib.id, ownerId = ownerId,
@@ -193,10 +188,6 @@ class LibraryCommanderImpl @Inject() (
         libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId = lib.id.get, userId = ownerId, None) match {
           case None => libraryMembershipRepo.save(LibraryMembership(libraryId = lib.id.get, userId = ownerId, access = LibraryAccess.OWNER))
           case Some(mem) => libraryMembershipRepo.save(mem.copy(state = LibraryMembershipStates.ACTIVE, listed = newListed))
-        }
-        libCreateReq.subscriptions match {
-          case Some(subKeys) => librarySubscriptionCommander.updateSubsByLibIdAndKey(lib.id.get, subKeys)
-          case None =>
         }
         newLib
     }
@@ -250,21 +241,6 @@ class LibraryCommanderImpl @Inject() (
       }
     }
 
-    def validateIntegration(newSubscriptions: Option[Seq[LibrarySubscriptionKey]], oldSpace: LibrarySpace, newSpace: LibrarySpace): Option[LibraryFail] = {
-      val areSubKeysValidOpt = newSubscriptions.map(subs => subs.forall {
-        case LibrarySubscriptionKey(name, info: SlackInfo, _) => name.length < 33 && "^https://hooks.slack.com/services/.*/.*/.*[^/]$".r.findFirstIn(info.url).isDefined
-        case _ => false // unsupported type
-      })
-
-      (newSubscriptions.exists(_.nonEmpty), areSubKeysValidOpt, oldSpace, newSpace) match {
-        case (true, Some(false), _, _) => Some(LibraryFail(BAD_REQUEST, "subscription_key_format"))
-        case (true, _, oldSpace: UserSpace, newSpace: OrganizationSpace) => None // allow members with existing subscriptions to transfer them to orgs sans permissions (grandfathered feature)
-        case (true, _, _, newSpace: OrganizationSpace) if db.readOnlyReplica { implicit session => !permissionCommander.getOrganizationPermissions(newSpace.id, Some(userId)).contains(OrganizationPermission.CREATE_SLACK_INTEGRATION) } =>
-          Some(LibraryFail(FORBIDDEN, "create_slack_integration_permission"))
-        case _ => None
-      }
-    }
-
     val newSpace = modifyReq.space.getOrElse(library.space)
     val oldSpace = library.space
     val errorOpts = Stream(
@@ -272,8 +248,7 @@ class LibraryCommanderImpl @Inject() (
       validateSpace(modifyReq.space),
       validateName(modifyReq.name, newSpace),
       validateSlug(modifyReq.slug, newSpace),
-      validateVisibility(modifyReq.visibility, newSpace),
-      validateIntegration(modifyReq.subscriptions, oldSpace, newSpace)
+      validateVisibility(modifyReq.visibility, newSpace)
     )
     errorOpts.flatten.headOption
   }
@@ -319,7 +294,6 @@ class LibraryCommanderImpl @Inject() (
     val newName = modifyReq.name.getOrElse(library.name)
     val newVisibility = modifyReq.visibility.getOrElse(library.visibility)
 
-    val newSubKeysOpt = modifyReq.subscriptions
     val newDescription = modifyReq.description.orElse(library.description)
     val newColor = modifyReq.color.orElse(library.color)
     val newInviteToCollab = modifyReq.whoCanInvite.orElse(library.whoCanInvite)
@@ -328,13 +302,6 @@ class LibraryCommanderImpl @Inject() (
       case None => library.organizationMemberAccess
     }
     val newLibraryCommentPermissions = modifyReq.whoCanComment.getOrElse(library.whoCanComment)
-
-    // New library subscriptions
-    newSubKeysOpt.foreach { newSubKeys =>
-      db.readWrite { implicit s =>
-        librarySubscriptionCommander.updateSubsByLibIdAndKey(library.id.get, newSubKeys)
-      }
-    }
 
     val modifiedLibrary = db.readWrite { implicit s =>
       if (newSpace != currentSpace || newSlug != currentSlug) {

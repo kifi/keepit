@@ -116,7 +116,6 @@ class ExtLibraryController @Inject() (
             color = externalCreateRequest.color,
             listed = externalCreateRequest.listed,
             whoCanInvite = externalCreateRequest.whoCanInvite,
-            subscriptions = externalCreateRequest.subscriptions,
             space = space
           )
         }
