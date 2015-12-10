@@ -584,8 +584,8 @@ angular.module('kifi')
       }, interval);
 
       function clickToRefresh() {
-        //$timeout.cancel(deregisterUpdateLibrary);
-        //knownUpdatesPending = -1;
+        $timeout.cancel(deregisterUpdateLibrary);
+        knownUpdatesPending = -1;
         $scope.$broadcast('keepUpdatesPending', -1);
       }
     };
