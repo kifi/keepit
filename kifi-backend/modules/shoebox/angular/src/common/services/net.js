@@ -98,7 +98,8 @@ angular.module('kifi')
       // eliza
       addMessageToKeepDiscussion: post(eliza, '/keeps/:id/message'),
       // ?limit={{number}}&fromId={{Option(String))}}
-      getMessagesForKeepDiscussion: get(eliza, '/keeps/:id/messages?limit=:limit&fromId=:fromId')
+      getMessagesForKeepDiscussion: get(eliza, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),
+      markDiscussionAsRead: post(eliza, '/keeps/markAsRead')
     };
 
     function get(base, pathSpec, cacheSec) {
