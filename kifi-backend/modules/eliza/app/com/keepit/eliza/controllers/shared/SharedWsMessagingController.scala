@@ -78,7 +78,9 @@ class SharedWsMessagingController @Inject() (
         log.info(s"[get_thread] user ${socket.userId} thread $threadId")
         for {
           (thread, msgs) <- basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId))
-          keepOpt <- thread.keepId.map(kid => shoebox.getBasicKeepsByIds(Set(kid)).map(res => res.values.headOption)).getOrElse(Future.successful(None))
+          keepOpt <- thread.keepId.map { kid =>
+            shoebox.getDiscussionKeepsByIds(socket.userId, Set(kid)).map(res => res.values.headOption).recover { case _ => None }
+          }.getOrElse(Future.successful(None))
         } {
           SafeFuture(socket.channel.push(Json.arr(
             "thread", Json.obj(
@@ -119,11 +121,11 @@ class SharedWsMessagingController @Inject() (
     // inbox notification/thread handlers
     "get_one_thread" -> {
       case JsNumber(requestId) +: JsString(threadId) +: _ =>
-        val fut = notificationDeliveryCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId), needsPageImages(socket))
-        fut.foreach { json =>
+        (for {
+          json <- notificationDeliveryCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId), needsPageImages(socket))
+        } yield {
           socket.channel.push(Json.arr(requestId.toLong, json.obj))
-        }
-        fut.onFailure {
+        }).onFailure {
           case f =>
             airbrake.notify(f)
             socket.channel.push(Json.arr("server_error", requestId.toLong))
