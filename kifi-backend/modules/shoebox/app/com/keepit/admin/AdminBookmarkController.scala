@@ -310,6 +310,9 @@ class AdminBookmarksController @Inject() (
 
   def backfillTwitterAttribution(fromPage: Int, pageSize: Int) = AdminUserAction { implicit request =>
     SafeFuture {
+      val keepIdsByTweetId = db.readOnlyMaster { implicit session =>
+        sourceRepo.getPartialTwitterAttribution()
+      }
       def isFromTwitter(source: KeepSource) = source == KeepSource.twitterSync || source == KeepSource.twitterFileImport
       var page = fromPage
       var lastProcessed = 0
@@ -320,8 +323,7 @@ class AdminBookmarksController @Inject() (
           rawKeepsFromTwitter.foreach { rawKeep =>
             rawKeep.originalJson.foreach { sourceJson =>
               RawTweet.reads.reads(sourceJson).foreach { tweet =>
-                uriInterner.getByUri(rawKeep.url).foreach { uri =>
-                  val keepIds = keepRepo.getByUri(uri.id.get, excludeState = None).collect { case keep if isFromTwitter(keep.source) => keep.id.get }.toSet
+                keepIdsByTweetId.get(tweet.id).foreach { keepIds =>
                   sourceRepo.getByKeepIds(keepIds).foreach {
                     case (keepId, PartialTwitterAttribution(tweetIdStr, _)) if tweet.id.id.toString == tweetIdStr =>
                       sourceRepo.save(keepId, TwitterAttribution(tweet))
