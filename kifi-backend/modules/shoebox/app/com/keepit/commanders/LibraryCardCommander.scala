@@ -149,7 +149,8 @@ class LibraryCardCommanderImpl @Inject() (
         path = path,
         modifiedAt = lib.updatedAt,
         org = basicOrgViewOpt,
-        orgMemberAccess = lib.organizationMemberAccess)
+        orgMemberAccess = lib.organizationMemberAccess,
+        whoCanComment = lib.whoCanComment)
       (info, viewerMemOpt, subscriptions)
     }
   }
@@ -180,7 +181,8 @@ class LibraryCardCommanderImpl @Inject() (
       kind = lib.kind,
       path = path,
       org = orgView,
-      orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None
+      orgMemberAccess = if (lib.organizationId.isDefined) Some(lib.organizationMemberAccess.getOrElse(LibraryAccess.READ_WRITE)) else None,
+      whoCanComment = lib.whoCanComment
     )
   }
 
@@ -235,7 +237,8 @@ class LibraryCardCommanderImpl @Inject() (
               path = info.path,
               kind = lib.kind,
               org = info.org,
-              orgMemberAccess = lib.organizationMemberAccess
+              orgMemberAccess = lib.organizationMemberAccess,
+              whoCanComment = lib.whoCanComment
             )
         }.seq.sortBy(_._1).map(_._2)
       }

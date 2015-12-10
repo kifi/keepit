@@ -30,25 +30,25 @@ case class LibraryCardInfo(
   kind: LibraryKind,
   path: String,
   org: Option[BasicOrganizationView],
-  orgMemberAccess: Option[LibraryAccess])
+  orgMemberAccess: Option[LibraryAccess],
+  whoCanComment: LibraryCommentPermissions)
 
 object LibraryCardInfo {
   // Ugh...what choices did I make in my life that have led me here, to this point?
   // TODO(ryan): pray for forgiveness
   private type LibraryCardInfoFirstArguments = (PublicId[Library], String, Option[String], Option[LibraryColor], Option[LibraryImageInfo], LibrarySlug, LibraryVisibility, BasicUser, Int, Int, Seq[BasicUser], Int, Seq[BasicUser])
-  private type LibraryCardInfoSecondArguments = (DateTime, Option[Boolean], Option[LibraryMembershipInfo], Option[LibraryInviteInfo], Set[LibraryPermission], Option[String], DateTime, LibraryKind, String, Option[BasicOrganizationView], Option[LibraryAccess])
+  private type LibraryCardInfoSecondArguments = (DateTime, Option[Boolean], Option[LibraryMembershipInfo], Option[LibraryInviteInfo], Set[LibraryPermission], Option[String], DateTime, LibraryKind, String, Option[BasicOrganizationView], Option[LibraryAccess], LibraryCommentPermissions)
   private def fromSadnessTuples(firsts: LibraryCardInfoFirstArguments, seconds: LibraryCardInfoSecondArguments): LibraryCardInfo = (firsts, seconds) match {
     case (
       (id, name, description, color, image, slug, visibility, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators),
-      (lastKept, following, membership, invite, permissions, caption, modifiedAt, kind, path, org, orgMemberAccess)
+      (lastKept, following, membership, invite, permissions, caption, modifiedAt, kind, path, org, orgMemberAccess, whoCanComment)
       ) =>
       LibraryCardInfo(id, name, description, color, image, slug, visibility, owner, numKeeps, numFollowers, followers, numCollaborators, collaborators,
-        lastKept, following, membership, invite, permissions, caption, modifiedAt, kind, path, org, orgMemberAccess
-      )
+        lastKept, following, membership, invite, permissions, caption, modifiedAt, kind, path, org, orgMemberAccess, whoCanComment)
   }
   private def toSadnessTuples(lci: LibraryCardInfo): (LibraryCardInfoFirstArguments, LibraryCardInfoSecondArguments) = {
     ((lci.id, lci.name, lci.description, lci.color, lci.image, lci.slug, lci.visibility, lci.owner, lci.numKeeps, lci.numFollowers, lci.followers, lci.numCollaborators, lci.collaborators),
-      (lci.lastKept, lci.following, lci.membership, lci.invite, lci.permissions, lci.caption, lci.modifiedAt, lci.kind, lci.path, lci.org, lci.orgMemberAccess))
+      (lci.lastKept, lci.following, lci.membership, lci.invite, lci.permissions, lci.caption, lci.modifiedAt, lci.kind, lci.path, lci.org, lci.orgMemberAccess, lci.whoCanComment))
   }
 
   val internalFormat: Format[LibraryCardInfo] = {
@@ -78,7 +78,8 @@ object LibraryCardInfo {
       (__ \ 'kind).format[LibraryKind] and
       (__ \ 'path).format[String] and
       (__ \ 'org).formatNullable[BasicOrganizationView] and
-      (__ \ 'orgMemberAccess).formatNullable[LibraryAccess]
+      (__ \ 'orgMemberAccess).formatNullable[LibraryAccess] and
+      (__ \ 'whoCanComment).format[LibraryCommentPermissions]
     ).tupled
     (formatFirst and formatSecond)(fromSadnessTuples, toSadnessTuples)
   }
