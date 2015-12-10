@@ -73,7 +73,11 @@ object NormalizedHostname extends Logging {
   private val MaxLength = 256
   def isValid(s: String): Boolean = DomainRegex.pattern.matcher(s).matches && s.length < MaxLength && Try(IDN.toASCII(s)).isSuccess
 
-  def fromHostname(hostname: String): Option[NormalizedHostname] = {
+  def fromHostname(hostname: String, allowInvalid: Boolean = false): Option[NormalizedHostname] = {
+    // “Why would you ALLOW invalid domains,” you may ask. Well, see…, this is used in weird places, such as
+    // keeper position for users. They send domains, we save the position. For that case, we shouldn't be using
+    // Domain at all. If they want to send garbage, there's no risk persisting that because it's user-specific.
+    // But, to keep things the way they are, we need to allow non-actual domains (like 'localhost').
     Try(NormalizedHostname(IDN.toASCII(hostname.trim).toLowerCase)).toOption
       .filter(hostname => isValid(hostname.value))
   }
@@ -81,7 +85,7 @@ object NormalizedHostname extends Logging {
   implicit val format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
     def reads(json: JsValue): JsResult[NormalizedHostname] = {
       val trimmed = json.as[String].trim
-      NormalizedHostname.fromHostname(trimmed).map(JsSuccess(_)).getOrElse { log.error(s"[NormalizedHostname] invalid hostname: $trimmed"); JsError("invalid_hostname") }
+      NormalizedHostname.fromHostname(trimmed, allowInvalid = true).map(JsSuccess(_)).getOrElse { log.error(s"[NormalizedHostname] invalid hostname: $trimmed"); JsError("invalid_hostname") }
     }
     def writes(o: NormalizedHostname) = JsString(o.value)
   }
