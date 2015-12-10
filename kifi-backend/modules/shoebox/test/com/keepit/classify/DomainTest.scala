@@ -66,7 +66,7 @@ class DomainTest extends Specification with ShoeboxTestInjector {
           val saved = domainRepo.save(domain1)
           val inactive = domainRepo.save(domain2.copy(state = DomainStates.INACTIVE))
 
-          val internedDomains = domainRepo.internAllByNames(Set("google.com", "apple.com").flatMap(NormalizedHostname.fromHostname))
+          val internedDomains = domainRepo.internAllByNames(Set("google.com", "apple.com").flatMap(NormalizedHostname.fromHostname(_).toSeq))
           internedDomains.keys.toSet === Set("google.com", "apple.com").map(NormalizedHostname.apply)
         }
       }
