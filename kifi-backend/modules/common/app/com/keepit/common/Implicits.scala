@@ -5,7 +5,7 @@ import play.api.libs.json._
 
 import scala.collection.IterableLike
 import scala.collection.generic.CanBuildFrom
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContext => ScalaExCtxt, Future }
 
 final class AnyExtensionOps[A](val x: A) extends AnyVal {
   // forward pipe operator, analogous to the Unix pipe.
@@ -40,6 +40,9 @@ final class TryExtensionOps[A](val x: scala.util.Try[A]) extends AnyVal {
 final class FutureExtensionOps[A](x: => Future[A]) {
   def imap[S](g: A => S): Future[S] = {
     x.map(g)(ExecutionContext.immediate)
+  }
+  def collectWith(pf: PartialFunction[A, Future[A]])(implicit exCtxt: ScalaExCtxt): Future[A] = {
+    x.flatMap { v => pf.lift.apply(v).getOrElse(Future.successful(v)) }
   }
 }
 
