@@ -25,6 +25,10 @@ angular.module('kifi')
         sel.addRange(range);
       }
 
+      function getCommentBox(element) {
+        return element.find('.kf-keep-comments-input')[0];
+      }
+
       return {
         restrict: 'A',
         $scope: {
@@ -32,21 +36,21 @@ angular.module('kifi')
         },
         templateUrl: 'common/directives/comments/comments.tpl.html',
         link: function ($scope, element) {
-          var inputDiv = element[0].querySelector('.kf-keep-comments-input');
-
           $scope.comments = [];
           $scope.visibleCount = 0;
-
           $scope.me = profileService.me;
-          $scope.threadId = null;
           $scope.canAddComments = $scope.keep.library.permissions.indexOf('add_comments') !== -1;
 
-          if ($scope.keep.discussion) {
-            $scope.threadId = $scope.keep.discussion.threadId;
-            $scope.comments = $scope.keep.discussion.messages.slice().sort(bySentAt); // don't mutate the original array, in case we need it later
-            $scope.visibleCount = Math.min(3, $scope.comments.length);
-            $scope.showViewPreviousComments = ($scope.visibleCount < $scope.keep.discussion.numMessages);
+          if (!$scope.keep.discussion) {
+            $scope.keep.discussion = {
+              messages: [],
+              numMessages: 0
+            };
           }
+
+          $scope.comments = $scope.keep.discussion.messages.slice().sort(bySentAt); // don't mutate the original array, in case we need it later
+          $scope.visibleCount = Math.min(3, $scope.comments.length);
+          $scope.showViewPreviousComments = ($scope.visibleCount < $scope.keep.discussion.numMessages);
 
           // listeners
 
@@ -54,23 +58,26 @@ angular.module('kifi')
             // if you are not holding the shift key while
             // hitting enter, then we take this as the desired comment.
             // else we continue normally
-            if (!e.shiftKey && e.which === 13) {
+            var commentBox = getCommentBox(element);
+            if (commentBox && !e.shiftKey && e.which === 13) {
               var msg = {
                 sentAt: new Date().getTime(),
                 sentBy: profileService.me,
-                text: inputDiv.textContent
+                text: commentBox.textContent
               };
               $scope.comments.push(msg);
+              $scope.keep.discussion.numMessages++;
+              $scope.visibleCount++;
 
               keepService
               .addMessageToKeepDiscussion($scope.keep.pubId, msg.text)
               .then(function () {
-                $scope.visibleCount++;
-                $scope.keep.discussion.numMessages++;
-                resetCaret(inputDiv);
+                resetCaret(commentBox);
               })
               ['catch'](function () {
                 $scope.error = 'Something went wrong. Try again?';
+                $scope.visibleCount--;
+                $scope.keep.discussion.numMessages--;
                 $scope.comments.pop();
               });
 
@@ -82,8 +89,9 @@ angular.module('kifi')
           };
 
           $scope.keyup = function () {
-            if (inputDiv.textContent === '') {
-              inputDiv.innerHTML = '';
+            var commentBox = getCommentBox(element);
+            if (commentBox && commentBox.textContent === '') {
+              commentBox.innerHTML = '';
             }
           };
 
