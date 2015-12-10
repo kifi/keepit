@@ -342,9 +342,9 @@ class SlackCommanderImpl @Inject() (
         }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value, x.creatorName.value))
         val deepLink = DeepLinkRouter.libraryLink(Library.publicId(libId))
         libId -> LibrarySlackInfo(
-          link = SlackAPI.OAuthAuthorize(SlackAuthScope.push ++ SlackAuthScope.ingest, deepLink).url,
-          pushLink = SlackAPI.OAuthAuthorize(SlackAuthScope.push, deepLink).url,
-          ingestLink = SlackAPI.OAuthAuthorize(SlackAuthScope.ingest, deepLink).url,
+          link = SlackAPI.OAuthAuthorize(SlackAuthScope.push ++ SlackAuthScope.ingest, deepLink, None).url,
+          pushLink = SlackAPI.OAuthAuthorize(SlackAuthScope.push, deepLink, None).url,
+          ingestLink = SlackAPI.OAuthAuthorize(SlackAuthScope.ingest, deepLink, None).url,
           integrations = integrations
         )
 

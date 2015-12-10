@@ -39,6 +39,9 @@ case class ServiceRoute(method: Method, path: String, params: Param*) {
 case class Param(key: String, value: ParamValue = ParamValue(None)) {
   override def toString(): String = s"key->${value.value.getOrElse("")}"
 }
+object Param {
+  implicit def fromTuple[T](keyValue: (String, T))(implicit toParamValue: T => ParamValue) = Param(keyValue._1, toParamValue(keyValue._2))
+}
 
 case class ParamValue(value: Option[String])
 
