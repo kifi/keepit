@@ -113,7 +113,8 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
 
   .kf-side-by-side>&
     float: left
-    margin: 16px 0 keepFooterMarginTop 20px
+    margin: 15px 0 5px 15px
+    border-radius: 4px
 
   &.kf-bottom-clip
     background-position: center top
@@ -242,25 +243,40 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
   &:hover
     opacity: 1.0
 
-.kf-keep-footer
+
+.kf-keep:hover
+  .kf-keep-card-actions
+    opacity: 1
+    transition: opacity 0.20s ease-in-out
+
+.kf-keep
+  .kf-keep-card-actions
+    opacity: 0
+    transition: opacity 0.2s ease-in-out
+
+.kf-keep.disable-hover
+  .kf-keep-card-actions
+    opacity: 1
+    transition: opacity 0s
+
+.kf-keep-card-footer
   display: table
   width: 100%
-  margin-top: keepFooterMarginTop
-  border-top: 1px solid #eee // dfdfdf
   line-height: 16px
   font-size: 14px
-  min-height: 42px
+  min-height: 30px
+  margin-bottom: 5px
 
   @media (max-width: maxWidthForNarrowKeep)
     line-height: 14px
     font-size: 12px
-    min-height: 36px
+    min-height: 30px
 
 .kf-keep-actions
   display: table-cell
   vertical-align: middle
   text-align: left
-  padding: 6px 20px
+  padding: 0px 15px
 
 .kf-keep-keep-btn
 .kf-keep-share-btn
@@ -394,20 +410,6 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
   &:not(:first-child)::before
     content: '+ '
 
-.kf-keep-title
-  margin: 12px 0
-  font: bold 20px/24px Lato,sans-serif
-  font-smoothing: antialiased
-  word-break: break-word
-
-  @media (max-width: 479px)
-    line-height: 22px
-    font-size: 18px
-
-.kf-keep-title-link[href]
-  color: textBlackColor
-  outline-color: #ddd
-
 .kf-keep-meta
   padding-top: 16px
   height: 1.2em
@@ -422,10 +424,6 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
 
     .kf-side-by-side &
       font-size: 12px
-
-.kf-keep-source
-  white-space: nowrap
-  color: accentGreen
 
 .kf-keep-length
   white-space: nowrap  // hides entire element (including bullet) if it does not fit
@@ -443,11 +441,12 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
       padding: 0 4px 0 3px
       font-size: 6px
 
-.kf-keep-description
+.kf-keep-card-description
+  font: 13px/18px Lato,Helvetica,Arial,sans-serif
   font-smoothing: antialiased
   color: textBlackColor
   word-break: break-word
-  paragraph()
+  margin-top: 6px
 
 .kf-keep-card-flex-row
   display: flex
@@ -461,41 +460,100 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
   flex-grow: 1
   width: 1px
 
-.kf-keep
-  &.compact
-      padding: 6px 8px
+.kf-keep-card-page-content
+  margin-right: 2px
+  border-radius: 5px
+  box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 0 0 1px eeeOverlay
 
-.kf-compact-card
+.compact
+  .kf-keep-card
+    .kf-keep-who
+      display: inline-block
+      align-self: center
+      flex-grow: 1
+      padding-right: 10px
+      font-size: 13px
+      margin-bottom: 1px
+
+    .kf-keep-who-pic-box
+      height: auto
+
+    .kf-keep-who-pic
+      height: 20px
+      width: 20px
+
+    .kf-keep-card-title
+      margin-top: 2px
+
+    .kf-keep-card-title-link[href]
+      font: 15px/17px Lato,sans-serif
+
+    .kf-keep-card-expand-button
+      transform: rotate(90deg)
+      transition: transform 0.1s
+
+.kf-keep-card
+
   > * + *
-    margin-top: 3px
+    margin-top: 5px
+  .kf-keep-card-view-comments
+    font-size: 12px
+    font-weight: normal
+    font-smoothing: antialiased
+    margin-top: 6px
+
+  .kf-keep-card-menu-button
+    svg
+      margin-bottom: 2px
+      fill: #a7a7a7
+
+  .kf-keep-card-expand-button
+    transform: rotate(0deg)
+    transition: transform 0.1s
+    svg
+      fill: #a7a7a7
+
+  .kf-keep-card-gallery-content
+    display: flex
+    flex-direction: column
+    padding: 10px 15px 2px 15px
+    > * + *
+      margin-top: 6px
 
   .kf-keep-card-attribution-container
     display: flex
     flex-direction: row
     align-items: center
     margin-bottom: 0px
+    > * + *
+      margin-left: 10px
 
   .kf-keep-keeper-pic
     margin-right: 10px
 
-  .kf-keep-card-content-bar
-    width: 1px
-    background-color: #DEDEDE
-    margin-top: 4px
-    margin-left: 15px
-    margin-right: 10px
-    margin-bottom: 4px
+  .kf-keep-card-image-container
+    width: 64px
+    height: 64px
+    border-right-style: solid
+    border-width: 1px
+    border-right-color: eeeOverlay
+    overflow: hidden
+    border-radius: 5px 0 0 5px
+    margin-right: 8px
+
+  .kf-keep-card-image-placeholder
+    width: 70%
+    height: 70%
+    margin: 15%
+    fill: accentGreen
 
   .kf-keep-card-image
     align-self: center
-    width: 62px
-    height: 62px
+    width: 100%
+    height: 100%
     display: inline-block
-    margin: 0 -1px // cover container's 1px side borders
     background-size: cover
     background-position: center
-    box-shadow: inset 0 0 0 1px eeeOverlay // provides subtle boundary for white image
-    border-radius: 6px
 
   .kf-keep-card-content
     display: flex
@@ -503,35 +561,34 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     flex-grow: 1
     justify-content: flex-start
     padding-left: 0px
-    margin-bottom: 2px
     margin-right: 5px
+    > * + *
+      margin-top: 1px
 
   .kf-keep-card-title
     margin-left: 0px
     overflow: hidden
     text-overflow: ellipsis
-    margin-right: 5px
 
-  .kf-keep-title-link[href]
-    font: bold 14px/17px Lato,sans-serif
+  .kf-keep-card-title-link[href]
+    font: 18px/17px Lato,sans-serif
+    color: #111
     white-space: nowrap
 
-  .kf-keep-source
-    margin-top: 4px
-    font-size: 12px
+  .kf-keep-card-source
+    font-size: 13px
+    font-smoothing: antialiased
     color: textGreyColor
 
   .kf-knf
-    margin-top: 0px
+    margin-top:0px
     margin-bottom: 4px
 
   .kf-keep-card-note-container
     .kf-knf-editor
       font-size: 13px
 
-    > .kf-knf + *
-      display: none
-
+  .kf-keep-card-add-note
   .kf-keep-card-note
     font: 13px Lato,sans-serif
     color: #777
@@ -547,10 +604,28 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     &:not(:empty)
       margin: noteMargin
 
+  .kf-keep-card-add-note
+    border: 0
+    padding: 0
+    color: #ccc //linkColor
+    background-color: transparent
+    font-smoothing: antialiased
+    margin-top: -2px
+
+    &:hover
+      color: #aaa
+
+    &:active
+      color: #8f8f8f
+
+  .kf-knf ~ *
+    display: none
 
   .kf-keep-keep-btn
   .kf-keep-share-btn
     font-size: 13px
+    padding-top: 5px
+    padding-bottom: 5px
 
     &>.svg-hearts-green
     &>.svg-hearts-green-empty
