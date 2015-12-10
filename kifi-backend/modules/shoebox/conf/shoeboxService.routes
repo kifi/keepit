@@ -1027,6 +1027,7 @@ POST    /internal/shoebox/user/addInteractions            @com.keepit.controller
 GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.internal.ShoeboxController.getUserActivePersonas(userId: Id[User])
 
 POST    /internal/shoebox/database/internKeep    @com.keepit.controllers.internal.ShoeboxDiscussionController.internKeep()
+GET     /internal/shoebox/database/canCommentOnKeep @com.keepit.controllers.internal.ShoeboxDiscussionController.canCommentOnKeep(userId: Id[User], keepId: Id[Keep])
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)

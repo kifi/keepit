@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.eliza.model.{ ElizaMessage, MessageSource }
 import com.keepit.heimdal._
 import com.keepit.model.Keep
+import com.keepit.shoebox.ShoeboxServiceClient
 
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -21,6 +22,7 @@ import scala.util.{ Try, Success, Failure }
 class WebsiteMessagingController @Inject() (
     notificationCommander: NotificationDeliveryCommander,
     discussionCommander: ElizaDiscussionCommander,
+    shoebox: ShoeboxServiceClient,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
     heimdalContextBuilder: HeimdalContextBuilderFactory) extends UserActions with ElizaServiceController {
@@ -57,16 +59,22 @@ class WebsiteMessagingController @Inject() (
   }
 
   def sendMessageOnKeep(keepPubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
-    (for {
-      keepId <- Keep.decodePublicId(keepPubId).toOption
-      txt <- (request.body \ "text").asOpt[String]
-    } yield {
-      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-      discussionCommander.sendMessageOnKeep(request.userId, txt, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { _ =>
-        NoContent
-      }
-    }).getOrElse {
-      Future.successful(BadRequest(Json.obj("hint" -> "pass in a valid keep id and make sure your request has .text string")))
+    Keep.decodePublicId(keepPubId) match {
+      case Failure(err) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id")))
+      case Success(keepId) =>
+        (request.body \ "text").asOpt[String] match {
+          case None => Future.successful(BadRequest(Json.obj("error" -> "missing_text")))
+          case Some(text) =>
+            shoebox.canCommentOnKeep(request.userId, keepId).flatMap { canComment =>
+              if (canComment) {
+                val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+
+                discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { _ =>
+                  NoContent
+                }
+              } else Future.successful(Forbidden)
+            }
+        }
     }
   }
 
