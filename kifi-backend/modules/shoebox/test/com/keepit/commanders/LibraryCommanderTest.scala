@@ -109,7 +109,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
     val (libShield, libMurica, libScience) = db.readWrite { implicit s =>
       val libShield = library().withOwner(userAgent).withName("Avengers Missions").withSlug("avengers").secret().saved
       val libMurica = library().withOwner(userCaptain).withName("MURICA").withSlug("murica").published().saved
-      val libScience = library().withOwner(userIron).withName("Science & Stuff").withSlug("science").discoverable().saved
+      val libScience = library().withOwner(userIron).withName("Science & Stuff").withSlug("science").withLibraryCommentPermissions(LibraryCommentPermissions.COLLABORATOR).discoverable().saved
       (libShield, libMurica, libScience)
     }
     db.readOnlyMaster { implicit s =>
@@ -515,6 +515,12 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             LibraryModifications(color = Some(LibraryColor.SKY_BLUE)))
           mod6 must beRight
           mod6.right.get.modifiedLibrary.color === Some(LibraryColor.SKY_BLUE)
+
+          val mod7 = libraryCommander.modifyLibrary(libraryId = libScience.id.get, userId = userIron.id.get,
+            LibraryModifications(whoCanComment = Some(LibraryCommentPermissions.ANYONE))
+          )
+          mod7 must beRight
+          mod7.right.get.modifiedLibrary.whoCanComment === LibraryCommentPermissions.ANYONE
 
           db.readOnlyMaster { implicit s =>
             val allLibs = libraryRepo.all
