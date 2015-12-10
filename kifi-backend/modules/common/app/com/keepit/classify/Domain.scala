@@ -79,7 +79,7 @@ object NormalizedHostname extends Logging {
     // Domain at all. If they want to send garbage, there's no risk persisting that because it's user-specific.
     // But, to keep things the way they are, we need to allow non-actual domains (like 'localhost').
     Try(NormalizedHostname(IDN.toASCII(hostname.trim).toLowerCase)).toOption
-      .filter(hostname => isValid(hostname.value))
+      .filter(hostname => allowInvalid || isValid(hostname.value))
   }
 
   implicit val format: Format[NormalizedHostname] = new Format[NormalizedHostname] {
