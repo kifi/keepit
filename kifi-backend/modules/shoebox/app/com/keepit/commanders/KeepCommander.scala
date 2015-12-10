@@ -150,7 +150,7 @@ class KeepCommanderImpl @Inject() (
           keep.title,
           keep.url,
           keep.visibility,
-          Library.publicId(keep.libraryId.get),
+          keep.libraryId.map(Library.publicId),
           users(keep.userId).externalId
         )
       }
@@ -350,7 +350,7 @@ class KeepCommanderImpl @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
+    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, Some(library), source)
 
     internResponse.newKeeps.foreach { keep => librarySubscriptionCommander.sendNewKeepMessage(keep, library) }
 

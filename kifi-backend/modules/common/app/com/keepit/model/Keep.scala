@@ -334,7 +334,7 @@ case class BasicKeep(
   title: Option[String],
   url: String,
   visibility: LibraryVisibility,
-  libraryId: PublicId[Library],
+  libraryId: Option[PublicId[Library]],
   ownerId: ExternalId[User])
 
 object BasicKeep {
@@ -343,7 +343,7 @@ object BasicKeep {
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).format[PublicId[Library]] and
+    (__ \ 'libraryId).formatNullable[PublicId[Library]] and
     (__ \ 'ownerId).format[ExternalId[User]]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
@@ -413,7 +413,7 @@ case class PersonalKeep(
   mine: Boolean,
   removable: Boolean,
   visibility: LibraryVisibility,
-  libraryId: PublicId[Library])
+  libraryId: Option[PublicId[Library]])
 
 object PersonalKeep {
   implicit val format: Format[PersonalKeep] = (
@@ -421,7 +421,7 @@ object PersonalKeep {
     (__ \ 'mine).format[Boolean] and
     (__ \ 'removable).format[Boolean] and
     (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).format[PublicId[Library]]
+    (__ \ 'libraryId).formatNullable[PublicId[Library]]
   )(PersonalKeep.apply, unlift(PersonalKeep.unapply))
 }
 
