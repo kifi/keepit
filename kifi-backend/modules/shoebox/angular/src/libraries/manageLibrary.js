@@ -44,7 +44,7 @@ angular.module('kifi')
         scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }, 'disabled': false }; };
         scope.showError = false;
         scope.me = profileService.me;
-        scope.isAdmin = profileService.isAdmin();
+        scope.hasCommentExperiment = profileService.hasExperiment('keep_comments');
         scope.libraryProps = {
           inOrg: false,
           selectedOrgId: null
@@ -77,6 +77,17 @@ angular.module('kifi')
               scrollTop: e.target.getBoundingClientRect().top
             }, 500);
           }
+        };
+
+        scope.changeOrgMemberAccess = function() {
+          // This gets sent to the backend
+          scope.library.orgMemberAccess = scope.library.orgMemberAccess === 'read_write' ? 'read_only' : 'read_write';
+          // This binds the UI.
+          scope.orgMemberAccessWrite = !scope.orgMemberAccessWrite;
+        };
+
+        scope.disableOrgMemberAccess = function() {
+          return !(scope.library.id && scope.spaceIsOrg(scope.space.destination) && scope.library.visibility !== 'secret');
         };
 
         scope.addIfEnter = function(event) {
@@ -323,6 +334,7 @@ angular.module('kifi')
           scope.modalTitle = scope.library.name;
           scope.library.subscriptions = scope.library.subscriptions || [];
           scope.library.subscriptions.push(scope.newBlankSub());
+          scope.orgMemberAccessWrite = scope.library.orgMemberAccess === 'read_only' ? false : true;
         } else {
           scope.library = {
             'name': '',
