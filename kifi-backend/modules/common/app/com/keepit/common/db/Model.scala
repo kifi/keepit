@@ -26,3 +26,8 @@ trait ModelWithMaybeCopy[M] { self: M =>
     newVal.filter(_ != curVal(self)).map(modFn(self)).getOrElse(self)
   }
 }
+
+trait CommonClassLinker[M <: Model[M], T] {
+  def toCommon(modelId: Id[M]): Id[T] = Id[T](modelId.id)
+  def fromCommon(commonId: Id[T]): Id[M] = Id[M](commonId.id)
+}

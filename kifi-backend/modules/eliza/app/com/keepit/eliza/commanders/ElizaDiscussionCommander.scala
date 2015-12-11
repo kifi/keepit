@@ -52,7 +52,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       basicUsers <- basicUsersFut
       basicNonUsers <- basicNonUsersFut
     } yield emsgs.flatMap { em =>
-      val msgId = Message.publicId(ElizaMessage.toMessageId(em.id.get)) // this is a hack to expose Id[ElizaMessage] without exposing ElizaMessage itself
+      val msgId = Message.publicId(ElizaMessage.toCommon(em.id.get)) // this is a hack to expose Id[ElizaMessage] without exposing ElizaMessage itself
       val senderOpt: Option[BasicUserLikeEntity] = em.from.fold(
         None,
         { uid => Some(BasicUserLikeEntity(basicUsers(uid))) },
@@ -152,13 +152,11 @@ class ElizaDiscussionCommanderImpl @Inject() (
     } yield {
       val unreadCount = messageRepo.countByThread(mt.id.get, Some(msgId), SortDirection.ASCENDING)
 
-      // Marking a user thread as read is sort of insane
-      // userThreadRepo.markRead does 2 things: updates the "lastActive" time for a user thread, and sets ut.unread = false
-      // The only problem is that there might be new messages. If there are, the user thread ISN'T unread; the user is wrong
-      val msg = messageRepo.get(msgId)
-      userThreadRepo.markRead(userId, mt.id.get, msg) // TODO(ryan): rework this method so that it does a sane thing
-      if (unreadCount != 0) userThreadRepo.markUnread(userId, mt.id.get)
-
+      // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
+      // Then you can just set it and forget it
+      if (unreadCount == 0) {
+        userThreadRepo.markRead(userId, mt.id.get, messageRepo.get(msgId))
+      }
       unreadCount
     }
   }

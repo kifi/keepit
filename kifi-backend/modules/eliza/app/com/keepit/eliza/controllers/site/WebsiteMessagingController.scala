@@ -3,7 +3,7 @@ package com.keepit.eliza.controllers.site
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.json.{ TraversableFormat, KeyFormat, TupleFormat }
 import com.keepit.discussion.Message
-import com.keepit.eliza.commanders.{ ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
+import com.keepit.eliza.commanders.{ MessageFetchingCommander, ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.time._
 import com.keepit.eliza.model.{ ElizaMessage, MessageSource }
@@ -22,6 +22,7 @@ import scala.util.{ Try, Success, Failure }
 class WebsiteMessagingController @Inject() (
     notificationCommander: NotificationDeliveryCommander,
     discussionCommander: ElizaDiscussionCommander,
+    messageFetchingCommander: MessageFetchingCommander,
     shoebox: ShoeboxServiceClient,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -44,7 +45,7 @@ class WebsiteMessagingController @Inject() (
     val keepIdTry = Keep.decodePublicId(keepPubId)
     val fromIdOptTry = fromPubIdOpt.filter(_.nonEmpty) match {
       case None => Success(None)
-      case Some(fromPubId) => Message.decodePublicId(PublicId[Message](fromPubId)).map(msgId => Some(ElizaMessage.fromMessageId(msgId)))
+      case Some(fromPubId) => Message.decodePublicId(PublicId[Message](fromPubId)).map(msgId => Some(ElizaMessage.fromCommon(msgId)))
     }
     (for {
       keepId <- keepIdTry
@@ -68,10 +69,9 @@ class WebsiteMessagingController @Inject() (
             shoebox.canCommentOnKeep(request.userId, keepId).flatMap { canComment =>
               if (canComment) {
                 val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-
-                discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { _ =>
-                  NoContent
-                }
+                for {
+                  msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build)
+                } yield Ok(Json.obj("pubId" -> Message.publicId(ElizaMessage.toCommon(msg.id.get)), "sentAt" -> msg.createdAt))
               } else Future.successful(Forbidden)
             }
         }
@@ -83,7 +83,7 @@ class WebsiteMessagingController @Inject() (
     implicit val outputWrites = TraversableFormat.mapWrites[PublicId[Keep], Int](_.id)
     (for {
       input <- request.body.asOpt[Seq[(PublicId[Keep], PublicId[Message])]]
-      readKeeps <- Try(input.map { case (pubKeepId, pubMsgId) => (Keep.decodePublicId(pubKeepId).get, ElizaMessage.fromMessageId(Message.decodePublicId(pubMsgId).get)) }).toOption
+      readKeeps <- Try(input.map { case (pubKeepId, pubMsgId) => (Keep.decodePublicId(pubKeepId).get, ElizaMessage.fromCommon(Message.decodePublicId(pubMsgId).get)) }).toOption
     } yield {
       val unreadMessagesByKeep = readKeeps.flatMap {
         case (keepId, msgId) => discussionCommander.markAsRead(request.userId, keepId, msgId).map { newMsgCount => Keep.publicId(keepId) -> newMsgCount }

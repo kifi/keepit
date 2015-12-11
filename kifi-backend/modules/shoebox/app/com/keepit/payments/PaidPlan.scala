@@ -1,7 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId, PublicIdConfiguration }
+import com.keepit.common.crypto.{ ModelWithPublicId, PublicIdGenerator, PublicId, PublicIdConfiguration }
 import com.keepit.common.time._
 import com.keepit.common.util.DollarAmount
 import com.keepit.model._
@@ -94,7 +94,7 @@ case class PaidPlan(
   def showUpsells: Boolean = PaidPlan.showUpsells(this)
 }
 
-object PaidPlan extends ModelWithPublicIdCompanion[PaidPlan] {
+object PaidPlan extends PublicIdGenerator[PaidPlan] {
   protected[this] val publicIdPrefix = "pp"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-81, 48, 82, -97, 110, 73, -46, -55, 43, 73, -107, -90, 89, 21, 116, -101))
 

@@ -2,7 +2,7 @@ package com.keepit.discussion
 
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId, PublicId }
+import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.store.ImagePath
 import com.keepit.model.{ Hashtag, LibraryCardInfo, DeepLocator, Keep }
@@ -16,10 +16,7 @@ case class Message(
   sentAt: DateTime,
   sentBy: BasicUserLikeEntity,
   text: String)
-    extends ModelWithPublicId[Message] {
-  val id: Option[Id[Message]] = None
-}
-object Message extends ModelWithPublicIdCompanion[Message] {
+object Message extends PublicIdGenerator[Message] {
   val publicIdIvSpec: IvParameterSpec = new IvParameterSpec(Array(-128, 93, 21, 18, 70, 113, -105, 79, -60, 109, -78, 108, -103, -82, 91, -14))
   val publicIdPrefix = "msg"
   implicit val format: Format[Message] = (
