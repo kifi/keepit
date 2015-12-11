@@ -4,7 +4,7 @@ import java.net.URLEncoder
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion, PublicId }
+import com.keepit.common.crypto.{ ModelWithPublicId, PublicIdGenerator, PublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.path.Path
@@ -63,7 +63,7 @@ case class Organization(
   )
 }
 
-object Organization extends ModelWithPublicIdCompanion[Organization] {
+object Organization extends PublicIdGenerator[Organization] {
   implicit val primaryHandleFormat = PrimaryOrganizationHandle.jsonAnnotationFormat
 
   protected val publicIdPrefix = "o"

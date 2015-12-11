@@ -15,7 +15,7 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.crypto.{ PublicIdConfiguration, ModelWithPublicIdCompanion, ModelWithPublicId, PublicId }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicIdGenerator, ModelWithPublicId, PublicId }
 
 import scala.util.Try
 import scala.util.hashing.MurmurHash3
@@ -96,7 +96,7 @@ case class Keep(
   def path(implicit config: PublicIdConfiguration) = Path(s"k/$titlePathString/${Keep.publicId(this.id.get).id}")
 }
 
-object Keep extends ModelWithPublicIdCompanion[Keep] {
+object Keep extends PublicIdGenerator[Keep] {
 
   protected[this] val publicIdPrefix = "k"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-28, 113, 122, 123, -126, 62, -12, 87, -112, 68, -9, -84, -56, -13, 15, 28))

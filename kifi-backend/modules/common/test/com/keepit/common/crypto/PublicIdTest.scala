@@ -12,13 +12,13 @@ class PublicIdTest extends Specification {
 
     "encode and decode public ids" in {
       case class TestModel(id: Option[Id[TestModel]]) extends ModelWithPublicId[TestModel]
-      object TestModel extends ModelWithPublicIdCompanion[TestModel] {
+      object TestModel extends PublicIdGenerator[TestModel] {
         protected[this] val publicIdPrefix = "t"
         protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-72, -49, 51, -61, 42, 43, 123, -61, 64, 122, -121, -55, 117, -51, 12, 21))
       }
 
       case class TestModel2(id: Option[Id[TestModel2]]) extends ModelWithPublicId[TestModel2]
-      object TestModel2 extends ModelWithPublicIdCompanion[TestModel2] {
+      object TestModel2 extends PublicIdGenerator[TestModel2] {
         protected[this] val publicIdPrefix = "w"
         protected[this] val publicIdIvSpec = new IvParameterSpec(Array(0, 0, 0, 0, -10, 100, 100, 10, 42, 42, 42, 42, 42, 42, 42, 42))
       }
