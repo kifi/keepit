@@ -27,6 +27,12 @@ angular.module('kifi')
         .then(getResponseData);
       },
 
+      deleteMessageFromKeepDiscussion: function(keepId, messageId) {
+        return net
+        .deleteMessageFromKeepDiscussion(keepId, { messageId: messageId })
+        .then(getResponseData);
+      },
+
       markDiscussionAsRead: function (keep) {
         // readList = [ {"keep": <keepId1>,  "lastMessage": <msgId1>}, { "keep": <keepId2>, "lastMessage": <msgId2> } ]
         var comments = keep.discussion && keep.discussion.messages;

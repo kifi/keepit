@@ -11,6 +11,18 @@
       <time class="kf-keep-comment-time"
             ng-attr-datetime="{{::comment.sentAt}}" am-time-ago="::comment.sentAt"
             title="{{::comment.sentAt|localTime}}" ng-if="::comment.sentAt"></time>
+      <span class="kf-keep-comment-actions" kf-click-menu ng-if="commentActionItems.length > 0  && canSeeCommentActions">
+        <menu class="kf-dropdown-menu">
+          <button class="kf-dropdown-menu-item"
+            ng-click="item.action($event)"
+            ng-repeat="item in commentActionItems"
+            ng-bind="item.title">
+          </button>
+        </menu>
+        <button class="kf-keep-comment-actions-button kf-button kf-button-image">
+          <svg kf-symbol-sprite class="kf-keep-comment-actions-icon" icon="dropdown-arrow"></svg>
+        </button>
+      </span>
     </div>
     <div class="kf-keep-comment-commenter-text">
       <div ng-repeat="part in commentParts" class="kf-keep-comment-inline">
