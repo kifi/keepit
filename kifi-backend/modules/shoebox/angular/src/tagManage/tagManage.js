@@ -167,9 +167,15 @@ angular.module('kifi')
     };
 
     $scope.deleteTag = function () {
-      manageTagService.remove($scope.selectedTag).then(function () {
-        _.remove($scope.tagsToShow, $scope.selectedTag);
+      var _scope = $rootScope.$new();
+      _scope.action = 'delete';
+      _scope.name = $scope.selectedTag.name;
+      modalService.open({
+        template: 'tagManage/modifyTagProgressModal.tpl.html',
+        scope: _scope
       });
+      _.remove($scope.tagsToShow, $scope.selectedTag);
+      manageTagService.remove($scope.selectedTag);
     };
 
     $scope.showRenameTagModal = function (tag) {
@@ -183,9 +189,15 @@ angular.module('kifi')
     };
 
     $scope.renameTag = function () {
-      manageTagService.rename($scope.selectedTag).then(function () {
-        $scope.selectedTag.name = $scope.selectedTag.renamed;
+      var _scope = $rootScope.$new();
+      _scope.action = 'rename';
+      _scope.name = $scope.selectedTag.name;
+      modalService.open({
+        template: 'tagManage/modifyTagProgressModal.tpl.html',
+        scope: _scope
       });
+      $scope.selectedTag.name = $scope.selectedTag.renamed;
+      manageTagService.rename($scope.selectedTag);
     };
   }
 ]);

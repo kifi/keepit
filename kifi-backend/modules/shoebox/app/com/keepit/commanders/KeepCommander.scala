@@ -485,10 +485,17 @@ class KeepCommanderImpl @Inject() (
     db.readWrite { implicit session =>
       val updated = keepRepo.getByIds(keeps).flatMap {
         case ((_, k)) =>
-          val tags = Hashtags.findAllHashtagNames(k.note.getOrElse(""))
-          if (tags.contains(tag.tag)) {
-            val newTags = tags - tag.tag
-            Some(syncTagsToNoteAndSaveKeep(k.userId, k, newTags.toSeq))
+          val existingTags = Hashtags.findAllHashtagNames(k.note.getOrElse("")).map(Hashtag(_)).toSeq
+          val existingNormalized = existingTags.map(_.normalized)
+
+          if (k.isActive && existingNormalized.contains(tag.normalized)) {
+            val newTags = existingTags.filterNot(_.normalized == tag.normalized).map(_.tag)
+            Try(syncTagsToNoteAndSaveKeep(k.userId, k, newTags)) match { // Note will be updated here
+              case Success(r) => Some(r)
+              case Failure(ex) =>
+                log.warn(s"[removeTagFromKeeps] Failure removing tag for keep ${k.id.get} removing ${tag.tag}. Existing tags: ${k.note}, new tags: $newTags")
+                None
+            }
           } else None
       }
       updated.values.flatten.distinctBy(_.id).map { c =>
@@ -498,15 +505,33 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
+  // Assumption that all keeps are owned by the same user
   def replaceTagOnKeeps(keeps: Set[Id[Keep]], oldTag: Hashtag, newTag: Hashtag): Int = {
-    db.readWrite { implicit session =>
+    if (keeps.nonEmpty && oldTag.normalized == newTag.normalized) { // Changing capitalization, etc
+      db.readWrite { implicit session =>
+        for {
+          firstKeepId <- keeps.headOption
+          keep = keepRepo.get(firstKeepId)
+          existing <- collectionRepo.getByUserAndName(keep.userId, oldTag)
+        } yield {
+          collectionRepo.save(existing.copy(name = newTag))
+        }
+      }
+    }
+    db.readWrite(attempts = 3) { implicit session =>
       val updated = keepRepo.getByIds(keeps).flatMap {
         case ((_, k)) =>
-          val tags = Hashtags.findAllHashtagNames(k.note.getOrElse(""))
-          if (tags.contains(oldTag.tag)) {
-            val newTags = tags - oldTag.tag + newTag.tag
-            val newNote = k.note.map(_.replaceAllLiterally("#" + oldTag, "#" + newTag))
-            Some(syncTagsToNoteAndSaveKeep(k.userId, k.withNote(newNote), newTags.toSeq))
+          val existingTags = Hashtags.findAllHashtagNames(k.note.getOrElse("")).map(Hashtag(_)).toSeq
+          val existingNormalized = existingTags.map(_.normalized)
+          if (k.isActive && existingNormalized.contains(oldTag.normalized)) {
+            val newTags = newTag.tag +: existingTags.filterNot(_.normalized == oldTag.normalized).map(_.tag)
+            val newNote = k.note.map(Hashtags.replaceTagNameFromString(_, oldTag.tag, newTag.tag))
+            Try(syncTagsToNoteAndSaveKeep(k.userId, k.withNote(newNote), newTags)) match {
+              case Success(r) => Some(r)
+              case Failure(ex) =>
+                log.warn(s"[replaceTagOnKeeps] Failure updating note for keep ${k.id.get} replacing ${oldTag.tag} with ${newTag.tag}. Existing note: ${k.note}, new note: $newNote")
+                None
+            }
           } else None
       }
       updated.values.flatten.distinctBy(_.id).map { c =>
@@ -551,7 +576,7 @@ class KeepCommanderImpl @Inject() (
     // find hashtags to remove & to append
     val hashtagsToRemove = hashtagsInNote.filterNot(hashtagsToPersistSet.contains(_))
     val hashtagsToAppend = allTagsKeepShouldHave.filterNot(hashtagsInNote.contains(_))
-    val noteWithHashtagsRemoved = Hashtags.removeHashtagNamesFromString(keepNote, hashtagsToRemove.toSet)
+    val noteWithHashtagsRemoved = Hashtags.removeTagNamesFromString(keepNote, hashtagsToRemove.toSet)
     val noteWithHashtagsAppended = Hashtags.addTagsToString(noteWithHashtagsRemoved, hashtagsToAppend)
     val finalNote = Some(noteWithHashtagsAppended.trim).filterNot(_.isEmpty)
 

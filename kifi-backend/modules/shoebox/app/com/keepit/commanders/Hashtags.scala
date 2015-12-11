@@ -34,11 +34,22 @@ object Hashtags {
   }
 
   def removeHashtagsFromString(str: String, hashtags: Set[Hashtag]): String = {
-    removeHashtagNamesFromString(str, hashtags.map(_.tag))
+    removeTagNamesFromString(str, hashtags.map(_.tag))
   }
 
-  def removeHashtagNamesFromString(str: String, hashtagNames: Set[String]): String = {
-    hashTagRe.replaceSomeIn(str, m => if (hashtagNames.contains(m.group(1))) Some("") else None).trim
+  def removeTagNamesFromString(str: String, hashtagNames: Set[String]): String = {
+    val normalizedTags = hashtagNames.map(Hashtag(_).normalized)
+    hashTagRe.replaceSomeIn(str, m => if (normalizedTags.contains(Hashtag(m.group(1)).normalized)) Some("") else None).trim
+  }
+
+  def replaceTagNameFromString(str: String, oldTag: String, newTag: String): String = {
+    val oldNormalized = Hashtag(oldTag).normalized
+    hashTagRe.replaceSomeIn(str, m =>
+      if (oldNormalized == Hashtag(m.group(1)).normalized) {
+        if (newTag.nonEmpty) Some("[#" + newTag + "]")
+        else Some("")
+      } else None
+    ).trim
   }
 
   def format(note: String): DescriptionElements = {
