@@ -174,9 +174,6 @@ angular.module('kifi')
           }
 
 
-
-
-
           if (uri) {
             //var escapedUri = escapeHtml(uri);
             //var escapedUrl = (scheme ? '' : 'http://') + escapedUri;
@@ -242,8 +239,9 @@ angular.module('kifi')
 
       var formatKifiSelRangeTextToParts = (function () {
         var replaceRe = /([\u001e\u001f])/g;
-        function replace(replacements, ch) {
-          return replacements[ch];
+        var replacements = {'\u001e': '\n\n', '\u001f': ''};
+        function replace(s) {
+          return replacements[s];
         }
 
         // var decodeURIComponent = function(t) {return t;};
