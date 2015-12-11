@@ -66,7 +66,7 @@
                 <label class="manage-lib-access-comments-txt" ng-bind="canAnyoneComment() ? 'Anyone who can see this library can comment.' : 'Anyone who can keep to this library can comment.'"></label>
               </span>
               <span class="kf-flex-row manage-lib-access-members-wrapper" ng-class="{ 'disabled': disableOrgMemberAccess() }" ng-if="library.id && spaceIsOrg(space.destination)">
-                  <button class="manage-lib-access-members-checkbox" ng-class="{ 'checked' : orgMemberAccessWrite && !disableOrgMemberAccess(), 'disabled' : disableOrgMemberAccess() }" ng-click="changeOrgMemberAccess()">
+                  <button class="manage-lib-access-members-checkbox kf-button kf-button-image" ng-class="{ 'checked' : orgMemberAccessWrite && !disableOrgMemberAccess(), 'disabled' : disableOrgMemberAccess() }" ng-click="changeOrgMemberAccess()">
                     <span class="manage-lib-access-members-checkmark svg-checkmark-thin" ng-if="orgMemberAccessWrite && !disableOrgMemberAccess()"></span>
                   </button>
                   <label class="manage-lib-input-area manage-lib-access-members">

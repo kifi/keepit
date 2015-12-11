@@ -212,8 +212,8 @@ select.manage-lib-input
 
 .manage-lib-access-members-checkbox
   margin-right: 2px
-  height: 12px
-  width: 7px
+  height: 15px
+  width: 16px
   border-radius: 4px
   border-width: 1px
   border: 1px solid lightGrey
@@ -227,13 +227,20 @@ select.manage-lib-input
     background-color: darkBlueColor
     border: 1px solid darkBlueColor
 
+    &.kf-button-image:hover:not([disabled]):not(.disabled)
+    &.kf-button:hover:not([disabled]):not(.disabled)
+      background: none
+      background-color: darkBlueColor
+      opacity: 1
+
+
 .manage-lib-access-members-checkmark
   display: inline-block
   position: relative
   height: 8px
   width: 12px
-  top: -3px
-  right: 2.5px
+  top: 0px
+  right: 0px
 
 .manage-lib-access-comments-container
   margin-top: 10px
