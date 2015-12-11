@@ -1,20 +1,21 @@
 <div class="kf-keep-container" ng-hide="keep.unkept">
   <div class="kf-keep"
-       ng-class="{'editing': $parent.edit.enabled, 'compact': !galleryView, 'mine': (keep.user.id === me.id) }">
-    <!-- Gallery card -->
-    <div class="kf-gallery-card" ng-if="galleryView">
-      <div class="kf-keep-top" ng-if="keep.user">
-        <section>
-          <div kf-keep-card-attribution
-               keep="keep"
-               show-library-attribution="::(currentPageOrigin !== 'libraryPage' || showOriginLibrary)"
-               is-first-item="::isFirstItem"></div>
-        </section>
-        <div class="kf-keep-top-menu-container" kf-click-menu
-             ng-if="menuItems.length > 0">
+       ng-class="{
+        'editing': $parent.edit.enabled,
+        'compact': !galleryView,
+        'mine': (keep.user.id === me.id),
+        'disable-hover': !admin || deviceCanTouch}">
+
+    <div class="kf-keep-card kf-flex-column">
+      <div class="kf-keep-card-attribution-container">
+        <div kf-keep-card-attribution
+             keep="keep"
+             show-library-attribution="::currentPageOrigin !== 'libraryPage'"
+             is-first-item="::isFirstItem"></div>
+        <div class="kf-keep-card-menu-container" kf-click-menu ng-if="menuItems.length > 0">
           <!-- This controls who gets the controls -->
-          <button class="kf-keep-top-menu-btn kf-button kf-button-image">
-            <svg kf-symbol-sprite icon="dropdown-arrow"></svg>
+          <button class="kf-button kf-button-image kf-keep-card-menu-button">
+            <svg kf-symbol-sprite icon="more"></svg>
           </button>
           <menu class="kf-dropdown-menu">
             <button class="kf-dropdown-menu-item"
@@ -24,20 +25,21 @@
             </button>
           </menu>
         </div>
+        <button class="kf-keep-card-expand-button kf-button kf-button-image"
+                ng-if="admin"
+                ng-click="toggleExpandCard()">
+          <svg kf-symbol-sprite icon="dropdown-arrow"></svg>
+        </button>
       </div>
-
-      <div class="kf-keep-note" ng-bind-html="::keep.note|noteHtml"
-           ng-if="::keep.note || canEditKeep"></div>
-      <div class="kf-keep-add-note"
-           ng-if="::canEditKeep">
-        <!-- wrapping button in div to reduce watch count on read-only libraries -->
-        <button class="kf-keep-add-note-btn" ng-click="editKeepNote($event, keep)"
-                ng-if="!keep.note && keep.user.id === me.id">Add a note
+      <div class="kf-keep-card-note-container">
+        <div class="kf-keep-card-note" ng-bind-html="::keep.note|noteHtml"
+             ng-if="::keep.note || canEditKeep"></div>
+        <button class="kf-keep-card-add-note" ng-click="editKeepNote($event, keep)"
+                ng-if="galleryView && !keep.note && keep.user.id === me.id">Add a note
           (type # to add a tag)
         </button>
       </div>
-
-      <div class="kf-keep-body"
+      <div class="kf-keep-body" ng-if="galleryView"
            ng-class="::{'kf-boxed': boxed != null, 'kf-side-by-side': image.w, 'kf-text-only': !image && !youtubeId}">
 
         <div class="kf-keep-video" ng-if="::youtubeId" ng-click="clickCallback({keep: keep, event: $event})">
@@ -50,25 +52,23 @@
            ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
         </a>
 
-        <div class="kf-keep-content">
-          <div class="kf-keep-meta">
-            <span class="kf-keep-source">{{::keepSource}}</span>
-            <span class="kf-keep-length" ng-if="::keep.summary.wordCount > 0 && !youtubeId">{{::keep.summary.wordCount|timeToRead}} read</span>
-          </div>
-          <div class="kf-keep-title">
-            <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank"
+        <div class="kf-keep-card-gallery-content">
+          <div class="kf-keep-card-title">
+            <a class="kf-keep-card-title-link" ng-href="{{::keep.url}}" target="_blank"
                ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow"
                click-action="clickedArticleTitle" kf-ellipsis full-text="displayTitle"
                ng-bind="displayTitle" max-num-lines="2"></a>
           </div>
-          <div class="kf-keep-description" kf-ellipsis ng-bind="keep.summary.description"
+          <div class="kf-keep-card-description" kf-ellipsis ng-bind="keep.summary.description"
                full-text="keep.summary.description"
-               max-num-lines="image.maxDescLines || defaultDescLines"></div>
+               max-num-lines="image.maxDescLines || defaultDescLines"
+               ng-if="keep.summary.description"></div>
+          <span class="kf-keep-card-source">{{::keepSource}}</span>
         </div>
 
         <div class="clearfix"></div>
 
-        <div class="kf-keep-footer">
+        <div class="kf-keep-card-footer kf-keep-card-actions">
           <div class="kf-keep-actions" ng-if="$root.userLoggedIn">
             <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
                     kf-keep-to-library-widget widget-action-text="Keep"
@@ -101,50 +101,31 @@
           </div>
         </div>
       </div>
-      <div ng-if="hasKeepCommentsPermission" kf-keep-comments keep="keep"></div>
-    </div>
-    <!-- end Gallery card -->
-
-
-    <!-- Compact card -->
-    <div class="kf-compact-card kf-flex-column" ng-if="!galleryView">
-      <div class="kf-keep-card-attribution-container">
-        <div kf-keep-card-attribution
-             keep="keep"
-             class="kf-keep-card-attribution-compact"
-             show-library-attribution="::currentPageOrigin !== 'libraryPage'"
-             is-first-item="::isFirstItem"></div>
-        <div class="kf-keep-card-menu-container" kf-click-menu ng-if="menuItems.length > 0">
-          <!-- This controls who gets the controls -->
-          <button class="kf-keep-top-menu-btn kf-button kf-button-image">
-            <svg kf-symbol-sprite icon="dropdown-arrow"></svg>
-          </button>
-          <menu class="kf-dropdown-menu">
-            <button class="kf-dropdown-menu-item"
-                    ng-click="item.action($event, keep)"
-                    ng-repeat="item in menuItems"
-                    ng-bind="item.title">
-            </button>
-          </menu>
+      <div class="kf-keep-card-flex-row kf-keep-card-page-content" ng-if="!galleryView">
+        <div class="kf-keep-card-image-container">
+          <a class="kf-keep-card-image"
+             ng-if="image"
+             ng-style="{'background-image': 'url(\'' + image.url + '\')'}"
+             ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
+             ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
+          </a>
+          <svg kf-symbol-sprite
+               class="kf-keep-card-image-placeholder"
+               icon="kifi"
+               ng-if="!image"></svg>
         </div>
-      </div>
-      <div class="kf-keep-card-note-container">
-        <div class="kf-keep-card-note" ng-bind-html="::keep.note|noteHtml"
-             ng-if="::keep.note || canEditKeep"></div>
-      </div>
-      <div class="kf-keep-card-flex-row">
-        <div class="kf-keep-card-content-bar"></div>
+
         <div class=".kf-keep-card-flex-column kf-keep-card-flex-grow">
           <div class="kf-keep-card-content kf-flex-grow">
             <div class="kf-keep-card-title">
-              <a class="kf-keep-title-link" ng-href="{{::keep.url}}" target="_blank"
+              <a class="kf-keep-card-title-link" ng-href="{{::keep.url}}" target="_blank"
                  ng-click="clickCallback({keep: keep, event: $event})" rel="nofollow"
                  click-action="clickedArticleTitle" full-text="displayTitle"
                  ng-bind="displayTitle"></a>
             </div>
-            <span class="kf-keep-source">{{::keepSource}}</span>
+            <span class="kf-keep-card-source">{{::keepSource}}</span>
           </div>
-          <div class="kf-keep-card-flex-row">
+          <div class="kf-keep-card-flex-row kf-keep-card-actions">
             <button ng-attr-class="kf-keep-keep-btn {{howKept ? 'state-kept-' + howKept : 'state-not-kept'}}"
                     kf-keep-to-library-widget widget-action-text="Keep"
                     library-click-action="onWidgetLibraryClicked(clickedLibrary)"
@@ -160,17 +141,28 @@
               <span class="svg-share-arrow-green"></span>
               <span>Share</span>
             </button>
+            <div class="kf-keep-who"
+                 ng-if="keep.keepers.length > 1 || (keep.keepers[0] && keep.keepers[0].id !== keep.user.id)">
+              <span class="kf-keep-who-pic-box" ng-repeat="keeper in keep.keepers | limitTo:6" kf-user-tooltip="::keeper"
+                    library="::keeper.library" desc="Your Kifi connection">
+                <a class="kf-keep-who-pic" ng-attr-style="background-image:url({{::keeper|pic:100}})"
+                   ng-href="{{::keeper.library.path || '/' + keeper.username}}"
+                   kf-track-origin="{{::currentPageOrigin}}/alsoKeptBy"
+                   ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedOtherKeeper"></a>
+              </span>
+              <span class="kf-keep-who-num" ng-if="keep.keepersTotal - 1 > (keep.keepers.length || 0)">
+                {{keep.keepersTotal - (keep.keepers.length || 0) | num}}
+              </span>
+            </div>
           </div>
         </div>
-        <a class="kf-keep-card-image" ng-if="::image"
-           ng-style="{'background-image': 'url(\'' + image.url + '\')'}"
-           ng-href="{{::keep.url}}" target="_blank" rel="nofollow" tabindex="-1"
-           ng-click="clickCallback({keep: keep, event: $event})" click-action="clickedArticleImage">
-        </a>
       </div>
+      <div ng-if="hasKeepCommentsPermission && galleryView" kf-keep-comments keep="keep"></div>
+      <span ng-if="hasKeepCommentsPermission && !galleryView && keep.discussion.numMessages"
+            class="kf-keep-card-view-comments kf-link"
+            ng-bind-template="View Comments({{keep.discussion.numMessages}})"
+            ng-click="toggleExpandCard()"></span>
     </div>
-
-    <!-- end Compact card -->
 
     <div class="kf-keep-checkbox-wrap">
       <div class="kf-keep-checkbox-icon sprite sprite-checkbox-icon" ng-if="!$parent.selection.isSelected(keep)"
