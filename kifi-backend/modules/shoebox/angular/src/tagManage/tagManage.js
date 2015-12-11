@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('ManageTagCtrl', [
   '$scope', '$window', 'manageTagService', 'libraryService',
-  'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
+  'routeService', '$http', '$location', 'modalService', '$timeout',
   function (
       $scope, $window, manageTagService, libraryService,
-      routeService, $http, $location, modalService, $timeout, $rootScope) {
+      routeService, $http, $location, modalService, $timeout) {
     $window.document.title = 'Kifi • Manage Your Tags';
 
     $scope.selected = {};
@@ -167,7 +167,7 @@ angular.module('kifi')
     };
 
     $scope.deleteTag = function () {
-      var _scope = $rootScope.$new();
+      var _scope = $scope.$new();
       _scope.action = 'delete';
       _scope.name = $scope.selectedTag.name;
       modalService.open({
@@ -189,7 +189,7 @@ angular.module('kifi')
     };
 
     $scope.renameTag = function () {
-      var _scope = $rootScope.$new();
+      var _scope = $scope.$new();
       _scope.action = 'rename';
       _scope.name = $scope.selectedTag.name;
       modalService.open({

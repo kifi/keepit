@@ -5,7 +5,7 @@
 
     <div class="dialog-body dialog-centered">
       <div class="kf-add-keep-body">
-        <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid URL</div>
+        <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid HTTP/HTTPS URL</div>
         <input class="kf-add-keep-input" placeholder="http://..." ng-model="state.input" ng-focus="resetFocusState()"></input>
 
         <!-- TODO(yiping): Use button instead of div. Styles have been cleaned up but we need a way to not trigger the form submission. -->

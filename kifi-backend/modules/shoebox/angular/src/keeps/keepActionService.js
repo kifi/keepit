@@ -7,7 +7,7 @@ angular.module('kifi')
   function ($analytics, $location, net, libraryService) {
 
     function sanitizeUrl(url) {
-      var regex = /^[a-zA-Z]+:\/\//;
+      var regex = /^https?:\/\//;
       if (!regex.test(url)) {
         return 'http://' + url;
       } else {
