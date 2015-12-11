@@ -779,7 +779,6 @@ GET     /admin/explainUserResult        @com.keepit.controllers.admin.AdminSearc
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResult])
 
 POST    /admin/users/createPushActivityEntities     @com.keepit.controllers.admin.AdminUserController.createPushActivityEntities
-POST    /admin/users/:id/pushLibraryActivity        @com.keepit.controllers.admin.AdminUserController.pushLibraryActivity(id: Id[User])
 POST    /admin/users/:id/pushPersonaActivity        @com.keepit.controllers.admin.AdminUserController.pushPersonaActivity(id: Id[User])
 
 GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns

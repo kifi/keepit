@@ -53,7 +53,6 @@ class CollectionCommander @Inject() (
 
   def pageCollections(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting) = {
     db.readOnlyMaster { implicit s =>
-      println(collectionRepo.all.map(_.name))
       sort match {
         case TagSorting.NumKeeps => collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize)
         case TagSorting.Name => collectionRepo.getByUserSortedByName(userId, offset, pageSize)
