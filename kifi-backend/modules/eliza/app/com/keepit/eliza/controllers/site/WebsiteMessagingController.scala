@@ -1,6 +1,7 @@
 package com.keepit.eliza.controllers.site
 
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.common.db.Id
 import com.keepit.common.json.{ TraversableFormat, KeyFormat, TupleFormat }
 import com.keepit.discussion.Message
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
@@ -101,7 +102,7 @@ class WebsiteMessagingController @Inject() (
         (request.body \ "messageId").asOpt[PublicId[Message]].flatMap(pubId => Message.decodePublicId(pubId).toOption) match {
           case None => BadRequest(Json.obj("error" -> "invalid_message_id"))
           case Some(messageId) =>
-            val elizaMessageId = ElizaMessage.fromMessageId(messageId)
+            val elizaMessageId: Id[ElizaMessage] = ElizaMessage.fromMessageId(messageId)
             val deleted = discussionCommander.deleteMessageOnKeep(request.userId, keepId, elizaMessageId)
             if (!deleted) Forbidden(Json.obj("error" -> "insufficient_permissions"))
             else Ok
