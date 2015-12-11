@@ -3,7 +3,7 @@ package com.keepit.eliza.controllers.site
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.json.{ TraversableFormat, KeyFormat, TupleFormat }
 import com.keepit.discussion.Message
-import com.keepit.eliza.commanders.{ ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
+import com.keepit.eliza.commanders.{ MessageFetchingCommander, ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.time._
 import com.keepit.eliza.model.{ ElizaMessage, MessageSource }
@@ -22,6 +22,7 @@ import scala.util.{ Try, Success, Failure }
 class WebsiteMessagingController @Inject() (
     notificationCommander: NotificationDeliveryCommander,
     discussionCommander: ElizaDiscussionCommander,
+    messageFetchingCommander: MessageFetchingCommander,
     shoebox: ShoeboxServiceClient,
     val userActionsHelper: UserActionsHelper,
     implicit val publicIdConfig: PublicIdConfiguration,
@@ -68,10 +69,9 @@ class WebsiteMessagingController @Inject() (
             shoebox.canCommentOnKeep(request.userId, keepId).flatMap { canComment =>
               if (canComment) {
                 val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-
-                discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { _ =>
-                  NoContent
-                }
+                for {
+                  msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build)
+                } yield Ok(Json.obj("pubId" -> Message.publicId(ElizaMessage.toCommon(msg.id.get))))
               } else Future.successful(Forbidden)
             }
         }
