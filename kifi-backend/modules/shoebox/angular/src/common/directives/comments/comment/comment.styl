@@ -90,8 +90,12 @@
 
 .kf-keep-comment-actions
   position: relative
+  float: right
 
   .kf-keep-comment-actions-menu
+    position: absolute
+    top: 15px
+    right: 5px
     font-size: 14px
     transform-origin: 80% top
     transition: visibility 0s, opacity linear dur, transform dur ease-out
@@ -126,13 +130,6 @@
   .kf-keep-comment-actions-icon
     width: 15px
     height: 15px
-
-.kf-feed-item .kf-keep-comment-actions-menu
-  left: 252px
-.kf-lib-content .kf-keep-comment-actions-menu
-  left: 190px
-.kf-keep-page .kf-keep-comment-actions-menu
-  left: 190px
 
 .kf-keep-comment-container:hover .kf-keep-comment-actions-button
 .kf-keep-comment-actions.kf-open .kf-keep-comment-actions-button
