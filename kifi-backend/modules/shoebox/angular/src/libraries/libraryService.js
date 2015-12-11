@@ -125,7 +125,6 @@ angular.module('kifi')
         }
         var libPromise = net.getLibraryByHandleAndSlug(handle, slug, authToken).then(function (res) {
           res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
-          res.data.library.subscriptions = res.data.subscriptions;
           return augment(res.data.library);
         });
 

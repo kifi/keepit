@@ -127,7 +127,6 @@ class KeepCommanderImpl @Inject() (
     keepDecorator: KeepDecorator,
     twitterPublishingCommander: TwitterPublishingCommander,
     facebookPublishingCommander: FacebookPublishingCommander,
-    librarySubscriptionCommander: LibrarySubscriptionCommander,
     permissionCommander: PermissionCommander,
     uriHelpers: UriIntegrityHelpers,
     implicit val defaultContext: ExecutionContext,
@@ -341,7 +340,6 @@ class KeepCommanderImpl @Inject() (
       libraryRepo.get(libraryId)
     }
     val (keep, isNewKeep) = keepInterner.internRawBookmark(rawBookmark, userId, library, source).get
-    if (isNewKeep) { librarySubscriptionCommander.sendNewKeepMessage(keep, library) }
     postSingleKeepReporting(keep, isNewKeep, library, socialShare)
     (keep, isNewKeep)
   }
@@ -351,8 +349,6 @@ class KeepCommanderImpl @Inject() (
       libraryRepo.get(libraryId)
     }
     val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
-
-    internResponse.newKeeps.foreach { keep => librarySubscriptionCommander.sendNewKeepMessage(keep, library) }
 
     val keeps = internResponse.successes
     log.info(s"[keepMulti] keeps(len=${keeps.length}):${keeps.mkString(",")}")

@@ -42,7 +42,6 @@ class LibraryController @Inject() (
   keepRepo: KeepRepo,
   orgRepo: OrganizationRepo,
   basicUserRepo: BasicUserRepo,
-  librarySubscriptionRepo: LibrarySubscriptionRepo,
   libPathCommander: PathCommander,
   keepsCommander: KeepCommander,
   keepDecorator: KeepDecorator,
@@ -93,7 +92,6 @@ class LibraryController @Inject() (
             color = externalCreateRequest.color,
             listed = externalCreateRequest.listed,
             whoCanInvite = externalCreateRequest.whoCanInvite,
-            subscriptions = externalCreateRequest.subscriptions,
             space = space,
             orgMemberAccess = externalCreateRequest.orgMemberAccess
           )
@@ -131,7 +129,6 @@ class LibraryController @Inject() (
         color = externalLibraryModifyRequest.color,
         listed = externalLibraryModifyRequest.listed,
         whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
-        subscriptions = externalLibraryModifyRequest.subscriptions,
         space = space,
         orgMemberAccess = externalLibraryModifyRequest.orgMemberAccess,
         whoCanComment = externalLibraryModifyRequest.whoCanComment
@@ -170,9 +167,7 @@ class LibraryController @Inject() (
     implicit val context = heimdalContextBuilder.withRequestInfo(request).build
     libraryInfoCommander.getLibraryById(request.userIdOpt, showPublishedLibraries, libraryId, idealSize, request.userIdOpt, sanitizeUrls = false) map { libInfo =>
       val suggestedSearches = getSuggestedSearchesAsJson(libraryId)
-      val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libraryId).map { sub => LibrarySubscription.toSubKey(sub) } }
-      val subscriptionJson = Json.toJson(subKeys)
-      Ok(Json.obj("library" -> libInfo, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
+      Ok(Json.obj("library" -> libInfo, "suggestedSearches" -> suggestedSearches))
     }
   }
 
@@ -208,11 +203,9 @@ class LibraryController @Inject() (
           if (useMultilibLogic) log.info(s"[KTL-EXP] Serving up library ${library.id.get} using new logic for user ${request.userIdOpt.get}")
           libraryInfoCommander.createFullLibraryInfo(request.userIdOpt, showPublishedLibraries = true, library, idealSize, authTokenOpt, sanitizeUrls = false, useMultilibLogic).map { libInfo =>
             val suggestedSearches = getSuggestedSearchesAsJson(library.id.get)
-            val subKeys: Seq[LibrarySubscriptionKey] = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(library.id.get).map { sub => LibrarySubscription.toSubKey(sub) } }
 
             libraryCommander.trackLibraryView(request.userIdOpt, library)
-            val subscriptionJson = Json.toJson(subKeys)
-            Ok(Json.obj("library" -> libInfo, "subscriptions" -> subscriptionJson, "suggestedSearches" -> suggestedSearches))
+            Ok(Json.obj("library" -> libInfo, "suggestedSearches" -> suggestedSearches))
           }
         })
       case Left(fail) => Future.successful {
@@ -222,16 +215,16 @@ class LibraryController @Inject() (
   }
 
   def getLibrarySummariesByUser = UserAction.async { request =>
-    val libInfos: ParSeq[(LibraryCardInfo, Option[MiniLibraryMembership], Seq[LibrarySubscriptionKey])] = db.readOnlyMaster { implicit session =>
+    val libInfos: ParSeq[(LibraryCardInfo, Option[MiniLibraryMembership])] = db.readOnlyMaster { implicit session =>
       val libs = libraryRepo.getOwnerLibrariesForSelf(request.userId, Paginator.fromStart(200)) // might want to paginate and/or stop preloading all of these
       libraryCardCommander.createLiteLibraryCardInfos(libs, request.userId)
     }
     val objs = libInfos.map {
-      case (info: LibraryCardInfo, memOpt: Option[MiniLibraryMembership], subs: Seq[LibrarySubscriptionKey]) =>
+      case (info: LibraryCardInfo, memOpt: Option[MiniLibraryMembership]) =>
         val id = Library.decodePublicId(info.id).get
         val lib = db.readOnlyMaster { implicit s => libraryRepo.get(id) }
         val path = libPathCommander.getPathForLibraryUrlEncoded(lib)
-        val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) + ("subscriptions" -> Json.toJson(subs)) // TODO: stop adding "url" when web app uses "slug" instead
+        val obj = Json.toJson(info).as[JsObject] + ("url" -> JsString(path)) // TODO: stop adding "url" when web app uses "slug" instead
         if (memOpt.flatMap(_.lastViewed).nonEmpty) {
           obj ++ Json.obj("lastViewed" -> memOpt.flatMap(_.lastViewed).get)
         } else {
@@ -248,8 +241,8 @@ class LibraryController @Inject() (
     val libraryCardInfos = db.readOnlyMaster(implicit s => libraryCardCommander.createLiteLibraryCardInfos(librariesWithMembershipAndCollaborators.map(_._1), request.userId))
 
     val objs = libraryCardInfos.map {
-      case (libCardInfo, memOpt, subscriptions) =>
-        val obj = Json.toJson(libCardInfo).as[JsObject] + ("subscriptions" -> Json.toJson(subscriptions))
+      case (libCardInfo, memOpt) =>
+        val obj = Json.toJson(libCardInfo).as[JsObject]
         if (memOpt.flatMap(_.lastViewed).nonEmpty) {
           obj + ("lastViewed" -> Json.toJson(memOpt.map(_.lastViewed)))
         } else obj

@@ -29,7 +29,6 @@ class UserProfileController @Inject() (
     userValueRepo: UserValueRepo,
     userCommander: UserCommander,
     friendRequestRepo: FriendRequestRepo,
-    librarySubscriptionRepo: LibrarySubscriptionRepo,
     userConnectionRepo: UserConnectionRepo,
     abookServiceClient: ABookServiceClient,
     userMutualConnectionsCommander: UserMutualConnectionsCommander,
@@ -93,14 +92,6 @@ class UserProfileController @Inject() (
     }
   }
 
-  private def zipSubscriptionsWithLibInfos(libCardInfos: Seq[LibraryCardInfo]): Seq[JsObject] = {
-    libCardInfos.map { lib =>
-      val libId = Library.decodePublicId(lib.id)
-      val subscriptions = db.readOnlyReplica { implicit s => librarySubscriptionRepo.getByLibraryId(libId.get).map { LibrarySubscription.toSubKey } }
-      Json.toJson(lib).as[JsObject] + ("subscriptions" -> Json.toJson(subscriptions))
-    }.seq
-  }
-
   def getProfileLibraries(username: Username, page: Int, pageSize: Int, filter: String) = MaybeUserAction.async { request =>
     userCommander.userFromUsername(username) match {
       case None =>
@@ -117,8 +108,7 @@ class UserProfileController @Inject() (
             } else {
               userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq
             }
-            val libInfosAndSubscriptions: Seq[JsObject] = zipSubscriptionsWithLibInfos(libCardInfos)
-            Future.successful(Ok(Json.obj("own" -> libInfosAndSubscriptions)))
+            Future.successful(Ok(Json.obj("own" -> Json.toJson(libCardInfos))))
           case "following" =>
             val libs = userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq
             Future.successful(Ok(Json.obj("following" -> libs)))
@@ -131,9 +121,9 @@ class UserProfileController @Inject() (
             } else {
               userProfileCommander.getOwnLibraries(user, viewer, paginator, imageSize).seq
             }
-            val libInfosAndSubscriptions: Seq[JsObject] = zipSubscriptionsWithLibInfos(libCardInfos)
+            val libInfosJson = Json.toJson(libCardInfos)
 
-            val ownLibsF = SafeFuture(libInfosAndSubscriptions)
+            val ownLibsF = SafeFuture(libInfosJson)
             val followLibsF = SafeFuture(userProfileCommander.getFollowingLibraries(user, viewer, paginator, imageSize).seq)
             val invitedLibsF = SafeFuture(userProfileCommander.getInvitedLibraries(user, viewer, paginator, imageSize).seq)
             for {
