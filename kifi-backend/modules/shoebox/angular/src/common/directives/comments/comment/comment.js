@@ -26,7 +26,7 @@ angular.module('kifi')
           $scope.commentActionItems = [
             {
               title: 'Delete',
-              action: function(event) {
+              action: function() {
                 keepService.deleteMessageFromKeepDiscussion($scope.keep.pubId, $scope.comment.id).then(function () {
                   element.remove();
                 })['catch'](modalService.openGenericErrorModal);
