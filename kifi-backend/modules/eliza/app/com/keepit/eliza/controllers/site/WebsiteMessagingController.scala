@@ -103,7 +103,7 @@ class WebsiteMessagingController @Inject() (
         (request.body \ "messageId").asOpt[PublicId[Message]].flatMap(pubId => Message.decodePublicId(pubId).toOption) match {
           case None => BadRequest(Json.obj("error" -> "invalid_message_id"))
           case Some(messageId) =>
-            val elizaMessageId = Id[ElizaMessage](messageId.id)
+            val elizaMessageId = ElizaMessage.fromCommon(messageId)
             val deleted = discussionCommander.deleteMessageOnKeep(request.userId, keepId, elizaMessageId)
             if (!deleted) Forbidden(Json.obj("error" -> "insufficient_permissions"))
             else Ok
