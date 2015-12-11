@@ -24,6 +24,7 @@ trait ElizaDiscussionCommander {
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
   def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
+  def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Boolean
 }
 
 @Singleton
@@ -158,6 +159,14 @@ class ElizaDiscussionCommanderImpl @Inject() (
       }
       unreadCount
     }
+  }
+
+  def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Boolean = db.readWrite { implicit s =>
+    val message = messageRepo.get(messageId)
+    if (message.from.asUser.contains(userId)) {
+      messageRepo.deactivate(message)
+      true
+    } else false
   }
 
 }
