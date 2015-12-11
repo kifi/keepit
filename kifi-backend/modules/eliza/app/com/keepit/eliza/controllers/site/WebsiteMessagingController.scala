@@ -71,7 +71,7 @@ class WebsiteMessagingController @Inject() (
                 val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
                 for {
                   msg <- discussionCommander.sendMessageOnKeep(request.userId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build)
-                } yield Ok(Json.obj("pubId" -> Message.publicId(ElizaMessage.toCommon(msg.id.get))))
+                } yield Ok(Json.obj("pubId" -> Message.publicId(ElizaMessage.toCommon(msg.id.get)), "sentAt" -> msg.createdAt))
               } else Future.successful(Forbidden)
             }
         }
