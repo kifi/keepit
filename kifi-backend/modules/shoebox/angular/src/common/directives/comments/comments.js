@@ -60,25 +60,22 @@ angular.module('kifi')
             // else we continue normally
             var commentBox = getCommentBox(element);
             if (commentBox && !e.shiftKey && e.which === 13) {
-              var msg = {
-                sentAt: new Date().getTime(),
-                sentBy: profileService.me,
-                text: commentBox.textContent
-              };
-              $scope.comments.push(msg);
-              $scope.keep.discussion.numMessages++;
-              $scope.visibleCount++;
-
               keepService
-              .addMessageToKeepDiscussion($scope.keep.pubId, msg.text)
-              .then(function () {
+              .addMessageToKeepDiscussion($scope.keep.pubId, commentBox.textContent)
+              .then(function (resp) {
+                var msg = {
+                  id: resp.pubId,
+                  sentAt: new Date().getTime(),
+                  sentBy: profileService.me,
+                  text: commentBox.textContent
+                };
+                $scope.comments.push(msg);
+                $scope.keep.discussion.numMessages++;
+                $scope.visibleCount++;
                 resetCaret(commentBox);
               })
               ['catch'](function () {
                 $scope.error = 'Something went wrong. Try again?';
-                $scope.visibleCount--;
-                $scope.keep.discussion.numMessages--;
-                $scope.comments.pop();
               });
 
               e.stopPropagation();
