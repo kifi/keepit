@@ -617,7 +617,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         keep.userId == userId,
         true,
         keep.visibility,
-        keep.libraryId.map(Library.publicId)
+        Library.publicId(keep.libraryId.get)
       )
     })
   }
