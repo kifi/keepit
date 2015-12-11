@@ -29,6 +29,7 @@ import play.api.http.Status.{ FORBIDDEN, NOT_FOUND }
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+import scala.collection.mutable
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Try, Failure, Success }
 
@@ -483,6 +484,7 @@ class KeepCommanderImpl @Inject() (
   // You have keeps, and want tags removed from it.
   def removeTagFromKeeps(keeps: Set[Id[Keep]], tag: Hashtag): Int = {
     db.readWrite { implicit session =>
+      var errors = mutable.Set.empty[Id[Keep]]
       val updated = keepRepo.getByIds(keeps).flatMap {
         case ((_, k)) =>
           val existingTags = Hashtags.findAllHashtagNames(k.note.getOrElse("")).map(Hashtag(_)).toSeq
@@ -493,6 +495,7 @@ class KeepCommanderImpl @Inject() (
             Try(syncTagsToNoteAndSaveKeep(k.userId, k, newTags)) match { // Note will be updated here
               case Success(r) => Some(r)
               case Failure(ex) =>
+                errors += k.id.get
                 log.warn(s"[removeTagFromKeeps] Failure removing tag for keep ${k.id.get} removing ${tag.tag}. Existing tags: ${k.note}, new tags: $newTags")
                 None
             }
@@ -500,6 +503,9 @@ class KeepCommanderImpl @Inject() (
       }
       updated.values.flatten.distinctBy(_.id).map { c =>
         collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)
+      }
+      if (errors.nonEmpty) {
+        airbrake.notify(s"[removeTagFromKeeps] Failure removing tag ${tag.tag} from ${errors.size} keeps. See logs for details.")
       }
       updated.size
     }
@@ -519,6 +525,7 @@ class KeepCommanderImpl @Inject() (
       }
     }
     db.readWrite(attempts = 3) { implicit session =>
+      var errors = mutable.Set.empty[Id[Keep]]
       val updated = keepRepo.getByIds(keeps).flatMap {
         case ((_, k)) =>
           val existingTags = Hashtags.findAllHashtagNames(k.note.getOrElse("")).map(Hashtag(_)).toSeq
@@ -529,6 +536,7 @@ class KeepCommanderImpl @Inject() (
             Try(syncTagsToNoteAndSaveKeep(k.userId, k.withNote(newNote), newTags)) match {
               case Success(r) => Some(r)
               case Failure(ex) =>
+                errors += k.id.get
                 log.warn(s"[replaceTagOnKeeps] Failure updating note for keep ${k.id.get} replacing ${oldTag.tag} with ${newTag.tag}. Existing note: ${k.note}, new note: $newNote")
                 None
             }
@@ -536,6 +544,9 @@ class KeepCommanderImpl @Inject() (
       }
       updated.values.flatten.distinctBy(_.id).map { c =>
         collectionRepo.collectionChanged(c.id, c.isNewKeep, c.inactivateIfEmpty)
+      }
+      if (errors.nonEmpty) {
+        airbrake.notify(s"[replaceTagOnKeeps] Failure replacing ${oldTag.tag} with ${newTag.tag} from ${errors.size} keeps. See logs for details.")
       }
       updated.size
     }
