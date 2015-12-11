@@ -175,7 +175,7 @@ angular.module('kifi')
         scope: _scope
       });
       _.remove($scope.tagsToShow, $scope.selectedTag);
-      manageTagService.remove($scope.selectedTag);
+      manageTagService.remove($scope.selectedTag.name);
     };
 
     $scope.showRenameTagModal = function (tag) {
@@ -196,8 +196,8 @@ angular.module('kifi')
         template: 'tagManage/modifyTagProgressModal.tpl.html',
         scope: _scope
       });
+      manageTagService.rename($scope.selectedTag.name, $scope.selectedTag.renamed);
       $scope.selectedTag.name = $scope.selectedTag.renamed;
-      manageTagService.rename($scope.selectedTag);
     };
   }
 ]);
