@@ -44,7 +44,7 @@ class WebsiteMessagingController @Inject() (
     val keepIdTry = Keep.decodePublicId(keepPubId)
     val fromIdOptTry = fromPubIdOpt.filter(_.nonEmpty) match {
       case None => Success(None)
-      case Some(fromPubId) => Message.decodePublicId(PublicId[Message](fromPubId)).map(msgId => Some(ElizaMessage.fromMessageId(msgId)))
+      case Some(fromPubId) => Message.decodePublicId(PublicId[Message](fromPubId)).map(msgId => Some(ElizaMessage.fromCommon(msgId)))
     }
     (for {
       keepId <- keepIdTry
@@ -83,7 +83,7 @@ class WebsiteMessagingController @Inject() (
     implicit val outputWrites = TraversableFormat.mapWrites[PublicId[Keep], Int](_.id)
     (for {
       input <- request.body.asOpt[Seq[(PublicId[Keep], PublicId[Message])]]
-      readKeeps <- Try(input.map { case (pubKeepId, pubMsgId) => (Keep.decodePublicId(pubKeepId).get, ElizaMessage.fromMessageId(Message.decodePublicId(pubMsgId).get)) }).toOption
+      readKeeps <- Try(input.map { case (pubKeepId, pubMsgId) => (Keep.decodePublicId(pubKeepId).get, ElizaMessage.fromCommon(Message.decodePublicId(pubMsgId).get)) }).toOption
     } yield {
       val unreadMessagesByKeep = readKeeps.flatMap {
         case (keepId, msgId) => discussionCommander.markAsRead(request.userId, keepId, msgId).map { newMsgCount => Keep.publicId(keepId) -> newMsgCount }

@@ -3,7 +3,7 @@ package com.keepit.slack.models
 import javax.crypto.spec.IvParameterSpec
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.crypto.{ ModelWithPublicIdCompanion, ModelWithPublicId }
+import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId }
 import com.keepit.common.db.slick.DBSession.{ RWSession, RSession }
 import com.keepit.common.db.slick.{ DbRepo, DataBaseComponent, Repo }
 import com.keepit.common.db._
@@ -45,7 +45,7 @@ case class SlackChannelToLibrary(
 }
 
 object SlackChannelToLibraryStates extends States[SlackChannelToLibrary]
-object SlackChannelToLibrary extends ModelWithPublicIdCompanion[SlackChannelToLibrary] {
+object SlackChannelToLibrary extends PublicIdGenerator[SlackChannelToLibrary] {
   protected val publicIdPrefix = "sctl"
   protected val publicIdIvSpec = new IvParameterSpec(Array(-52, 55, -75, 41, -105, -48, -35, 2, 29, 39, 85, 107, -43, -63, 15, -23))
 }

@@ -2,7 +2,7 @@ package com.keepit.model
 
 import javax.crypto.spec.IvParameterSpec
 
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ ModelWithPublicId, PublicIdGenerator }
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
@@ -53,7 +53,7 @@ object InvitationDecision {
     Format(__.read[String].map(InvitationDecision(_)), new Writes[InvitationDecision] { def writes(o: InvitationDecision) = JsString(o.value) })
 }
 
-object OrganizationInvite extends ModelWithPublicIdCompanion[OrganizationInvite] {
+object OrganizationInvite extends PublicIdGenerator[OrganizationInvite] {
 
   protected[this] val publicIdPrefix = "o"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-66, -82, -35, -48, -88, 55, -82, 53, -38, 123, 92, 62, -14, -35, 95, -93))

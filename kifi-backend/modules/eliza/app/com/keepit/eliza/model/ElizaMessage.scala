@@ -129,11 +129,7 @@ case class ElizaMessage(
 }
 object ElizaMessageStates extends States[ElizaMessage]
 
-object ElizaMessage {
-  // hack to expose ElizaMessage ids outside Eliza
-  def toMessageId(emId: Id[ElizaMessage]): Id[Message] = Id[Message](emId.id)
-  def fromMessageId(msgId: Id[Message]): Id[ElizaMessage] = Id[ElizaMessage](msgId.id)
-
+object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[ElizaMessage]) and
     (__ \ 'createdAt).format[DateTime] and
