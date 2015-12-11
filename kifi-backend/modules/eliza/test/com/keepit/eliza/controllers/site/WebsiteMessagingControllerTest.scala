@@ -22,7 +22,7 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ DbInjectionHelper, ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable.SpecificationLike
-import play.api.libs.json.JsValue
+import play.api.libs.json.{ Json, JsValue }
 import play.api.mvc.{ AnyContentAsEmpty, Call }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -76,9 +76,75 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
         actualPages.length === expectedPages.length
         (actualPages zip expectedPages) foreach {
           case (actual, expected) =>
-            actual.map(pubId => ElizaMessage.fromMessageId(Message.decodePublicId(pubId).get)) === expected
+            actual.map(pubId => ElizaMessage.fromCommon(Message.decodePublicId(pubId).get)) === expected
         }
         1 === 1
+      }
+    }
+
+    "allow users to delete their own keeps" in {
+      withDb(modules: _*) { implicit injector =>
+        val keepId = Id[Keep](1)
+        val keepPubId = Keep.publicId(keepId)
+        val (user1, user2, thread, messages, messageToDelete) = db.readWrite { implicit session =>
+          val user1 = UserFactory.user().get
+          val user2 = UserFactory.user().get
+          val thread = MessageThreadFactory.thread().withKeep(keepId).saved
+          val user1Messages = MessageFactory.messages(5).map(_.withThread(thread).from(MessageSender.User(user1.id.get)).saved)
+          val user2Messages = MessageFactory.messages(5).map(_.withThread(thread).from(MessageSender.User(user2.id.get)).saved)
+          (user1, user2, thread, user1Messages ++ user2Messages, user1Messages.last)
+        }
+
+        inject[FakeUserActionsHelper].setUser(user1)
+        val getRequest1 = route.getMessagesOnKeep(keepPubId)
+        val getResponse1 = controller.getMessagesOnKeep(keepPubId, 20, None)(getRequest1)
+        val messagesBefore = (contentAsJson(getResponse1) \ "messages").as[Seq[Message]]
+        messagesBefore.length === 10
+        messagesBefore.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toCommon(messageToDelete.id.get) } must beTrue
+
+        val payload = Json.obj("messageId" -> Message.publicId(ElizaMessage.toCommon(messageToDelete.id.get)))
+        val delRequest = route.deleteMessageOnKeep(keepPubId).withBody(payload)
+        val delResponse1 = controller.deleteMessageOnKeep(keepPubId)(delRequest)
+        status(delResponse1) must beEqualTo(OK)
+
+        val getRequest2 = route.getMessagesOnKeep(keepPubId)
+        val getResponse2 = controller.getMessagesOnKeep(keepPubId, 20, None)(getRequest2)
+        val messagesAfter = (contentAsJson(getResponse2) \ "messages").as[Seq[Message]]
+        messagesAfter.length === 9
+        messagesAfter.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toCommon(messageToDelete.id.get) } must beFalse
+      }
+    }
+
+    "disallow users to delete others' keeps" in {
+      withDb(modules: _*) { implicit injector =>
+        val keepId = Id[Keep](1)
+        val keepPubId = Keep.publicId(keepId)
+        val (user1, user2, thread, messages, messageToDelete) = db.readWrite { implicit session =>
+          val user1 = UserFactory.user().get
+          val user2 = UserFactory.user().get
+          val thread = MessageThreadFactory.thread().withKeep(keepId).saved
+          val user1Messages = MessageFactory.messages(5).map(_.withThread(thread).from(MessageSender.User(user1.id.get)).saved)
+          val user2Messages = MessageFactory.messages(5).map(_.withThread(thread).from(MessageSender.User(user2.id.get)).saved)
+          (user1, user2, thread, user1Messages ++ user2Messages, user2Messages.last)
+        }
+
+        inject[FakeUserActionsHelper].setUser(user1)
+        val getRequest1 = route.getMessagesOnKeep(keepPubId)
+        val getResponse1 = controller.getMessagesOnKeep(keepPubId, 20, None)(getRequest1)
+        val messagesBefore = (contentAsJson(getResponse1) \ "messages").as[Seq[Message]]
+        messagesBefore.length === 10
+        messagesBefore.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toCommon(messageToDelete.id.get) } must beTrue
+
+        val payload = Json.obj("messageId" -> Message.publicId(ElizaMessage.toCommon(messageToDelete.id.get)))
+        val delRequest = route.deleteMessageOnKeep(keepPubId).withBody(payload)
+        val delResponse1 = controller.deleteMessageOnKeep(keepPubId)(delRequest)
+        status(delResponse1) must beEqualTo(FORBIDDEN)
+
+        val getRequest2 = route.getMessagesOnKeep(keepPubId)
+        val getResponse2 = controller.getMessagesOnKeep(keepPubId, 20, None)(getRequest2)
+        val messagesAfter = (contentAsJson(getResponse2) \ "messages").as[Seq[Message]]
+        messagesAfter.length === 10
+        messagesAfter.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toCommon(messageToDelete.id.get) } must beTrue
       }
     }
   }

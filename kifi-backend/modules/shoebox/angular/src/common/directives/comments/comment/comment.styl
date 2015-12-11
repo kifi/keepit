@@ -87,3 +87,51 @@
       color: #ABABAB
       font-size: 12px
       -webkit-font-smoothing: antialiased
+
+.kf-keep-comment-actions
+  position: relative
+
+  .kf-dropdown-menu
+    font-size: 14px
+    transform-origin: 80% top
+    transition: visibility 0s, opacity linear dur, transform dur ease-out
+
+  &:not(.kf-open)>.kf-dropdown-menu
+    dur = .08s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.9)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+.kf-dropdown-menu-item
+  padding: 0 16px
+  color: #556179
+  white-space: nowrap
+  cursor: pointer
+
+  &:hover
+    background-color: #eee
+
+  &:active
+    background-color: #ccc
+
+.kf-keep-comment-actions-button
+  display: none
+  float: right
+
+  :hover
+    opacity: .65
+
+  .kf-keep-comment-actions-icon
+    width: 15px
+    height: 15px
+
+.kf-feed-item .kf-dropdown-menu
+  left: 265px
+.kf-lib-content .kf-dropdown-menu
+  left: 205px
+
+.kf-keep-comment-container:hover .kf-keep-comment-actions-button
+.kf-keep-comment-actions.kf-open .kf-keep-comment-actions-button
+  display: block

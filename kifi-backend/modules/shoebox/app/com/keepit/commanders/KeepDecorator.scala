@@ -160,7 +160,7 @@ class KeepDecoratorImpl @Inject() (
               url = if (sanitizeUrls) URISanitizer.sanitize(keep.url) else keep.url,
               path = bestEffortPath,
               isPrivate = keep.isPrivate,
-              user = Some(idToBasicUser(keep.userId)),
+              user = idToBasicUser.get(keep.userId),
               createdAt = Some(getTimestamp(keep)),
               keeps = Some(keeps),
               keepers = Some(keepers.map { case (keeperId, _) => idToBasicUser(keeperId) }),

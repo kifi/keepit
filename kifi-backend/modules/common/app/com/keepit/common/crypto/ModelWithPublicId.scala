@@ -15,10 +15,9 @@ case class PublicIdConfiguration(key: String) {
   })
 }
 
-case class PublicId[T <: ModelWithPublicId[T]](id: String)
-
+case class PublicId[T](id: String)
 object PublicId {
-  implicit def queryStringBinder[T <: ModelWithPublicId[T]](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[PublicId[T]] {
+  implicit def queryStringBinder[T](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[PublicId[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, PublicId[T]]] = {
       stringBinder.bind(key, params) map {
         case Right(id) => Right(PublicId(id))
@@ -30,7 +29,7 @@ object PublicId {
     }
   }
 
-  implicit def pathBinder[T <: ModelWithPublicId[T]] = new PathBindable[PublicId[T]] {
+  implicit def pathBinder[T] = new PathBindable[PublicId[T]] {
     override def bind(key: String, value: String): Either[String, PublicId[T]] =
       Right(PublicId(value)) // TODO: handle errors if value is malformed
 
@@ -48,7 +47,7 @@ object PublicIdRegistry {
     def toId(pubIdStr: String)(implicit config: PublicIdConfiguration): Long
   }
   private val _registry = scala.collection.concurrent.TrieMap.empty[String, PubIdAccessor]
-  def register[T <: ModelWithPublicId[T]](c: ModelWithPublicIdCompanion[T]) = {
+  def register[T](c: PublicIdGenerator[T]) = {
     val accessor = new PubIdAccessor {
       def toPubId(idL: Long)(implicit config: PublicIdConfiguration) = c.publicId(Id[T](idL)).id
       def toId(pubIdStr: String)(implicit config: PublicIdConfiguration) = c.decodePublicId(PublicId[T](pubIdStr)).get.id
@@ -59,10 +58,8 @@ object PublicIdRegistry {
   def registry: List[(String, PubIdAccessor)] = _registry.toList
 }
 
-trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
-
+trait PublicIdGenerator[T] {
   PublicIdRegistry.register(this)
-
   protected[this] val publicIdPrefix: String
   /* Can be generated with:
     val sr = new java.security.SecureRandom()
@@ -99,7 +96,7 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
 }
 
 case class InternalOrExternalId[T <: ModelWithPublicId[T]](id: String) {
-  def parse(implicit config: PublicIdConfiguration, companion: ModelWithPublicIdCompanion[T]): Try[Either[Id[T], ExternalId[T]]] = {
+  def parse(implicit config: PublicIdConfiguration, companion: PublicIdGenerator[T]): Try[Either[Id[T], ExternalId[T]]] = {
     companion.decodePublicId(PublicId[T](id)).map(Left(_)).recoverWith {
       case _: Throwable => Try(ExternalId[T](id)).map(Right(_))
     }

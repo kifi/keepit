@@ -3,7 +3,7 @@ package com.keepit.payments
 import javax.crypto.spec.IvParameterSpec
 
 import com.amazonaws.services.cloudfront.model.InvalidArgumentException
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ ModelWithPublicId, PublicIdGenerator }
 import com.keepit.common.db.{ Id, ModelWithState, State, States }
 import com.keepit.common.mail.EmailAddress
 import com.keepit.common.time._
@@ -263,7 +263,7 @@ case class AccountEvent(
   def withState(state: State[AccountEvent]): AccountEvent = this.copy(state = state)
 }
 
-object AccountEvent extends ModelWithPublicIdCompanion[AccountEvent] {
+object AccountEvent extends PublicIdGenerator[AccountEvent] {
 
   protected[this] val publicIdPrefix = "ae"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-57, -50, -59, -20, 87, -37, -64, 34, -84, -42, 10, 118, 40, -17, -23, -93))

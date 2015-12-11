@@ -24,7 +24,8 @@ import scala.util.{ Failure, Try, Success }
 
 object LibraryToSlackChannelPusher {
   val maxAcceptableProcessingDuration = Period.minutes(10) // we will wait this long for a process to complete before we assume it is incompetent
-  val defaultDelayBetweenPushes = Period.minutes(30)
+  val delayFromFullPush = Period.minutes(30)
+  val delayFromPartialPush = Period.seconds(15)
   val delayFromPushRequest = Period.seconds(20)
   val maxTitleDelayFromKept = Period.seconds(40)
   val maxDelayFromKeptAt = Period.minutes(5)
@@ -184,9 +185,9 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       (lib, integrationsToProcess)
     }.flatMap {
       case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
-        val (webhookOpt, keepsToPush, lastKtlIdOpt) = db.readOnlyReplica { implicit s =>
+        val (webhookOpt, keepsToPush, lastKtlIdOpt, mayHaveMore) = db.readOnlyReplica { implicit s =>
           val webhook = slackIncomingWebhookInfoRepo.getForIntegration(lts)
-          val (keeps, lastKtlIdOpt) = {
+          val (keeps, lastKtlIdOpt, mayHaveMore) = {
             val recentKtls = ktlRepo.getByLibraryAddedAfter(libId, lts.lastProcessedKeep)
             val keepsByIds = keepRepo.getByIds(recentKtls.map(_.keepId).toSet)
             val now = clock.now()
@@ -195,7 +196,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
                 val isTitleGoodEnough = keep.title.isDefined || (keep.keptAt isBefore (now minus maxTitleDelayFromKept))
                 val isKeepStable = keep.updatedAt isBefore (now minus delayFromUpdatedAt)
                 (isTitleGoodEnough && isKeepStable) || (keep.keptAt isBefore (now minus maxDelayFromKeptAt))
-            } unzip match { case (stableRecentKeeps, stableRecentKtls) => (stableRecentKeeps, stableRecentKtls.lastOption.map(_.id.get)) }
+            } unzip match { case (stableRecentKeeps, stableRecentKtls) => (stableRecentKeeps, stableRecentKtls.lastOption.map(_.id.get), stableRecentKtls.length < recentKtls.length) }
           }
           val attributionByKeepId = keepSourceAttributionRepo.getByKeepIds(keeps.flatMap(_.id).toSet)
           def comesFromDestinationChannel(keepId: Id[Keep]): Boolean = attributionByKeepId.get(keepId).exists {
@@ -208,7 +209,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, attributionByKeepId)
             case ks => ManyKeeps(ks, lib, attributionByKeepId)
           }
-          (webhook, keepsToPush, lastKtlIdOpt)
+          (webhook, keepsToPush, lastKtlIdOpt, mayHaveMore)
         }
 
         val slackPush = webhookOpt match {
@@ -240,7 +241,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
               lts
                 .finishedProcessing
                 .withLastProcessedKeep(lastKtlIdOpt orElse lts.lastProcessedKeep)
-                .withNextPushAt(clock.now plus defaultDelayBetweenPushes)
+                .withNextPushAt(clock.now plus (if (mayHaveMore) delayFromPartialPush else delayFromFullPush))
             )
             maybeFail match {
               case Failure(f) => airbrake.notify(f)

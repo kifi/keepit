@@ -5,7 +5,7 @@ import java.util.regex.Pattern
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ CacheStatistics, FortyTwoCachePlugin, JsonCacheImpl, Key }
-import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, ModelWithPublicId, PublicIdGenerator }
 import com.keepit.common.db._
 import com.keepit.common.json.EnumFormat
 import com.keepit.common.logging.AccessLog
@@ -72,7 +72,7 @@ case class Library(
 
 }
 
-object Library extends ModelWithPublicIdCompanion[Library] {
+object Library extends PublicIdGenerator[Library] {
 
   val SYSTEM_MAIN_DISPLAY_NAME = "My Main Library"
   val SYSTEM_SECRET_DISPLAY_NAME = "My Private Library"

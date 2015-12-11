@@ -102,7 +102,7 @@ class PageCommander @Inject() (
 
   def getPageInfo(uri: URI, userId: Id[User], experiments: Set[UserExperimentType]): Future[KeeperPageInfo] = {
     val useMultilibLogic = experiments.contains(UserExperimentType.KEEP_MULTILIB)
-    val host: Option[NormalizedHostname] = uri.host.flatMap(host => NormalizedHostname.fromHostname(host.name))
+    val host: Option[NormalizedHostname] = uri.host.flatMap(host => NormalizedHostname.fromHostname(host.name, allowInvalid = true))
     val domainF = db.readOnlyMasterAsync { implicit session =>
       val domainOpt = host.flatMap(domainRepo.get(_))
       domainOpt.map { dom =>
@@ -112,7 +112,7 @@ class PageCommander @Inject() (
     }
     val uriInfoF = db.readOnlyMasterAsync { implicit session =>
       val (nUriStr, nUri) = normalizedURIInterner.getByUriOrPrenormalize(uri.raw.get) match {
-        case Success(Left(nUri)) => (nUri.url, Some(nUri))
+        case Success(Left(n)) => (n.url, Some(n))
         case Success(Right(pUri)) => (pUri, None)
         case Failure(ex) => (uri.raw.get, None)
       }

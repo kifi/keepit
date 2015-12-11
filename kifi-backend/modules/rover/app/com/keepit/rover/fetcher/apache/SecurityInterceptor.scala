@@ -11,8 +11,7 @@ trait SecurityInterceptor extends Logging {
   def throwIfBannedHost(host: String): Unit = {
     val trimmed = host.trim
     if (SecurityInterceptor.bannedHosts.exists(trimmed.startsWith)) {
-      //throw new HttpException(s"Tried to scrape banned domain ${host.toString}")
-      log.error(s"[SI] Blocking $trimmed")
+      throw new HttpException(s"Tried to scrape banned domain ${host.toString}")
     }
   }
 }
