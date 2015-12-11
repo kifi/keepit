@@ -55,12 +55,12 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
      * @return {Object} A state object
      */
     getView: function () {
-      if (this.parent.keep) {
-        return {
-          keep: this.parent.keep,
-          librariesPlural: this.parent.keep && this.parent.keep.libraries.length !== 1
-        };
-      }
+      var keep = this.parent.keep;
+
+      return {
+        keep: keep,
+        librariesPlural: keep && keep.libraries && keep.libraries.length !== 1
+      };
     },
 
     /**
@@ -69,16 +69,22 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
      * @return {string} participants html
      */
     renderContent: function () {
+      var keep = this.parent.keep;
+      var libraries;
       var $rendered;
       var html = '';
 
-      if (this.parent.keep) {
+      if (keep) {
         $rendered = $(k.render('html/keeper/message_keepscussion_header', this.getView(), {  'keep_box_lib': 'keep_box_lib' }));
+
         // Change the :javascript link to be an actual link to the library.
-        $rendered
-        .find('.kifi-keep-box-lib')
-        .attr('href', 'https://www.kifi.com/' + this.parent.keep.libraries[0].path)
-        .attr('target','_blank');
+        libraries = keep.libraries;
+        if (libraries && libraries[0]) {
+          $rendered
+          .find('.kifi-keep-box-lib')
+          .attr('href', 'https://www.kifi.com' + libraries[0].path)
+          .attr('target','_blank');
+        }
 
         html = $rendered.prop('outerHTML');
       }
