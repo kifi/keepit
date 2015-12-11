@@ -24,6 +24,8 @@ trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[Eliza
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
   def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int]
   def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Option[ElizaMessage]
+  def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit
+  def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit
 
   // PSA: please just use this method going forward, it has the cleanest API
   def countByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int
@@ -162,4 +164,7 @@ class MessageRepoImpl @Inject() (
     }
     sortedThreads.take(limit).list
   }
+
+  def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit = save(message.sanitizeForDelete)
+  def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit = save(get(messageId).sanitizeForDelete)
 }

@@ -93,4 +93,19 @@ class WebsiteMessagingController @Inject() (
       BadRequest(Json.obj("hint" -> "pass in valid keep and message ids"))
     }
   }
+
+  def deleteMessageOnKeep(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
+    Keep.decodePublicId(keepPubId) match {
+      case Failure(err) => BadRequest(Json.obj("error" -> "invalid_keep_id"))
+      case Success(keepId) =>
+        (request.body \ "messageId").asOpt[PublicId[Message]].flatMap(pubId => Message.decodePublicId(pubId).toOption) match {
+          case None => BadRequest(Json.obj("error" -> "invalid_message_id"))
+          case Some(messageId) =>
+            val elizaMessageId = ElizaMessage.fromMessageId(messageId)
+            val deleted = discussionCommander.deleteMessageOnKeep(request.userId, keepId, elizaMessageId)
+            if (!deleted) Forbidden(Json.obj("error" -> "insufficient_permissions"))
+            else Ok
+        }
+    }
+  }
 }
