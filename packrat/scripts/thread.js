@@ -23,13 +23,13 @@ k.panes.thread = k.panes.thread || function () {
   'use strict';
   var handlers = {
     thread_info: function (o) {
-      if ($holder && $holder.data('threadId') === o.thread) {
-        k.messageHeader.init($who.find('.kifi-message-header'), o.thread, o.participants);
+      if ($holder && $holder.data('threadId') === o.th.thread) {
+        k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, o.th.participants, o.keep);
       }
     },
     thread: function (o) {
       if ($holder && $holder.data('threadId') === o.id) {
-        updateAll(o.id, o.messages);
+        updateAll(o.id, o.messages, o.keep);
       }
     },
     message: function (o) {
@@ -155,7 +155,7 @@ k.panes.thread = k.panes.thread || function () {
     }
   }
 
-  function updateAll(threadId, messages) {
+  function updateAll(threadId, messages, keep) {
     var $msgs = $holder.find('.kifi-message-sent');
     if ($msgs.length) {
       var newMessages = justNewMessages($msgs, messages);
@@ -172,6 +172,7 @@ k.panes.thread = k.panes.thread || function () {
       $holder.append(messages.map(renderMessage));
       scrollToBottomResiliently(true);
     }
+
     emitRendered(threadId, messages[messages.length - 1]);
   }
 
@@ -246,11 +247,13 @@ k.panes.thread = k.panes.thread || function () {
     if (m.source && m.source !== "server") {
       m.displayedSource = m.source;
     }
+
     var templates = {
       messageTip: 'message_tip'
     };
+    var $rendered;
     if (m.auxData && m.auxData.length) {
-      var $rendered = $(k.render('html/keeper/message_aux', m, templates))
+      $rendered = $(k.render('html/keeper/message_aux', m, templates))
         .on('click', '.kifi-message-email-view', function() {
           api.require('scripts/iframe_dialog.js', function() {
             api.port.emit('auth_info', function (info) {
@@ -259,8 +262,9 @@ k.panes.thread = k.panes.thread || function () {
           });
         });
     } else {
-      var $rendered = $(k.render('html/keeper/message_discussion', m, templates));
+      $rendered = $(k.render('html/keeper/message_discussion', m, templates));
     }
+
     return $rendered.find('time').timeago().end()[0];
   }
 

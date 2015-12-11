@@ -22,6 +22,7 @@ var pageData = {}; // normUrl => PageData
 var threadLists = {}; // normUrl => ThreadList (special keys: 'all', 'sent', 'unread')
 var threadsById = {}; // threadId => thread (notification JSON)
 var messageData = {}; // threadId => [message, ...]; TODO: evict old threads from memory
+var keepData = {};
 var contactSearchCache;
 var urlPatterns;
 var guideData;
@@ -40,6 +41,7 @@ function clearDataCache() {
   threadLists = {};
   threadsById = {};
   messageData = {};
+  keepData = {};
   contactSearchCache = null;
   urlPatterns = null;
   guideData = null;
@@ -405,6 +407,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   tellVisibleTabsNoticeCountIfChanged();
 
   messageData = {};
+  keepData = {};
   forEachThreadOpenInPane(function (threadId) {
     socket.send(['get_thread', threadId]);
   });
@@ -519,8 +522,9 @@ var socketHandlers = {
   thread: function(o) {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
+    keepData[o.id] = o.keep;
     // Do we need to update muted state and possibly participants too? or will it come in thread_info?
-    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages));
+    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, o.keep));
   },
   message: function(threadId, message) {
     log('[socket:message]', threadId, message, message.nUrl);
@@ -559,12 +563,12 @@ function emitAllTabs(name, data, options) {
   });
 }
 
-function emitThreadInfoToTab(th, tab) {
-  api.tabs.emit(tab, 'thread_info', th, {queue: 1});
+function emitThreadInfoToTab(th, keep, tab) {
+  api.tabs.emit(tab, 'thread_info', {th: th, keep: keep}, {queue: 1});
 }
 
-function emitThreadToTab(id, messages, tab) {
-  api.tabs.emit(tab, 'thread', {id: id, messages: messages}, {queue: 1});
+function emitThreadToTab(id, messages, keep, tab) {
+  api.tabs.emit(tab, 'thread', {id: id, messages: messages, keep: keep}, {queue: 1});
 }
 
 function emitThreadsToTab(kind, tl, tab) {
@@ -1076,20 +1080,21 @@ api.port.on({
   },
   thread: function(id, _, tab) {
     var th = threadsById[id];
+    var keep = keepData[id];
     if (th) {
-      emitThreadInfoToTab(th, tab);
+      emitThreadInfoToTab(th, keep, tab);
     } else {
       // TODO: remember that this tab needs this thread info until it gets it or its pane changes?
       socket.send(['get_one_thread', id], function (th) {
         standardizeNotification(th);
         updateIfJustRead(th);
         threadsById[th.thread] = th;
-        emitThreadInfoToTab(th, tab);
+        emitThreadInfoToTab(th, keep, tab);
       });
     }
     var msgs = messageData[id];
     if (msgs) {
-      emitThreadToTab(id, msgs, tab);
+      emitThreadToTab(id, msgs, keep, tab);
     } else {
       // TODO: remember that this tab needs this thread until it gets it or its pane changes?
       socket.send(['get_thread', id]);
@@ -2755,6 +2760,7 @@ function lightFlush() {
   threadLists = {};
   threadsById = {};
   messageData = {};
+  keepData = {};
   contactSearchCache = null;
   urlPatterns = null;
   guideData = null;
