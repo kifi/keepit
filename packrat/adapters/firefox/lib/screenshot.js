@@ -1,9 +1,8 @@
 'use strict';
 
 const {Services} = require('resource://gre/modules/Services.jsm');
-const {getMostRecentBrowserWindow} = require('sdk/window/utils');
-const {getActiveTab, getTabContentWindow} = require('sdk/tabs/utils');
-
+const {browserWindows} = require('sdk/windows');
+const {viewFor} = require('sdk/view/core');
 const NS = 'http://www.w3.org/1999/xhtml';
 
 function newCanvas() {
@@ -13,7 +12,7 @@ function newCanvas() {
 exports.createBlankCanvas = newCanvas;
 
 exports.takeToCanvas = function () {
-  let win = getTabContentWindow(getActiveTab(getMostRecentBrowserWindow()));
+  let win = viewFor(browserWindows.activeWindow);
   let canvas = newCanvas();
   canvas.mozOpaque = true;
   let w = canvas.width = win.innerWidth;
