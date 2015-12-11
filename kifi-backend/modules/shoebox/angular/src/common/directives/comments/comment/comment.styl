@@ -91,12 +91,12 @@
 .kf-keep-comment-actions
   position: relative
 
-  .kf-dropdown-menu
+  .kf-keep-comment-actions-menu
     font-size: 14px
     transform-origin: 80% top
     transition: visibility 0s, opacity linear dur, transform dur ease-out
 
-  &:not(.kf-open)>.kf-dropdown-menu
+  &:not(.kf-open)>.kf-keep-comment-actions-menu
     dur = .08s
     visibility: hidden
     opacity: 0
@@ -104,7 +104,7 @@
     transition-duration: 0s, dur, dur
     transition-delay: dur, 0s, 0s
 
-.kf-dropdown-menu-item
+.kf-keep-comment-actions-item
   padding: 0 16px
   color: #556179
   white-space: nowrap
@@ -127,10 +127,12 @@
     width: 15px
     height: 15px
 
-.kf-feed-item .kf-dropdown-menu
-  left: 265px
-.kf-lib-content .kf-dropdown-menu
-  left: 205px
+.kf-feed-item .kf-keep-comment-actions-menu
+  left: 252px
+.kf-lib-content .kf-keep-comment-actions-menu
+  left: 190px
+.kf-keep-page .kf-keep-comment-actions-menu
+  left: 190px
 
 .kf-keep-comment-container:hover .kf-keep-comment-actions-button
 .kf-keep-comment-actions.kf-open .kf-keep-comment-actions-button
