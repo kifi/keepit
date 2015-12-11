@@ -108,7 +108,6 @@ angular.module('kifi')
 
           scope.$error = {};
 
-
           if (scope.$error.general) {
             return;
           }
