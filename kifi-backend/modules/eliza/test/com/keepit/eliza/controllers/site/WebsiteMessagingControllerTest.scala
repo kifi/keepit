@@ -98,9 +98,9 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
         inject[FakeUserActionsHelper].setUser(user1)
         val getRequest1 = route.getMessagesOnKeep(keepPubId)
         val getResponse1 = controller.getMessagesOnKeep(keepPubId, 20, None)(getRequest1)
-        val keepsBefore = (contentAsJson(getResponse1) \ "messages").as[Seq[Message]]
-        keepsBefore.length === 10
-        keepsBefore.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toMessageId(messageToDelete.id.get) } must beTrue
+        val messagesBefore = (contentAsJson(getResponse1) \ "messages").as[Seq[Message]]
+        messagesBefore.length === 10
+        messagesBefore.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toMessageId(messageToDelete.id.get) } must beTrue
 
         val payload = Json.obj("messageId" -> Message.publicId(ElizaMessage.toMessageId(messageToDelete.id.get)))
         val delRequest = route.deleteMessageOnKeep(keepPubId).withBody(payload)
@@ -109,9 +109,9 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
 
         val getRequest2 = route.getMessagesOnKeep(keepPubId)
         val getResponse2 = controller.getMessagesOnKeep(keepPubId, 20, None)(getRequest2)
-        val keepsAfter = (contentAsJson(getResponse2) \ "messages").as[Seq[Message]]
-        keepsAfter.length === 9
-        keepsAfter.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toMessageId(messageToDelete.id.get) } must beFalse
+        val messagesAfter = (contentAsJson(getResponse2) \ "messages").as[Seq[Message]]
+        messagesAfter.length === 9
+        messagesAfter.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toMessageId(messageToDelete.id.get) } must beFalse
       }
     }
 
@@ -131,9 +131,9 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
         inject[FakeUserActionsHelper].setUser(user1)
         val getRequest1 = route.getMessagesOnKeep(keepPubId)
         val getResponse1 = controller.getMessagesOnKeep(keepPubId, 20, None)(getRequest1)
-        val keepsBefore = (contentAsJson(getResponse1) \ "messages").as[Seq[Message]]
-        keepsBefore.length === 10
-        keepsBefore.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toMessageId(messageToDelete.id.get) } must beTrue
+        val messagesBefore = (contentAsJson(getResponse1) \ "messages").as[Seq[Message]]
+        messagesBefore.length === 10
+        messagesBefore.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toMessageId(messageToDelete.id.get) } must beTrue
 
         val payload = Json.obj("messageId" -> Message.publicId(ElizaMessage.toMessageId(messageToDelete.id.get)))
         val delRequest = route.deleteMessageOnKeep(keepPubId).withBody(payload)
@@ -142,9 +142,9 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
 
         val getRequest2 = route.getMessagesOnKeep(keepPubId)
         val getResponse2 = controller.getMessagesOnKeep(keepPubId, 20, None)(getRequest2)
-        val keepsAfter = (contentAsJson(getResponse2) \ "messages").as[Seq[Message]]
-        keepsAfter.length === 10
-        keepsAfter.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toMessageId(messageToDelete.id.get) } must beTrue
+        val messagesAfter = (contentAsJson(getResponse2) \ "messages").as[Seq[Message]]
+        messagesAfter.length === 10
+        messagesAfter.exists { msg => Message.decodePublicId(msg.pubId).get == ElizaMessage.toMessageId(messageToDelete.id.get) } must beTrue
       }
     }
   }
