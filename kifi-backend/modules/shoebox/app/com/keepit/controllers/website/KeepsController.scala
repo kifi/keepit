@@ -157,6 +157,35 @@ class KeepsController @Inject() (
     }
   }
 
+  def deleteCollectionByTag(tag: String) = UserAction { request =>
+    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndName(request.userId, Hashtag(tag)) } map { coll =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+      val keepIds = db.readOnlyReplica { implicit session =>
+        keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
+      }
+      collectionCommander.deleteCollection(coll)
+      val cnt = keepsCommander.removeTagFromKeeps(keepIds, coll.name)
+      Ok(Json.obj("deleted" -> coll.name, "cnt" -> cnt))
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Collection not found for tag $tag"))
+    }
+  }
+
+  def renameCollectionByTag() = UserAction(parse.json) { request =>
+    val oldTagName = (request.body \ "oldTagName").as[String].trim
+    val newTagName = (request.body \ "newTagName").as[String].trim
+    db.readOnlyMaster { implicit s => collectionRepo.getByUserAndName(request.userId, Hashtag(oldTagName)) } map { coll =>
+      implicit val context = heimdalContextBuilder.withRequestInfoAndSource(request, KeepSource.site).build
+      val keepIds = db.readOnlyReplica { implicit session =>
+        keepToCollectionRepo.getKeepsForTag(coll.id.get).toSet
+      }
+      val cnt = keepsCommander.replaceTagOnKeeps(keepIds, coll.name, Hashtag(newTagName))
+      Ok(Json.obj("renamed" -> coll.name, "cnt" -> cnt))
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Collection not found for id $oldTagName"))
+    }
+  }
+
   def searchUserTags(query: String, limit: Option[Int] = None) = UserAction.async { request =>
     keepsCommander.searchTags(request.userId, query, limit).map { hits =>
       implicit val matchesWrites = TupleFormat.tuple2Writes[Int, Int]

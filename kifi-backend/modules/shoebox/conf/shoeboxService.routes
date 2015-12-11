@@ -395,9 +395,13 @@ POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsCo
 GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep])
 
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.pageCollections(sort: String ?= "last_kept", offset : Int ?= 0, pageSize: Int ?= 0)
+POST    /site/collections/delete    @com.keepit.controllers.website.KeepsController.deleteCollectionByTag(tag: String)
+POST    /site/collections/rename    @com.keepit.controllers.website.KeepsController.renameCollectionByTag()
+GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
+
+# Legacy:
 POST    /site/collections/:id/delete @com.keepit.controllers.website.KeepsController.deleteCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/rename @com.keepit.controllers.website.KeepsController.renameCollection(id: ExternalId[Collection])
-GET     /site/collections/search    @com.keepit.controllers.website.KeepsController.searchUserTags(query: String, limit: Option[Int] = None)
 
 # Profile pages
 GET     /site/user/:name/profile    @com.keepit.controllers.website.UserProfileController.getProfile(name: Username)
