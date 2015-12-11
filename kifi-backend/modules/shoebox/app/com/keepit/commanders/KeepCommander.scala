@@ -150,7 +150,7 @@ class KeepCommanderImpl @Inject() (
           keep.title,
           keep.url,
           keep.visibility,
-          Library.publicId(keep.libraryId.get),
+          keep.libraryId.map(Library.publicId),
           users(keep.userId).externalId
         )
       }
@@ -330,7 +330,7 @@ class KeepCommanderImpl @Inject() (
     keepsF.flatMap {
       case keepsWithHelpRankCounts =>
         val (keeps, clickCounts, rkCounts) = keepsWithHelpRankCounts.unzip3
-        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
+        keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), showPublishedLibraries = false, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
     }
   }
 
@@ -350,7 +350,7 @@ class KeepCommanderImpl @Inject() (
     val library = db.readOnlyReplica { implicit session =>
       libraryRepo.get(libraryId)
     }
-    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, library, source)
+    val internResponse = keepInterner.internRawBookmarksWithStatus(rawBookmarks, userId, Some(library), source)
 
     internResponse.newKeeps.foreach { keep => librarySubscriptionCommander.sendNewKeepMessage(keep, library) }
 
@@ -526,8 +526,8 @@ class KeepCommanderImpl @Inject() (
     val selectedTagIds = selectedTags.map(_.id.get).toSet
     // get all active tags for keep to figure out which tags to add & which tags to remove
     val activeTagIds = keepToCollectionRepo.getCollectionsForKeep(keep.id.get).toSet
-    val tagIdsToAdd = selectedTagIds.filterNot(activeTagIds.contains(_))
-    val tagIdsToRemove = activeTagIds.filterNot(selectedTagIds.contains(_))
+    val tagIdsToAdd = selectedTagIds.filterNot(activeTagIds.contains)
+    val tagIdsToRemove = activeTagIds.filterNot(selectedTagIds.contains)
     var changedCollections = scala.collection.mutable.Set.empty[ChangedCollection]
 
     // fix k2c for tagsToAdd & tagsToRemove
@@ -581,7 +581,7 @@ class KeepCommanderImpl @Inject() (
     }.getOrElse(Set.empty)
     futureHits.imap { hits =>
       val validHits = hits.filterNot(hit => existingTags.contains(hit.tag))
-      limit.map(validHits.take(_)) getOrElse validHits
+      limit.map(validHits.take) getOrElse validHits
     }
   }
 
@@ -594,13 +594,13 @@ class KeepCommanderImpl @Inject() (
       val suggestedTags = {
         val restrictedKeeps = response.infos(item).keeps.toSet
         val safeTags = restrictedKeeps.flatMap {
-          case myKeep if myKeep.keptBy == Some(userId) => myKeep.tags
+          case myKeep if myKeep.keptBy.contains(userId) => myKeep.tags
           case anotherKeep => anotherKeep.tags.filterNot(_.isSensitive)
         }
         val validTags = safeTags.filterNot(tag => existingNormalizedTags.contains(tag.normalized))
         CollectionHelpers.dedupBy(validTags.toSeq.sortBy(-response.scores.byTag(_)))(_.normalized)
       }
-      limit.map(suggestedTags.take(_)) getOrElse suggestedTags
+      limit.map(suggestedTags.take) getOrElse suggestedTags
     }
   }
 
@@ -617,7 +617,7 @@ class KeepCommanderImpl @Inject() (
   // Only use this directly if you want to skip ALL interning features. You probably want KeepInterner.
   def persistKeep(k: Keep, userIds: Set[Id[User]], libraryIds: Set[Id[Library]])(implicit session: RWSession): Keep = {
     require(userIds.contains(k.userId), "keep owner is not one of the connected users")
-    require(libraryIds.contains(k.libraryId.get), "keep's library is not one of the connected libraries")
+    require(k.libraryId.toSet == libraryIds, "ktls in 2 or more libraries are not supported")
     val keep = keepRepo.save(k.withLibraries(libraryIds).withParticipants(userIds))
 
     userIds.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
@@ -777,15 +777,23 @@ class KeepCommanderImpl @Inject() (
   }
 
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]] = {
-    val (keeps, firstAddedAt): (Seq[Keep], Map[Id[Keep], DateTime]) = db.readOnlyReplica { implicit session =>
-      keepRepo.getRecentKeeps(userId, limit, beforeExtId, afterExtId)
-    }.foldRight(((List.empty[Keep], Map.empty[Id[Keep], DateTime]), Set.empty[Id[NormalizedURI]])) {
-      case ((keep, firstAddedAt), ((previousKeeps, previousLastAddedAt), seenUriIds)) =>
-        if (seenUriIds(keep.uriId)) ((previousKeeps, previousLastAddedAt), seenUriIds) else ((keep :: previousKeeps, previousLastAddedAt + (keep.id.get -> firstAddedAt)), seenUriIds + keep.uriId)
-    }._1
+    val keepsAndTimes = db.readOnlyReplica { implicit session =>
+      // TODO(ryan): when the frontend can handle a keep without a library, let them through
+      keepRepo.getRecentKeeps(userId, limit, beforeExtId, afterExtId).filter { case (k, _) => k.libraryId.isDefined }
+    }.distinctBy { case (k, addedAt) => k.uriId }
 
+    val keeps = keepsAndTimes.map(_._1)
+    val firstAddedAt = keepsAndTimes.map { case (k, addedAt) => k.id.get -> addedAt }.toMap
     def getKeepTimestamp(keep: Keep) = firstAddedAt(keep.id.get)
-    keepDecorator.decorateKeepsIntoKeepInfos(Some(userId), false, keeps, ProcessedImageSize.Large.idealSize, sanitizeUrls = sanitizeUrls, getTimestamp = getKeepTimestamp)
+
+    keepDecorator.decorateKeepsIntoKeepInfos(
+      Some(userId),
+      showPublishedLibraries = false,
+      keeps,
+      ProcessedImageSize.Large.idealSize,
+      sanitizeUrls = sanitizeUrls,
+      getTimestamp = getKeepTimestamp
+    )
   }
 
   private val autoFixNoteLimiter = new ReactiveLock()
