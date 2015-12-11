@@ -242,14 +242,13 @@ class KeepDecoratorImpl @Inject() (
         case Some(keeps) =>
           val userKeeps = keeps.map { keep =>
             val mine = userId == keep.userId
-            val libraryId = keep.libraryId.get
             val removable = true // all keeps here are writeable
             PersonalKeep(
               id = keep.externalId,
               mine = mine,
               removable = removable,
               visibility = keep.visibility,
-              libraryId = Library.publicId(libraryId)
+              libraryId = keep.libraryId.map(Library.publicId)
             )
           }
           uriId -> userKeeps
