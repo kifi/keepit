@@ -3,7 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.cache.{ JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics, Key }
-import com.keepit.common.crypto.{ CryptoSupport, ModelWithPublicIdCompanion, ModelWithPublicId }
+import com.keepit.common.crypto.{ CryptoSupport, PublicIdGenerator, ModelWithPublicId }
 import com.keepit.common.db._
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.mail.EmailAddress
@@ -41,7 +41,7 @@ case class LibraryInvite(
   override def toString: String = s"LibraryInvite[id=$id,libraryId=$libraryId,ownerId=$inviterId,userId=$userId,email=$emailAddress,access=$access,state=$state]"
 }
 
-object LibraryInvite extends ModelWithPublicIdCompanion[LibraryInvite] {
+object LibraryInvite extends PublicIdGenerator[LibraryInvite] {
 
   protected[this] val publicIdPrefix = "l"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-20, -76, -59, 85, 85, -2, 72, 61, 58, 38, 60, -2, -128, 79, 9, -87))

@@ -90,7 +90,8 @@ angular.module('kifi')
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
       link: function (scope) {
-
+        scope.admin = profileService.isAdmin();
+        scope.deviceCanTouch = 'ontouchstart' in document.documentElement;
         if (typeof scope.galleryView === 'undefined') {
           // Default to true when the caller doesn't specify
           scope.galleryView = true;
@@ -109,15 +110,20 @@ angular.module('kifi')
         //
         // Scope methods.
         //
+        scope.toggleExpandCard = function () {
+          scope.galleryView = !scope.galleryView;
+        };
+
         scope.editKeepNote = function (event, keep) {
           if (keep.id !== scope.keep.id || !scope.canEditKeep) {
             return;
           }
+          scope.galleryView = true;
 
-          var keepEl = angular.element(event.target).closest(scope.galleryView ? '.kf-gallery-card' : '.kf-compact-card');
+          var keepEl = angular.element(event.target).closest('.kf-keep-card');
           var editor = keepEl.find('.kf-knf-editor');
           if (!editor.length) {
-            var noteEl = keepEl.find(scope.galleryView ? '.kf-keep-note' : '.kf-keep-card-note');
+            var noteEl = keepEl.find('.kf-keep-card-note');
             var keepLibraryId = keep.library && keep.library.id;
             var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keepLibraryId; })[0];
             $injector.get('keepNoteForm').init(noteEl, keep.note, keepLibraryId, distinctKeep.id, function update(noteText) {
@@ -231,8 +237,8 @@ angular.module('kifi')
           $rootScope.$on('prefsChanged', function() {
             scope.galleryView = !profileService.prefs.use_minimal_keep_card;
           }),
-          $rootScope.$on('cardStyleChanged', function(style) {
-            scope.galleryView = style.use_minimal_keep_card;
+          $rootScope.$on('cardStyleChanged', function(scope, style) {
+            scope.galleryView = !style.use_minimal_keep_card;
           })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);

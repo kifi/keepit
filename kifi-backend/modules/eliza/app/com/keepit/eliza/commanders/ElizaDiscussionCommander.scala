@@ -51,7 +51,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       basicUsers <- basicUsersFut
       basicNonUsers <- basicNonUsersFut
     } yield emsgs.flatMap { em =>
-      val msgId = Message.publicId(ElizaMessage.toMessageId(em.id.get)) // this is a hack to expose Id[ElizaMessage] without exposing ElizaMessage itself
+      val msgId = Message.publicId(ElizaMessage.toCommon(em.id.get)) // this is a hack to expose Id[ElizaMessage] without exposing ElizaMessage itself
       val senderOpt: Option[BasicUserLikeEntity] = em.from.fold(
         None,
         { uid => Some(BasicUserLikeEntity(basicUsers(uid))) },

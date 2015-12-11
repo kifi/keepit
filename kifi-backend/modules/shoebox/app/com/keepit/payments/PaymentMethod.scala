@@ -1,7 +1,7 @@
 package com.keepit.payments
 
 import com.keepit.common.db.{ States, ModelWithState, Id, State }
-import com.keepit.common.crypto.{ ModelWithPublicId, ModelWithPublicIdCompanion }
+import com.keepit.common.crypto.{ ModelWithPublicId, PublicIdGenerator }
 import com.keepit.common.time._
 import com.kifi.macros.json
 
@@ -34,7 +34,7 @@ case class PaymentMethod(
   def sanitizeForDelete = this.copy(state = PaymentMethodStates.INACTIVE, default = false, stripeToken = StripeToken.DELETED)
 }
 
-object PaymentMethod extends ModelWithPublicIdCompanion[PaymentMethod] {
+object PaymentMethod extends PublicIdGenerator[PaymentMethod] {
 
   protected[this] val publicIdPrefix = "pm"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-27, 11, 110, 93, 103, 55, -9, -3, -10, 73, -17, -49, -97, -78, 29, 78))

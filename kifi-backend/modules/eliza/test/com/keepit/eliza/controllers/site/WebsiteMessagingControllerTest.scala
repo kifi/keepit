@@ -76,7 +76,7 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
         actualPages.length === expectedPages.length
         (actualPages zip expectedPages) foreach {
           case (actual, expected) =>
-            actual.map(pubId => ElizaMessage.fromMessageId(Message.decodePublicId(pubId).get)) === expected
+            actual.map(pubId => ElizaMessage.fromCommon(Message.decodePublicId(pubId).get)) === expected
         }
         1 === 1
       }
