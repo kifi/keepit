@@ -263,12 +263,13 @@
   width: @listPicSize;
   height: @listPicSize;
   border: 0;
-  border-radius: 2px !important;
   padding: 0;
   margin: 0;
   margin-right: 10px;
   float: left;
   vertical-align: middle;
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 .kifi-message-participant-img {
@@ -276,7 +277,7 @@
 }
 
 .kifi-message-participant-email-image {
-  line-height: 34px;
+  line-height: 35px;
   text-align: center;
   font-size: 24px;
   font-weight: 400;
@@ -361,6 +362,7 @@
   position: absolute;
   top: -1px;
   left: 0;
+  z-index: 10;
   width: 100%;
   padding: 9px 12px;
   box-sizing: border-box;
