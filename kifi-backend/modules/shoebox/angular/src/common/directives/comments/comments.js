@@ -60,22 +60,35 @@ angular.module('kifi')
             // else we continue normally
             var commentBox = getCommentBox(element);
             if (commentBox && !e.shiftKey && e.which === 13) {
+              var sentAt = new Date().getTime();
+              var msg = {
+                sentAt: sentAt,
+                sentBy: profileService.me,
+                text: commentBox.textContent
+              };
+              $scope.comments.push(msg);
+              $scope.keep.discussion.numMessages++;
+              $scope.visibleCount++;
+              $scope.bufferText = commentBox.textContent;
+              resetCaret(commentBox);
+
               keepService
               .addMessageToKeepDiscussion($scope.keep.pubId, commentBox.textContent)
               .then(function (resp) {
-                var msg = {
-                  id: resp.pubId,
-                  sentAt: new Date().getTime(),
-                  sentBy: profileService.me,
-                  text: commentBox.textContent
-                };
-                $scope.comments.push(msg);
-                $scope.keep.discussion.numMessages++;
-                $scope.visibleCount++;
-                resetCaret(commentBox);
-              })
-              ['catch'](function () {
+                $scope.comments.forEach(function (comment) {
+                  if (comment.sentAt === sentAt) {
+                    comment.id = resp.pubId;
+                  }
+                });
+              })['catch'](function () {
                 $scope.error = 'Something went wrong. Try again?';
+                $scope.visibleCount--;
+                $scope.keep.discussion.numMessages--;
+                $scope.comments.pop();
+                var commentBox = getCommentBox(element);
+                commentBox.innerHtml = $scope.bufferText;
+                commentBox.textContent = $scope.bufferText;
+                $scope.bufferText = '';
               });
 
               e.stopPropagation();
@@ -107,6 +120,19 @@ angular.module('kifi')
             } else if (readTimer) {
               $timeout.cancel(readTimer);
             }
+          };
+
+          $scope.deleteComment = function(event, keepId, commentId) {
+            angular.element(event.target).closest('.kf-keep-comments-comment').remove();
+            keepService.deleteMessageFromKeepDiscussion('', commentId)
+            ['catch'](function () {
+              $scope.error = 'Something went wrong. Try again?';
+            });
+            $scope.comments = $scope.comments.filter(function (comment) {
+              return comment.id !== commentId;
+            });
+            $scope.keep.discussion.numMessages--;
+            $scope.visibleCount--;
           };
 
           var MESSAGES_PER_PAGE = 4;
