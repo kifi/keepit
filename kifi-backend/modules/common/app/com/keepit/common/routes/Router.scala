@@ -177,6 +177,7 @@ object Shoebox extends Service {
     def getIntegrationsBySlackChannel() = ServiceRoute(POST, "/internal/shoebox/database/getIntegrationsBySlackChannel")
     def getSourceAttributionForKeeps() = ServiceRoute(POST, "/internal/shoebox/database/getSourceAttributionForKeeps")
     def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]) = ServiceRoute(GET, "/internal/shoebox/database/canCommentOnKeep", Param("userId", userId), Param("keepId", keepId))
+    def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]) = ServiceRoute(GET, "/internal/shoebox/database/canDeleteCommentOnKeep", Param("userId", userId), Param("keepId", keepId))
   }
 }
 
