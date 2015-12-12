@@ -183,6 +183,7 @@ class PermissionCommanderImpl @Inject() (
       LibraryPermission.ADD_KEEPS,
       LibraryPermission.EDIT_OWN_KEEPS,
       LibraryPermission.REMOVE_OWN_KEEPS,
+      LibraryPermission.REMOVE_OTHER_KEEPS,
       LibraryPermission.ADD_COMMENTS
     ) ++ (if (!library.whoCanInvite.contains(LibraryInvitePermissions.OWNER)) Set(LibraryPermission.INVITE_COLLABORATORS) else Set.empty)
 

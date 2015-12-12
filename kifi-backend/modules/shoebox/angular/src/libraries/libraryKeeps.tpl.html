@@ -1,4 +1,5 @@
 <div>
+  <div kf-quick-keep library="library"></div>
   <div class="kf-lk-empty" ng-if="keeps.length === 0" ng-show="!loading">
     <div ng-if="userIsOwner">
       You don’t have any keeps in this library yet. You can:
@@ -21,7 +22,7 @@
       </ul>
     </div>
     <div ng-if="!userIsOwner">
-      <p>{{library.owner.firstName || 'The curator'}} hasn’t added anything to this library yet.</p>
+      <p>There’s nothing added to this library yet.</p>
       <p ng-hide="$root.userLoggedIn">
         Want to create and share your own libraries? <a href="/signup" target="_self">Sign up</a> to join the Kifi family.
       </p>

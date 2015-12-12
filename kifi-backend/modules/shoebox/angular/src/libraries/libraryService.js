@@ -158,8 +158,8 @@ angular.module('kifi')
         var lib = _.find(infos, { id: libraryId });
         if (lib) {
           lib.numKeeps += val;
-          $rootScope.$emit('libraryKeepCountChanged', libraryId, lib.numKeeps);
         }
+        $rootScope.$emit('libraryKeepCountChanged', libraryId, lib.numKeeps += val);
       },
 
       // TODO(yiping): All functions that update library infos should refetch automatically instead of
