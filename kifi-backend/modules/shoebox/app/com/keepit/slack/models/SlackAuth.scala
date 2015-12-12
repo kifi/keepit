@@ -54,8 +54,7 @@ object SlackAuthScope {
 
 case class SlackState(state: String)
 object SlackState {
-  implicit def fromWritable[T](value: T)(implicit writes: Writes[T]): SlackState = fromJson(writes.writes(value))
-  implicit def fromJson(value: JsValue): SlackState = SlackState(CryptoSupport.encodeBase64(Json.stringify(value)))
+  def apply(value: JsValue): SlackState = SlackState(CryptoSupport.encodeBase64(Json.stringify(value)))
   def toJson(state: SlackState): Try[JsValue] = Try(Json.parse(CryptoSupport.decodeBase64(state.state))).orElse(Failure(SlackAPIFailure.StateError(state)))
 }
 
