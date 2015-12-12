@@ -1,15 +1,27 @@
 /*jshint globalstrict:true */
 'use strict';
 
-const {browserWindows, BrowserWindow} = require('sdk/windows');
-const tabs = require('sdk/tabs');
-const {getTabId} = require('sdk/tabs/utils');
-const {windows} = require('sdk/window/utils');
+const {Services} = require('resource://gre/modules/Services.jsm');
+const {browserWindows} = require('sdk/windows');
 const browserNs = require('sdk/core/namespace').ns();
-const {viewFor} = require("sdk/view/core");
+const {viewFor} = require('sdk/view/core');
 
- // Mozilla doesn't want us to use require('chrome'), so just save the value here
+// Mozilla doesn't want us to use require('chrome'),
+// so just save the value here. If something breaks,
+// go get the freshest copy from the nsIWebProgressListener
 const LOCATION_CHANGE_SAME_DOCUMENT = 0x00000001; // = Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT)
+
+// Mozilla doesn't want us to use require('sdk/tabs/utils'),
+// so just copy this pure function from it. If something breaks
+// just get the freshest value from mozilla-central/addon-sdk/source/lib/sdk/tabs/utils.js
+function getTabId(tab) {
+  if (tab.browser) {
+    // fennec
+    return tab.id;
+  }
+
+  return String.split(tab.linkedPanel, 'panel').pop();
+}
 
 function getTabIdForBrowser(gBrowser, browser) {
   for (let tab of gBrowser.tabs) {
@@ -51,11 +63,16 @@ function offFocus(win, callbacks) {
 }
 
 exports.onChange = function (callback) {
-  for (let win of windows('navigator:browser')) {
+  var enumerator = Services.wm.getEnumerator('navigator:browser');
+  while(enumerator.hasMoreElements()) {
+    var win = enumerator.getNext();
     onChange(win.gBrowser, callback);
   }
   browserWindows.on('open', function(win) {
-    onChange(viewFor(win).gBrowser, callback);
+    var domWin = viewFor(win);
+    if (domWin) {
+      onChange(viewFor(win).gBrowser, callback);
+    }
   });
   browserWindows.on('close', function(win) {
     var domWin = viewFor(win);
@@ -70,11 +87,16 @@ exports.onFocus = function (callback) {
     urlbar: callback.bind(null, 'a'),
     searchbar: callback.bind(null, 's')
   };
-  for (let win of windows('navigator:browser')) {
-    onFocus(win, callbacks);
+  var enumerator = Services.wm.getEnumerator('navigator:browser');
+  while(enumerator.hasMoreElements()) {
+    var win = enumerator.getNext();
+    onFocus(win, callback);
   }
   browserWindows.on('open', function (win) {
-    onFocus(viewFor(win), callbacks);
+    var domWin = viewFor(win);
+    if (domWin) {
+      onFocus(viewFor(win), callbacks);
+    }
   });
   browserWindows.on('close', function (win) {
     var domWin = viewFor(win);
