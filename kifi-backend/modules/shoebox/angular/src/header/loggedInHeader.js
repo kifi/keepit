@@ -155,7 +155,7 @@ angular.module('kifi')
       var library = $scope.library;
       modalService.open({
         template: 'keeps/addKeepModal.tpl.html',
-        modalData: {selectedLibId: library && libraryService.isMyLibrary(library) && library.id}
+        modalData: {selectedLibId: library && library.permissions.indexOf('add_keeps') !== -1 && library.id}
       });
     };
 

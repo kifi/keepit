@@ -464,14 +464,26 @@ angular.module('kifi')
       $rootScope.$on('keepAdded', function (e, keeps, library) {
         keeps.forEach(function (keep) {
 
-          var existingKeep = _.find($scope.keeps, {url: keep.url});
-          if (!existingKeep && library.id === $scope.library.id) {
-            $scope.keeps.unshift(augmentKeep(keep));
-            existingKeep = keep;
+          var existingKeep = _.find($scope.keeps, function (k) {
+            return k.url === keep.url || k.id === keep.id;
+          });
+
+          if (library.id === $scope.library.id) {
+            if (!existingKeep || new Date(existingKeep.createdAt) !== new Date(keep.createdAt)) {
+              // New keep, or existing keep that has changed times
+              if (existingKeep) {
+                $scope.keeps.splice($scope.keeps.indexOf(existingKeep), 1);
+              }
+              var idx = _.sortedIndex($scope.keeps, keep, function (k) {
+                return +new Date(k.createdAt) * -1;
+              });
+              existingKeep = augmentKeep(keep);
+              $scope.keeps.splice(idx, 0, existingKeep);
+            }
           }
 
           // add the new keep to the keep card's 'my keeps' array
-          if (existingKeep && !_.find($scope.keeps, {id: keep.id})) {
+          if (existingKeep && !_.find(existingKeep.keeps, {id: keep.id})) {
             existingKeep.keeps.push({
               id: keep.id,
               libraryId: library.id,

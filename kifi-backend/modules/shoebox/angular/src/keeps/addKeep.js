@@ -70,6 +70,7 @@ angular.module('kifi')
 
         scope.keepToLibrary = function () {
           var url = (scope.state.input) || '';
+          url = sanitizeUrl(url);
           if (url && util.validateUrl(url)) {
 
             var libraryInvitePromise = null;
@@ -121,6 +122,15 @@ angular.module('kifi')
 
         $document.on('keydown', processKey);
         safeFocus();
+
+        function sanitizeUrl(url) {
+          var regex = /^https?:\/\//;
+          if (!regex.test(url)) {
+            return 'http://' + url;
+          } else {
+            return url;
+          }
+        }
       }
     };
   }

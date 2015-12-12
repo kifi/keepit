@@ -1,0 +1,9 @@
+<div kf-modal class="kf-quick-add-keeps">
+  <div kf-basic-modal-content with-cancel="true" title="Add many keeps" action-text="Keep it" action="doQuickKeeps()">
+    <span>Enter a list of URLs to keep on separate lines:</span>
+    <form>
+      <textarea class="kf-quick-add-keeps-input" ng-model="quickKeep.urls" placeholder="http://…"></textarea>
+    </form>
+    <div class="kf-quick-add-keep-error" ng-show="quickKeep.invalidUrl">Please use a valid URL</div>
+  </div>
+</div>
