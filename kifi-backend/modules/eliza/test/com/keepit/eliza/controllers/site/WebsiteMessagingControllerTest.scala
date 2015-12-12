@@ -82,7 +82,7 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
       }
     }
 
-    "allow users to delete their own keeps" in {
+    "allow users to delete their own messages" in {
       withDb(modules: _*) { implicit injector =>
         val keepId = Id[Keep](1)
         val keepPubId = Keep.publicId(keepId)
@@ -115,7 +115,7 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
       }
     }
 
-    "disallow users to delete others' keeps" in {
+    "disallow users to delete others' messages without permission" in {
       withDb(modules: _*) { implicit injector =>
         val keepId = Id[Keep](1)
         val keepPubId = Keep.publicId(keepId)

@@ -68,6 +68,7 @@ trait KeepCommander {
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
   def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean
+  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
@@ -201,22 +202,17 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean = {
-    db.readOnlyReplica { implicit s =>
-      keepRepo.getOption(keepId) match {
-        case None =>
-          airbrake.notify(s"no keep found for id=${keepId.id}, user ${userId.id} can't comment")
-          false
-        case Some(keep) =>
-          keep.libraryId match {
-            case None =>
-              airbrake.notify(s"no library found for keepId=${keepId.id}, user ${userId.id} can't comment")
-              false
-            case Some(libId) =>
-              permissionCommander.getLibraryPermissions(libId, Some(userId)).contains(LibraryPermission.ADD_COMMENTS)
-          }
-      }
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean = db.readOnlyReplica { implicit s =>
+    ktlRepo.getAllByKeepId(keepId).forall { ktl =>
+      permissionCommander.getLibraryPermissions(ktl.libraryId, Some(userId)).contains(LibraryPermission.ADD_COMMENTS)
     }
+  }
+
+  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean = db.readOnlyReplica { implicit s =>
+    keepRepo.get(keepId).userId == userId ||
+      libraryRepo.getActiveByIds(ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet).exists {
+        case (_, library) => library.ownerId == userId
+      }
   }
 
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {

@@ -96,17 +96,18 @@ class WebsiteMessagingController @Inject() (
     }
   }
 
-  def deleteMessageOnKeep(keepPubId: PublicId[Keep]) = UserAction(parse.tolerantJson) { request =>
+  def deleteMessageOnKeep(keepPubId: PublicId[Keep]) = UserAction.async(parse.tolerantJson) { request =>
     Keep.decodePublicId(keepPubId) match {
-      case Failure(err) => BadRequest(Json.obj("error" -> "invalid_keep_id"))
+      case Failure(err) => Future.successful(BadRequest(Json.obj("error" -> "invalid_keep_id")))
       case Success(keepId) =>
         (request.body \ "messageId").asOpt[PublicId[Message]].flatMap(pubId => Message.decodePublicId(pubId).toOption) match {
-          case None => BadRequest(Json.obj("error" -> "invalid_message_id"))
+          case None => Future.successful(BadRequest(Json.obj("error" -> "invalid_message_id")))
           case Some(messageId) =>
             val elizaMessageId = ElizaMessage.fromCommon(messageId)
-            val deleted = discussionCommander.deleteMessageOnKeep(request.userId, keepId, elizaMessageId)
-            if (!deleted) Forbidden(Json.obj("error" -> "insufficient_permissions"))
-            else Ok
+            shoebox.canDeleteCommentOnKeep(request.userId, keepId).map { canDelete =>
+              if (canDelete && discussionCommander.deleteMessageOnKeep(request.userId, keepId, elizaMessageId)) Ok
+              else Forbidden(Json.obj("error" -> "insufficient_permissions"))
+            }
         }
     }
   }
