@@ -469,7 +469,7 @@ angular.module('kifi')
           });
 
           if (library.id === $scope.library.id) {
-            if (!existingKeep || existingKeep.createdAt != keep.createdAt) {
+            if (!existingKeep || new Date(existingKeep.createdAt) !== new Date(keep.createdAt)) {
               // New keep, or existing keep that has changed times
               if (existingKeep) {
                 $scope.keeps.splice($scope.keeps.indexOf(existingKeep), 1);
