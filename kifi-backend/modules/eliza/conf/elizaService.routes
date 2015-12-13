@@ -4,6 +4,10 @@
 
 POST    /eliza/site/chatter               @com.keepit.controllers.site.ChatterController.getChatter
 GET     /eliza/site/notifications         @com.keepit.eliza.controllers.site.WebsiteMessagingController.getNotifications(n: Int, before: Option[String] ?= None)
+
+
+# DEPRECATED ROUTES
+# There are equivalent Shoebox routes that should be called instead
 POST    /eliza/site/keeps/markAsRead      @com.keepit.eliza.controllers.site.WebsiteMessagingController.markKeepsAsRead()
 POST    /eliza/site/keeps/:id/message     @com.keepit.eliza.controllers.site.WebsiteMessagingController.sendMessageOnKeep(id: PublicId[Keep])
 GET     /eliza/site/keeps/:id/messages    @com.keepit.eliza.controllers.site.WebsiteMessagingController.getMessagesOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
@@ -68,6 +72,11 @@ POST  /internal/eliza/sendToAllUsers            @com.keepit.eliza.controllers.in
 GET   /internal/eliza/connectedClientCount      @com.keepit.eliza.controllers.internal.ElizaController.connectedClientCount
 GET   /internal/eliza/getUserThreadStats        @com.keepit.eliza.controllers.internal.ElizaController.getUserThreadStats(userId: Id[User])
 GET   /internal/eliza/sequenceNumber/renormalization @com.keepit.eliza.controllers.internal.ElizaController.getRenormalizationSequenceNumber()
+
+POST    /internal/eliza/keeps/markAsRead      @com.keepit.eliza.controllers.site.WebsiteMessagingController.markKeepsAsRead()
+POST    /internal/eliza/keeps/:id/message     @com.keepit.eliza.controllers.site.WebsiteMessagingController.sendMessageOnKeep(id: PublicId[Keep])
+GET     /internal/eliza/keeps/:id/messages    @com.keepit.eliza.controllers.site.WebsiteMessagingController.getMessagesOnKeep(id: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
+POST    /internal/eliza/keeps/:id/deleteMessage @com.keepit.eliza.controllers.site.WebsiteMessagingController.deleteMessageOnKeep(id: PublicId[Keep])
 
 GET   /internal/eliza/getThreadContentForIndexing  @com.keepit.eliza.controllers.internal.MessagingController.getThreadContentForIndexing(sequenceNumber: Long, maxBatchSize: Long)
 

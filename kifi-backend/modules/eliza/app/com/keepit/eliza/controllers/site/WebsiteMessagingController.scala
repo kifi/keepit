@@ -105,7 +105,7 @@ class WebsiteMessagingController @Inject() (
           case Some(messageId) =>
             val elizaMessageId = ElizaMessage.fromCommon(messageId)
             shoebox.canDeleteCommentOnKeep(request.userId, keepId).map { canDelete =>
-              if (canDelete && discussionCommander.deleteMessageOnKeep(request.userId, keepId, elizaMessageId)) Ok
+              if (canDelete && discussionCommander.deleteMessageOnKeep(request.userId, keepId, elizaMessageId).isSuccess) Ok
               else Forbidden(Json.obj("error" -> "insufficient_permissions"))
             }
         }

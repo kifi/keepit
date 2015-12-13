@@ -17,6 +17,7 @@ import com.keepit.social.BasicUserLikeEntity
 import play.api.libs.json.JsNull
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
@@ -24,7 +25,7 @@ trait ElizaDiscussionCommander {
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
   def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
-  def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Boolean
+  def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Try[Unit]
 }
 
 @Singleton
@@ -161,12 +162,12 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Boolean = db.readWrite { implicit s =>
-    val message = messageRepo.get(messageId)
-    if (message.from.asUser.contains(userId)) {
-      messageRepo.deactivate(message)
-      true
-    } else false
+  def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Try[Unit] = db.readWrite { implicit s =>
+    for {
+      msg <- Some(messageRepo.get(messageId)).filter(_.isActive).map(Success(_)).getOrElse(Failure(new Exception("message does not exist")))
+      thread <- Some(messageThreadRepo.get(msg.thread)).filter(_.keepId.contains(keepId)).map(Success(_)).getOrElse(Failure(new Exception("wrong keep id!")))
+      owner <- msg.from.asUser.filter(_ == userId).map(Success(_)).getOrElse(Failure(new Exception("wrong owner")))
+    } yield messageRepo.deactivate(msg)
   }
 
 }

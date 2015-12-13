@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+// Exposed to clients
 case class Message(
   pubId: PublicId[Message],
   sentAt: DateTime,

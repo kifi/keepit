@@ -115,6 +115,7 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
   case object EXPORT_KEEPS extends LibraryPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends LibraryPermission("create_slack_integration")
   case object ADD_COMMENTS extends LibraryPermission("add_comments")
+  case object DELETE_COMMENTS extends LibraryPermission("delete_comments")
 
   private val soloReads = EnumFormat.reads(get, all.map(_.value))
   implicit val setReads: Reads[Set[LibraryPermission]] = TraversableFormat.safeSetReads[LibraryPermission](soloReads)
@@ -123,7 +124,6 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
 
   def all = _all.toSet
   def get(str: String): Option[LibraryPermission] = all.find(_.value == str)
-  def apply(str: String): LibraryPermission = get(str).getOrElse(throw new Exception(s"Unknown LibraryPermission $str"))
 }
 
 sealed abstract class LibraryCommentPermissions(val value: String)

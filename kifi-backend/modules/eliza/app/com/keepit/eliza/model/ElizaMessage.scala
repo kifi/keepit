@@ -127,6 +127,8 @@ case class ElizaMessage(
   def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def sanitizeForDelete = this.copy(state = ElizaMessageStates.INACTIVE)
+
+  def isActive: Boolean = state == ElizaMessageStates.ACTIVE
 }
 object ElizaMessageStates extends States[ElizaMessage]
 
