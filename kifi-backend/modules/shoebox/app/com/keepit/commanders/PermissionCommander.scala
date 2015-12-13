@@ -277,6 +277,13 @@ class PermissionCommanderImpl @Inject() (
           }
           viewerIsDirectlyConnectedToKeep || viewerIsConnectedToKeepByALibrary
         }
+        val canViewMessages = {
+          val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
+          val viewerIsConnectedToKeepByALibrary = keepLibraries.exists { libId =>
+            libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
+          }
+          viewerIsDirectlyConnectedToKeep || viewerIsConnectedToKeepByALibrary
+        }
         val canDeleteOwnMessages = true
         val canDeleteOtherMessages = {
           // This seems like a pretty strange operational definition...
@@ -287,7 +294,8 @@ class PermissionCommanderImpl @Inject() (
         kid -> List(
           canAddMessage -> KeepPermission.ADD_MESSAGE,
           canDeleteOwnMessages -> KeepPermission.DELETE_OWN_MESSAGES,
-          canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES
+          canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES,
+          canViewMessages -> KeepPermission.VIEW_MESSAGES
         ).collect { case (true, p) => p }.toSet[KeepPermission]
     }
   }

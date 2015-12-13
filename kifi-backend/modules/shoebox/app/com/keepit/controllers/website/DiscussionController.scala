@@ -33,11 +33,11 @@ class DiscussionController @Inject() (
       }.toMap
       unreadCountsByKeep <- discussionCommander.markKeepsAsRead(request.userId, input)
     } yield {
-      val outputWrites = TraversableFormat.mapWrites[PublicId[Keep], Int](_.id)
+      implicit val outputWrites = TraversableFormat.mapWrites[PublicId[Keep], Int](_.id)
       val res = unreadCountsByKeep.map {
         case (kid, unreadCount) => Keep.publicId(kid) -> unreadCount
       }
-      Ok(Json.toJson(res)(outputWrites))
+      Ok(Json.obj("unreadCounts" -> res))
     }).recover {
       case fail: DiscussionFail => fail.asErrorResponse
     }
@@ -77,7 +77,7 @@ class DiscussionController @Inject() (
       msgId <- Message.decodePublicId(msgPubId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INVALID_MESSAGE_ID))
       editedMsg <- discussionCommander.editMessageOnKeep(request.userId, keepId, msgId, newText)
     } yield {
-      Ok(Json.toJson(editedMsg))
+      Ok(Json.obj("message" -> editedMsg))
     }).recover {
       case fail: DiscussionFail => fail.asErrorResponse
     }

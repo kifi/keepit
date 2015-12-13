@@ -122,11 +122,11 @@ trait ElizaServiceClient extends ServiceClient {
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
-  def markKeepsAsReadForUser(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Int]]
-  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Discussion]
+  def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
-  def editMessage(msgId: Id[Message], newText: String): Future[Discussion]
-  def deleteMessage(msgId: Id[Message]): Future[Discussion]
+  def editMessage(msgId: Id[Message], newText: String): Future[Message]
+  def deleteMessage(msgId: Id[Message]): Future[Unit]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -291,17 +291,17 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Map[Id[Keep], Discussion]]
     }
   }
-  def markKeepsAsReadForUser(userId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Int]] = {
-    implicit val outputReads = TraversableFormat.mapReads[Id[Message], Discussion](s => Try(Id[Message](s.toLong)).toOption)
-    val payload = Json.obj("userId" -> userId, "keepIds" -> keepIds)
+  def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]] = {
+    implicit val lastSeenWrites: Writes[Map[Id[Keep], Id[Message]]] = Id.mapOfIdToObjectFormat
+    val payload = Json.obj("userId" -> userId, "lastSeen" -> lastSeenByKeep)
     call(Eliza.internal.markKeepsAsReadForUser(), body = payload).map { response =>
       response.json.as[Map[Id[Keep], Int]]
     }
   }
-  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Discussion] = {
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message] = {
     val payload = Json.obj("userId" -> userId, "text" -> text, "keepId" -> keepId)
     call(Eliza.internal.sendMessageOnKeep(), body = payload).map { response =>
-      response.json.as[Discussion]
+      response.json.as[Message]
     }
   }
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]] = {
@@ -310,16 +310,16 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Seq[Message]]
     }
   }
-  def editMessage(msgId: Id[Message], newText: String): Future[Discussion] = {
+  def editMessage(msgId: Id[Message], newText: String): Future[Message] = {
     val payload = Json.obj("messageId" -> msgId, "newText" -> newText)
     call(Eliza.internal.editMessage(), body = payload).map { response =>
-      response.json.as[Discussion]
+      response.json.as[Message]
     }
   }
-  def deleteMessage(msgId: Id[Message]): Future[Discussion] = {
+  def deleteMessage(msgId: Id[Message]): Future[Unit] = {
     val payload = Json.obj("messageId" -> msgId)
     call(Eliza.internal.deleteMessage(), body = payload).map { response =>
-      response.json.as[Discussion]
+      Unit
     }
   }
 }
