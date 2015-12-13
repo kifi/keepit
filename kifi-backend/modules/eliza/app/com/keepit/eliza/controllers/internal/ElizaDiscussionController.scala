@@ -1,67 +1,94 @@
 package com.keepit.eliza.controllers.internal
 
-import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
-import com.keepit.common.db.Id
-import com.keepit.common.json.{ TraversableFormat, KeyFormat, TupleFormat }
-import com.keepit.common.logging.Logging
-import com.keepit.discussion.Message
-import com.keepit.eliza.commanders.{ MessageFetchingCommander, ElizaDiscussionCommander, NotificationDeliveryCommander, MessagingCommander }
+import com.google.inject.Inject
 import com.keepit.common.controller.ElizaServiceController
+import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
+import com.keepit.common.json.{ KeyFormat, TraversableFormat }
+import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.eliza.model.{ ElizaMessage, MessageSource }
-import com.keepit.eliza.model.ElizaMessage._
+import com.keepit.discussion.Message
+import com.keepit.eliza.commanders.ElizaDiscussionCommander
+import com.keepit.eliza.model.{ ElizaMessage, MessageRepo, MessageSource, MessageThreadRepo }
 import com.keepit.heimdal._
-import com.keepit.model.{ User, Keep }
-import com.keepit.shoebox.ShoeboxServiceClient
-
+import com.keepit.model.{ Keep, User }
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-
-import com.google.inject.Inject
 import play.api.mvc.Action
 
-import scala.concurrent.Future
-import scala.util.{ Try, Success, Failure }
-
 class ElizaDiscussionController @Inject() (
-  notificationCommander: NotificationDeliveryCommander,
   discussionCommander: ElizaDiscussionCommander,
-  messageFetchingCommander: MessageFetchingCommander,
-  shoebox: ShoeboxServiceClient,
+  db: Database,
+  messageRepo: MessageRepo,
+  threadRepo: MessageThreadRepo,
   implicit val publicIdConfig: PublicIdConfiguration,
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends ElizaServiceController with Logging {
 
-  def getMessagesOnKeep(keepId: Id[Keep], limit: Int = 10, fromRawIdOpt: Option[Long] = None) = Action.async { request =>
-    val fromIdOpt = fromRawIdOpt.map(Id[Message]).map(ElizaMessage.fromCommon)
-    discussionCommander.getMessagesOnKeep(keepId, fromIdOpt, limit).map { msgs =>
+  def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
+    val keepIds = request.body.as[Set[Id[Keep]]]
+    discussionCommander.getDiscussionsForKeeps(keepIds).map { discussions =>
+      Ok(Json.toJson(discussions))
+    }
+  }
+
+  def getCrossServiceMessages = Action(parse.tolerantJson) { request =>
+    val msgIds = request.body.as[Set[Id[Message]]].map(ElizaMessage.fromCommon)
+    val crossServiceMsgs = db.readOnlyReplica { implicit s =>
+      msgIds.map { msgId => msgId -> messageRepo.get(msgId).asCrossServiceMessage }.toMap
+    }
+    Ok(Json.toJson(crossServiceMsgs))
+  }
+
+  def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>
+    implicit val inputReads = KeyFormat.key3Reads[Id[Keep], Option[Id[Message]], Int]("keepId", "fromId", "limit")
+    val (keepId, fromIdOpt, limit) = request.body.as[(Id[Keep], Option[Id[Message]], Int)]
+    discussionCommander.getMessagesOnKeep(keepId, fromIdOpt.map(ElizaMessage.fromCommon), limit).map { msgs =>
       Ok(Json.obj("messages" -> msgs))
     }
   }
 
-  def sendMessageOnKeep(authorId: Id[User], keepId: Id[Keep]) = Action.async(parse.tolerantJson) { request =>
-    val text = (request.body \ "text").as[String]
+  def sendMessageOnKeep() = Action.async(parse.tolerantJson) { request =>
+    implicit val inputReads = KeyFormat.key3Reads[Id[User], String, Id[Keep]]("userId", "text", "keepId")
+    val (authorId, text, keepId) = request.body.as[(Id[User], String, Id[Keep])]
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
     discussionCommander.sendMessageOnKeep(authorId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { msg =>
       Ok(Json.obj("pubId" -> Message.publicId(ElizaMessage.toCommon(msg.id.get)), "sentAt" -> msg.createdAt))
     }
   }
 
-  def markKeepsAsRead() = Action(parse.tolerantJson) { request =>
+  def markKeepsAsReadForUser() = Action(parse.tolerantJson) { request =>
     implicit val inputReads = KeyFormat.key2Reads[Id[Keep], Id[Message]]("keepId", "lastMessage")
-    val outputWrites = TraversableFormat.mapWrites[Id[Keep], Int](_.id.toString)
     val userId = (request.body \ "user").as[Id[User]]
     val input = request.body.as[Seq[(Id[Keep], Id[Message])]]
     val unreadMessagesByKeep = input.flatMap {
       case (keepId, msgId) => discussionCommander.markAsRead(userId, keepId, ElizaMessage.fromCommon(msgId)).map { unreadMsgCount => keepId -> unreadMsgCount }
     }.toMap
+
+    val outputWrites = TraversableFormat.mapWrites[Id[Keep], Int](_.id.toString)
     Ok(outputWrites.writes(unreadMessagesByKeep))
   }
 
-  def deleteMessageOnKeep() = Action(parse.tolerantJson) { request =>
-    val inputReads = KeyFormat.key3Reads[Id[User], Id[Keep], Id[Message]]("userId", "keepId", "messageId")
-    val (userId, keepId, msgId) = request.body.as[(Id[User], Id[Keep], Id[Message])](inputReads)
-    discussionCommander.deleteMessageOnKeep(userId, keepId, ElizaMessage.fromCommon(msgId)).map { _ =>
+  def editMessage() = Action(parse.tolerantJson) { request =>
+    val inputReads = KeyFormat.key2Reads[Id[Message], String]("messageId", "newText")
+    val (msgId, newText) = request.body.as[(Id[Message], String)](inputReads)
+    discussionCommander.editMessage(ElizaMessage.fromCommon(msgId), newText)
+    NoContent
+  }
+
+  def deleteMessage() = Action(parse.tolerantJson) { request =>
+    val inputReads = KeyFormat.key1Reads[Id[Message]]("messageId")
+    val msgId = ElizaMessage.fromCommon(request.body.as[Id[Message]](inputReads))
+    val (msg, thread) = db.readOnlyReplica { implicit s =>
+      val msg = messageRepo.get(msgId)
+      val thread = threadRepo.get(msg.thread)
+      (msg, thread)
+    }
+    // This is sort of messy because of the type signature on `deleteMessageOnKeep`
+    // As soon as possible we should port over to just deleting the messages, and trusting that whoever
+    // hits this endpoint knows what they're doing
+    discussionCommander.deleteMessageOnKeep(msg.from.asUser.get, thread.keepId.get, msgId).map { _ =>
       NoContent
     }.recover {
       case fail: Exception => BadRequest(JsString(fail.getMessage))

@@ -256,7 +256,14 @@ object Eliza extends Service {
     def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
     def getParticipantsByThreadExtId(threadExtId: String) = ServiceRoute(GET, "/internal/eliza/getParticipantsByThreadExtId", Param("threadId", threadExtId))
+
+    def getCrossServiceMessages = ServiceRoute(POST, "/internal/eliza/getCrossServiceMessages")
     def getDiscussionsForKeeps = ServiceRoute(POST, "/internal/eliza/getDiscussionsForKeeps")
+    def markKeepsAsReadForUser() = ServiceRoute(POST, "/internal/eliza/markKeepsAsReadForUser")
+    def sendMessageOnKeep() = ServiceRoute(POST, "/internal/eliza/sendMessageOnKeep")
+    def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")
+    def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
+    def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")
   }
 }
 
