@@ -257,23 +257,32 @@ class PermissionCommanderImpl @Inject() (
   }
 
   def getKeepsPermissions(keepIds: Set[Id[Keep]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Keep], Set[KeepPermission]] = {
-    val librariesByKeep = ktlRepo.getAllByKeepIds(keepIds)
-    val usersByKeep = ktuRepo.getAllByKeepIds(keepIds)
+    val librariesByKeep = ktlRepo.getAllByKeepIds(keepIds).map { case (kid, ktls) => kid -> ktls.map(_.libraryId).toSet }
+    val usersByKeep = ktuRepo.getAllByKeepIds(keepIds).map { case (kid, ktus) => kid -> ktus.map(_.userId).toSet }
 
-    val libIds = librariesByKeep.values.flatten.map(_.libraryId).toSet
+    val libIds = librariesByKeep.values.flatten.toSet
     val libraries = libraryRepo.getActiveByIds(libIds)
     val libPermissions = getLibrariesPermissions(libIds, userIdOpt)
     val keeps = keepRepo.getByIds(keepIds)
 
     keeps.map {
       case (kid, k) =>
-        val keepLibraries = librariesByKeep.getOrElse(kid, Seq.empty).map(_.libraryId)
+        val keepLibraries = librariesByKeep.getOrElse(kid, Set.empty)
+        val keepUsers = usersByKeep.getOrElse(kid, Set.empty)
 
-        val canAddMessage = keepLibraries.exists { libId =>
-          libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_COMMENTS)
+        val canAddMessage = {
+          val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
+          val viewerIsConnectedToKeepByALibrary = keepLibraries.exists { libId =>
+            libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_COMMENTS)
+          }
+          viewerIsDirectlyConnectedToKeep || viewerIsConnectedToKeepByALibrary
         }
         val canDeleteOwnMessages = true
-        val canDeleteOtherMessages = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
+        val canDeleteOtherMessages = {
+          // This seems like a pretty strange operational definition...
+          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
+          viewerOwnsOneOfTheKeepLibraries
+        }
 
         kid -> List(
           canAddMessage -> KeepPermission.ADD_MESSAGE,
