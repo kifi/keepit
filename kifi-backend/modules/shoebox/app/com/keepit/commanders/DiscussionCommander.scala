@@ -58,15 +58,27 @@ class DiscussionCommanderImpl @Inject() (
   }
   def editMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message], newText: String): Future[Message] = {
     for {
-      msg <- eliza.getCrossServiceMessages(Set(msgId)).map(_.values.head)
+      msg <- eliza.getCrossServiceMessages(Set(msgId)).map(_.values.headOption).flatMap { msgOpt =>
+        msgOpt.filter(_.keep.contains(keepId)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.MESSAGE_DOES_NOT_EXIST_ON_KEEP))
+      }
       owner <- msg.sentBy.filter(_ == userId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
       editedMsg <- eliza.editMessage(msgId, newText)
     } yield editedMsg
   }
   def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], msgId: Id[Message]): Future[Unit] = {
+    val keepPermissions = db.readOnlyReplica { implicit s =>
+      permissionCommander.getKeepPermissions(keepId, Some(userId))
+    }
+    def userCanDeleteMessagesFrom(who: Id[User]) = who match {
+      case `userId` if keepPermissions.contains(KeepPermission.DELETE_OWN_MESSAGES) => true
+      case _ if keepPermissions.contains(KeepPermission.DELETE_OTHER_MESSAGES) => true
+      case _ => false
+    }
     for {
-      msg <- eliza.getCrossServiceMessages(Set(msgId)).map(_.values.head)
-      owner <- msg.sentBy.filter(_ == userId).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
+      msg <- eliza.getCrossServiceMessages(Set(msgId)).map(_.values.headOption).flatMap { msgOpt =>
+        msgOpt.filter(_.keep.contains(keepId)).map(Future.successful).getOrElse(Future.failed(DiscussionFail.MESSAGE_DOES_NOT_EXIST_ON_KEEP))
+      }
+      owner <- msg.sentBy.filter(userCanDeleteMessagesFrom).map(Future.successful).getOrElse(Future.failed(DiscussionFail.INSUFFICIENT_PERMISSIONS))
       res <- eliza.deleteMessage(msgId)
     } yield res
   }

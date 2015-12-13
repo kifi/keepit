@@ -130,13 +130,6 @@ case class ElizaMessage(
   def sanitizeForDelete = this.copy(state = ElizaMessageStates.INACTIVE)
 
   def isActive: Boolean = state == ElizaMessageStates.ACTIVE
-
-  def asCrossServiceMessage = CrossServiceMessage(
-    id = ElizaMessage.toCommon(id.get),
-    sentAt = createdAt,
-    sentBy = from.asUser,
-    text = messageText
-  )
 }
 object ElizaMessageStates extends States[ElizaMessage]
 

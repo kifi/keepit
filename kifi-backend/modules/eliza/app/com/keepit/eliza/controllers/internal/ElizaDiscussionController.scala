@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.json.{ KeyFormat, TraversableFormat }
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.discussion.Message
+import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model.{ ElizaMessage, MessageRepo, MessageSource, MessageThreadRepo }
 import com.keepit.heimdal._
@@ -36,7 +36,17 @@ class ElizaDiscussionController @Inject() (
   def getCrossServiceMessages = Action(parse.tolerantJson) { request =>
     val msgIds = request.body.as[Set[Id[Message]]].map(ElizaMessage.fromCommon)
     val crossServiceMsgs = db.readOnlyReplica { implicit s =>
-      msgIds.map { msgId => msgId -> messageRepo.get(msgId).asCrossServiceMessage }.toMap
+      msgIds.map { msgId =>
+        val msg = messageRepo.get(msgId)
+        val thread = threadRepo.get(msg.thread)
+        msgId -> CrossServiceMessage(
+          id = ElizaMessage.toCommon(msgId),
+          keep = thread.keepId,
+          sentAt = msg.createdAt,
+          sentBy = msg.from.asUser,
+          text = msg.messageText
+        )
+      }.toMap
     }
     Ok(Json.toJson(crossServiceMsgs))
   }

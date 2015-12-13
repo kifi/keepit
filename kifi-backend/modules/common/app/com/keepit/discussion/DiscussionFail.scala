@@ -15,6 +15,7 @@ object DiscussionFail extends Enumerator[DiscussionFail] {
   case object INSUFFICIENT_PERMISSIONS extends DiscussionFail(FORBIDDEN, "insufficient_permissions")
   case object INVALID_KEEP_ID extends DiscussionFail(BAD_REQUEST, "specified_keep_does_not_exist")
   case object INVALID_MESSAGE_ID extends DiscussionFail(BAD_REQUEST, "specified_message_does_not_exist")
+  case object MESSAGE_DOES_NOT_EXIST_ON_KEEP extends DiscussionFail(BAD_REQUEST, "message_does_not_exist_on_specified_keep")
 
   // The most generic input failure. As we create new endpoints we should create specific failures
   // This is here strictly because I'm lazy

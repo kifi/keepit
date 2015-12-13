@@ -30,12 +30,14 @@ object Message extends PublicIdGenerator[Message] {
 
 case class CrossServiceMessage(
   id: Id[Message],
+  keep: Option[Id[Keep]],
   sentAt: DateTime,
   sentBy: Option[Id[User]],
   text: String)
 object CrossServiceMessage {
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
+    (__ \ 'keep).formatNullable[Id[Keep]] and
     (__ \ 'sentAt).format[DateTime] and
     (__ \ 'sentBy).formatNullable[Id[User]] and
     (__ \ 'text).format[String]
