@@ -66,7 +66,7 @@ angular.module('kifi')
                 var msg = {
                   id: resp.id,
                   sentAt: new Date().getTime(),
-                  sentBy: resp.sentBy,
+                  sentBy: profileService.me,
                   text: commentBox.textContent
                 };
                 $scope.comments.push(msg);
