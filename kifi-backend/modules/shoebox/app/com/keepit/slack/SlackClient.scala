@@ -32,7 +32,7 @@ object SlackAPI {
 
   import SlackParams._
 
-  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState, teamId: Option[SlackTeamId]) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state, "teamId" -> teamId.map(_.value))
+  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState, teamId: Option[SlackTeamId]) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state, "team" -> teamId.map(_.value))
   def OAuthAccess(code: SlackAuthorizationCode) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, code)
   def Identify(token: SlackAccessToken) = Route(GET, "https://slack.com/api/auth.test", token)
   def SearchMessages(token: SlackAccessToken, request: SlackSearchRequest) = {
