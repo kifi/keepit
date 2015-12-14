@@ -14,11 +14,13 @@ import play.api.libs.json._
 @ImplementedBy(classOf[KeepSourceAttributionRepoImpl])
 trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
+  def getByKeepIdsNoCache(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
   def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution
 }
 
 @Singleton
 class KeepSourceAttributionRepoImpl @Inject() (
+    sourceAttributionByKeepIdCache: SourceAttributionKeepIdCache,
     val db: DataBaseComponent,
     val clock: Clock,
     airbrake: AirbrakeNotifier) extends DbRepo[KeepSourceAttribution] with KeepSourceAttributionRepo with Logging {
@@ -59,6 +61,12 @@ class KeepSourceAttributionRepoImpl @Inject() (
   private def activeRows = rows.filter(row => row.state === KeepSourceAttributionStates.ACTIVE)
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
+    sourceAttributionByKeepIdCache.bulkGetOrElse(keepIds.map(SourceAttributionKeepIdKey(_))) { missingKeys =>
+      getByKeepIdsNoCache(missingKeys.map(_.keepId)).map { case (keepId, attribution) => SourceAttributionKeepIdKey(keepId) -> attribution }
+    }.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution }
+  }
+
+  def getByKeepIdsNoCache(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
     activeRows.filter(_.keepId inSet keepIds).list.map(att => att.keepId -> att.attribution).toMap
   }
 

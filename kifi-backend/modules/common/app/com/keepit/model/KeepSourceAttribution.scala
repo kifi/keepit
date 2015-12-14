@@ -1,6 +1,8 @@
 package com.keepit.model
 
-import com.keepit.common.db.{ Id, ModelWithState, State, States }
+import com.keepit.common.cache.{ Key, JsonCacheImpl, FortyTwoCachePlugin, CacheStatistics }
+import com.keepit.common.db._
+import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
 import com.keepit.slack.models.SlackMessage
@@ -10,6 +12,7 @@ import com.kifi.macros.json
 import org.joda.time.DateTime
 import play.api.libs.json._
 
+import scala.concurrent.duration.Duration
 import scala.util.{ Failure, Success, Try }
 
 case class KeepSourceAttribution(
@@ -107,3 +110,12 @@ case class TwitterAttribution(tweet: RawTweet) extends SourceAttribution
 object TwitterAttribution {
   implicit val format = Json.format[TwitterAttribution]
 }
+
+case class SourceAttributionKeepIdKey(keepId: Id[Keep]) extends Key[SourceAttribution] {
+  override val version = 1
+  val namespace = "source_attribution_by_keep_id"
+  def toKey(): String = keepId.id.toString
+}
+
+class SourceAttributionKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SourceAttributionKeepIdKey, SourceAttribution](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)(SourceAttribution.internalFormat)
