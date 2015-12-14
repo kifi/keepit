@@ -97,11 +97,11 @@ angular.module('kifi')
       deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete'),
 
       // eliza
-      addMessageToKeepDiscussion: post(eliza, '/keeps/:id/message'),
+      addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),
       // ?limit={{number}}&fromId={{Option(String))}}
-      getMessagesForKeepDiscussion: get(eliza, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),
+      getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),
       deleteMessageFromKeepDiscussion: post(shoebox, '/keeps/:id/messages/delete'),
-      markDiscussionAsRead: post(eliza, '/keeps/markAsRead')
+      markDiscussionAsRead: post(shoebox, '/keeps/markAsRead')
     };
 
     function get(base, pathSpec, cacheSec) {
