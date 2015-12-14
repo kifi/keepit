@@ -47,7 +47,8 @@ object SlackTeamMembershipStates extends States[SlackTeamMembership]
 trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
   def getBySlackTeam(slackTeamId: SlackTeamId)(implicit session: RSession): Set[SlackTeamMembership]
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership]
-  def internBySlackTeamAndUser(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): Try[SlackTeamMembership]
+
+  def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): SlackTeamMembership
   def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership]
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
 }
@@ -133,26 +134,20 @@ class SlackTeamMembershipRepoImpl @Inject() (
   def getBySlackTeamAndUser(slackTeamId: SlackTeamId, slackUserId: SlackUserId, excludeState: Option[State[SlackTeamMembership]] = Some(SlackTeamMembershipStates.INACTIVE))(implicit session: RSession): Option[SlackTeamMembership] = {
     rows.filter(row => row.slackTeamId === slackTeamId && row.slackUserId === slackUserId && row.state =!= excludeState.orNull).firstOption
   }
-
-  def internBySlackTeamAndUser(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): Try[SlackTeamMembership] = {
+  def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): SlackTeamMembership = {
     getBySlackTeamAndUser(request.slackTeamId, request.slackUserId, excludeState = None) match {
       case Some(membership) if membership.isActive =>
-        if (membership.userId != request.userId) Failure(InvalidSlackAccountOwnerException(request.userId, membership))
-        else {
-          val updated = membership.copy(
-            slackUserId = request.slackUserId,
-            slackUsername = request.slackUsername,
-            slackTeamId = request.slackTeamId,
-            slackTeamName = request.slackTeamName,
-            token = Some(request.token),
-            scopes = request.scopes
-          )
-          val saved = if (updated == membership) membership else save(updated)
-          Success(saved)
-        }
+        val updated = membership.copy(
+          userId = request.userId, // let a Kifi user steal a slack membership
+          slackUsername = request.slackUsername,
+          slackTeamName = request.slackTeamName,
+          token = Some(request.token),
+          scopes = request.scopes
+        )
+        if (updated == membership) membership else save(updated)
       case inactiveMembershipOpt =>
         val newMembership = SlackTeamMembership(
-          id = inactiveMembershipOpt.flatMap(_.id),
+          id = inactiveMembershipOpt.map(_.id.get),
           userId = request.userId,
           slackUserId = request.slackUserId,
           slackUsername = request.slackUsername,
@@ -161,7 +156,7 @@ class SlackTeamMembershipRepoImpl @Inject() (
           token = Some(request.token),
           scopes = request.scopes
         )
-        Success(save(newMembership))
+        save(newMembership)
     }
   }
 

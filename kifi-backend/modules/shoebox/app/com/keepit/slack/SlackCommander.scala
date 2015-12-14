@@ -98,7 +98,7 @@ class SlackCommanderImpl @Inject() (
   def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
     db.readWrite { implicit s =>
-      slackTeamMembershipRepo.internBySlackTeamAndUser(SlackTeamMembershipInternRequest(
+      slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
         userId = userId,
         slackUserId = identity.userId,
         slackUsername = identity.userName,
@@ -106,7 +106,7 @@ class SlackCommanderImpl @Inject() (
         slackTeamName = auth.teamName,
         token = auth.accessToken,
         scopes = auth.scopes
-      )).get
+      ))
       auth.incomingWebhook.foreach { webhook =>
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,

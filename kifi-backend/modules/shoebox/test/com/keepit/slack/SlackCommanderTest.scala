@@ -14,6 +14,7 @@ import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 import play.api.libs.json.Json
 
@@ -25,6 +26,30 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
   )
 
   "SlackCommander" should {
+    "register slack authorizations" in {
+      "let two users share one Slack auth" in {
+        withDb(modules: _*) { implicit injector =>
+          val Seq(user1, user2) = db.readWrite { implicit s => UserFactory.users(2).saved }
+          val slackTeam = SlackTeamFactory.team()
+          val slackUser = SlackUserFactory.user()
+          val ident = SlackIdentifyResponse("http://www.rando.slack.com/", slackTeam.teamName, slackUser.username, slackTeam.teamId, slackUser.userId)
+          val auth = SlackAuthorizationResponse(SlackAccessToken(RandomStringUtils.randomAlphanumeric(30)), SlackAuthScope.push, slackTeam.teamName, slackTeam.teamId, None)
+
+          db.readOnlyMaster { implicit s => inject[SlackTeamMembershipRepo].all must beEmpty }
+          slackCommander.registerAuthorization(user1.id.get, auth, ident)
+          db.readOnlyMaster { implicit s =>
+            inject[SlackTeamMembershipRepo].all must haveSize(1)
+            inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.teamId, slackUser.userId).get.userId === user1.id.get
+          }
+          slackCommander.registerAuthorization(user2.id.get, auth, ident)
+          db.readOnlyMaster { implicit s =>
+            inject[SlackTeamMembershipRepo].all must haveSize(1)
+            inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.teamId, slackUser.userId).get.userId === user2.id.get
+          }
+          1 === 1
+        }
+      }
+    }
     "create new integrations" in {
       "handle multiple integrations for a single library" in {
         withDb(modules: _*) { implicit injector =>

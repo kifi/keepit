@@ -20,6 +20,13 @@ object SlackTeamFactory {
   def team() = TestingSlackTeam(SlackTeamId(ran(10)), SlackTeamName(ra(10)))
 }
 
+case class TestingSlackUser(
+  userId: SlackUserId,
+  username: SlackUsername)
+object SlackUserFactory {
+  def user() = TestingSlackUser(SlackUserId(ran(10)), SlackUsername(ra(10)))
+}
+
 object SlackTeamMembershipFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
   def membership(): PartialSlackTeamMembership = {
