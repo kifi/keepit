@@ -38,7 +38,7 @@ case class SlackTeamMembership(
   def withId(id: Id[SlackTeamMembership]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == SlackTeamMembershipStates.ACTIVE
-  def revoked = this.copy(state = SlackTeamMembershipStates.INACTIVE)
+  def revoked = this.copy(token = None, scopes = Set.empty)
 }
 
 object SlackTeamMembershipStates extends States[SlackTeamMembership]
