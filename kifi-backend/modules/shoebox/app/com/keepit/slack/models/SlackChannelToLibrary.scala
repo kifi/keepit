@@ -190,7 +190,8 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary = {
     getBySlackTeamChannelAndLibrary(request.slackTeamId, request.slackChannelName, request.libraryId, excludeState = None) match {
       case Some(integration) if integration.isActive =>
-        val updated = integration.copy(space = request.space, slackChannelName = request.slackChannelName)
+        val updatedStatus = if (integration.status == SlackIntegrationStatus.On) integration.status else SlackIntegrationStatus.Off
+        val updated = integration.copy(space = request.space, slackChannelName = request.slackChannelName, status = updatedStatus)
         val saved = if (updated == integration) integration else save(updated)
         saved
       case inactiveIntegrationOpt =>
