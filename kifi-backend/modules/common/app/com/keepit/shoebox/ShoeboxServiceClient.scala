@@ -858,6 +858,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = {
     val payload = Json.obj("keepIds" -> keepIds)
+    implicit val reads = SourceAttribution.internalFormat
     call(Shoebox.internal.getSourceAttributionForKeeps, payload).map { _.json.as[Map[Id[Keep], SourceAttribution]] }
   }
 

@@ -613,6 +613,7 @@ class ShoeboxController @Inject() (
     val attributions = db.readOnlyMaster { implicit session =>
       keepSourceCommander.getSourceAttributionForKeeps(keepIds)
     }
+    implicit val writes = SourceAttribution.internalFormat
     Ok(Json.toJson(attributions))
   }
 }

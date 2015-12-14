@@ -326,6 +326,7 @@ object KeepSource {
 case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
+  implicit val sourceFormat = SourceAttribution.internalFormat
   implicit val format = Json.format[KeepAndTags]
 }
 

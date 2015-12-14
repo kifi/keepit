@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.model.KeepAttributionType.TwitterPartial
 import com.keepit.social.twitter.TwitterStatusId
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -15,7 +14,6 @@ import play.api.libs.json._
 @ImplementedBy(classOf[KeepSourceAttributionRepoImpl])
 trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
-  def getPartialTwitterAttribution()(implicit session: RSession): Map[TwitterStatusId, Set[Id[Keep]]]
   def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution
 }
 
@@ -62,12 +60,6 @@ class KeepSourceAttributionRepoImpl @Inject() (
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
     activeRows.filter(_.keepId inSet keepIds).list.map(att => att.keepId -> att.attribution).toMap
-  }
-
-  def getPartialTwitterAttribution()(implicit session: RSession): Map[TwitterStatusId, Set[Id[Keep]]] = {
-    activeRows.filter(_.attributionType === (TwitterPartial: KeepAttributionType)).list.groupBy { attribution =>
-      attribution.attribution match { case PartialTwitterAttribution(idStr, _) => TwitterStatusId(idStr.toLong) }
-    }.mapValues(_.map(_.keepId).toSet)
   }
 
   def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution = {
