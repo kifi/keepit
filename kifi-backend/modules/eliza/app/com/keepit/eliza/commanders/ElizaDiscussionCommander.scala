@@ -186,7 +186,6 @@ class ElizaDiscussionCommanderImpl @Inject() (
       //  1. trust Shoebox to ask for reasonable things, only do simple sanity checks (i.e., pass in a KeepId and make sure the msg is on that keep)
       //  2. asynchronously ask for permissions from Shoebox, do all checking here
       //  3. pass in permissions (from Shoebox), double-check them here
-      owner <- msg.from.asUser.filter(_ == userId).map(Success(_)).getOrElse(Failure(new Exception("wrong owner")))
     } yield messageRepo.deactivate(msg)
   }
 
