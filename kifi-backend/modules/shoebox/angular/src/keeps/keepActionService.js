@@ -33,6 +33,7 @@ angular.module('kifi')
 
       return net.addKeepsToLibrary(libraryId, data).then(function (res) {
         libraryService.noteLibraryKeptTo(libraryId);
+        libraryService.addToLibraryCount(libraryId, keepInfos.length);
 
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;

@@ -542,7 +542,7 @@ angular.module('kifi')
         };
 
         scope.isOwnerOrCollaborator = function () {
-          return scope.library.membership && (scope.library.membership.access === 'owner' || scope.library.membership.access === 'read_write');
+          return scope.library.permissions && scope.library.permissions.indexOf('remove_other_keeps') !== -1;
         };
 
         scope.followLibrary = function (opts) {
