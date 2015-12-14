@@ -53,7 +53,7 @@ class DiscussionController @Inject() (
       case fail: DiscussionFail => fail.asErrorResponse
     }
   }
-  def getMessagesOnKeep(pubId: PublicId[Keep], limit: Int, fromPubIdOpt: Option[String]) = UserAction.async(parse.tolerantJson) { request =>
+  def getMessagesOnKeep(pubId: PublicId[Keep], limit: Int, fromPubIdOpt: Option[String]) = UserAction.async { request =>
     val fromIdOptFut = fromPubIdOpt.filter(_.nonEmpty) match {
       case None => Future.successful(None)
       case Some(fromPubId) =>
