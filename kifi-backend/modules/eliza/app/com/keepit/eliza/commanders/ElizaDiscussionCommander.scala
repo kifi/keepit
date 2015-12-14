@@ -25,9 +25,9 @@ trait ElizaDiscussionCommander {
 
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
-  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage]
+  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
-  def editMessage(messageId: Id[ElizaMessage], newText: String): ElizaMessage
+  def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Try[Unit]
 }
 
@@ -47,6 +47,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
 
   val MESSAGES_TO_INCLUDE = 8
 
+  private def externalizeMessage(msg: ElizaMessage): Future[Message] = {
+    externalizeMessages(Seq(msg)).map(_.values.head)
+  }
   private def externalizeMessages(emsgs: Seq[ElizaMessage]): Future[Map[Id[ElizaMessage], Message]] = {
     val users = emsgs.flatMap(_.from.asUser)
     val nonUsers = emsgs.flatMap(_.from.asNonUser)
@@ -136,8 +139,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
       }
     }
   }
-  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage] = {
-    getOrCreateMessageThreadForKeep(keepId).imap { thread =>
+  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message] = {
+    getOrCreateMessageThreadForKeep(keepId).flatMap { thread =>
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId)))
@@ -146,7 +149,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
         }
       } else { log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId, they were already part of the thread.") }
       val (_, message) = messagingCommander.sendMessage(userId, thread.id.get, txt, source, None)
-      message
+      externalizeMessage(message)
     }
   }
 
@@ -167,8 +170,11 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def editMessage(messageId: Id[ElizaMessage], newText: String): ElizaMessage = db.readWrite { implicit s =>
-    messageRepo.save(messageRepo.get(messageId).withText(newText))
+  def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message] = {
+    val editedMsg = db.readWrite { implicit s =>
+      messageRepo.save(messageRepo.get(messageId).withText(newText))
+    }
+    externalizeMessage(editedMsg)
   }
 
   def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Try[Unit] = db.readWrite { implicit s =>

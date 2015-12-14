@@ -5,7 +5,6 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.core._
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.json.TraversableFormat
 import com.keepit.common.json.TupleFormat._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{CallTimeouts, HttpClient}
@@ -19,8 +18,10 @@ import com.keepit.model._
 import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
 import com.keepit.search.index.message.ThreadContent
+import com.kifi.macros.json
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.eliza.ElizaServiceClient._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -278,48 +279,100 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]] = {
-    implicit val outputReads = TraversableFormat.mapReads[Id[Message], CrossServiceMessage](s => Try(Id[Message](s.toLong)).toOption)
-    val payload = Json.toJson(msgIds)
-    call(Eliza.internal.getCrossServiceMessages, body = payload).map { response =>
-      response.json.as[Map[Id[Message], CrossServiceMessage]]
+    import GetCrossServiceMessages._
+    val request = Request(msgIds)
+    val x = implicitly[Format[Request]]
+    call(Eliza.internal.getCrossServiceMessages, body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msgs
     }
   }
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
-    val payload = Json.toJson(keepIds)
-    implicit val outputReads = TraversableFormat.mapReads[Id[Message], Discussion](s => Try(Id[Message](s.toLong)).toOption)
-    call(Eliza.internal.getDiscussionsForKeeps, body = payload).map { response =>
-      response.json.as[Map[Id[Keep], Discussion]]
+    import GetDiscussionsForKeeps._
+    val request = Request(keepIds)
+    call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
+      response.json.as[Response].discussions
     }
   }
+
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]] = {
-    implicit val lastSeenWrites: Writes[Map[Id[Keep], Id[Message]]] = Id.mapOfIdToObjectFormat
-    val payload = Json.obj("userId" -> userId, "lastSeen" -> lastSeenByKeep)
-    call(Eliza.internal.markKeepsAsReadForUser(), body = payload).map { response =>
-      response.json.as[Map[Id[Keep], Int]]
+    import MarkKeepsAsReadForUser._
+    val request = Request(userId, lastSeenByKeep)
+    call(Eliza.internal.markKeepsAsReadForUser(), body = Json.toJson(request)).map { response =>
+      response.json.as[Response].unreadCount
     }
   }
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message] = {
-    val payload = Json.obj("userId" -> userId, "text" -> text, "keepId" -> keepId)
-    call(Eliza.internal.sendMessageOnKeep(), body = payload).map { response =>
-      response.json.as[Message]
+    import SendMessageOnKeep._
+    val request = Request(userId, text, keepId)
+    call(Eliza.internal.sendMessageOnKeep(), body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msg
     }
   }
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]] = {
-    val payload = Json.obj("keepId" -> keepId, "fromId" -> fromIdOpt, "limit" -> limit)
-    call(Eliza.internal.getMessagesOnKeep, body = payload).map { response =>
-      response.json.as[Seq[Message]]
+    import GetMessagesOnKeep._
+    val request = Request(keepId, fromIdOpt, limit)
+    call(Eliza.internal.getMessagesOnKeep, body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msgs
     }
   }
   def editMessage(msgId: Id[Message], newText: String): Future[Message] = {
-    val payload = Json.obj("messageId" -> msgId, "newText" -> newText)
-    call(Eliza.internal.editMessage(), body = payload).map { response =>
-      response.json.as[Message]
+    import EditMessage._
+    val request = Request(msgId, newText)
+    call(Eliza.internal.editMessage(), body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msg
     }
   }
   def deleteMessage(msgId: Id[Message]): Future[Unit] = {
-    val payload = Json.obj("messageId" -> msgId)
-    call(Eliza.internal.deleteMessage(), body = payload).map { response =>
+    import DeleteMessage._
+    val request = Request(msgId)
+    call(Eliza.internal.deleteMessage(), body = Json.toJson(request)).map { response =>
       Unit
     }
+  }
+}
+
+object ElizaServiceClient {
+  object GetCrossServiceMessages {
+    case class Request(msgIds: Set[Id[Message]])
+    case class Response(msgs: Map[Id[Message], CrossServiceMessage])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetDiscussionsForKeeps {
+    case class Request(keepIds: Set[Id[Keep]])
+    case class Response(discussions: Map[Id[Keep], Discussion])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object MarkKeepsAsReadForUser {
+    case class Request(userId: Id[User], lastSeen: Map[Id[Keep], Id[Message]])
+    case class Response(unreadCount: Map[Id[Keep], Int])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object SendMessageOnKeep {
+    case class Request(userId: Id[User], text: String, keepId: Id[Keep])
+    case class Response(msg: Message)
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetMessagesOnKeep {
+    case class Request(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int)
+    case class Response(msgs: Seq[Message])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object EditMessage {
+    case class Request(msgId: Id[Message], newText: String)
+    case class Response(msg: Message)
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object DeleteMessage {
+    case class Request(msgId: Id[Message])
+    implicit val requestFormat: Format[Request] = Format(
+      Reads { j => j.validate[Long].map(n => Request(Id(n))) },
+      Writes { o => JsNumber(o.msgId.id) }
+    )
   }
 }

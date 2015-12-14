@@ -2,17 +2,17 @@ package com.keepit.eliza.controllers.internal
 
 import com.google.inject.Inject
 import com.keepit.common.controller.ElizaServiceController
+import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.json.{ KeyFormat, TraversableFormat }
 import com.keepit.common.logging.Logging
-import com.keepit.common.time._
 import com.keepit.discussion.{ CrossServiceMessage, Message }
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model.{ ElizaMessage, MessageRepo, MessageSource, MessageThreadRepo }
 import com.keepit.heimdal._
-import com.keepit.model.{ Keep, User }
+import com.keepit.model.Keep
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
@@ -39,7 +39,7 @@ class ElizaDiscussionController @Inject() (
       msgIds.map { msgId =>
         val msg = messageRepo.get(msgId)
         val thread = threadRepo.get(msg.thread)
-        msgId -> CrossServiceMessage(
+        ElizaMessage.toCommon(msgId) -> CrossServiceMessage(
           id = ElizaMessage.toCommon(msgId),
           keep = thread.keepId,
           sentAt = msg.createdAt,
@@ -52,46 +52,48 @@ class ElizaDiscussionController @Inject() (
   }
 
   def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>
-    implicit val inputReads = KeyFormat.key3Reads[Id[Keep], Option[Id[Message]], Int]("keepId", "fromId", "limit")
-    val (keepId, fromIdOpt, limit) = request.body.as[(Id[Keep], Option[Id[Message]], Int)]
-    discussionCommander.getMessagesOnKeep(keepId, fromIdOpt.map(ElizaMessage.fromCommon), limit).map { msgs =>
-      Ok(Json.obj("messages" -> msgs))
+    val input = request.body.as[ElizaServiceClient.GetMessagesOnKeep.Request]
+    discussionCommander.getMessagesOnKeep(input.keepId, input.fromIdOpt.map(ElizaMessage.fromCommon), input.limit).map { msgs =>
+      val output = ElizaServiceClient.GetMessagesOnKeep.Response(msgs)
+      Ok(Json.toJson(output))
     }
   }
 
   def sendMessageOnKeep() = Action.async(parse.tolerantJson) { request =>
-    implicit val inputReads = KeyFormat.key3Reads[Id[User], String, Id[Keep]]("userId", "text", "keepId")
-    val (authorId, text, keepId) = request.body.as[(Id[User], String, Id[Keep])]
+    import SendMessageOnKeep._
+    val input = request.body.as[Request]
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    discussionCommander.sendMessageOnKeep(authorId, text, keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { msg =>
-      Ok(Json.obj("pubId" -> Message.publicId(ElizaMessage.toCommon(msg.id.get)), "sentAt" -> msg.createdAt))
+    discussionCommander.sendMessageOnKeep(input.userId, input.text, input.keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { msg =>
+      val output = Response(msg)
+      Ok(Json.toJson(output))
     }
   }
 
   def markKeepsAsReadForUser() = Action(parse.tolerantJson) { request =>
-    implicit val inputReads = KeyFormat.key2Reads[Id[Keep], Id[Message]]("keepId", "lastMessage")
-    val userId = (request.body \ "user").as[Id[User]]
-    val input = request.body.as[Seq[(Id[Keep], Id[Message])]]
-    val unreadMessagesByKeep = input.flatMap {
-      case (keepId, msgId) => discussionCommander.markAsRead(userId, keepId, ElizaMessage.fromCommon(msgId)).map { unreadMsgCount => keepId -> unreadMsgCount }
-    }.toMap
-
-    val outputWrites = TraversableFormat.mapWrites[Id[Keep], Int](_.id.toString)
-    Ok(outputWrites.writes(unreadMessagesByKeep))
+    import MarkKeepsAsReadForUser._
+    val input = request.body.as[Request]
+    val unreadMessagesByKeep = input.lastSeen.flatMap {
+      case (keepId, msgId) => discussionCommander.markAsRead(input.userId, keepId, ElizaMessage.fromCommon(msgId)).map { unreadMsgCount => keepId -> unreadMsgCount }
+    }
+    val output = Response(unreadMessagesByKeep)
+    Ok(Json.toJson(output))
   }
 
-  def editMessage() = Action(parse.tolerantJson) { request =>
-    val inputReads = KeyFormat.key2Reads[Id[Message], String]("messageId", "newText")
-    val (msgId, newText) = request.body.as[(Id[Message], String)](inputReads)
-    discussionCommander.editMessage(ElizaMessage.fromCommon(msgId), newText)
-    NoContent
+  def editMessage() = Action.async(parse.tolerantJson) { request =>
+    import EditMessage._
+    val input = request.body.as[Request]
+    discussionCommander.editMessage(ElizaMessage.fromCommon(input.msgId), input.newText).map { msg =>
+      val output = Response(msg)
+      Ok(Json.toJson(output))
+    }
   }
 
   def deleteMessage() = Action(parse.tolerantJson) { request =>
-    val inputReads = KeyFormat.key1Reads[Id[Message]]("messageId")
-    val msgId = ElizaMessage.fromCommon(request.body.as[Id[Message]](inputReads))
+    import DeleteMessage._
+    val input = request.body.as[Request]
+    val msgId = ElizaMessage.fromCommon(input.msgId)
     val (msg, thread) = db.readOnlyReplica { implicit s =>
-      val msg = messageRepo.get(msgId)
+      val msg = messageRepo.get(ElizaMessage.fromCommon(input.msgId))
       val thread = threadRepo.get(msg.thread)
       (msg, thread)
     }
