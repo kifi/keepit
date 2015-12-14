@@ -40,7 +40,7 @@ case class LibraryToSlackChannel(
     case None => this
     case Some(newKtlId) => this.copy(lastProcessedKeep = Some(newKtlId))
   }
-  def withNextPushAt(time: DateTime) = this.copy(nextPushAt = Some(time))
+  def withNextPushAt(time: DateTime) = this.copy(status = SlackIntegrationStatus.On, nextPushAt = Some(time))
   def withNextPushAtLatest(time: DateTime) = nextPushAt match {
     case Some(t) if t < time => this
     case _ => this.withNextPushAt(time)
