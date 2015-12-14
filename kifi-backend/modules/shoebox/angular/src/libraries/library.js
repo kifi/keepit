@@ -205,7 +205,6 @@ angular.module('kifi')
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === me.id;
     $scope.isAdminExperiment = (me.experiments || []).indexOf('admin') !== -1;
-    $scope.canCreateSlackIntegration = (me.experiments || []).indexOf('slack') !== -1;
     $scope.canAddKeepsToLibrary = (
       library.membership && (
         library.membership.access === 'owner' ||
