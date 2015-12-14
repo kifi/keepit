@@ -7,7 +7,6 @@ angular.module('kifi')
   function (env, $http, createExpiringCache) {
     var shoebox = env.xhrBase;
     var search = env.xhrBaseSearch;
-    var eliza = env.xhrBaseEliza;
     var pathParamRe = /(:\w+)/;
 
     var post = angular.bind(null, http, 'POST');  // caller should pass any path params, optional post data (JSON), and an optional query params object
