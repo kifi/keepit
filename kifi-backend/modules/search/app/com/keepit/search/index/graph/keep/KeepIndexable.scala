@@ -51,7 +51,6 @@ object KeepFields {
     def apply(handle: TwitterHandle): String = s"twitter|${handle.value}"
     def apply(source: SourceAttribution): String = source match {
       case twitter: TwitterAttribution => Source(twitter.tweet.user.screenName)
-      case twitterPartial: PartialTwitterAttribution => Source(twitterPartial.screenName)
       case slack: SlackAttribution => Source(slack.message.channel.id)
     }
   }

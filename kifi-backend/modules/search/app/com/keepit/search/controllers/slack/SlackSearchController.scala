@@ -150,7 +150,6 @@ class SlackSearchController @Inject() (
           val pretext = {
             val attribution = keepId.flatMap(sourceAttributions.get).map {
               case TwitterAttribution(tweet) => Elements("via", "@" + tweet.user.screenName.value --> LinkElement(tweet.getUrl), "on Twitter")
-              case partialTwitter: PartialTwitterAttribution => Elements("via", "@" + partialTwitter.screenName.value --> LinkElement(partialTwitter.getOriginalURL), "on Twitter")
               case SlackAttribution(message) => Elements("via", "@" + message.username.value, "in", "#" + message.channel.name.value, "·", message.timestamp.toDateTime --> LinkElement(message.permalink))
             }
             val library = hit.libraryId.flatMap(id => libraries.get(Id(id)))
