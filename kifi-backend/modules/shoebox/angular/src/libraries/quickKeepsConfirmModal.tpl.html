@@ -1,12 +1,12 @@
 <div kf-modal class="kf-quick-add-keeps">
   <div kf-basic-modal-content title="Add many keeps" action-text="Awesome!" action="">
   <div ng-if="numKeepsProcessed > 0">
-    Pulled out {{numKeepsProcessed}} links, and are munching on them now. They’ll be kept in your library very soon.
+    We pulled out <span ng-bind="numKeepsProcessed"></span> links, and are munching on them now. They’ll be kept in your library very soon.
   </div>
   <div ng-if="numKeepsProcessed > 0 && invalid.length > 0"><hr></div>
   <div ng-if="invalid.length > 0">
-    Unfortunately, we had trouble with {{invalid.length}} of your links. Be sure to enter them one per line, and only include regular HTTP or HTTPs pages.
-    <div>One of the problematic links was:<br><code>{{invalid[0]}}</code></div>
+    Unfortunately, we had trouble with <span ng-bind="invalid.length"></span> of your links. Be sure to enter them one per line, and only include regular HTTP or HTTPs pages.
+    <div>One of the problematic links was:<div><code ng-bind="invalid[0]"></code></div></div>
   </div>
   </div>
 </div>
