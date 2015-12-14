@@ -468,7 +468,7 @@ class ShoeboxController @Inject() (
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
 
     val keepById = db.readOnlyReplica { implicit s => keepRepo.getByIds(keepIds) }
-    val keepsSeq = keepIds.toSeq.flatMap(keepById.get)
+    val keepsSeq = keepIds.toList.flatMap(keepById.get)
     val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
       Some(viewerId),
       showPublishedLibraries = true,
