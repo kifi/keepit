@@ -6,7 +6,7 @@
   <div ng-if="numKeepsProcessed > 0 && invalid.length > 0"><hr></div>
   <div ng-if="invalid.length > 0">
     Unfortunately, we had trouble with <span ng-bind="invalid.length"></span> of your links. Be sure to enter them one per line, and only include regular HTTP or HTTPs pages.
-    <div>One of the problematic links was:<br><code ng-bind="invalid[0]">/code></div>
+    <div>One of the problematic links was:<div><code ng-bind="invalid[0]"></code></div></div>
   </div>
   </div>
 </div>
