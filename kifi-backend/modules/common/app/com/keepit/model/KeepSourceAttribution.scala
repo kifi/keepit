@@ -66,8 +66,8 @@ object SourceAttribution {
     }
   }
 
-  val internalFormat = new Format[SourceAttribution] {
-    def writes(source: SourceAttribution): JsValue = {
+  val internalFormat = new OFormat[SourceAttribution] {
+    def writes(source: SourceAttribution) = {
       val (attrType, attrJs) = toJson(source)
       Json.obj(
         "type" -> attrType,
@@ -83,13 +83,16 @@ object SourceAttribution {
     }
   }
 
-  val externalWrites: Writes[(SourceAttribution, Option[BasicUser])] = Writes {
-    case (source, userOpt) =>
-      val (attrType, attrJs) = toJson(source)
-      Json.obj(attrType.name -> attrJs, "kifi" -> userOpt)
+  val externalWrites: OWrites[SourceAttribution] = OWrites { source =>
+    val (attrType, attrJs) = toJson(source)
+    Json.obj(attrType.name -> attrJs)
   }
 
-  val deprecatedWrites = externalWrites.transform { value =>
+  val externalWritesWithBasicUser: OWrites[(SourceAttribution, Option[BasicUser])] = OWrites {
+    case (source, userOpt) => externalWrites.writes(source) + ("kifi" -> Json.toJson(userOpt))
+  }
+
+  val deprecatedWrites = externalWritesWithBasicUser.transform { value =>
     val updatedValue = for {
       obj <- value.validate[JsObject]
       tweeterObj <- (value \ "twitter").validate[JsObject]

@@ -145,6 +145,9 @@ class WebsiteSearchController @Inject() (
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers).flatten
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries).flatten
 
+    val keepIds = allKeepsShown.map(_.id).toSet
+    val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(keepIds)
+
     val userIds = ((allKeepsShown.flatMap(_.keptBy) ++ allKeepersShown.map(_._1) ++ allLibrariesShown.map(_._2)).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
 
@@ -175,6 +178,7 @@ class WebsiteSearchController @Inject() (
     val futureAugmentationFields = for {
       basicKeeps <- futureBasicKeeps
       librariesWithWriteAccess <- futureLibrariesWithWriteAccess
+      sourceAttributionByKeepId <- futureKeepSources
     } yield {
       val allBasicKeeps = augmentedItems.map(item => basicKeeps.getOrElse(item.uri, Set.empty))
       (limitedAugmentationInfos zip allBasicKeeps).map {
@@ -202,11 +206,14 @@ class WebsiteSearchController @Inject() (
             } getOrElse (None, None, None, None)
           }
 
+          val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
+
           Json.obj(
             "user" -> keeperIndex,
             "library" -> libraryIndex,
             "createdAt" -> keptAt, // field named createdAt for legacy reason
             "note" -> note,
+            "source" -> source.map(SourceAttribution.externalWrites.writes),
             "keeps" -> keeps,
             "keepers" -> keepersIndices,
             "keepersOmitted" -> limitedInfo.keepersOmitted,

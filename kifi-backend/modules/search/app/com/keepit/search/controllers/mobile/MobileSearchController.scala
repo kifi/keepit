@@ -243,9 +243,9 @@ class MobileSearchController @Inject() (
 
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
       val futureUriSummaries = rover.getUriSummaryByUris(uriIds.toSet)
-      val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = {
-        val keepIds = uriSearchResult.hits.flatMap(hit => hit.keepId.map(Id[Keep](_)))
-        shoeboxClient.getKeepImages(keepIds.toSet)
+      val (futureKeepImages, futureKeepSources): (Future[Map[Id[Keep], BasicImages]], Future[Map[Id[Keep], SourceAttribution]]) = {
+        val keepIds = uriSearchResult.hits.flatMap(hit => hit.keepId.map(Id[Keep](_))).toSet
+        (shoeboxClient.getKeepImages(keepIds), shoeboxClient.getSourceAttributionForKeeps(keepIds))
       }
 
       getAugmentedItems(augmentationCommander)(userId, uriSearchResult).flatMap { augmentedItems =>
@@ -260,6 +260,7 @@ class MobileSearchController @Inject() (
         for {
           summaries <- futureUriSummaries
           keepImages <- futureKeepImages
+          sourceAttributionByKeepId <- futureKeepSources
           users <- futureUsers
         } yield {
           val jsHits = (uriSearchResult.hits zip limitedAugmentationInfos).map {
@@ -268,9 +269,13 @@ class MobileSearchController @Inject() (
               val summary = summaries.get(uriId)
               val keepId = hit.keepId.map(Id[Keep](_))
               val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize)))
+              val note = limitedInfo.keep.map(_.note)
+              val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
               Json.obj(
                 "title" -> hit.title,
                 "url" -> URISanitizer.sanitize(hit.url),
+                "note" -> note,
+                "source" -> source.map(SourceAttribution.externalWrites.writes),
                 "score" -> hit.finalScore,
                 "summary" -> json.aggressiveMinify(Json.obj(
                   "title" -> summary.flatMap(_.article.title),
