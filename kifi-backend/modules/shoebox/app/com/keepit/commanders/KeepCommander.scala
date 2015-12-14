@@ -619,7 +619,7 @@ class KeepCommanderImpl @Inject() (
 
   private def suggestTagsForKeep(userId: Id[User], keepId: ExternalId[Keep], limit: Option[Int]): Future[Seq[Hashtag]] = {
     val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
-    val item = AugmentableItem(keep.uriId, Some(keep.libraryId.get))
+    val item = AugmentableItem(keep.uriId, Some(keep.id.get))
     val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
     val existingNormalizedTags = db.readOnlyMaster { implicit session => collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.normalized) }
     futureAugmentationResponse.map { response =>

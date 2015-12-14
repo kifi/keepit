@@ -35,7 +35,7 @@ trait SearchControllerUtil {
 
   def getAugmentedItems(augmentationCommander: AugmentationCommander)(userId: Id[User], kifiPlainResult: UriSearchResult): Future[Seq[AugmentedItem]] = {
     val items = kifiPlainResult.hits.map { hit =>
-      AugmentableItem(Id(hit.id), hit.libraryId.map(Id[Library](_)))
+      AugmentableItem(Id(hit.id), hit.keepId.map(Id[Keep](_)))
     }
     val previousItems = (kifiPlainResult.idFilter.map(Id[NormalizedURI](_)) -- items.map(_.uri)).map(AugmentableItem(_, None)).toSet
     val context = AugmentationContext.uniform(userId, previousItems ++ items)
