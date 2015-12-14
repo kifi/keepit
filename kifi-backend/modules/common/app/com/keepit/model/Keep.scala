@@ -3,6 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.path.Path
+import com.keepit.common.reflection.Enumerator
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.mvc.PathBindable
 
@@ -433,3 +434,12 @@ case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
 
 class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+sealed abstract class KeepPermission(val value: String)
+object KeepPermission extends Enumerator[KeepPermission] {
+  case object ADD_MESSAGE extends KeepPermission("add_message")
+  case object DELETE_OWN_MESSAGES extends KeepPermission("delete_own_messages")
+  case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
+  case object DELETE_KEEP extends KeepPermission("delete_keep")
+  case object VIEW_MESSAGES extends KeepPermission("view_messages")
+}

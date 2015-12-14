@@ -123,7 +123,6 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
 
   def all = _all.toSet
   def get(str: String): Option[LibraryPermission] = all.find(_.value == str)
-  def apply(str: String): LibraryPermission = get(str).getOrElse(throw new Exception(s"Unknown LibraryPermission $str"))
 }
 
 sealed abstract class LibraryCommentPermissions(val value: String)

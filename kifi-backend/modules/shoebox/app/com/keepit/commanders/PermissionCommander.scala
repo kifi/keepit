@@ -4,15 +4,10 @@ import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.cache._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.{ AccessLog, Logging }
 import com.keepit.common.performance.StatsdTiming
 import com.keepit.model._
-import com.keepit.common.core.anyExtensionOps
-import com.keepit.payments.PaidAccount
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
@@ -22,8 +17,12 @@ import scala.util.Random
 trait PermissionCommander {
   def getOrganizationsPermissions(orgIds: Set[Id[Organization]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Organization], Set[OrganizationPermission]]
   def getOrganizationPermissions(orgId: Id[Organization], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[OrganizationPermission]
-  def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission]
+
   def getLibrariesPermissions(libIds: Set[Id[Library]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Library], Set[LibraryPermission]]
+  def getLibraryPermissions(libId: Id[Library], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[LibraryPermission]
+
+  def getKeepsPermissions(keepIds: Set[Id[Keep]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Keep], Set[KeepPermission]]
+  def getKeepPermissions(keepId: Id[Keep], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[KeepPermission]
 }
 
 @Singleton
@@ -37,6 +36,10 @@ class PermissionCommanderImpl @Inject() (
     libraryRepo: LibraryRepo,
     libraryMembershipRepo: LibraryMembershipRepo,
     libraryInviteRepo: LibraryInviteRepo,
+    keepRepo: KeepRepo,
+    userRepo: UserRepo,
+    ktlRepo: KeepToLibraryRepo,
+    ktuRepo: KeepToUserRepo,
     airbrake: AirbrakeNotifier,
     implicit val executionContext: ExecutionContext) extends PermissionCommander with Logging {
 
@@ -251,6 +254,55 @@ class PermissionCommanderImpl @Inject() (
       OrganizationPermission.REDEEM_CREDIT_CODE,
       OrganizationPermission.REMOVE_MEMBERS
     )
+  }
+
+  def getKeepsPermissions(keepIds: Set[Id[Keep]], userIdOpt: Option[Id[User]])(implicit session: RSession): Map[Id[Keep], Set[KeepPermission]] = {
+    val librariesByKeep = ktlRepo.getAllByKeepIds(keepIds).map { case (kid, ktls) => kid -> ktls.map(_.libraryId).toSet }
+    val usersByKeep = ktuRepo.getAllByKeepIds(keepIds).map { case (kid, ktus) => kid -> ktus.map(_.userId).toSet }
+
+    val libIds = librariesByKeep.values.flatten.toSet
+    val libraries = libraryRepo.getActiveByIds(libIds)
+    val libPermissions = getLibrariesPermissions(libIds, userIdOpt)
+    val keeps = keepRepo.getByIds(keepIds)
+
+    keeps.map {
+      case (kid, k) =>
+        val keepLibraries = librariesByKeep.getOrElse(kid, Set.empty)
+        val keepUsers = usersByKeep.getOrElse(kid, Set.empty)
+
+        val canAddMessage = {
+          val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
+          val viewerIsConnectedToKeepByALibrary = keepLibraries.exists { libId =>
+            libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_COMMENTS)
+          }
+          viewerIsDirectlyConnectedToKeep || viewerIsConnectedToKeepByALibrary
+        }
+        val canViewMessages = {
+          val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
+          val viewerIsConnectedToKeepByALibrary = keepLibraries.exists { libId =>
+            libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
+          }
+          viewerIsDirectlyConnectedToKeep || viewerIsConnectedToKeepByALibrary
+        }
+        val canDeleteOwnMessages = true
+        val canDeleteOtherMessages = {
+          // This seems like a pretty strange operational definition...
+          val viewerOwnsTheKeep = userIdOpt.contains(k.userId)
+          val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
+          viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
+        }
+
+        kid -> List(
+          canAddMessage -> KeepPermission.ADD_MESSAGE,
+          canDeleteOwnMessages -> KeepPermission.DELETE_OWN_MESSAGES,
+          canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES,
+          canViewMessages -> KeepPermission.VIEW_MESSAGES
+        ).collect { case (true, p) => p }.toSet[KeepPermission]
+    }
+  }
+
+  def getKeepPermissions(keepId: Id[Keep], userIdOpt: Option[Id[User]])(implicit session: RSession): Set[KeepPermission] = {
+    getKeepsPermissions(Set(keepId), userIdOpt).getOrElse(keepId, Set.empty)
   }
 }
 

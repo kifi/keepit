@@ -394,6 +394,12 @@ POST    /site/keeps/personalExport       @com.keepit.controllers.website.KeepsCo
 POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep])
 
+POST    /site/keeps/markAsRead              @com.keepit.controllers.website.DiscussionController.markKeepsAsRead()
+POST    /site/keeps/:keepId/messages        @com.keepit.controllers.website.DiscussionController.sendMessageOnKeep(keepId: PublicId[Keep])
+GET     /site/keeps/:keepId/messages        @com.keepit.controllers.website.DiscussionController.getMessagesOnKeep(keepId: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
+POST    /site/keeps/:keepId/messages/edit   @com.keepit.controllers.website.DiscussionController.editMessageOnKeep(keepId: PublicId[Keep])
+POST    /site/keeps/:keepId/messages/delete @com.keepit.controllers.website.DiscussionController.deleteMessageOnKeep(keepId: PublicId[Keep])
+
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.pageCollections(sort: String ?= "last_kept", offset : Int ?= 0, pageSize: Int ?= 0)
 POST    /site/collections/delete    @com.keepit.controllers.website.KeepsController.deleteCollectionByTag(tag: String)
 POST    /site/collections/rename    @com.keepit.controllers.website.KeepsController.renameCollectionByTag()
