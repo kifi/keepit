@@ -134,8 +134,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean]
-  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (

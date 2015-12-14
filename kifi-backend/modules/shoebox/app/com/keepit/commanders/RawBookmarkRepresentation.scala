@@ -40,15 +40,6 @@ object RawBookmarkRepresentation {
       JsSuccess(RawBookmarkRepresentation(x.title, x.url, x.canonical, x.openGraph, x.keptAt, None))
     }
   }
-
-  def fromCreateRequest(req: KeepCreateRequest): RawBookmarkRepresentation = RawBookmarkRepresentation(
-    title = req.title,
-    url = req.url,
-    canonical = req.canonical,
-    openGraph = req.openGraph,
-    keptAt = req.keptAt,
-    note = req.note
-  )
 }
 
 @Singleton

@@ -22,13 +22,12 @@ import scala.util.{ Failure, Success, Try }
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
-
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
   def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
-  def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Try[Unit]
+  def deleteMessage(messageId: Id[ElizaMessage]): Unit
 }
 
 @Singleton
@@ -177,17 +176,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
     externalizeMessage(editedMsg)
   }
 
-  def deleteMessageOnKeep(userId: Id[User], keepId: Id[Keep], messageId: Id[ElizaMessage]): Try[Unit] = db.readWrite { implicit s =>
-    for {
-      msg <- Some(messageRepo.get(messageId)).filter(_.isActive).map(Success(_)).getOrElse(Failure(new Exception("message does not exist")))
-      thread <- Some(messageThreadRepo.get(msg.thread)).filter(_.keepId.contains(keepId)).map(Success(_)).getOrElse(Failure(new Exception("wrong keep id!")))
-      // TODO(ryan): stop checking permissions in Eliza
-      // Three options that I can see, in order of how much I like them:
-      //  1. trust Shoebox to ask for reasonable things, only do simple sanity checks (i.e., pass in a KeepId and make sure the msg is on that keep)
-      //  2. asynchronously ask for permissions from Shoebox, do all checking here
-      //  3. pass in permissions (from Shoebox), double-check them here
-      owner <- msg.from.asUser.filter(_ == userId).map(Success(_)).getOrElse(Failure(new Exception("wrong owner")))
-    } yield messageRepo.deactivate(msg)
+  def deleteMessage(messageId: Id[ElizaMessage]): Unit = db.readWrite { implicit s =>
+    messageRepo.deactivate(messageRepo.get(messageId))
   }
-
 }
