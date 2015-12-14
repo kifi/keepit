@@ -133,7 +133,8 @@ k.panes.notices = k.panes.notices || function () {
     var $box = $list.closest('.kifi-notices-box');
     $box.antiscroll({x: false});
     $(window).off('resize.notices').on('resize.notices', function () {
-      $box.data('antiscroll').refresh();
+      var antiscroll = $box.data('antiscroll');
+      antiscroll && antiscroll.refresh();
       $list.canScroll();
     });
 

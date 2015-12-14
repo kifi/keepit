@@ -3,6 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.path.Path
+import com.keepit.common.reflection.Enumerator
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.mvc.PathBindable
 
@@ -326,6 +327,7 @@ object KeepSource {
 case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
+  implicit val sourceFormat = SourceAttribution.internalFormat
   implicit val format = Json.format[KeepAndTags]
 }
 
@@ -334,7 +336,7 @@ case class BasicKeep(
   title: Option[String],
   url: String,
   visibility: LibraryVisibility,
-  libraryId: PublicId[Library],
+  libraryId: Option[PublicId[Library]],
   ownerId: ExternalId[User])
 
 object BasicKeep {
@@ -343,7 +345,7 @@ object BasicKeep {
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).format[PublicId[Library]] and
+    (__ \ 'libraryId).formatNullable[PublicId[Library]] and
     (__ \ 'ownerId).format[ExternalId[User]]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
@@ -413,7 +415,7 @@ case class PersonalKeep(
   mine: Boolean,
   removable: Boolean,
   visibility: LibraryVisibility,
-  libraryId: PublicId[Library])
+  libraryId: Option[PublicId[Library]])
 
 object PersonalKeep {
   implicit val format: Format[PersonalKeep] = (
@@ -421,7 +423,7 @@ object PersonalKeep {
     (__ \ 'mine).format[Boolean] and
     (__ \ 'removable).format[Boolean] and
     (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).format[PublicId[Library]]
+    (__ \ 'libraryId).formatNullable[PublicId[Library]]
   )(PersonalKeep.apply, unlift(PersonalKeep.unapply))
 }
 
@@ -433,3 +435,12 @@ case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
 
 class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+sealed abstract class KeepPermission(val value: String)
+object KeepPermission extends Enumerator[KeepPermission] {
+  case object ADD_MESSAGE extends KeepPermission("add_message")
+  case object DELETE_OWN_MESSAGES extends KeepPermission("delete_own_messages")
+  case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
+  case object DELETE_KEEP extends KeepPermission("delete_keep")
+  case object VIEW_MESSAGES extends KeepPermission("view_messages")
+}

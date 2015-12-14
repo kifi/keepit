@@ -394,6 +394,12 @@ POST    /site/keeps/personalExport       @com.keepit.controllers.website.KeepsCo
 POST    /site/keeps/organizationExport   @com.keepit.controllers.website.KeepsController.exportOrganizationKeeps()
 GET     /site/keeps/:id                  @com.keepit.controllers.website.KeepsController.getKeepInfo(id: InternalOrExternalId[Keep])
 
+POST    /site/keeps/markAsRead              @com.keepit.controllers.website.DiscussionController.markKeepsAsRead()
+POST    /site/keeps/:keepId/messages        @com.keepit.controllers.website.DiscussionController.sendMessageOnKeep(keepId: PublicId[Keep])
+GET     /site/keeps/:keepId/messages        @com.keepit.controllers.website.DiscussionController.getMessagesOnKeep(keepId: PublicId[Keep], limit: Int ?= 10, fromId: Option[String] ?= None)
+POST    /site/keeps/:keepId/messages/edit   @com.keepit.controllers.website.DiscussionController.editMessageOnKeep(keepId: PublicId[Keep])
+POST    /site/keeps/:keepId/messages/delete @com.keepit.controllers.website.DiscussionController.deleteMessageOnKeep(keepId: PublicId[Keep])
+
 GET     /site/collections/page      @com.keepit.controllers.website.KeepsController.pageCollections(sort: String ?= "last_kept", offset : Int ?= 0, pageSize: Int ?= 0)
 POST    /site/collections/delete    @com.keepit.controllers.website.KeepsController.deleteCollectionByTag(tag: String)
 POST    /site/collections/rename    @com.keepit.controllers.website.KeepsController.renameCollectionByTag()
@@ -605,7 +611,6 @@ GET     /admin/bookmarks/userKeywords @com.keepit.controllers.admin.AdminBookmar
 GET     /admin/bookmarksKeywords/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksKeywordsPageView(page: Int)
 DELETE  /admin/users/:id/tags/:name @com.keepit.controllers.admin.AdminBookmarksController.deleteTag(id: Id[User], name: String)
 GET     /admin/bookmarks/checkLibraryKeepVisibility             @com.keepit.controllers.admin.AdminBookmarksController.checkLibraryKeepVisibility(libId: Id[Library])
-GET     /admin/bookmarks/backfillTwitterAttribution             @com.keepit.controllers.admin.AdminBookmarksController.backfillTwitterAttribution(page: Int ?= 0, pageSize: Int ?= 1000)
 
 GET     /admin/uri/:uriId           @com.keepit.controllers.admin.UrlController.getURIInfo(uriId: Id[NormalizedURI])
 #GET     /admin/uri/article/        @com.keepit.controllers.admin.UrlController.getArticle(uriId: Id[NormalizedURI], kind: ArticleKind[_ <: Article], version: ArticleVersion)
@@ -1032,6 +1037,8 @@ GET     /internal/shoebox/user/activePersonas           @com.keepit.controllers.
 
 POST    /internal/shoebox/database/internKeep    @com.keepit.controllers.internal.ShoeboxDiscussionController.internKeep()
 GET     /internal/shoebox/database/canCommentOnKeep @com.keepit.controllers.internal.ShoeboxDiscussionController.canCommentOnKeep(userId: Id[User], keepId: Id[Keep])
+GET     /internal/shoebox/database/canDeleteCommentOnKeep @com.keepit.controllers.internal.ShoeboxDiscussionController.canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep])
+
 
 # Angular assets
 GET     /dist/*file                com.keepit.controllers.website.AngularDistAssets.at(path = "/public/ng/dist", file)

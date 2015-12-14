@@ -33,13 +33,13 @@ angular.module('kifi')
       search: function (query) {
         return searchClutch.get(query);
       },
-      remove: function (tag) {
-        var promise = $http.post(routeService.deleteTag(tag.id));
+      remove: function (tagName) {
+        var promise = $http.post(routeService.deleteTag(tagName));
         $analytics.eventTrack('user_clicked_page', {action: 'removeTag', path: $state.href($state.current)});
         return promise;
       },
-      rename: function (tag) {
-        var promise = $http.post(routeService.renameTag(tag.id), {'newTagName': tag.renamed || tag.name });
+      rename: function (oldTagName, newTagName) {
+        var promise = $http.post(routeService.renameTag(), {'oldTagName': oldTagName, 'newTagName': newTagName });
         $analytics.eventTrack('user_clicked_page', {action: 'renameTag', path: $state.href($state.current)});
         return promise;
       }

@@ -3,8 +3,8 @@
 angular.module('kifi')
 
 .directive('kfProfileWidget', [
-  '$state', '$analytics', 'profileService', 'modalService', 'orgProfileService',
-  function ($state, $analytics, profileService, modalService, orgProfileService) {
+  '$state', '$analytics', 'profileService', 'modalService', 'orgProfileService', '$q',
+  function ($state, $analytics, profileService, modalService, orgProfileService, $q) {
     return {
       replace: true,
       restrict: 'A',
@@ -31,28 +31,40 @@ angular.module('kifi')
           scope.organizations = scope.organizations.concat(me.potentialOrgs);
         }
 
-        if (!profileService.prefs.hide_company_name && !profileService.prefs.company_name) {
-          profileService.fetchPrefs().then(function (prefs) {
-            if (prefs.hide_company_name) {
-              scope.companyName = null;
-            } else if (prefs.company_name && !orgNameExists(prefs.company_name)) {
-              scope.companyName = prefs.company_name;
-            } else {
-              var potentialEmails = potentialCompanyEmails(me.emails);
-              scope.companyName = potentialEmails[0] && getEmailDomain(potentialEmails[0].address);
-            }
+        var companyNameP;
+        if (Object.keys(profileService.prefs).length === 0) {
+          companyNameP = profileService.fetchPrefs().then(function (prefs) {
+            return prefs.company_name;
           });
         } else {
-          scope.companyName = profileService.prefs.hide_company_name ? null :
-            (!orgNameExists(profileService.prefs.company_name) && profileService.prefs.company_name);
+          companyNameP = $q.when(profileService.prefs.company_name);
         }
+        companyNameP.then(function (companyName) {
+          if (profileService.prefs.hide_company_name) {
+            scope.companyName = null;
+          } else {
+            var potentialName = companyName;
+            if (!potentialName) {
+              var emails = potentialCompanyEmails(me.emails);
+              potentialName = emails && emails[0] && getEmailDomain(emails[0].address);
+            }
+            if (potentialName) {
+              if (!orgNameExists(potentialName)) {
+                if (potentialName.length > 28) {
+                  scope.companyName = potentialName.substr(0, 26) + '…';
+                } else {
+                  scope.companyName = potentialName;
+                }
+              } else {
+                scope.companyName = null;
+                profileService.savePrefs({ hide_company_name: true });
+              }
+            }
+          }
+        });
 
         function orgNameExists(companyName) {
-          var orgNames = profileService.me.orgs.map(
-            function(org) {
-              return org.name.toLowerCase();
-            }
-          );
+          var orgNames = profileService.me.orgs.map(function(org) { return org.name.toLowerCase(); });
           return orgNames.indexOf(companyName.toLowerCase()) !== -1;
         }
 
@@ -101,7 +113,7 @@ angular.module('kifi')
           if (!profileService.prefs.hide_company_name) {
             profileService.savePrefs({ hide_company_name: true });
           }
-          
+
           $state.go('teams.new');
         };
 

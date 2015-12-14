@@ -71,7 +71,7 @@ object AmplitudeClient {
     "visitor_viewed_pane" -> "visitor_viewed_page"
   )
 
-  // these user_was_notified action properties should be change dto user_clicked_notification events
+  // these user_was_notified action properties should be changed to user_clicked_notification events
   val userWasNotifiedClickActions = Set("open", "click", "spamreport", "cleared", "marked_read", "marked_unread")
 }
 
@@ -259,12 +259,17 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
   val origEventName = s"${companion.typeCode}_${event.eventType.name}"
 
   lazy val eventType: String = {
+    val action = heimdalContext.get[String]("action")
+    def isUserRegistered = origEventName == "user_joined" && (action.contains("registered") || action.contains("wasInvited"))
+    def isUserInstalled = origEventName == "user_joined" && action.contains("installedExtension")
+    def isUserClickedNotification = origEventName == "user_was_notified" && action.exists(AmplitudeClient.userWasNotifiedClickActions.contains)
+
     AmplitudeClient.simpleEventRenames.getOrElse(origEventName, {
       // specific rules for renaming event types
       // TODO(josh) after amplitude is in prod, change these events at their source
-      if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("registered")) "user_registered"
-      else if (origEventName == "user_joined" && heimdalContext.get[String]("action").contains("installed")) "user_installed"
-      else if (shouldRenameToUserClickedNotification()) "user_clicked_notification"
+      if (isUserRegistered) "user_registered"
+      else if (isUserInstalled) "user_installed"
+      else if (isUserClickedNotification) "user_clicked_notification"
       else origEventName
     })
   }
@@ -344,11 +349,6 @@ class AmplitudeEventBuilder[E <: HeimdalEvent](val event: E)(implicit companion:
     }
 
     builder.build.data
-  }
-
-  private def shouldRenameToUserClickedNotification() = {
-    origEventName == "user_was_notified" &&
-      heimdalContext.get[String]("action").exists(AmplitudeClient.userWasNotifiedClickActions.contains)
   }
 
   private def getIpAddress(): Option[String] =

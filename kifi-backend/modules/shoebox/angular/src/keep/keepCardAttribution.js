@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-.directive('kfKeepCardAttribution', [ 'profileService',
-  function (profileService) {
+.directive('kfKeepCardAttribution', [ '$state', 'profileService',
+  function ($state, profileService) {
     return {
       scope: {
         keep: '=keep',
@@ -14,7 +14,8 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'keep/keepCardAttribution.tpl.html',
       link: function (scope) {
-        scope.isAdmin = (profileService.me.experiments || []).indexOf('admin') !== -1;
+        var isAdmin = (profileService.me.experiments || []).indexOf('admin') !== -1;
+        scope.showKeepPageLink = !$state.is('keepPage') && isAdmin;
       }
     };
   }

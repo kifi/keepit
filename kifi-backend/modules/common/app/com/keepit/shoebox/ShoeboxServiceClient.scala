@@ -135,6 +135,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
   def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean]
+  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -165,7 +166,8 @@ case class ShoeboxCacheProvider @Inject() (
   basicKeepByIdCache: BasicKeepByIdCache,
   organizationMembersCache: OrganizationMembersCache,
   basicOrganizationIdCache: BasicOrganizationIdCache,
-  slackIntegrationsCache: SlackChannelIntegrationsCache)
+  slackIntegrationsCache: SlackChannelIntegrationsCache,
+  sourceAttributionByKeepIdCache: SourceAttributionKeepIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -857,11 +859,22 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = {
-    val payload = Json.obj("keepIds" -> keepIds)
-    call(Shoebox.internal.getSourceAttributionForKeeps, payload).map { _.json.as[Map[Id[Keep], SourceAttribution]] }
+    cacheProvider.sourceAttributionByKeepIdCache.bulkGetOrElseFuture(keepIds.map(SourceAttributionKeepIdKey(_))) { missingKeys =>
+      val payload = Json.obj("keepIds" -> keepIds)
+      implicit val reads = SourceAttribution.internalFormat
+      call(Shoebox.internal.getSourceAttributionForKeeps, payload).map {
+        _.json.as[Map[Id[Keep], SourceAttribution]].map {
+          case (keepId, attribution) => SourceAttributionKeepIdKey(keepId) -> attribution
+        }
+      }
+    }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
   }
 
   def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = {
     call(Shoebox.internal.canCommentOnKeep(userId, keepId)).map { response => (response.json \ "canComment").as[Boolean] }
+  }
+
+  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = {
+    call(Shoebox.internal.canDeleteCommentOnKeep(userId, keepId)).map { response => (response.json \ "canDelete").as[Boolean] }
   }
 }

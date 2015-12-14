@@ -89,19 +89,21 @@ class ExtSearchController @Inject() (
     val augmentationFuture = plainResultFuture.flatMap { kifiPlainResult =>
       getAugmentedItems(augmentationCommander)(userId, kifiPlainResult).flatMap { augmentedItems =>
         val librarySearcher = libraryIndexer.getSearcher
-        val (augmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
+        val (futureAugmentationFields, futureBasicUsersAndLibraries) = writesAugmentationFields(librarySearcher, userId, maxKeepersShown, maxLibrariesShown, maxTagsShown, augmentedItems)
 
-        val hitsJson = augmentationFields.map(json.aggressiveMinify)
-
-        futureBasicUsersAndLibraries.imap {
+        val futureHitsJson = futureAugmentationFields.imap(_.map(json.aggressiveMinify))
+        val futureBasicUsersAndLibrariesJson = futureBasicUsersAndLibraries.imap {
           case (users, libraries) =>
-
             val librariesJson = libraries.map { library =>
               json.aggressiveMinify(Json.obj("id" -> library.id, "name" -> library.name, "color" -> library.color, "path" -> library.path, "secret" -> library.isSecret))
             }
-
-            Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
+            (users, librariesJson)
         }
+
+        for {
+          hitsJson <- futureHitsJson
+          (users, librariesJson) <- futureBasicUsersAndLibrariesJson
+        } yield Json.obj("hits" -> hitsJson, "users" -> users, "libraries" -> librariesJson)
       }
     }
     val augmentationEnumerator = safelyFlatten(augmentationFuture.map(aug => Enumerator(Json.stringify(aug)))(immediate))
@@ -123,12 +125,15 @@ class ExtSearchController @Inject() (
     maxKeepersShown: Int,
     maxLibrariesShown: Int,
     maxTagsShown: Int,
-    augmentedItems: Seq[AugmentedItem]): (Seq[JsObject], Future[(Seq[BasicUser], Seq[BasicLibrary])]) = {
+    augmentedItems: Seq[AugmentedItem]): (Future[Seq[JsObject]], Future[(Seq[BasicUser], Seq[BasicLibrary])]) = {
 
     val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
 
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries)
+    val allKeepIds = limitedAugmentationInfos.flatMap(_.keep.map(_.id)).toSet
+
+    val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(allKeepIds)
 
     val userIds = ((allKeepersShown.flatMap(_.map(_._1)) ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
@@ -157,28 +162,32 @@ class ExtSearchController @Inject() (
       }
     }
 
-    val secrecies = augmentedItems.map(_.isSecret(librarySearcher))
+    val futureAugmentationFields = futureKeepSources.map { sourceAttributionByKeepId =>
+      val secrecies = augmentedItems.map(_.isSecret(librarySearcher))
+      (limitedAugmentationInfos zip secrecies).map {
+        case (limitedInfo, secret) =>
 
-    val augmentationFields = (limitedAugmentationInfos zip secrecies).map {
-      case (limitedInfo, secret) =>
+          val keepersIndices = limitedInfo.keepers.map { case (keeperId, _) => userIndexById(keeperId) }
+          val librariesIndices = limitedInfo.libraries.collect {
+            case (libraryId, keeperId, _) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
+          }.flatten
 
-        val keepersIndices = limitedInfo.keepers.map { case (keeperId, _) => userIndexById(keeperId) }
-        val librariesIndices = limitedInfo.libraries.collect {
-          case (libraryId, keeperId, _) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
-        }.flatten
+          val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
 
-        Json.obj(
-          "keepers" -> keepersIndices,
-          "keepersOmitted" -> limitedInfo.keepersOmitted,
-          "keepersTotal" -> limitedInfo.keepersTotal,
-          "libraries" -> librariesIndices,
-          "librariesOmitted" -> limitedInfo.librariesOmitted,
-          "tags" -> limitedInfo.tags,
-          "tagsOmitted" -> limitedInfo.tagsOmitted,
-          "secret" -> secret
-        )
+          Json.obj(
+            "keepers" -> keepersIndices,
+            "keepersOmitted" -> limitedInfo.keepersOmitted,
+            "keepersTotal" -> limitedInfo.keepersTotal,
+            "libraries" -> librariesIndices,
+            "librariesOmitted" -> limitedInfo.librariesOmitted,
+            "tags" -> limitedInfo.tags,
+            "tagsOmitted" -> limitedInfo.tagsOmitted,
+            "secret" -> secret,
+            "source" -> source.map(SourceAttribution.externalWrites.writes)
+          )
+      }
     }
-    (augmentationFields, futureBasicUsersAndLibraries)
+    (futureAugmentationFields, futureBasicUsersAndLibraries)
   }
 
   //external (from the extension)

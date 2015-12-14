@@ -464,14 +464,26 @@ angular.module('kifi')
       $rootScope.$on('keepAdded', function (e, keeps, library) {
         keeps.forEach(function (keep) {
 
-          var existingKeep = _.find($scope.keeps, {url: keep.url});
-          if (!existingKeep && library.id === $scope.library.id) {
-            $scope.keeps.unshift(augmentKeep(keep));
-            existingKeep = keep;
+          var existingKeep = _.find($scope.keeps, function (k) {
+            return k.url === keep.url || k.id === keep.id;
+          });
+
+          if (library.id === $scope.library.id) {
+            if (!existingKeep || new Date(existingKeep.createdAt) !== new Date(keep.createdAt)) {
+              // New keep, or existing keep that has changed times
+              if (existingKeep) {
+                $scope.keeps.splice($scope.keeps.indexOf(existingKeep), 1);
+              }
+              var idx = _.sortedIndex($scope.keeps, keep, function (k) {
+                return +new Date(k.createdAt) * -1;
+              });
+              existingKeep = augmentKeep(keep);
+              $scope.keeps.splice(idx, 0, existingKeep);
+            }
           }
 
           // add the new keep to the keep card's 'my keeps' array
-          if (existingKeep && !_.find($scope.keeps, {id: keep.id})) {
+          if (existingKeep && !_.find(existingKeep.keeps, {id: keep.id})) {
             existingKeep.keeps.push({
               id: keep.id,
               libraryId: library.id,
@@ -574,7 +586,7 @@ angular.module('kifi')
             knownUpdatesPending = status.updates;
             $scope.$broadcast('keepUpdatesPending', knownUpdatesPending);
             updateLibrary(10000, 0);
-          } else if (countSinceUpdate < 480) { // Roughly 8 hours
+          } else if (countSinceUpdate < 1440) { // Roughly a day of no updates
             $scope.$broadcast('keepUpdatesPending', status.updates);
             updateLibrary(Math.min(60000, interval + 10000), countSinceUpdate + 1);
           } else {
@@ -613,7 +625,10 @@ angular.module('kifi')
     });
 
     var getLastKnownUpdate = function () {
-      return ($scope.keeps && $scope.keeps[0] && $scope.keeps[0].createdAt) || $scope.library.lastKept || $scope.library.modifiedAt;
+      var newestKeep = _.max($scope.keeps, function (k) {
+        return +new Date(k.createdAt);
+      });
+      return newestKeep.createdAt || $scope.library.lastKept || $scope.library.modifiedAt;
     };
     updateLibrary(10000);
 

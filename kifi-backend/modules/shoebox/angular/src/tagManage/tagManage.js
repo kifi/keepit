@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('ManageTagCtrl', [
   '$scope', '$window', 'manageTagService', 'libraryService',
-  'routeService', '$http', '$location', 'modalService', '$timeout', '$rootScope',
+  'routeService', '$http', '$location', 'modalService', '$timeout',
   function (
       $scope, $window, manageTagService, libraryService,
-      routeService, $http, $location, modalService, $timeout, $rootScope) {
+      routeService, $http, $location, modalService, $timeout) {
     $window.document.title = 'Kifi • Manage Your Tags';
 
     $scope.selected = {};
@@ -167,7 +167,7 @@ angular.module('kifi')
     };
 
     $scope.deleteTag = function () {
-      var _scope = $rootScope.$new();
+      var _scope = $scope.$new();
       _scope.action = 'delete';
       _scope.name = $scope.selectedTag.name;
       modalService.open({
@@ -175,7 +175,7 @@ angular.module('kifi')
         scope: _scope
       });
       _.remove($scope.tagsToShow, $scope.selectedTag);
-      manageTagService.remove($scope.selectedTag);
+      manageTagService.remove($scope.selectedTag.name);
     };
 
     $scope.showRenameTagModal = function (tag) {
@@ -189,15 +189,15 @@ angular.module('kifi')
     };
 
     $scope.renameTag = function () {
-      var _scope = $rootScope.$new();
+      var _scope = $scope.$new();
       _scope.action = 'rename';
       _scope.name = $scope.selectedTag.name;
       modalService.open({
         template: 'tagManage/modifyTagProgressModal.tpl.html',
         scope: _scope
       });
+      manageTagService.rename($scope.selectedTag.name, $scope.selectedTag.renamed);
       $scope.selectedTag.name = $scope.selectedTag.renamed;
-      manageTagService.rename($scope.selectedTag);
     };
   }
 ]);

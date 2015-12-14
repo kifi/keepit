@@ -5,12 +5,13 @@ import javax.crypto.spec.IvParameterSpec
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.store.ImagePath
-import com.keepit.model.{ Hashtag, LibraryCardInfo, DeepLocator, Keep }
+import com.keepit.model._
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
 import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
+// Exposed to clients
 case class Message(
   pubId: PublicId[Message],
   sentAt: DateTime,
@@ -25,6 +26,22 @@ object Message extends PublicIdGenerator[Message] {
     (__ \ 'sentBy).format[BasicUserLikeEntity] and
     (__ \ 'text).format[String]
   )(Message.apply, unlift(Message.unapply))
+}
+
+case class CrossServiceMessage(
+  id: Id[Message],
+  keep: Option[Id[Keep]],
+  sentAt: DateTime,
+  sentBy: Option[Id[User]],
+  text: String)
+object CrossServiceMessage {
+  implicit val format: Format[CrossServiceMessage] = (
+    (__ \ 'id).format[Id[Message]] and
+    (__ \ 'keep).formatNullable[Id[Keep]] and
+    (__ \ 'sentAt).format[DateTime] and
+    (__ \ 'sentBy).formatNullable[Id[User]] and
+    (__ \ 'text).format[String]
+  )(CrossServiceMessage.apply, unlift(CrossServiceMessage.unapply))
 }
 
 case class Discussion(

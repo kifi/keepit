@@ -59,11 +59,11 @@ angular.module('kifi')
       suggestTags: function (libraryId, keepId, query) {
         return route('/libraries/' + libraryId + '/keeps/' + keepId + '/tags/suggest', {q: query});
       },
-      deleteTag: function (tagId) {
-        return route('/collections/' + tagId + '/delete');
+      deleteTag: function (tagName) {
+        return route('/collections/delete?tag=' + tagName);
       },
-      renameTag: function (tagId) {
-        return route('/collections/' + tagId + '/rename');
+      renameTag: function () {
+        return route('/collections/rename');
       },
 
       whoToInvite: route('/user/invite/recommended'),
