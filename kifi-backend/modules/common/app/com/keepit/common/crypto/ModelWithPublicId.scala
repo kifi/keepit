@@ -35,6 +35,8 @@ object PublicId {
 
     override def unbind(key: String, id: PublicId[T]): String = id.id
   }
+
+  implicit def writes[T]: Writes[PublicId[T]] = Writes(id => JsString(id.id))
 }
 
 trait ModelWithPublicId[T <: ModelWithPublicId[T]] {
@@ -84,11 +86,8 @@ trait PublicIdGenerator[T] {
     }
   }
 
-  implicit val formatPublicId: Format[PublicId[T]] = Format(
-    Reads { j => j.validate[String].filter(_.startsWith(publicIdPrefix)).map(PublicId[T]) },
-    Writes { o => JsString(o.id) }
-  )
-
+  implicit val readsPublicId: Reads[PublicId[T]] = Reads { j => j.validate[String].filter(_.startsWith(publicIdPrefix)).map(PublicId[T]) }
+  implicit val formatPublicId: Format[PublicId[T]] = Format(readsPublicId, PublicId.writes)
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {
     PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id)))
