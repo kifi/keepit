@@ -60,35 +60,28 @@ angular.module('kifi')
             // else we continue normally
             var commentBox = getCommentBox(element);
             if (commentBox && !e.shiftKey && e.which === 13) {
-              var sentAt = new Date().getTime();
               var msg = {
-                sentAt: sentAt,
+                sentAt: new Date().getTime(),
                 sentBy: profileService.me,
                 text: commentBox.textContent
               };
               $scope.comments.push(msg);
               $scope.keep.discussion.numMessages++;
               $scope.visibleCount++;
-              $scope.bufferText = commentBox.textContent;
+              var bufferHTML = commentBox.innerHTML;
               resetCaret(commentBox);
 
               keepService
               .addMessageToKeepDiscussion($scope.keep.pubId, commentBox.textContent)
               .then(function (resp) {
-                $scope.comments.forEach(function (comment) {
-                  if (comment.sentAt === sentAt) {
-                    comment.id = resp.pubId;
-                  }
-                });
+                msg.sentAt = resp.sentAt;
+                msg.id = resp.id;
               })['catch'](function () {
                 $scope.error = 'Something went wrong. Try again?';
                 $scope.visibleCount--;
                 $scope.keep.discussion.numMessages--;
                 $scope.comments.pop();
-                var commentBox = getCommentBox(element);
-                commentBox.innerHtml = $scope.bufferText;
-                commentBox.textContent = $scope.bufferText;
-                $scope.bufferText = '';
+                commentBox.innerHTML = bufferHTML;
               });
 
               e.stopPropagation();
@@ -124,7 +117,7 @@ angular.module('kifi')
 
           $scope.deleteComment = function(event, keepId, commentId) {
             angular.element(event.target).closest('.kf-keep-comments-comment').remove();
-            keepService.deleteMessageFromKeepDiscussion('', commentId)
+            keepService.deleteMessageFromKeepDiscussion(keepId, commentId)
             ['catch'](function () {
               $scope.error = 'Something went wrong. Try again?';
             });
