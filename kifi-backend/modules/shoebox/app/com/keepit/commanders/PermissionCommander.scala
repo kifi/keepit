@@ -287,8 +287,9 @@ class PermissionCommanderImpl @Inject() (
         val canDeleteOwnMessages = true
         val canDeleteOtherMessages = {
           // This seems like a pretty strange operational definition...
+          val viewerOwnsTheKeep = userIdOpt.contains(k.userId)
           val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
-          viewerOwnsOneOfTheKeepLibraries
+          viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
         }
 
         kid -> List(
