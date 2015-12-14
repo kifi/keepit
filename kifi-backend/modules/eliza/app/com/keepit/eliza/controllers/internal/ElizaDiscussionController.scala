@@ -97,18 +97,7 @@ class ElizaDiscussionController @Inject() (
     import DeleteMessage._
     val input = request.body.as[Request]
     val msgId = ElizaMessage.fromCommon(input.msgId)
-    val (msg, thread) = db.readOnlyReplica { implicit s =>
-      val msg = messageRepo.get(ElizaMessage.fromCommon(input.msgId))
-      val thread = threadRepo.get(msg.thread)
-      (msg, thread)
-    }
-    // This is sort of messy because of the type signature on `deleteMessageOnKeep`
-    // As soon as possible we should port over to just deleting the messages, and trusting that whoever
-    // hits this endpoint knows what they're doing
-    discussionCommander.deleteMessageOnKeep(msg.from.asUser.get, thread.keepId.get, msgId).map { _ =>
-      NoContent
-    }.recover {
-      case fail: Exception => BadRequest(JsString(fail.getMessage))
-    }.get
+    discussionCommander.deleteMessage(msgId)
+    NoContent
   }
 }
