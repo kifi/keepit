@@ -72,7 +72,7 @@ angular.module('kifi')
               resetCaret(commentBox);
 
               keepService
-              .addMessageToKeepDiscussion($scope.keep.pubId, commentBox.textContent)
+              .addMessageToKeepDiscussion($scope.keep.pubId, msg.text)
               .then(function (resp) {
                 msg.sentAt = resp.sentAt;
                 msg.id = resp.id;

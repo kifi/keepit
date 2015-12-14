@@ -100,7 +100,7 @@ angular.module('kifi')
       addMessageToKeepDiscussion: post(eliza, '/keeps/:id/message'),
       // ?limit={{number}}&fromId={{Option(String))}}
       getMessagesForKeepDiscussion: get(eliza, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),
-      deleteMessageFromKeepDiscussion: post(eliza, '/keeps/:id/deleteMessage'),
+      deleteMessageFromKeepDiscussion: post(shoebox, '/keeps/:id/messages/delete'),
       markDiscussionAsRead: post(eliza, '/keeps/markAsRead')
     };
 
