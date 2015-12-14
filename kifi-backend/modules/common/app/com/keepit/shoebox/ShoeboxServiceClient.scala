@@ -166,7 +166,8 @@ case class ShoeboxCacheProvider @Inject() (
   basicKeepByIdCache: BasicKeepByIdCache,
   organizationMembersCache: OrganizationMembersCache,
   basicOrganizationIdCache: BasicOrganizationIdCache,
-  slackIntegrationsCache: SlackChannelIntegrationsCache)
+  slackIntegrationsCache: SlackChannelIntegrationsCache,
+  sourceAttributionByKeepIdCache: SourceAttributionKeepIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -858,8 +859,15 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = {
-    val payload = Json.obj("keepIds" -> keepIds)
-    call(Shoebox.internal.getSourceAttributionForKeeps, payload).map { _.json.as[Map[Id[Keep], SourceAttribution]] }
+    cacheProvider.sourceAttributionByKeepIdCache.bulkGetOrElseFuture(keepIds.map(SourceAttributionKeepIdKey(_))) { missingKeys =>
+      val payload = Json.obj("keepIds" -> keepIds)
+      implicit val reads = SourceAttribution.internalFormat
+      call(Shoebox.internal.getSourceAttributionForKeeps, payload).map {
+        _.json.as[Map[Id[Keep], SourceAttribution]].map {
+          case (keepId, attribution) => SourceAttributionKeepIdKey(keepId) -> attribution
+        }
+      }
+    }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
   }
 
   def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = {

@@ -7,7 +7,6 @@ import com.keepit.common.db.slick.{ DataBaseComponent, DbRepo }
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import com.keepit.model.KeepAttributionType.TwitterPartial
 import com.keepit.social.twitter.TwitterStatusId
 import org.joda.time.DateTime
 import play.api.libs.json._
@@ -15,12 +14,13 @@ import play.api.libs.json._
 @ImplementedBy(classOf[KeepSourceAttributionRepoImpl])
 trait KeepSourceAttributionRepo extends DbRepo[KeepSourceAttribution] {
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
-  def getPartialTwitterAttribution()(implicit session: RSession): Map[TwitterStatusId, Set[Id[Keep]]]
+  def getByKeepIdsNoCache(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution]
   def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution
 }
 
 @Singleton
 class KeepSourceAttributionRepoImpl @Inject() (
+    sourceAttributionByKeepIdCache: SourceAttributionKeepIdCache,
     val db: DataBaseComponent,
     val clock: Clock,
     airbrake: AirbrakeNotifier) extends DbRepo[KeepSourceAttribution] with KeepSourceAttributionRepo with Logging {
@@ -61,13 +61,13 @@ class KeepSourceAttributionRepoImpl @Inject() (
   private def activeRows = rows.filter(row => row.state === KeepSourceAttributionStates.ACTIVE)
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
-    activeRows.filter(_.keepId inSet keepIds).list.map(att => att.keepId -> att.attribution).toMap
+    sourceAttributionByKeepIdCache.bulkGetOrElse(keepIds.map(SourceAttributionKeepIdKey(_))) { missingKeys =>
+      getByKeepIdsNoCache(missingKeys.map(_.keepId)).map { case (keepId, attribution) => SourceAttributionKeepIdKey(keepId) -> attribution }
+    }.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution }
   }
 
-  def getPartialTwitterAttribution()(implicit session: RSession): Map[TwitterStatusId, Set[Id[Keep]]] = {
-    activeRows.filter(_.attributionType === (TwitterPartial: KeepAttributionType)).list.groupBy { attribution =>
-      attribution.attribution match { case PartialTwitterAttribution(idStr, _) => TwitterStatusId(idStr.toLong) }
-    }.mapValues(_.map(_.keepId).toSet)
+  def getByKeepIdsNoCache(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], SourceAttribution] = {
+    activeRows.filter(_.keepId inSet keepIds).list.map(att => att.keepId -> att.attribution).toMap
   }
 
   def save(keepId: Id[Keep], attribution: SourceAttribution)(implicit session: RWSession): KeepSourceAttribution = {
