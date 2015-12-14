@@ -107,6 +107,9 @@ var defaultUserProperties = {
 // for user_was_notified events, these 'action' properties should be user_clicked_notification events
 var userWasNotifiedClickActions = ['open', 'click', 'spamreport', 'cleared', 'marked_read', 'marked_unread'];
 
+// for user_joined events that will be renamed to user_registered based on the 'action' property
+var userJoinedRegisteredActions = ['wasInvited', 'registered'];
+
 // many property values will be automatically convereted from camelCase to snake_case,
 // but the following fields should not be changed
 var fieldNamesToNotChangeValuesToSnakeCase = [
@@ -165,17 +168,18 @@ function isDeletedProperty(key, _value) {
  */
 function amplitudeEventName(mixpanelEvent) {
   var newEventName = renamedEvents[mixpanelEvent.event];
+  var action = mixpanelEvent.properties.action;
   if (_.isString(newEventName)) {
     return newEventName;
-  } else if (mixpanelEvent.event === 'user_joined' && mixpanelEvent.properties.action === 'registered') {
+  } else if (mixpanelEvent.event === 'user_joined' && userJoinedRegisteredActions.indexOf(action) >= 0, action) {
     return 'user_registered';
-  } else if (mixpanelEvent.event === 'user_joined' && mixpanelEvent.properties.action === 'installed') {
+  } else if (mixpanelEvent.event === 'user_joined' && action === 'installedExtension') {
     return 'user_installed';
   } else if (mixpanelEvent.event === 'visitor_viewed_pane') {
     return 'visitor_viewed_page';
   } else if (mixpanelEvent.event === 'user_viewed_pane') {
     return 'user_viewed_page';
-  } else if (mixpanelEvent.event === 'user_was_notified' && userWasNotifiedClickActions.indexOf(mixpanelEvent.properties.action) >= 0) {
+  } else if (mixpanelEvent.event === 'user_was_notified' && userWasNotifiedClickActions.indexOf(action) >= 0) {
     return 'user_clicked_notification';
   } else {
     return mixpanelEvent.event;
@@ -566,7 +570,12 @@ reader.on('line', handleLine);
 
 reader.on('end', function() {
   logger.info('DONE: import from %s', filename);
-  printAndStop();
+  var drainEvents = setInterval(function() {
+    if (amplitudeApiQueue.length() === 0 && amplitudeApiQueue.running() === 0) {
+      clearInterval(drainEvents);
+      printAndStop();
+    }
+  }, 1000);
 });
 
 function printFailedEvents() {
