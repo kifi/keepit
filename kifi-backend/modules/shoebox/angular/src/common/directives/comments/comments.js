@@ -64,9 +64,9 @@ angular.module('kifi')
               .addMessageToKeepDiscussion($scope.keep.pubId, commentBox.textContent)
               .then(function (resp) {
                 var msg = {
-                  id: resp.pubId,
+                  id: resp.id,
                   sentAt: new Date().getTime(),
-                  sentBy: profileService.me,
+                  sentBy: resp.sentBy,
                   text: commentBox.textContent
                 };
                 $scope.comments.push(msg);
