@@ -8,9 +8,14 @@
       <a class="kf-keep-comment-commenter-name"
          ng-href="{{::comment.sentBy|profileUrl}}"
          ng-bind="::comment.sentBy|name"></a> </span>
+      <a class="kf-keep-comment-page-link kf-link" ng-if="showKeepPageLink" ng-href="{{::keep.path}}">
+        <time class="kf-keep-comment-time"
+              ng-attr-datetime="{{::comment.sentAt}}" am-time-ago="::comment.sentAt"
+              title="{{::comment.sentAt|localTime}}" ng-href="{{::keep.path}}" ng-if="::comment.sentAt"></time>
+      </a>
       <time class="kf-keep-comment-time"
             ng-attr-datetime="{{::comment.sentAt}}" am-time-ago="::comment.sentAt"
-            title="{{::comment.sentAt|localTime}}" ng-if="::comment.sentAt"></time>
+            title="{{::comment.sentAt|localTime}}" ng-if="::comment.sentAt && !showKeepPageLink"></time>
       <span class="kf-keep-comment-actions" kf-click-menu ng-if="commentActionItems.length > 0  && canSeeCommentActions">
         <menu class="kf-dropdown-menu kf-keep-comment-actions-menu">
           <button class="kf-dropdown-menu-item kf-keep-comment-actions-item"

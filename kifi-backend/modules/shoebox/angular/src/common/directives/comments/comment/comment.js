@@ -2,8 +2,8 @@
 
 angular.module('kifi')
 
-  .directive('kfKeepComment', ['messageFormattingService', 'extensionLiaison', 'profileService', 'keepService', 'modalService',
-    function (messageFormattingService, extensionLiaison, profileService, keepService, modalService) {
+  .directive('kfKeepComment', ['$state', 'messageFormattingService', 'extensionLiaison', 'profileService', 'keepService', 'modalService',
+    function ($state, messageFormattingService, extensionLiaison, profileService, keepService, modalService) {
       return {
         restrict: 'A',
         scope: {
@@ -15,7 +15,9 @@ angular.module('kifi')
         link: function ($scope, element) {
           $scope.commentParts = messageFormattingService.trimExtraSpaces(messageFormattingService.full($scope.comment.text));
           $scope.me = profileService.me;
-          $scope.canSeeCommentActions = $scope.me.id === $scope.comment.sentBy.id && profileService.isAdmin();
+          var isAdmin = profileService.isAdmin();
+          $scope.canSeeCommentActions = $scope.me.id === $scope.comment.sentBy.id && isAdmin;
+          $scope.showKeepPageLink = !$state.is('keepPage') && isAdmin;
 
           $scope.openLookHere = function(event) {
             event.preventDefault();
