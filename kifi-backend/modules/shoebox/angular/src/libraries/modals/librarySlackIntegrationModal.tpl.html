@@ -40,68 +40,74 @@
                  ng-click="si.guardDeleteIntegration()">delete</a>
             </div>
 
-            <div class="kf-library-slack-integration-modal-item-content-text">
-              <div class="kf-library-slack-integration-modal-checkbox-wrap">
+            <div>
+                <div class="kf-library-slack-integration-modal-item-content-text">
+                  <div class="kf-library-slack-integration-modal-checkbox-wrap">
 
-                <input class="kf-library-slack-integration-modal-checkbox" id="cb-1-{{$index}}" type="checkbox"
-                       ng-model="si.keepToSlack"
-                       ng-checked="si.keepToSlack" ng-change="si.onKeepToSlackChanged(si.keepToSlack)"/>
-                <label ng-mouseenter="si.keepToSlackHover = true"
-                       ng-mouseleave="si.keepToSlackHover = false" for="cb-1-{{$index}}"
-                       ng-class="{'svg-checkbox_checked': si.keepToSlack && !si.keepToSlackHover,
-                 'svg-checkbox_checked_active': si.keepToSlack && si.keepToSlackHover,
-                 'svg-checkbox_unchecked': !si.keepToSlack && !si.keepToSlackHover,
-                 'svg-checkbox_unchecked_active': !si.keepToSlack && si.keepToSlackHover,
-                 'kf-library-slack-integration-modal-checkbox-bg': true}"></label>
+                    <input class="kf-library-slack-integration-modal-checkbox" id="cb-1-{{$index}}" type="checkbox"
+                           ng-model="si.keepToSlack"
+                           ng-checked="si.keepToSlack" ng-change="si.onKeepToSlackChanged(si.keepToSlack)"/>
+                    <label ng-mouseenter="si.keepToSlackHover = true"
+                           ng-mouseleave="si.keepToSlackHover = false" for="cb-1-{{$index}}"
+                           ng-class="{'svg-checkbox_checked': si.keepToSlack && !si.keepToSlackHover,
+                     'svg-checkbox_checked_active': si.keepToSlack && si.keepToSlackHover,
+                     'svg-checkbox_unchecked': !si.keepToSlack && !si.keepToSlackHover,
+                     'svg-checkbox_unchecked_active': !si.keepToSlack && si.keepToSlackHover,
+                     'kf-library-slack-integration-modal-checkbox-bg': true}"></label>
 
-              </div>
+                  </div>
 
-              <div>
-                Send Keeps from
-                <div
-                  class="kf-library-slack-integration-modal-item-lib-card kf-library-slack-integration-modal-item-left-space"
-                  ng-style="{'background-color':'{{library.color}}'}"></div>
-                <span ng-bind="si.library.name"></span>
-                <img
-                  class="kf-library-slack-integration-modal-item-arrow kf-library-slack-integration-modal-item-left-space kf-library-slack-integration-modal-item-right-space"
-                  src="/img/lined-right-arrow.png"/>
-                <span class="kf-library-slack-integration-modal-nowrap" ng-bind="si.getChannelName()"></span>
-              </div>
+                  <div>
+                    Send Keeps from
+                    <div
+                      class="kf-library-slack-integration-modal-item-lib-card kf-library-slack-integration-modal-item-left-space"
+                      ng-style="{'background-color':'{{library.color}}'}"></div>
+                    <span ng-bind="si.library.name"></span>
+                    <img
+                      class="kf-library-slack-integration-modal-item-arrow kf-library-slack-integration-modal-item-left-space kf-library-slack-integration-modal-item-right-space"
+                      src="/img/lined-right-arrow.png"/>
+                    <span class="kf-library-slack-integration-modal-nowrap" ng-bind="si.getChannelName()"></span>
+                  </div>
+                </div>
+              <span ng-if="si.requiresPushAuth()" class="kf-library-slack-integration-modal-item-subtext">(This feature will require furthur authorization via Slack)</span>
             </div>
 
+            <div>
+                <div class="kf-library-slack-integration-modal-item-content-text"
+                     ng-class="{'kf-library-slack-integration-modal-cursor-pointer': !canAddKeepsToLibrary}"
+                     ng-click="!canAddKeepsToLibrary && showUnableToKeepFromSlackModal()"
+                     ng-style="{'opacity': canAddKeepsToLibrary ? '1.0' : '0.5'}">
+                  <div class="kf-library-slack-integration-modal-checkbox-wrap">
+                    <input class="kf-library-slack-integration-modal-checkbox" id="cb-2-{{$index}}" type="checkbox"
+                           ng-model="si.slackToKeep"
+                           ng-checked="canAddKeepsToLibrary && si.slackToKeep"
+                           ng-change="canAddKeepsToLibrary && si.onSlackToKeepChanged(si.slackToKeep)"/>
+                    <label ng-mouseenter="si.slackToKeepHover = true"
+                           ng-mouseleave="si.slackToKeepHover = false" for="cb-2-{{$index}}"
+                           ng-class="{'svg-checkbox_checked': canAddKeepsToLibrary && si.slackToKeep && !si.slackToKeepHover,
+                   'svg-checkbox_checked_active': canAddKeepsToLibrary && si.slackToKeep && si.slackToKeepHover,
+                   'svg-checkbox_unchecked': !canAddKeepsToLibrary || (!si.slackToKeep && !si.slackToKeepHover),
+                   'svg-checkbox_unchecked_active': canAddKeepsToLibrary && !si.slackToKeep && si.slackToKeepHover,
+                   'kf-library-slack-integration-modal-checkbox-bg': true}"></label>
 
-            <div class="kf-library-slack-integration-modal-item-content-text"
-                 ng-class="{'kf-library-slack-integration-modal-cursor-pointer': !canAddKeepsToLibrary}"
-                 ng-click="!canAddKeepsToLibrary && showUnableToKeepFromSlackModal()"
-                 ng-style="{'opacity': canAddKeepsToLibrary ? '1.0' : '0.5'}">
-              <div class="kf-library-slack-integration-modal-checkbox-wrap">
-                <input class="kf-library-slack-integration-modal-checkbox" id="cb-2-{{$index}}" type="checkbox"
-                       ng-model="si.slackToKeep"
-                       ng-checked="canAddKeepsToLibrary && si.slackToKeep"
-                       ng-change="canAddKeepsToLibrary && si.onSlackToKeepChanged(si.slackToKeep)"/>
-                <label ng-mouseenter="si.slackToKeepHover = true"
-                       ng-mouseleave="si.slackToKeepHover = false" for="cb-2-{{$index}}"
-                       ng-class="{'svg-checkbox_checked': canAddKeepsToLibrary && si.slackToKeep && !si.slackToKeepHover,
-               'svg-checkbox_checked_active': canAddKeepsToLibrary && si.slackToKeep && si.slackToKeepHover,
-               'svg-checkbox_unchecked': !canAddKeepsToLibrary || (!si.slackToKeep && !si.slackToKeepHover),
-               'svg-checkbox_unchecked_active': canAddKeepsToLibrary && !si.slackToKeep && si.slackToKeepHover,
-               'kf-library-slack-integration-modal-checkbox-bg': true}"></label>
+                  </div>
 
-              </div>
+                  <div>
+                    Keep links from
+                    <span
+                      class="kf-library-slack-integration-modal-nowrap kf-library-slack-integration-modal-item-left-space"
+                      ng-bind="si.getChannelName()"></span>
+                    <img
+                      class="kf-library-slack-integration-modal-item-arrow kf-library-slack-integration-modal-item-left-space kf-library-slack-integration-modal-item-right-space"
+                      src="/img/lined-right-arrow.png"/>
 
-              <div>
-                Keep links from
-                <span
-                  class="kf-library-slack-integration-modal-nowrap kf-library-slack-integration-modal-item-left-space"
-                  ng-bind="si.getChannelName()"></span>
-                <img
-                  class="kf-library-slack-integration-modal-item-arrow kf-library-slack-integration-modal-item-left-space kf-library-slack-integration-modal-item-right-space"
-                  src="/img/lined-right-arrow.png"/>
+                    <div class="kf-library-slack-integration-modal-item-lib-card"
+                         ng-style="{'background-color':'{{library.color}}'}"></div>
+                    <span ng-bind="si.library.name"></span>
+                  </div>
 
-                <div class="kf-library-slack-integration-modal-item-lib-card"
-                     ng-style="{'background-color':'{{library.color}}'}"></div>
-                <span ng-bind="si.library.name"></span>
-              </div>
+                </div>
+                <span ng-if="si.requiresIngestAuth()" class="kf-library-slack-integration-modal-item-subtext">(This feature will require furthur authorization via Slack)</span>
             </div>
           </div>
         </div>

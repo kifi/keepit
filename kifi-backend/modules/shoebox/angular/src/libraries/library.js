@@ -94,20 +94,40 @@ angular.module('kifi')
         }
       }
 
+      this.requiresPushAuth = function() {
+        return this.data.toSlack && this.data.toSlack.authLink;
+      };
+
+      this.requiresIngestAuth = function() {
+        return this.data.fromSlack && this.data.fromSlack.authLink;
+      };
+
       this.onKeepToSlackChanged = function(on) {
         // make request
         // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
-        this.data.toSlack.status = on ? 'on' : 'off';
-        this.data.toSlack.space = this.data.space;
-        libraryService.modifySlackIntegrations(this.library.id, [this.data.toSlack]);
+        if (on && this.data.toSlack.authLink) {
+          // need to authorize
+          $window.location = this.data.toSlack.authLink;
+        } else {
+          this.data.toSlack.status = on ? 'on' : 'off';
+          this.data.toSlack.space = this.data.space;
+          libraryService.modifySlackIntegrations(this.library.id, [this.data.toSlack]);
+        }
+
       };
 
       this.onSlackToKeepChanged = function(on) {
         // make request
         // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
-        this.data.fromSlack.status = $scope.canAddKeepsToLibrary && on ? 'on' : 'off';
-        this.data.fromSlack.space = this.data.space;
-        libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack]);
+        if (on && this.data.fromSlack.authLink) {
+          // need to authorize
+          $window.location = this.data.fromSlack.authLink;
+        } else {
+          this.data.fromSlack.status = $scope.canAddKeepsToLibrary && on ? 'on' : 'off';
+          this.data.fromSlack.space = this.data.space;
+          libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack]);
+        }
+
       };
 
       this.getChannelName = function() {
@@ -292,7 +312,7 @@ angular.module('kifi')
     };
 
     $scope.getSlackLink = function() {
-      return library.slack && (library.slack.link || '');
+      return library.slack && (library.slack.link || '').replace('search%3Aread%2Creactions%3Awrite', '');
     };
 
     $scope.getNextKeeps = function (offset) {

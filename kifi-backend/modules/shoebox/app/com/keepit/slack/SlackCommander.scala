@@ -386,7 +386,7 @@ class SlackCommanderImpl @Inject() (
           )
         }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value, x.creatorName.value))
         libId -> LibrarySlackInfo(
-          link = SlackAPI.OAuthAuthorize(SlackAuthScope.push ++ SlackAuthScope.ingest, SetupLibraryIntegrations -> Library.publicId(libId), None).url,
+          link = SlackAPI.OAuthAuthorize(SlackAuthScope.push, SetupLibraryIntegrations -> Library.publicId(libId), None).url,
           integrations = integrations
         )
 
