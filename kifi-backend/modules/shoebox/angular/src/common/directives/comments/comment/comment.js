@@ -10,7 +10,7 @@ angular.module('kifi')
           keep: '=',
           comment: '=',
           threadId: '=',
-          deleteComment: '&'
+          getDeleteComment: '&deleteComment'
         },
         templateUrl: 'common/directives/comments/comment/comment.tpl.html',
         link: function ($scope) {
@@ -30,7 +30,7 @@ angular.module('kifi')
           $scope.commentActionItems = [
             {
               title: 'Delete',
-              action: $scope.deleteComment()
+              action: $scope.getDeleteComment()
             }
           ];
         }
