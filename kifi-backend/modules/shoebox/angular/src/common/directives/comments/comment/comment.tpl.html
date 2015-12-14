@@ -19,7 +19,7 @@
       <span class="kf-keep-comment-actions" kf-click-menu ng-if="commentActionItems.length > 0  && canSeeCommentActions">
         <menu class="kf-dropdown-menu kf-keep-comment-actions-menu">
           <button class="kf-dropdown-menu-item kf-keep-comment-actions-item"
-            ng-click="item.action($event)"
+            ng-click="item.action($event, keep.pubId, comment.id)"
             ng-repeat="item in commentActionItems"
             ng-bind="item.title">
           </button>

@@ -60,22 +60,28 @@ angular.module('kifi')
             // else we continue normally
             var commentBox = getCommentBox(element);
             if (commentBox && !e.shiftKey && e.which === 13) {
+              var msg = {
+                sentAt: new Date().getTime(),
+                sentBy: profileService.me,
+                text: commentBox.textContent
+              };
+              $scope.comments.push(msg);
+              $scope.keep.discussion.numMessages++;
+              $scope.visibleCount++;
+              var bufferHTML = commentBox.innerHTML;
+              resetCaret(commentBox);
+
               keepService
-              .addMessageToKeepDiscussion($scope.keep.pubId, commentBox.textContent)
+              .addMessageToKeepDiscussion($scope.keep.pubId, msg.text)
               .then(function (resp) {
-                var msg = {
-                  id: resp.id,
-                  sentAt: new Date().getTime(),
-                  sentBy: profileService.me,
-                  text: commentBox.textContent
-                };
-                $scope.comments.push(msg);
-                $scope.keep.discussion.numMessages++;
-                $scope.visibleCount++;
-                resetCaret(commentBox);
-              })
-              ['catch'](function () {
+                msg.sentAt = resp.sentAt;
+                msg.id = resp.id;
+              })['catch'](function () {
                 $scope.error = 'Something went wrong. Try again?';
+                $scope.visibleCount--;
+                $scope.keep.discussion.numMessages--;
+                $scope.comments.pop();
+                commentBox.innerHTML = bufferHTML;
               });
 
               e.stopPropagation();
@@ -107,6 +113,19 @@ angular.module('kifi')
             } else if (readTimer) {
               $timeout.cancel(readTimer);
             }
+          };
+
+          $scope.deleteComment = function(event, keepId, commentId) {
+            angular.element(event.target).closest('.kf-keep-comments-comment').remove();
+            keepService.deleteMessageFromKeepDiscussion(keepId, commentId)
+            ['catch'](function () {
+              $scope.error = 'Something went wrong. Try again?';
+            });
+            $scope.comments = $scope.comments.filter(function (comment) {
+              return comment.id !== commentId;
+            });
+            $scope.keep.discussion.numMessages--;
+            $scope.visibleCount--;
           };
 
           var MESSAGES_PER_PAGE = 4;
