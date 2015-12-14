@@ -39,7 +39,6 @@ class SlackController @Inject() (
 
   def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
-
     val resultFut = for {
       code <- codeOpt.map(Future.successful).getOrElse(Future.failed(SlackAPIFailure.NoAuthCode))
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
@@ -51,7 +50,7 @@ class SlackController @Inject() (
           (action, dataJson) <- stateValue.asOpt(SlackAuthenticatedAction.readsWithDataJson)
           result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userId, slackAuth, slackIdentity, _, _)))
         } yield result
-      } getOrElse Future.successful(BadRequest("invalid_state"))
+      } getOrElse Future.successful(BadRequest)
     } yield result
 
     resultFut.recover {
@@ -66,7 +65,19 @@ class SlackController @Inject() (
         case (Success(libId), Some(webhook)) =>
           slackCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
           Future.successful(redirectToLibrary(libId, showSlackDialog = true))
-        case _ => ???
+        case _ => Future.successful(BadRequest)
+      }
+      case TurnOnLibraryPush => (LibraryToSlackChannel.decodePublicId(data), slackAuth.incomingWebhook) match {
+        case (Success(integrationId), Some(webhook)) =>
+          val libraryId = slackCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
+          Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
+        case _ => Future.successful(BadRequest)
+      }
+      case TurnOnChannelIngestion => SlackChannelToLibrary.decodePublicId(data) match {
+        case Success(integrationId) =>
+          val libraryId = slackCommander.turnOnChannelIngestion(integrationId, slackIdentity)
+          Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
+        case _ => Future.successful(BadRequest)
       }
     }
   }
