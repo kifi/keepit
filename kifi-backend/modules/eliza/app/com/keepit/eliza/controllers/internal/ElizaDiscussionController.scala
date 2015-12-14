@@ -27,20 +27,23 @@ class ElizaDiscussionController @Inject() (
     extends ElizaServiceController with Logging {
 
   def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
-    val keepIds = request.body.as[Set[Id[Keep]]]
-    discussionCommander.getDiscussionsForKeeps(keepIds).map { discussions =>
-      Ok(Json.toJson(discussions))
+    import GetDiscussionsForKeeps._
+    val input = request.body.as[Request]
+    discussionCommander.getDiscussionsForKeeps(input.keepIds).map { discussions =>
+      val output = Response(discussions)
+      Ok(Json.toJson(output))
     }
   }
 
   def getCrossServiceMessages = Action(parse.tolerantJson) { request =>
-    val msgIds = request.body.as[Set[Id[Message]]].map(ElizaMessage.fromCommon)
+    import GetCrossServiceMessages._
+    val input = request.body.as[Request]
     val crossServiceMsgs = db.readOnlyReplica { implicit s =>
-      msgIds.map { msgId =>
-        val msg = messageRepo.get(msgId)
+      input.msgIds.map { msgId =>
+        val msg = messageRepo.get(ElizaMessage.fromCommon(msgId))
         val thread = threadRepo.get(msg.thread)
-        ElizaMessage.toCommon(msgId) -> CrossServiceMessage(
-          id = ElizaMessage.toCommon(msgId),
+        msgId -> CrossServiceMessage(
+          id = msgId,
           keep = thread.keepId,
           sentAt = msg.createdAt,
           sentBy = msg.from.asUser,
@@ -48,13 +51,15 @@ class ElizaDiscussionController @Inject() (
         )
       }.toMap
     }
-    Ok(Json.toJson(crossServiceMsgs))
+    val output = Response(crossServiceMsgs)
+    Ok(Json.toJson(output))
   }
 
   def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>
-    val input = request.body.as[ElizaServiceClient.GetMessagesOnKeep.Request]
+    import GetMessagesOnKeep._
+    val input = request.body.as[Request]
     discussionCommander.getMessagesOnKeep(input.keepId, input.fromIdOpt.map(ElizaMessage.fromCommon), input.limit).map { msgs =>
-      val output = ElizaServiceClient.GetMessagesOnKeep.Response(msgs)
+      val output = Response(msgs)
       Ok(Json.toJson(output))
     }
   }
