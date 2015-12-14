@@ -181,11 +181,6 @@ class ElizaDiscussionCommanderImpl @Inject() (
     for {
       msg <- Some(messageRepo.get(messageId)).filter(_.isActive).map(Success(_)).getOrElse(Failure(new Exception("message does not exist")))
       thread <- Some(messageThreadRepo.get(msg.thread)).filter(_.keepId.contains(keepId)).map(Success(_)).getOrElse(Failure(new Exception("wrong keep id!")))
-      // TODO(ryan): stop checking permissions in Eliza
-      // Three options that I can see, in order of how much I like them:
-      //  1. trust Shoebox to ask for reasonable things, only do simple sanity checks (i.e., pass in a KeepId and make sure the msg is on that keep)
-      //  2. asynchronously ask for permissions from Shoebox, do all checking here
-      //  3. pass in permissions (from Shoebox), double-check them here
     } yield messageRepo.deactivate(msg)
   }
 
