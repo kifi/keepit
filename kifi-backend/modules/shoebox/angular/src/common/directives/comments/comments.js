@@ -49,10 +49,9 @@ angular.module('kifi')
           }
 
           $scope.comments = $scope.keep.discussion.messages.slice().sort(bySentAt); // don't mutate the original array, in case we need it later
-          $scope.numMessages = $scope.keep.discussion.numMessages; // Total number of known messages that exist for this keep
 
           $scope.visibleCount = Math.min(3, $scope.comments.length);
-          $scope.showViewPreviousComments = $scope.hasMoreToFetch = $scope.visibleCount < $scope.numMessages;
+          $scope.showViewPreviousComments = $scope.hasMoreToFetch = $scope.visibleCount < $scope.keep.discussion.numMessages;
 
           // listeners
 
