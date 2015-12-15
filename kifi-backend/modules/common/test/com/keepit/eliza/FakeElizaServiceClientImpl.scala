@@ -1,32 +1,22 @@
 package com.keepit.eliza
 
-import com.keepit.discussion.{CrossServiceMessage, Discussion, Message}
-import com.keepit.eliza.ElizaServiceClient.RPBGetThread
-import com.keepit.model._
-import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
-import com.keepit.common.service.{ ServiceClient, ServiceType }
-import com.keepit.common.logging.Logging
-import com.keepit.common.routes.Eliza
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{ CallTimeouts, HttpClient }
-import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.notify.model.{Recipient, GroupingNotificationKind}
-import com.keepit.notify.model.event.NotificationEvent
-import com.keepit.search.index.message.ThreadContent
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.collection.mutable
-import scala.concurrent.{ Future, Promise }
-
-import play.api.libs.json.{ JsString, JsValue, JsArray, Json, JsObject }
-
-import com.google.inject.Inject
-import com.google.inject.util.Providers
-import com.keepit.eliza.model._
-
 import akka.actor.Scheduler
-import com.keepit.common.json.TupleFormat._
+import com.google.inject.util.Providers
+import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.service.ServiceType
+import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.discussion.{CrossServiceMessage, Discussion, Message}
+import com.keepit.eliza.ElizaServiceClient.RPBGetThreads
+import com.keepit.eliza.model._
+import com.keepit.model._
+import com.keepit.notify.model.event.NotificationEvent
+import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
+import com.keepit.search.index.message.ThreadContent
+import play.api.libs.json.{JsArray, JsObject}
+
+import scala.collection.mutable
+import scala.concurrent.{Future, Promise}
 
 class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, scheduler: Scheduler, attributionInfo: mutable.Map[Id[NormalizedURI], Seq[Id[User]]] = mutable.HashMap.empty) extends ElizaServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), scheduler, () => {})
@@ -110,6 +100,6 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def markKeepsAsReadForUser(userId: Id[User], lastSeen: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep],Int]] = ???
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message] = ???
 
-  def rpbGetThread(threadId: Long): Future[RPBGetThread.Response] = ???
-  def rpbConnectKeep(threadId: Long, keepId: Id[Keep]): Future[Unit] = ???
+  def rpbGetThreads(limit: Int): Future[RPBGetThreads.Response] = ???
+  def rpbConnectKeeps(connections: Map[Long, Id[Keep]]): Future[Unit] = ???
 }

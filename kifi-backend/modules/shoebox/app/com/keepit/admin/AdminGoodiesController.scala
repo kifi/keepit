@@ -4,21 +4,24 @@ import java.util.regex.{ Pattern, PatternSyntaxException }
 
 import com.google.inject.Inject
 import com.keepit.commanders.{ KeepInterner, RawBookmarkRepresentation }
-import com.keepit.common.concurrent.ChunkedResponseHelper
+import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicIdRegistry }
 import com.keepit.common.db.Id
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.{ KeepSource, Library, Organization }
-import play.api.libs.json.Json
+import com.keepit.slack.models.SlackMessageRequest
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import play.api.libs.json.{ JsString, Json }
 
 import scala.concurrent.ExecutionContext
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 class AdminGoodiesController @Inject() (
   eliza: ElizaServiceClient,
   keepInterner: KeepInterner,
+  inhouseSlackClient: InhouseSlackClient,
   override val userActionsHelper: UserActionsHelper,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
@@ -79,24 +82,30 @@ class AdminGoodiesController @Inject() (
   }
 
   def backfillMessageThread() = AdminUserAction(parse.tolerantJson) { request =>
-    val source = KeepSource.keeper
-    val threads = (request.body \ "threads").as[Seq[Long]]
+    val source = KeepSource.discussion
+    val n = (request.body \ "n").as[Int]
+    val limit = (request.body \ "limit").as[Int]
     implicit val context = HeimdalContext.empty
-    val enum = ChunkedResponseHelper.chunkedFuture(threads) { threadId =>
+    FutureHelpers.sequentialExec(1 to n) { _ =>
       for {
-        res <- eliza.rpbGetThread(threadId)
-        rawBookmark = RawBookmarkRepresentation(title = res.title, url = res.url, keptAt = Some(res.startedAt))
-        internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), res.startedBy, None, source)
-        keepId = internResponse.successes.head.id.get
-        _ <- eliza.rpbConnectKeep(threadId, keepId)
+        res <- eliza.rpbGetThreads(limit)
+        keepsByThreadId = res.threads.map {
+          case (threadId, to) =>
+            val rawBookmark = RawBookmarkRepresentation(title = to.title, url = to.url, keptAt = Some(to.startedAt))
+            val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), to.startedBy, None, source)
+            val keepId = internResponse.successes.head.id.get
+            threadId -> keepId
+        }
+        _ <- eliza.rpbConnectKeeps(keepsByThreadId)
       } yield {
-        Json.obj(
-          "requested" -> threadId,
-          "received" -> Json.arr(res.title, res.url, res.startedAt, res.startedBy),
-          "successfully_interned" -> internResponse.successes.map(_.id.get)
-        )
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Interned (thread, keep) pairs: $keepsByThreadId"))
       }
+    }.andThen {
+      case Success(_) =>
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Done!"))
+      case Failure(fail) =>
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Crap, we broke because $fail"))
     }
-    Ok.chunked(enum)
+    Ok(JsString("started, check #test-ryan"))
   }
 }

@@ -101,22 +101,25 @@ class ElizaDiscussionController @Inject() (
     NoContent
   }
 
-  def rpbGetThread() = Action(parse.tolerantJson) { request =>
-    import RPBGetThread._
+  def rpbGetThreads() = Action(parse.tolerantJson) { request =>
+    import RPBGetThreads._
     val input = request.body.as[Request]
     db.readOnlyMaster { implicit s =>
-      val thread = threadRepo.get(Id[MessageThread](input.threadId))
-      val output = Response(thread.startedBy, thread.pageTitle, thread.url, thread.createdAt)
+      val threads = threadRepo.getThreadsWithoutKeepId(limit = input.limit)
+      val output = Response(threads.map { th => th.id.get.id -> ThreadObject(th.startedBy, th.allParticipants, th.pageTitle, th.url, th.createdAt) }.toMap)
       Ok(Json.toJson(output))
     }
   }
-  def rpbConnectKeep() = Action(parse.tolerantJson) { request =>
-    import RPBConnectKeep._
+  def rpbConnectKeeps() = Action(parse.tolerantJson) { request =>
+    import RPBConnectKeeps._
     val input = request.body.as[Request]
     db.readWrite { implicit s =>
-      val thread = threadRepo.get(Id[MessageThread](input.threadId))
-      assert(thread.keepId.isEmpty)
-      threadRepo.save(thread.withKeepId(input.keepId))
+      input.connections.foreach {
+        case (threadId, keepId) =>
+          val thread = threadRepo.get(Id[MessageThread](threadId))
+          assert(thread.keepId.isEmpty)
+          threadRepo.save(thread.withKeepId(keepId))
+      }
       NoContent
     }
   }

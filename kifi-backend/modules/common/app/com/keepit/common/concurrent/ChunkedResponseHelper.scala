@@ -8,18 +8,18 @@ import scala.concurrent.{ ExecutionContext => ScalaExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object ChunkedResponseHelper {
-  def chunkedFuture[I](items: Seq[I])(process: I => Future[JsValue])(implicit exc: ScalaExecutionContext): Enumerator[JsValue] = {
-    Concurrent.unicast(onStart = { (channel: Concurrent.Channel[JsValue]) =>
+  def chunkedFuture[I](items: Seq[I])(process: I => Future[String])(implicit exc: ScalaExecutionContext): Enumerator[String] = {
+    Concurrent.unicast(onStart = { (channel: Concurrent.Channel[String]) =>
       FutureHelpers.sequentialExec(items) { x =>
         process(x).imap(channel.push)
       } andThen {
         case res =>
-          if (res.isFailure) channel.push(JsString("server error"))
+          if (res.isFailure) channel.push("server error")
           channel.eofAndEnd()
       }
     })
   }
-  def chunked[I](items: Seq[I])(process: I => JsValue)(implicit exc: ScalaExecutionContext): Enumerator[JsValue] = {
+  def chunked[I](items: Seq[I])(process: I => String)(implicit exc: ScalaExecutionContext): Enumerator[String] = {
     chunkedFuture(items)(x => Future.successful(process(x)))
   }
 }
