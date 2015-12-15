@@ -51,6 +51,7 @@ trait SlackTeamMembershipRepo extends Repo[SlackTeamMembership] {
   def internMembership(request: SlackTeamMembershipInternRequest)(implicit session: RWSession): SlackTeamMembership
   def getBySlackUserIds(ids: Set[SlackUserId])(implicit session: RSession): Map[SlackUserId, SlackTeamMembership]
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership]
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership]
 }
 
 @Singleton
@@ -165,6 +166,10 @@ class SlackTeamMembershipRepoImpl @Inject() (
   }
   def getByToken(token: SlackAccessToken)(implicit session: RSession): Option[SlackTeamMembership] = {
     activeRows.filter(_.token === token).firstOption
+  }
+
+  def getByUserId(userId: Id[User])(implicit session: RSession): Seq[SlackTeamMembership] = {
+    activeRows.filter(_.userId === userId).list
   }
 }
 

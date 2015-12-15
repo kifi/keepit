@@ -331,7 +331,8 @@ class UserController @Inject() (
       HAS_SEEN_FTUE,
       COMPANY_NAME,
       HIDE_COMPANY_NAME,
-      STORED_CREDIT_CODE
+      STORED_CREDIT_CODE,
+      SLACK_INT_PROMO
     )
   }
 
@@ -357,7 +358,7 @@ class UserController @Inject() (
       } |> JsArray.apply
     }
 
-    val prefsF = userCommander.getPrefs(SitePrefNames, request.userId, request.experiments)
+    val prefsF = Future(userCommander.getPrefs(SitePrefNames, request.userId, request.experiments))
 
     for {
       prefs <- prefsF
