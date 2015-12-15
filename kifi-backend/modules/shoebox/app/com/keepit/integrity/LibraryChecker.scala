@@ -143,7 +143,7 @@ class LibraryChecker @Inject() (val airbrake: AirbrakeNotifier,
 
       val keeps = keepRepo.getBySequenceNumber(lastSeq, KEEP_FETCH_SIZE)
       val nextSeqNum = if (keeps.isEmpty) None else Some(keeps.map(_.seq).max)
-      val libraryIds = keeps.map(_.libraryId.get).toSet
+      val libraryIds = keeps.flatMap(_.libraryId).toSet
 
       val newLibraryKeepCount = keepRepo.getCountsByLibrary(libraryIds)
       val latestKeptAtMap = keepRepo.latestKeptAtByLibraryIds(libraryIds)

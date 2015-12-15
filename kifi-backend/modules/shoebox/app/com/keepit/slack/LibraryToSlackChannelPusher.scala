@@ -68,6 +68,7 @@ class LibraryToSlackChannelPusherImpl @Inject() (
     extends LibraryToSlackChannelPusher with Logging {
 
   import LibraryToSlackChannelPusher._
+  import SlackIntegration._
 
   @StatsdTiming("LibraryToSlackChannelPusher.findAndPushUpdatesForRipestLibraries")
   @AlertingTimer(5 seconds)
@@ -185,8 +186,8 @@ class LibraryToSlackChannelPusherImpl @Inject() (
       (lib, integrationsToProcess)
     }.flatMap {
       case (lib, integrationsToProcess) => FutureHelpers.accumulateOneAtATime(integrationsToProcess.toSet) { lts =>
-        val (webhookOpt, keepsToPush, lastKtlIdOpt, mayHaveMore) = db.readOnlyReplica { implicit s =>
-          val webhook = slackIncomingWebhookInfoRepo.getForIntegration(lts)
+        val (webhooks, keepsToPush, lastKtlIdOpt, mayHaveMore) = db.readOnlyReplica { implicit s =>
+          val webhooks = slackIncomingWebhookInfoRepo.getForIntegration(lts)
           val (keeps, lastKtlIdOpt, mayHaveMore) = {
             val recentKtls = ktlRepo.getByLibraryAddedAfter(libId, lts.lastProcessedKeep)
             val keepsByIds = keepRepo.getByIds(recentKtls.map(_.keepId).toSet)
@@ -209,26 +210,24 @@ class LibraryToSlackChannelPusherImpl @Inject() (
             case ks if ks.length <= MAX_KEEPS_TO_SEND => SomeKeeps(ks, lib, attributionByKeepId)
             case ks => ManyKeeps(ks, lib, attributionByKeepId)
           }
-          (webhook, keepsToPush, lastKtlIdOpt, mayHaveMore)
+          (webhooks, keepsToPush, lastKtlIdOpt, mayHaveMore)
         }
 
-        val slackPush = webhookOpt match {
-          case None => Future.successful(false)
-          case Some(wh) =>
-            describeKeeps(keepsToPush) match {
-              case None => Future.successful(true)
-              case Some(msgFut) =>
-                msgFut.flatMap { msg =>
-                  slackClient.sendToSlack(wh.webhook, msg.quiet).imap { _ => true }
-                    .recover {
-                      case f: SlackAPIFailure =>
-                        log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} because $f")
-                        false
-                    }
+        val hasBeenPushed = describeKeeps(keepsToPush) match {
+          case None => Future.successful(true)
+          case Some(futureMessage) => futureMessage.flatMap { message =>
+            FutureHelpers.exists(webhooks) { webhook =>
+              slackClient.sendToSlack(webhook.webhook, message.quiet).imap(_ => true)
+                .recover {
+                  case f: SlackAPIFailure =>
+                    log.info(s"[LTSCP] Failed to push Slack messages for integration ${lts.id.get} via webhook ${webhook.id.get} because $f")
+                    false
                 }
             }
+          }
         }
-        slackPush.andThen {
+
+        hasBeenPushed.andThen {
           case Success(false) => db.readWrite { implicit s =>
             libToChannelRepo.save(lts.withStatus(SlackIntegrationStatus.Broken))
           }

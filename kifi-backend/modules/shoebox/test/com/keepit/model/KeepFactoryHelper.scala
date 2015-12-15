@@ -2,6 +2,7 @@ package com.keepit.model
 
 import com.google.inject.Injector
 import com.keepit.common.core._
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.model.KeepFactory.PartialKeep
 import org.apache.commons.lang3.RandomStringUtils.random
@@ -23,7 +24,7 @@ object KeepFactoryHelper {
         val libRepo = injector.getInstance(classOf[LibraryRepo])
         candidate.libraryId match {
           case Some(libraryId) =>
-            val library = libRepo.get(candidate.libraryId.get)
+            val library = libRepo.get(libraryId)
             libRepo.save(library.copy(lastKept = Some(candidate.createdAt), keepCount = library.keepCount + 1))
           case None =>
           // This would be great. However, we have tests that test the number of libraries.
@@ -38,20 +39,22 @@ object KeepFactoryHelper {
 
       val keep = partialKeep.get |> fixUriReferences |> fixLibraryReferences
 
-      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(Set(keep.libraryId.get)).withParticipants(Set(keep.userId)))
-      val library = injector.getInstance(classOf[LibraryRepo]).get(finalKeep.libraryId.get)
+      val finalKeep = injector.getInstance(classOf[KeepRepo]).save(keep.copy(id = None).withLibraries(keep.libraryId.toSet).withParticipants(Set(keep.userId)))
+      val libraries = finalKeep.libraryId.toSet[Id[Library]].map(libId => injector.getInstance(classOf[LibraryRepo]).get(libId))
 
-      val ktl = KeepToLibrary(
-        keepId = finalKeep.id.get,
-        libraryId = library.id.get,
-        addedAt = finalKeep.keptAt,
-        addedBy = finalKeep.userId,
-        uriId = finalKeep.uriId,
-        isPrimary = finalKeep.isPrimary,
-        visibility = library.visibility,
-        organizationId = library.organizationId
-      )
-      injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
+      libraries.foreach { library =>
+        val ktl = KeepToLibrary(
+          keepId = finalKeep.id.get,
+          libraryId = library.id.get,
+          addedAt = finalKeep.keptAt,
+          addedBy = finalKeep.userId,
+          uriId = finalKeep.uriId,
+          isPrimary = finalKeep.isPrimary,
+          visibility = library.visibility,
+          organizationId = library.organizationId
+        )
+        injector.getInstance(classOf[KeepToLibraryRepo]).save(ktl)
+      }
       val ktu = KeepToUser(
         keepId = finalKeep.id.get,
         userId = finalKeep.userId,

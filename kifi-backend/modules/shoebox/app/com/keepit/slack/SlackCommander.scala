@@ -11,17 +11,20 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance.StatsdTiming
+import com.keepit.common.reflection.Enumerator
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time.{ Clock, DEFAULT_DATE_TIME_ZONE }
 import com.keepit.common.util.{ DescriptionElements, LinkElement }
 import com.keepit.controllers.website.DeepLinkRouter
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
+import com.keepit.model.KeepAttributionType._
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.social.BasicUser
 import com.kifi.macros.json
 import play.api.http.Status._
+import play.api.libs.json._
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success, Try }
 import com.keepit.common.core._
@@ -30,13 +33,13 @@ import com.keepit.common.core._
 case class LibraryToSlackIntegrationInfo(
   id: PublicId[LibraryToSlackChannel],
   status: SlackIntegrationStatus,
-  needsAuth: Boolean)
+  authLink: Option[String])
 
 @json
 case class SlackToLibraryIntegrationInfo(
   id: PublicId[SlackChannelToLibrary],
   status: SlackIntegrationStatus,
-  needsAuth: Boolean)
+  authLink: Option[String])
 
 @json
 case class LibrarySlackIntegrationInfo(
@@ -50,8 +53,6 @@ case class LibrarySlackIntegrationInfo(
 @json
 case class LibrarySlackInfo(
   link: String,
-  pushLink: String,
-  ingestLink: String,
   integrations: Seq[LibrarySlackIntegrationInfo])
 
 @ImplementedBy(classOf[SlackCommanderImpl])
@@ -59,6 +60,8 @@ trait SlackCommander {
   // Open their own DB sessions, intended to be called directly from controllers
   def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit
   def setupIntegrations(userId: Id[User], libId: Id[Library], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Unit
+  def turnOnLibraryPush(integrationId: Id[LibraryToSlackChannel], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Id[Library]
+  def turnOnChannelIngestion(integrationId: Id[SlackChannelToLibrary], identity: SlackIdentifyResponse): Id[Library]
   def modifyIntegrations(request: SlackIntegrationModifyRequest): Try[SlackIntegrationModifyResponse]
   def deleteIntegrations(request: SlackIntegrationDeleteRequest): Try[SlackIntegrationDeleteResponse]
   def fetchMissingChannelIds(): Future[Unit]
@@ -90,10 +93,12 @@ class SlackCommanderImpl @Inject() (
   inhouseSlackClient: InhouseSlackClient)
     extends SlackCommander with Logging {
 
+  import SlackAuthenticatedAction._
+
   def registerAuthorization(userId: Id[User], auth: SlackAuthorizationResponse, identity: SlackIdentifyResponse): Unit = {
     require(auth.teamId == identity.teamId && auth.teamName == identity.teamName)
     db.readWrite { implicit s =>
-      slackTeamMembershipRepo.internBySlackTeamAndUser(SlackTeamMembershipInternRequest(
+      slackTeamMembershipRepo.internMembership(SlackTeamMembershipInternRequest(
         userId = userId,
         slackUserId = identity.userId,
         slackUsername = identity.userName,
@@ -101,7 +106,7 @@ class SlackCommanderImpl @Inject() (
         slackTeamName = auth.teamName,
         token = auth.accessToken,
         scopes = auth.scopes
-      )).get
+      ))
       auth.incomingWebhook.foreach { webhook =>
         slackIncomingWebhookInfoRepo.save(SlackIncomingWebhookInfo(
           slackUserId = identity.userId,
@@ -140,23 +145,24 @@ class SlackCommanderImpl @Inject() (
         slackChannelName = webhook.channelName
       ))
     }
-    val welcomeMsg = db.readOnlyMaster { implicit s =>
-      import DescriptionElements._
-      val lib = libRepo.get(libId)
-      DescriptionElements(
-        "A new Kifi integration was just set up.",
-        "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
-      )
-    }
-    slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet) andThen {
-      case Success(()) =>
-        libToSlackPusher.pushUpdatesToSlack(libId) andThen {
-          case Success(_) =>
-            fetchMissingChannelIds()
-        }
-    }
 
     SafeFuture {
+      val welcomeMsg = db.readOnlyMaster { implicit s =>
+        import DescriptionElements._
+        val lib = libRepo.get(libId)
+        DescriptionElements(
+          "A new Kifi integration was just set up.",
+          "Keeps from", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute), "will be posted to this channel."
+        )
+      }
+      slackClient.sendToSlack(webhook, SlackMessageRequest.fromKifi(DescriptionElements.formatForSlack(welcomeMsg)).quiet) andThen {
+        case Success(()) =>
+          libToSlackPusher.pushUpdatesToSlack(libId) andThen {
+            case Success(_) =>
+              fetchMissingChannelIds()
+          }
+      }
+
       val inhouseMsg = db.readOnlyReplica { implicit s =>
         import DescriptionElements._
         val lib = libRepo.get(libId)
@@ -209,6 +215,32 @@ class SlackCommanderImpl @Inject() (
         }
         if (spacesUserCannotModify.nonEmpty) Some(LibraryFail(FORBIDDEN, "permission_denied"))
         else None
+    }
+  }
+
+  def turnOnLibraryPush(integrationId: Id[LibraryToSlackChannel], webhook: SlackIncomingWebhook, identity: SlackIdentifyResponse): Id[Library] = {
+    db.readWrite { implicit session =>
+      val integration = libToChannelRepo.get(integrationId)
+      if (integration.isActive && integration.slackTeamId == identity.teamId && integration.slackChannelName == webhook.channelName) {
+        val updatedIntegration = {
+          if (integration.slackUserId == identity.userId) integration else integration.copy(slackUserId = identity.userId, slackChannelId = None) // resetting channelId with userId to be safe
+        }.withStatus(SlackIntegrationStatus.On)
+        libToChannelRepo.save(updatedIntegration)
+      }
+      integration.libraryId
+    }
+  }
+
+  def turnOnChannelIngestion(integrationId: Id[SlackChannelToLibrary], identity: SlackIdentifyResponse): Id[Library] = {
+    db.readWrite { implicit session =>
+      val integration = channelToLibRepo.get(integrationId)
+      if (integration.isActive && integration.slackTeamId == identity.teamId) {
+        val updatedIntegration = {
+          if (integration.slackUserId == identity.userId) integration else integration.copy(slackUserId = identity.userId, slackChannelId = None) // resetting channelId with userId to be safe
+        }.withStatus(SlackIntegrationStatus.On)
+        channelToLibRepo.save(updatedIntegration)
+      }
+      integration.libraryId
     }
   }
 
@@ -322,13 +354,26 @@ class SlackCommanderImpl @Inject() (
 
         val fromSlackGroupedInfos = fromSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromSTL).map {
           case (key, Seq(fs)) =>
-            val needsMoreAuthScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).exists(stm => SlackAuthScope.ingest.subsetOf(stm.scopes))
-            key -> SlackToLibraryIntegrationInfo(SlackChannelToLibrary.publicId(fs.id.get), fs.status, needsMoreAuthScopes)
+            val fsId = SlackChannelToLibrary.publicId(fs.id.get)
+            val authLink = {
+              val existingScopes = teamMembershipMap.get(fs.slackUserId, fs.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
+              val requiredScopes = SlackAuthScope.ingest
+              if (requiredScopes subsetOf existingScopes) None
+              else Some(SlackAPI.OAuthAuthorize(requiredScopes, TurnOnChannelIngestion -> fsId, Some(fs.slackTeamId)).url)
+            }
+            key -> SlackToLibraryIntegrationInfo(fsId, fs.status, authLink)
         }
         val toSlackGroupedInfos = toSlacksThisLib.groupBy(SlackIntegrationInfoKey.fromLTS).map {
           case (key, Seq(ts)) =>
-            val needsMoreAuthScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).exists(stm => SlackAuthScope.push.subsetOf(stm.scopes))
-            key -> LibraryToSlackIntegrationInfo(LibraryToSlackChannel.publicId(ts.id.get), ts.status, needsMoreAuthScopes)
+            val tsId = LibraryToSlackChannel.publicId(ts.id.get)
+            val authLink = {
+              val hasValidWebhook = slackIncomingWebhookInfoRepo.getForIntegration(ts).nonEmpty
+              lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
+              val requiredScopes = SlackAuthScope.push
+              if (hasValidWebhook && (requiredScopes subsetOf existingScopes)) None
+              else Some(SlackAPI.OAuthAuthorize(requiredScopes, TurnOnLibraryPush -> tsId, Some(ts.slackTeamId)).url)
+            }
+            key -> LibraryToSlackIntegrationInfo(tsId, ts.status, authLink)
         }
         val integrations = (fromSlackGroupedInfos.keySet ++ toSlackGroupedInfos.keySet).map { key =>
           LibrarySlackIntegrationInfo(
@@ -340,11 +385,8 @@ class SlackCommanderImpl @Inject() (
             fromSlack = fromSlackGroupedInfos.get(key)
           )
         }.toSeq.sortBy(x => (x.teamName.value, x.channelName.value, x.creatorName.value))
-        val deepLink = DeepLinkRouter.libraryLink(Library.publicId(libId))
         libId -> LibrarySlackInfo(
-          link = SlackAPI.OAuthAuthorize(SlackAuthScope.push ++ SlackAuthScope.ingest, deepLink).url,
-          pushLink = SlackAPI.OAuthAuthorize(SlackAuthScope.push, deepLink).url,
-          ingestLink = SlackAPI.OAuthAuthorize(SlackAuthScope.ingest, deepLink).url,
+          link = SlackAPI.OAuthAuthorize(SlackAuthScope.push, SetupLibraryIntegrations -> Library.publicId(libId), None).url,
           integrations = integrations
         )
 
@@ -372,3 +414,37 @@ class SlackCommanderImpl @Inject() (
     }
   }
 }
+
+sealed abstract class SlackAuthenticatedAction[T](val action: String)(implicit val format: Format[T]) {
+  def readsDataAndThen[R](f: (SlackAuthenticatedAction[T], T) => R): Reads[R] = format.map { data => f(this, data) }
+}
+object SlackAuthenticatedAction {
+  case object SetupLibraryIntegrations extends SlackAuthenticatedAction[PublicId[Library]]("setup_library_integrations")
+  case object TurnOnLibraryPush extends SlackAuthenticatedAction[PublicId[LibraryToSlackChannel]]("turn_on_library_push")
+  case object TurnOnChannelIngestion extends SlackAuthenticatedAction[PublicId[SlackChannelToLibrary]]("turn_on__channel_ingestion")
+
+  val all: Set[SlackAuthenticatedAction[_]] = Set(SetupLibraryIntegrations, TurnOnLibraryPush, TurnOnChannelIngestion)
+
+  case class UnknownSlackAuthenticatedActionException(action: String) extends Exception(s"Unknown SlackAuthenticatedAction: $action")
+  def fromString(action: String): Try[SlackAuthenticatedAction[_]] = {
+    all.collectFirst {
+      case authAction if authAction.action equalsIgnoreCase action => Success(authAction)
+    } getOrElse Failure(UnknownSlackAuthenticatedActionException(action))
+  }
+
+  private implicit val format: Format[SlackAuthenticatedAction[_]] = Format(
+    Reads(_.validate[String].flatMap[SlackAuthenticatedAction[_]](action => SlackAuthenticatedAction.fromString(action).map(JsSuccess(_)).recover { case error => JsError(error.getMessage) }.get)),
+    Writes(action => JsString(action.action))
+  )
+
+  implicit def writesWithData[T]: Writes[(SlackAuthenticatedAction[T], T)] = Writes { case (action, data) => Json.obj("action" -> action, "data" -> action.format.writes(data)) }
+  implicit def toState[T](actionWithData: (SlackAuthenticatedAction[T], T)): SlackState = SlackState(Json.toJson(actionWithData))
+
+  def readsWithDataJson: Reads[(SlackAuthenticatedAction[_], JsValue)] = Reads { value =>
+    for {
+      action <- (value \ "action").validate[SlackAuthenticatedAction[_]]
+      dataJson <- (value \ "data").validate[JsValue]
+    } yield (action, dataJson)
+  }
+}
+

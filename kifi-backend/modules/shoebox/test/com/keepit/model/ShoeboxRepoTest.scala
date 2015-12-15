@@ -96,7 +96,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           Set(SlackAuthScope.SearchRead)
         )
         db.readWrite { implicit session =>
-          val Success(saved) = slackTeamMembershipRepo.internBySlackTeamAndUser(slackAccount)
+          val saved = slackTeamMembershipRepo.internMembership(slackAccount)
           slackTeamMembershipRepo.getBySlackTeamAndUser(slackAccount.slackTeamId, slackAccount.slackUserId) must beSome(saved)
         }
 

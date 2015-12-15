@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
+import com.keepit.common.concurrent.{ FutureHelpers, WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
@@ -125,11 +125,12 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           val user1 = Id[User](1)
           val user2 = Id[User](2)
 
-          val msgs = Await.result(Future.sequence(Seq(
-            discussionCommander.sendMessageOnKeep(user1, "First post!", keep),
-            discussionCommander.sendMessageOnKeep(user2, "My first post too!", keep),
-            discussionCommander.sendMessageOnKeep(user2, "And another post!", keep)
-          )), Duration.Inf)
+          Await.result(for {
+            _ <- discussionCommander.sendMessageOnKeep(user1, "First post!", keep)
+            _ <- discussionCommander.sendMessageOnKeep(user2, "My first post too!", keep)
+            _ <- discussionCommander.sendMessageOnKeep(user2, "And another post!", keep)
+          } yield Unit, Duration.Inf)
+          val msgs = db.readOnlyMaster { implicit s => messageRepo.all }
 
           inject[WatchableExecutionContext].drain()
 

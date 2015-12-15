@@ -243,22 +243,6 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
   &:hover
     opacity: 1.0
 
-
-.kf-keep:hover
-  .kf-keep-card-actions
-    opacity: 1
-    transition: opacity 0.20s ease-in-out
-
-.kf-keep
-  .kf-keep-card-actions
-    opacity: 0
-    transition: opacity 0.2s ease-in-out
-
-.kf-keep.disable-hover
-  .kf-keep-card-actions
-    opacity: 1
-    transition: opacity 0s
-
 .kf-keep-card-footer
   display: table
   width: 100%
@@ -475,6 +459,9 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
       font-size: 13px
       margin-bottom: 1px
 
+    .kf-keep-card-note
+      white-space: nowrap
+
     .kf-keep-who-pic-box
       height: auto
 
@@ -490,7 +477,6 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
 
     .kf-keep-card-expand-button
       transform: rotate(90deg)
-      transition: transform 0.1s
 
 .kf-keep-card
 
@@ -509,7 +495,6 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
 
   .kf-keep-card-expand-button
     transform: rotate(0deg)
-    transition: transform 0.1s
     svg
       fill: #a7a7a7
 
@@ -597,7 +582,6 @@ defaultBorderColorOverlayUsingBefore(borderWidth)  // slightly darkens an image'
     margin-bottom: 2px
     white-space: pre-wrap
     word-wrap: break-word
-    white-space: nowrap
     overflow: hidden
     text-overflow: ellipsis
 

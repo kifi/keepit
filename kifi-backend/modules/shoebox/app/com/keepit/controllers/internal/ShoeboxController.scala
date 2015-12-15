@@ -43,6 +43,7 @@ class ShoeboxController @Inject() (
   userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
+  keepSourceAttributionRepo: KeepSourceAttributionRepo,
   keepCommander: KeepCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
@@ -52,7 +53,6 @@ class ShoeboxController @Inject() (
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   keepDecorator: KeepDecorator,
-  keepSourceCommander: KeepSourceCommander,
   keepImageCommander: KeepImageCommander,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
@@ -468,7 +468,7 @@ class ShoeboxController @Inject() (
     val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
 
     val keepById = db.readOnlyReplica { implicit s => keepRepo.getByIds(keepIds) }
-    val keepsSeq = keepIds.toSeq.flatMap(keepById.get)
+    val keepsSeq = keepIds.toList.flatMap(keepById.get)
     val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
       Some(viewerId),
       showPublishedLibraries = true,
@@ -611,8 +611,9 @@ class ShoeboxController @Inject() (
   def getSourceAttributionForKeeps() = Action(parse.tolerantJson) { request =>
     val keepIds = (request.body \ "keepIds").as[Set[Id[Keep]]]
     val attributions = db.readOnlyMaster { implicit session =>
-      keepSourceCommander.getSourceAttributionForKeeps(keepIds)
+      keepSourceAttributionRepo.getByKeepIdsNoCache(keepIds)
     }
+    implicit val writes = SourceAttribution.internalFormat
     Ok(Json.toJson(attributions))
   }
 }

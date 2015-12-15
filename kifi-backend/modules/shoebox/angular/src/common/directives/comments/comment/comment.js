@@ -2,20 +2,24 @@
 
 angular.module('kifi')
 
-  .directive('kfKeepComment', ['messageFormattingService', 'extensionLiaison', 'profileService', 'keepService', 'modalService',
-    function (messageFormattingService, extensionLiaison, profileService, keepService, modalService) {
+  .directive('kfKeepComment', ['$state', 'messageFormattingService', 'extensionLiaison', 'profileService',
+    function ($state, messageFormattingService, extensionLiaison, profileService) {
       return {
         restrict: 'A',
         scope: {
           keep: '=',
           comment: '=',
-          threadId: '='
+          threadId: '=',
+          getDeleteComment: '&deleteComment'
         },
         templateUrl: 'common/directives/comments/comment/comment.tpl.html',
-        link: function ($scope, element) {
+        link: function ($scope) {
           $scope.commentParts = messageFormattingService.trimExtraSpaces(messageFormattingService.full($scope.comment.text));
           $scope.me = profileService.me;
-          $scope.canSeeCommentActions = $scope.me.id === $scope.comment.sentBy.id && profileService.isAdmin();
+          var isAdmin = profileService.isAdmin();
+          $scope.canSeeCommentActions = isAdmin && $scope.me.id === $scope.comment.sentBy.id ||
+          $scope.me.id === $scope.keep.user.id || $scope.me.id === $scope.keep.library.owner.id;
+          $scope.showKeepPageLink = !$state.is('keepPage') && isAdmin;
 
           $scope.openLookHere = function(event) {
             event.preventDefault();
@@ -26,11 +30,7 @@ angular.module('kifi')
           $scope.commentActionItems = [
             {
               title: 'Delete',
-              action: function() {
-                keepService.deleteMessageFromKeepDiscussion($scope.keep.pubId, $scope.comment.id).then(function () {
-                  element.remove();
-                })['catch'](modalService.openGenericErrorModal);
-              }
+              action: $scope.getDeleteComment()
             }
           ];
         }

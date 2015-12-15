@@ -3,6 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.path.Path
+import com.keepit.common.reflection.Enumerator
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.mvc.PathBindable
 
@@ -326,6 +327,7 @@ object KeepSource {
 case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
+  implicit val sourceFormat = SourceAttribution.internalFormat
   implicit val format = Json.format[KeepAndTags]
 }
 
@@ -379,35 +381,6 @@ object CrossServiceKeep {
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
 }
 
-// NOT client facing
-// Used by Eliza when creating a discussion (create a keep, then tie a message thread to it)
-case class KeepCreateRequest(
-    owner: Id[User],
-    users: Set[Id[User]],
-    libraries: Set[Id[Library]],
-    url: String,
-    title: Option[String] = None,
-    canonical: Option[String] = None,
-    openGraph: Option[String] = None,
-    keptAt: Option[DateTime] = None,
-    note: Option[String] = None) {
-  require(users.contains(owner))
-  require(libraries.size == 1) // TODO(ryan): remove when no longer true
-}
-object KeepCreateRequest {
-  implicit val format: Format[KeepCreateRequest] = (
-    (__ \ 'owner).format[Id[User]] and
-    (__ \ 'users).format[Set[Id[User]]] and
-    (__ \ 'libraries).format[Set[Id[Library]]] and
-    (__ \ 'url).format[String] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'canonical).formatNullable[String] and
-    (__ \ 'openGraph).formatNullable[String] and
-    (__ \ 'keptAt).formatNullable[DateTime] and
-    (__ \ 'note).formatNullable[String]
-  )(KeepCreateRequest.apply, unlift(KeepCreateRequest.unapply))
-}
-
 case class PersonalKeep(
   id: ExternalId[Keep],
   mine: Boolean,
@@ -433,3 +406,12 @@ case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
 
 class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+sealed abstract class KeepPermission(val value: String)
+object KeepPermission extends Enumerator[KeepPermission] {
+  case object ADD_MESSAGE extends KeepPermission("add_message")
+  case object DELETE_OWN_MESSAGES extends KeepPermission("delete_own_messages")
+  case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
+  case object DELETE_KEEP extends KeepPermission("delete_keep")
+  case object VIEW_MESSAGES extends KeepPermission("view_messages")
+}

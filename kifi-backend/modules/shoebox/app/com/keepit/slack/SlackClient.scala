@@ -3,7 +3,6 @@ package com.keepit.slack
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{ NonOKResponseException, DirectUrl, HttpClient }
 import com.keepit.slack.models._
-import play.api.Mode.Mode
 import play.api.http.Status
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -33,14 +32,14 @@ object SlackAPI {
 
   import SlackParams._
 
-  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state)
+  def OAuthAuthorize(scopes: Set[SlackAuthScope], state: SlackState, teamId: Option[SlackTeamId]) = Route(GET, "https://slack.com/oauth/authorize", CLIENT_ID, REDIRECT_URI, scopes, state, "team" -> teamId.map(_.value))
   def OAuthAccess(code: SlackAuthorizationCode) = Route(GET, "https://slack.com/api/oauth.access", CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, code)
   def Identify(token: SlackAccessToken) = Route(GET, "https://slack.com/api/auth.test", token)
   def SearchMessages(token: SlackAccessToken, request: SlackSearchRequest) = {
     val params = Seq[Param](token, request.query) ++ request.optional.map(fromSearchParam)
     Route(GET, "https://slack.com/api/search.messages", params: _*)
   }
-  def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, Param("name", reaction.value), Param("channel", channelId.value), Param("timestamp", messageTimestamp.value))
+  def AddReaction(token: SlackAccessToken, reaction: SlackReaction, channelId: SlackChannelId, messageTimestamp: SlackMessageTimestamp) = Route(GET, "https://slack.com/api/reactions.add", token, "name" -> reaction.value, "channel" -> channelId.value, "timestamp" -> messageTimestamp.value)
 }
 
 trait SlackClient {

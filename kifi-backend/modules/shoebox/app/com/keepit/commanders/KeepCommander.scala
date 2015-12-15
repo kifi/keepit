@@ -67,8 +67,6 @@ trait KeepCommander {
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean
-  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean
 
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
@@ -200,19 +198,6 @@ class KeepCommanderImpl @Inject() (
         countMap.values.sum
       }
     }
-  }
-
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean = db.readOnlyReplica { implicit s =>
-    ktlRepo.getAllByKeepId(keepId).forall { ktl =>
-      permissionCommander.getLibraryPermissions(ktl.libraryId, Some(userId)).contains(LibraryPermission.ADD_COMMENTS)
-    }
-  }
-
-  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Boolean = db.readOnlyReplica { implicit s =>
-    keepRepo.get(keepId).userId == userId ||
-      libraryRepo.getActiveByIds(ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet).exists {
-        case (_, library) => library.ownerId == userId
-      }
   }
 
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep] = {
@@ -615,7 +600,7 @@ class KeepCommanderImpl @Inject() (
 
   private def suggestTagsForKeep(userId: Id[User], keepId: ExternalId[Keep], limit: Option[Int]): Future[Seq[Hashtag]] = {
     val keep = db.readOnlyMaster { implicit session => keepRepo.get(keepId) }
-    val item = AugmentableItem(keep.uriId, Some(keep.libraryId.get))
+    val item = AugmentableItem(keep.uriId, Some(keep.id.get))
     val futureAugmentationResponse = searchClient.augmentation(ItemAugmentationRequest.uniform(userId, item))
     val existingNormalizedTags = db.readOnlyMaster { implicit session => collectionRepo.getHashtagsByKeepId(keep.id.get).map(_.normalized) }
     futureAugmentationResponse.map { response =>

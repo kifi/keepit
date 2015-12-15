@@ -39,6 +39,9 @@ case class ServiceRoute(method: Method, path: String, params: Param*) {
 case class Param(key: String, value: ParamValue = ParamValue(None)) {
   override def toString(): String = s"key->${value.value.getOrElse("")}"
 }
+object Param {
+  implicit def fromTuple[T](keyValue: (String, T))(implicit toParamValue: T => ParamValue) = Param(keyValue._1, toParamValue(keyValue._2))
+}
 
 case class ParamValue(value: Option[String])
 
@@ -256,7 +259,14 @@ object Eliza extends Service {
     def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
     def getParticipantsByThreadExtId(threadExtId: String) = ServiceRoute(GET, "/internal/eliza/getParticipantsByThreadExtId", Param("threadId", threadExtId))
+
+    def getCrossServiceMessages = ServiceRoute(POST, "/internal/eliza/getCrossServiceMessages")
     def getDiscussionsForKeeps = ServiceRoute(POST, "/internal/eliza/getDiscussionsForKeeps")
+    def markKeepsAsReadForUser() = ServiceRoute(POST, "/internal/eliza/markKeepsAsReadForUser")
+    def sendMessageOnKeep() = ServiceRoute(POST, "/internal/eliza/sendMessageOnKeep")
+    def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")
+    def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
+    def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")
   }
 }
 

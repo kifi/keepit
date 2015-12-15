@@ -85,18 +85,12 @@ angular.module('kifi')
         clickCallback: '&',
         deleteCallback: '&',
         removeImageCallback: '&',
+        forceGalleryView: '=',
         isFirstItem: '='
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
       link: function (scope) {
-        scope.admin = profileService.isAdmin();
-        scope.deviceCanTouch = 'ontouchstart' in document.documentElement;
-        if (typeof scope.galleryView === 'undefined') {
-          // Default to true when the caller doesn't specify
-          scope.galleryView = true;
-        }
-
         //
         // Internal methods.
         //
@@ -111,7 +105,7 @@ angular.module('kifi')
         // Scope methods.
         //
         scope.toggleExpandCard = function () {
-          scope.galleryView = !scope.galleryView;
+          scope.galleryView = scope.forceGalleryView || !scope.galleryView;
         };
 
         scope.editKeepNote = function (event, keep) {
@@ -235,10 +229,12 @@ angular.module('kifi')
             scope.onWidgetLibraryClicked(args.clickedLibrary);
           }),
           $rootScope.$on('prefsChanged', function() {
-            scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+            scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
+            scope.globalGalleryView = scope.galleryView;
           }),
-          $rootScope.$on('cardStyleChanged', function(scope, style) {
-            scope.galleryView = !style.use_minimal_keep_card;
+          $rootScope.$on('cardStyleChanged', function(s, style) {
+            scope.galleryView = scope.forceGalleryView || !style.use_minimal_keep_card;
+            scope.globalGalleryView = scope.galleryView;
           })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
@@ -258,7 +254,8 @@ angular.module('kifi')
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
           // Don't change until the link is updated to be a bit more secure:
-          scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+          scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
+          scope.globalGalleryView = scope.galleryView;
 
           var permissions = (keep.library && keep.library.permissions) || [];
           var keepUserId = keep.user && keep.user.id;

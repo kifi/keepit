@@ -13,7 +13,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
   def isSecret(librarySearcher: Searcher) = if (myKeeps.isEmpty) None else Some(myKeeps.flatMap(_.keptIn).forall(LibraryIndexable.isSecret(librarySearcher, _)))
 
   // Keeps
-  private lazy val primaryKeep = item.keptIn.flatMap { libraryId => info.keeps.find(_.keptIn == Some(libraryId)) }
+  private lazy val primaryKeep = item.keepId.flatMap { keepId => info.keeps.find(_.id == keepId) }
   lazy val (myKeeps, moreKeeps) = AugmentedItem.sortKeeps(userId, allFriends, allOrganizations, allLibraries, scores, info.keeps)
   lazy val keeps = myKeeps ++ moreKeeps
   def otherPublishedKeeps: Int = info.otherPublishedKeeps
@@ -21,7 +21,7 @@ class AugmentedItem(userId: Id[User], allFriends: Set[Id[User]], allOrganization
 
   // Libraries
 
-  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, keptAt, Some(libraryId), Some(keeperId), _, _) => (libraryId, keeperId, keptAt) }
+  lazy val libraries = keeps.collect { case RestrictedKeepInfo(_, _, keptAt, Some(libraryId), Some(keeperId), _, _) => (libraryId, keeperId, keptAt) }
 
   def librariesTotal = keeps.length + otherPublishedKeeps + otherDiscoverableKeeps
 
