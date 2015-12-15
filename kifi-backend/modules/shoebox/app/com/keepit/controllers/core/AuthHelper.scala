@@ -110,7 +110,7 @@ class AuthHelper @Inject() (
                 userRepo.get(userId).state != UserStates.INCOMPLETE_SIGNUP
               }
               if (finalized) {
-                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String])) // todo(ray): uri not relevant for mobile
+                Ok(Json.obj("uri" -> session.get(SecureSocial.OriginalUrlKey).getOrElse(home.url).asInstanceOf[String]))
                   .withSession((session - SecureSocial.OriginalUrlKey).setUserId(userId))
                   .withCookies(authenticator.toCookie)
               } else {
@@ -146,12 +146,6 @@ class AuthHelper @Inject() (
     )((validEmail, pwd) => EmailPassword(validEmail, pwd))((ep: EmailPassword) => Some(ep.email, ep.password))
   )
 
-  /**
-   * For email login, a (emailString, password) is tied to a user. This email string
-   * has no direct connection to a user's actual active email address. So, we need to
-   * keep in mind that whenever the user supplies an email address, it may or may not
-   * be related to what's their (emailString, password) login combination.
-   */
   def userPasswordSignupAction(implicit request: MaybeUserRequest[JsValue]) = emailPasswordForm.bindFromRequest.fold(
     hasErrors = formWithErrors => {
       log.warn("[userpass-signup] Rejected email signup because of form errors: " + formWithErrors.errors)
@@ -177,6 +171,7 @@ class AuthHelper @Inject() (
   case class AutoFollowLibrary(libraryPublicId: PublicId[Library], authToken: Option[String]) extends PostRegIntent
   case class AutoJoinOrganization(organizationPublicId: PublicId[Organization], authToken: String) extends PostRegIntent
   case object JoinTwitterWaitlist extends PostRegIntent
+  case object SlackReg extends PostRegIntent
   case object NoIntent extends PostRegIntent
 
   def finishSignup(user: User,
@@ -218,6 +213,8 @@ class AuthHelper @Inject() (
           }
         case "waitlist" =>
           Some(JoinTwitterWaitlist)
+        case "slack" =>
+          Some(SlackReg)
         case _ => None
       }
 
@@ -242,7 +239,7 @@ class AuthHelper @Inject() (
             userEmailAddressCommander.setAsPrimaryEmail(emailAddr)
           }
         }
-        if (mode == Prod || true) {
+        if (mode == Prod) {
           // Do not sent the email in dev
           SafeFuture { userCommander.sendWelcomeEmail(user.id.get, withVerification = !emailConfirmedAlready, Some(emailAddress)) }
         }
@@ -278,6 +275,8 @@ class AuthHelper @Inject() (
       .foreach(i => i(intent))
 
     val uri = intent match {
+      case SlackReg =>
+        "/teams/new"
       case ApplyCreditCode(creditCode) =>
         "/teams/new"
       case AutoFollowLibrary(libId, authTokenOpt) =>

@@ -139,7 +139,7 @@ class AuthController @Inject() (
       val userOpt = request.userIdOpt
       log.info(s"[login social] with $provider, (c=$close) user $userOpt")
     }
-    var res = handleAuth(provider)
+    val res = handleAuth(provider)
     if (close && res.header.status == 303) {
       authHelper.transformResult(res) { (_, session: Session) =>
         res.withSession(session + (SecureSocial.OriginalUrlKey -> routes.AuthController.afterLoginClosePopup.url))
@@ -487,16 +487,19 @@ class AuthController @Inject() (
 
           } else if (ur.identityOpt.isDefined) {
             log.info(s"[doSignupPage] ${ur.identityOpt.get} has incomplete signup state")
-            val identity = ur.identityOpt.get
             // User exists, is incomplete
-            val (firstName, lastName) = if (identity.firstName.contains("@")) ("", "") else (User.sanitizeName(identity.firstName), User.sanitizeName(identity.lastName))
-            val picture = identityPicture(identity)
-            Ok(views.html.authMinimal.signupGetName())
+            // Supporting top-level intents from here. These are non-privileged, and just determine where someone goes. (No ids, tokens, etc)
+            request.getQueryString("intent") match {
+              case Some(intentAction) =>
+                Ok(views.html.authMinimal.signupGetName()).withCookies(Cookie("intent", intentAction))
+              case None =>
+                Ok(views.html.authMinimal.signupGetName())
+            }
           } else {
             log.info(s"[doSignupPage] ${ur.userId} has no identity ${ur.user.state}")
             // User but no identity. Huh?
             // Haven't run into this one. Redirecting user to logout, ideally to fix their cookie situation
-            Redirect(securesocial.controllers.routes.LoginPage.logout)
+            Redirect("/logout")
           }
         case requestNonUser: NonUserRequest[_] =>
           if (requestNonUser.identityOpt.isDefined) {
