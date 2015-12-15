@@ -91,8 +91,6 @@ angular.module('kifi')
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
       link: function (scope) {
-        scope.admin = profileService.isAdmin();
-
         //
         // Internal methods.
         //

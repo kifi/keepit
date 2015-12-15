@@ -367,7 +367,7 @@ class SlackCommanderImpl @Inject() (
           case (key, Seq(ts)) =>
             val tsId = LibraryToSlackChannel.publicId(ts.id.get)
             val authLink = {
-              val hasValidWebhook = slackIncomingWebhookInfoRepo.getForIntegration(ts).isDefined
+              val hasValidWebhook = slackIncomingWebhookInfoRepo.getForIntegration(ts).nonEmpty
               lazy val existingScopes = teamMembershipMap.get(ts.slackUserId, ts.slackTeamId).toSet[SlackTeamMembership].flatMap(_.scopes)
               val requiredScopes = SlackAuthScope.push
               if (hasValidWebhook && (requiredScopes subsetOf existingScopes)) None
