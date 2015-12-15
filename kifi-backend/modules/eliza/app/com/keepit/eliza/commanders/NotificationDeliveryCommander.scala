@@ -61,7 +61,7 @@ object MessageNotification {
   // TODO(ryan): pray for forgiveness for this travesty
   def apply(message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser,
     unread: Boolean, originalAuthorIdx: Int, numUnseenAuthors: Int, numAuthors: Int,
-    numMessages: Int, numUnread: Int, muted: Boolean): MessageNotification = MessageNotification(
+    numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration): MessageNotification = MessageNotification(
     id = message.externalId,
     time = message.createdAt,
     author = messageWithBasicUser.user,
