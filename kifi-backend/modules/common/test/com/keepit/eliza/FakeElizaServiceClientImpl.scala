@@ -1,6 +1,7 @@
 package com.keepit.eliza
 
 import com.keepit.discussion.{CrossServiceMessage, Discussion, Message}
+import com.keepit.eliza.ElizaServiceClient.RPBGetThread
 import com.keepit.model._
 import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
 import com.keepit.common.service.{ ServiceClient, ServiceType }
@@ -108,4 +109,7 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]] = ???
   def markKeepsAsReadForUser(userId: Id[User], lastSeen: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep],Int]] = ???
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message] = ???
+
+  def rpbGetThread(threadId: Long): Future[RPBGetThread.Response] = ???
+  def rpbConnectKeep(threadId: Long, keepId: Id[Keep]): Future[Unit] = ???
 }
