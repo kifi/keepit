@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.google.inject.Inject
 import com.keepit.classify.NormalizedHostname
+import com.keepit.common.concurrent.ChunkedResponseHelper
 import com.keepit.common.core.futureExtensionOps
 import com.keepit.commanders._
 import com.keepit.common.controller._
@@ -429,29 +430,22 @@ class AdminOrganizationController @Inject() (
 
   def applyDefaultSettingsToOrgConfigs() = AdminUserAction(parse.tolerantJson) { implicit request =>
     require((request.body \ "confirmation").as[String] == "really do it")
-    def applyDefaultSettingsForPlan(plan: PaidPlan)(channel: Concurrent.Channel[JsValue]) = {
-      val planSettings = plan.defaultSettings
-      val oldConfigs = db.readOnlyMaster { implicit s =>
-        val orgIds = paidAccountRepo.getActiveByPlan(plan.id.get).map(_.orgId)
-        orgIds.map(orgConfigRepo.getByOrgId)
-      }
-      oldConfigs.foreach { config =>
-        if (config.settings.features != planSettings.features) {
-          val newSettings = OrganizationSettings(planSettings.features.map { f =>
-            f -> config.settings.settingFor(f).getOrElse(planSettings.settingFor(f).get)
-          }.toMap)
-          db.readWrite { implicit s => orgConfigRepo.save(config.withSettings(newSettings)) }
-          channel.push(Json.obj("orgId" -> config.organizationId, "settings" -> Json.toJson(newSettings)(OrganizationSettings.siteFormat)))
+    val allOrgIds = db.readOnlyMaster { implicit s => orgRepo.allActive.map(_.id.get) }
+    val response = ChunkedResponseHelper.chunked(allOrgIds) { orgId =>
+      db.readWrite { implicit s =>
+        val account = paidAccountRepo.getByOrgId(orgId)
+        val plan = paidPlanRepo.get(account.planId)
+        val config = orgConfigRepo.getByOrgId(orgId)
+        if (config.settings.features != plan.defaultSettings.features) {
+          val newSettings = OrganizationSettings(plan.defaultSettings.kvs.map {
+            case (f, default) => f -> config.settings.settingFor(f).getOrElse(default)
+          })
+          orgConfigRepo.save(config.withSettings(newSettings))
         }
+        Json.obj("orgId" -> orgId)
       }
     }
-
-    val paidPlans = db.readOnlyMaster { implicit s => paidPlanRepo.all().filter(_.state == PaidPlanStates.ACTIVE) }
-    val enum: Enumerator[JsValue] = Concurrent.unicast(onStart = { (channel: Concurrent.Channel[JsValue]) =>
-      paidPlans.foreach(plan => applyDefaultSettingsForPlan(plan)(channel))
-      channel.eofAndEnd()
-    })
-    Ok.chunked(enum)
+    Ok.chunked(response)
   }
 
   def cleanUpEmailAddresses() = AdminUserAction(parse.tolerantJson) { implicit request =>

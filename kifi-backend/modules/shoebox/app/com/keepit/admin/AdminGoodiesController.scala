@@ -3,17 +3,21 @@ package com.keepit.controllers.admin
 import java.util.regex.{ PatternSyntaxException, Pattern }
 
 import com.google.inject.Inject
+import com.keepit.common.concurrent.ChunkedResponseHelper
 import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
 import com.keepit.common.crypto.{ PublicIdRegistry, PublicIdConfiguration }
 import com.keepit.common.db.Id
 import com.keepit.model.{ Organization, Library }
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsNumber, JsString, JsArray, Json }
 
+import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.Try
 
 class AdminGoodiesController @Inject() (
-    override val userActionsHelper: UserActionsHelper,
-    implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
+  override val userActionsHelper: UserActionsHelper,
+  implicit val executionContext: ExecutionContext,
+  implicit val publicIdConfig: PublicIdConfiguration)
+    extends AdminUserActions {
 
   def testRegex = AdminUserPage { implicit request =>
     Ok(views.html.admin.roverTestRegex())
@@ -68,5 +72,4 @@ class AdminGoodiesController @Inject() (
         (companion, a, b)
     }
   }
-
 }
