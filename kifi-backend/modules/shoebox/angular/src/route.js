@@ -274,6 +274,9 @@ angular.module('kifi')
         url: '/:handle/:librarySlug?authToken',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
+        params: {
+          showSlackDialog: false
+        },
         resolve: {
           libraryService: 'libraryService',
           library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
