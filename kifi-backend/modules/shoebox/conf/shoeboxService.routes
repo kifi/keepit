@@ -814,8 +814,7 @@ POST    /admin/libraries/setLibraryOwner                @com.keepit.controllers.
 POST    /admin/libraries/forceAddMember                 @com.keepit.controllers.admin.AdminLibraryController.unsafeAddMember
 POST    /admin/libraries/forceMoveLibraryKeeps          @com.keepit.controllers.admin.AdminLibraryController.unsafeMoveLibraryKeeps
 POST    /admin/libraries/forceModify                    @com.keepit.controllers.admin.AdminLibraryController.unsafeModifyLibrary
-POST    /admin/libraries/removeLibrariesWithInactiveOwner       @com.keepit.controllers.admin.AdminLibraryController.removeLibrariesWithInactiveOwner
-POST    /admin/libraries/getLibrariesWithInactiveOwner          @com.keepit.controllers.admin.AdminLibraryController.getLibrariesWithInactiveOwner
+POST    /admin/libraries/changeWhoCanComment            @com.keepit.controllers.admin.AdminLibraryController.changeWhoCanComment()
 
 GET     /admin/typeahead                    @com.keepit.controllers.admin.TypeaheadAdminController.index
 GET     /admin/typeahead/userSearch         @com.keepit.controllers.admin.TypeaheadAdminController.userSearch(userId:Id[User], query:String ?= "")
@@ -891,7 +890,6 @@ GET           /admin/goodies/testRegexFilled                                    
 POST          /admin/goodies/performRegexTest                                        @com.keepit.controllers.admin.AdminGoodiesController.performRegexTest
 GET           /admin/goodies/externalIdById                                          @com.keepit.controllers.admin.AdminGoodiesController.externalIdById(name: String, id: Long)
 GET           /admin/goodies/externalIdsByPublicId                                   @com.keepit.controllers.admin.AdminGoodiesController.externalIdByPublicId(name: String, id: String)
-
 
 POST          /admin/payments/grantExtraCredit             @com.keepit.controllers.admin.AdminPaymentsController.grantExtraCredit(orgId: Id[Organization])
 POST          /admin/payments/processOrgNow                @com.keepit.controllers.admin.AdminPaymentsController.processOrgNow(orgId: Id[Organization])
