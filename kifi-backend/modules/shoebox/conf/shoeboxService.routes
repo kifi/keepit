@@ -332,7 +332,7 @@ GET     /about/join_us.html         @com.keepit.controllers.website.HomeControll
 GET     /about/user_feedback        @com.keepit.controllers.website.HomeController.route(path = "about/user_feedback")
 GET     /how_it_works               @com.keepit.controllers.website.HomeController.route(path = "how_it_works")
 GET     /integrations/slack         @com.keepit.controllers.website.HomeController.route(path = "integrations/slackv2")
-GET     /integrations/slack_v2      @com.keepit.controllers.website.HomeController.route(path = "integrations/slack")
+GET     /getting-started/slack      @com.keepit.controllers.website.HomeController.route(path = "integrations/slack")
 GET     /imports/pinboard           @com.keepit.controllers.website.HomeController.route(path = "imports/pinboard")
 GET     /imports/kippt              @com.keepit.controllers.website.HomeController.route(path = "imports/kippt")
 GET     /imports/instapaper         @com.keepit.controllers.website.HomeController.route(path = "imports/instapaper")
@@ -342,7 +342,7 @@ GET     /imports/pocket             @com.keepit.controllers.website.HomeControll
 GET     /imports/delicious          @com.keepit.controllers.website.HomeController.route(path = "imports/delicious")
 GET     /getting-started            @com.keepit.controllers.website.HomeController.route(path = "getting-started/users")
 GET     /teams                      @com.keepit.controllers.website.HomeController.teams
-#GET     /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
+#GET    /teams                      @com.keepit.controllers.website.HomeController.route(path = "teams")
 GET     /teams-confirmation         @com.keepit.controllers.website.HomeController.route(path = "teams-confirmation")
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
