@@ -145,7 +145,7 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
 
             Set(publicLib, secretLib).foreach { lib =>
               val whoCanComment = all.filter { x => permissionCommander.getLibraryPermissions(publicLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
-              whoCanComment === Set(owner, collab)
+              whoCanComment === all
             }
           }
           1 === 1
@@ -290,11 +290,6 @@ class PermissionCommanderTest extends TestKitSupport with SpecificationLike with
           db.readWrite { implicit session =>
             val (orgOwner, libOwner, collab, follower, member, rando, noone, publicLib, orgLib, secretLib, openCollabLib, openCommentLib) = setupLibs()
             val all = Set(orgOwner, libOwner, collab, follower, member, rando, noone)
-
-            Set(publicLib, orgLib, secretLib).foreach { lib =>
-              val whoCanComment = all.filter { x => permissionCommander.getLibraryPermissions(lib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
-              whoCanComment === Set(libOwner, collab)
-            }
 
             val whoCanComment2 = all.filter { x => permissionCommander.getLibraryPermissions(openCollabLib.id.get, x).contains(LibraryPermission.ADD_COMMENTS) }
             whoCanComment2 === Set(orgOwner, libOwner, collab, member, follower) // all org members can comment
