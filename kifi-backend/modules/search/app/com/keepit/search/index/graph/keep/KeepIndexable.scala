@@ -72,21 +72,6 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
     import KeepFields._
     val doc = super.buildDocument
 
-    doc.add(buildKeywordField(uriField, keep.uriId.toString))
-    doc.add(buildKeywordField(userField, keep.userId.toString))
-
-    if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.DISCOVERABLE) {
-      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
-      doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
-    }
-
-    keep.organizationId.foreach { orgId =>
-      doc.add(buildKeywordField(orgField, orgId.toString))
-      if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.ORGANIZATION) {
-        doc.add(buildKeywordField(orgDiscoverableField, keep.organizationId.get.id.toString))
-      }
-    }
-
     val titleLang = keep.title.collect { case title if title.nonEmpty => LangDetector.detect(title) } getOrElse DefaultAnalyzer.defaultLang
     val titleAndUrl = Array(keep.title.getOrElse(""), "\n\n", urlToIndexableString(keep.url).getOrElse("")) // piggybacking uri text on title
     val titleAnalyzer = DefaultAnalyzer.getAnalyzer(titleLang)
@@ -96,8 +81,6 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
     doc.add(buildTextField(titleStemmedField, new MultiStringReader(titleAndUrl), titleAnalyzerWithStemmer))
     doc.add(buildPrefixField(titlePrefixField, keep.title.getOrElse(""), maxPrefixLength))
     doc.add(buildStringDocValuesField(titleValueField, keep.title.getOrElse("")))
-
-    doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
 
     val contentLang = keep.note.collect { case note if note.nonEmpty => LangDetector.detect(note) } getOrElse DefaultAnalyzer.defaultLang
     val contentAnalyzer = DefaultAnalyzer.getAnalyzer(contentLang)
@@ -120,9 +103,28 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
 
     buildDomainFields(keep.url, siteField, homePageField).foreach(doc.add)
 
+    doc.add(buildKeywordField(uriField, keep.uriId.toString))
+    doc.add(buildKeywordField(userField, keep.userId.toString))
+
+    if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.DISCOVERABLE) {
+      doc.add(buildKeywordField(uriDiscoverableField, keep.uriId.toString))
+      doc.add(buildKeywordField(userDiscoverableField, keep.userId.toString))
+    }
+
+    keep.organizationId.foreach { orgId =>
+      doc.add(buildKeywordField(orgField, orgId.toString))
+      if (keep.visibility == LibraryVisibility.PUBLISHED || keep.visibility == LibraryVisibility.ORGANIZATION) {
+        doc.add(buildKeywordField(orgDiscoverableField, keep.organizationId.get.id.toString))
+      }
+    }
+
+    keep.libraryId.foreach { libId =>
+      doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
+    }
+
     doc.add(buildIdValueField(uriIdField, keep.uriId))
     doc.add(buildIdValueField(userIdField, keep.userId))
-    doc.add(buildIdValueField(libraryIdField, keep.libraryId.get))
+    doc.add(buildIdValueField(libraryIdField, keep.libraryId.getOrElse(Id[Library](-1))))
     doc.add(buildIdValueField(orgIdField, keep.organizationId.getOrElse(Id[Organization](-1))))
 
     doc.add(buildLongValueField(visibilityField, LibraryFields.Visibility.toNumericCode(keep.visibility)))

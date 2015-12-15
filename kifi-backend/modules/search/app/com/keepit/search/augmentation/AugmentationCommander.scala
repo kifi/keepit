@@ -171,7 +171,7 @@ class AugmentationCommanderImpl @Inject() (
           if (item.keepId.isDefined && item.keepId.get.id == keepId) { // canonical keep, get note
             val record = getKeepRecord(docId)
             uniqueKeepers += userId
-            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, Some(Id(libraryId)), Some(Id(userId)), record.note, record.tags)
+            keeps += RestrictedKeepInfo(Id[Keep](keepId), record.externalId, record.keptAt, if (libraryId < 0) None else Some(Id(libraryId)), Some(Id(userId)), record.note, record.tags)
           } else if (libraryIdFilter.findIndex(libraryId) >= 0) { // kept in my libraries
             val record = getKeepRecord(docId)
             uniqueKeepers += userId
