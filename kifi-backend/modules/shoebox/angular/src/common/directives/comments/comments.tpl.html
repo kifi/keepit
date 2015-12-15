@@ -1,6 +1,6 @@
 <div class="kf-keep-comments-container">
-  <div class="kf-keep-comments" ng-if="visibleCount > 0 || canAddComments" ng-attr-kf-inview="{{ keep.discussion && keep.discussion.numMessages ? 'onInview' : undefined }}">
-    <span class="kf-keep-comments-view-previous" ng-if="visibleCount < keep.discussion.numMessages" ng-click="onViewPreviousComments()">View Previous Comments</span>
+  <div class="kf-keep-comments" ng-if="visibleCount > 0 || canAddComments" ng-attr-kf-inview="{{ keep.discussion && numMessages ? 'onInview' : undefined }}">
+    <span class="kf-keep-comments-view-previous" ng-if="showViewPreviousComments" ng-click="onViewPreviousComments()">View Previous Comments</span>
     <div
       class="kf-keep-comments-comment"
       ng-repeat="comment in comments.slice(-visibleCount)"
@@ -15,7 +15,7 @@
       <div
         class="kf-keep-comments-input"
         contenteditable="true"
-        placeholder="write a comment..."
+        placeholder="Write a comment…"
         ng-keydown="keydown($event)"
         ng-keyup="keyup($event)"
       ></div>

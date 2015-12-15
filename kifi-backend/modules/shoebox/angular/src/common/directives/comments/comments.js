@@ -49,8 +49,10 @@ angular.module('kifi')
           }
 
           $scope.comments = $scope.keep.discussion.messages.slice().sort(bySentAt); // don't mutate the original array, in case we need it later
+          $scope.numMessages = $scope.keep.discussion.numMessages; // Total number of known messages that exist for this keep
+
           $scope.visibleCount = Math.min(3, $scope.comments.length);
-          $scope.showViewPreviousComments = ($scope.visibleCount < $scope.keep.discussion.numMessages);
+          $scope.showViewPreviousComments = $scope.hasMoreToFetch = $scope.visibleCount < $scope.numMessages;
 
           // listeners
 
@@ -66,7 +68,6 @@ angular.module('kifi')
                 text: commentBox.textContent
               };
               $scope.comments.push(msg);
-              $scope.keep.discussion.numMessages++;
               $scope.visibleCount++;
               var bufferHTML = commentBox.innerHTML;
               resetCaret(commentBox);
@@ -79,7 +80,6 @@ angular.module('kifi')
               })['catch'](function () {
                 $scope.error = 'Something went wrong. Try again?';
                 $scope.visibleCount--;
-                $scope.keep.discussion.numMessages--;
                 $scope.comments.pop();
                 commentBox.innerHTML = bufferHTML;
               });
@@ -103,12 +103,17 @@ angular.module('kifi')
           var readTimer;
           $scope.onInview = function (e, intoView) {
             if (intoView) {
+
               readTimer = $timeout(function () {
                 readTimer = null;
 
                 keepService
-                .markDiscussionAsRead($scope.keep);
-                // TODO(carlos): do something with the response
+                .markDiscussionAsRead($scope.keep.pubId, $scope.comments)
+                .then(function (resp) {
+                  if (resp.unreadCounts[$scope.keep.pubId] > 0) {
+                    fetchMessages();
+                  }
+                });
               }, MARK_READ_TIMEOUT);
             } else if (readTimer) {
               $timeout.cancel(readTimer);
@@ -124,27 +129,47 @@ angular.module('kifi')
             $scope.comments = $scope.comments.filter(function (comment) {
               return comment.id !== commentId;
             });
-            $scope.keep.discussion.numMessages--;
             $scope.visibleCount--;
           };
 
           var MESSAGES_PER_PAGE = 4;
           var MESSAGES_PER_LOAD = MESSAGES_PER_PAGE * 2;
 
-          $scope.onViewPreviousComments = function () {
-            if ($scope.visibleCount < $scope.comments.length) {
-              $scope.visibleCount = Math.min($scope.visibleCount + MESSAGES_PER_PAGE, $scope.keep.discussion.numMessages); // don't go over the comments length
+          function fetchMessages(lastMsgId, batchSize) {
+            return keepService
+            .getMessagesForKeepDiscussion($scope.keep.pubId, batchSize || MESSAGES_PER_LOAD + 1, lastMsgId)
+            .then(function (o) {
+              var existingNewest = _.max($scope.comments, function (c) {
+                return c.sentAt;
+              });
+              var batchOldest = _.min(o.messages, function (c) {
+                return c.sentAt;
+              });
 
-              if ($scope.visibleCount < $scope.keep.discussion.numMessages) {
-                var last = $scope.comments.slice(0,1).pop();
-                if (last) {
-                  keepService
-                  .getMessagesForKeepDiscussion($scope.keep.pubId, MESSAGES_PER_LOAD + 1, last.id)
-                  .then(function (messageData) {
-                    var messages = messageData.messages;
-                    $scope.comments = messages.slice(0, MESSAGES_PER_LOAD).sort(bySentAt).concat($scope.comments);
-                  });
-                }
+              if (batchOldest.sentAt > existingNewest.sentAt) {
+                fetchMessages(batchOldest.id);
+              }
+
+              var updatedComments = _.uniq($scope.comments.concat(o.messages), 'id').sort(bySentAt);
+              if (lastMsgId && o.messages.length === 0) {
+                $scope.hasMoreToFetch = false; // We're at the beginning, can't possible paginate more.
+              } else if (updatedComments.length > $scope.visibleCount) {
+                $scope.showViewPreviousComments = true;
+              }
+
+              $scope.comments = updatedComments;
+              return $scope.comments;
+            });
+          }
+
+          $scope.onViewPreviousComments = function () {
+            $scope.visibleCount = Math.min($scope.visibleCount + MESSAGES_PER_PAGE, $scope.comments.length); // don't go over the comments length
+            $scope.showViewPreviousComments = $scope.hasMoreToFetch;
+
+            if ($scope.visibleCount + MESSAGES_PER_PAGE >= $scope.comments.length) { // if next time we paginate we won't have enough, preload next batch
+              var last = $scope.comments.slice(0,1).pop();
+              if (last) {
+                fetchMessages(last.id);
               }
             }
           };
