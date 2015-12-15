@@ -10,7 +10,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.discussion.{ CrossServiceMessage, Message }
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
-import com.keepit.eliza.model.{ ElizaMessage, MessageRepo, MessageSource, MessageThreadRepo }
+import com.keepit.eliza.model._
 import com.keepit.heimdal._
 import com.keepit.model.Keep
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -99,5 +99,25 @@ class ElizaDiscussionController @Inject() (
     val msgId = ElizaMessage.fromCommon(input.msgId)
     discussionCommander.deleteMessage(msgId)
     NoContent
+  }
+
+  def rpbGetThread() = Action(parse.tolerantJson) { request =>
+    import RPBGetThread._
+    val input = request.body.as[Request]
+    db.readOnlyMaster { implicit s =>
+      val thread = threadRepo.get(Id[MessageThread](input.threadId))
+      val output = Response(thread.startedBy, thread.pageTitle, thread.url, thread.createdAt)
+      Ok(Json.toJson(output))
+    }
+  }
+  def rpbConnectKeep() = Action(parse.tolerantJson) { request =>
+    import RPBConnectKeep._
+    val input = request.body.as[Request]
+    db.readWrite { implicit s =>
+      val thread = threadRepo.get(Id[MessageThread](input.threadId))
+      assert(thread.keepId.isEmpty)
+      threadRepo.save(thread.withKeepId(input.keepId))
+      NoContent
+    }
   }
 }

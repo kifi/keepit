@@ -19,6 +19,7 @@ import com.keepit.notify.model.event.NotificationEvent
 import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
 import com.keepit.search.index.message.ThreadContent
 import com.kifi.macros.json
+import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.eliza.ElizaServiceClient._
@@ -128,6 +129,9 @@ trait ElizaServiceClient extends ServiceClient {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
+
+  def rpbGetThread(threadId: Long): Future[RPBGetThread.Response]
+  def rpbConnectKeep(threadId: Long, keepId: Id[Keep]): Future[Unit]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -329,6 +333,22 @@ class ElizaServiceClientImpl @Inject() (
       Unit
     }
   }
+
+  // TODO(ryan): delete this morass
+  def rpbGetThread(threadId: Long): Future[RPBGetThread.Response] = {
+    import RPBGetThread._
+    val request = Request(threadId)
+    call(Eliza.internal.rpbGetThread, body = Json.toJson(request)).map { response =>
+      response.json.as[Response]
+    }
+  }
+  def rpbConnectKeep(threadId: Long, keepId: Id[Keep]): Future[Unit] = {
+    import RPBConnectKeep._
+    val request = Request(threadId, keepId)
+    call(Eliza.internal.rpbConnectKeep, body = Json.toJson(request)).map { response =>
+      Unit
+    }
+  }
 }
 
 object ElizaServiceClient {
@@ -374,5 +394,17 @@ object ElizaServiceClient {
       Reads { j => j.validate[Long].map(n => Request(Id(n))) },
       Writes { o => JsNumber(o.msgId.id) }
     )
+  }
+
+  // TODO(ryan): delete this grossness
+  object RPBGetThread {
+    case class Request(threadId: Long)
+    case class Response(startedBy: Id[User], title: Option[String], url: String, startedAt: DateTime)
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object RPBConnectKeep {
+    case class Request(threadId: Long, keepId: Id[Keep])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 }
