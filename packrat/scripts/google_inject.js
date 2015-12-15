@@ -866,7 +866,7 @@ if (searchUrlRe.test(document.URL)) !function () {
 
   function renderDataForHit(hit) {
     var who = (response.filter || {}).who;
-    var users = hit.keepers.slice(0, who === 'm' ? 1 : 8);
+    var users = hit.keepers.slice(0, who === 'm' ? 1 : 5);
     if (hit.secret) {
       users[0] = $.extend({secret: true}, users[0]);
     }
@@ -887,6 +887,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       librariesMore: hit.librariesOmitted || '',
       tags: hit.tags,
       tagsMore: hit.tagsOmitted || '',
+      source: hit.source,
       origin: response.origin
     };
   }
