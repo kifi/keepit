@@ -692,16 +692,8 @@ class LibraryCommanderImpl @Inject() (
   }
 
   def getUpdatesToLibrary(libraryId: Id[Library], since: DateTime): LibraryUpdates = {
-    db.readOnlyReplica { implicit session =>
-      val instantAfterSince = since.plusSeconds(1) // slight fudge factor for races
-      val lastUpdate = ktlRepo.latestKeptAtByLibraryIds(Set(libraryId)).get(libraryId).flatten
-      if (lastUpdate.exists(_.isAfter(instantAfterSince))) {
-        val updates = ktlRepo.getFromLibrarySince(instantAfterSince, libraryId, 20).length
-        LibraryUpdates(lastUpdate.get, updates)
-      } else {
-        LibraryUpdates(lastUpdate.getOrElse(since), 0)
-      }
-    }
+    // Stop broken site, fix incoming
+    LibraryUpdates(since, 0)
   }
 }
 
