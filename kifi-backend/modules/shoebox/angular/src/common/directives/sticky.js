@@ -12,10 +12,10 @@ angular.module('kifi')
         'stickyToggle': '&',  // required, implements element stuck/unstuck state transitions
         'stickyNear': '&',    // optional, reacts to element approaching or leaving stuck position
         'stickyNearPx': '=',  // optional, px from stuck/unstuck threshold stickyNear cares about (default: 10)
-        'stickyIf': '&'       // optional, disables this directive if falsy, evaluated only once
+        'stickyIf': '&'       // optional, disables this directive if false, evaluated only once
       },
       link: function (scope, element) {
-        if (scope.stickyIf && !scope.stickyIf()) {
+        if (scope.stickyIf && scope.stickyIf() === false) {
           return;
         }
 

@@ -1,35 +1,31 @@
 package com.keepit.eliza
 
-import com.keepit.common.crypto.PublicId
-import com.keepit.common.store.S3UserPictureConfig
-import com.keepit.discussion.{Discussion, Message}
-import com.keepit.model._
-import com.keepit.common.db.{ ExternalId, SequenceNumber, Id }
-import com.keepit.common.service.{ ServiceClient, ServiceType }
-import com.keepit.common.logging.Logging
-import com.keepit.common.routes.Eliza
-import com.keepit.common.healthcheck.AirbrakeNotifier
-import com.keepit.common.net.{ CallTimeouts, HttpClient }
-import com.keepit.common.zookeeper.ServiceCluster
-import com.keepit.notify.model.{Recipient, GroupingNotificationKind}
-import com.keepit.notify.model.event.NotificationEvent
-import com.keepit.search.index.message.ThreadContent
-import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
-import com.kifi.macros.json
-
-import scala.collection.mutable
-import scala.concurrent.{ ExecutionContext, Future }
-
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-
 import com.google.inject.Inject
-import com.google.inject.util.Providers
-import com.keepit.eliza.model._
-
-import akka.actor.Scheduler
-import com.keepit.common.json.TupleFormat._
+import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.core._
+import com.keepit.common.db.{Id, SequenceNumber}
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json.TupleFormat._
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.{CallTimeouts, HttpClient}
+import com.keepit.common.routes.Eliza
+import com.keepit.common.service.{ServiceClient, ServiceType}
+import com.keepit.common.store.S3UserPictureConfig
+import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.discussion.{CrossServiceMessage, Discussion, Message}
+import com.keepit.eliza.model._
+import com.keepit.model._
+import com.keepit.notify.model.event.NotificationEvent
+import com.keepit.notify.model.{GroupingNotificationKind, Recipient}
+import com.keepit.search.index.message.ThreadContent
+import com.kifi.macros.json
+import org.joda.time.DateTime
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import com.keepit.eliza.ElizaServiceClient._
+
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Try
 
 sealed case class LibraryPushNotificationCategory(name: String)
 sealed case class UserPushNotificationCategory(name: String)
@@ -124,7 +120,18 @@ trait ElizaServiceClient extends ServiceClient {
   def getSharedThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getAllThreadsForGroupByWeek(users: Seq[Id[User]]): Future[Seq[GroupThreadStats]]
   def getParticipantsByThreadExtId(threadExtId: String): Future[Set[Id[User]]]
+
+  // Discussion cross-service methods
+  def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
+  def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
+  def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
+  def editMessage(msgId: Id[Message], newText: String): Future[Message]
+  def deleteMessage(msgId: Id[Message]): Future[Unit]
+
+  def rpbGetThread(threadId: Long): Future[RPBGetThread.Response]
+  def rpbConnectKeep(threadId: Long, keepId: Id[Keep]): Future[Unit]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -275,9 +282,129 @@ class ElizaServiceClientImpl @Inject() (
     }
   }
 
-  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
-    call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(keepIds)).map { response =>
-      response.json.as[Map[Id[Keep], Discussion]]
+  def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]] = {
+    import GetCrossServiceMessages._
+    val request = Request(msgIds)
+    val x = implicitly[Format[Request]]
+    call(Eliza.internal.getCrossServiceMessages, body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msgs
     }
+  }
+  def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
+    import GetDiscussionsForKeeps._
+    val request = Request(keepIds)
+    call(Eliza.internal.getDiscussionsForKeeps, body = Json.toJson(request)).map { response =>
+      response.json.as[Response].discussions
+    }
+  }
+
+  def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]] = {
+    import MarkKeepsAsReadForUser._
+    val request = Request(userId, lastSeenByKeep)
+    call(Eliza.internal.markKeepsAsReadForUser(), body = Json.toJson(request)).map { response =>
+      response.json.as[Response].unreadCount
+    }
+  }
+  def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message] = {
+    import SendMessageOnKeep._
+    val request = Request(userId, text, keepId)
+    call(Eliza.internal.sendMessageOnKeep(), body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msg
+    }
+  }
+  def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]] = {
+    import GetMessagesOnKeep._
+    val request = Request(keepId, fromIdOpt, limit)
+    call(Eliza.internal.getMessagesOnKeep, body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msgs
+    }
+  }
+  def editMessage(msgId: Id[Message], newText: String): Future[Message] = {
+    import EditMessage._
+    val request = Request(msgId, newText)
+    call(Eliza.internal.editMessage(), body = Json.toJson(request)).map { response =>
+      response.json.as[Response].msg
+    }
+  }
+  def deleteMessage(msgId: Id[Message]): Future[Unit] = {
+    import DeleteMessage._
+    val request = Request(msgId)
+    call(Eliza.internal.deleteMessage(), body = Json.toJson(request)).map { response =>
+      Unit
+    }
+  }
+
+  // TODO(ryan): delete this morass
+  def rpbGetThread(threadId: Long): Future[RPBGetThread.Response] = {
+    import RPBGetThread._
+    val request = Request(threadId)
+    call(Eliza.internal.rpbGetThread, body = Json.toJson(request)).map { response =>
+      response.json.as[Response]
+    }
+  }
+  def rpbConnectKeep(threadId: Long, keepId: Id[Keep]): Future[Unit] = {
+    import RPBConnectKeep._
+    val request = Request(threadId, keepId)
+    call(Eliza.internal.rpbConnectKeep, body = Json.toJson(request)).map { response =>
+      Unit
+    }
+  }
+}
+
+object ElizaServiceClient {
+  object GetCrossServiceMessages {
+    case class Request(msgIds: Set[Id[Message]])
+    case class Response(msgs: Map[Id[Message], CrossServiceMessage])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetDiscussionsForKeeps {
+    case class Request(keepIds: Set[Id[Keep]])
+    case class Response(discussions: Map[Id[Keep], Discussion])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object MarkKeepsAsReadForUser {
+    case class Request(userId: Id[User], lastSeen: Map[Id[Keep], Id[Message]])
+    case class Response(unreadCount: Map[Id[Keep], Int])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object SendMessageOnKeep {
+    case class Request(userId: Id[User], text: String, keepId: Id[Keep])
+    case class Response(msg: Message)
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetMessagesOnKeep {
+    case class Request(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int)
+    case class Response(msgs: Seq[Message])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object EditMessage {
+    case class Request(msgId: Id[Message], newText: String)
+    case class Response(msg: Message)
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object DeleteMessage {
+    case class Request(msgId: Id[Message])
+    implicit val requestFormat: Format[Request] = Format(
+      Reads { j => j.validate[Long].map(n => Request(Id(n))) },
+      Writes { o => JsNumber(o.msgId.id) }
+    )
+  }
+
+  // TODO(ryan): delete this grossness
+  object RPBGetThread {
+    case class Request(threadId: Long)
+    case class Response(startedBy: Id[User], title: Option[String], url: String, startedAt: DateTime)
+    implicit val requestFormat: Format[Request] = Json.format[Request]
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object RPBConnectKeep {
+    case class Request(threadId: Long, keepId: Id[Keep])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 }

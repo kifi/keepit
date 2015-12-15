@@ -2,7 +2,6 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
-import com.keepit.eliza.model.UserThreadRepo.RawNotification
 import com.keepit.model.{ NormalizedURI }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
@@ -26,6 +25,7 @@ class NotificationJsonMaker @Inject() (
 
   private val idealImageSize = ImageSize(65, 95)
 
+  private type RawNotification = (JsValue, Boolean, Option[Id[NormalizedURI]]) // lastNotification, unread, uriId
   def makeOne(rawNotification: RawNotification, includeUriSummary: Boolean = false): Future[NotificationJson] = {
     make(Seq(rawNotification), includeUriSummary).imap(_.head)
   }

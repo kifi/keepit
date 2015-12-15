@@ -104,9 +104,9 @@ angular.module('kifi')
           for (var i = 0; i < parts.length; i += 2) {
             items = items.concat(processPlainTextForEmojis(parts[i]));
             if (i + 1 < parts.length) {
-              var escapedAddr = parts[i + 1];
+              var addr = parts[i + 1];
               var data = {
-                text: escapedAddr
+                text: addr
               };
               items.push({
                 type: 'EMAIL',
@@ -133,6 +133,23 @@ angular.module('kifi')
         //console.log('\n');
         for (var i = 0; i < parts.length; i += 3) {
 
+          // format emoji
+          var uri = parts[i + 1];
+          var scheme = parts[i + 2];
+
+
+          if (!scheme && uri && uri.indexOf('/') < 0 || parts[i].slice(-1) === '@') {
+            var ambiguous = parts[i] + uri;
+            var processed = processEmail(ambiguous);
+            var filter = function(item) {
+              return item.type === 'EMAIL';
+            };
+            if (processed.filter(filter).length > 0) {
+              items = items.concat(processed);
+              continue;
+            }
+          }
+
 
           var item;
           if (imageUrlRe.test(parts[i])) {
@@ -154,25 +171,6 @@ angular.module('kifi')
             items.push(item);
           } else {
             items = items.concat(processPlainTextForEmojis(parts[i]));
-          }
-
-
-
-          // format emoji
-          var uri = parts[i + 1];
-          var scheme = parts[i + 2];
-
-
-          if (!scheme && uri && uri.indexOf('/') < 0 || parts[i].slice(-1) === '@') {
-            var ambiguous = parts[i] + uri;
-            var processed = processEmail(ambiguous);
-            var filter = function(item) {
-              return item.type === 'EMAIL';
-            };
-            if (processed.filter(filter).length > 0) {
-              items = items.concat(processed);
-              continue;
-            }
           }
 
 
@@ -241,8 +239,9 @@ angular.module('kifi')
 
       var formatKifiSelRangeTextToParts = (function () {
         var replaceRe = /([\u001e\u001f])/g;
-        function replace(replacements, ch) {
-          return replacements[ch];
+        var replacements = {'\u001e': '\n\n', '\u001f': ''};
+        function replace(s) {
+          return replacements[s];
         }
 
         // var decodeURIComponent = function(t) {return t;};

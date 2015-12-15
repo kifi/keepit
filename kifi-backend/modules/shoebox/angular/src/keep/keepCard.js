@@ -85,17 +85,12 @@ angular.module('kifi')
         clickCallback: '&',
         deleteCallback: '&',
         removeImageCallback: '&',
+        forceGalleryView: '=',
         isFirstItem: '='
       },
       replace: true,
       templateUrl: 'keep/keepCard.tpl.html',
       link: function (scope) {
-
-        if (typeof scope.galleryView === 'undefined') {
-          // Default to true when the caller doesn't specify
-          scope.galleryView = true;
-        }
-
         //
         // Internal methods.
         //
@@ -109,15 +104,20 @@ angular.module('kifi')
         //
         // Scope methods.
         //
+        scope.toggleExpandCard = function () {
+          scope.galleryView = scope.forceGalleryView || !scope.galleryView;
+        };
+
         scope.editKeepNote = function (event, keep) {
           if (keep.id !== scope.keep.id || !scope.canEditKeep) {
             return;
           }
+          scope.galleryView = true;
 
-          var keepEl = angular.element(event.target).closest(scope.galleryView ? '.kf-gallery-card' : '.kf-compact-card');
+          var keepEl = angular.element(event.target).closest('.kf-keep-card');
           var editor = keepEl.find('.kf-knf-editor');
           if (!editor.length) {
-            var noteEl = keepEl.find(scope.galleryView ? '.kf-keep-note' : '.kf-keep-card-note');
+            var noteEl = keepEl.find('.kf-keep-card-note');
             var keepLibraryId = keep.library && keep.library.id;
             var distinctKeep = keep.keeps.filter(function (k) { return k.libraryId === keepLibraryId; })[0];
             $injector.get('keepNoteForm').init(noteEl, keep.note, keepLibraryId, distinctKeep.id, function update(noteText) {
@@ -229,10 +229,12 @@ angular.module('kifi')
             scope.onWidgetLibraryClicked(args.clickedLibrary);
           }),
           $rootScope.$on('prefsChanged', function() {
-            scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+            scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
+            scope.globalGalleryView = scope.galleryView;
           }),
-          $rootScope.$on('cardStyleChanged', function(style) {
-            scope.galleryView = style.use_minimal_keep_card;
+          $rootScope.$on('cardStyleChanged', function(s, style) {
+            scope.galleryView = scope.forceGalleryView || !style.use_minimal_keep_card;
+            scope.globalGalleryView = scope.galleryView;
           })
         ].forEach(function (deregister) {
           scope.$on('$destroy', deregister);
@@ -252,7 +254,8 @@ angular.module('kifi')
           scope.showOriginLibrary = scope.currentPageOrigin !== 'libraryPage' &&
             keep.library && keep.library.visibility !== 'discoverable' && keep.library.kind === 'system_secret';
           // Don't change until the link is updated to be a bit more secure:
-          scope.galleryView = !profileService.prefs.use_minimal_keep_card;
+          scope.galleryView = scope.forceGalleryView || !profileService.prefs.use_minimal_keep_card;
+          scope.globalGalleryView = scope.galleryView;
 
           var permissions = (keep.library && keep.library.permissions) || [];
           var keepUserId = keep.user && keep.user.id;

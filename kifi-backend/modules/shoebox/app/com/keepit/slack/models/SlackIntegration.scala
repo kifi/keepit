@@ -30,7 +30,7 @@ object SlackIntegrationStatus extends Enumerator[SlackIntegrationStatus] {
 }
 
 trait SlackIntegration {
-  def ownerId: Id[User]
+  def space: LibrarySpace
   def slackUserId: SlackUserId
   def slackTeamId: SlackTeamId
   def slackChannelId: Option[SlackChannelId]
@@ -39,16 +39,20 @@ trait SlackIntegration {
   def status: SlackIntegrationStatus
 }
 
+object SlackIntegration {
+  case class BrokenSlackIntegration(integration: SlackIntegration, token: Option[SlackAccessToken], cause: Option[SlackAPIFailure]) extends Exception(s"Found a broken Slack integration: token->$token, integration->$integration, cause->$cause")
+  case class ForbiddenSlackIntegration(integration: SlackIntegration) extends Exception(s"Found a forbidden Slack integration: $integration")
+}
+
 sealed abstract class SlackIntegrationRequest
 case class SlackIntegrationCreateRequest(
-    userId: Id[User],
-    organizationId: Option[Id[Organization]],
+    requesterId: Id[User],
+    space: LibrarySpace,
     slackUserId: SlackUserId,
     slackTeamId: SlackTeamId,
     slackChannelId: Option[SlackChannelId],
     slackChannelName: SlackChannelName,
     libraryId: Id[Library]) extends SlackIntegrationRequest {
-  def space = LibrarySpace(userId, organizationId)
 }
 
 case class SlackIntegrationModification(

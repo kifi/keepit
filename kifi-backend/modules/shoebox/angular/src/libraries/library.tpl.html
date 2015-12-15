@@ -21,7 +21,7 @@
       <span class="kf-lib-rss-icon svg-rss-feed"></span>
     </button>
 
-    <div class="kf-lib-slack"   ng-if="canCreateSlackIntegration">
+    <div class="kf-lib-slack">
       <div kf-cta-hover delegate="slackDelegate" ng-if="!isMobile && !$root.userLoggedIn"></div>
       <div ng-click="processSlackRequest()" class="kf-cta-hover-element kf-lib-slack-btn-bg">
         <img  ng-src="{{slackIntegrations.length == 0 ? '/img/add-to-slack.png' : '/img/edit-slack-sync.png'}}"

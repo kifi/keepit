@@ -22,7 +22,7 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ DbInjectionHelper, ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable.SpecificationLike
-import play.api.libs.json.JsValue
+import play.api.libs.json.{ Json, JsValue }
 import play.api.mvc.{ AnyContentAsEmpty, Call }
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
@@ -50,36 +50,8 @@ class WebsiteMessagingControllerTest extends TestKitSupport with SpecificationLi
   private def route = com.keepit.eliza.controllers.site.routes.WebsiteMessagingController
 
   "WebsiteMessagingController" should {
-    "page through a keep's messages" in {
-      withDb(modules: _*) { implicit injector =>
-        val keepId = Id[Keep](1)
-        val (user, thread, messages) = db.readWrite { implicit session =>
-          val user = UserFactory.user().get
-          val thread = MessageThreadFactory.thread().withKeep(keepId).saved
-          val messages = MessageFactory.messages(20).map(_.withThread(thread).saved)
-          (user, thread, messages)
-        }
-        val keepPubId = Keep.publicId(keepId)
-
-        val pageSize = 3
-        val expectedPages = messages.sortBy(m => (m.createdAt.getMillis, m.id.get.id)).reverse.map(_.id.get).grouped(pageSize).toList
-
-        inject[FakeUserActionsHelper].setUser(user)
-        val actualPages = Iterator.iterate(Seq.empty[PublicId[Message]]) { prevPage =>
-          val fromIdOpt = prevPage.lastOption.map(_.id)
-          val request = route.getMessagesOnKeep(keepPubId, pageSize, fromIdOpt)
-          val response = controller.getMessagesOnKeep(keepPubId, pageSize, fromIdOpt)(request)
-          val items = (contentAsJson(response) \ "messages").as[Seq[JsValue]]
-          items.map { j => (j \ "id").as[PublicId[Message]] }
-        }.toStream.tail.takeWhile(_.nonEmpty).toList
-
-        actualPages.length === expectedPages.length
-        (actualPages zip expectedPages) foreach {
-          case (actual, expected) =>
-            actual.map(pubId => ElizaMessage.fromMessageId(Message.decodePublicId(pubId).get)) === expected
-        }
-        1 === 1
-      }
+    "do nothing, now that all the logic has moved into ElizaDiscussionController" in {
+      skipped(":)")
     }
   }
 }

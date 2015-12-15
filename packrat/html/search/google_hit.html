@@ -34,6 +34,18 @@
       {{/libraries}}
       <a class="kifi-res-libs-n" href="javascript:">{{librariesMore}}</a>
     {{/libraries.length}}
+    {{#source}}
+      <span class="kifi-res-source">
+        {{#twitter.tweet}}
+          <span class="kifi-res-source-twitter-icon"></span>
+          <a class="kifi-res-source-tweet-user" href="https://www.twitter.com/{{user.screen_name}}/status/{{id_str}}">@{{user.screen_name}}</a>
+        {{/twitter.tweet}}
+        {{#slack.message}}
+          <span class="kifi-res-source-slack-icon"></span>
+          <a class="kifi-res-source-slack-channel" href="{{permalink}}">#{{channel.name}}</a>
+        {{/slack.message}}
+      </span>
+    {{/source}}
     {{#tags.length}}
       <span class="kifi-res-tags"></span>
       {{#tags}}

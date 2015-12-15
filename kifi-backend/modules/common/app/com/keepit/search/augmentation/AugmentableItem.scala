@@ -6,7 +6,7 @@ import org.joda.time.DateTime
 import play.api.libs.json._
 import com.keepit.common.json.TupleFormat
 
-case class AugmentableItem(uri: Id[NormalizedURI], keptIn: Option[Id[Library]] = None)
+case class AugmentableItem(uri: Id[NormalizedURI], keepId: Option[Id[Keep]] = None)
 
 object AugmentableItem {
   implicit val format = Json.format[AugmentableItem]
@@ -19,7 +19,7 @@ object AugmentableItem {
   }
 }
 
-case class RestrictedKeepInfo(id: ExternalId[Keep], keptAt: DateTime, keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
+case class RestrictedKeepInfo(id: Id[Keep], externalId: ExternalId[Keep], keptAt: DateTime, keptIn: Option[Id[Library]], keptBy: Option[Id[User]], note: Option[String], tags: Set[Hashtag])
 
 object RestrictedKeepInfo {
   implicit val format = Json.format[RestrictedKeepInfo]

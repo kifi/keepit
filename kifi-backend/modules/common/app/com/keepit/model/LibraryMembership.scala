@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.keepit.common.cache._
 import com.keepit.common.db._
-import com.keepit.common.json.EnumFormat
+import com.keepit.common.json.{ TraversableFormat, EnumFormat }
 import com.keepit.common.logging.AccessLog
 import com.keepit.common.reflection.Enumerator
 import com.keepit.common.time._
@@ -114,15 +114,30 @@ object LibraryPermission extends Enumerator[LibraryPermission] {
   case object REMOVE_OTHER_KEEPS extends LibraryPermission("remove_other_keeps")
   case object EXPORT_KEEPS extends LibraryPermission("export_keeps")
   case object CREATE_SLACK_INTEGRATION extends LibraryPermission("create_slack_integration")
+  case object ADD_COMMENTS extends LibraryPermission("add_comments")
 
-  implicit val format: Format[LibraryPermission] = Format(
-    EnumFormat.reads(get, all.map(_.value)),
+  private val soloReads = EnumFormat.reads(get, all.map(_.value))
+  implicit val setReads: Reads[Set[LibraryPermission]] = TraversableFormat.safeSetReads[LibraryPermission](soloReads)
+  implicit val setWrites: Writes[Set[LibraryPermission]] = Writes { ps => JsArray(ps.toSeq.map(p => JsString(p.value))) }
+  implicit val format = Format(setReads, setWrites)
+
+  def all = _all.toSet
+  def get(str: String): Option[LibraryPermission] = all.find(_.value == str)
+}
+
+sealed abstract class LibraryCommentPermissions(val value: String)
+object LibraryCommentPermissions extends Enumerator[LibraryCommentPermissions] {
+  case object COLLABORATOR extends LibraryCommentPermissions("collaborator") // collaborators and if Library.organizationMemberAccess == READ_WRITE, org-members
+  case object ANYONE extends LibraryCommentPermissions("anyone") // anyone with view permissions
+
+  implicit val format: Format[LibraryCommentPermissions] = Format(
+    Reads { j => j.validate[String].map(LibraryCommentPermissions(_)) },
     Writes { o => JsString(o.value) }
   )
 
   def all = _all.toSet
-  def get(str: String): Option[LibraryPermission] = all.find(_.value == str)
-  def apply(str: String): LibraryPermission = get(str).getOrElse(throw new Exception(s"Unknown LibraryPermission $str"))
+  def get(str: String): Option[LibraryCommentPermissions] = all.find(_.value == str)
+  def apply(str: String): LibraryCommentPermissions = get(str).getOrElse(throw new Exception(s"Unknown LibraryCommentPermission $str"))
 }
 
 case class CountWithLibraryIdByAccess(readOnly: Int, readWrite: Int, owner: Int)

@@ -39,15 +39,15 @@ trait KeepInterner {
   private[commanders] def deDuplicate(rawBookmarks: Seq[RawBookmarkRepresentation]): Seq[RawBookmarkRepresentation]
   def persistRawKeeps(rawKeeps: Seq[RawKeep], importId: Option[String] = None)(implicit context: HeimdalContext): Unit
 
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse
 
   // Because we're nice, you get some extras:
   def internRawBookmarks(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): (Seq[Keep], Seq[RawBookmarkRepresentation]) = {
-    val response = internRawBookmarksWithStatus(rawBookmarks, ownerId, library, source)
+    val response = internRawBookmarksWithStatus(rawBookmarks, ownerId, Some(library), source)
     (response.successes, response.failures)
   }
   def internRawBookmark(rawBookmark: RawBookmarkRepresentation, ownerId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): Try[(Keep, Boolean)] = {
-    internRawBookmarksWithStatus(Seq(rawBookmark), ownerId, library, source) match {
+    internRawBookmarksWithStatus(Seq(rawBookmark), ownerId, Some(library), source) match {
       case KeepInternResponse(Seq(newKeep), _, _) => Success((newKeep, true))
       case KeepInternResponse(_, Seq(existingKeep), _) => Success((existingKeep, false))
       case KeepInternResponse(_, _, Seq(failedKeep)) => Failure(new Exception(s"could not intern $failedKeep"))
@@ -126,26 +126,26 @@ class KeepInternerImpl @Inject() (
     }
   }
 
-  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse = {
-    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, ownerId, library, source)
+  def internRawBookmarksWithStatus(rawBookmarks: Seq[RawBookmarkRepresentation], ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource)(implicit context: HeimdalContext): KeepInternResponse = {
+    val (persistedBookmarksWithUris, failures) = internUriAndBookmarkBatch(rawBookmarks, ownerId, libraryOpt, source)
 
     val (newKeeps, existingKeeps) = persistedBookmarksWithUris.partition(obj => obj.isNewKeep || obj.wasInactiveKeep) match {
       case (newKs, existingKs) => (newKs.map(_.keep), existingKs.map(_.keep))
     }
 
-    reportNewKeeps(ownerId, newKeeps, library, context, notifyExternalSources = true)
+    reportNewKeeps(ownerId, newKeeps, libraryOpt, context, notifyExternalSources = true)
 
     KeepInternResponse(newKeeps, existingKeeps, failures)
   }
 
-  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], ownerId: Id[User], library: Library, source: KeepSource) = {
+  private def internUriAndBookmarkBatch(bms: Seq[RawBookmarkRepresentation], ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource) = {
     // For batches, if we can't prenormalize, silently drop. This is a low bar, and usually means it couldn't *ever* be a valid keep.
     val (validUrls, invalidUrls) = bms.partition(b => httpPrefix.findPrefixOf(b.url.toLowerCase).isDefined && normalizationService.prenormalize(b.url).isSuccess)
 
     val (persisted, failed) = db.readWriteBatch(validUrls, attempts = 5) {
       case ((session, bm)) =>
         implicit val s = session
-        internUriAndBookmark(bm, ownerId, library, source).get // Exception caught by readWriteBatch
+        internUriAndBookmark(bm, ownerId, libraryOpt, source).get // Exception caught by readWriteBatch
     }.partition { case (bm, res) => res.isSuccess }
 
     val keeps = persisted.values.map(_.get).toSeq
@@ -162,7 +162,7 @@ class KeepInternerImpl @Inject() (
 
   private val httpPrefix = "https?://".r
 
-  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, ownerId: Id[User], library: Library, source: KeepSource)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
+  private def internUriAndBookmark(rawBookmark: RawBookmarkRepresentation, ownerId: Id[User], libraryOpt: Option[Library], source: KeepSource)(implicit session: RWSession): Try[InternedUriAndKeep] = try {
     if (httpPrefix.findPrefixOf(rawBookmark.url.toLowerCase).isDefined) {
       val uri = try {
         normalizedURIInterner.internByUri(rawBookmark.url, contentWanted = true, candidates = NormalizationCandidate.fromRawBookmark(rawBookmark))
@@ -171,7 +171,7 @@ class KeepInternerImpl @Inject() (
       }
 
       log.info(s"[keepinterner] Persisting keep ${rawBookmark.url}, ${rawBookmark.keptAt}, ${clock.now}")
-      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, ownerId, library, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.noteFormattedLikeOurNotes)
+      val (isNewKeep, wasInactiveKeep, bookmark) = internKeep(uri, ownerId, libraryOpt, source, rawBookmark.title, rawBookmark.url, rawBookmark.keptAt.getOrElse(clock.now), rawBookmark.sourceAttribution, rawBookmark.noteFormattedLikeOurNotes)
       Success(InternedUriAndKeep(bookmark, uri, isNewKeep, wasInactiveKeep))
     } else {
       Failure(new Exception(s"bookmark url is not an http protocol: ${rawBookmark.url}"))
@@ -181,11 +181,11 @@ class KeepInternerImpl @Inject() (
       Failure(e)
   }
 
-  private def internKeep(uri: NormalizedURI, userId: Id[User], library: Library, source: KeepSource,
+  private def internKeep(uri: NormalizedURI, userId: Id[User], libraryOpt: Option[Library], source: KeepSource,
     title: Option[String], url: String, keptAt: DateTime,
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
-    val keepOpt = keepRepo.getPrimaryByUriAndLibrary(uri.id.get, library.id.get) // This in effect makes libraries only able to hold one keep per uriId
+    val keepOpt = libraryOpt.flatMap { lib => keepRepo.getPrimaryByUriAndLibrary(uri.id.get, lib.id.get) }
 
     val trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
 
@@ -199,18 +199,19 @@ class KeepInternerImpl @Inject() (
           userId = userId,
           title = kTitle,
           state = KeepStates.ACTIVE,
-          visibility = library.visibility,
-          libraryId = Some(library.id.get),
+          visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
+          libraryId = libraryOpt.map(_.id.get),
           keptAt = keptAt,
           note = kNote,
-          url = url
+          url = url,
+          organizationId = libraryOpt.flatMap(_.organizationId)
         ) |> { keep =>
             if (wasInactiveKeep) {
               keep.copy(createdAt = clock.now)
             } else keep
           } |> { keep =>
             try {
-              keepCommander.persistKeep(keep, Set(userId), Set(library.id.get))
+              keepCommander.persistKeep(keep, Set(userId), libraryOpt.map(_.id.get).toSet)
             } catch {
               case ex: UndeclaredThrowableException =>
                 log.warn(s"[keepinterner] Persisting keep failed of ${keep.url} (${keep.id.get})", ex)
@@ -225,14 +226,15 @@ class KeepInternerImpl @Inject() (
           uriId = uri.id.get,
           url = url,
           source = source,
-          visibility = library.visibility,
-          libraryId = Some(library.id.get),
+          visibility = libraryOpt.map(_.visibility).getOrElse(LibraryVisibility.SECRET),
+          libraryId = libraryOpt.map(_.id.get),
           keptAt = keptAt,
           note = note,
-          originalKeeperId = Some(userId)
+          originalKeeperId = Some(userId),
+          organizationId = libraryOpt.flatMap(_.organizationId)
         )
         val improvedKeep = try {
-          keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), Set(library.id.get)) tap { improvedKeep =>
+          keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), libraryOpt.map(_.id.get).toSet) tap { improvedKeep =>
             sourceAttribution.map { attr => sourceAttrRepo.save(improvedKeep.id.get, attr) }
           }
         } catch {
@@ -272,18 +274,20 @@ class KeepInternerImpl @Inject() (
     }
   }
 
-  private def reportNewKeeps(keeperUserId: Id[User], keeps: Seq[Keep], library: Library, ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
+  private def reportNewKeeps(keeperUserId: Id[User], keeps: Seq[Keep], libraryOpt: Option[Library], ctx: HeimdalContext, notifyExternalSources: Boolean): Unit = {
     if (keeps.nonEmpty) {
       // Analytics
-      libraryAnalytics.keptPages(keeperUserId, keeps, library, ctx)
+      libraryOpt.foreach { lib => libraryAnalytics.keptPages(keeperUserId, keeps, lib, ctx) }
       heimdalClient.processKeepAttribution(keeperUserId, keeps)
       searchClient.updateKeepIndex()
 
       // Make external notifications & fetch
       if (notifyExternalSources && KeepSource.discrete.contains(keeps.head.source)) { // Only report first to not spam
-        SafeFuture { libraryNewFollowersCommander.notifyFollowersOfNewKeeps(library, keeps.head) }
-        db.readWrite { implicit s =>
-          libToSlackProcessor.scheduleLibraryToBePushed(library.id.get, clock.now plus (if (keeps.forall(_.title.isDefined)) Period.seconds(20) else Period.seconds(40)))
+        SafeFuture {
+          libraryOpt.foreach { lib =>
+            libraryNewFollowersCommander.notifyFollowersOfNewKeeps(lib, keeps.head)
+            libToSlackProcessor.schedule(lib.id.get)
+          }
         }
         FutureHelpers.sequentialExec(keeps) { keep =>
           val nuri = db.readOnlyMaster { implicit session =>
@@ -295,8 +299,10 @@ class KeepInternerImpl @Inject() (
 
       // Update data-dependencies
       db.readWrite(attempts = 3) { implicit s =>
-        libraryRepo.updateLastKept(library.id.get)
-        Try(libraryRepo.save(libraryRepo.getNoCache(library.id.get).copy(keepCount = keepRepo.getCountByLibrary(library.id.get)))) // wrapped in a Try because this is super deadlock prone
+        libraryOpt.foreach { lib =>
+          libraryRepo.updateLastKept(lib.id.get)
+          Try(libraryRepo.save(libraryRepo.getNoCache(lib.id.get).copy(keepCount = keepRepo.getCountByLibrary(lib.id.get)))) // wrapped in a Try because this is super deadlock prone
+        }
       }
     }
   }

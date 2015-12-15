@@ -54,6 +54,28 @@
             </div>
           </div>
 
+          <div class="manage-lib-input-wrapper" ng-if="hasCommentExperiment">
+            <h3 class="manage-lib-heading">Access</h3>
+            <div class="manage-lib-input-area manage-lib-access">
+              <span class="kf-flex-row manage-lib-access-comments-container">
+                <button class="manage-lib-access-comments" ng-click="toggleSelector()">
+                  <div class="manage-lib-access-comments-toggle" ng-class="{'toggle' : canAnyoneComment() }"></div>
+                  <div class="manage-lib-access-toggle-option collab svg-collaborators-white" ng-class="{'on' : !canAnyoneComment()}"></div>
+                  <div class="manage-lib-access-toggle-option globe svg-white-globe" ng-class="{'on' : canAnyoneComment()}"></div>
+                </button>
+                <label class="manage-lib-access-comments-txt" ng-bind="canAnyoneComment() ? 'Anyone who can see this library can comment.' : 'Anyone who can keep to this library can comment.'"></label>
+              </span>
+              <span class="kf-flex-row manage-lib-access-members-wrapper" ng-class="{ 'disabled': disableOrgMemberAccess() }" ng-if="library.id && spaceIsOrg(space.destination)">
+                  <button class="manage-lib-access-members-checkbox kf-button kf-button-image" ng-class="{ 'checked' : orgMemberAccessWrite && !disableOrgMemberAccess(), 'disabled' : disableOrgMemberAccess() }" ng-click="changeOrgMemberAccess()">
+                    <span class="manage-lib-access-members-checkmark svg-checkmark-thin" ng-if="orgMemberAccessWrite && !disableOrgMemberAccess()"></span>
+                  </button>
+                  <label class="manage-lib-input-area manage-lib-access-members">
+                  Members of {{ space.current.name }} can join and keep to this library.
+                  </label>
+              </span>
+            </div>
+          </div>
+
           <div ng-if="modifyingExistingLibrary" class="manage-lib-input-wrapper kf-color">
             <h3 class="manage-lib-heading">Color</h3>
             <div class="manage-lib-input-area manage-lib-colors">
@@ -62,58 +84,6 @@
                 <span class="svg-checkmark-thin"></span>
               </label>
             </div>
-          </div>
-
-          <div
-            class="manage-lib-input-wrapper"
-          >
-            <div ng-if="modifyingExistingLibrary" class="manage-lib-integrations-title-wrapper">
-              <h3
-                class="manage-lib-integrations-title"
-                ng-class="{
-                  'active': integrationsOpen,
-                  'manage-lib-integrations-disabled': !isIntegrationsEnabled()
-                }"
-                ng-click="isIntegrationsEnabled() && toggleIntegrations($event)"
-              >Integrations</h3>
-              <span
-                ng-if="!isIntegrationsEnabled()"
-                kf-upsell
-                on-click="onClickUpsellIntegration()"
-                on-hover="onHoverUpsellIntegration()"
-              >
-                <span ng-if="!isIntegrationsEnabled()">
-                  This team has not allowed you create Slack integrations on their libraries. Please contact a team admin to upgrade your member status or change their team's settings.
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <div class="manage-lib-integrations" ng-if="isIntegrationsEnabled() && integrationsOpen">
-            <div class="manage-lib-subs-heading">Slack</div>
-            <div class="manage-lib-subs-instruct">
-              <p>
-                It's easy to push updates from this library to one of your company's Slack channels.
-                To configure the integration between Kifi and Slack:
-              </p>
-              <ol class="kf-list kf-list-ordered">
-                <li>Log into Slack, then <a href="https://slack.com/services/new/incoming-webhook" target="_blank">go to this page</a>.</li>
-                <li>Choose a default channel, then click "Add Incoming WebHooks Integration"</li>
-                <li>Copy the Webhook URL, and paste it in the URL fields below.</li>
-                <li>Enter the name of the #channel or @mention you want updates sent to, then "Save".</li>
-              </ol>
-              <p>All new keeps added to this library will now appear in Slack!</p>
-            </div>
-
-            <form name="slackForm">
-              <table class="manage-lib-subs-table">
-                <tr ng-repeat="subscription in library.subscriptions">
-                  <td class="manage-lib-sub-name-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine" ng-class="{ 'ng-valid' : !(subscription.$error && subscription.$error.name) || !subscription.disabled,  'ng-invalid': (subscription.$error && subscription.$error.name) || subscription.disabled }" ng-model="subscription.name" type="text" name="name" placeholder="#channel, @mention" autocomplete="off" novalidate></td>
-                  <td class="manage-lib-sub-url-input" ng-keydown="preventNewline($event)"><input class="manage-lib-input manage-lib-sub-input ng-pristine" ng-class="{ 'ng-valid' : !(subscription.$error && subscription.$error.url) || !subscription.disabled,  'ng-invalid': (subscription.$error && subscription.$error.url) || subscription.disabled }" ng-model="subscription.info.url" placeholder="Webhook Url" autocomplete="off" novalidate></td>
-                  <td><a class="manage-lib-sub-remove-x" ng-if="$index != (library.subscriptions.length-1) || library.subscriptions.length == 3" ng-click="removeSubscription($index)"></a><a class="manage-lib-sub-add-x" ng-if="$index == (library.subscriptions.length-1) && (library.subscriptions.length != 3)" ng-click="addSubscription()"></a></td>
-                </tr>
-              </table>
-            </form>
           </div>
           <div ng-if="$error.general" class="manage-lib-error">{{$error.general}}</div>
         </div>

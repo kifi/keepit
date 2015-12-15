@@ -3,6 +3,7 @@ package com.keepit.model
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.path.Path
+import com.keepit.common.reflection.Enumerator
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.mvc.PathBindable
 
@@ -15,7 +16,7 @@ import com.keepit.common.strings.StringWithNoLineBreaks
 import com.keepit.common.time._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.common.crypto.{ PublicIdConfiguration, ModelWithPublicIdCompanion, ModelWithPublicId, PublicId }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicIdGenerator, ModelWithPublicId, PublicId }
 
 import scala.util.Try
 import scala.util.hashing.MurmurHash3
@@ -96,7 +97,7 @@ case class Keep(
   def path(implicit config: PublicIdConfiguration) = Path(s"k/$titlePathString/${Keep.publicId(this.id.get).id}")
 }
 
-object Keep extends ModelWithPublicIdCompanion[Keep] {
+object Keep extends PublicIdGenerator[Keep] {
 
   protected[this] val publicIdPrefix = "k"
   protected[this] val publicIdIvSpec = new IvParameterSpec(Array(-28, 113, 122, 123, -126, 62, -12, 87, -112, 68, -9, -84, -56, -13, 15, 28))
@@ -270,7 +271,7 @@ class CountByLibraryCache(stats: CacheStatistics, accessLog: AccessLog, innermos
   extends JsonCacheImpl[CountByLibraryKey, Int](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class KeepIdKey(id: Id[Keep]) extends Key[Keep] {
-  override val version = 1
+  override val version = 2
   val namespace = "keep_by_id"
   def toKey(): String = id.id.toString
 }
@@ -326,6 +327,7 @@ object KeepSource {
 case class KeepAndTags(keep: Keep, source: Option[SourceAttribution], tags: Set[Hashtag])
 
 object KeepAndTags {
+  implicit val sourceFormat = SourceAttribution.internalFormat
   implicit val format = Json.format[KeepAndTags]
 }
 
@@ -334,7 +336,7 @@ case class BasicKeep(
   title: Option[String],
   url: String,
   visibility: LibraryVisibility,
-  libraryId: PublicId[Library],
+  libraryId: Option[PublicId[Library]],
   ownerId: ExternalId[User])
 
 object BasicKeep {
@@ -343,7 +345,7 @@ object BasicKeep {
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).format[PublicId[Library]] and
+    (__ \ 'libraryId).formatNullable[PublicId[Library]] and
     (__ \ 'ownerId).format[ExternalId[User]]
   )(BasicKeep.apply, unlift(BasicKeep.unapply))
 }
@@ -379,41 +381,12 @@ object CrossServiceKeep {
   )(CrossServiceKeep.apply, unlift(CrossServiceKeep.unapply))
 }
 
-// NOT client facing
-// Used by Eliza when creating a discussion (create a keep, then tie a message thread to it)
-case class KeepCreateRequest(
-    owner: Id[User],
-    users: Set[Id[User]],
-    libraries: Set[Id[Library]],
-    url: String,
-    title: Option[String] = None,
-    canonical: Option[String] = None,
-    openGraph: Option[String] = None,
-    keptAt: Option[DateTime] = None,
-    note: Option[String] = None) {
-  require(users.contains(owner))
-  require(libraries.size == 1) // TODO(ryan): remove when no longer true
-}
-object KeepCreateRequest {
-  implicit val format: Format[KeepCreateRequest] = (
-    (__ \ 'owner).format[Id[User]] and
-    (__ \ 'users).format[Set[Id[User]]] and
-    (__ \ 'libraries).format[Set[Id[Library]]] and
-    (__ \ 'url).format[String] and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'canonical).formatNullable[String] and
-    (__ \ 'openGraph).formatNullable[String] and
-    (__ \ 'keptAt).formatNullable[DateTime] and
-    (__ \ 'note).formatNullable[String]
-  )(KeepCreateRequest.apply, unlift(KeepCreateRequest.unapply))
-}
-
 case class PersonalKeep(
   id: ExternalId[Keep],
   mine: Boolean,
   removable: Boolean,
   visibility: LibraryVisibility,
-  libraryId: PublicId[Library])
+  libraryId: Option[PublicId[Library]])
 
 object PersonalKeep {
   implicit val format: Format[PersonalKeep] = (
@@ -421,7 +394,7 @@ object PersonalKeep {
     (__ \ 'mine).format[Boolean] and
     (__ \ 'removable).format[Boolean] and
     (__ \ 'visibility).format[LibraryVisibility] and
-    (__ \ 'libraryId).format[PublicId[Library]]
+    (__ \ 'libraryId).formatNullable[PublicId[Library]]
   )(PersonalKeep.apply, unlift(PersonalKeep.unapply))
 }
 
@@ -433,3 +406,12 @@ case class BasicKeepIdKey(id: Id[Keep]) extends Key[BasicKeep] {
 
 class BasicKeepByIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends ImmutableJsonCacheImpl[BasicKeepIdKey, BasicKeep](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+
+sealed abstract class KeepPermission(val value: String)
+object KeepPermission extends Enumerator[KeepPermission] {
+  case object ADD_MESSAGE extends KeepPermission("add_message")
+  case object DELETE_OWN_MESSAGES extends KeepPermission("delete_own_messages")
+  case object DELETE_OTHER_MESSAGES extends KeepPermission("delete_other_messages")
+  case object DELETE_KEEP extends KeepPermission("delete_keep")
+  case object VIEW_MESSAGES extends KeepPermission("view_messages")
+}

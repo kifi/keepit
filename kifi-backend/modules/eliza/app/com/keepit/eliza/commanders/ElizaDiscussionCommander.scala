@@ -17,12 +17,17 @@ import com.keepit.social.BasicUserLikeEntity
 import play.api.libs.json.JsNull
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.{ Failure, Success, Try }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
 trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
+  def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
-  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage]
+  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
+  def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
+  def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
+  def deleteMessage(messageId: Id[ElizaMessage]): Unit
 }
 
 @Singleton
@@ -41,6 +46,9 @@ class ElizaDiscussionCommanderImpl @Inject() (
 
   val MESSAGES_TO_INCLUDE = 8
 
+  private def externalizeMessage(msg: ElizaMessage): Future[Message] = {
+    externalizeMessages(Seq(msg)).map(_.values.head)
+  }
   private def externalizeMessages(emsgs: Seq[ElizaMessage]): Future[Map[Id[ElizaMessage], Message]] = {
     val users = emsgs.flatMap(_.from.asUser)
     val nonUsers = emsgs.flatMap(_.from.asNonUser)
@@ -50,7 +58,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
       basicUsers <- basicUsersFut
       basicNonUsers <- basicNonUsersFut
     } yield emsgs.flatMap { em =>
-      val msgId = Message.publicId(ElizaMessage.toMessageId(em.id.get)) // this is a hack to expose Id[ElizaMessage] without exposing ElizaMessage itself
+      val msgId = Message.publicId(ElizaMessage.toCommon(em.id.get)) // this is a hack to expose Id[ElizaMessage] without exposing ElizaMessage itself
       val senderOpt: Option[BasicUserLikeEntity] = em.from.fold(
         None,
         { uid => Some(BasicUserLikeEntity(basicUsers(uid))) },
@@ -69,19 +77,21 @@ class ElizaDiscussionCommanderImpl @Inject() (
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]] = {
     val elizaMsgs = db.readOnlyReplica { implicit s =>
       messageThreadRepo.getByKeepId(keepId).map { thread =>
-        messageRepo.getByThread(thread.id.get, fromIdOpt, limit)
+        messageRepo.getByThread(thread.id.get, fromId = fromIdOpt, limit = limit)
       }.getOrElse(Seq.empty)
     }
     externalizeMessages(elizaMsgs).map { extMessageMap =>
       elizaMsgs.flatMap(em => extMessageMap.get(em.id.get))
     }
   }
+
+  def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion] = getDiscussionsForKeeps(Set(keepId)).imap(dm => dm(keepId))
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]) = db.readOnlyReplica { implicit s =>
     val threadsByKeep = messageThreadRepo.getByKeepIds(keepIds)
     val threadIds = threadsByKeep.values.map(_.id.get).toSet
     val countsByThread = messageRepo.getAllMessageCounts(threadIds)
     val recentsByThread = threadIds.map { threadId =>
-      threadId -> messageRepo.getByThread(threadId, None, MESSAGES_TO_INCLUDE)
+      threadId -> messageRepo.getByThread(threadId, fromId = None, limit = MESSAGES_TO_INCLUDE)
     }.toMap
 
     val extMessageMapFut = externalizeMessages(recentsByThread.values.toSeq.flatten)
@@ -128,8 +138,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
       }
     }
   }
-  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[ElizaMessage] = {
-    getOrCreateMessageThreadForKeep(keepId).imap { thread =>
+  def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message] = {
+    getOrCreateMessageThreadForKeep(keepId).flatMap { thread =>
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
           messageThreadRepo.save(thread.withParticipants(clock.now, Set(userId)))
@@ -138,7 +148,35 @@ class ElizaDiscussionCommanderImpl @Inject() (
         }
       } else { log.info(s"[DISC-CMDR] User $userId said $txt on keep $keepId, they were already part of the thread.") }
       val (_, message) = messagingCommander.sendMessage(userId, thread.id.get, txt, source, None)
-      message
+      externalizeMessage(message)
     }
+  }
+
+  // TODO(ryan): make this do batch processing...
+  def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int] = db.readWrite { implicit s =>
+    for {
+      mt <- messageThreadRepo.getByKeepId(keepId)
+      ut <- userThreadRepo.getUserThread(userId, mt.id.get)
+    } yield {
+      val unreadCount = messageRepo.countByThread(mt.id.get, Some(msgId), SortDirection.ASCENDING)
+
+      // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
+      // Then you can just set it and forget it
+      if (unreadCount == 0) {
+        userThreadRepo.markRead(userId, mt.id.get, messageRepo.get(msgId))
+      }
+      unreadCount
+    }
+  }
+
+  def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message] = {
+    val editedMsg = db.readWrite { implicit s =>
+      messageRepo.save(messageRepo.get(messageId).withText(newText))
+    }
+    externalizeMessage(editedMsg)
+  }
+
+  def deleteMessage(messageId: Id[ElizaMessage]): Unit = db.readWrite { implicit s =>
+    messageRepo.deactivate(messageRepo.get(messageId))
   }
 }

@@ -1,13 +1,14 @@
 <div class="kf-create-keep-widget">
-  <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid URL.</div>
+  <div class="kf-add-keep-error" ng-show="state.invalidUrl">Please enter a valid HTTP/HTTPS URL.</div>
   <div class="kf-add-keep-error" ng-show="state.alreadyKept">That keep is already in that library.</div>
   <input class="kf-add-keep-input" placeholder="http://..." ng-model="state.input" ng-focus="resetFocusState()"></input>
   <button type="button" class="add-keep-to-library-dropdown"
     kf-keep-to-library-widget widget-action-text="Add keep" library-select-action="onLibrarySelected(selectedLibrary)"
     lib-select-down-offset="0" lib-select-max-up-offset="110" lib-select-left-offset="0">
-    <span class="keep-to-library-lib-icon-container">
+    <span class="keep-to-library-lib-icon-container" ng-if="!selectedLibrary.org">
       <div class="kf-klw-library-card" ng-style="{'background-color': selectedLibrary.color}"></div>
     </span>
+    <img class="kf-klw-library-org-pic" ng-if="selectedLibrary.org" ng-src="{{ selectedLibrary.org | pic }}" />
     <svg class="kf-klw-star-icon" ng-if="selectedLibrary.kind === 'system_main'" kf-symbol-sprite icon="star"></svg>
     <svg class="kf-klw-lock-icon" ng-if="selectedLibrary.visibility === 'secret'" kf-symbol-sprite icon="lock"></svg>
     <span ng-bind="selectedLibrary.name"></span>

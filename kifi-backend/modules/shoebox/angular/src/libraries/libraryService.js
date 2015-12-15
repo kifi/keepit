@@ -125,7 +125,6 @@ angular.module('kifi')
         }
         var libPromise = net.getLibraryByHandleAndSlug(handle, slug, authToken).then(function (res) {
           res.data.library.suggestedSearches = (res.data.suggestedSearches && res.data.suggestedSearches.terms) || [];
-          res.data.library.subscriptions = res.data.subscriptions;
           return augment(res.data.library);
         });
 
@@ -159,8 +158,8 @@ angular.module('kifi')
         var lib = _.find(infos, { id: libraryId });
         if (lib) {
           lib.numKeeps += val;
-          $rootScope.$emit('libraryKeepCountChanged', libraryId, lib.numKeeps);
         }
+        $rootScope.$emit('libraryKeepCountChanged', libraryId, (lib && lib.numKeeps) || val); // Best effort?
       },
 
       // TODO(yiping): All functions that update library infos should refetch automatically instead of
@@ -234,12 +233,6 @@ angular.module('kifi')
         return $http.post(routeService.deleteLibrary(libraryId)).then(function () {
           _.remove(infos, {id: libraryId});
           $rootScope.$emit('libraryDeleted', libraryId);
-        });
-      },
-
-      authIntoLibrary: function (username, slug, authToken, passPhrase) {
-        return $http.post(routeService.authIntoLibrary(username, slug, authToken), {'passPhrase': passPhrase}).then(function (resp) {
-          return resp;
         });
       },
 
@@ -348,6 +341,10 @@ angular.module('kifi')
         var defaultAttributes = api.getCommonTrackingAttributes(library);
         attributes = _.extend(defaultAttributes, attributes || {});
         $analytics.eventTrack(eventName, attributes);
+      },
+
+      checkLibraryForUpdates: function (libraryId, since) {
+        return net.checkLibraryForUpdates(libraryId, since);
       }
     };
 

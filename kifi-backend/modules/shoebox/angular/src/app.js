@@ -161,7 +161,7 @@ angular.module('kifi', [
   'profileService', 'platformService', 'libraryService',
   function ($scope, $rootScope, $rootElement, $window, $timeout, $log, $analytics, $location, $state,
       profileService, platformService, libraryService) {
-    $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/team\n   █▜▙ █ █  █         join us!\n');
+    $log.log('\n   █   ● ▟▛ ●        made with ❤\n   █▟▛ █ █■ █    kifi.com/about/join_us\n   █▜▙ █ █  █         join us!\n');
 
     function start() {
       if ($rootElement.find('#kf-authenticated').removeAttr('id').length) {

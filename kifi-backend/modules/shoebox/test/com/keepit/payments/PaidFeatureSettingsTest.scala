@@ -277,50 +277,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
     }
   }
 
-  "create slack integration permission" should {
-    "be configurable" in {
-      withDb(modules: _*) { implicit injector =>
-        val (org, owner, admin, member, _) = setup()
-
-        // Initially, only admins
-        val initOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.CreateSlackIntegration -> FeatureSetting.ADMINS) }
-        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, initOrgSettings)) must beRight
-
-        val library = db.readWrite { implicit session => LibraryFactory.library().withOwner(owner).withCollaborators(Seq(admin, member)).withOrganization(org).saved }
-
-        val libraryCommander = inject[LibraryCommander]
-        val libraryController = inject[LibraryController]
-
-        val ownerModifyRequest = LibraryModifications(subscriptions = Some(Seq(LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk/kk"), disabled = false))))
-
-        val adminModifyRequest = LibraryModifications(subscriptions = Some(Seq(
-          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk/kk"), disabled = false),
-          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok/kk"), disabled = false))))
-
-        val memberModifyRequest = LibraryModifications(subscriptions = Some(Seq(
-          LibrarySubscriptionKey("#general", SlackInfo("https://hooks.slack.com/services/kk/kk/kk"), disabled = false),
-          LibrarySubscriptionKey("#eng", SlackInfo("https://hooks.slack.com/services/ok/ok/kk"), disabled = false),
-          LibrarySubscriptionKey("#product", SlackInfo("https://hooks.slack.com/services/ko/ko/kk"), disabled = false))))
-
-        libraryCommander.modifyLibrary(library.id.get, owner.id.get, ownerModifyRequest) must beRight
-        libraryCommander.modifyLibrary(library.id.get, admin.id.get, adminModifyRequest) must beRight
-        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beLeft
-
-        val orgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.CreateSlackIntegration -> FeatureSetting.MEMBERS) }
-        orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, admin.id.get, orgSettings)) must beRight
-
-        libraryCommander.modifyLibrary(library.id.get, member.id.get, memberModifyRequest) must beRight
-
-        inject[FakeUserActionsHelper].setUser(member)
-        val testRoute = com.keepit.controllers.website.routes.LibraryController.getLibraryById(Library.publicId(library.id.get), showPublishedLibraries = true, is = None).url
-        val memberRequest = FakeRequest("GET", testRoute)
-        val memberResult = libraryController.getLibraryById(Library.publicId(library.id.get), showPublishedLibraries = true, imageSize = None)(memberRequest)
-        status(memberResult) must equalTo(OK)
-        (contentAsJson(memberResult) \ "library" \ "permissions").as[Set[LibraryPermission]] must contain(LibraryPermission.CREATE_SLACK_INTEGRATION)
-      }
-    }
-  }
-
   "export keeps permission" should {
     "be configurable" in {
       withDb(modules: _*) { implicit injector =>
@@ -539,7 +495,6 @@ class PaidFeatureSettingsTest extends SpecificationLike with ShoeboxTestInjector
 
         val newOrgSettings = db.readOnlyMaster { implicit session => orgConfigRepo.getByOrgId(org.id.get).settings.withFeatureSetTo(Feature.JoinByVerifying -> FeatureSetting.NONMEMBERS) }
         orgCommander.setAccountFeatureSettings(OrganizationSettingsRequest(org.id.get, owner.id.get, newOrgSettings)) must beRight
-
 
         val response2 = authController.verifyEmail(userEmail.verificationCode.get, Some(orgPubId.id))(request)
         Await.ready(response2, Duration(5, "seconds"))

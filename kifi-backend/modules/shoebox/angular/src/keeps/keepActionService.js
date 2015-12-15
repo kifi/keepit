@@ -7,7 +7,7 @@ angular.module('kifi')
   function ($analytics, $location, net, libraryService) {
 
     function sanitizeUrl(url) {
-      var regex = /^[a-zA-Z]+:\/\//;
+      var regex = /^https?:\/\//;
       if (!regex.test(url)) {
         return 'http://' + url;
       } else {
@@ -33,6 +33,7 @@ angular.module('kifi')
 
       return net.addKeepsToLibrary(libraryId, data).then(function (res) {
         libraryService.noteLibraryKeptTo(libraryId);
+        libraryService.addToLibraryCount(libraryId, keepInfos.length);
 
         _.uniq(res.data.keeps, function (keep) {
           return keep.url;

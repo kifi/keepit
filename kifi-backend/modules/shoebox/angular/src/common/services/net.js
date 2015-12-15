@@ -7,7 +7,6 @@ angular.module('kifi')
   function (env, $http, createExpiringCache) {
     var shoebox = env.xhrBase;
     var search = env.xhrBaseSearch;
-    var eliza = env.xhrBaseEliza;
     var pathParamRe = /(:\w+)/;
 
     var post = angular.bind(null, http, 'POST');  // caller should pass any path params, optional post data (JSON), and an optional query params object
@@ -79,6 +78,7 @@ angular.module('kifi')
       changeKeepImage: post(shoebox, '/libraries/:id/keeps/:keepId/image'),
       exportOrgKeeps: post(shoebox, '/keeps/organizationExport'),
       getFtueLibraries: get(shoebox, '/libraries/marketing-suggestions'),
+      checkLibraryForUpdates: get(shoebox, '/libraries/:id/updates?since=:since'),
 
       getLibraryShareSuggest: get(shoebox, '/libraries/:id/members/suggest?n=30', 30),
       updateLibraryMembership: post(shoebox, '/libraries/:id/members/:uid/access'),
@@ -96,9 +96,11 @@ angular.module('kifi')
       deleteLibrarySlackIntegrations: post(shoebox, '/libraries/:id/slack/delete'),
 
       // eliza
-      addMessageToKeepDiscussion: post(eliza, '/keeps/:id/message'),
+      addMessageToKeepDiscussion: post(shoebox, '/keeps/:id/messages'),
       // ?limit={{number}}&fromId={{Option(String))}}
-      getMessagesForKeepDiscussion: get(eliza, '/keeps/:id/messages?limit=:limit&fromId=:fromId')
+      getMessagesForKeepDiscussion: get(shoebox, '/keeps/:id/messages?limit=:limit&fromId=:fromId'),
+      deleteMessageFromKeepDiscussion: post(shoebox, '/keeps/:id/messages/delete'),
+      markDiscussionAsRead: post(shoebox, '/keeps/markAsRead')
     };
 
     function get(base, pathSpec, cacheSec) {

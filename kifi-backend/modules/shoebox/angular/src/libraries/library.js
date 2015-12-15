@@ -5,11 +5,13 @@ angular.module('kifi')
 .controller('LibraryCtrl', [
   '$scope', '$rootScope', '$analytics', '$location', '$state', '$stateParams', '$timeout', '$window',
   '$FB', '$twitter', 'env', 'util', 'URI', 'AB', 'initParams', 'library', 'libraryService', 'modalService',
-  'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService', 'libraryImageLoaded',
+  'platformService', 'profileService', 'originTrackingService', 'installService', 'signupService',
+  'libraryImageLoaded',
   function (
     $scope, $rootScope, $analytics, $location, $state, $stateParams, $timeout, $window,
     $FB, $twitter, env, util, URI, AB, initParams, library, libraryService, modalService,
-    platformService, profileService, originTrackingService, installService, signupService, libraryImageLoaded) {
+    platformService, profileService, originTrackingService, installService, signupService,
+    libraryImageLoaded) {
 
     //
     // Internal functions
@@ -92,20 +94,40 @@ angular.module('kifi')
         }
       }
 
+      this.requiresPushAuth = function() {
+        return this.data.toSlack && this.data.toSlack.authLink;
+      };
+
+      this.requiresIngestAuth = function() {
+        return this.data.fromSlack && this.data.fromSlack.authLink;
+      };
+
       this.onKeepToSlackChanged = function(on) {
         // make request
         // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
-        this.data.toSlack.status = on ? 'on' : 'off';
-        this.data.toSlack.space = this.data.space;
-        libraryService.modifySlackIntegrations(this.library.id, [this.data.toSlack]);
+        if (on && this.data.toSlack.authLink) {
+          // need to authorize
+          $window.location = this.data.toSlack.authLink;
+        } else {
+          this.data.toSlack.status = on ? 'on' : 'off';
+          this.data.toSlack.space = this.data.space;
+          libraryService.modifySlackIntegrations(this.library.id, [this.data.toSlack]);
+        }
+
       };
 
       this.onSlackToKeepChanged = function(on) {
         // make request
         // integrationsToModify => [{'id': 'integration-id', 'status': 'off|on'}]
-        this.data.fromSlack.status = $scope.canAddKeepsToLibrary && on ? 'on' : 'off';
-        this.data.fromSlack.space = this.data.space;
-        libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack]);
+        if (on && this.data.fromSlack.authLink) {
+          // need to authorize
+          $window.location = this.data.fromSlack.authLink;
+        } else {
+          this.data.fromSlack.status = $scope.canAddKeepsToLibrary && on ? 'on' : 'off';
+          this.data.fromSlack.space = this.data.space;
+          libraryService.modifySlackIntegrations(this.library.id, [this.data.fromSlack]);
+        }
+
       };
 
       this.getChannelName = function() {
@@ -200,11 +222,9 @@ angular.module('kifi')
     $scope.loading = true;  // whether keeps are currently loading
     $scope.hasMore = true;   // whether there may be more keeps in this library than those currently in $scope.keeps
     $scope.isMobile = platformService.isSupportedMobilePlatform();
-    $scope.passphrase = $scope.passphrase || {};
     $scope.$error = $scope.$error || {};
     $scope.userIsOwner = $rootScope.userLoggedIn && library.owner.id === me.id;
     $scope.isAdminExperiment = (me.experiments || []).indexOf('admin') !== -1;
-    $scope.canCreateSlackIntegration = (me.experiments || []).indexOf('slack') !== -1;
     $scope.canAddKeepsToLibrary = (
       library.membership && (
         library.membership.access === 'owner' ||
@@ -292,7 +312,7 @@ angular.module('kifi')
     };
 
     $scope.getSlackLink = function() {
-      return library.slack && (library.slack.link || '');
+      return library.slack && (library.slack.link || '').replace('search%3Aread%2Creactions%3Awrite', '');
     };
 
     $scope.getNextKeeps = function (offset) {
@@ -462,23 +482,27 @@ angular.module('kifi')
     [
       $rootScope.$on('keepAdded', function (e, keeps, library) {
         keeps.forEach(function (keep) {
-          // if the keep was added to the secret library from main or vice-versa, removes the keep from the current library
-          if (library.kind === 'system_secret' && $scope.librarySlug === 'main' ||
-              library.kind === 'system_main' && $scope.librarySlug === 'secret') {
-            var idx = _.findIndex($scope.keeps, { url: keep.url });
-            if (idx > -1) {
-              $scope.keeps.splice(idx, 1);
+
+          var existingKeep = _.find($scope.keeps, function (k) {
+            return k.url === keep.url || k.id === keep.id;
+          });
+
+          if (library.id === $scope.library.id) {
+            if (!existingKeep || new Date(existingKeep.createdAt) !== new Date(keep.createdAt)) {
+              // New keep, or existing keep that has changed times
+              if (existingKeep) {
+                $scope.keeps.splice($scope.keeps.indexOf(existingKeep), 1);
+              }
+              var idx = _.sortedIndex($scope.keeps, keep, function (k) {
+                return +new Date(k.createdAt) * -1;
+              });
+              existingKeep = augmentKeep(keep);
+              $scope.keeps.splice(idx, 0, existingKeep);
             }
           }
 
-          var existingKeep = _.find($scope.keeps, {url: keep.url});
-          if (!existingKeep && library.id === $scope.library.id) {
-            $scope.keeps.unshift(augmentKeep(keep));
-            existingKeep = keep;
-          }
-
           // add the new keep to the keep card's 'my keeps' array
-          if (existingKeep && !_.find($scope.keeps, {id: keep.id})) {
+          if (existingKeep && !_.find(existingKeep.keeps, {id: keep.id})) {
             existingKeep.keeps.push({
               id: keep.id,
               libraryId: library.id,
@@ -568,6 +592,64 @@ angular.module('kifi')
         keepView: $scope.galleryView ? 'gallery' : 'list'
       });
     });
+
+    var deregisterUpdateLibrary;
+    var knownUpdatesPending = 0;
+    var updateLibrary = function (interval, countSinceUpdate) {
+      countSinceUpdate = countSinceUpdate || 0;
+      deregisterUpdateLibrary = $timeout(function () {
+        var lastKnownUpdate = getLastKnownUpdate();
+        libraryService.checkLibraryForUpdates($scope.library.id, lastKnownUpdate).then(function (res) {
+          var status = res.data.updates;
+          if (status.updates > knownUpdatesPending) { // An update we don't know about has occured
+            knownUpdatesPending = status.updates;
+            $scope.$broadcast('keepUpdatesPending', knownUpdatesPending);
+            updateLibrary(10000, 0);
+          } else if (countSinceUpdate < 1440) { // Roughly a day of no updates
+            $scope.$broadcast('keepUpdatesPending', status.updates);
+            updateLibrary(Math.min(60000, interval + 10000), countSinceUpdate + 1);
+          } else {
+            clickToRefresh();
+          }
+        })['catch'](clickToRefresh);
+      }, interval);
+
+      function clickToRefresh() {
+        $timeout.cancel(deregisterUpdateLibrary);
+        knownUpdatesPending = -1;
+        $scope.$broadcast('keepUpdatesPending', -1);
+      }
+    };
+
+    $scope.$on('refreshLibrary', function () {
+      if (knownUpdatesPending <= 0 || knownUpdatesPending >= 10) { // error, or far too many
+        $state.reload();
+      } else {
+        libraryService.getKeepsInLibrary(library.id, 0, $stateParams.authToken).then(function (res) {
+          var keeps = res.keeps.slice().reverse(); // reversing, because they're pushed to the top, so oldest first
+          $rootScope.$emit('keepAdded', keeps, library);
+          $timeout.cancel(deregisterUpdateLibrary);
+
+          $scope.library.lastKept = (res.keeps && res.keeps[0] && res.keeps[0].createdAt) || $scope.library.lastKept || $scope.library.modifiedAt;
+          updateLibrary(10000);
+        });
+      }
+
+      $scope.$broadcast('keepUpdatesPending', 0);
+      knownUpdatesPending = 0;
+    });
+
+    $scope.$on('$destroy', function () {
+      $timeout.cancel(deregisterUpdateLibrary);
+    });
+
+    var getLastKnownUpdate = function () {
+      var newestKeep = _.max($scope.keeps, function (k) {
+        return +new Date(k.createdAt);
+      });
+      return newestKeep.createdAt || $scope.library.lastKept || $scope.library.modifiedAt;
+    };
+    updateLibrary(10000);
 
     // query param handling
     var showSlackDialog = initParams.getAndClear('showSlackDialog');

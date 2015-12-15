@@ -17,7 +17,8 @@ CREATE TABLE slack_team_membership (
 
   PRIMARY KEY(id),
   UNIQUE KEY slack_team_membership_u_slack_team_id_slack_user_id (slack_team_id, slack_user_id),
-  INDEX slack_team_membership_i_user_id_slack_team_id_slack_user_id (user_id, slack_user_id, slack_team_id)
+  INDEX slack_team_membership_i_user_id_slack_team_id_slack_user_id (user_id, slack_user_id, slack_team_id),
+  INDEX slack_team_membership_i_slack_user_id_slack_team_id (slack_team_id, slack_user_id)
 );
 
 CREATE TABLE slack_incoming_webhook_info (
@@ -25,7 +26,6 @@ CREATE TABLE slack_incoming_webhook_info (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   state VARCHAR(20) NOT NULL,
-  owner_id BIGINT(20) NOT NULL,
   slack_user_id VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
   slack_channel_id VARCHAR(32) DEFAULT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE slack_incoming_webhook_info (
 
   PRIMARY KEY(id),
   INDEX slack_incoming_webhook_info_i_team_id_channel_id (slack_team_id, slack_channel_id),
-  CONSTRAINT slack_incoming_webhook_info_f_slack_team_membership FOREIGN KEY (owner_id, slack_user_id, slack_team_id) REFERENCES slack_team_membership(user_id, slack_user_id, slack_team_id)
+  CONSTRAINT slack_incoming_webhook_info_f_slack_team_membership FOREIGN KEY (slack_user_id, slack_team_id) REFERENCES slack_team_membership(slack_user_id, slack_team_id)
 );
 
 CREATE TABLE library_to_slack_channel (
@@ -46,7 +46,7 @@ CREATE TABLE library_to_slack_channel (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   state VARCHAR(20) NOT NULL,
-  owner_id BIGINT(20) NOT NULL,
+  owner_id BIGINT(20) DEFAULT NULL,
   organization_id BIGINT(20) DEFAULT NULL,
   slack_user_id VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE slack_channel_to_library (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   state VARCHAR(20) NOT NULL,
-  owner_id BIGINT(20) NOT NULL,
+  owner_id BIGINT(20) DEFAULT NULL,
   organization_id BIGINT(20) DEFAULT NULL,
   slack_user_id VARCHAR(32) NOT NULL,
   slack_team_id VARCHAR(32) NOT NULL,

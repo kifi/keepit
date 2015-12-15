@@ -3,22 +3,53 @@
 angular.module('kifi')
 
 .factory('keepService', [
-  'profileService', 'net',
-  function (profileService, net) {
+  '$q', 'profileService', 'net',
+  function ($q, profileService, net) {
+    function getResponseData(response) {
+      return response && response.data;
+    }
+
+    function bySentAt(a, b) {
+      return a.sentAt - b.sentAt;
+    }
+
     //
     var api = {
-      addMessageToKeepDiscussion: function (keepId, message) {
-        return net.addMessageToKeepDiscussion(keepId, message).then(function (res) {
-          // do something
-          return res;
-        });
+      addMessageToKeepDiscussion: function (keepId, text) {
+        return net
+        .addMessageToKeepDiscussion(keepId, { text: text })
+        .then(getResponseData);
       },
 
       getMessagesForKeepDiscussion: function (keepId, limit, fromId) {
-        return net.getMessagesForKeepDiscussion(keepId, limit, fromId).then(function (res) {
-          // do something
-          return (res && res.data) || [];
-        });
+        return net
+        .getMessagesForKeepDiscussion(keepId, limit, fromId)
+        .then(getResponseData);
+      },
+
+      deleteMessageFromKeepDiscussion: function(keepId, messageId) {
+        return net
+        .deleteMessageFromKeepDiscussion(keepId, { messageId: messageId })
+        .then(getResponseData);
+      },
+
+      markDiscussionAsRead: function (keep) {
+        // readList = [ {"keep": <keepId1>,  "lastMessage": <msgId1>}, { "keep": <keepId2>, "lastMessage": <msgId2> } ]
+        var comments = keep.discussion && keep.discussion.messages;
+
+        if (comments && comments.length) {
+          comments = comments.slice(); // so our sort doesn't mutate the original
+          var mostRecentComment = comments.sort(bySentAt).pop();
+
+          return net
+          .markDiscussionAsRead([{
+            keepId: keep.pubId,
+            lastMessage: mostRecentComment.id
+          }])
+          .then(getResponseData);
+        } else {
+          return $q.reject('Cannot mark empty discussion as read.');
+        }
       }
     };
 

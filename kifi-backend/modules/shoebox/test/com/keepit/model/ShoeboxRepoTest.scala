@@ -96,7 +96,7 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
           Set(SlackAuthScope.SearchRead)
         )
         db.readWrite { implicit session =>
-          val Success(saved) = slackTeamMembershipRepo.internBySlackTeamAndUser(slackAccount)
+          val saved = slackTeamMembershipRepo.internMembership(slackAccount)
           slackTeamMembershipRepo.getBySlackTeamAndUser(slackAccount.slackTeamId, slackAccount.slackUserId) must beSome(saved)
         }
 
@@ -107,7 +107,6 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         val hook = SlackIncomingWebhook(channel, "fake_url", "fake_config_url")
         db.readWrite { implicit session =>
           val saved = slackWebhookRepo.save(SlackIncomingWebhookInfo(
-            ownerId = slackAccount.userId,
             slackUserId = slackAccount.slackUserId,
             slackTeamId = slackAccount.slackTeamId,
             slackChannelId = None,
@@ -118,17 +117,17 @@ class ShoeboxRepoTest extends Specification with ShoeboxApplicationInjector {
         }
 
         // LibraryToSlackChannel
-        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId, None, slackAccount.slackUserId, slackAccount.slackTeamId, None, channel, lib.id.get)
+        val integrationRequest = SlackIntegrationCreateRequest(slackAccount.userId, LibrarySpace.fromUserId(slackAccount.userId), slackAccount.slackUserId, slackAccount.slackTeamId, None, channel, lib.id.get)
         val libraryToSlackChannelRepo = inject[LibraryToSlackChannelRepo]
         db.readWrite { implicit session =>
-          val (saved, true) = libraryToSlackChannelRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
+          val saved = libraryToSlackChannelRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
           libraryToSlackChannelRepo.getBySlackTeamChannelAndLibrary(integrationRequest.slackTeamId, integrationRequest.slackChannelName, integrationRequest.libraryId) must beSome(saved)
         }
 
         // SlackChannelToLibrary
         val slackChannelToLibraryRepo = inject[SlackChannelToLibraryRepo]
         db.readWrite { implicit session =>
-          val (saved, true) = slackChannelToLibraryRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
+          val saved = slackChannelToLibraryRepo.internBySlackTeamChannelAndLibrary(integrationRequest)
           slackChannelToLibraryRepo.getBySlackTeamChannelAndLibrary(integrationRequest.slackTeamId, integrationRequest.slackChannelName, integrationRequest.libraryId) must beSome(saved)
         }
       }

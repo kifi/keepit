@@ -106,8 +106,7 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         (res1 \ "numCollabLibraries").as[Int] === 0
         (res1 \ "biography").as[String] === "First Prez yo!"
         val orgs = (res1 \ "orgs").as[Seq[JsObject]]
-        (orgs.head \ "id").as[PublicId[Organization]] === Organization.publicId(org1.id.get)(inject[PublicIdConfiguration])
-        (orgs.head \ "members").as[Seq[JsValue]].length === 1
+        orgs.length === 0
 
         //seeing a profile from another user (friend)
         val friendViewer = getProfile(Some(user2), user1.username)
@@ -318,13 +317,13 @@ class MobileUserProfileControllerTest extends Specification with ShoeboxTestInje
         (libs.head \ "kind").as[LibraryKind] must equalTo(LibraryKind.USER_CREATED)
         (libs.head \ "visibility").as[LibraryVisibility] must equalTo(LibraryVisibility.PUBLISHED)
         (libs.head \ "membership").as[Option[LibraryMembershipInfo]] must equalTo(
-          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER))))
+          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib2, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
         )
 
         (libs.last \ "id").as[PublicId[Library]] must equalTo(pubId1)
         (libs.last \ "owner" \ "id").as[ExternalId[User]] must equalTo(user1.externalId)
         (libs.last \ "membership").as[Option[LibraryMembershipInfo]] must equalTo(
-          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER))))
+          Some(LibraryMembershipInfo(LibraryAccess.OWNER, listed = true, subscribed = false, permissions = permissionCommander.libraryPermissionsByAccess(lib1, Some(LibraryAccess.OWNER), includeOrgWriteAccess = false)))
         )
         val result2 = getProfileLibraries(user1, 0, 10, "all")
         status(result2) must equalTo(OK)

@@ -1,19 +1,28 @@
 package com.keepit.controllers.admin
 
-import java.util.regex.{ PatternSyntaxException, Pattern }
+import java.util.regex.{ Pattern, PatternSyntaxException }
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ UserActionsHelper, AdminUserActions }
-import com.keepit.common.crypto.{ PublicIdRegistry, PublicIdConfiguration }
+import com.keepit.commanders.{ KeepInterner, RawBookmarkRepresentation }
+import com.keepit.common.concurrent.ChunkedResponseHelper
+import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicIdRegistry }
 import com.keepit.common.db.Id
-import com.keepit.model.{ Organization, Library }
+import com.keepit.eliza.ElizaServiceClient
+import com.keepit.heimdal.HeimdalContext
+import com.keepit.model.{ KeepSource, Library, Organization }
 import play.api.libs.json.Json
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class AdminGoodiesController @Inject() (
-    override val userActionsHelper: UserActionsHelper,
-    implicit val publicIdConfig: PublicIdConfiguration) extends AdminUserActions {
+  eliza: ElizaServiceClient,
+  keepInterner: KeepInterner,
+  override val userActionsHelper: UserActionsHelper,
+  implicit val executionContext: ExecutionContext,
+  implicit val publicIdConfig: PublicIdConfiguration)
+    extends AdminUserActions {
 
   def testRegex = AdminUserPage { implicit request =>
     Ok(views.html.admin.roverTestRegex())
@@ -69,4 +78,25 @@ class AdminGoodiesController @Inject() (
     }
   }
 
+  def backfillMessageThread() = AdminUserAction(parse.tolerantJson) { request =>
+    val source = KeepSource.keeper
+    val threads = (request.body \ "threads").as[Seq[Long]]
+    implicit val context = HeimdalContext.empty
+    val enum = ChunkedResponseHelper.chunkedFuture(threads) { threadId =>
+      for {
+        res <- eliza.rpbGetThread(threadId)
+        rawBookmark = RawBookmarkRepresentation(title = res.title, url = res.url, keptAt = Some(res.startedAt))
+        internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), res.startedBy, None, source)
+        keepId = internResponse.successes.head.id.get
+        _ <- eliza.rpbConnectKeep(threadId, keepId)
+      } yield {
+        Json.obj(
+          "requested" -> threadId,
+          "received" -> Json.arr(res.title, res.url, res.startedAt, res.startedBy),
+          "successfully_interned" -> internResponse.successes.map(_.id.get)
+        )
+      }
+    }
+    Ok.chunked(enum)
+  }
 }

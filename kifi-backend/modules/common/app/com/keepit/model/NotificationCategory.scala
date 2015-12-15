@@ -5,6 +5,7 @@ import com.keepit.common.mail.ElectronicMailCategory
 
 case class NotificationCategory(category: String)
 object NotificationCategory {
+  implicit val writes: Writes[NotificationCategory] = Writes { c => JsString(c.category) }
   val ALL = NotificationCategory("all")
 
   object ParentCategory {

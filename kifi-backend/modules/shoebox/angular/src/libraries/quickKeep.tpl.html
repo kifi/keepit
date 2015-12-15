@@ -1,7 +1,9 @@
 <div class="kf-quick-add-keep" ng-show="hasAddKeepPermission()">
-  <div class="kf-quick-add-keep-explain">Add a Link to this library: {{something}}</div>
+  <div class="kf-quick-add-keep-explain">Add a link to this library: <button class="kf-link kf-quick-add-keep-many" ng-click="openMultiKeepModal()">(Have many links?)</span></div>
   <div>
-    <input class="kf-quick-add-keep-input" placeholder="http://..." ng-model="quickKeep.url" ng-change="checkQuickKeepUrl()"></input> <button class="kf-quick-add-keep-button" ng-click="doQuickKeep()"><span class="svg-hearts-white"></span>Keep It</button>
+    <form>
+      <input class="kf-quick-add-keep-input" placeholder="http://…" ng-model="quickKeep.url" ng-change="checkQuickKeepUrl()"></input> <button class="kf-quick-add-keep-button" ng-click="doQuickKeep()" type="submit"><span class="svg-hearts-white"></span>Keep It</button>
+    </form>
   </div>
   <div class="kf-quick-add-keep-error" ng-show="quickKeep.invalidUrl">Please use a valid URL</div>
   <div class="kf-quick-add-keep-get-extension" ng-if="canInstallExtension">

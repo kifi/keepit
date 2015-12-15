@@ -8,9 +8,26 @@
       <a class="kf-keep-comment-commenter-name"
          ng-href="{{::comment.sentBy|profileUrl}}"
          ng-bind="::comment.sentBy|name"></a> </span>
+      <a class="kf-keep-comment-page-link kf-link" ng-if="showKeepPageLink" ng-href="{{::keep.path}}">
+        <time class="kf-keep-comment-time"
+              ng-attr-datetime="{{::comment.sentAt}}" am-time-ago="::comment.sentAt"
+              title="{{::comment.sentAt|localTime}}" ng-href="{{::keep.path}}" ng-if="::comment.sentAt"></time>
+      </a>
       <time class="kf-keep-comment-time"
             ng-attr-datetime="{{::comment.sentAt}}" am-time-ago="::comment.sentAt"
-            title="{{::comment.sentAt|localTime}}" ng-if="::comment.sentAt"></time>
+            title="{{::comment.sentAt|localTime}}" ng-if="::comment.sentAt && !showKeepPageLink"></time>
+      <span class="kf-keep-comment-actions" kf-click-menu ng-if="commentActionItems.length > 0  && canSeeCommentActions">
+        <menu class="kf-dropdown-menu kf-keep-comment-actions-menu">
+          <button class="kf-dropdown-menu-item kf-keep-comment-actions-item"
+            ng-click="item.action($event, keep.pubId, comment.id)"
+            ng-repeat="item in commentActionItems"
+            ng-bind="item.title">
+          </button>
+        </menu>
+        <button class="kf-keep-comment-actions-button kf-button kf-button-image">
+          <svg kf-symbol-sprite class="kf-keep-comment-actions-icon" icon="dropdown-arrow"></svg>
+        </button>
+      </span>
     </div>
     <div class="kf-keep-comment-commenter-text">
       <div ng-repeat="part in commentParts" class="kf-keep-comment-inline">
@@ -24,15 +41,15 @@
         <div ng-if="part.type === 'TEXT_PLAIN'" ng-bind="part.data.text" class="kf-keep-comment-inline"></div>
 
         <div ng-if="part.type === 'EMAIL'" class="kf-keep-comment-inline">
-          <a ng-href="mail-to:{{part.data.text}}" ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
+          <a ng-href="mail-to:{{part.data.text}}" ng-bind="part.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
         </div>
 
         <div ng-if="part.type === 'LINK'" class="kf-keep-comment-inline">
-          <a  ng-href="{{part.data.link}}"  ng-bind="part.data.text" class="kf-keep-comment-inline"></a>
+          <a  ng-href="{{part.data.link}}"  ng-bind="part.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
         </div>
 
         <div ng-if="part.type === 'LOOK_HERE'" class="kf-keep-comment-inline">
-          <a   ng-href="#" ng-click="openLookHere()" title="{{part.data.title}}" ng-bind="part.data.text" class="kf-keep-comment-look-here-link kf-keep-comment-inline"/>
+          <a   ng-href="#" ng-click="openLookHere($event)" title="{{part.data.title}}" ng-bind="part.data.text" class="kf-link-blue kf-keep-comment-look-here-link kf-keep-comment-inline"/>
         </div>
         <div ng-if="part.type === 'LOOK_HERE'" >
 
@@ -49,11 +66,11 @@
                 <div ng-if="lookHerePart.type === 'TEXT_PLAIN'" ng-bind="lookHerePart.data.text" class="kf-keep-comment-inline"></div>
 
                 <div ng-if="lookHerePart.type === 'EMAIL'" class="kf-keep-comment-inline">
-                  <a ng-href="mail-to:{{part.data.text}}" ng-bind="lookHerePart.data.text" class="kf-keep-comment-inline"></a>
+                  <a ng-href="mail-to:{{part.data.text}}" ng-bind="lookHerePart.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
                 </div>
 
                 <div ng-if="lookHerePart.type === 'LINK'" class="kf-keep-comment-inline">
-                  <a  ng-href="{{lookHerePart.data.link}}"  ng-bind="lookHerePart.data.text" class="kf-keep-comment-inline"></a>
+                  <a  ng-href="{{lookHerePart.data.link}}"  ng-bind="lookHerePart.data.text" class="kf-link-blue kf-keep-comment-inline"></a>
                 </div>
 
               </div>

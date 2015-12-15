@@ -235,6 +235,19 @@ angular.module('kifi')
         scope.onWidgetLibraryClicked = function(clickedLibrary) {
           $rootScope.$broadcast('onWidgetLibraryClicked', { clickedLibrary: clickedLibrary });
         };
+
+        scope.$on('keepUpdatesPending', function (e, count) {
+          if (count >= 10) {
+            scope.keepUpdatesPending = '10+';
+          } else {
+            scope.keepUpdatesPending = count;
+          }
+        });
+
+        scope.refreshLibrary = function () {
+          scope.keepUpdatesPending = 0;
+          scope.$emit('refreshLibrary');
+        };
       }
     };
   }

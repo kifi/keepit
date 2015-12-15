@@ -27,6 +27,7 @@
 
     .kf-keep-comment-look-here-container
       margin-top: 5px
+      margin-bottom: 5px
       background-color: #F9F6DE
       display: flex
       flex-direction: row
@@ -44,12 +45,11 @@
       height: auto
       margin-right: 10px
 
+
     .kf-keep-comment-look-here-link
       font-weight: bold
       font-style: italic
 
-      &:hover
-        text-decoration: underline
 
     .kf-keep-comment-embedded-img
       max-width: 100px
@@ -87,3 +87,56 @@
       color: #ABABAB
       font-size: 12px
       -webkit-font-smoothing: antialiased
+
+    .kf-keep-comment-page-link
+      &.kf-link
+        &:hover
+          text-decoration: none
+          opacity: .7
+
+.kf-keep-comment-actions
+  position: relative
+  float: right
+
+  .kf-keep-comment-actions-menu
+    position: absolute
+    top: 15px
+    right: 5px
+    font-size: 14px
+    transform-origin: 80% top
+    transition: visibility 0s, opacity linear dur, transform dur ease-out
+
+  &:not(.kf-open)>.kf-keep-comment-actions-menu
+    dur = .08s
+    visibility: hidden
+    opacity: 0
+    transform: scale(.9)
+    transition-duration: 0s, dur, dur
+    transition-delay: dur, 0s, 0s
+
+.kf-keep-comment-actions-item
+  padding: 0 16px
+  color: #556179
+  white-space: nowrap
+  cursor: pointer
+
+  &:hover
+    background-color: #eee
+
+  &:active
+    background-color: #ccc
+
+.kf-keep-comment-actions-button
+  display: none
+  float: right
+
+  :hover
+    opacity: .65
+
+  .kf-keep-comment-actions-icon
+    width: 15px
+    height: 15px
+
+.kf-keep-comment-container:hover .kf-keep-comment-actions-button
+.kf-keep-comment-actions.kf-open .kf-keep-comment-actions-button
+  display: block

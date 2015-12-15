@@ -1,20 +1,22 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.commanders.{ LibraryAccessCommander, LibraryMembershipCommander, PermissionCommander }
+import com.keepit.commanders.{ LibraryAccessCommander }
 import com.keepit.common.controller.{ ShoeboxServiceController, UserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.json.EitherFormat
 import com.keepit.model.ExternalLibrarySpace.{ ExternalOrganizationSpace, ExternalUserSpace }
 import com.keepit.model.LibrarySpace.{ OrganizationSpace, UserSpace }
 import com.keepit.model._
 import com.keepit.slack.models._
-import com.keepit.slack.{ LibraryToSlackChannelPusher, SlackClient, SlackCommander }
-import play.api.libs.json.{ JsObject, JsSuccess, Json, JsError }
+import com.keepit.slack.{ SlackAuthenticatedAction, SlackClient, SlackCommander }
+import play.api.libs.json._
+import play.api.mvc.Result
 
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.{ Success, Failure }
+import scala.util.Success
 
 @Singleton
 class SlackController @Inject() (
@@ -29,29 +31,54 @@ class SlackController @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val ec: ExecutionContext) extends UserActions with ShoeboxServiceController {
 
+  private def redirectToLibrary(libraryId: Id[Library], showSlackDialog: Boolean): Result = {
+    val libraryUrl = deepLinkRouter.generateRedirect(DeepLinkRouter.libraryLink(Library.publicId(libraryId))).get.url
+    val redirectUrl = if (showSlackDialog) libraryUrl + "?showSlackDialog" else libraryUrl
+    Redirect(redirectUrl, SEE_OTHER)
+  }
+
   def registerSlackAuthorization(codeOpt: Option[String], state: String) = UserAction.async { request =>
     implicit val scopesFormat = SlackAuthScope.dbFormat
-    val stateObj = SlackState.toJson(SlackState(state)).toOption.flatMap(_.asOpt[JsObject])
-    val libIdOpt = stateObj.flatMap(obj => (obj \ "lid").asOpt[PublicId[Library]].flatMap(lid => Library.decodePublicId(lid).toOption))
-
-    val redir = stateObj.flatMap(deepLinkRouter.generateRedirect).map(r => r.url + "?showSlackDialog").getOrElse("/")
-
-    val authFut = for {
+    val resultFut = for {
       code <- codeOpt.map(Future.successful).getOrElse(Future.failed(SlackAPIFailure.NoAuthCode))
       slackAuth <- slackClient.processAuthorizationResponse(SlackAuthorizationCode(code))
       slackIdentity <- slackClient.identifyUser(slackAuth.accessToken)
-    } yield {
-      slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
-      (libIdOpt, slackAuth.incomingWebhook) match {
-        case (Some(libId), Some(webhook)) => slackCommander.setupIntegrations(request.userId, libId, webhook, slackIdentity)
-        case _ =>
-      }
-    }
+      result <- {
+        slackCommander.registerAuthorization(request.userId, slackAuth, slackIdentity)
+        for {
+          stateValue <- SlackState.toJson(SlackState(state)).toOption
+          (action, dataJson) <- stateValue.asOpt(SlackAuthenticatedAction.readsWithDataJson)
+          result <- dataJson.asOpt(action.readsDataAndThen(processAuthorizedAction(request.userId, slackAuth, slackIdentity, _, _)))
+        } yield result
+      } getOrElse Future.successful(BadRequest)
+    } yield result
 
-    authFut.recover {
-      case fail: SlackAPIFailure => ()
-    }.map { _ =>
-      Redirect(redir, SEE_OTHER)
+    resultFut.recover {
+      case fail: SlackAPIFailure => Redirect("/", SEE_OTHER) // we could have an explicit error page here
+    }
+  }
+
+  private def processAuthorizedAction[T](userId: Id[User], slackAuth: SlackAuthorizationResponse, slackIdentity: SlackIdentifyResponse, action: SlackAuthenticatedAction[T], data: T): Future[Result] = {
+    import SlackAuthenticatedAction._
+    action match {
+      case SetupLibraryIntegrations => (Library.decodePublicId(data), slackAuth.incomingWebhook) match {
+        case (Success(libId), Some(webhook)) =>
+          slackCommander.setupIntegrations(userId, libId, webhook, slackIdentity)
+          Future.successful(redirectToLibrary(libId, showSlackDialog = true))
+        case _ => Future.successful(BadRequest)
+      }
+      case TurnOnLibraryPush => (LibraryToSlackChannel.decodePublicId(data), slackAuth.incomingWebhook) match {
+        case (Success(integrationId), Some(webhook)) =>
+          val libraryId = slackCommander.turnOnLibraryPush(integrationId, webhook, slackIdentity)
+          Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
+        case _ => Future.successful(BadRequest)
+      }
+      case TurnOnChannelIngestion => SlackChannelToLibrary.decodePublicId(data) match {
+        case Success(integrationId) =>
+          val libraryId = slackCommander.turnOnChannelIngestion(integrationId, slackIdentity)
+          Future.successful(redirectToLibrary(libraryId, showSlackDialog = true))
+        case _ => Future.successful(BadRequest)
+      }
     }
   }
 

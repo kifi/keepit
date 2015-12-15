@@ -36,13 +36,14 @@ import securesocial.core.IdentityId
 
 import scala.concurrent.Future
 import scala.util.{ Try, Failure, Success }
-import com.keepit.common.json.{ TraversableFormat, EitherFormat, TupleFormat }
+import com.keepit.common.json.{ KeyFormat, TraversableFormat, EitherFormat, TupleFormat }
 
 class ShoeboxController @Inject() (
   db: Database,
   userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
   keepRepo: KeepRepo,
+  keepSourceAttributionRepo: KeepSourceAttributionRepo,
   keepCommander: KeepCommander,
   normUriRepo: NormalizedURIRepo,
   normalizedURIInterner: NormalizedURIInterner,
@@ -52,7 +53,6 @@ class ShoeboxController @Inject() (
   postOffice: LocalPostOffice,
   airbrake: AirbrakeNotifier,
   keepDecorator: KeepDecorator,
-  keepSourceCommander: KeepSourceCommander,
   keepImageCommander: KeepImageCommander,
   basicUserRepo: BasicUserRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
@@ -463,6 +463,28 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(keepDataById))
   }
 
+  def getDiscussionKeepsByIds() = Action.async(parse.tolerantJson) { request =>
+    implicit val payloadFormat = KeyFormat.key2Format[Id[User], Set[Id[Keep]]]("viewerId", "keepIds")
+    val (viewerId, keepIds) = request.body.as[(Id[User], Set[Id[Keep]])]
+
+    val keepById = db.readOnlyReplica { implicit s => keepRepo.getByIds(keepIds) }
+    val keepsSeq = keepIds.toList.flatMap(keepById.get)
+    val keepInfosFut = keepDecorator.decorateKeepsIntoKeepInfos(
+      Some(viewerId),
+      showPublishedLibraries = true,
+      keepsSeq = keepsSeq,
+      idealImageSize = ProcessedImageSize.Medium.idealSize,
+      sanitizeUrls = true
+    )
+
+    keepInfosFut.map { keepInfos =>
+      val keepInfoById = (keepsSeq zip keepInfos).map {
+        case (keep, keepInfo) => keep.id.get -> keepInfo.asDiscussionKeep
+      }.toMap
+      Ok(Json.toJson(keepInfoById))
+    }
+  }
+
   def getBasicLibraryDetails() = Action(parse.tolerantJson) { request =>
     val libraryIds = (request.body \ "libraryIds").as[Set[Id[Library]]]
     val idealImageSize = (request.body \ "idealImageSize").as[ImageSize]
@@ -589,8 +611,9 @@ class ShoeboxController @Inject() (
   def getSourceAttributionForKeeps() = Action(parse.tolerantJson) { request =>
     val keepIds = (request.body \ "keepIds").as[Set[Id[Keep]]]
     val attributions = db.readOnlyMaster { implicit session =>
-      keepSourceCommander.getSourceAttributionForKeeps(keepIds)
+      keepSourceAttributionRepo.getByKeepIdsNoCache(keepIds)
     }
+    implicit val writes = SourceAttribution.internalFormat
     Ok(Json.toJson(attributions))
   }
 }

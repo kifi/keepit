@@ -50,26 +50,6 @@ class MessagingController @Inject() (
     }
   }
 
-  def verifyAllNotifications() = Action { request => //Use with caution, very expensive!
-    //Will need to change when we have detached threads.
-    //currently only verifies
-    SafeFuture {
-      log.warn("Starting notification verification!")
-      val userThreads: Seq[UserThread] = db.readOnlyMaster { implicit session => userThreadRepo.all }
-      val nUrls: Map[Id[MessageThread], String] = db.readOnlyMaster { implicit session => threadRepo.all } map { thread => (thread.id.get, thread.url) } toMap
-
-      userThreads.foreach { userThread =>
-        if (userThread.uriId.isDefined) {
-          nUrls.get(userThread.threadId).foreach { correctNUrl =>
-            log.warn(s"Verifying notification on user thread ${userThread.id.get}")
-            uriNormalizationUpdater.fixLastNotificationJson(userThread, correctNUrl)
-          }
-        }
-      }
-    }
-    Status(ACCEPTED)
-  }
-
   def getNonUserThreadMuteInfo(token: String) = Action { request =>
     val result = messagingCommander.getNonUserThreadOptByAccessToken(ThreadAccessToken(token)).map { nonUserThread =>
       (nonUserThread.participant.identifier, nonUserThread.muted)

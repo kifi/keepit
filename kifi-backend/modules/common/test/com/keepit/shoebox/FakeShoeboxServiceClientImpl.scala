@@ -16,6 +16,7 @@ import com.keepit.common.store.ImageSize
 import com.keepit.common.time._
 import com.keepit.common.usersegment.UserSegment
 import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.discussion.DiscussionKeep
 import com.keepit.model._
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.notify.info._
@@ -360,13 +361,18 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
     val basicUsers = userIds.map { id =>
-      val dummyUser = User(
-        id = Some(id),
-        firstName = "Douglas",
-        lastName = "Adams-clone-" + id.toString,
-        primaryUsername = Some(PrimaryUsername(Username("adams"), Username("adams")))
-      )
-      val user = allUsers.getOrElse(id, dummyUser)
+      val user = allUsers.get(id) match {
+        case Some(u) => u
+        case None =>
+          val dummyUser = User(
+            id = Some(id),
+            firstName = "Douglas",
+            lastName = "Adams-clone-" + id.toString,
+            primaryUsername = Some(PrimaryUsername(Username("adams"), Username("adams")))
+          )
+          allUsers.put(id, dummyUser)
+          dummyUser
+      }
       id -> BasicUser.fromUser(user)
     }.toMap
     Future.successful(basicUsers)
@@ -611,7 +617,7 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
         keep.userId == userId,
         true,
         keep.visibility,
-        Library.publicId(keep.libraryId.get)
+        keep.libraryId.map(Library.publicId)
       )
     })
   }
@@ -672,6 +678,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
     )).toMap
   }
 
+  def getDiscussionKeepsByIds(viewerId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], DiscussionKeep]] = Future.successful(Map.empty)
+
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = Future.successful(Map.empty)
 
   def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = Future.successful(None)
@@ -683,4 +691,8 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = Future.successful(SlackChannelIntegrations.none(teamId, channelId))
 
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
+
+  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = Future.successful(true)
+
+  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = Future.successful(true)
 }

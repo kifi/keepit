@@ -39,6 +39,9 @@ case class ServiceRoute(method: Method, path: String, params: Param*) {
 case class Param(key: String, value: ParamValue = ParamValue(None)) {
   override def toString(): String = s"key->${value.value.getOrElse("")}"
 }
+object Param {
+  implicit def fromTuple[T](keyValue: (String, T))(implicit toParamValue: T => ParamValue) = Param(keyValue._1, toParamValue(keyValue._2))
+}
 
 case class ParamValue(value: Option[String])
 
@@ -169,12 +172,15 @@ object Shoebox extends Service {
     def getOrgTrackingValues(orgId: Id[Organization]) = ServiceRoute(GET, "/internal/shoebox/database/getOrgTrackingValues", Param("orgId", orgId))
     def getBasicKeepsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicKeepsByIds")
     def getCrossServiceKeepsByIds = ServiceRoute(POST, "/internal/shoebox/database/getCrossServiceKeepsByIds")
+    def getDiscussionKeepsByIds = ServiceRoute(POST, "/internal/shoebox/database/getDiscussionKeepsByIds")
     def getBasicOrganizationsByIds() = ServiceRoute(POST, "/internal/shoebox/database/getBasicOrganizationsByIds")
     def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getLibraryMembershipView", Param("libraryId", libraryId), Param("userId", userId))
     def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/getOrganizationUserRelationship", Param("orgId", orgId), Param("userId", userId))
     def getUserPermissionsByOrgId() = ServiceRoute(POST, "/internal/shoebox/database/getUserPermissionsByOrgId")
     def getIntegrationsBySlackChannel() = ServiceRoute(POST, "/internal/shoebox/database/getIntegrationsBySlackChannel")
     def getSourceAttributionForKeeps() = ServiceRoute(POST, "/internal/shoebox/database/getSourceAttributionForKeeps")
+    def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]) = ServiceRoute(GET, "/internal/shoebox/database/canCommentOnKeep", Param("userId", userId), Param("keepId", keepId))
+    def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]) = ServiceRoute(GET, "/internal/shoebox/database/canDeleteCommentOnKeep", Param("userId", userId), Param("keepId", keepId))
   }
 }
 
@@ -253,7 +259,16 @@ object Eliza extends Service {
     def getSharedThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/sharedThreadsForGroupByWeek")
     def getAllThreadsForGroupByWeek = ServiceRoute(POST, "/internal/eliza/allThreadsForGroupByWeek")
     def getParticipantsByThreadExtId(threadExtId: String) = ServiceRoute(GET, "/internal/eliza/getParticipantsByThreadExtId", Param("threadId", threadExtId))
+
+    def getCrossServiceMessages = ServiceRoute(POST, "/internal/eliza/getCrossServiceMessages")
     def getDiscussionsForKeeps = ServiceRoute(POST, "/internal/eliza/getDiscussionsForKeeps")
+    def markKeepsAsReadForUser() = ServiceRoute(POST, "/internal/eliza/markKeepsAsReadForUser")
+    def sendMessageOnKeep() = ServiceRoute(POST, "/internal/eliza/sendMessageOnKeep")
+    def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")
+    def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
+    def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")
+    def rpbGetThread = ServiceRoute(POST, "/internal/eliza/rpbGetThread")
+    def rpbConnectKeep() = ServiceRoute(POST, "/internal/eliza/rpbConnectKeep")
   }
 }
 

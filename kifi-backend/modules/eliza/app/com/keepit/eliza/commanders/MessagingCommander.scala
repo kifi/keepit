@@ -71,9 +71,7 @@ class MessagingCommander @Inject() (
     }.toMap
     //get user_threads
     val userThreads: Map[Id[MessageThread], UserThread] = db.readOnlyMaster { implicit session =>
-      threads.map { thread =>
-        (thread.id.get, userThreadRepo.getUserThread(userId, thread.id.get))
-      }
+      threads.map { thread => thread.id.get -> userThreadRepo.getUserThread(userId, thread.id.get).get }
     }.toMap
 
     userId2BasicUserF.map { userId2BasicUser =>
@@ -267,7 +265,6 @@ class MessagingCommander @Inject() (
     log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite { implicit session =>
       messageRepo.save(ElizaMessage(
-        id = None,
         from = from,
         thread = thread.id.get,
         threadExtId = thread.externalId,
@@ -307,11 +304,20 @@ class MessagingCommander @Inject() (
     thread.participants.allUsers.foreach { user =>
       notificationDeliveryCommander.notifyMessage(user, thread, messageWithBasicUser)
     }
+    // For everyone except the sender, mark their thread as unread
+    db.readWrite { implicit s =>
+      (thread.participants.allUsers -- from.asUser).foreach { user =>
+        userThreadRepo.markUnread(user, thread.id.get)
+      }
+    }
 
     // update user thread of the sender
     from.asUser.foreach { sender =>
       setLastSeen(sender, thread.id.get, Some(message.createdAt))
-      db.readWrite { implicit session => userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt) }
+      db.readWrite { implicit session =>
+        userThreadRepo.setLastActive(sender, thread.id.get, message.createdAt)
+        userThreadRepo.markRead(sender, thread.id.get, message)
+      }
     }
 
     // update user threads of user recipients - this somehow depends on the sender's user thread update above
@@ -516,7 +522,7 @@ class MessagingCommander @Inject() (
     val stateChanged = db.readWrite { implicit session =>
       val thread = threadRepo.get(extId)
       userThreadRepo.getUserThread(userId, thread.id.get) match {
-        case ut if ut.muted != mute =>
+        case Some(ut) if ut.muted != mute =>
           userThreadRepo.setMuteState(ut.id.get, mute)
         case _ => false
       }

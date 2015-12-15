@@ -64,46 +64,40 @@ class HashtagsTest extends Specification {
     }
 
     "remove specific hashtags from a string" in {
-      Hashtags.removeHashtagNamesFromString("", Set("asdf")) === ""
-      Hashtags.removeHashtagNamesFromString("asdf", Set("asdf")) === "asdf"
-      Hashtags.removeHashtagNamesFromString("#[asdf]", Set("asdf")) === "#[asdf]"
-      Hashtags.removeHashtagNamesFromString("[\\#asdf]", Set("asdf")) === "[\\#asdf]"
-      Hashtags.removeHashtagNamesFromString("[#asdf]", Set("asdf")) === ""
-      Hashtags.removeHashtagNamesFromString("[#asdf]]", Set("asdf")) === "]"
-      Hashtags.removeHashtagNamesFromString("[#asdf\\]]", Set("asdf")) === "[#asdf\\]]" //'#asdf\]' does not match '#asdf'
-      Hashtags.removeHashtagNamesFromString("[#asd[f\\]]", Set("asdf")) === "[#asd[f\\]]" //'#asd[f\]' does not match '#asdf'
-      Hashtags.removeHashtagNamesFromString("[##asdf]", Set("asdf")) === "[##asdf]"
-      Hashtags.removeHashtagNamesFromString("[[#asdf]]", Set("asdf")) === "[]"
+      Hashtags.removeTagNamesFromString("", Set("asdf")) === ""
+      Hashtags.removeTagNamesFromString("asdf", Set("asdf")) === "asdf"
+      Hashtags.removeTagNamesFromString("#[asdf]", Set("asdf")) === "#[asdf]"
+      Hashtags.removeTagNamesFromString("[\\#asdf]", Set("asdf")) === "[\\#asdf]"
+      Hashtags.removeTagNamesFromString("[#asdf]", Set("asdf")) === ""
+      Hashtags.removeTagNamesFromString("[#asdf]]", Set("asdf")) === "]"
+      Hashtags.removeTagNamesFromString("[#asdf\\]]", Set("asdf")) === "[#asdf\\]]" //'#asdf\]' does not match '#asdf'
+      Hashtags.removeTagNamesFromString("[#asd[f\\]]", Set("asdf")) === "[#asd[f\\]]" //'#asd[f\]' does not match '#asdf'
+      Hashtags.removeTagNamesFromString("[##asdf]", Set("asdf")) === "[##asdf]"
+      Hashtags.removeTagNamesFromString("[[#asdf]]", Set("asdf")) === "[]"
 
-      Hashtags.removeHashtagNamesFromString("[#asdf] [#qwer]", Set("asdf")) === "[#qwer]"
-      Hashtags.removeHashtagNamesFromString("[#asdf] [#qwer]", Set("asdf", "qwer")) === ""
-      Hashtags.removeHashtagNamesFromString("[#asdf] a [#qwer]", Set("asdf", "qwer")) === "a"
-      Hashtags.removeHashtagNamesFromString("a [#asdf] b [#qwer] c", Set("asdf", "qwer")) === "a  b  c"
+      Hashtags.removeTagNamesFromString("[#asdf] [#qwer]", Set("asdf")) === "[#qwer]"
+      Hashtags.removeTagNamesFromString("[#asdf] [#qwer]", Set("asdf", "qwer")) === ""
+      Hashtags.removeTagNamesFromString("[#asdf] a [#qwer]", Set("asdf", "qwer")) === "a"
+      Hashtags.removeTagNamesFromString("a [#asdf] b [#qwer] c", Set("asdf", "qwer")) === "a  b  c"
     }
 
-    "remove all hashtags or unescape them for v1 mobile notes" in {
-      // text only
-      Hashtags.formatMobileNoteV1(None) === None
-      Hashtags.formatMobileNoteV1(Some("")) === None
-      Hashtags.formatMobileNoteV1(Some("hi there")) === Some("hi there")
-      Hashtags.formatMobileNoteV1(Some("[\\#asdf]")) === Some("[#asdf]")
+    "replace specific hashtags from a string" in {
+      Hashtags.replaceTagNameFromString("", "asdf", "dfgh") === ""
+      Hashtags.replaceTagNameFromString("asdf", "asdf", "") === "asdf"
+      Hashtags.replaceTagNameFromString("#[asdf]", "asdf", "dfgh") === "#[asdf]"
 
-      // tags only
-      Hashtags.formatMobileNoteV1(Some("[#\\asd\\]f]")) === None
-      Hashtags.formatMobileNoteV1(Some("[#asdf\\]]")) === None
-      Hashtags.formatMobileNoteV1(Some("[#asd[f\\]]")) === None
-      Hashtags.formatMobileNoteV1(Some("[##asdf]")) === None
-      Hashtags.formatMobileNoteV1(Some("[#asdf]")) === None
-      Hashtags.formatMobileNoteV1(Some("[#asdf] [#hjkl]")) === None
-      Hashtags.formatMobileNoteV1(Some(" [#asdf] [#hjkl] ")) === None
+      Hashtags.replaceTagNameFromString("[#asdf]", "Asdf", "dfgh") === "[#dfgh]"
+      Hashtags.replaceTagNameFromString("[#Asdf]", "asdf", "dfgh") === "[#dfgh]"
+      Hashtags.replaceTagNameFromString("[#asdf]", "asdf", "Asdf") === "[#Asdf]"
 
-      // text + tags
-      Hashtags.formatMobileNoteV1(Some("this is really useful [#tag1] [#tag2]")) === Some("this is really useful")
-      Hashtags.formatMobileNoteV1(Some("this is really [\\#useful] [#tag1] [#tag2]")) === Some("this is really [#useful]")
-      //Hashtags.formatMobileNoteV1(Some("i love [#scala]")) === Some("i love #scala")
-      //Hashtags.formatMobileNoteV1(Some("""i love [#\\asdf\]]""")) === Some("""i love #\asdf]""")
-      //Hashtags.formatMobileNoteV1(Some("[[#asdf]]")) === Some("[#asdf]")
-      //Hashtags.formatMobileNoteV1(Some("[#asdf]]")) === Some("#asdf]")
+      Hashtags.replaceTagNameFromString("[\\#asdf]", "asdf", "dfgh") === "[\\#asdf]"
+      Hashtags.replaceTagNameFromString("[#asdf]", "Asdf", "") === ""
+
+      Hashtags.replaceTagNameFromString("[#asdf] [#qwer]", "asdf", "dfgh") === "[#dfgh] [#qwer]"
+      Hashtags.replaceTagNameFromString("[#asdf] [#qwer]", "asdf", "qwer") === "[#qwer] [#qwer]"
+      Hashtags.replaceTagNameFromString("[#asdf] a [#qwer]", "asdf", "dfgh") === "[#dfgh] a [#qwer]"
+      Hashtags.replaceTagNameFromString("a [#asdf] b [#qwer] c", "asdf", "dfgh") === "a [#dfgh] b [#qwer] c"
     }
+
   }
 }

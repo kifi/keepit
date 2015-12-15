@@ -130,34 +130,6 @@ object LibraryNewKeep extends NonGroupingNotificationKind[LibraryNewKeep] {
 
 }
 
-// todo is this ever really used/called?
-case class NewKeepActivity(
-  recipient: Recipient,
-  time: DateTime,
-  keeperId: Id[User],
-  keepId: Id[Keep],
-  libraryId: Id[Library]) extends NotificationEvent {
-
-  type N = NewKeepActivity
-  val kind = NewKeepActivity
-
-}
-
-object NewKeepActivity extends NonGroupingNotificationKind[NewKeepActivity] {
-
-  override val name: String = "new_keep_activity"
-
-  override implicit val format = (
-    (__ \ "recipient").format[Recipient] and
-      (__ \ "time").format[DateTime] and
-      (__ \ "keeperId").format[Id[User]] and
-      (__ \ "keepId").format[Id[Keep]] and
-      (__ \ "libraryId").format[Id[Library]]
-    )(NewKeepActivity.apply, unlift(NewKeepActivity.unapply))
-
-}
-
-
 case class LibraryCollabInviteAccepted(
   recipient: Recipient,
   time: DateTime,

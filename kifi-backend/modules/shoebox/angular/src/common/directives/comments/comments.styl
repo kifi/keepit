@@ -2,72 +2,77 @@
   display: flex
   width: 100%
   height: auto
-  flex-direction: row
+  flex-flow: row wrap
   justify-content: space-around
 
-  .kf-keep-comments
-    display: flex
-    flex-direction: column
-    width: 100%
-    //border-left: solid 1px #3e495533
-    //border-right: solid 1px #3e495533
-    //border-bottom: solid 1px #3e495533
-    //border-bottom-left-radius: 5px
-    //border-bottom-right-radius: 5px
-    //background-color: #3e495508
-    padding: 15px 10px 0px 10px
+  > * + *
+    margin: 15px 0 0
 
-    .kf-keep-comments-view-previous
-      font-size: 14px
-      font-weight: bold
-      color: accentGreen
-      -webkit-font-smoothing: antialiased
-      align-self: center
-      margin-bottom: 10px
+.kf-keep-comments
+  display: flex
+  flex-direction: column
+  width: 100%
+  padding: 15px 10px 0px 10px
 
-      &:hover
-        text-decoration: underline
-        cursor: pointer
+.kf-keep-comments-view-previous
+  font-size: 14px
+  font-weight: bold
+  color: accentGreen
+  font-smoothing: antialiased
+  align-self: center
+  margin-bottom: 10px
 
-    .kf-keep-comments-comment-v-spacing
-      margin-bottom: 15px
+  &:hover
+    text-decoration: underline
+    cursor: pointer
 
-    .kf-keep-comments-input-container
-      flex-direction: row
-      flex-wrap: nowrap
-      display: flex
+.kf-keep-comments-input-container
+  flex-direction: row
+  flex-wrap: nowrap
+  display: flex
 
-      [contenteditable=true]:empty:before{
-        content: attr(placeholder);
-        display: block; /* For Firefox */
-        -webkit-font-smoothing: antialiased
-        color: #AAA
-      }
+[contenteditable]:empty:before
+  content: attr(placeholder)
+  display: block
+  font-smoothing: antialiased
+  color: #AAA
 
-      .kf-keep-comments-input-user-img
-        align-self: flex-start
-        width: 34px
-        height: 34px
-        background: #3e495533
-        border-radius: 17px
-        flex-shrink: 0
-        margin-right: 10px
-        border: none
-        outline: none
+.kf-keep-comments-input-user-img
+  align-self: flex-start
+  width: 34px
+  height: 34px
+  background: #3e495533
+  border-radius: 17px
+  flex-shrink: 0
+  margin-right: 10px
+  border: none
+  outline: none
 
-      .kf-keep-comments-input
-        height: auto
-        white-space: pre-wrap
-        word-wrap: break-word
-        background-color: #FBFBFB
-        max-height: 300px
-        flex-grow: 1
-        border: 1px solid #3e495533
-        border-radius: 1px
-        font-size: 14px
-        padding: 7px
-        padding-right: 10px
-        padding-left: 10px
-        color: #333333
-        box-sizing: border-box
+.kf-keep-comments-input
+  height: auto
+  white-space: pre-wrap
+  word-wrap: break-word
+  background-color: #FBFBFB
+  max-height: 300px
+  flex-grow: 1
+  border: 1px solid #3e495533
+  border-radius: 1px
+  font-size: 14px
+  padding: 7px
+  padding-right: 10px
+  padding-left: 10px
+  color: #333333
+  box-sizing: border-box
 
+.kf-keep-comments-error
+  margin-right: 15px
+  margin-left: auto
+  font-size: 14px
+  text-align: left
+  color: errorRed
+
+.kf-keep-comments-comment + .kf-keep-comments-comment
+  margin-top: 15px
+
+.kf-keep-comments-comment + .kf-keep-comments-input-container
+  margin-top: 15px

@@ -89,7 +89,6 @@ class MobileLibraryController @Inject() (
             color = externalCreateRequest.color,
             listed = externalCreateRequest.listed,
             whoCanInvite = externalCreateRequest.whoCanInvite,
-            subscriptions = externalCreateRequest.subscriptions,
             space = space,
             orgMemberAccess = externalCreateRequest.orgMemberAccess
           )
@@ -147,9 +146,9 @@ class MobileLibraryController @Inject() (
             color = externalLibraryModifyRequest.color,
             listed = externalLibraryModifyRequest.listed,
             whoCanInvite = externalLibraryModifyRequest.whoCanInvite,
-            subscriptions = externalLibraryModifyRequest.subscriptions,
             space = space,
-            orgMemberAccess = externalLibraryModifyRequest.orgMemberAccess
+            orgMemberAccess = externalLibraryModifyRequest.orgMemberAccess,
+            whoCanComment = externalLibraryModifyRequest.whoCanComment
           )
         }
 

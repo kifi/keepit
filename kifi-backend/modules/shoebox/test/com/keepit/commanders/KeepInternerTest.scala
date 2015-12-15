@@ -90,7 +90,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           userRepo.get(user.id.get) === user
           val targetRawKeep = rawKeepRepo.all.headOption
           targetRawKeep.map(_.url) === Some("http://42go.com")
-          targetRawKeep.map(_.libraryId.get) === lib.id
+          targetRawKeep.flatMap(_.libraryId) === lib.id
           rawKeepRepo.all.size === 1
         }
       }

@@ -75,7 +75,7 @@ trait LibraryRepo extends Repo[Library] with SeqNumberFunction[Library] {
   def orgsWithMostLibs()(implicit session: RSession): Seq[(Id[Organization], Int)]
 
   // one-time admin cleanup endpoint
-  def getLibrariesWithInactiveOwner()(implicit session: RSession): Seq[Id[Library]]
+  def allActive()(implicit session: RSession): Seq[Library]
 
   def deactivate(model: Library)(implicit session: RWSession): Unit
   def countPublishedNonEmptyOrgLibraries(orgId: Id[Organization], minKeepCount: Int = 2)(implicit session: RSession): Int
@@ -111,8 +111,9 @@ class LibraryRepoImpl @Inject() (
     def whoCanInvite = column[Option[LibraryInvitePermissions]]("invite_collab", O.Nullable)
     def orgId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def orgMemberAccess = column[Option[LibraryAccess]]("organization_member_access", O.Nullable)
+    def whoCanComment = column[LibraryCommentPermissions]("who_can_comment", O.NotNull)
 
-    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount, whoCanInvite, orgId, orgMemberAccess) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
+    def * = (id.?, createdAt, updatedAt, state, name, ownerId, description, visibility, slug, color.?, seq, kind, memberCount, universalLink, lastKept, keepCount, whoCanInvite, orgId, orgMemberAccess, whoCanComment) <> ((Library.applyFromDbRow _).tupled, Library.unapplyToDbRow _)
   }
 
   implicit val getLibraryResult: GetResult[Library] = GetResult { r: PositionedResult =>
@@ -135,7 +136,8 @@ class LibraryRepoImpl @Inject() (
       keepCount = r.<<[Int],
       whoCanInvite = r.<<[Option[String]].map(LibraryInvitePermissions(_)),
       organizationId = r.<<[Option[Id[Organization]]],
-      organizationMemberAccess = r.<<[Option[LibraryAccess]]
+      organizationMemberAccess = r.<<[Option[LibraryAccess]],
+      whoCanComment = r.<<[LibraryCommentPermissions]
     )
   }
 
@@ -145,6 +147,8 @@ class LibraryRepoImpl @Inject() (
 
   def table(tag: Tag) = new LibraryTable(tag)
   initTable()
+
+  def allActive()(implicit session: RSession): Seq[Library] = rows.filter(_.state === LibraryStates.ACTIVE).list
 
   override def save(library: Library)(implicit session: RWSession): Library = {
     val toSave = library.copy(seq = deferredSeqNum())
@@ -526,12 +530,6 @@ class LibraryRepoImpl @Inject() (
       val cnts = q.as[(Int, Int)].list.map { case (userId, count) => Id[User](userId) -> count }.toMap
       owners.map { user => user -> cnts.getOrElse(user, 0) }.toMap
     }
-  }
-
-  def getLibrariesWithInactiveOwner()(implicit session: RSession): Seq[Id[Library]] = {
-    import com.keepit.common.db.slick.StaticQueryFixed.interpolation
-    val q = sql"""select lib.id from library lib inner join user u on lib.owner_id = u.id where lib.state = 'active' and u.state = 'inactive'"""
-    q.as[Id[Library]].list
   }
 
   def deactivate(model: Library)(implicit session: RWSession): Unit = {

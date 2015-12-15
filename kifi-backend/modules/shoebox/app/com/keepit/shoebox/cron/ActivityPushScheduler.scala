@@ -7,7 +7,6 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.S3ImageStore
 import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.Recipient
-import com.keepit.notify.model.event.NewKeepActivity
 import com.keepit.social.BasicUser
 import play.api.libs.json.Json
 
@@ -35,7 +34,6 @@ import scala.util.Random
 
 trait PushNotificationMessage
 case class PersonaActivityPushNotificationMessage(message: String) extends PushNotificationMessage
-case class LibraryPushNotificationMessage(message: String, lib: Library, owner: BasicUser, newKeep: Keep, libraryUrl: String, libImageOpt: Option[LibraryImage]) extends PushNotificationMessage
 
 object PushActivities
 object CreatePushActivityEntities
@@ -109,17 +107,6 @@ class ActivityPusher @Inject() (
 
   }
 
-  def forcePushLibraryActivityForUser(userId: Id[User]): Unit = {
-    val task = db.readOnlyMaster { implicit s =>
-      activityPushTaskRepo.getByUser(userId)
-    }
-    PushNotificationExperiment.All.foreach { experiment =>
-      getLibraryActivityMessage(experiment, userId) foreach { message =>
-        pushMessage(task.get, message, experiment)
-      }
-    }
-  }
-
   def forcePersonaActivityForUser(userId: Id[User]): Unit = {
     val task = db.readOnlyMaster { implicit s =>
       activityPushTaskRepo.getByUser(userId)
@@ -154,21 +141,6 @@ class ActivityPusher @Inject() (
 
   private def pushMessage(activity: ActivityPushTask, message: PushNotificationMessage, experimant: PushNotificationExperiment): Unit = {
     val res: Future[Int] = message match {
-      case libMessage: LibraryPushNotificationMessage =>
-        log.info(s"pushing library activity update to ${activity.userId} [$experimant]: $message")
-        val devices =
-          elizaServiceClient.sendLibraryPushNotification(activity.userId, libMessage.message, libMessage.lib.id.get, libMessage.libraryUrl, experimant, LibraryPushNotificationCategory.LibraryChanged, activity.state == ActivityPushTaskStates.NO_DEVICES)
-        val owner = db.readOnlyReplica { implicit session =>
-          userRepo.get(libMessage.owner.externalId)
-        }
-        elizaServiceClient.sendNotificationEvent(NewKeepActivity(
-          Recipient(activity.userId),
-          currentDateTime,
-          owner.id.get,
-          libMessage.newKeep.id.get,
-          libMessage.lib.id.get
-        ))
-        devices
       case personaMessage: PersonaActivityPushNotificationMessage =>
         log.info(s"pushing general persona activity update to ${activity.userId} [$experimant]: $message")
         elizaServiceClient.sendGeneralPushNotification(activity.userId, personaMessage.message, experimant, SimplePushNotificationCategory.PersonaUpdate, activity.state == ActivityPushTaskStates.NO_DEVICES)
@@ -214,25 +186,6 @@ class ActivityPusher @Inject() (
 
   }
 
-  private def getLibraryActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[LibraryPushNotificationMessage] = {
-    db.readOnlyReplica { implicit s =>
-      libraryMembershipRepo.getLatestUpdatedLibraryUserFollow(userId) flatMap { lib =>
-        val message = {
-          if (experiment == PushNotificationExperiment.Experiment1) s"""New keeps in "${lib.name.abbreviate(25)}""""
-          else s""""${lib.name.abbreviate(25)}" library has updates"""
-        }
-        val owner = basicUserRepo.load(lib.ownerId)
-        val libraryUrl = "https://www.kifi.com" + libPathCommander.getPathForLibraryUrlEncoded(lib)
-        keepRepo.getByLibrary(lib.id.get, 0, 1) match {
-          case keeps if keeps.nonEmpty =>
-            val libImageOpt = libraryImageCommander.getBestImageForLibrary(lib.id.get, ProcessedImageSize.Medium.idealSize)
-            Some(LibraryPushNotificationMessage(message, lib, owner, keeps.head, libraryUrl, libImageOpt))
-          case _ => None
-        }
-      }
-    }
-  }
-
   private def getPersonaActivityMessage(experiment: PushNotificationExperiment, userId: Id[User]): Option[PersonaActivityPushNotificationMessage] = {
     db.readOnlyReplica { implicit s =>
       val personas = Random.shuffle(userPersonaRepo.getPersonasForUser(userId))
@@ -258,10 +211,7 @@ class ActivityPusher @Inject() (
   }
 
   private def getMessage(userId: Id[User]): Option[(PushNotificationMessage, PushNotificationExperiment)] = {
-    val canSendLibPush = kifiInstallationCommander.isMobileVersionEqualOrGreaterThen(userId, KifiAndroidVersion("2.2.4"), KifiIPhoneVersion("2.1.0"))
     val experiment = if (Random.nextBoolean()) PushNotificationExperiment.Experiment1 else PushNotificationExperiment.Experiment2
-    //val libMessage = if (canSendLibPush) getLibraryActivityMessage(experiment, userId) else None
-    // Removed for now because users can opt in to library update pushes, and this is confusing otherwise. More thought needed?
     val message = getPersonaActivityMessage(experiment, userId)
     message.map(m => m -> experiment)
   }

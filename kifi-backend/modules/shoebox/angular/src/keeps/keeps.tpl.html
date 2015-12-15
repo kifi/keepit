@@ -1,5 +1,8 @@
 <div class="kf-main-keeps">
-  <div kf-quick-keep library="library"></div>
+  <div ng-if="keepUpdatesPending">
+    <button class="kf-link kf-link-underline kf-link-blue kf-keeps-update" ng-click="refreshLibrary()" ng-if="keepUpdatesPending > 0">View {{keepUpdatesPending}} new keeps</button>
+    <button class="kf-link kf-link-underline kf-link-blue kf-keeps-update" ng-click="refreshLibrary()" ng-if="keepUpdatesPending === -1">Refresh keeps</button>
+  </div>
   <ol class="kf-my-keeps" smart-scroll scroll-distance="scrollDistance" scroll-disabled="isScrollDisabled()" scroll-next="scrollNext()(keeps.length)">
     <li>
       <div class="kf-keep-selection-tools" ng-if="edit.enabled" ng-show="availableKeeps.length > 0">

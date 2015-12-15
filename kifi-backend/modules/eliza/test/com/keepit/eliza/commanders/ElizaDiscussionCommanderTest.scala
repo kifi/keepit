@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
+import com.keepit.common.concurrent.{ FutureHelpers, WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
@@ -20,7 +20,7 @@ import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable.SpecificationLike
 import play.api.libs.json.{ JsNull, Json }
 
-import scala.concurrent.Await
+import scala.concurrent.{ Future, Await }
 import scala.concurrent.duration.Duration
 
 class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
@@ -117,19 +117,39 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           ans.get.numMessages === 2
         }
       }
-      "make sure that new users have their stupid lastNotification set" in {
+    }
+    "mark keeps as read" in {
+      "handle unread messages" in {
         withDb(modules: _*) { implicit injector =>
           val keep = Id[Keep](1)
           val user1 = Id[User](1)
           val user2 = Id[User](2)
 
-          db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
+          Await.result(for {
+            _ <- discussionCommander.sendMessageOnKeep(user1, "First post!", keep)
+            _ <- discussionCommander.sendMessageOnKeep(user2, "My first post too!", keep)
+            _ <- discussionCommander.sendMessageOnKeep(user2, "And another post!", keep)
+          } yield Unit, Duration.Inf)
+          val msgs = db.readOnlyMaster { implicit s => messageRepo.all }
 
-          discussionCommander.sendMessageOnKeep(user2, "First post!", keep)
           inject[WatchableExecutionContext].drain()
+
           db.readOnlyMaster { implicit s =>
-            val th = messageThreadRepo.getByKeepId(keep).get
-            userThreadRepo.getByThread(th.id.get).foreach { uth => uth.lastNotification !== JsNull }
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(true)
+            userThreadRepo.getUserThread(user2, mtId).map(_.unread) must beSome(false)
+          }
+
+          discussionCommander.markAsRead(user1, keep, msgs(1).id.get) must beSome(1)
+          db.readOnlyMaster { implicit s =>
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(true)
+          }
+
+          discussionCommander.markAsRead(user1, keep, msgs.last.id.get) must beSome(0)
+          db.readOnlyMaster { implicit s =>
+            val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
+            userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(false)
           }
           1 === 1
         }

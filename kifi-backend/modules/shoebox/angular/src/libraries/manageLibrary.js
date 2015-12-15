@@ -40,10 +40,9 @@ angular.module('kifi')
         scope.$error = {};
         scope.colors = ['#447ab7','#5ab7e7','#4fc49e','#f99457','#dd5c60','#c16c9e','#9166ac'];
         scope.currentPageOrigin = '';
-        scope.showSubIntegrations = false;
-        scope.newBlankSub = function () { return { 'name': '', 'info': { 'kind': 'slack', 'url': '' }, 'disabled': false }; };
         scope.showError = false;
         scope.me = profileService.me;
+        scope.hasCommentExperiment = profileService.hasExperiment('keep_comments');
         scope.libraryProps = {
           inOrg: false,
           selectedOrgId: null
@@ -61,13 +60,23 @@ angular.module('kifi')
           scope.userHasEditedSlug = true;
         };
 
-        scope.toggleIntegrations = function (e) {
-          scope.integrationsOpen = !scope.integrationsOpen;
-          if (scope.integrationsOpen) {
-            element.find('.dialog-body').animate({
-              scrollTop: e.target.getBoundingClientRect().top
-            }, 500);
-          }
+        scope.toggleSelector = function () {
+          scope.library.whoCanComment = scope.library.whoCanComment === 'anyone' ? 'collaborator' : 'anyone';
+        };
+
+        scope.canAnyoneComment = function() {
+          return scope.library.whoCanComment === 'anyone';
+        };
+
+        scope.changeOrgMemberAccess = function() {
+          // This gets sent to the backend
+          scope.library.orgMemberAccess = scope.library.orgMemberAccess === 'read_write' ? 'read_only' : 'read_write';
+          // This binds the UI.
+          scope.orgMemberAccessWrite = !scope.orgMemberAccessWrite;
+        };
+
+        scope.disableOrgMemberAccess = function() {
+          return !(scope.library.id && scope.spaceIsOrg(scope.space.destination) && scope.library.visibility !== 'secret');
         };
 
         scope.addIfEnter = function(event) {
@@ -81,19 +90,6 @@ angular.module('kifi')
           if (event.keyCode === 13) {
             event.preventDefault();
           }
-        };
-
-        scope.addSubscription = function() {
-          var lastSub = scope.library.subscriptions.slice(-1)[0];
-          if(lastSub.name === '' && lastSub.info.url === '') {
-            return;
-          } else {
-            scope.library.subscriptions.push(scope.newBlankSub());
-          }
-        };
-
-        scope.removeSubscription = function (index) {
-          scope.library.subscriptions.splice(index,1);
         };
 
         scope.spaceIsOrg = function (space) {
@@ -112,8 +108,6 @@ angular.module('kifi')
 
           scope.$error = {};
 
-          validateSubscriptions();
-
           if (scope.$error.general) {
             return;
           }
@@ -131,10 +125,6 @@ angular.module('kifi')
 
           submitting = true;
 
-          var nonEmptySubscriptions = _.filter(scope.library.subscriptions, function(sub){
-            return sub.name !== '' && sub.info.url !== '';
-          });
-
           // Create an owner object that declares the type (user/org) for backend.
           var owner;
           // If the space is changing or the library is new
@@ -151,9 +141,9 @@ angular.module('kifi')
             visibility: scope.library.visibility,
             listed: (scope.library.membership && scope.library.membership.listed) || true,
             color: colorNames[scope.library.color],
-            subscriptions: nonEmptySubscriptions,
             orgMemberAccess: scope.library.orgMemberAccess,
-            space: owner
+            space: owner,
+            whoCanComment: scope.library.whoCanComment
           }, true).then(function (resp) {
 
             var newLibrary = resp.data.library;
@@ -163,7 +153,6 @@ angular.module('kifi')
             submitting = false;
             scope.close();
 
-            scope.library.subscriptions = nonEmptySubscriptions;
             if (scope.space.current.id !== scope.space.destination.id) {
               returnAction = null;
             }
@@ -200,28 +189,6 @@ angular.module('kifi')
             }
           });
         };
-
-        function validateSubscriptions() {
-          scope.library.subscriptions.forEach(function(sub) {
-
-            if (sub.name === '' && sub.info.url === '') {
-              return;
-            }
-
-            if (sub.name) { // slack channels can't have uppercase letters
-              sub.name = sub.name.toLowerCase();
-            }
-
-            sub.$error = {};
-            if (!sub.name || sub.name.indexOf(' ') > -1) {
-              sub.$error.name = true;
-              scope.$error.general = 'Please enter a valid Slack channel name for each subscription.';
-            } else if (sub.info.url === '' || sub.info.url.match(/^https:\/\/hooks.slack.com\/services\/.*\/.*\/.*[^\/]$/i) == null) {
-              sub.$error.url = true;
-              scope.$error.general = 'Please enter a valid webhook URL for each subscription.';
-            }
-          });
-        }
 
         scope.openDeleteLibraryModal = function () {
           modalService.open({
@@ -278,26 +245,6 @@ angular.module('kifi')
           }
         };
 
-        scope.isIntegrationsEnabled = function () {
-          return scope.hasPermission(LIB_PERMISSION.CREATE_SLACK_INTEGRATION);
-        };
-
-        scope.$watch(function () {
-          return scope.isIntegrationsEnabled();
-        }, function (newValue) {
-          if (newValue === false && scope.integrationsOpen === true) {
-            scope.integrationsOpen = !scope.integrationsOpen;
-          }
-        });
-
-        scope.onHoverUpsellIntegration = function () {
-          orgProfileService.trackEvent('user_viewed_page', scope.space.destination, { action: 'viewIntegrationUpsell' });
-        };
-
-        scope.onClickUpsellIntegration = function () {
-          orgProfileService.trackEvent('user_clicked_page', scope.space.destination, { action: 'clickIntegrationUpsell' });
-        };
-
         //
         // On link.
         //
@@ -311,15 +258,15 @@ angular.module('kifi')
           scope.modifyingExistingLibrary = true;
           scope.emptySlug = false;
           scope.modalTitle = scope.library.name;
-          scope.library.subscriptions = scope.library.subscriptions || [];
-          scope.library.subscriptions.push(scope.newBlankSub());
+          scope.orgMemberAccessWrite = scope.library.orgMemberAccess === 'read_only' ? false : true;
         } else {
           scope.library = {
             'name': '',
             'description': '',
             'slug': '',
             'visibility': 'published',
-            'orgMemberAccess': 'read_write'
+            'orgMemberAccess': 'read_write',
+            'whoCanComment' : 'anyone'
           };
           scope.library.org = scope.modalData.organization;
           scope.library.membership = {
@@ -327,7 +274,6 @@ angular.module('kifi')
             listed: true,
             subscribed: false
           };
-          scope.library.subscriptions = [scope.newBlankSub()];
           scope.modalTitle = 'Create a library';
         }
 

@@ -14,6 +14,7 @@ import com.keepit.model.SlackIncomingWebhookInfoFactoryHelper._
 import com.keepit.model._
 import com.keepit.slack.models._
 import com.keepit.test.ShoeboxTestInjector
+import org.apache.commons.lang3.RandomStringUtils
 import org.specs2.mutable.SpecificationLike
 import play.api.libs.json.Json
 
@@ -25,6 +26,30 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
   )
 
   "SlackCommander" should {
+    "register slack authorizations" in {
+      "let two users share one Slack auth" in {
+        withDb(modules: _*) { implicit injector =>
+          val Seq(user1, user2) = db.readWrite { implicit s => UserFactory.users(2).saved }
+          val slackTeam = SlackTeamFactory.team()
+          val slackUser = SlackUserFactory.user()
+          val ident = SlackIdentifyResponse("http://www.rando.slack.com/", slackTeam.teamName, slackUser.username, slackTeam.teamId, slackUser.userId)
+          val auth = SlackAuthorizationResponse(SlackAccessToken(RandomStringUtils.randomAlphanumeric(30)), SlackAuthScope.push, slackTeam.teamName, slackTeam.teamId, None)
+
+          db.readOnlyMaster { implicit s => inject[SlackTeamMembershipRepo].all must beEmpty }
+          slackCommander.registerAuthorization(user1.id.get, auth, ident)
+          db.readOnlyMaster { implicit s =>
+            inject[SlackTeamMembershipRepo].all must haveSize(1)
+            inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.teamId, slackUser.userId).get.userId === user1.id.get
+          }
+          slackCommander.registerAuthorization(user2.id.get, auth, ident)
+          db.readOnlyMaster { implicit s =>
+            inject[SlackTeamMembershipRepo].all must haveSize(1)
+            inject[SlackTeamMembershipRepo].getBySlackTeamAndUser(slackTeam.teamId, slackUser.userId).get.userId === user2.id.get
+          }
+          1 === 1
+        }
+      }
+    }
     "create new integrations" in {
       "handle multiple integrations for a single library" in {
         withDb(modules: _*) { implicit injector =>
@@ -118,10 +143,10 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
             (user, lib, lts, stl)
           }
           db.readOnlyMaster { implicit s =>
-            val ltss = inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
-            val stls = inject[SlackChannelToLibraryRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
-            ltss.map(_.id.get) === Set(libToSlack.id.get)
-            stls.map(_.id.get) === Set(slackToLib.id.get)
+            val ltss = inject[LibraryToSlackChannelRepo].all
+            val stls = inject[SlackChannelToLibraryRepo].all
+            ltss.map(_.id.get) === Seq(libToSlack.id.get)
+            stls.map(_.id.get) === Seq(slackToLib.id.get)
             ltss.foreach { lts => lts.status === SlackIntegrationStatus.On }
             stls.foreach { stl => stl.status === SlackIntegrationStatus.Off }
           }
@@ -132,10 +157,10 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           )
           slackCommander.modifyIntegrations(modRequest) must beSuccessfulTry
           db.readOnlyMaster { implicit s =>
-            val ltss = inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
-            val stls = inject[SlackChannelToLibraryRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
-            ltss.map(_.id.get) === Set(libToSlack.id.get)
-            stls.map(_.id.get) === Set(slackToLib.id.get)
+            val ltss = inject[LibraryToSlackChannelRepo].all
+            val stls = inject[SlackChannelToLibraryRepo].all
+            ltss.map(_.id.get) === Seq(libToSlack.id.get)
+            stls.map(_.id.get) === Seq(slackToLib.id.get)
             ltss.foreach { lts => lts.status === SlackIntegrationStatus.Off }
             stls.foreach { stl => stl.status === SlackIntegrationStatus.On }
           }
@@ -157,10 +182,10 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
             (user, lib, org, lts, stl)
           }
           db.readOnlyMaster { implicit s =>
-            val ltss = inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
-            val stls = inject[SlackChannelToLibraryRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
-            ltss.map(_.id.get) === Set(libToSlack.id.get)
-            stls.map(_.id.get) === Set(slackToLib.id.get)
+            val ltss = inject[LibraryToSlackChannelRepo].all
+            val stls = inject[SlackChannelToLibraryRepo].all
+            ltss.map(_.id.get) === Seq(libToSlack.id.get)
+            stls.map(_.id.get) === Seq(slackToLib.id.get)
             ltss.foreach { lts => lts.space === LibrarySpace.fromUserId(user.id.get) }
             stls.foreach { stl => stl.space === LibrarySpace.fromUserId(user.id.get) }
           }
@@ -171,10 +196,10 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           )
           slackCommander.modifyIntegrations(modRequest) must beSuccessfulTry
           db.readOnlyMaster { implicit s =>
-            val ltss = inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
-            val stls = inject[SlackChannelToLibraryRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get)
-            ltss.map(_.id.get) === Set(libToSlack.id.get)
-            stls.map(_.id.get) === Set(slackToLib.id.get)
+            val ltss = inject[LibraryToSlackChannelRepo].all
+            val stls = inject[SlackChannelToLibraryRepo].all
+            ltss.map(_.id.get) === Seq(libToSlack.id.get)
+            stls.map(_.id.get) === Seq(slackToLib.id.get)
             ltss.foreach { lts => lts.space === LibrarySpace.fromOrganizationId(org.id.get) }
             stls.foreach { stl => stl.space === LibrarySpace.fromOrganizationId(org.id.get) }
           }
@@ -196,14 +221,14 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
             (user, lib, lts, stl)
           }
           db.readOnlyMaster { implicit s =>
-            inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get).map(_.id.get) === Set(libToSlack.id.get)
-            inject[SlackChannelToLibraryRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get).map(_.id.get) === Set(slackToLib.id.get)
+            inject[LibraryToSlackChannelRepo].all.map(_.id.get) === Seq(libToSlack.id.get)
+            inject[SlackChannelToLibraryRepo].all.map(_.id.get) === Seq(slackToLib.id.get)
           }
           val delRequest = SlackIntegrationDeleteRequest(user.id.get, libToSlack = Set(libToSlack.id.get), slackToLib = Set(slackToLib.id.get))
           slackCommander.deleteIntegrations(delRequest) must beSuccessfulTry
           db.readOnlyMaster { implicit s =>
-            inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get).map(_.id.get) === Set.empty
-            inject[SlackChannelToLibraryRepo].getActiveByOwnerAndLibrary(user.id.get, lib.id.get).map(_.id.get) === Set.empty
+            inject[LibraryToSlackChannelRepo].all.filter(_.isActive) === Seq.empty
+            inject[SlackChannelToLibraryRepo].all.filter(_.isActive) === Seq.empty
           }
           1 === 1
         }
@@ -223,7 +248,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
             (owner, member, org, lib, lts)
           }
           db.readOnlyMaster { implicit s =>
-            inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(owner.id.get, lib.id.get).map(_.id.get) === Set(libToSlack.id.get)
+            inject[LibraryToSlackChannelRepo].all.map(_.id.get) === Seq(libToSlack.id.get)
           }
 
           // At first, if Member tries to modify they fail because they don't have access (the integration is in a personal space)
@@ -241,7 +266,7 @@ class SlackCommanderTest extends TestKitSupport with SpecificationLike with Shoe
           // Then the Member can modify it
           slackCommander.deleteIntegrations(delRequest) must beSuccessfulTry
           db.readOnlyMaster { implicit s =>
-            inject[LibraryToSlackChannelRepo].getActiveByOwnerAndLibrary(owner.id.get, lib.id.get).map(_.id.get) === Set.empty
+            inject[LibraryToSlackChannelRepo].all.filter(_.isActive) === Seq.empty
           }
           1 === 1
         }

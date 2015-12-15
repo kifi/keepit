@@ -20,6 +20,13 @@ object SlackTeamFactory {
   def team() = TestingSlackTeam(SlackTeamId(ran(10)), SlackTeamName(ra(10)))
 }
 
+case class TestingSlackUser(
+  userId: SlackUserId,
+  username: SlackUsername)
+object SlackUserFactory {
+  def user() = TestingSlackUser(SlackUserId(ran(10)), SlackUsername(ra(10)))
+}
+
 object SlackTeamMembershipFactory {
   private[this] val idx = new AtomicLong(System.currentTimeMillis() % 100)
   def membership(): PartialSlackTeamMembership = {
@@ -31,7 +38,7 @@ object SlackTeamMembershipFactory {
       slackTeamId = SlackTeamId(ran(10)),
       slackTeamName = SlackTeamName(ran(10)),
       token = Some(SlackAccessToken(ran(30))),
-      scopes = SlackAuthScope.library
+      scopes = SlackAuthScope.push ++ SlackAuthScope.ingest
     ))
   }
 
@@ -50,7 +57,6 @@ object SlackIncomingWebhookFactory {
     val teamStr = ran(10)
     val botStr = ran(10)
     PartialSlackIncomingWebhook(SlackIncomingWebhookInfo(
-      ownerId = Id[User](idx.incrementAndGet()),
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(teamStr),
       slackChannelId = None,
@@ -63,7 +69,7 @@ object SlackIncomingWebhookFactory {
     ))
   }
   case class PartialSlackIncomingWebhook(siw: SlackIncomingWebhookInfo) {
-    def withMembership(stm: SlackTeamMembership) = this.copy(siw = siw.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
+    def withMembership(stm: SlackTeamMembership) = this.copy(siw = siw.copy(slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withChannelName(cn: String) = this.copy(siw = siw.copy(webhook = siw.webhook.copy(channelName = SlackChannelName(cn))))
   }
   def webhooks(count: Int) = List.fill(count)(webhook())
@@ -74,8 +80,7 @@ object SlackChannelToLibraryFactory {
   def stl(): PartialSlackChannelToLibrary = {
     val owner = Id[User](idx.incrementAndGet())
     PartialSlackChannelToLibrary(SlackChannelToLibrary(
-      ownerId = owner,
-      organizationId = None,
+      space = LibrarySpace.fromUserId(Id(-idx.incrementAndGet())),
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
@@ -84,7 +89,7 @@ object SlackChannelToLibraryFactory {
     ))
   }
   case class PartialSlackChannelToLibrary(stl: SlackChannelToLibrary) {
-    def withMembership(stm: SlackTeamMembership) = this.copy(stl = stl.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
+    def withMembership(stm: SlackTeamMembership) = this.copy(stl = stl.copy(space = LibrarySpace.fromUserId(stm.userId), slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withLibrary(lib: Library) = this.copy(stl = stl.copy(libraryId = lib.id.get))
     def withChannel(cn: String) = this.copy(stl = stl.copy(slackChannelName = SlackChannelName(cn)))
     def withNextIngestionAt(time: DateTime) = this.copy(stl = stl.copy(nextIngestionAt = Some(time)))
@@ -99,8 +104,7 @@ object LibraryToSlackChannelFactory {
   def lts(): PartialLibraryToSlackChannel = {
     val owner = Id[User](idx.incrementAndGet())
     PartialLibraryToSlackChannel(LibraryToSlackChannel(
-      ownerId = owner,
-      organizationId = None,
+      space = LibrarySpace.fromUserId(Id(-idx.incrementAndGet())),
       slackUserId = SlackUserId(ran(10)),
       slackTeamId = SlackTeamId(ran(10)),
       slackChannelId = None,
@@ -110,7 +114,7 @@ object LibraryToSlackChannelFactory {
   }
 
   case class PartialLibraryToSlackChannel(lts: LibraryToSlackChannel) {
-    def withMembership(stm: SlackTeamMembership) = this.copy(lts = lts.copy(ownerId = stm.userId, slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
+    def withMembership(stm: SlackTeamMembership) = this.copy(lts = lts.copy(space = LibrarySpace.fromUserId(stm.userId), slackTeamId = stm.slackTeamId, slackUserId = stm.slackUserId))
     def withLibrary(lib: Library) = this.copy(lts = lts.copy(libraryId = lib.id.get))
     def withChannel(cn: String) = this.copy(lts = lts.copy(slackChannelName = SlackChannelName(cn)))
     def withNextPushAt(time: DateTime) = this.copy(lts = lts.withNextPushAt(time))

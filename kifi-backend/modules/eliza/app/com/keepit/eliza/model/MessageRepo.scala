@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db.{ Id, ExternalId }
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ SortDirection, User, NormalizedURI }
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
 import play.api.libs.json.{ JsArray, JsValue }
@@ -23,10 +23,13 @@ trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[Eliza
   def getMaxId()(implicit session: RSession): Id[ElizaMessage]
   def getMessageCounts(threadId: Id[MessageThread], afterOpt: Option[DateTime])(implicit session: RSession): (Int, Int)
   def getAllMessageCounts(threadIds: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], Int]
-  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage
+  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Option[ElizaMessage]
+  def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit
+  def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit
 
   // PSA: please just use this method going forward, it has the cleanest API
-  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage]
+  def countByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int
+  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage]
 }
 
 @Singleton
@@ -134,19 +137,35 @@ class MessageRepoImpl @Inject() (
     activeRows.filter(row => row.thread.inSet(threadIds) && row.fromHuman).groupBy(_.thread).map { case (thread, messages) => (thread, messages.length) }.list.toMap
   }
 
-  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): ElizaMessage = {
-    activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => row.id desc).first
+  def getLatest(threadId: Id[MessageThread])(implicit session: RSession): Option[ElizaMessage] = {
+    activeRows.filter(row => row.thread === threadId && row.from.isDefined).sortBy(row => (row.createdAt desc, row.id desc)).firstOption
   }
 
-  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+  private def getByThreadHelper(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection)(implicit session: RSession) = {
     val threadMessages = activeRows.filter(row => row.thread === threadId)
-    val filteredMessages = fromId match {
+    fromId match {
       case None => threadMessages
       case Some(fid) =>
-        val fromTime = activeRows.filter(_.id === fid).map(_.createdAt).first
-        threadMessages.filter(r => r.createdAt < fromTime || (r.createdAt === fromTime && r.id < fid))
+        // The message for fid may have been deleted, so search for it in all rows
+        val fromTime = rows.filter(_.id === fid).map(_.createdAt).first
+        dir match {
+          case SortDirection.DESCENDING => threadMessages.filter(r => r.createdAt < fromTime || (r.createdAt === fromTime && r.id < fid))
+          case SortDirection.ASCENDING => threadMessages.filter(r => r.createdAt > fromTime || (r.createdAt === fromTime && r.id > fid))
+        }
     }
-    filteredMessages.sortBy(r => (r.createdAt desc, r.id desc)).take(limit).list
+  }
+  def countByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING)(implicit session: RSession): Int = {
+    getByThreadHelper(threadId, fromId, dir).length.run
+  }
+  def getByThread(threadId: Id[MessageThread], fromId: Option[Id[ElizaMessage]], dir: SortDirection = SortDirection.DESCENDING, limit: Int)(implicit session: RSession): Seq[ElizaMessage] = {
+    val threads = getByThreadHelper(threadId, fromId, dir)
+    val sortedThreads = dir match {
+      case SortDirection.ASCENDING => threads.sortBy(r => (r.createdAt asc, r.id asc))
+      case SortDirection.DESCENDING => threads.sortBy(r => (r.createdAt desc, r.id desc))
+    }
+    sortedThreads.take(limit).list
   }
 
+  def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit = save(message.sanitizeForDelete)
+  def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit = save(get(messageId).sanitizeForDelete)
 }

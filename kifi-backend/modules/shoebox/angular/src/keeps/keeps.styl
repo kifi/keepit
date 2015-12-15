@@ -1,6 +1,6 @@
 keepBorderWidth = 1px
 keepBorderRadius = 8px
-keepSidePad = 20px
+keepSidePad = 14px
 keepCardMaxWidth = 496px  // chosen to make youtube videos (16:9 aspect ratio) come out to whole pixels, 496x279
 maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 // = 559px
 
@@ -11,16 +11,20 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
   align-items: center
   flex-flow: column wrap
 
-  @media (min-width: 480px)
-    padding-top: 14px
-
-  @media (min-width: 720px)
-    padding-top: 20px
-
   &::before
     content: ''
     border-top: 1px none #f9f9f9
     z-index: 1
+
+.kf-keeps-update
+  display: inline-block
+  padding: 8px 24px
+  border: 1px solid #f8f4e8
+  border-radius: 2px
+  font-size: 16px
+  font-weight: 300
+  background-color: #ffc
+  white-space: nowrap
 
 .kf-my-keeps
   width: 100%
@@ -97,7 +101,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
 .kf-keep
   position: relative
   border-radius: keepBorderRadius
-  padding: 0 keepSidePad 20px
+  padding: keepSidePad
 
   &.detailed
     background-color: #eff2f7
@@ -191,7 +195,7 @@ maxWidthForNarrowKeep = keepCardMaxWidth + 2 * (keepSidePad + appSidePad1) - 1 /
     border-top-left-radius: 0
 
   @media (max-width: maxWidthForNarrowKeep)
-    padding-bottom: 0
+    padding-bottom: 12px
 
     &>.kf-keep-body
       margin-left: -(keepSidePad)

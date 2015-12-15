@@ -44,31 +44,19 @@ class CollectionCommander @Inject() (
     }
   }
 
+  // legacy, users have too many tags to reliably return them all
   def allCollections(sort: String, userId: Id[User]) = {
     log.info(s"Getting all collections for $userId (sort $sort)")
-    val unsortedCollections = db.readOnlyMaster { implicit s =>
-      val colls = collectionRepo.getUnfortunatelyIncompleteTagSummariesByUser(userId)
-      val bmCounts = collectionRepo.getBookmarkCounts(colls.map(_.id).toSet)
-      colls.map { c => BasicCollection.fromCollection(c, bmCounts.get(c.id).orElse(Some(0))) }
-    }
-    log.info(s"Sorting collections for $userId")
-    val collections = sort match {
-      case "num_keeps" =>
-        unsortedCollections.sortBy(_.keeps)(Ordering[Option[Int]].reverse)
-      case _ => // default is "last_kept"
-        unsortedCollections
-    }
-    log.info(s"Returning collection and keep counts for $userId")
-    collections
+
+    pageCollections(userId, 0, 1000, TagSorting(sort))
   }
 
-  def pageCollections(sort: String, offset: Int, pageSize: Int, userId: Id[User]) = {
-    log.info(s"Getting all collections for $userId (sort $sort)")
+  def pageCollections(userId: Id[User], offset: Int, pageSize: Int, sort: TagSorting) = {
     db.readOnlyMaster { implicit s =>
       sort match {
-        case "num_keeps" => collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize)
-        case "name" => collectionRepo.getByUserSortedByName(userId, offset, pageSize)
-        case _ => collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize) // default is "last_kept"
+        case TagSorting.NumKeeps => collectionRepo.getByUserSortedByNumKeeps(userId, offset, pageSize)
+        case TagSorting.Name => collectionRepo.getByUserSortedByName(userId, offset, pageSize)
+        case TagSorting.LastKept => collectionRepo.getByUserSortedByLastKept(userId, offset, pageSize)
       }
     }.map { case (collectionSummary, keepCount) => BasicCollection.fromCollection(collectionSummary, Some(keepCount)) }
   }
@@ -104,3 +92,17 @@ class CollectionCommander @Inject() (
   }
 
 }
+
+sealed trait TagSorting { def name: String }
+object TagSorting {
+  case object NumKeeps extends TagSorting { val name = "num_keeps" }
+  case object Name extends TagSorting { val name = "name" }
+  case object LastKept extends TagSorting { val name = "last_kept" }
+
+  def apply(str: String) = str match {
+    case NumKeeps.name => NumKeeps
+    case Name.name => Name
+    case _ => LastKept
+  }
+}
+

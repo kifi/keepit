@@ -2,9 +2,11 @@ package com.keepit.slack
 
 import java.util.concurrent.ExecutionException
 
+import com.google.inject.Injector
 import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.{ FutureHelpers, FakeExecutionContextModule }
+import com.keepit.common.db.Id
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time
 import com.keepit.heimdal.HeimdalContext
@@ -33,6 +35,11 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
     FakeClockModule()
   )
 
+  def pushUpdatesToSlackSurely(libraryId: Id[Library])(implicit injector: Injector): Map[Id[LibraryToSlackChannel], Boolean] = {
+    fakeClock += LibraryToSlackChannelPusher.maxDelayFromKeptAt
+    Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(libraryId), Duration.Inf)
+  }
+
   "LibraryToSlackChannelPusher" should {
     "identify and process integrations" in {
       "unmark integrations when finished processing" in {
@@ -48,8 +55,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           }
           db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).lastProcessingAt must beNone }
 
-          val resFut = inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get)
-          val res = Await.result(resFut, Duration.Inf)
+          val res = pushUpdatesToSlackSurely(lib.id.get)
           res.size === 1
           res.values.toList === List(true)
 
@@ -69,13 +75,13 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             (owner, user, lib, lts)
           }
           // First time is fine, since they have view permissions
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf).values.toList === List(true)
+          pushUpdatesToSlackSurely(lib.id.get).values.toList === List(true)
           // Now we make the lib secret
           db.readWrite { implicit s =>
             libraryRepo.save(lib.copy(visibility = LibraryVisibility.SECRET))
-            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get, fakeClock.now)
+            libToSlackPusher.pushLibraryAtLatest(lib.id.get, fakeClock.now)
           }
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf).values.toList === List.empty
+          pushUpdatesToSlackSurely(lib.id.get).values.toList === List.empty
           // We hopefully turned off the "bad" integration
           db.readOnlyMaster { implicit s => inject[LibraryToSlackChannelRepo].get(integration.id.get).status === SlackIntegrationStatus.Off }
           1 === 1
@@ -96,7 +102,7 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           }
           slackClient.isSlackThrowingAFit = true // pretend Slack hates us and rejects all our webhooks
           // We will try and send, but Slack rejects the webhook
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf).values.toList === List(false)
+          pushUpdatesToSlackSurely(lib.id.get).values.toList === List(false)
           // We should have noticed that the webhook is broken and marked it as failed
           // Because the webhook failed, the integration should be marked as broken
           db.readOnlyMaster { implicit s =>
@@ -125,17 +131,16 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           val titles = Iterator.from(1).map(n => s"panda time <3 #$n")
 
           // First, no keeps => no message
-          fakeClock += Period.days(1)
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
+          pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must beEmpty
 
           // 2 keeps => 1 msg, 2 lines
           fakeClock += Period.days(1)
           db.readWrite { implicit s =>
             KeepFactory.keeps(2).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved
-            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get, fakeClock.now)
+            libToSlackPusher.pushLibraryAtLatest(lib.id.get, fakeClock.now)
           }
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
+          pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 2
           slackClient.pushedMessagesByWebhook(webhook.url).head.attachments.length === 0 // TODO(ryan): write a test for the attachments-style
@@ -144,9 +149,9 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
           fakeClock += Period.days(1)
           db.readWrite { implicit s =>
             KeepFactory.keeps(20).map(_.withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle(titles.next())).saved
-            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get, fakeClock.now)
+            libToSlackPusher.pushLibraryAtLatest(lib.id.get, fakeClock.now)
           }
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
+          pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text.lines.size === 1
           slackClient.pushedMessagesByWebhook(webhook.url).head.attachments.length === 0
@@ -170,15 +175,14 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
 
           val ch = SlackChannel(SlackChannelId("C123123"), libToSlack.slackChannelName)
           db.readWrite { implicit s => KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("In Kifi").saved }
-          fakeClock += Period.days(1)
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
+          pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("ryan-kifi")
 
           slackClient.sayInChannel(stm, ch)("I love sharing links like <http://www.google.com>")
-          fakeClock += Period.days(1)
           Await.result(inject[SlackIngestionCommander].ingestAllDue(), Duration.Inf)
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
+
+          pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(2)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("#eng")
 
@@ -197,10 +201,10 @@ class LibraryToSlackChannelPusherTest extends TestKitSupport with SpecificationL
             val lts = LibraryToSlackChannelFactory.lts().withMembership(stm).withLibrary(lib).withChannel("#eng").saved
             KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("Keep Without Note").saved
             KeepFactory.keep().withUser(user).withLibrary(lib).withKeptAt(fakeClock.now).withTitle("Keep With Note").withNote("My [#favorite] keep [#in the world] is this one").saved
-            libToSlackPusher.scheduleLibraryToBePushed(lib.id.get, fakeClock.now)
+            libToSlackPusher.pushLibraryAtLatest(lib.id.get, fakeClock.now)
             (user, lib, lts, siw.webhook)
           }
-          Await.result(inject[LibraryToSlackChannelPusher].pushUpdatesToSlack(lib.id.get), Duration.Inf)
+          pushUpdatesToSlackSurely(lib.id.get)
           slackClient.pushedMessagesByWebhook(webhook.url) must haveSize(1)
           slackClient.pushedMessagesByWebhook(webhook.url).head.text must contain("https://www.kifi.com/find?q=tag%3A%22in+the+world%22")
         }

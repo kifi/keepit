@@ -1,5 +1,6 @@
 package com.keepit.graph.manager
 
+import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.graph.model._
 import com.google.inject.Inject
@@ -107,17 +108,18 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
     val keepVertexId: VertexDataId[KeepReader] = update.id
     val uriVertexId: VertexDataId[UriReader] = update.uriId
     val userVertexId: VertexDataId[UserReader] = update.userId
-    val libVertexId: VertexDataId[LibraryReader] = update.libId
+    val libVertexIds: Set[VertexDataId[LibraryReader]] = update.libId.toSet.map(VertexDataId.fromLibraryId)
 
     writer.removeVertexIfExists(keepVertexId) // build the vertex and its neighbors from empty state. (e.g. LibraryId can change, this removes old links)
 
     update.state match {
-
       case KeepStates.ACTIVE if update.source != KeepSource.default =>
         writer.saveVertex(KeepData(keepVertexId))
         writer.saveVertex(UriData(uriVertexId))
         writer.saveVertex(UserData(userVertexId))
-        writer.saveVertex(LibraryData(libVertexId))
+        libVertexIds.foreach { lvIdx =>
+          writer.saveVertex(LibraryData(lvIdx))
+        }
 
         writer.saveEdge(userVertexId, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
         writer.saveEdge(uriVertexId, keepVertexId, TimestampEdgeData(update.createdAt.getMillis()))
@@ -125,8 +127,10 @@ class GraphUpdaterImpl @Inject() () extends GraphUpdater with Logging {
         writer.saveEdge(keepVertexId, userVertexId, EmptyEdgeData)
         writer.saveEdge(keepVertexId, uriVertexId, EmptyEdgeData)
 
-        writer.saveEdge(libVertexId, keepVertexId, EmptyEdgeData)
-        writer.saveEdge(keepVertexId, libVertexId, EmptyEdgeData)
+        libVertexIds.foreach { lvIdx =>
+          writer.saveEdge(lvIdx, keepVertexId, EmptyEdgeData)
+          writer.saveEdge(keepVertexId, lvIdx, EmptyEdgeData)
+        }
 
       case _ => // do nothing
 

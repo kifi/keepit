@@ -40,9 +40,10 @@ object SlackAuthScope {
   val UsersRead = SlackAuthScope("users:read")
   val UsersWrite = SlackAuthScope("users:write")
 
-  val library: Set[SlackAuthScope] = Set(IncomingWebhook, SearchRead, ReactionsWrite, Commands)
-  val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
+  val push: Set[SlackAuthScope] = Set(IncomingWebhook, Commands)
+  val ingest: Set[SlackAuthScope] = Set(SearchRead, ReactionsWrite, Commands)
 
+  val slackReads: Reads[Set[SlackAuthScope]] = Reads { j => j.validate[String].map(s => s.split(",").toSet.map(SlackAuthScope.apply)) }
   val dbFormat: Format[SlackAuthScope] = Format(
     Reads { j => j.validate[String].map(SlackAuthScope.apply) },
     Writes { sas => JsString(sas.value) }
@@ -53,7 +54,7 @@ object SlackAuthScope {
 
 case class SlackState(state: String)
 object SlackState {
-  implicit def fromJson(value: JsValue): SlackState = SlackState(CryptoSupport.encodeBase64(Json.stringify(value)))
+  def apply(value: JsValue): SlackState = SlackState(CryptoSupport.encodeBase64(Json.stringify(value)))
   def toJson(state: SlackState): Try[JsValue] = Try(Json.parse(CryptoSupport.decodeBase64(state.state))).orElse(Failure(SlackAPIFailure.StateError(state)))
 }
 

@@ -165,7 +165,7 @@ class OrganizationInfoCommanderImpl @Inject() (
     val membersAsBasicUsers = members.map(BasicUser.fromUser)
     val memberCount = members.length
     val avatarPath = organizationAvatarCommander.getBestImageByOrgId(orgId, ImageSize(200, 200)).imagePath
-    val config = getExternalOrgConfigurationHelper(orgId)
+    val config = Some(getExternalOrgConfigurationHelper(orgId)).filter(_ => viewerPermissions.contains(OrganizationPermission.VIEW_SETTINGS))
     val numLibraries = countLibrariesVisibleToUserHelper(orgId, viewerIdOpt)
 
     OrganizationInfo(

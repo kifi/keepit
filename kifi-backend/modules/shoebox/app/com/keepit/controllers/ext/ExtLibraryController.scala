@@ -116,7 +116,6 @@ class ExtLibraryController @Inject() (
             color = externalCreateRequest.color,
             listed = externalCreateRequest.listed,
             whoCanInvite = externalCreateRequest.whoCanInvite,
-            subscriptions = externalCreateRequest.subscriptions,
             space = space
           )
         }
@@ -249,7 +248,7 @@ class ExtLibraryController @Inject() (
                 removable = mem.canWrite,
                 secret = keep.visibility == LibraryVisibility.SECRET,
                 visibility = keep.visibility,
-                libraryId = libraryPubId)
+                libraryId = Some(libraryPubId))
               val moarKeepData = MoarKeepData(
                 title = keep.title,
                 image = image,

@@ -31,7 +31,6 @@ class NotificationKindInfoRequests @Inject()() {
       case NewConnectionInvite => genericInfoFn(infoForNewConnectionInvite)
       case ConnectionInviteAccepted => genericInfoFn(infoForConnectionInviteAccepted)
       case LibraryNewKeep => genericInfoFn(infoForLibraryNewKeep)
-      case NewKeepActivity => genericInfoFn(infoForNewKeepActivity)
       case LibraryCollabInviteAccepted => genericInfoFn(infoForLibraryCollabInviteAccepted)
       case LibraryFollowInviteAccepted => genericInfoFn(infoForLibraryFollowInviteAccepted)
       case LibraryNewCollabInvite => genericInfoFn(infoForLibraryNewCollabInvite)
@@ -104,33 +103,6 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"New keep in ${libraryKept.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
         linkText = "Go to page",
-        extraJson = Some(Json.obj(
-          "keeper" -> keeper,
-          "library" -> Json.toJson(libraryKept),
-          "keep" -> Json.obj(
-            "id" -> newKeep.id,
-            "url" -> newKeep.url
-          )
-        )),
-        category = NotificationCategory.User.NEW_KEEP
-      )
-    }
-  }
-
-  def infoForNewKeepActivity(events: Set[NewKeepActivity]): RequestingNotificationInfos[StandardNotificationInfo] = {
-    val event = requireOne(events)
-    RequestingNotificationInfos(Requests(
-      RequestLibrary(event.libraryId), RequestKeep(event.keepId)
-    )) { batched =>
-      val libraryKept = RequestLibrary(event.libraryId).lookup(batched)
-      val newKeep = RequestKeep(event.keepId).lookup(batched)
-      val keeper = RequestUserExternal(newKeep.ownerId).lookup(batched)
-      StandardNotificationInfo(
-        url = Path(libraryKept.path).absolute,
-        image = UserImage(keeper),
-        title = s"New Keep in ${libraryKept.name}",
-        body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
-        linkText = "Go to library",
         extraJson = Some(Json.obj(
           "keeper" -> keeper,
           "library" -> Json.toJson(libraryKept),

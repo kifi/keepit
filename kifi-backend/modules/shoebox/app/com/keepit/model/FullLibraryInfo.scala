@@ -37,9 +37,6 @@ case class LibraryFail(status: Int, message: String) extends Exception(message) 
   def asErrorResponse = Status(status)(Json.obj("error" -> message))
 }
 
-@json
-case class LibrarySubscriptionKey(name: String, info: SubscriptionInfo, disabled: Boolean)
-
 case class ExternalLibraryInitialValues(
   name: String,
   visibility: LibraryVisibility,
@@ -49,7 +46,6 @@ case class ExternalLibraryInitialValues(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[ExternalLibrarySpace] = None,
   orgMemberAccess: Option[LibraryAccess] = None)
 
@@ -62,7 +58,6 @@ case class LibraryInitialValues(
     color: Option[LibraryColor] = None,
     listed: Option[Boolean] = None,
     whoCanInvite: Option[LibraryInvitePermissions] = None,
-    subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
     space: Option[LibrarySpace] = None,
     orgMemberAccess: Option[LibraryAccess] = None) {
   def asLibraryModifications: LibraryModifications = LibraryModifications(
@@ -73,7 +68,6 @@ case class LibraryInitialValues(
     color = color,
     listed = listed,
     whoCanInvite = whoCanInvite,
-    subscriptions = subscriptions,
     space = space,
     orgMemberAccess = orgMemberAccess
   )
@@ -89,7 +83,6 @@ object ExternalLibraryInitialValues {
     (__ \ 'color).readNullable[LibraryColor] and
     (__ \ 'listed).readNullable[Boolean] and
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
-    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace] and
     (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
   )(ExternalLibraryInitialValues.apply _)
@@ -118,9 +111,9 @@ case class ExternalLibraryModifications(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   externalSpace: Option[ExternalLibrarySpace] = None,
-  orgMemberAccess: Option[LibraryAccess] = None)
+  orgMemberAccess: Option[LibraryAccess] = None,
+  whoCanComment: Option[LibraryCommentPermissions] = None)
 
 case class LibraryModifications(
   name: Option[String] = None,
@@ -130,9 +123,9 @@ case class LibraryModifications(
   color: Option[LibraryColor] = None,
   listed: Option[Boolean] = None,
   whoCanInvite: Option[LibraryInvitePermissions] = None,
-  subscriptions: Option[Seq[LibrarySubscriptionKey]] = None,
   space: Option[LibrarySpace] = None,
-  orgMemberAccess: Option[LibraryAccess] = None)
+  orgMemberAccess: Option[LibraryAccess] = None,
+  whoCanComment: Option[LibraryCommentPermissions] = None)
 object LibraryModifications {
   val adminReads: Reads[LibraryModifications] = (
     (__ \ 'name).readNullable[String] and
@@ -142,9 +135,9 @@ object LibraryModifications {
     (__ \ 'color).readNullable[LibraryColor] and
     (__ \ 'listed).readNullable[Boolean] and
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
-    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[LibrarySpace] and
-    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess] and
+    (__ \ 'whoCanComment).readNullable[LibraryCommentPermissions]
   )(LibraryModifications.apply _)
 }
 
@@ -157,9 +150,9 @@ object ExternalLibraryModifications {
     (__ \ 'color).readNullable[LibraryColor] and
     (__ \ 'listed).readNullable[Boolean] and
     (__ \ 'whoCanInvite).readNullable[LibraryInvitePermissions] and
-    (__ \ 'subscriptions).readNullable[Seq[LibrarySubscriptionKey]] and
     (__ \ 'space).readNullable[ExternalLibrarySpace] and
-    (__ \ 'orgMemberAccess).readNullable[LibraryAccess]
+    (__ \ 'orgMemberAccess).readNullable[LibraryAccess] and
+    (__ \ 'whoCanComment).readNullable[LibraryCommentPermissions]
   )(ExternalLibraryModifications.apply _)
 
   val reads = readsMobileV1 // this can be reassigned, just don't add any breaking changes to an mobile API in prod
@@ -251,6 +244,7 @@ case class FullLibraryInfo(
   numFollowers: Int,
   attr: Option[LibrarySourceAttribution] = None,
   whoCanInvite: LibraryInvitePermissions,
+  whoCanComment: LibraryCommentPermissions,
   modifiedAt: DateTime,
   path: String,
   org: Option[BasicOrganizationView],
@@ -284,6 +278,7 @@ object FullLibraryInfo {
       "numFollowers" -> o.numFollowers,
       "attr" -> o.attr,
       "whoCanInvite" -> o.whoCanInvite,
+      "whoCanComment" -> o.whoCanComment,
       "modifiedAt" -> o.modifiedAt,
       "path" -> o.path,
       "org" -> o.org,

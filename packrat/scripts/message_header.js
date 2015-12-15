@@ -2,6 +2,7 @@
 // @require scripts/render.js
 // @require scripts/message_participants.js
 // @require scripts/message_muter.js
+// @require scripts/message_keepscussion_header.js
 
 /**
  * ---------------------
@@ -21,7 +22,11 @@ k.messageHeader = k.messageHeader || (function ($, win) {
 
 	return {
 		initialized: false,
-		plugins: [k.messageParticipants, k.messageMuter],
+		plugins: [
+			k.messageParticipants,
+			k.messageMuter,
+			k.messageKeepscussionHeader
+		],
 		status: null,
 		threadId: null,
 		participants: null,
@@ -31,12 +36,13 @@ k.messageHeader = k.messageHeader || (function ($, win) {
 		/**
 		 * Renders and initializes a message header box.
 		 */
-		init: function ($el, threadId, participants) {
+		init: function ($el, threadId, participants, keep) {
 			if (this.initialized) {
 				this.destroy();
 			}
 			this.threadId = threadId;
 			this.participants = participants;
+			this.keep = keep;
 			this.initialized = true;
 			this.status = {};
 			this.plugins.forEach(function (plugin) {
@@ -216,6 +222,6 @@ k.messageHeader = k.messageHeader || (function ($, win) {
 			return this.plugins.map(function (plugin) {
 				return plugin.render(compName) || '';
 			}).join('');
-		},
+		}
 	};
 })(jQuery, this);
