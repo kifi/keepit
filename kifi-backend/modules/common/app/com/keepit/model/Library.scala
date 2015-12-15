@@ -47,7 +47,7 @@ case class Library(
     whoCanInvite: Option[LibraryInvitePermissions] = None,
     organizationId: Option[Id[Organization]] = None,
     organizationMemberAccess: Option[LibraryAccess] = None,
-    whoCanComment: LibraryCommentPermissions = LibraryCommentPermissions.COLLABORATOR) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
+    whoCanComment: LibraryCommentPermissions = LibraryCommentPermissions.ANYONE) extends ModelWithPublicId[Library] with ModelWithState[Library] with ModelWithSeqNumber[Library] {
 
   def sanitizeForDelete: Library = this.copy(
     name = RandomStringUtils.randomAlphanumeric(20),
