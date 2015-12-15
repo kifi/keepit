@@ -887,6 +887,7 @@ if (searchUrlRe.test(document.URL)) !function () {
       librariesMore: hit.librariesOmitted || '',
       tags: hit.tags,
       tagsMore: hit.tagsOmitted || '',
+      source: hit.source,
       origin: response.origin
     };
   }
