@@ -8,8 +8,8 @@
   "version": "see build.properties",
   "main": "lib/main.js",
   "id": "kifi@42go.com",
-  "icon": "data/icons/kifi.48.png",
-  "icon64": "data/icons/kifi.64.png",
+  "icon": "icon.png",
+  "icon64": "icon64.png",
   "permissions": {
     "cross-domain-content": ["https://www.kifi.com"]
   }
