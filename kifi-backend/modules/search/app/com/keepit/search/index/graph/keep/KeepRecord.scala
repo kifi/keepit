@@ -10,10 +10,10 @@ import scala.collection.JavaConversions._
 import play.api.libs.json.Json
 import com.keepit.common.time._
 
-case class KeepRecord(title: Option[String], url: String, keptAt: DateTime, libraryId: Id[Library], externalId: ExternalId[Keep], note: Option[String], tags: Set[Hashtag])
+case class KeepRecord(title: Option[String], url: String, keptAt: DateTime, libraryId: Option[Id[Library]], externalId: ExternalId[Keep], note: Option[String], tags: Set[Hashtag])
 
 object KeepRecord {
-  def fromKeepAndTags(keep: Keep, tags: Set[Hashtag]): KeepRecord = KeepRecord(keep.title, keep.url, keep.keptAt, keep.libraryId.get, keep.externalId, keep.note.filter(_.nonEmpty), tags)
+  def fromKeepAndTags(keep: Keep, tags: Set[Hashtag]): KeepRecord = KeepRecord(keep.title, keep.url, keep.keptAt, keep.libraryId, keep.externalId, keep.note.filter(_.nonEmpty), tags)
 
   implicit def toByteArray(record: KeepRecord): Array[Byte] = {
     val baos = new ByteArrayOutputStream()
@@ -23,7 +23,7 @@ object KeepRecord {
     out.writeString(record.title.getOrElse(""))
     out.writeString(record.url)
     out.writeLong(record.keptAt.getMillis)
-    out.writeLong(record.libraryId.id)
+    out.writeLong(record.libraryId.map(_.id) getOrElse -1L)
     out.writeString(record.externalId.id)
     out.writeString(record.note.getOrElse(""))
     out.writeStringSet(record.tags.map(_.tag))
@@ -45,7 +45,7 @@ object KeepRecord {
     val title = Some(in.readString()).filter(_.nonEmpty)
     val url = in.readString()
     val keptAt = in.readLong().toDateTime
-    val libraryId = Id[Library](in.readLong())
+    val libraryId = Some(Id[Library](in.readLong())).filter(_.id > 0)
     val id = ExternalId[Keep](in.readString())
     val note = if (version < 2) None else Some(in.readString()).filter(_.nonEmpty)
     val tags = in.readStringSet().map(Hashtag(_)).toSet
