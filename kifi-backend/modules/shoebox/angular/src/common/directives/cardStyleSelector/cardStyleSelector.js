@@ -11,7 +11,6 @@ angular.module('kifi')
       restrict: 'A',
       templateUrl: 'common/directives/cardStyleSelector/cardStyleSelector.tpl.html',
       link: function (scope) {
-        scope.admin = profileService.isAdmin();
         scope.galleryView = !profileService.prefs.use_minimal_keep_card;
         [
           $rootScope.$on('prefsChanged', function() {
