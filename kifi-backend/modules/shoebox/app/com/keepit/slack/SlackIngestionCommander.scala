@@ -110,7 +110,7 @@ class SlackIngestionCommanderImpl @Inject() (
     val futureIngestionMaybe = {
       if (isAllowed(integration.id.get)) {
         getTokenWithScopes(integration.id.get) match {
-          case Some(tokenWithScopes) if Set(SlackAuthScope.SearchRead, SlackAuthScope.ReactionsWrite) subsetOf tokenWithScopes.scopes => doIngest(tokenWithScopes, integration)
+          case Some(tokenWithScopes) if SlackAuthScope.ingest subsetOf tokenWithScopes.scopes => doIngest(tokenWithScopes, integration)
           case invalidTokenOpt => Future.failed(BrokenSlackIntegration(integration, invalidTokenOpt.map(_.token), None))
         }
       } else {

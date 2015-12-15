@@ -119,7 +119,7 @@ case class KeepIndexable(keep: Keep, sourceAttribution: Option[SourceAttribution
     }
 
     keep.libraryId.foreach { libId =>
-      doc.add(buildDataPayloadField(new Term(libraryField, keep.libraryId.get.toString), titleLang.lang.getBytes(UTF8)))
+      doc.add(buildDataPayloadField(new Term(libraryField, libId.id.toString), titleLang.lang.getBytes(UTF8)))
     }
 
     doc.add(buildIdValueField(uriIdField, keep.uriId))
