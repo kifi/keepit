@@ -146,7 +146,8 @@ class MessageRepoImpl @Inject() (
     fromId match {
       case None => threadMessages
       case Some(fid) =>
-        val fromTime = activeRows.filter(_.id === fid).map(_.createdAt).first
+        // The message for fid may have been deleted, so search for it in all rows
+        val fromTime = rows.filter(_.id === fid).map(_.createdAt).first
         dir match {
           case SortDirection.DESCENDING => threadMessages.filter(r => r.createdAt < fromTime || (r.createdAt === fromTime && r.id < fid))
           case SortDirection.ASCENDING => threadMessages.filter(r => r.createdAt > fromTime || (r.createdAt === fromTime && r.id > fid))
