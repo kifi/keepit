@@ -55,6 +55,7 @@ angular.module('kifi')
 
     $scope.createOrg = function() {
       $scope.disableCreate = true;
+      profileService.savePrefs({ hide_company_name: true });
 
       orgProfileService
       .createOrg(this.orgName)
