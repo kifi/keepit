@@ -266,7 +266,7 @@ angular.module('kifi')
             'slug': '',
             'visibility': 'published',
             'orgMemberAccess': 'read_write',
-            'whoCanComment' : 'collaborator'
+            'whoCanComment' : 'anyone'
           };
           scope.library.org = scope.modalData.organization;
           scope.library.membership = {
