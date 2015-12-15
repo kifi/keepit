@@ -442,7 +442,7 @@ class AdminOrganizationController @Inject() (
           })
           orgConfigRepo.save(config.withSettings(newSettings))
         }
-        Json.obj("orgId" -> orgId)
+        Json.stringify(Json.obj("orgId" -> orgId))
       }
     }
     Ok.chunked(response)
