@@ -401,7 +401,7 @@ object ElizaServiceClient {
   object RPBGetThreads {
     case class Request(limit: Int)
     case class Response(threads: Map[Long, ThreadObject])
-    case class ThreadObject(startedBy: Id[User], users: Set[Id[User]], title: Option[String], url: String, startedAt: DateTime)
+    case class ThreadObject(startedBy: Id[User], userAddedAt: Map[Id[User], DateTime], title: Option[String], url: String, startedAt: DateTime)
     implicit val threadObjectFormat = Json.format[ThreadObject]
     implicit val mapFormat = TraversableFormat.mapFormat[Long, ThreadObject](_.toString, s => Try(s.toLong).toOption)
     implicit val requestFormat: Format[Request] = Json.format[Request]
