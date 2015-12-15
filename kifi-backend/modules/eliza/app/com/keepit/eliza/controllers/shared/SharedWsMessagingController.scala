@@ -1,5 +1,6 @@
 package com.keepit.eliza.controllers.shared
 
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.net.HttpClient
 import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
@@ -50,7 +51,8 @@ class SharedWsMessagingController @Inject() (
   protected val userExperimentCommander: RemoteUserExperimentCommander,
   protected val httpClient: HttpClient,
   val accessLog: AccessLog,
-  val shoutdownListener: WebsocketsShutdownListener)
+  val shoutdownListener: WebsocketsShutdownListener,
+  implicit val publicIdConfig: PublicIdConfiguration)
     extends UserActions with AuthenticatedWebSocketsController {
 
   protected def onConnect(socket: SocketInfo): Unit = {

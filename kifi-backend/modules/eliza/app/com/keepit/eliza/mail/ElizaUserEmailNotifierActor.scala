@@ -3,17 +3,18 @@ package com.keepit.eliza.mail
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.AirbrakeNotifier
 import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
-import com.keepit.common.mail.{ EmailAddress, ElectronicMail, SystemEmailAddress }
+import com.keepit.common.mail.{ EmailAddress, SystemEmailAddress }
 import com.keepit.common.store.ImageSize
 import com.keepit.eliza.commanders.{ ElizaEmailUriSummaryImageSizes, ElizaEmailCommander }
 import com.keepit.eliza.model._
 import com.keepit.eliza.model.ExtendedThreadItem
 import com.keepit.eliza.model.UserThread
-import com.keepit.model.{ NotificationCategory, UserStates, URISummary, User }
+import com.keepit.model.{ NotificationCategory, UserStates, User }
 import com.keepit.rover.model.RoverUriSummary
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.Minutes
@@ -28,7 +29,8 @@ class ElizaUserEmailNotifierActor @Inject() (
     userThreadRepo: UserThreadRepo,
     threadRepo: MessageThreadRepo,
     shoebox: ShoeboxServiceClient,
-    elizaEmailCommander: ElizaEmailCommander) extends ElizaEmailNotifierActor[UserThread](airbrake) {
+    elizaEmailCommander: ElizaEmailCommander,
+    implicit val publicIdConfig: PublicIdConfiguration) extends ElizaEmailNotifierActor[UserThread](airbrake) {
 
   import ElizaEmailNotifierActor._
 

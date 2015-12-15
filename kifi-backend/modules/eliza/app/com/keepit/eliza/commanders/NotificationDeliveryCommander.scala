@@ -6,6 +6,7 @@ import java.nio.{ ByteBuffer, CharBuffer }
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
@@ -47,6 +48,7 @@ class NotificationDeliveryCommander @Inject() (
     basicMessageCommander: MessageFetchingCommander,
     emailCommander: ElizaEmailCommander,
     notificationRepo: NotificationRepo,
+    implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends Logging {
 
   def notifySendMessage(from: Id[User], message: ElizaMessage, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {

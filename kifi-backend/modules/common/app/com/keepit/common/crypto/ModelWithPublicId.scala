@@ -87,11 +87,12 @@ trait ModelWithPublicIdCompanion[T <: ModelWithPublicId[T]] {
     }
   }
 
+  def validatePublicId(id: String): Option[PublicId[T]] = if (id.startsWith(publicIdPrefix)) Some(PublicId(id)) else None
+
   implicit val formatPublicId: Format[PublicId[T]] = Format(
-    Reads { j => j.validate[String].filter(_.startsWith(publicIdPrefix)).map(PublicId[T]) },
+    Reads { j => j.validate[String].flatMap(idStr => validatePublicId(idStr).map(JsSuccess(_)) getOrElse JsError(s"Invalid PublicId: $idStr")) },
     Writes { o => JsString(o.id) }
   )
-
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {
     PublicId[T](publicIdPrefix + Base62Long.encode(config.aes64bit(publicIdIvSpec).encrypt(id.id)))
