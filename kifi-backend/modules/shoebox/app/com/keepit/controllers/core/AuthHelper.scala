@@ -276,7 +276,7 @@ class AuthHelper @Inject() (
 
     val uri = intent match {
       case SlackReg =>
-        "/teams/new"
+        "/teams/new?slack"
       case ApplyCreditCode(creditCode) =>
         "/teams/new"
       case AutoFollowLibrary(libId, authTokenOpt) =>

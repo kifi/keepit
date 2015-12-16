@@ -259,16 +259,11 @@ class MobileUserController @Inject() (
 
   private val MobilePrefNames = Set(UserValueName.SHOW_DELIGHTED_QUESTION)
 
-  def getPrefs() = UserAction.async { request =>
+  def getPrefs() = UserAction { request =>
     // Make sure the user's last active date has been updated before returning the result
     userCommander.setLastUserActive(request.userId)
-    val notifyPrefs = db.readOnlyMaster { implicit s =>
-      val canShowRecosReminders = notifyPreferenceRepo.canNotify(request.userId, NotifyPreference.RECOS_REMINDER)
-      Json.obj("recos_reminder" -> canShowRecosReminders)
-    }
-    userCommander.getPrefs(MobilePrefNames, request.userId, request.experiments) map { prefObj =>
-      Ok(prefObj ++ notifyPrefs)
-    }
+    val prefObj = userCommander.getPrefs(MobilePrefNames, request.userId, request.experiments)
+    Ok(prefObj)
   }
 
   def getSettings() = UserAction { request =>
