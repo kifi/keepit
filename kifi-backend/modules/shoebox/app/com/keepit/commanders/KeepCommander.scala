@@ -157,7 +157,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] = {
-    val (keeps, users, libs) = db.readOnlyReplica { implicit s =>
+    val (keeps, users, libs) = db.readOnlyMaster { implicit s =>
       val keepsById = keepRepo.getByIds(ids)
       val usersById = ktuRepo.getAllByKeepIds(ids).map { case (keepId, ktus) => keepId -> ktus.map(_.userId).toSet }
       val libsById = ktlRepo.getAllByKeepIds(ids).map { case (keepId, ktls) => keepId -> ktls.map(_.libraryId).toSet }

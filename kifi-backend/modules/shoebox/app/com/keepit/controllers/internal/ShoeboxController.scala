@@ -17,11 +17,13 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.store.{ S3ImageStore, ImageSize }
 import com.keepit.common.time._
+import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
 import com.keepit.notify.NotificationInfoModel
 import com.keepit.notify.model.{ NotificationKind }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.BasicImages
+import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.normalizer._
 import com.keepit.search.{ SearchConfigExperiment, SearchConfigExperimentRepo }
@@ -40,8 +42,10 @@ import com.keepit.common.json.{ KeyFormat, TraversableFormat, EitherFormat, Tupl
 
 class ShoeboxController @Inject() (
   db: Database,
+  keepInterner: KeepInterner,
   userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
+  ktuCommander: KeepToUserCommander,
   keepRepo: KeepRepo,
   keepSourceAttributionRepo: KeepSourceAttributionRepo,
   keepCommander: KeepCommander,
@@ -615,5 +619,19 @@ class ShoeboxController @Inject() (
     }
     implicit val writes = SourceAttribution.internalFormat
     Ok(Json.toJson(attributions))
+  }
+
+  def internKeep() = Action(parse.tolerantJson) { request =>
+    import InternKeep._
+    val input = request.body.as[Request]
+    val rawBookmark = RawBookmarkRepresentation(title = input.title, url = input.url, note = input.note)
+    implicit val context = HeimdalContext.empty
+    val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), input.creator, libraryOpt = None, source = KeepSource.discussion)
+    val keep = internResponse.newKeeps.head
+    db.readWrite { implicit s =>
+      input.users.foreach { uid => ktuCommander.internKeepInUser(keep, uid, input.creator) }
+    }
+    val csKeep = keepCommander.getCrossServiceKeeps(Set(keep.id.get)).values.head
+    Ok(Json.toJson(csKeep))
   }
 }
