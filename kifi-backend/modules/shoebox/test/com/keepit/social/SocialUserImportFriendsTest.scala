@@ -43,6 +43,7 @@ class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector
         graphs forall { case (filename, numOfFriends) => testFacebookGraph(socialUser, filename, numOfFriends) }
       }
     }
+
   }
 
   def testFacebookGraph(socialUserInfo: SocialUserInfo, jsonFilename: String, numOfFriends: Int)(implicit injector: Injector) = {
