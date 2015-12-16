@@ -1,0 +1,60 @@
+section-border = defaultBorder
+section-border-radius = 10px
+
+.kf-feature-upsell
+  padding: 10px 16px
+  line-height: 16px
+  font-size: 13px
+  overflow: hidden
+  border-radius: section-border-radius
+  border: section-border
+  background-color: #fff
+  text-align: center
+
+.kf-fu-slack-icon
+  display: inline-block
+  height: 15px
+  width: 15px
+
+.kf-fu-header
+  margin-bottom: 10px
+  font-size: 15px
+  text-align: center
+  margin-left: 16px
+
+.kf-fu-body
+  display: inline-block
+  color: alpha(black, .8)
+
+.kf-fu-body + .kf-fu-body
+  margin-top: 1px
+
+.kf-fu-body + :not(.kf-fu-body):not(.kf-fu-loading-spinner-container)
+  margin-top: 14px
+
+.kf-fu-loading-spinner
+  margin-bottom: 8px
+  margin-top: 8px
+
+.kf-fu-slack-start-btn
+  display: block
+  background-color: libraryGreen
+  color: white
+  border: none
+  border-radius: 3px
+  margin: auto
+
+  &:hover
+    opacity: .9
+
+  &:hover:active
+    opacity: 1
+
+.kf-fu-slack-learn-link
+  display: block
+  margin: auto
+  padding-right: 2px
+
+.kf-fu-slack-start-btn + .kf-fu-slack-learn-link
+  margin-top: 4px
+

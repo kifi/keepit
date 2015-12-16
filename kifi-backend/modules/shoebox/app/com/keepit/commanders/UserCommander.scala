@@ -23,10 +23,12 @@ import com.keepit.common.usersegment.{ UserSegment, UserSegmentFactory }
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, ElizaServiceClient }
 import com.keepit.graph.GraphServiceClient
 import com.keepit.heimdal.{ ContextStringData, HeimdalServiceClient, _ }
+import com.keepit.model.UserValueName._
 import com.keepit.model._
 import com.keepit.notify.model.Recipient
 import com.keepit.notify.model.event.SocialContactJoined
 import com.keepit.search.SearchServiceClient
+import com.keepit.slack.models.{ SlackChannelToLibraryRepo, SlackTeamMembershipRepo }
 import com.keepit.social.{ BasicUser, SocialNetworks, UserIdentity }
 import com.keepit.typeahead.{ KifiUserTypeahead, SocialUserTypeahead, TypeaheadHit }
 import com.kifi.macros.json
@@ -131,7 +133,7 @@ trait UserCommander {
   def resetPassword(code: String, ip: IpAddress, password: String): Either[String, Id[User]]
   def sendCloseAccountEmail(userId: Id[User], comment: String): ElectronicMail
   def sendCreateTeamEmail(userId: Id[User], emailAddress: EmailAddress): Either[String, ElectronicMail]
-  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[JsObject]
+  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): JsObject
   def savePrefs(userId: Id[User], o: Map[UserValueName, JsValue]): Unit
   def setLastUserActive(userId: Id[User]): Unit
   def postDelightedAnswer(userId: Id[User], answer: BasicDelightedAnswer): Future[Option[ExternalId[DelightedAnswer]]]
@@ -182,6 +184,8 @@ class UserCommanderImpl @Inject() (
     kifiInstallationRepo: KifiInstallationRepo,
     implicit val executionContext: ExecutionContext,
     experimentRepo: UserExperimentRepo,
+    slackTeamMembershipRepo: SlackTeamMembershipRepo,
+    slackChannelToLibraryRepo: SlackChannelToLibraryRepo,
     airbrake: AirbrakeNotifier) extends UserCommander with Logging { self =>
 
   def userFromUsername(username: Username): Option[User] = db.readOnlyReplica { implicit session =>
@@ -518,6 +522,15 @@ class UserCommanderImpl @Inject() (
     }
   }
 
+  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): JsObject = {
+    updatePrefs(prefSet, userId, experiments)
+
+    val staticPrefs = readUserValuePrefs(prefSet, userId)
+    val missing = prefSet.diff(staticPrefs.keySet)
+    val allPrefs = (staticPrefs ++ generateDynamicPrefs(missing, userId)).map(r => r._1.name -> r._2)
+    JsObject(allPrefs.toSeq)
+  }
+
   private def getPrefUpdates(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[Map[UserValueName, JsValue]] = {
     if (prefSet.contains(UserValueName.SHOW_DELIGHTED_QUESTION)) {
       // Check if user should be shown Delighted question
@@ -545,28 +558,39 @@ class UserCommanderImpl @Inject() (
     } else Future.successful(Map())
   }
 
-  private def readPrefs(prefSet: Set[UserValueName], userId: Id[User]): JsObject = {
-    // Reading from master because the value may have been updated just before
-    val values = db.readOnlyMaster { implicit s =>
+  private def readUserValuePrefs(prefSet: Set[UserValueName], userId: Id[User]): Map[UserValueName, JsValue] = {
+    val values = db.readOnlyReplica { implicit s =>
       userValueRepo.getValues(userId, prefSet.toSeq: _*)
     }
-    JsObject(prefSet.toSeq.map { name =>
-      name.name -> values(name).map(value => {
-        if (value == "false") JsBoolean(false)
-        else if (value == "true") JsBoolean(true)
-        else if (value == "null") JsNull
-        else JsString(value)
-      }).getOrElse(JsNull)
-    })
+    prefSet.flatMap { name =>
+      values(name).flatMap { value =>
+        if (value == "false") Some(name -> JsBoolean(false))
+        else if (value == "true") Some(name -> JsBoolean(true))
+        else if (value == "null") None
+        else Some(name -> JsString(value))
+      }
+    }.toMap
   }
 
-  def getPrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]): Future[JsObject] = {
+  private def generateDynamicPrefs(prefSet: Set[UserValueName], userId: Id[User]): Map[UserValueName, JsValue] = {
+    db.readOnlyReplica { implicit session =>
+      prefSet.collect {
+        case SLACK_INT_PROMO =>
+          val teamOpt = organizationMembershipRepo.getByUserId(userId, Limit(1), Offset(0)).headOption
+          lazy val hasIntegrations = {
+            slackTeamMembershipRepo.getByUserId(userId).nonEmpty ||
+              teamOpt.flatMap(team => slackChannelToLibraryRepo.getIntegrationsByOrg(team.organizationId).headOption).nonEmpty
+          }
+          SLACK_INT_PROMO -> JsBoolean(teamOpt.nonEmpty && !hasIntegrations)
+      }.toMap
+    }
+  }
+
+  private def updatePrefs(prefSet: Set[UserValueName], userId: Id[User], experiments: Set[UserExperimentType]) = {
     getPrefUpdates(prefSet, userId, experiments) map { updates =>
       savePrefs(userId, updates)
     } recover {
       case t: Throwable => airbrake.notify(s"Error updating prefs for user $userId", t)
-    } map { _ =>
-      readPrefs(prefSet, userId)
     }
   }
 
@@ -582,8 +606,8 @@ class UserCommanderImpl @Inject() (
     ()
   }
 
-  val DELIGHTED_MIN_INTERVAL = 60 // days
-  val DELIGHTED_INITIAL_DELAY = 14 // days
+  val DELIGHTED_MIN_INTERVAL = 90 // days
+  val DELIGHTED_INITIAL_DELAY = 28 // days
 
   def setLastUserActive(userId: Id[User]): Unit = {
     val time = clock.now

@@ -664,8 +664,8 @@ class KeepCommanderImpl @Inject() (
   private def getKeepsByUriAndLibraries(uriId: Id[NormalizedURI], targetLibraries: Set[Id[Library]])(implicit session: RSession): Set[Keep] = {
     // TODO(ryan): uncomment the line below, and get rid of the require
     // keepRepo.getByUriAndLibrariesHash(uriId, LibrariesHash(targetLibraries)).filter(k => isKeepInLibraries(k.id.get, targetLibraries))
-    require(targetLibraries.size == 1, s"keep is not in exactly 1 library: $targetLibraries!")
-    keepRepo.getPrimaryByUriAndLibrary(uriId, targetLibraries.head).toSet
+    require(targetLibraries.size <= 1)
+    targetLibraries.headOption.map(libId => keepRepo.getPrimaryByUriAndLibrary(uriId, libId).toSet).getOrElse(Set.empty)
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (keep.isInactive) {
@@ -789,11 +789,13 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
+  @StatsdTiming("KeepCommander.getKeepStream")
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]] = {
     val keepsAndTimes = db.readOnlyReplica { implicit session =>
       // TODO(ryan): when the frontend can handle a keep without a library, let them through
-      keepRepo.getRecentKeeps(userId, limit, beforeExtId, afterExtId).filter { case (k, _) => k.libraryId.isDefined }
-    }.distinctBy { case (k, addedAt) => k.uriId }
+      // Grab 2x the required number because we're going to be dropping some
+      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId).filter { case (k, _) => k.libraryId.isDefined }
+    }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
 
     val keeps = keepsAndTimes.map(_._1)
     val firstAddedAt = keepsAndTimes.map { case (k, addedAt) => k.id.get -> addedAt }.toMap

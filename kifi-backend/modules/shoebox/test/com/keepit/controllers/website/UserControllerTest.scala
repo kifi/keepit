@@ -160,10 +160,7 @@ class UserControllerTest extends Specification with ShoeboxTestInjector {
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
         val expected = Json.obj(
-          "auto_show_guide" -> JsNull,
-          "show_delighted_question" -> false,
-          "use_minimal_keep_card" -> JsNull,
-          "has_no_password" -> JsNull)
+          "show_delighted_question" -> false)
 
         def subsetOf(json1: JsObject, json2: JsObject): Boolean = {
           json1.fieldSet.map {

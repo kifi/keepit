@@ -81,6 +81,7 @@ object UserValueName {
   val SHOW_DELIGHTED_QUESTION = UserValueName("show_delighted_question")
   val HAS_SEEN_FTUE = UserValueName("has_seen_ftue")
   val STORED_CREDIT_CODE = UserValueName("stored_credit_code")
+  val SLACK_INT_PROMO = UserValueName("slack_int_promo")
 
   val LAST_SMS_SENT = UserValueName("last_sms_sent")
 

@@ -5,6 +5,7 @@ import com.keepit.common.cache.TransactionalCaching.Implicits.directCacheAccess
 import com.keepit.common.core._
 import com.keepit.common.db.{Id, SequenceNumber}
 import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.json.TraversableFormat
 import com.keepit.common.json.TupleFormat._
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{CallTimeouts, HttpClient}
@@ -130,8 +131,8 @@ trait ElizaServiceClient extends ServiceClient {
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
 
-  def rpbGetThread(threadId: Long): Future[RPBGetThread.Response]
-  def rpbConnectKeep(threadId: Long, keepId: Id[Keep]): Future[Unit]
+  def rpbGetThreads(limit: Int): Future[RPBGetThreads.Response]
+  def rpbConnectKeeps(connections: Map[Long, Id[Keep]]): Future[Unit]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -335,17 +336,17 @@ class ElizaServiceClientImpl @Inject() (
   }
 
   // TODO(ryan): delete this morass
-  def rpbGetThread(threadId: Long): Future[RPBGetThread.Response] = {
-    import RPBGetThread._
-    val request = Request(threadId)
-    call(Eliza.internal.rpbGetThread, body = Json.toJson(request)).map { response =>
+  def rpbGetThreads(limit: Int): Future[RPBGetThreads.Response] = {
+    import RPBGetThreads._
+    val request = Request(limit)
+    call(Eliza.internal.rpbGetThreads, body = Json.toJson(request)).map { response =>
       response.json.as[Response]
     }
   }
-  def rpbConnectKeep(threadId: Long, keepId: Id[Keep]): Future[Unit] = {
-    import RPBConnectKeep._
-    val request = Request(threadId, keepId)
-    call(Eliza.internal.rpbConnectKeep, body = Json.toJson(request)).map { response =>
+  def rpbConnectKeeps(connections: Map[Long, Id[Keep]]): Future[Unit] = {
+    import RPBConnectKeeps._
+    val request = Request(connections)
+    call(Eliza.internal.rpbConnectKeeps(), body = Json.toJson(request)).map { response =>
       Unit
     }
   }
@@ -397,14 +398,18 @@ object ElizaServiceClient {
   }
 
   // TODO(ryan): delete this grossness
-  object RPBGetThread {
-    case class Request(threadId: Long)
-    case class Response(startedBy: Id[User], title: Option[String], url: String, startedAt: DateTime)
+  object RPBGetThreads {
+    case class Request(limit: Int)
+    case class Response(threads: Map[Long, ThreadObject])
+    case class ThreadObject(startedBy: Id[User], userAddedAt: Map[Id[User], DateTime], title: Option[String], url: String, startedAt: DateTime)
+    implicit val threadObjectFormat = Json.format[ThreadObject]
+    implicit val mapFormat = TraversableFormat.mapFormat[Long, ThreadObject](_.toString, s => Try(s.toLong).toOption)
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
   }
-  object RPBConnectKeep {
-    case class Request(threadId: Long, keepId: Id[Keep])
+  object RPBConnectKeeps {
+    case class Request(connections: Map[Long, Id[Keep]])
+    implicit val mapFormat = TraversableFormat.mapFormat[Long, Id[Keep]](_.toString, s => Try(s.toLong).toOption)
     implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 }

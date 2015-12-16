@@ -56,6 +56,7 @@ trait SlackChannelToLibraryRepo extends Repo[SlackChannelToLibrary] {
   def getActiveByIds(ids: Set[Id[SlackChannelToLibrary]])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getActiveByLibrary(libraryId: Id[Library])(implicit session: RSession): Set[SlackChannelToLibrary]
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary]
+  def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[SlackChannelToLibrary]
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary]
   def internBySlackTeamChannelAndLibrary(request: SlackIntegrationCreateRequest)(implicit session: RWSession): SlackChannelToLibrary
   def getRipeForIngestion(limit: Int, ingestingForMoreThan: Period)(implicit session: RSession): Seq[Id[SlackChannelToLibrary]]
@@ -181,6 +182,10 @@ class SlackChannelToLibraryRepoImpl @Inject() (
   def getUserVisibleIntegrationsForLibraries(userId: Id[User], orgsForUser: Set[Id[Organization]], libraryIds: Set[Id[Library]])(implicit session: RSession): Seq[SlackChannelToLibrary] = {
     // TODO(ryan): this `row.organizationId.isEmpty` should not be necessary anymore. If the userId is set, it _should_ imply that the orgId is not
     activeRows.filter(row => row.libraryId.inSet(libraryIds) && row.organizationId.inSet(orgsForUser) || (row.userId === userId && row.organizationId.isEmpty)).list
+  }
+
+  def getIntegrationsByOrg(orgId: Id[Organization])(implicit session: RSession): Seq[SlackChannelToLibrary] = {
+    activeRows.filter(row => row.organizationId === orgId).list
   }
 
   def getBySlackTeamChannelAndLibrary(slackTeamId: SlackTeamId, slackChannelName: SlackChannelName, libraryId: Id[Library], excludeState: Option[State[SlackChannelToLibrary]] = Some(SlackChannelToLibraryStates.INACTIVE))(implicit session: RSession): Option[SlackChannelToLibrary] = {

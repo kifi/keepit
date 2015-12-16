@@ -3,22 +3,30 @@ package com.keepit.controllers.admin
 import java.util.regex.{ Pattern, PatternSyntaxException }
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepInterner, RawBookmarkRepresentation }
-import com.keepit.common.concurrent.ChunkedResponseHelper
+import com.keepit.commanders.{ KeepToUserCommander, RawBookmarkRepresentation, KeepInterner, KeepCommander }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicIdRegistry }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.{ KeepSource, Library, Organization }
-import play.api.libs.json.Json
+import com.keepit.model._
+import com.keepit.slack.models.SlackMessageRequest
+import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
+import play.api.libs.json.{ JsString, Json }
 
 import scala.concurrent.ExecutionContext
-import scala.util.Try
+import scala.util.{ Failure, Success, Try }
 
 class AdminGoodiesController @Inject() (
   eliza: ElizaServiceClient,
+  keepCommander: KeepCommander,
+  ktuCommander: KeepToUserCommander,
+  ktuRepo: KeepToUserRepo,
   keepInterner: KeepInterner,
+  db: Database,
+  inhouseSlackClient: InhouseSlackClient,
   override val userActionsHelper: UserActionsHelper,
   implicit val executionContext: ExecutionContext,
   implicit val publicIdConfig: PublicIdConfiguration)
@@ -78,25 +86,42 @@ class AdminGoodiesController @Inject() (
     }
   }
 
+  // TODO(ryan): erase this garbage from the face of the earth, what were you thinking?
   def backfillMessageThread() = AdminUserAction(parse.tolerantJson) { request =>
-    val source = KeepSource.keeper
-    val threads = (request.body \ "threads").as[Seq[Long]]
+    val source = KeepSource.discussion
+    val n = (request.body \ "n").as[Int]
+    val limit = (request.body \ "limit").as[Int]
     implicit val context = HeimdalContext.empty
-    val enum = ChunkedResponseHelper.chunkedFuture(threads) { threadId =>
+    FutureHelpers.sequentialExec(1 to n) { _ =>
       for {
-        res <- eliza.rpbGetThread(threadId)
-        rawBookmark = RawBookmarkRepresentation(title = res.title, url = res.url, keptAt = Some(res.startedAt))
-        internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), res.startedBy, None, source)
-        keepId = internResponse.successes.head.id.get
-        _ <- eliza.rpbConnectKeep(threadId, keepId)
+        res <- eliza.rpbGetThreads(limit)
+        keepsByThreadId = res.threads.map {
+          case (threadId, threadObject) =>
+            val rawBookmark = RawBookmarkRepresentation(title = threadObject.title, url = threadObject.url, keptAt = Some(threadObject.startedAt))
+            val keepTemplate = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), threadObject.startedBy, None, source).newKeeps.head
+            val keep = db.readWrite { implicit s =>
+              val k = keepCommander.persistKeep(keepTemplate, users = threadObject.userAddedAt.keySet, libraries = Set.empty)
+              // Manually hack in all the keep-to-users
+              threadObject.userAddedAt.foreach {
+                case (uid, addedAt) =>
+                  val ktu = ktuCommander.internKeepInUser(k, uid, k.userId)
+                  ktuRepo.save(ktu.withAddedAt(addedAt))
+              }
+              k
+            }
+            threadId -> keep.id.get
+        }
+        _ <- eliza.rpbConnectKeeps(keepsByThreadId)
       } yield {
-        Json.obj(
-          "requested" -> threadId,
-          "received" -> Json.arr(res.title, res.url, res.startedAt, res.startedBy),
-          "successfully_interned" -> internResponse.successes.map(_.id.get)
-        )
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Interned (thread, keep) pairs: $keepsByThreadId"))
+        Thread.sleep(5000)
       }
+    }.andThen {
+      case Success(_) =>
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Done!"))
+      case Failure(fail) =>
+        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Crap, we broke because $fail"))
     }
-    Ok.chunked(enum)
+    Ok(JsString("started, check #test-ryan"))
   }
 }

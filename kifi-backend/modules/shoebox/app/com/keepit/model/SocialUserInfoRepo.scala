@@ -16,6 +16,7 @@ import scala.util.Try
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] with RepoWithDelete[SocialUserInfo] with SeqNumberFunction[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
+  def getByUsernameOpt(username: String, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo]
   def getByUsers(userIds: Seq[Id[User]])(implicit session: RSession): Seq[SocialUserInfo]
   def doNotUseSave(socialUserInfo: SocialUserInfo)(implicit session: RWSession): SocialUserInfo
   def getNotAuthorizedByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
@@ -161,6 +162,10 @@ class SocialUserInfoRepoImpl @Inject() (
       val hashed = socialIdToSocialHash(id)
       (for (f <- rows if (f.socialHash === hashed || f.socialHash.isEmpty) && f.socialId === id && f.networkType === networkType) yield f).firstOption
     }
+
+  def getByUsernameOpt(username: String, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] = {
+    (for (f <- rows if f.username === username && f.networkType === networkType) yield f).firstOption
+  }
 
   def getSocialUserBasicInfos(ids: Seq[Id[SocialUserInfo]])(implicit session: RSession): Map[Id[SocialUserInfo], SocialUserBasicInfo] = {
     if (ids.isEmpty) Map.empty[Id[SocialUserInfo], SocialUserBasicInfo]

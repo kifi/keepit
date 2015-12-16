@@ -468,6 +468,12 @@ angular.module('kifi')
 
     };
 
+    // query param handling
+    var showSlackDialog = $stateParams.showSlackDialog || initParams.getAndClear('showSlackDialog');
+    if (showSlackDialog) {
+      $scope.processSlackRequest();
+    }
+
     $scope.showFeedModal = function () {
       libraryService.trackEvent('user_clicked_page', $scope.library, { type: 'rss', action: 'clicked_subscribe_button'});
       modalService.open({
@@ -650,11 +656,5 @@ angular.module('kifi')
       return newestKeep.createdAt || $scope.library.lastKept || $scope.library.modifiedAt;
     };
     updateLibrary(10000);
-
-    // query param handling
-    var showSlackDialog = initParams.getAndClear('showSlackDialog');
-    if (showSlackDialog) {
-      $scope.openSlackIntegrations();
-    }
   }
 ]);

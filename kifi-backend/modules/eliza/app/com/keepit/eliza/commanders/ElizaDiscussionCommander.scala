@@ -1,8 +1,8 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.common.core.futureExtensionOps
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.core.{ futureExtensionOps, anyExtensionOps }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.healthcheck.AirbrakeNotifier
@@ -193,14 +193,11 @@ class ElizaDiscussionCommanderImpl @Inject() (
       mt <- messageThreadRepo.getByKeepId(keepId)
       ut <- userThreadRepo.getUserThread(userId, mt.id.get)
     } yield {
-      val unreadCount = messageRepo.countByThread(mt.id.get, Some(msgId), SortDirection.ASCENDING)
-
-      // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
-      // Then you can just set it and forget it
-      if (unreadCount == 0) {
-        userThreadRepo.markRead(userId, mt.id.get, messageRepo.get(msgId))
+      messageRepo.countByThread(mt.id.get, Some(msgId), SortDirection.ASCENDING) tap { unreadCount =>
+        // TODO(ryan): drop UserThread.unread and instead have a `UserThread.lastSeenMessageId` and compare to `messageRepo.getLatest(threadId)`
+        // Then you can just set it and forget it
+        if (unreadCount == 0) userThreadRepo.markRead(userId, mt.id.get, messageRepo.get(msgId))
       }
-      unreadCount
     }
   }
 

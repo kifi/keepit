@@ -267,8 +267,8 @@ object Eliza extends Service {
     def getMessagesOnKeep = ServiceRoute(POST, "/internal/eliza/getMessagesOnKeep")
     def editMessage() = ServiceRoute(POST, "/internal/eliza/editMessage")
     def deleteMessage() = ServiceRoute(POST, "/internal/eliza/deleteMessage")
-    def rpbGetThread = ServiceRoute(POST, "/internal/eliza/rpbGetThread")
-    def rpbConnectKeep() = ServiceRoute(POST, "/internal/eliza/rpbConnectKeep")
+    def rpbGetThreads = ServiceRoute(POST, "/internal/eliza/rpbGetThreads")
+    def rpbConnectKeeps() = ServiceRoute(POST, "/internal/eliza/rpbConnectKeeps")
   }
 }
 
