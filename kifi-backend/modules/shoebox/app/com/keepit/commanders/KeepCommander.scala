@@ -789,11 +789,13 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
+  @StatsdTiming("KeepCommander.getKeepStream")
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]] = {
     val keepsAndTimes = db.readOnlyReplica { implicit session =>
       // TODO(ryan): when the frontend can handle a keep without a library, let them through
-      keepRepo.getRecentKeeps(userId, limit, beforeExtId, afterExtId).filter { case (k, _) => k.libraryId.isDefined }
-    }.distinctBy { case (k, addedAt) => k.uriId }
+      // Grab 2x the required number because we're going to be dropping some
+      keepRepo.getRecentKeeps(userId, 2 * limit, beforeExtId, afterExtId).filter { case (k, _) => k.libraryId.isDefined }
+    }.distinctBy { case (k, addedAt) => k.uriId }.take(limit)
 
     val keeps = keepsAndTimes.map(_._1)
     val firstAddedAt = keepsAndTimes.map { case (k, addedAt) => k.id.get -> addedAt }.toMap
