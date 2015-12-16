@@ -106,7 +106,7 @@ class ElizaDiscussionController @Inject() (
     val input = request.body.as[Request]
     db.readOnlyMaster { implicit s =>
       val threads = threadRepo.getThreadsWithoutKeepId(limit = input.limit)
-      val output = Response(threads.map { th => th.id.get.id -> ThreadObject(th.startedBy, th.allParticipants, th.pageTitle, th.url, th.createdAt) }.toMap)
+      val output = Response(threads.map { th => th.id.get.id -> ThreadObject(th.startedBy, th.participants.userParticipants, th.pageTitle, th.url, th.createdAt) }.toMap)
       Ok(Json.toJson(output))
     }
   }

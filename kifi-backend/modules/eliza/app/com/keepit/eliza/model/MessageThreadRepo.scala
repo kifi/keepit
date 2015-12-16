@@ -120,7 +120,7 @@ class MessageThreadRepoImpl @Inject() (
     getByKeepIds(Set(keepId)).get(keepId)
   }
   def getThreadsWithoutKeepId(limit: Int)(implicit session: RSession): Seq[MessageThread] = {
-    activeRows.filter(row => row.keepId.isEmpty && row.startedBy === Id[User](84792)).take(limit).list
+    activeRows.filter(row => row.keepId.isEmpty).take(limit).list
   }
 
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit = {

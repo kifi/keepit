@@ -3,14 +3,15 @@ package com.keepit.controllers.admin
 import java.util.regex.{ Pattern, PatternSyntaxException }
 
 import com.google.inject.Inject
-import com.keepit.commanders.{ KeepInterner, RawBookmarkRepresentation }
-import com.keepit.common.concurrent.{ FutureHelpers, ChunkedResponseHelper }
+import com.keepit.commanders.{ KeepToUserCommander, RawBookmarkRepresentation, KeepInterner, KeepCommander }
+import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.controller.{ AdminUserActions, UserActionsHelper }
 import com.keepit.common.crypto.{ PublicIdConfiguration, PublicIdRegistry }
 import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
 import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal.HeimdalContext
-import com.keepit.model.{ KeepSource, Library, Organization }
+import com.keepit.model._
 import com.keepit.slack.models.SlackMessageRequest
 import com.keepit.slack.{ InhouseSlackChannel, InhouseSlackClient }
 import play.api.libs.json.{ JsString, Json }
@@ -20,7 +21,11 @@ import scala.util.{ Failure, Success, Try }
 
 class AdminGoodiesController @Inject() (
   eliza: ElizaServiceClient,
+  keepCommander: KeepCommander,
+  ktuCommander: KeepToUserCommander,
+  ktuRepo: KeepToUserRepo,
   keepInterner: KeepInterner,
+  db: Database,
   inhouseSlackClient: InhouseSlackClient,
   override val userActionsHelper: UserActionsHelper,
   implicit val executionContext: ExecutionContext,
@@ -81,6 +86,7 @@ class AdminGoodiesController @Inject() (
     }
   }
 
+  // TODO(ryan): erase this garbage from the face of the earth, what were you thinking?
   def backfillMessageThread() = AdminUserAction(parse.tolerantJson) { request =>
     val source = KeepSource.discussion
     val n = (request.body \ "n").as[Int]
@@ -90,15 +96,25 @@ class AdminGoodiesController @Inject() (
       for {
         res <- eliza.rpbGetThreads(limit)
         keepsByThreadId = res.threads.map {
-          case (threadId, to) =>
-            val rawBookmark = RawBookmarkRepresentation(title = to.title, url = to.url, keptAt = Some(to.startedAt))
-            val internResponse = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), to.startedBy, None, source)
-            val keepId = internResponse.successes.head.id.get
-            threadId -> keepId
+          case (threadId, threadObject) =>
+            val rawBookmark = RawBookmarkRepresentation(title = threadObject.title, url = threadObject.url, keptAt = Some(threadObject.startedAt))
+            val keepTemplate = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), threadObject.startedBy, None, source).newKeeps.head
+            val keep = db.readWrite { implicit s =>
+              val k = keepCommander.persistKeep(keepTemplate, users = threadObject.userAddedAt.keySet, libraries = Set.empty)
+              // Manually hack in all the keep-to-users
+              threadObject.userAddedAt.foreach {
+                case (uid, addedAt) =>
+                  val ktu = ktuCommander.internKeepInUser(k, uid, k.userId)
+                  ktuRepo.save(ktu.withAddedAt(addedAt))
+              }
+              k
+            }
+            threadId -> keep.id.get
         }
         _ <- eliza.rpbConnectKeeps(keepsByThreadId)
       } yield {
         inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Interned (thread, keep) pairs: $keepsByThreadId"))
+        Thread.sleep(1000)
       }
     }.andThen {
       case Success(_) =>
