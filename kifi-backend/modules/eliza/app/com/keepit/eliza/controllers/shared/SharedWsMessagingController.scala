@@ -123,15 +123,17 @@ class SharedWsMessagingController @Inject() (
     },
     // inbox notification/thread handlers
     "get_one_thread" -> {
-      case JsNumber(requestId) +: JsString(threadId) +: _ =>
-        (for {
-          json <- notificationDeliveryCommander.getSendableNotification(socket.userId, ExternalId[MessageThread](threadId), needsPageImages(socket))
-        } yield {
-          socket.channel.push(Json.arr(requestId.toLong, json.obj))
-        }).onFailure {
-          case f =>
-            airbrake.notify(f)
-            socket.channel.push(Json.arr("server_error", requestId.toLong))
+      case JsNumber(requestId) +: JsString(threadIdStr) +: _ =>
+        MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
+          (for {
+            json <- notificationDeliveryCommander.getSendableNotification(socket.userId, threadId, needsPageImages(socket))
+          } yield {
+            socket.channel.push(Json.arr(requestId.toLong, json.obj))
+          }).onFailure {
+            case f =>
+              airbrake.notify(f)
+              socket.channel.push(Json.arr("server_error", requestId.toLong))
+          }
         }
     },
     "get_latest_threads" -> {
@@ -327,7 +329,6 @@ class SharedWsMessagingController @Inject() (
     "unmute_thread" -> {
       case JsString(jsThreadId) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        val notifExternalId = ExternalId[Notification](jsThreadId)
         legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
           notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = false)
         } {

@@ -43,7 +43,7 @@ case class MessageNotification(
   author: Option[BasicUserLikeEntity],
   text: String,
   // Information about the thread
-  threadId: ExternalId[MessageThread],
+  threadId: MessageThreadId,
   locator: DeepLocator,
   url: String,
   title: Option[String],
@@ -60,14 +60,14 @@ case class MessageNotification(
   numUnreadMessages: Int)
 object MessageNotification {
   // TODO(ryan): pray for forgiveness for this travesty
-  def apply(message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser,
+  def apply(message: ElizaMessage, originalThreadId: MessageThreadId, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser,
     unread: Boolean, originalAuthorIdx: Int, numUnseenAuthors: Int, numAuthors: Int,
     numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration): MessageNotification = MessageNotification(
     id = message.pubId,
     time = message.createdAt,
     author = messageWithBasicUser.user,
     text = message.messageText,
-    threadId = thread.externalId,
+    threadId = originalThreadId,
     locator = thread.deepLocator,
     url = message.sentOnUrl.getOrElse(thread.url),
     title = thread.pageTitle,
@@ -81,12 +81,12 @@ object MessageNotification {
     numMessages = numMessages,
     numUnreadMessages = numUnread
   )
-  implicit val writes: Writes[MessageNotification] = (
+  implicit def writes(implicit messageThreadIdWrites: Writes[MessageThreadId]): Writes[MessageNotification] = (
     (__ \ 'id).write[PublicId[Message]] and
     (__ \ 'time).write[DateTime] and
     (__ \ 'author).writeNullable[BasicUserLikeEntity] and
     (__ \ 'text).write[String] and
-    (__ \ 'thread).write[ExternalId[MessageThread]] and
+    (__ \ 'thread).write[MessageThreadId] and
     (__ \ 'locator).write[DeepLocator] and
     (__ \ 'url).write[String] and
     (__ \ 'title).writeNullable[String] and
@@ -119,9 +119,13 @@ class NotificationDeliveryCommander @Inject() (
     implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends Logging {
 
-  def notifySendMessage(from: Id[User], message: ElizaMessage, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
+  implicit val threadIdWrites: Writes[MessageThreadId] = MessageThreadId.format
+  implicit val messageNotificationWrites: Writes[MessageNotification] = MessageNotification.writes
+
+  def notifySendMessage(from: Id[User], message: ElizaMessage, originalThreadId: MessageThreadId, thread: MessageThread, orderedMessageWithBasicUser: MessageWithBasicUser, originalAuthor: Int, numAuthors: Int, numMessages: Int, numUnread: Int): Unit = {
     val notifJson = MessageNotification(
       message = message,
+      originalThreadId = originalThreadId,
       thread = thread,
       messageWithBasicUser = orderedMessageWithBasicUser,
       unread = false,
@@ -157,7 +161,7 @@ class NotificationDeliveryCommander @Inject() (
 
   def notifyEmailParticipants(thread: MessageThread): Unit = { emailCommander.notifyEmailUsers(thread) }
 
-  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], thread: MessageThread, message: ElizaMessage, adderUserId: Id[User]): Unit = {
+  def notifyAddParticipants(newParticipants: Seq[Id[User]], newNonUserParticipants: Seq[NonUserParticipant], originalThreadId: MessageThreadId, thread: MessageThread, message: ElizaMessage, adderUserId: Id[User]): Unit = {
     new SafeFuture(shoebox.getBasicUsers(thread.participants.allUsers.toSeq) map { basicUsers =>
       val adderUserName = basicUsers.get(adderUserId).map { bu => bu.firstName + " " + bu.lastName }.get
       val theTitle: String = thread.pageTitle.getOrElse("New conversation")
@@ -167,13 +171,13 @@ class NotificationDeliveryCommander @Inject() (
       val notificationJson = Json.obj(
         "id" -> message.pubId,
         "time" -> message.createdAt,
-        "thread" -> thread.externalId,
+        "thread" -> originalThreadId,
         "text" -> s"$adderUserName added you to a conversation.",
         "url" -> message.sentOnUrl.getOrElse[String](thread.url),
         "title" -> theTitle,
         "author" -> basicUsers(adderUserId),
         "participants" -> participants,
-        "locator" -> ("/messages/" + thread.externalId),
+        "locator" -> ("/messages/" + thread.threadId),
         "unread" -> true,
         "category" -> NotificationCategory.User.MESSAGE.category
       )
@@ -206,8 +210,8 @@ class NotificationDeliveryCommander @Inject() (
         val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message.pubId, message.createdAt, "", message.source, message.auxData, "", "", None, participants)
         messageWithBasicUser.map { augmentedMessage =>
           thread.participants.allUsers.par.foreach { userId =>
-            sendToUser(userId, Json.arr("message", thread.externalId.id, augmentedMessage))
-            sendToUser(userId, Json.arr("thread_participants", thread.externalId.id, participants))
+            sendToUser(userId, Json.arr("message", originalThreadId, augmentedMessage))
+            sendToUser(userId, Json.arr("thread_participants", originalThreadId, participants))
           }
         }
         emailCommander.notifyAddedEmailUsers(thread, newNonUserParticipants)
@@ -215,20 +219,20 @@ class NotificationDeliveryCommander @Inject() (
     })
   }
 
-  def notifyMessage(userId: Id[User], thread: MessageThread, message: MessageWithBasicUser): Unit =
-    sendToUser(userId, Json.arr("message", thread.externalId.id, message))
+  def notifyMessage(userId: Id[User], threadExtId: MessageThreadId, message: MessageWithBasicUser): Unit =
+    sendToUser(userId, Json.arr("message", threadExtId, message))
 
-  def notifyRead(userId: Id[User], threadExtId: ExternalId[MessageThread], messageId: PublicId[Message], nUrl: String, creationDate: DateTime): Unit = {
-    sendToUser(userId, Json.arr("message_read", nUrl, threadExtId.id, creationDate, messageId.id))
+  def notifyRead(userId: Id[User], threadExtId: MessageThreadId, messageId: PublicId[Message], nUrl: String, creationDate: DateTime): Unit = {
+    sendToUser(userId, Json.arr("message_read", nUrl, threadExtId, creationDate, messageId.id))
     notifyUnreadCount(userId, threadExtId)
   }
 
-  def notifyUnread(userId: Id[User], threadExtId: ExternalId[MessageThread], messageId: PublicId[Message], nUrl: String, creationDate: DateTime): Unit = {
-    sendToUser(userId, Json.arr("message_unread", nUrl, threadExtId.id, creationDate, messageId.id))
+  def notifyUnread(userId: Id[User], threadExtId: MessageThreadId, messageId: PublicId[Message], nUrl: String, creationDate: DateTime): Unit = {
+    sendToUser(userId, Json.arr("message_unread", nUrl, threadExtId, creationDate, messageId.id))
     notifyUnreadCount(userId, threadExtId)
   }
 
-  private def notifyUnreadCount(userId: Id[User], threadExtId: ExternalId[MessageThread]): Unit = {
+  private def notifyUnreadCount(userId: Id[User], threadExtId: MessageThreadId): Unit = {
     val (_, unreadUnmutedThreadCount, unreadNotificationCount) = getUnreadCounts(userId)
     val totalUnreadCount = unreadUnmutedThreadCount + unreadNotificationCount
     sendToUser(userId, Json.arr("unread_notifications_count", totalUnreadCount, unreadUnmutedThreadCount, unreadNotificationCount))
@@ -243,8 +247,8 @@ class NotificationDeliveryCommander @Inject() (
     sendPushNotification(userId, MessageCountPushNotification(totalUnreadCount))
   }
 
-  def notifyRemoveThread(userId: Id[User], threadExtId: ExternalId[MessageThread]): Unit =
-    sendToUser(userId, Json.arr("remove_thread", threadExtId.id))
+  def notifyRemoveThread(userId: Id[User], threadExtId: MessageThreadId): Unit =
+    sendToUser(userId, Json.arr("remove_thread", threadExtId))
 
   def sendToUser(userId: Id[User], data: JsArray): Unit =
     notificationRouter.sendToUser(userId, data)
@@ -307,6 +311,7 @@ class NotificationDeliveryCommander @Inject() (
         }
         MessageNotification(
           message = message,
+          originalThreadId = thread.threadId,
           thread = thread,
           messageWithBasicUser = messageWithBasicUser,
           unread = !message.from.asUser.contains(userId),
@@ -332,7 +337,7 @@ class NotificationDeliveryCommander @Inject() (
     }
   }
 
-  def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
+  def sendNotificationForMessage(userId: Id[User], message: ElizaMessage, originalThreadId: MessageThreadId, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, orderedActivityInfo: Seq[UserThreadActivity]): Unit = {
     SafeFuture {
       val authorActivityInfos = orderedActivityInfo.filter(_.lastActive.isDefined)
       val lastSeenOpt: Option[DateTime] = orderedActivityInfo.find(_.userId == userId).flatMap(_.lastSeen)
@@ -348,6 +353,7 @@ class NotificationDeliveryCommander @Inject() (
 
       val notif = MessageNotification(
         message = message,
+        originalThreadId = originalThreadId,
         thread = thread,
         messageWithBasicUser = messageWithBasicUser,
         unread = true,
@@ -376,7 +382,7 @@ class NotificationDeliveryCommander @Inject() (
         }
         val notifText = sender + MessageFormatter.toText(message.messageText)
         val sound = if (numMessages > 1) MobilePushNotifier.MoreMessageNotificationSound else MobilePushNotifier.DefaultNotificationSound
-        val notification = MessageThreadPushNotification(thread.externalId, unreadMessages + unreadNotifications, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
+        val notification = MessageThreadPushNotification(originalThreadId, unreadMessages + unreadNotifications, Some(trimAtBytes(notifText, 128, UTF_8)), Some(sound))
         sendPushNotification(userId, notification)
       }
     }
@@ -425,20 +431,20 @@ class NotificationDeliveryCommander @Inject() (
 
   // todo(Léo): Why send unread counts computed before marking stuff as read?
   def setAllNotificationsReadBefore(user: Id[User], messageId: Id[ElizaMessage], unreadMessages: Int, unreadNotifications: Int): DateTime = {
-    val message = db.readWrite(attempts = 2) { implicit session =>
+    val (message, thread) = db.readWrite(attempts = 2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)
       notificationRepo.setAllReadBefore(Recipient(user), message.createdAt)
-      message
+      (message, threadRepo.get(message.thread))
     }
     notificationRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
-    val notification = MessageThreadPushNotification(message.threadExtId, unreadMessages + unreadNotifications, None, None)
+    val notification = MessageThreadPushNotification(thread.threadId, unreadMessages + unreadNotifications, None, None)
     sendPushNotification(user, notification)
     message.createdAt
   }
 
-  def getSendableNotification(userId: Id[User], threadExtId: ExternalId[MessageThread], includeUriSummary: Boolean): Future[NotificationJson] = {
-    val threadId = db.readOnlyReplica { implicit s => threadRepo.get(threadExtId).id.get }
+  def getSendableNotification(userId: Id[User], threadExtId: MessageThreadId, includeUriSummary: Boolean): Future[NotificationJson] = {
+    val threadId = db.readOnlyReplica { implicit s => threadRepo.getByMessageThreadId(threadExtId).get.id.get }
     getNotificationsByUser(userId, UserThreadQuery(threadIds = Some(Set(threadId)), limit = 1), includeUriSummary).map(_.head)
   }
 
@@ -505,8 +511,8 @@ class NotificationDeliveryCommander @Inject() (
 
   def connectedSockets: Int = notificationRouter.connectedSockets
 
-  def notifyUserAboutMuteChange(userId: Id[User], threadId: ExternalId[MessageThread], mute: Boolean) = {
-    notificationRouter.sendToUser(userId, Json.arr("thread_muted", threadId.id, mute))
+  def notifyUserAboutMuteChange(userId: Id[User], threadId: MessageThreadId, mute: Boolean) = {
+    notificationRouter.sendToUser(userId, Json.arr("thread_muted", threadId, mute))
   }
 
   def getUnreadUnmutedThreads(userId: Id[User], howMany: Int): Seq[UserThreadView] = {

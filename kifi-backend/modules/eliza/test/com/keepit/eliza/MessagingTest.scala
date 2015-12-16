@@ -74,7 +74,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
         val notificationCommander = inject[NotificationDeliveryCommander]
 
         val (thread1, msg1) = waitFor(messagingCommander.sendNewMessage(user1, user2n3Seq, Nil, "http://thenextgoogle.com", Some("title"), "World!", None))
-        val (thread2, msg2) = messagingCommander.sendMessage(user1, msg1.thread, "Domination!", None, None)
+        val (thread2, msg2) = messagingCommander.sendMessage(user1, thread1.threadId, thread1, "Domination!", None, None)
         inject[WatchableExecutionContext].drain()
         waitFor(notificationCommander.getLatestSendableNotifications(user1, 20, includeUriSummary = false)).length === 1
 
@@ -149,7 +149,7 @@ class MessagingTest extends Specification with ElizaTestInjector {
         waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 0
 
         val user3ExtId = Await.result(shoebox.getUser(user3), Duration(4, "seconds")).get.externalId
-        messagingCommander.addParticipantsToThread(user1, thread.externalId, Seq(user3ExtId), Seq.empty, Seq.empty)
+        messagingCommander.addParticipantsToThread(user1, thread.threadId, thread.id.get, Seq(user3ExtId), Seq.empty, Seq.empty)
         inject[WatchableExecutionContext].drain()
         waitFor(notificationCommander.getLatestSendableNotifications(user3, 1, includeUriSummary = false)).length === 1
       }

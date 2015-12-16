@@ -45,14 +45,12 @@ class NotificationMessagingCommander @Inject() (
     howMany.fold(full)(full.take)
   }
 
-  def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
+  private def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
     recipient match {
       case UserRecipient(user) =>
         val unreadMessages = messagingCommander.getUnreadUnmutedThreadCount(user)
         val unreadNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(user))
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
-        val pushNotif = MessageThreadPushNotification(ExternalId[MessageThread](notif.externalId.id), unreadMessages + unreadNotifications, None, None)
-        pushNotifier.notifyUser(user, pushNotif, false)
       case _ =>
     }
   }

@@ -123,7 +123,7 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
 
         implicit val context = new HeimdalContext(Map())
 
-        messagingCommander.sendMessage(Id[User](2), messageThread.id.get, "So long and thanks for all the fish", None, None)
+        messagingCommander.sendMessage(Id[User](2), messageThread.threadId, messageThread, "So long and thanks for all the fish", None, None)
 
         val message = socket.out
         message(0).as[String] === "message"
