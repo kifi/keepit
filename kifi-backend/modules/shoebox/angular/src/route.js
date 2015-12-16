@@ -126,6 +126,9 @@ angular.module('kifi')
       })
       .state('orgProfile.libraries', {
         url: '?openInviteModal&addMany',
+        params: {
+          showSlackDialog: false
+        },
         controller: 'OrgProfileLibrariesCtrl',
         templateUrl: 'orgProfile/orgProfileLibraries.tpl.html',
         activetab: 'libraries'
