@@ -473,9 +473,9 @@ class MessagingCommander @Inject() (
     new SafeFuture[Boolean](haveBeenAdded, Some("Adding Participants to Thread"))
   }
 
-  def setRead(userId: Id[User], msgExtId: ExternalId[ElizaMessage])(implicit context: HeimdalContext): Unit = {
+  def setRead(userId: Id[User], messageId: Id[ElizaMessage])(implicit context: HeimdalContext): Unit = {
     val (message: ElizaMessage, thread: MessageThread) = db.readOnlyMaster { implicit session =>
-      val message = messageRepo.get(msgExtId)
+      val message = messageRepo.get(messageId)
       (message, threadRepo.get(message.thread))
     }
     db.readWrite(attempts = 2) { implicit session =>
@@ -483,19 +483,19 @@ class MessagingCommander @Inject() (
     }
     messagingAnalytics.clearedNotification(userId, message.externalId, thread.externalId, context)
 
-    notificationDeliveryCommander.notifyRead(userId, thread.externalId, msgExtId, thread.nUrl, message.createdAt)
+    notificationDeliveryCommander.notifyRead(userId, thread.externalId, message.externalId, thread.nUrl, message.createdAt)
   }
 
-  def setUnread(userId: Id[User], msgExtId: ExternalId[ElizaMessage]): Unit = {
+  def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit = {
     val (message: ElizaMessage, thread: MessageThread) = db.readOnlyMaster { implicit session =>
-      val message = messageRepo.get(msgExtId)
+      val message = messageRepo.get(messageId)
       (message, threadRepo.get(message.thread))
     }
     val changed: Boolean = db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.markUnread(userId, thread.id.get)
     }
     if (changed) {
-      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, msgExtId, thread.nUrl, message.createdAt)
+      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, message.externalId, thread.nUrl, message.createdAt)
     }
   }
 
@@ -505,8 +505,8 @@ class MessagingCommander @Inject() (
     }
   }
 
-  def setLastSeen(userId: Id[User], messageExtId: ExternalId[ElizaMessage]): Unit = {
-    val message = db.readOnlyMaster { implicit session => messageRepo.get(messageExtId) }
+  def setLastSeen(userId: Id[User], messageId: Id[ElizaMessage]): Unit = {
+    val message = db.readOnlyMaster { implicit session => messageRepo.get(messageId) }
     setLastSeen(userId, message.thread, Some(message.createdAt))
   }
 

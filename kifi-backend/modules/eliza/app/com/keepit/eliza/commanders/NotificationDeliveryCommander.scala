@@ -6,7 +6,7 @@ import java.nio.{ ByteBuffer, CharBuffer }
 
 import com.google.inject.Inject
 import com.keepit.common.akka.SafeFuture
-import com.keepit.common.crypto.PublicIdConfiguration
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.logging.Logging
@@ -424,7 +424,7 @@ class NotificationDeliveryCommander @Inject() (
   }
 
   // todo(Léo): Why send unread counts computed before marking stuff as read?
-  def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[ElizaMessage], unreadMessages: Int, unreadNotifications: Int): DateTime = {
+  def setAllNotificationsReadBefore(user: Id[User], messageId: Id[ElizaMessage], unreadMessages: Int, unreadNotifications: Int): DateTime = {
     val message = db.readWrite(attempts = 2) { implicit session =>
       val message = messageRepo.get(messageId)
       userThreadRepo.markAllReadAtOrBefore(user, message.createdAt)

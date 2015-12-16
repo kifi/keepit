@@ -272,7 +272,6 @@ class SharedWsMessagingController @Inject() (
     },
     "set_all_notifications_visited" -> {
       case JsString(notifId) +: _ =>
-        val messageId = ExternalId[ElizaMessage](notifId)
         legacyNotificationCheck.ifNotifItemExists(notifId) {
           case (notif, item) =>
             val recipient = Recipient(socket.userId)
@@ -280,6 +279,7 @@ class SharedWsMessagingController @Inject() (
         } {
           val numUnreadUnmutedMessages = messagingCommander.getUnreadUnmutedThreadCount(socket.userId)
           val numUnreadUnmutedNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(socket.userId))
+          val messageId = basicMessageCommander.getElizaMessageId(notifId)
           val lastModified = notificationDeliveryCommander.setAllNotificationsReadBefore(socket.userId, messageId, numUnreadUnmutedMessages, numUnreadUnmutedNotifications)
           websocketRouter.sendToUser(socket.userId, Json.arr("all_notifications_visited", notifId, lastModified))
         }
@@ -288,28 +288,29 @@ class SharedWsMessagingController @Inject() (
     // end of inbox notification/thread handlers
 
     "set_message_unread" -> {
-      case JsString(messageId) +: _ =>
+      case JsString(messageIdStr) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        legacyNotificationCheck.ifNotifItemExists(messageId) {
+        legacyNotificationCheck.ifNotifItemExists(messageIdStr) {
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = true)
         } {
-          messagingCommander.setUnread(socket.userId, ExternalId[ElizaMessage](messageId))
+          val messageId = basicMessageCommander.getElizaMessageId(messageIdStr)
+          messagingCommander.setUnread(socket.userId, messageId)
         }
     },
     "set_message_read" -> {
-      case JsString(messageId) +: _ =>
-        val msgExtId = ExternalId[ElizaMessage](messageId)
+      case JsString(messageIdStr) +: _ =>
         val contextBuilder = authenticatedWebSocketsContextBuilder(socket)
         contextBuilder += ("global", false)
         contextBuilder += ("category", NotificationCategory.User.MESSAGE.category) // TODO: Get category from json
         implicit val context = contextBuilder.build
-        legacyNotificationCheck.ifNotifItemExists(messageId) {
+        legacyNotificationCheck.ifNotifItemExists(messageIdStr) {
           case (notif, item) =>
             notificationMessagingCommander.changeNotificationUnread(socket.userId, notif, item, unread = false)
         } {
-          messagingCommander.setRead(socket.userId, msgExtId)
-          messagingCommander.setLastSeen(socket.userId, msgExtId)
+          val messageId = basicMessageCommander.getElizaMessageId(messageIdStr)
+          messagingCommander.setRead(socket.userId, messageId)
+          messagingCommander.setLastSeen(socket.userId, messageId)
         }
     },
     "mute_thread" -> {
