@@ -24,6 +24,7 @@ trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
+  def changeKeepParticipants(userId: Id[User], keepId: Id[Keep], addUsers: Set[Id[User]], removeUsers: Set[Id[User]])(implicit context: HeimdalContext): Future[Unit]
   def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
@@ -137,6 +138,16 @@ class ElizaDiscussionCommanderImpl @Inject() (
         }
       }
     }
+  }
+  def changeKeepParticipants(userId: Id[User], keepId: Id[Keep], addUsers: Set[Id[User]], removeUsers: Set[Id[User]])(implicit context: HeimdalContext): Future[Unit] = {
+    for {
+      thread <- getOrCreateMessageThreadForKeep(keepId)
+      _ = require(thread.allParticipants.contains(userId))
+      _ = require(removeUsers.isEmpty) // TODO(ryan): really need to revisit this
+      // TODO(ryan): This is horrible. We pass in Id[User], immediately go BACK to shoebox to convert to ExternalId[User], THEN TURN AROUND AGAIN TO CONVERT BACK TO Id[User]
+      extIds <- shoebox.getUsers(addUsers.toSeq).map(_.map(_.externalId))
+      _ <- messagingCommander.addParticipantsToThread(userId, thread.externalId, extIds, Seq.empty, Seq.empty)
+    } yield Unit
   }
   def sendMessageOnKeep(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message] = {
     getOrCreateMessageThreadForKeep(keepId).flatMap { thread =>

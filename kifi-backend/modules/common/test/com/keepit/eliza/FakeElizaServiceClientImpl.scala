@@ -93,6 +93,8 @@ class FakeElizaServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, schedul
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]] = {
     Future.successful(Map.empty)
   }
+  def getKeepParticipants(keepId: Id[Keep]): Future[Set[Id[User]]] = ???
+  def changeKeepParticipants(userId: Id[User], keepId: Id[Keep], addUsers: Set[Id[User]], removeUsers: Set[Id[User]]): Future[Unit] = ???
   def deleteMessage(msgId: Id[Message]): Future[Unit] = ???
   def editMessage(msgId: Id[Message], newText: String): Future[Message] = ???
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message],CrossServiceMessage]] = ???

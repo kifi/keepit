@@ -74,6 +74,24 @@ class ElizaDiscussionController @Inject() (
     }
   }
 
+  def getKeepParticipants = Action(parse.tolerantJson) { request =>
+    import GetKeepParticipants._
+    val input = request.body.as[Request]
+    val participants = db.readOnlyReplica { implicit s =>
+      threadRepo.getByKeepId(input.keepId).map(_.allParticipants).getOrElse(Set.empty)
+    }
+    val output = Response(participants)
+    Ok(Json.toJson(output))
+  }
+  def changeKeepParticipants() = Action.async(parse.tolerantJson) { request =>
+    import ChangeKeepParticipants._
+    val input = request.body.as[Request]
+    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+    discussionCommander.changeKeepParticipants(input.userId, input.keepId, input.addUsers, input.removeUsers)(contextBuilder.build).map { _ =>
+      NoContent
+    }
+  }
+
   def markKeepsAsReadForUser() = Action(parse.tolerantJson) { request =>
     import MarkKeepsAsReadForUser._
     val input = request.body.as[Request]
