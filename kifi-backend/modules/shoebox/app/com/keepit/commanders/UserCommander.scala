@@ -526,7 +526,7 @@ class UserCommanderImpl @Inject() (
     updatePrefs(prefSet, userId, experiments)
 
     val staticPrefs = readUserValuePrefs(prefSet, userId)
-    val missing = staticPrefs.keySet.diff(prefSet)
+    val missing = prefSet.diff(staticPrefs.keySet)
     val allPrefs = (staticPrefs ++ generateDynamicPrefs(missing, userId)).map(r => r._1.name -> r._2)
     JsObject(allPrefs.toSeq)
   }

@@ -664,8 +664,8 @@ class KeepCommanderImpl @Inject() (
   private def getKeepsByUriAndLibraries(uriId: Id[NormalizedURI], targetLibraries: Set[Id[Library]])(implicit session: RSession): Set[Keep] = {
     // TODO(ryan): uncomment the line below, and get rid of the require
     // keepRepo.getByUriAndLibrariesHash(uriId, LibrariesHash(targetLibraries)).filter(k => isKeepInLibraries(k.id.get, targetLibraries))
-    require(targetLibraries.size == 1, s"keep is not in exactly 1 library: $targetLibraries!")
-    keepRepo.getPrimaryByUriAndLibrary(uriId, targetLibraries.head).toSet
+    require(targetLibraries.size <= 1)
+    targetLibraries.headOption.map(libId => keepRepo.getPrimaryByUriAndLibrary(uriId, libId).toSet).getOrElse(Set.empty)
   }
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit = {
     if (keep.isInactive) {

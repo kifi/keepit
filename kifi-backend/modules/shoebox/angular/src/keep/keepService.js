@@ -33,9 +33,8 @@ angular.module('kifi')
         .then(getResponseData);
       },
 
-      markDiscussionAsRead: function (keep) {
+      markDiscussionAsRead: function (keepPubId, comments) {
         // readList = [ {"keep": <keepId1>,  "lastMessage": <msgId1>}, { "keep": <keepId2>, "lastMessage": <msgId2> } ]
-        var comments = keep.discussion && keep.discussion.messages;
 
         if (comments && comments.length) {
           comments = comments.slice(); // so our sort doesn't mutate the original
@@ -43,7 +42,7 @@ angular.module('kifi')
 
           return net
           .markDiscussionAsRead([{
-            keepId: keep.pubId,
+            keepId: keepPubId,
             lastMessage: mostRecentComment.id
           }])
           .then(getResponseData);
