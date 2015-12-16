@@ -6,11 +6,12 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecutionContext }
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.slick._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -34,6 +35,11 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
     val shachaf = UserFactory.user().withId(43).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61484").withName("Shachaf", "Smith").withUsername("test").get
     val eishay = UserFactory.user().withId(44).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61483").withName("Eishay", "Smith").withUsername("test").get
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee, shachaf, eishay)
+  }
+
+  def toMessageIdStr(message: ElizaMessage)(implicit injector: Injector): String = {
+    implicit val publicIdConfig = inject[PublicIdConfiguration]
+    Message.publicId(ElizaMessage.toCommon(message.id.get)).id
   }
 
   def modules = {
@@ -103,12 +109,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
         }
 
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.externalId.id, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
         path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts=joe%40smith.com%2Cjack%40smith.com"
 
         inject[FakeUserActionsHelper].setUser(shanee)
 
-        val result = inject[MobileMessagingController].addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+        val result = inject[MobileMessagingController].addParticipantsToThread(thread.externalId.id, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
 
         status(result) must equalTo(OK)
         contentType(result) must beSome("text/plain")
@@ -146,12 +152,12 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           inject[NonUserThreadRepo].getByMessageThreadId(thread.id.get).map(_.participant.identifier).toSet === Set.empty
         }
 
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "").toString
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.externalId.id, users = eishay.externalId.toString, emailContacts = "").toString
         path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts="
 
         inject[FakeUserActionsHelper].setUser(shanee)
 
-        val result = inject[MobileMessagingController].addParticipantsToThread(threadId = thread.externalId, users = eishay.externalId.toString, emailContacts = "")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
+        val result = inject[MobileMessagingController].addParticipantsToThread(threadIdStr = thread.externalId.id, users = eishay.externalId.toString, emailContacts = "")(FakeRequest().withHeaders("user-agent" -> "iKeefee/1.0.12823 (Device-Type: iPhone, OS: iOS 7.0.6)"))
 
         status(result) must equalTo(OK)
         contentType(result) must beSome("text/plain")
@@ -196,7 +202,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         val expected = Json.parse(s"""
           {
-            "id": "${message.externalId.id}",
+            "id": "${toMessageIdStr(message)}",
             "parentId": "${thread.externalId.id}",
             "createdAt": "${message.createdAt.toStandardTimeString}",
             "threadInfo":{
@@ -219,7 +225,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               "lastAuthor": "a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
               "messageCount":1,
               "messageTimes": {
-                "${message.externalId.id}": "${message.createdAt.toStandardTimeString}"
+                "${toMessageIdStr(message)}": "${message.createdAt.toStandardTimeString}"
               },
               "createdAt": "${thread.createdAt.toStandardTimeString}",
               "lastCommentedAt": "${message.createdAt.toStandardTimeString}",
@@ -230,7 +236,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             },
             "messages":[
               {
-                "id": "${message.externalId.id}",
+                "id": "${toMessageIdStr(message)}",
                 "createdAt": "${message.createdAt.toStandardTimeString}",
                 "text": "test me out",
                 "url": "https://admin.kifi.com/admin/searchExperiments",
@@ -308,28 +314,28 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               }
             ],
             "messages": [
-              { "id": "${messages(0).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(3).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-              { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" }
+              { "id": "${toMessageIdStr(messages(0))}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" },
+              { "id": "${toMessageIdStr(messages(1))}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+              { "id": "${toMessageIdStr(messages(2))}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
+              { "id": "${toMessageIdStr(messages(3))}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+              { "id": "${toMessageIdStr(messages(4))}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" }
             ]
           }
         """)
 
         val res = Json.parse(contentAsString(result))
         val jsMessages = (res \ "messages").as[JsArray].value
-        (messages map { m => m.externalId } mkString ",") === (jsMessages map { m => (m \ "id").as[String] } mkString ",")
+        (messages map toMessageIdStr) === (jsMessages map { m => (m \ "id").as[String] })
         jsMessages.size === 5
-        (jsMessages(0) \ "id").as[String] === messages(0).externalId.id
+        (jsMessages(0) \ "id").as[String] === toMessageIdStr(messages(0))
         (jsMessages(0) \ "time").as[Long] === messages(0).createdAt.getMillis
-        (jsMessages(1) \ "id").as[String] === messages(1).externalId.id
+        (jsMessages(1) \ "id").as[String] === toMessageIdStr(messages(1))
         (jsMessages(1) \ "time").as[Long] === messages(1).createdAt.getMillis
-        (jsMessages(2) \ "id").as[String] === messages(2).externalId.id
+        (jsMessages(2) \ "id").as[String] === toMessageIdStr(messages(2))
         (jsMessages(2) \ "time").as[Long] === messages(2).createdAt.getMillis
-        (jsMessages(3) \ "id").as[String] === messages(3).externalId.id
+        (jsMessages(3) \ "id").as[String] === toMessageIdStr(messages(3))
         (jsMessages(3) \ "time").as[Long] === messages(3).createdAt.getMillis
-        (jsMessages(4) \ "id").as[String] === messages(4).externalId.id
+        (jsMessages(4) \ "id").as[String] === toMessageIdStr(messages(4))
         (jsMessages(4) \ "time").as[Long] === messages(4).createdAt.getMillis
         res must equalTo(expected)
       }
@@ -376,11 +382,11 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           contentType(result) must beSome("application/json")
 
           val expectedMessages = s"""[
-                { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(3).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(0).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
+                { "id": "${toMessageIdStr(messages(4))}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(3))}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(2))}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(1))}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(0))}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
               ]"""
 
           val expected = Json.parse(s"""
@@ -407,17 +413,17 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
           val res = Json.parse(contentAsString(result))
           val jsMessages = (res \ "messages").as[JsArray].value
-          (messages.reverse map { m => m.externalId } mkString ",") === (jsMessages map { m => (m \ "id").as[String] } mkString ",")
+          (messages.reverse map toMessageIdStr) === (jsMessages map { m => (m \ "id").as[String] })
           jsMessages.size === 5
-          (jsMessages(0) \ "id").as[String] === messages(4).externalId.id
+          (jsMessages(0) \ "id").as[String] === toMessageIdStr(messages(4))
           (jsMessages(0) \ "time").as[Long] === messages(4).createdAt.getMillis
-          (jsMessages(1) \ "id").as[String] === messages(3).externalId.id
+          (jsMessages(1) \ "id").as[String] === toMessageIdStr(messages(3))
           (jsMessages(1) \ "time").as[Long] === messages(3).createdAt.getMillis
-          (jsMessages(2) \ "id").as[String] === messages(2).externalId.id
+          (jsMessages(2) \ "id").as[String] === toMessageIdStr(messages(2))
           (jsMessages(2) \ "time").as[Long] === messages(2).createdAt.getMillis
-          (jsMessages(3) \ "id").as[String] === messages(1).externalId.id
+          (jsMessages(3) \ "id").as[String] === toMessageIdStr(messages(1))
           (jsMessages(3) \ "time").as[Long] === messages(1).createdAt.getMillis
-          (jsMessages(4) \ "id").as[String] === messages(0).externalId.id
+          (jsMessages(4) \ "id").as[String] === toMessageIdStr(messages(0))
           (jsMessages(4) \ "time").as[Long] === messages(0).createdAt.getMillis
           res must equalTo(expected)
         }
@@ -429,9 +435,9 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           val res2 = Json.parse(contentAsString(action2(FakeRequest("GET", path2))))
 
           val expectedMessages2 = s"""[
-                { "id": "${messages(4).externalId.id}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(3).externalId.id}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(2).externalId.id}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" }
+                { "id": "${toMessageIdStr(messages(4))}", "time": ${messages(4).createdAt.getMillis}, "text": "message #5", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(3))}", "time": ${messages(3).createdAt.getMillis}, "text": "message #4", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(2))}", "time": ${messages(2).createdAt.getMillis}, "text": "message #3", "userId": "${shanee.externalId.id}" }
               ]"""
 
           val expected2 = Json.parse(s"""
@@ -457,7 +463,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           """)
 
           (res2 \ "messages").as[JsArray].value.size === 3
-          (messages.reverse.take(3) map { m => m.externalId } mkString ",") === ((res2 \ "messages").as[JsArray].value map { m => (m \ "id").as[String] } mkString ",")
+          (messages.reverse.take(3) map toMessageIdStr) === ((res2 \ "messages").as[JsArray].value map { m => (m \ "id").as[String] })
           res2 must equalTo(expected2)
         }
         {
@@ -468,8 +474,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           val res3 = Json.parse(contentAsString(action3(FakeRequest())))
 
           val expectedMessages3 = s"""[
-                { "id": "${messages(1).externalId.id}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
-                { "id": "${messages(0).externalId.id}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
+                { "id": "${toMessageIdStr(messages(1))}", "time": ${messages(1).createdAt.getMillis}, "text": "message #2", "userId": "${shanee.externalId.id}" },
+                { "id": "${toMessageIdStr(messages(0))}", "time": ${messages(0).createdAt.getMillis}, "text": "message #1", "userId": "${shanee.externalId.id}" }
               ]"""
 
           val expected3 = Json.parse(s"""
@@ -495,7 +501,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           """)
 
           (res3 \ "messages").as[JsArray].value.size === 2
-          (messages.reverse.drop(3) map { m => m.externalId } mkString ",") === ((res3 \ "messages").as[JsArray].value map { m => (m \ "id").as[String] } mkString ",")
+          (messages.reverse.drop(3) map toMessageIdStr) === ((res3 \ "messages").as[JsArray].value map { m => (m \ "id").as[String] })
           res3 must equalTo(expected3)
         }
       }
@@ -523,7 +529,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val message = inject[Database].readOnlyMaster { implicit s => inject[MessageRepo].all } head
         val thread = inject[Database].readOnlyMaster { implicit s => inject[MessageThreadRepo].all } head
 
-        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageReplyAction(thread.externalId).toString
+        val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.sendMessageReplyAction(thread.externalId.id).toString
         path === s"/m/1/eliza/messages/${thread.externalId}"
 
         val input = Json.parse(s"""
@@ -535,7 +541,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "extVersion": "2.6.65"
           }
           """)
-        val action = controller.sendMessageReplyAction(thread.externalId)
+        val action = controller.sendMessageReplyAction(thread.externalId.id)
         val request = FakeRequest("POST", path).withBody(input)
         val result = action(request)
         status(result) must equalTo(OK)
@@ -550,7 +556,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         reply.messageText === "cool man!"
         val expected = Json.parse(s"""
           {
-            "id":"${reply.externalId.id}",
+            "id":"${toMessageIdStr(reply)}",
             "parentId":"${reply.threadExtId.id}",
             "createdAt":"${reply.createdAt.toStandardTimeString}"
           }
@@ -589,13 +595,13 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             ],
             "messages": [
               {
-                "id": "${messages(0).externalId.id}",
+                "id": "${toMessageIdStr(messages(0))}",
                 "time": ${messages(0).createdAt.getMillis},
                 "text": "test me out",
                 "userId": "${shanee.externalId.id}"
               },
               {
-                "id": "${messages(1).externalId.id}",
+                "id": "${toMessageIdStr(messages(1))}",
                 "time": ${messages(1).createdAt.getMillis},
                 "text": "cool man!",
                 "userId": "${shanee.externalId.id}"

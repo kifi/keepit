@@ -172,23 +172,23 @@ object MessageThread {
 
 sealed trait MessageThreadId
 case class ThreadExternalId(threadId: ExternalId[MessageThread]) extends MessageThreadId
-case class ThreadKeepId(keepId: Id[Keep]) extends MessageThreadId
+case class KeepId(keepId: Id[Keep]) extends MessageThreadId
 object MessageThreadId {
   def toIdString(id: MessageThreadId)(implicit publicIdConfiguration: PublicIdConfiguration): String = id match {
     case ThreadExternalId(threadId) => threadId.id
-    case ThreadKeepId(keepId) => Keep.publicId(keepId).id
+    case KeepId(keepId) => Keep.publicId(keepId).id
   }
 
   def fromIdString(idStr: String)(implicit publicIdConfiguration: PublicIdConfiguration): Option[MessageThreadId] = {
-    ExternalId.asOpt[MessageThread](idStr).map(ThreadExternalId(_)) orElse Keep.validatePublicId(idStr).flatMap(pubId => Keep.decodePublicId(pubId).map(ThreadKeepId(_)).toOption)
+    ExternalId.asOpt[MessageThread](idStr).map(ThreadExternalId(_)) orElse Keep.validatePublicId(idStr).flatMap(pubId => Keep.decodePublicId(pubId).map(KeepId(_)).toOption)
   }
 
-  implicit def format()(implicit publicIdConfiguration: PublicIdConfiguration) = Format[MessageThreadId](
+  implicit def format(implicit publicIdConfiguration: PublicIdConfiguration) = Format[MessageThreadId](
     Reads(value => value.validate[String].flatMap(fromIdString(_).map(JsSuccess(_)) getOrElse JsError(s"Invalid MessageThreadId: $value"))),
     Writes(id => JsString(toIdString(id)))
   )
 
-  def apply(keepId: Option[Id[Keep]], externalId: ExternalId[MessageThread]): MessageThreadId = keepId.map(ThreadKeepId) getOrElse ThreadExternalId(externalId)
+  def apply(keepId: Option[Id[Keep]], externalId: ExternalId[MessageThread]): MessageThreadId = keepId.map(KeepId) getOrElse ThreadExternalId(externalId)
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {

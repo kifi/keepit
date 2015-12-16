@@ -122,7 +122,7 @@ class MessageThreadRepoImpl @Inject() (
 
   def getByMessageThreadId(threadId: MessageThreadId)(implicit session: RSession): Option[MessageThread] = threadId match {
     case ThreadExternalId(extId) => Some(get(extId))
-    case ThreadKeepId(keepId) => getByKeepId(keepId)
+    case KeepId(keepId) => getByKeepId(keepId)
   }
 
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit = {

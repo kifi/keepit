@@ -68,7 +68,7 @@ class ElizaDiscussionController @Inject() (
     import SendMessageOnKeep._
     val input = request.body.as[Request]
     val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    discussionCommander.sendMessageOnKeep(input.userId, input.text, input.keepId, source = Some(MessageSource.SITE))(contextBuilder.build).map { msg =>
+    discussionCommander.sendMessage(input.userId, input.text, KeepId(input.keepId), source = Some(MessageSource.SITE))(contextBuilder.build).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }

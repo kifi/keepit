@@ -6,10 +6,11 @@ import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
-import com.keepit.common.crypto.FakeCryptoModule
+import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
@@ -33,6 +34,11 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
     val shachaf = UserFactory.user().withId(43).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61484").withName("Shachaf", "Smith").withUsername("test").get
     val eishay = UserFactory.user().withId(44).withId("2be9e0e7-212e-4081-a2b0-bfcaf3e61483").withName("Eishay", "Smith").withUsername("test").get
     inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveUsers(shanee, shachaf, eishay)
+  }
+
+  def toMessageIdStr(message: ElizaMessage)(implicit injector: Injector): String = {
+    implicit val publicIdConfig = inject[PublicIdConfiguration]
+    Message.publicId(ElizaMessage.toCommon(message.id.get)).id
   }
 
   def modules = Seq(
@@ -84,7 +90,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
 
         val expected = Json.parse(s"""
           {
-            "id": "${message.externalId.id}",
+            "id": "${toMessageIdStr(message)}",
             "parentId": "${thread.externalId.id}",
             "createdAt": "${message.createdAt.toStandardTimeString}",
             "threadInfo":{
@@ -110,7 +116,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
               "lastAuthor": "a9f67559-30fa-4bcd-910f-4c2fc8bbde85",
               "messageCount":1,
               "messageTimes": {
-                "${message.externalId.id}": "${message.createdAt.toStandardTimeString}"
+                "${toMessageIdStr(message)}": "${message.createdAt.toStandardTimeString}"
               },
               "createdAt": "${thread.createdAt.toStandardTimeString}",
               "lastCommentedAt": "${message.createdAt.toStandardTimeString}",
@@ -121,7 +127,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
             },
             "messages":[
               {
-                "id": "${message.externalId.id}",
+                "id": "${toMessageIdStr(message)}",
                 "createdAt": "${message.createdAt.toStandardTimeString}",
                 "text": "test me out",
                 "url": "https://admin.kifi.com/admin/searchExperiments",
@@ -178,7 +184,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         val message = db.readOnlyMaster { implicit s => inject[MessageRepo].all } head
         val thread = db.readOnlyMaster { implicit s => inject[MessageThreadRepo].all } head
 
-        val path2 = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.externalId).toString
+        val path2 = com.keepit.eliza.controllers.ext.routes.ExtMessagingController.sendMessageReplyAction(thread.externalId.id).toString
         path2 === s"/eliza/messages/${thread.externalId}"
 
         val input = Json.parse(s"""
@@ -191,7 +197,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
           }
           """)
         val request2 = FakeRequest("POST", path2).withBody(input)
-        val result2 = extMessagingController.sendMessageReplyAction(thread.externalId)(request2)
+        val result2 = extMessagingController.sendMessageReplyAction(thread.externalId.id)(request2)
         status(result2) must equalTo(OK)
         contentType(result2) must beSome("application/json")
 
@@ -203,7 +209,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
         reply.messageText === "cool man!"
         val expected = Json.parse(s"""
           {
-            "id":"${reply.externalId.id}",
+            "id":"${toMessageIdStr(reply)}",
             "parentId":"${reply.threadExtId.id}",
             "createdAt":"${reply.createdAt.toStandardTimeString}"
           }

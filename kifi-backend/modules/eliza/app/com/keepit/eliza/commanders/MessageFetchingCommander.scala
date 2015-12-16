@@ -1,6 +1,8 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.discussion.{ Message, DiscussionKeep }
 import com.keepit.eliza.model._
 import com.keepit.common.logging.Logging
 import scala.concurrent.{ Promise, Future }
@@ -10,19 +12,28 @@ import com.keepit.common.db.slick.Database
 import scala.Some
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.json.{ Json, JsArray, JsString, JsNumber, JsBoolean, JsValue }
-import com.keepit.model.{ Username, User }
+import com.keepit.model.{ Keep, Username, User }
 import com.keepit.social.{ BasicUserLikeEntity, BasicUser, BasicNonUser }
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import com.keepit.common.core._
+
+// todo(Léo): revisit this with full keepscussions
+case class BasicDiscussion(
+  url: String,
+  nUrl: String,
+  participants: Set[BasicUserLikeEntity],
+  messages: Seq[MessageWithBasicUser])
 
 class MessageFetchingCommander @Inject() (
     db: Database,
     messageRepo: MessageRepo,
     threadRepo: MessageThreadRepo,
-    shoebox: ShoeboxServiceClient) extends Logging {
+    shoebox: ShoeboxServiceClient,
+    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   def getMessageWithBasicUser(
-    id: ExternalId[ElizaMessage],
+    id: PublicId[Message],
     createdAt: DateTime,
     text: String,
     source: Option[MessageSource],
@@ -40,8 +51,7 @@ class MessageFetchingCommander @Inject() (
     messageRepo.get(thread.id.get, 0)
   }
 
-  def getThreadMessagesWithBasicUser(userId: Id[User], thread: MessageThread): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    if (!thread.containsUser(userId)) throw NotAuthorizedException(s"User $userId not authorized to view messages of thread ${thread.id.get}")
+  def getThreadMessagesWithBasicUser(thread: MessageThread): Future[Seq[MessageWithBasicUser]] = {
     val userParticipantSet = thread.participants.allUsers
     log.info(s"[get_thread] got participants for extId ${thread.externalId}: $userParticipantSet")
     val messagesFut: Future[Seq[MessageWithBasicUser]] = new SafeFuture(shoebox.getBasicUsers(userParticipantSet.toSeq) map { id2BasicUser =>
@@ -50,7 +60,7 @@ class MessageFetchingCommander @Inject() (
       messages.map { message =>
         val nonUsers = thread.participants.allNonUsers.map(NonUserParticipant.toBasicNonUser)
         MessageWithBasicUser(
-          id = message.externalId,
+          id = Message.publicId(ElizaMessage.toCommon(message.id.get)),
           createdAt = message.createdAt,
           text = message.messageText,
           source = message.source,
@@ -69,12 +79,35 @@ class MessageFetchingCommander @Inject() (
     })
     messagesFut flatMap { messages =>
       Future.sequence(messages map { message => modifyMessageWithAuxData(message) })
-    } map { (thread, _) }
+    }
   }
 
-  def getThreadMessagesWithBasicUser(userId: Id[User], threadExtId: ExternalId[MessageThread]): Future[(MessageThread, Seq[MessageWithBasicUser])] = {
-    val thread = db.readOnlyMaster(threadRepo.get(threadExtId)(_))
-    getThreadMessagesWithBasicUser(userId, thread)
+  def getDiscussionAndKeep(userId: Id[User], threadExtId: MessageThreadId): Future[(BasicDiscussion, Option[DiscussionKeep])] = {
+    db.readOnlyMaster(threadRepo.getByMessageThreadId(threadExtId)(_)) match {
+      case Some(thread) =>
+        val futureMessages = getThreadMessagesWithBasicUser(thread)
+        val futureKeep = thread.keepId.map(keepId => shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.get(keepId))) getOrElse Future.successful(None)
+        for {
+          messages <- futureMessages
+          discussionKeepOpt <- futureKeep
+        } yield {
+          (BasicDiscussion(thread.url, thread.nUrl, messages.flatMap(_.participants).toSet, messages), discussionKeepOpt)
+        }
+      case None =>
+        val KeepId(keepId) = threadExtId
+        val futureDiscussionKeep = shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.apply(keepId))
+        val futureNormalizedUrl = for {
+          keep <- shoebox.getCrossServiceKeepsByIds(Set(keepId)).imap(_.apply(keepId))
+          uri <- shoebox.getNormalizedURI(keep.uriId)
+        } yield uri.url
+
+        for {
+          discussionKeep <- futureDiscussionKeep
+          nUrl <- futureNormalizedUrl
+        } yield {
+          (BasicDiscussion(discussionKeep.url, nUrl, Set(BasicUserLikeEntity(discussionKeep.keptBy)), Seq.empty), Some(discussionKeep))
+        }
+    }
   }
 
   def processParticipantsMessage(jsAdderUserId: String, jsAddedUsers: Seq[JsValue], isInitialMessage: Boolean = false): Future[(String, JsArray)] = {
@@ -134,5 +167,12 @@ class MessageFetchingCommander @Inject() (
     } else {
       Promise.successful(m).future
     }
+  }
+
+  def getMessagePublicId(messageIdStr: String): PublicId[Message] = ExternalId.asOpt[ElizaMessage](messageIdStr) match {
+    case Some(externalId) => db.readOnlyMaster { implicit session =>
+      Message.publicId(ElizaMessage.toCommon(messageRepo.get(externalId).id.get))
+    }
+    case None => Message.validatePublicId(messageIdStr).get
   }
 }

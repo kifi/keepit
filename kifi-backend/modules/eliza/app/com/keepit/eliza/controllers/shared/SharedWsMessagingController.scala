@@ -31,6 +31,7 @@ import com.keepit.common.store.KifiInstallationStore
 import scala.concurrent.Future
 
 class SharedWsMessagingController @Inject() (
+  discussionCommander: ElizaDiscussionCommander,
   messagingCommander: MessagingCommander,
   basicMessageCommander: MessageFetchingCommander,
   notificationDeliveryCommander: NotificationDeliveryCommander,
@@ -76,25 +77,23 @@ class SharedWsMessagingController @Inject() (
       socket.channel.push(Json.arr(s"id:${socket.id}", stats))
     },
     "get_thread" -> {
-      case JsString(threadId) +: _ =>
-        log.info(s"[get_thread] user ${socket.userId} thread $threadId")
-        for {
-          (thread, msgs) <- basicMessageCommander.getThreadMessagesWithBasicUser(socket.userId, ExternalId[MessageThread](threadId))
-          keepOpt <- thread.keepId.map { kid =>
-            shoebox.getDiscussionKeepsByIds(socket.userId, Set(kid)).map(res => res.values.headOption).recover { case _ => None }
-          }.getOrElse(Future.successful(None))
-        } {
-          SafeFuture(socket.channel.push(Json.arr(
-            "thread", Json.obj(
-              "id" -> threadId,
-              "uri" -> thread.url,
-              "keep" -> keepOpt,
-              "messages" -> msgs.reverse
-            ))))
+      case JsString(threadIdStr) +: _ =>
+        log.info(s"[get_thread] user ${socket.userId} thread $threadIdStr")
+        MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
+          basicMessageCommander.getDiscussionAndKeep(socket.userId, threadId).map {
+            case (discussion, keepOpt) =>
+              socket.channel.push(Json.arr(
+                "thread", Json.obj(
+                  "id" -> threadIdStr,
+                  "uri" -> discussion.url,
+                  "keep" -> keepOpt,
+                  "messages" -> discussion.messages.reverse
+                )))
+          }
         }
     },
     "add_participants_to_thread" -> {
-      case JsString(threadId) +: (data: JsValue) +: _ =>
+      case JsString(threadIdStr) +: (data: JsValue) +: _ =>
         val (users, emailContacts, orgs) = data match {
           case JsArray(participantsJson) =>
             val (users, emailContacts, orgs) = messagingCommander.parseRecipients(participantsJson)
@@ -108,7 +107,9 @@ class SharedWsMessagingController @Inject() (
 
         if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-          messagingCommander.addParticipantsToThread(socket.userId, ExternalId[MessageThread](threadId), users, emailContacts, orgs)
+          MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
+            discussionCommander.addParticipantsToThread(socket.userId, threadId, users, emailContacts, orgs)
+          }
         }
     },
     "get_unread_notifications_count" -> { _ =>
