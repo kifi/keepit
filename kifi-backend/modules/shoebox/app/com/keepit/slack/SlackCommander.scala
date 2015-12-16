@@ -170,7 +170,7 @@ class SlackCommanderImpl @Inject() (
         val user = basicUserRepo.load(userId)
         val orgOpt = lib.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
         DescriptionElements(
-          user, s"set up Slack integrations between channel ${webhook.channelName} and",
+          user, s"set up Slack integrations between channel ${webhook.channelName.value} and",
           lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute),
           orgOpt.map(org => DescriptionElements("in", org.name --> LinkElement(pathCommander.orgPage(org))))
         )
