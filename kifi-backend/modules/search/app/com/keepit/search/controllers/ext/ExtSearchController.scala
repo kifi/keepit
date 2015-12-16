@@ -127,13 +127,13 @@ class ExtSearchController @Inject() (
     maxTagsShown: Int,
     augmentedItems: Seq[AugmentedItem]): (Future[Seq[JsObject]], Future[(Seq[BasicUser], Seq[BasicLibrary])]) = {
 
+    val allKeepIds = augmentedItems.flatMap(_.keeps.map(_.id)).toSet
+    val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(allKeepIds)
+
     val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
 
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries)
-    val allKeepIds = limitedAugmentationInfos.flatMap(_.keep.map(_.id)).toSet
-
-    val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(allKeepIds)
 
     val userIds = ((allKeepersShown.flatMap(_.map(_._1)) ++ allLibrariesShown.flatMap(_.map(_._2))).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
@@ -163,16 +163,18 @@ class ExtSearchController @Inject() (
     }
 
     val futureAugmentationFields = futureKeepSources.map { sourceAttributionByKeepId =>
-      val secrecies = augmentedItems.map(_.isSecret(librarySearcher))
-      (limitedAugmentationInfos zip secrecies).map {
-        case (limitedInfo, secret) =>
+      (augmentedItems zip limitedAugmentationInfos).map {
+        case (augmentedItem, limitedInfo) =>
 
           val keepersIndices = limitedInfo.keepers.map { case (keeperId, _) => userIndexById(keeperId) }
           val librariesIndices = limitedInfo.libraries.collect {
             case (libraryId, keeperId, _) if libraryIndexById.contains(libraryId) => Seq(libraryIndexById(libraryId), userIndexById(keeperId))
           }.flatten
 
-          val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
+          val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id)) orElse {
+            augmentedItem.keeps.toStream.flatMap(keep => sourceAttributionByKeepId.get(keep.id)).headOption
+          }
+          val secret = augmentedItem.isSecret(librarySearcher)
 
           Json.obj(
             "keepers" -> keepersIndices,
