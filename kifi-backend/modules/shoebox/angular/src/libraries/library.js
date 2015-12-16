@@ -470,7 +470,9 @@ angular.module('kifi')
 
     // query param handling
     var showSlackDialog = $stateParams.showSlackDialog || initParams.getAndClear('showSlackDialog');
-    showSlackDialog && $scope.processSlackRequest();
+    if (showSlackDialog) {
+      $scope.processSlackRequest();
+    }
 
     $scope.showFeedModal = function () {
       libraryService.trackEvent('user_clicked_page', $scope.library, { type: 'rss', action: 'clicked_subscribe_button'});

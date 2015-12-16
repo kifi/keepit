@@ -3,11 +3,12 @@
 angular.module('kifi')
 
 .controller('OrgProfileCreateCtrl', [
-  '$scope', '$timeout', 'orgProfileService', '$state', 'profileService', 'modalService', 'billingService',
-  function($scope, $timeout, orgProfileService, $state, profileService, modalService, billingService) {
+  '$scope', '$timeout', 'orgProfileService', '$state', '$stateParams', 'initParams', 'profileService', 'modalService', 'billingService',
+  function($scope, $timeout, orgProfileService, $state, $stateParams, initParams, profileService, modalService, billingService) {
     $scope.orgSlug = ''; // Not yet implemented.
     $scope.disableCreate = false;
     $scope.orgName = '';
+    $scope.showSlackPromo = $stateParams.showSlackPromo || initParams.getAndClear('slack');
 
     var me = profileService.me;
     $scope.$watch(function () {

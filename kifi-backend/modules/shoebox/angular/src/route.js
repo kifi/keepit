@@ -209,7 +209,10 @@ angular.module('kifi')
       .state('teams.new', {
         url: '/new',
         controller: 'OrgProfileCreateCtrl',
-        templateUrl: 'orgProfile/orgProfileCreate.tpl.html'
+        templateUrl: 'orgProfile/orgProfileCreate.tpl.html',
+        params: {
+          showSlackPromo: false
+        }
       })
       .state('userProfile', {
         url: '/:handle?authToken&openCreateLibrary',

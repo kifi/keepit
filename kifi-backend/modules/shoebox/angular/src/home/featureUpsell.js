@@ -25,7 +25,7 @@ angular.module('kifi')
               }
             });
           } else {
-            $state.go('teams.new');
+            $state.go('teams.new', { showSlackPromo: true });
           }
         };
         scope.clickedLearnMore = function() {
