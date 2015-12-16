@@ -144,6 +144,19 @@ angular.module('kifi')
     };
     $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:libraries'});
 
+    if (true) { // if me.prefs.show_slack_upsell
+      libraryService
+      .getLibraryByHandleAndSlug(organization.handle, 'general')
+      .then(function (library) {
+        modalService.open({
+          template: 'orgProfile/orgProfileSlackUpsellModal.tpl.html',
+          modalData: {
+            library: library
+          }
+        });
+      });
+    }
+
     if ($stateParams.openCreateLibrary) {
       $scope.openCreateLibrary();
     } else if ($stateParams.openInviteModal === 'true') {
