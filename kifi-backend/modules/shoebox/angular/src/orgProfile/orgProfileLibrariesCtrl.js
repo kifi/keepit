@@ -144,7 +144,8 @@ angular.module('kifi')
     };
     $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:libraries'});
 
-    if (true) { // if me.prefs.show_slack_upsell
+    if (profileService.prefs.slack_int_promo) { // if me.prefs.show_slack_upsell
+      profileService.savePrefs({ slack_int_promo: false });
       libraryService
       .getLibraryByHandleAndSlug(organization.handle, 'general')
       .then(function (library) {
