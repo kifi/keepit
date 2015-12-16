@@ -13,6 +13,7 @@ angular.module('kifi')
       link: function (scope) {
         scope.me = profileService.me;
         scope.showFeatureUpsell = (scope.me.orgs || []).length === 0;
+        scope.loadingSlackAuth = false;
 
         var slackIntPromoP;
         if (Object.keys(profileService.prefs).length === 0 ) {
@@ -34,6 +35,7 @@ angular.module('kifi')
               if (library.slack && library.slack.integrations && library.slack.integrations.length > 0) {
                 $state.go('library.keeps', { handle: org.handle, librarySlug: 'general', 'showSlackDialog': true });
               } else {
+                scope.loadingSlackAuth = true;
                 $window.location = library.slack && (library.slack.link || '').replace('search%3Aread%2Creactions%3Awrite', '');
               }
             });
