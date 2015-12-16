@@ -102,7 +102,6 @@ angular.module('kifi')
           var readTimer;
           $scope.onInview = function (e, intoView) {
             if (intoView) {
-
               readTimer = $timeout(function () {
                 readTimer = null;
 
