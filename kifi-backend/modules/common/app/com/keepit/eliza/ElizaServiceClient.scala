@@ -125,6 +125,8 @@ trait ElizaServiceClient extends ServiceClient {
   // Discussion cross-service methods
   def getCrossServiceMessages(msgIds: Set[Id[Message]]): Future[Map[Id[Message], CrossServiceMessage]]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
+  def getKeepParticipants(keepId: Id[Keep]): Future[Set[Id[User]]]
+  def changeKeepParticipants(userId: Id[User], keepId: Id[Keep], addUsers: Set[Id[User]], removeUsers: Set[Id[User]]): Future[Unit]
   def markKeepsAsReadForUser(userId: Id[User], lastSeenByKeep: Map[Id[Keep], Id[Message]]): Future[Map[Id[Keep], Int]]
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message]
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
@@ -306,6 +308,20 @@ class ElizaServiceClientImpl @Inject() (
       response.json.as[Response].unreadCount
     }
   }
+  def getKeepParticipants(keepId: Id[Keep]): Future[Set[Id[User]]] = {
+    import GetKeepParticipants._
+    val request = Request(keepId)
+    call(Eliza.internal.getKeepParticipants(), body = Json.toJson(request)).map { response =>
+      response.json.as[Response].users
+    }
+  }
+  def changeKeepParticipants(userId: Id[User], keepId: Id[Keep], addUsers: Set[Id[User]], removeUsers: Set[Id[User]]): Future[Unit] = {
+    import ChangeKeepParticipants._
+    val request = Request(userId, keepId, addUsers, removeUsers)
+    call(Eliza.internal.changeKeepParticipants(), body = Json.toJson(request)).map { response =>
+      Unit
+    }
+  }
   def sendMessageOnKeep(userId: Id[User], text: String, keepId: Id[Keep]): Future[Message] = {
     import SendMessageOnKeep._
     val request = Request(userId, text, keepId)
@@ -370,6 +386,16 @@ object ElizaServiceClient {
     case class Response(unreadCount: Map[Id[Keep], Int])
     implicit val requestFormat: Format[Request] = Json.format[Request]
     implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object GetKeepParticipants {
+    case class Request(keepId: Id[Keep])
+    case class Response(users: Set[Id[User]])
+    implicit val requestFormat: Format[Request] = Format( Reads { j => j.validate[Long].map(x => Request(Id(x))) }, Writes { r => JsNumber(r.keepId.id) } )
+    implicit val responseFormat: Format[Response] = Json.format[Response]
+  }
+  object ChangeKeepParticipants {
+    case class Request(userId: Id[User], keepId: Id[Keep], addUsers: Set[Id[User]], removeUsers: Set[Id[User]])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
   }
   object SendMessageOnKeep {
     case class Request(userId: Id[User], text: String, keepId: Id[Keep])
