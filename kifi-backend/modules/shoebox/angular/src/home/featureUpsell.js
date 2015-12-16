@@ -3,8 +3,8 @@
 
 angular.module('kifi')
 
-.directive('kfFeatureUpsell', [ '$window', '$state', '$analytics', 'profileService', 'libraryService',
-  function($window, $state, $analytics, profileService, libraryService) {
+.directive('kfFeatureUpsell', [ '$window', '$state', '$analytics', '$q', 'profileService', 'libraryService',
+  function($window, $state, $analytics, $q, profileService, libraryService) {
     return {
       restrict: 'A',
       replace: true,
@@ -12,7 +12,20 @@ angular.module('kifi')
       templateUrl: 'home/featureUpsell.tpl.html',
       link: function (scope) {
         scope.me = profileService.me;
-        scope.showFeatureUpsell = (scope.me.orgs || []).length < 2;
+        scope.showFeatureUpsell = (scope.me.orgs || []).length === 0;
+
+        var slackIntPromoP;
+        if (Object.keys(profileService.prefs).length === 0 ) {
+          slackIntPromoP = profileService.fetchPrefs().then(function(prefs) {
+            return prefs.slack_int_promo;
+          });
+        } else {
+          slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
+        }
+        slackIntPromoP.then(function(showPromo) {
+          scope.showFeatureUpsell = scope.showFeatureUpsell || showPromo;
+        });
+
         scope.clickedGetStarted = function() {
           $analytics.eventTrack('user_clicked_page', { type: 'homeFeed', action: 'slackGetStarted' });
           if (scope.me.orgs.length > 0) {
