@@ -269,6 +269,13 @@ class PermissionCommanderImpl @Inject() (
       case (kid, k) =>
         val keepLibraries = librariesByKeep.getOrElse(kid, Set.empty)
         val keepUsers = usersByKeep.getOrElse(kid, Set.empty)
+        val canViewKeep = {
+          // 12/16/15: this may need to change with library-less keeps.
+          userIdOpt.contains(k.userId) || k.originalKeeperId.exists(userIdOpt.contains) ||
+            keepLibraries.exists { libId =>
+              libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
+            }
+        }
 
         val canAddMessage = {
           val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
@@ -293,6 +300,7 @@ class PermissionCommanderImpl @Inject() (
         }
 
         kid -> List(
+          canViewKeep -> KeepPermission.VIEW_KEEP,
           canAddMessage -> KeepPermission.ADD_MESSAGE,
           canDeleteOwnMessages -> KeepPermission.DELETE_OWN_MESSAGES,
           canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES,
