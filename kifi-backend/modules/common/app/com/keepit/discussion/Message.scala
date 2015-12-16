@@ -64,6 +64,7 @@ object Discussion {
 case class DiscussionKeep(
   id: PublicId[Keep],
   url: String,
+  path: String,
   title: Option[String],
   note: Option[String],
   tags: Set[Hashtag],
