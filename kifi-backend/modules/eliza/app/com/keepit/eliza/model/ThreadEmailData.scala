@@ -1,6 +1,7 @@
 package com.keepit.eliza.model
 
-import com.keepit.model.{ NormalizedURI, User }
+import com.keepit.common.crypto.PublicId
+import com.keepit.model.{ Keep, NormalizedURI, User }
 import com.keepit.eliza.util.MessageSegment
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.rover.model.RoverUriSummary
@@ -8,6 +9,7 @@ import com.keepit.rover.model.RoverUriSummary
 case class ThreadEmailInfo(
   uriId: Id[NormalizedURI],
   threadId: ExternalId[MessageThread],
+  keepId: Option[PublicId[Keep]],
   pageName: String,
   pageTitle: String,
   isInitialEmail: Boolean,

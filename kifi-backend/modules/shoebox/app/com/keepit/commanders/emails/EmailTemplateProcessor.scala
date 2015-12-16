@@ -3,7 +3,7 @@ package com.keepit.commanders.emails
 import java.net.URLEncoder
 
 import com.google.inject.{ Provider, ImplementedBy, Inject }
-import com.keepit.commanders.{ PathCommander }
+import com.keepit.commanders.PathCommander
 import com.keepit.commanders.emails.tips.EmailTipProvider
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.crypto.PublicIdConfiguration
@@ -235,7 +235,10 @@ class EmailTemplateProcessorImpl @Inject() (
           config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.discussionLink =>
-          val data = Json.obj("t" -> "m", "uri" -> uri.externalId, "id" -> tagArgs(1))
+          import com.keepit.common.core._
+          val threadExtId = tagArgs(1)
+          val keepPubIdOpt = tagArgs(2).asOpt[String]
+          val data = Json.obj("t" -> "m", "uri" -> uri.externalId, "id" -> threadExtId, "kid" -> keepPubIdOpt).nonNullFields
           config.applicationBaseUrl + "/redir?data=" + URLEncoder.encode(Json.stringify(data), "ascii")
 
         case tags.organizationId => Organization.publicId(org.id.get).id
