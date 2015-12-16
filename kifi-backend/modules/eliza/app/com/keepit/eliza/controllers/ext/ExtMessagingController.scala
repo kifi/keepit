@@ -61,7 +61,7 @@ class ExtMessagingController @Inject() (
     messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
       case (message, threadInfo, messages) =>
         Ok(Json.obj(
-          "id" -> Message.publicId(ElizaMessage.toCommon(message.id.get)),
+          "id" -> message.pubId,
           "parentId" -> MessageThreadId.format.writes(threadInfo.threadId),
           "createdAt" -> message.createdAt,
           "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo),

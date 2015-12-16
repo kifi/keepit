@@ -38,7 +38,7 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
 
   def toMessageIdStr(message: ElizaMessage)(implicit injector: Injector): String = {
     implicit val publicIdConfig = inject[PublicIdConfiguration]
-    Message.publicId(ElizaMessage.toCommon(message.id.get)).id
+    message.pubId.id
   }
 
   def modules = Seq(

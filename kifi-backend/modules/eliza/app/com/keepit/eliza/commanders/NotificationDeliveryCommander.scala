@@ -165,7 +165,7 @@ class NotificationDeliveryCommander @Inject() (
         basicUsers.values.toSeq.map(u => BasicUserLikeEntity(u)) ++
           thread.participants.allNonUsers.toSeq.map(nu => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nu)))
       val notificationJson = Json.obj(
-        "id" -> Message.publicId(ElizaMessage.toCommon(message.id.get)),
+        "id" -> message.pubId,
         "time" -> message.createdAt,
         "thread" -> thread.externalId,
         "text" -> s"$adderUserName added you to a conversation.",
@@ -203,7 +203,7 @@ class NotificationDeliveryCommander @Inject() (
           case (userId, permanentNotification) =>
             sendToUser(userId, Json.arr("notification", notificationJson, permanentNotification))
         }
-        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(Message.publicId(ElizaMessage.toCommon(message.id.get)), message.createdAt, "", message.source, message.auxData, "", "", None, participants)
+        val messageWithBasicUser = basicMessageCommander.getMessageWithBasicUser(message.pubId, message.createdAt, "", message.source, message.auxData, "", "", None, participants)
         messageWithBasicUser.map { augmentedMessage =>
           thread.participants.allUsers.par.foreach { userId =>
             sendToUser(userId, Json.arr("message", thread.externalId.id, augmentedMessage))
@@ -275,7 +275,7 @@ class NotificationDeliveryCommander @Inject() (
         def basicUserById(id: Id[User]) = basicUserByIdMap.getOrElse(id, throw new Exception(s"Could not get basic user data for $id in MessageThread ${thread.id.get}"))
         val basicNonUserParticipants = thread.participants.nonUserParticipants.keySet.map(nup => BasicUserLikeEntity(NonUserParticipant.toBasicNonUser(nup)))
         val messageWithBasicUser = MessageWithBasicUser(
-          id = Message.publicId(ElizaMessage.toCommon(message.id.get)),
+          id = message.pubId,
           createdAt = message.createdAt,
           text = message.messageText,
           source = message.source,

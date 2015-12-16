@@ -60,7 +60,7 @@ class MessageFetchingCommander @Inject() (
       messages.map { message =>
         val nonUsers = thread.participants.allNonUsers.map(NonUserParticipant.toBasicNonUser)
         MessageWithBasicUser(
-          id = Message.publicId(ElizaMessage.toCommon(message.id.get)),
+          id = message.pubId,
           createdAt = message.createdAt,
           text = message.messageText,
           source = message.source,
@@ -170,7 +170,7 @@ class MessageFetchingCommander @Inject() (
   }
 
   def getMessagePublicId(messageIdStr: String): PublicId[Message] = ExternalId.asOpt[ElizaMessage](messageIdStr) match {
-    case Some(externalId) => db.readOnlyMaster { implicit session => Message.publicId(ElizaMessage.toCommon(messageRepo.get(externalId).id.get)) }
+    case Some(externalId) => db.readOnlyMaster { implicit session => messageRepo.get(externalId).pubId }
     case None => Message.validatePublicId(messageIdStr).get
   }
 

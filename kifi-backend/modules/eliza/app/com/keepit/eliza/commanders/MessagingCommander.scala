@@ -83,7 +83,7 @@ class MessagingCommander @Inject() (
         val lastMessage = lastMessageOpt.get
 
         val messageTimes = messagesByThread(thread.id.get).take(10).map { message =>
-          (Message.publicId(ElizaMessage.toCommon(message.id.get)), message.createdAt)
+          (message.pubId, message.createdAt)
         }.toMap
 
         val nonUsers = thread.participants.allNonUsers
@@ -286,7 +286,7 @@ class MessagingCommander @Inject() (
       .map(nu => BasicUserLikeEntity(nu))
 
     val messageWithBasicUser = MessageWithBasicUser(
-      Message.publicId(ElizaMessage.toCommon(message.id.get)),
+      message.pubId,
       message.createdAt,
       message.messageText,
       source,
