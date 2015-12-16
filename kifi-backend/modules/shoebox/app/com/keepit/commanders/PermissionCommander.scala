@@ -271,7 +271,7 @@ class PermissionCommanderImpl @Inject() (
         val keepUsers = usersByKeep.getOrElse(kid, Set.empty)
         val canViewKeep = {
           // 12/16/15: this may need to change with library-less keeps.
-          userIdOpt.contains(k.userId) || k.originalKeeperId.exists(userIdOpt.contains) ||
+          userIdOpt.contains(k.userId) || k.originalKeeperId.exists(userIdOpt.contains) || userIdOpt.exists(usersByKeep(kid).contains) ||
             keepLibraries.exists { libId =>
               libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
             }
