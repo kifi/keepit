@@ -24,11 +24,13 @@ k.panes.thread = k.panes.thread || function () {
   var handlers = {
     thread_info: function (o) {
       if ($holder && $holder.data('threadId') === o.th.thread) {
+        $holder.data('keep', o.keep);
         k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, o.th.participants, o.keep);
       }
     },
     thread: function (o) {
       if ($holder && $holder.data('threadId') === o.id) {
+        $holder.data('keep', o.keep);
         updateAll(o.id, o.messages, o.keep);
       }
     },
@@ -147,7 +149,8 @@ k.panes.thread = k.panes.thread || function () {
     if (!$holder.find('.kifi-message-sent[data-id="' + message.id + '"]').length &&
         !$holder.find('.kifi-message-sent[data-id=]').get().some(textMatches.bind(null, message.text))) {  // transmitReply updates these
       var atBottom = scrolledToBottom($holder[0]);
-      insertChronologically(renderMessage(message), message.createdAt);
+      var _renderMessage = renderMessage.bind(null, $holder.data('keep'));
+      insertChronologically(_renderMessage(message), message.createdAt);
       if (atBottom) {
         scrollToBottomResiliently();
       }
@@ -157,19 +160,21 @@ k.panes.thread = k.panes.thread || function () {
 
   function updateAll(threadId, messages, keep) {
     var $msgs = $holder.find('.kifi-message-sent');
+    var _renderMessage = renderMessage.bind(null, $holder.data('keep'));
+
     if ($msgs.length) {
       var newMessages = justNewMessages($msgs, messages);
       if (newMessages.length) {
         var atBottom = scrolledToBottom($holder[0]);
         newMessages.forEach(function (m) {
-          insertChronologically(renderMessage(m), m.createdAt);
+          insertChronologically(_renderMessage(m), m.createdAt);
         });
         if (atBottom) {
           scrollToBottomResiliently();
         }
       }
     } else {
-      $holder.append(messages.map(renderMessage));
+      $holder.append(messages.map(_renderMessage));
       scrollToBottomResiliently(true);
     }
 
@@ -211,7 +216,8 @@ k.panes.thread = k.panes.thread || function () {
   }
 
   function sendReply(threadId, text) {
-    var $m = $(renderMessage({
+    var _renderMessage = renderMessage.bind(null, $holder.data('keep'));
+    var $m = $(_renderMessage({
       id: '',
       createdAt: new Date().toISOString(),
       text: text,
@@ -234,9 +240,13 @@ k.panes.thread = k.panes.thread || function () {
     return Q(true);  // reset form
   }
 
-  function renderMessage(m) {
+  function renderMessage(keep, m) {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
+    m.formatKeepUrl = function () {
+      return 'https://www.kifi.com/k/' + encodeURIComponent(this.title.slice(0, 30)) + '/'+ this.id;
+    };
+    m.keep = keep;
     if (m.auxData && m.auxData.length >= 3 &&
       (m.auxData[0] === 'add_participants' || m.auxData[0] === 'start_with_emails')) {
       m.hasEmail = m.auxData[2].some(function (o) {return o.kind === 'email'});

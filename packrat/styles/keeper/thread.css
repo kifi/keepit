@@ -142,6 +142,17 @@ a.kifi-message-name:hover {
 .kifi-aux-message {
   padding: 13px;
 }
+.kifi-message-tip-keep-link {
+  color: inherit;
+}
+.kifi-message-tip-keep-link:hover {
+  text-decoration: underline !important;
+  color: inherit;
+}
+.kifi-message-tip-keep-link:hover:active {
+  text-decoration: none !important;
+  color: inherit;
+}
 .kifi-thread-background {
   position: absolute;
   top: 40px;
@@ -210,5 +221,3 @@ a.kifi-message-name:hover {
   border-color: inherit;
   background-color: #fff;
 }
-
-
