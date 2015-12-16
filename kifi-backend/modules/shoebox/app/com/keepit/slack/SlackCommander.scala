@@ -1,7 +1,7 @@
 package com.keepit.slack
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
-import com.keepit.commanders.{ PermissionCommander, PathCommander }
+import com.keepit.commanders.{ OrganizationInfoCommander, PermissionCommander, PathCommander }
 import com.keepit.common.akka.SafeFuture
 import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
@@ -86,6 +86,7 @@ class SlackCommanderImpl @Inject() (
   permissionCommander: PermissionCommander,
   libRepo: LibraryRepo,
   orgMembershipRepo: OrganizationMembershipRepo,
+  organizationInfoCommander: OrganizationInfoCommander,
   clock: Clock,
   airbrake: AirbrakeNotifier,
   implicit val executionContext: ExecutionContext,
@@ -167,7 +168,12 @@ class SlackCommanderImpl @Inject() (
         import DescriptionElements._
         val lib = libRepo.get(libId)
         val user = basicUserRepo.load(userId)
-        DescriptionElements(user, "set up Slack integrations for", lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute))
+        val orgOpt = lib.organizationId.flatMap(organizationInfoCommander.getBasicOrganizationHelper)
+        DescriptionElements(
+          user, s"set up Slack integrations between channel ${webhook.channelName} and",
+          lib.name --> LinkElement(pathCommander.pathForLibrary(lib).absolute),
+          orgOpt.map(org => DescriptionElements("in", org.name --> LinkElement(pathCommander.orgPage(org))))
+        )
       }
       inhouseSlackClient.sendToSlack(InhouseSlackChannel.SLACK_ALERTS, SlackMessageRequest.inhouse(inhouseMsg))
     }
