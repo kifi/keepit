@@ -41,13 +41,12 @@ class SocialUserImportFriends @Inject() (
     val socialUserInfos = db.readWriteBatch(socialUserInfosNeedToUpdate, attempts = 3) {
       case (session, friend) =>
         val existingOpt = repo.getOpt(friend.socialId, friend.networkType)(session)
-        existingOpt.foreach { existing =>
+        existingOpt.map { existing =>
           //updating social user if its not up to date
           if (existing.username != friend.username || existing.profileUrl != friend.profileUrl || existing.pictureUrl != friend.pictureUrl) {
             repo.save(existing.copy(username = friend.username, profileUrl = friend.profileUrl, pictureUrl = friend.pictureUrl))(session)
-          }
-        }
-        existingOpt.orElse {
+          } else existing
+        }.orElse {
           try {
             Some(repo.save(friend)(session))
           } catch {
@@ -66,13 +65,16 @@ class SocialUserImportFriends @Inject() (
     socialUserInfos
   }
 
-  def fixSocialUser(friend: SocialUserInfo)(implicit session: RWSession): Unit = {
+  def fixSocialUser(friend: SocialUserInfo)(implicit session: RWSession): Unit = try {
     repo.getByUsernameOpt(friend.username.get, friend.networkType) map { existing =>
       //got a fresh social user that has an existing social user that claimed its social username.
       //looking at the data its probably wrong and the new one is good. https://fortytwo.airbrake.io/projects/91268/groups/1081513854301130421/notices/1576396721757049802
       repo.save(existing.copy(username = None, profileUrl = None, pictureUrl = None))
       repo.save(friend)
     }
+  } catch {
+    case e: Exception =>
+      airbrake.notify(s"Error persisting fixup for social user info for userId ${friend.userId} (${friend.fullName}), network ${friend.networkType}", e)
   }
 
   private def getIfUpdateNeeded(friend: SocialUserInfo)(implicit s: RSession): Option[SocialUserInfo] = {
