@@ -209,7 +209,10 @@ angular.module('kifi')
       .state('teams.new', {
         url: '/new',
         controller: 'OrgProfileCreateCtrl',
-        templateUrl: 'orgProfile/orgProfileCreate.tpl.html'
+        templateUrl: 'orgProfile/orgProfileCreate.tpl.html',
+        params: {
+          showSlackPromo: false
+        }
       })
       .state('userProfile', {
         url: '/:handle?authToken&openCreateLibrary',
@@ -274,6 +277,9 @@ angular.module('kifi')
         url: '/:handle/:librarySlug?authToken',
         templateUrl: 'libraries/library.tpl.html',
         controller: 'LibraryCtrl',
+        params: {
+          showSlackDialog: false
+        },
         resolve: {
           libraryService: 'libraryService',
           library: ['libraryService', '$stateParams', function (libraryService, $stateParams) {
