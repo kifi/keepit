@@ -1,6 +1,6 @@
 package com.keepit.notify.info
 
-import com.keepit.model.{ BasicOrganization, User, NotificationCategory }
+import com.keepit.model.{ DeepLocator, BasicOrganization, User, NotificationCategory }
 import com.keepit.social.BasicUser
 import play.api.libs.json.JsObject
 import play.api.libs.json._
@@ -17,6 +17,7 @@ sealed trait NotificationInfo
  * @param body The body of the notification, text explaining why it happened or the relation to the user
  * @param linkText Text that goes on link hover, explains where the link goes
  * @param category Provisional 'category' of the notification for use in clients
+ * @param locator Optional locator used to trigger a specific behavior in the extension
  * @param extraJson Assorted data that is read by clients, per-notification
  */
 case class StandardNotificationInfo(
@@ -26,6 +27,7 @@ case class StandardNotificationInfo(
   body: String,
   linkText: String,
   category: NotificationCategory,
+  locator: Option[DeepLocator] = None,
   extraJson: Option[JsObject] = None) extends NotificationInfo
 
 object StandardNotificationInfo {
@@ -36,6 +38,7 @@ object StandardNotificationInfo {
     body: String,
     linkText: String,
     category: NotificationCategory,
+    locator: Option[DeepLocator],
     extraJson: Option[JsObject]): StandardNotificationInfo = {
     StandardNotificationInfo(
       user.path.encode.absolute,
@@ -44,6 +47,7 @@ object StandardNotificationInfo {
       body,
       linkText,
       category,
+      locator,
       extraJson
     )
   }
