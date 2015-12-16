@@ -11,7 +11,7 @@ import com.keepit.model.User
 import com.keepit.notify.delivery.NotificationJsonFormat
 import com.keepit.notify.info.NotificationInfoGenerator
 import com.keepit.notify.model.{ EmailRecipient, UserRecipient, Recipient }
-import com.keepit.realtime.{ MobilePushNotifier, MessageThreadPushNotification }
+import com.keepit.realtime.{MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification}
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsObject, Json }
@@ -50,6 +50,8 @@ class NotificationMessagingCommander @Inject() (
       case UserRecipient(user) =>
         val unreadMessages = messagingCommander.getUnreadUnmutedThreadCount(user)
         val unreadNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(user))
+        val pushNotif = MessageCountPushNotification(unreadMessages + unreadNotifications)
+        pushNotifier.notifyUser(user, pushNotif, false)
         webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
       case _ =>
     }
