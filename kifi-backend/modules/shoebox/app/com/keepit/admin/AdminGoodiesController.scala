@@ -114,7 +114,7 @@ class AdminGoodiesController @Inject() (
         _ <- eliza.rpbConnectKeeps(keepsByThreadId)
       } yield {
         inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Interned (thread, keep) pairs: $keepsByThreadId"))
-        Thread.sleep(1000)
+        Thread.sleep(5000)
       }
     }.andThen {
       case Success(_) =>
