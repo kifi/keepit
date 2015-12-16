@@ -11,7 +11,7 @@ import com.keepit.model.User
 import com.keepit.notify.delivery.NotificationJsonFormat
 import com.keepit.notify.info.NotificationInfoGenerator
 import com.keepit.notify.model.{ EmailRecipient, UserRecipient, Recipient }
-import com.keepit.realtime.{ MobilePushNotifier, MessageThreadPushNotification }
+import com.keepit.realtime.{MessageCountPushNotification, MobilePushNotifier, MessageThreadPushNotification}
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.joda.time.DateTime
 import play.api.libs.json.{ JsObject, Json }
@@ -45,14 +45,14 @@ class NotificationMessagingCommander @Inject() (
     howMany.fold(full)(full.take)
   }
 
-  def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
+  private def sendUnreadNotificationsWith(notif: Notification, recipient: Recipient): Unit = {
     recipient match {
       case UserRecipient(user) =>
         val unreadMessages = messagingCommander.getUnreadUnmutedThreadCount(user)
         val unreadNotifications = notificationCommander.getUnreadNotificationsCount(Recipient(user))
-        webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
-        val pushNotif = MessageThreadPushNotification(ExternalId[MessageThread](notif.externalId.id), unreadMessages + unreadNotifications, None, None)
+        val pushNotif = MessageCountPushNotification(unreadMessages + unreadNotifications)
         pushNotifier.notifyUser(user, pushNotif, false)
+        webSocketRouter.sendToUser(user, Json.arr("unread_notifications_count", unreadMessages + unreadNotifications, unreadMessages, unreadNotifications))
       case _ =>
     }
   }
@@ -70,7 +70,7 @@ class NotificationMessagingCommander @Inject() (
       val nUrl = ""
       webSocketRouter.sendToUser(userId, Json.arr(if (unread) "message_unread" else "message_read", nUrl, notif.externalId, item.eventTime, item.externalId))
       if (unread) {
-        messagingAnalytics.clearedNotification(userId, ExternalId[ElizaMessage](item.externalId.id), ExternalId[MessageThread](notif.externalId.id), context)
+        messagingAnalytics.clearedNotification(userId, Left(notif.externalId), Left(item.externalId), context)
       }
       sendUnreadNotificationsWith(notif, Recipient(userId))
     }

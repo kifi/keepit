@@ -1,7 +1,7 @@
 package com.keepit.eliza.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
-import com.keepit.common.crypto.PublicId
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
@@ -128,6 +128,8 @@ case class ElizaMessage(
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withText(newText: String) = this.copy(messageText = newText)
   def sanitizeForDelete = this.copy(state = ElizaMessageStates.INACTIVE)
+
+  def pubId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Message] = Message.publicId(ElizaMessage.toCommon(id.get))
 
   def isActive: Boolean = state == ElizaMessageStates.ACTIVE
 }

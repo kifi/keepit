@@ -4,13 +4,12 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.concurrent.{ FutureHelpers, WatchableExecutionContext, FakeExecutionContextModule }
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.Id
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
-import com.keepit.eliza.model.{ MessageSender, ElizaMessage }
-import com.keepit.discussion.Message
+import com.keepit.eliza.model.{ KeepId, MessageSender }
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
 import com.keepit.model.{ Keep, MessageFactory, MessageThreadFactory, _ }
@@ -18,9 +17,8 @@ import com.keepit.rover.FakeRoverServiceModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.{ ElizaInjectionHelpers, ElizaTestInjector }
 import org.specs2.mutable.SpecificationLike
-import play.api.libs.json.{ JsNull, Json }
 
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
@@ -96,7 +94,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
 
           db.readOnlyMaster { implicit s => messageThreadRepo.getByKeepId(keep) must beNone }
 
-          Await.result(discussionCommander.sendMessageOnKeep(user1, "First post!", keep), Duration.Inf)
+          Await.result(discussionCommander.sendMessage(user1, "First post!", KeepId(keep)), Duration.Inf)
           db.readOnlyMaster { implicit s =>
             val th = messageThreadRepo.getByKeepId(keep).get
             th.participants.allUsers === Set(user1)
@@ -104,7 +102,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             userThreadRepo.getByThread(th.id.get) must haveSize(1)
           }
 
-          Await.result(discussionCommander.sendMessageOnKeep(user2, "Second post", keep), Duration.Inf)
+          Await.result(discussionCommander.sendMessage(user2, "Second post", KeepId(keep)), Duration.Inf)
           db.readOnlyMaster { implicit s =>
             val th = messageThreadRepo.getByKeepId(keep).get
             th.participants.allUsers === Set(user1, user2)
@@ -126,9 +124,9 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           val user2 = Id[User](2)
 
           Await.result(for {
-            _ <- discussionCommander.sendMessageOnKeep(user1, "First post!", keep)
-            _ <- discussionCommander.sendMessageOnKeep(user2, "My first post too!", keep)
-            _ <- discussionCommander.sendMessageOnKeep(user2, "And another post!", keep)
+            _ <- discussionCommander.sendMessage(user1, "First post!", KeepId(keep))
+            _ <- discussionCommander.sendMessage(user2, "My first post too!", KeepId(keep))
+            _ <- discussionCommander.sendMessage(user2, "And another post!", KeepId(keep))
           } yield Unit, Duration.Inf)
           val msgs = db.readOnlyMaster { implicit s => messageRepo.all }
 

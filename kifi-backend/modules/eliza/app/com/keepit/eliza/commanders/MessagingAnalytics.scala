@@ -1,6 +1,8 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.{ Singleton, Inject }
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
+import com.keepit.discussion.Message
 import com.keepit.heimdal._
 import com.keepit.realtime._
 import com.keepit.common.logging.Logging
@@ -23,7 +25,8 @@ class MessagingAnalytics @Inject() (
     heimdal: HeimdalServiceClient,
     shoebox: ShoeboxServiceClient,
     threadRepo: MessageThreadRepo,
-    db: Database) extends Logging {
+    db: Database,
+    implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
   private val kifi = "kifi"
   private val push = "push"
@@ -39,7 +42,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder.addNotificationCategory(NotificationCategory.User.MESSAGE)
       contextBuilder += ("global", false)
       contextBuilder += ("muted", muted)
-      contextBuilder += ("messageId", message.externalId.id)
+      contextBuilder += ("messageId", message.pubId.id)
       contextBuilder += ("threadId", thread.externalId.id)
       message.from match {
         case MessageSender.User(senderId) => contextBuilder += ("senderId", senderId.id)
@@ -69,7 +72,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("global", false)
       contextBuilder += ("category", "messageThread")
       contextBuilder += ("os", deviceType.name)
-      contextBuilder += ("threadId", notification.id.id)
+      contextBuilder += ("threadId", MessageThreadId.toIdString(notification.id))
       contextBuilder += ("pendingNotificationCount", notification.unvisitedCount)
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, sentAt))
     }
@@ -146,7 +149,7 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def sentGlobalNotification(userIds: Set[Id[User]], messageId: ExternalId[ElizaMessage], threadId: ExternalId[MessageThread], category: NotificationCategory): Unit = {
+  def sentGlobalNotification(userIds: Set[Id[User]], notificationId: ExternalId[Notification], notificationItemId: ExternalId[NotificationItem], category: NotificationCategory): Unit = {
     val sentAt = currentDateTime
     SafeFuture {
       val contextBuilder = heimdalContextBuilder()
@@ -154,22 +157,28 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("channel", kifi)
       contextBuilder.addNotificationCategory(category)
       contextBuilder += ("global", true)
-      contextBuilder += ("messageId", messageId.id)
-      contextBuilder += ("threadId", threadId.id)
+      contextBuilder += ("notificationId", notificationId.id)
+      contextBuilder += ("notificationItemId", notificationItemId.id)
       val context = contextBuilder.build
       userIds.foreach { id => heimdal.trackEvent(UserEvent(id, context, UserEventTypes.WAS_NOTIFIED, sentAt)) }
     }
   }
 
-  def clearedNotification(userId: Id[User], message: ExternalId[ElizaMessage], thread: ExternalId[MessageThread], existingContext: HeimdalContext): Unit = {
+  def clearedNotification(userId: Id[User], notificationOrThreadId: Either[ExternalId[Notification], MessageThreadId], notificationItemOrMessageId: Either[ExternalId[NotificationItem], PublicId[Message]], existingContext: HeimdalContext): Unit = {
     val clearedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "cleared")
       contextBuilder += ("channel", kifi)
-      contextBuilder += ("messageId", message.id)
-      contextBuilder += ("threadId", thread.id)
+      notificationOrThreadId.fold(
+        notificationId => contextBuilder += ("notificationId", notificationId.id),
+        messageThreadId => contextBuilder += ("threadId", MessageThreadId.toIdString(messageThreadId))
+      )
+      notificationItemOrMessageId.fold(
+        notificationItemId => contextBuilder += ("notificationItemId", notificationItemId.id),
+        messageId => contextBuilder += ("messageId", messageId.id)
+      )
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.WAS_NOTIFIED, clearedAt))
     }
   }
@@ -205,7 +214,7 @@ class MessagingAnalytics @Inject() (
       }
 
       contextBuilder += ("threadId", thread.externalId.id)
-      contextBuilder += ("messageId", message.externalId.id)
+      contextBuilder += ("messageId", message.pubId.id)
       message.source.foreach { source => contextBuilder += ("source", source.value) }
       contextBuilder += ("uriId", thread.uriId.toString)
       addParticipantsInfo(contextBuilder, thread.participants)
@@ -237,16 +246,16 @@ class MessagingAnalytics @Inject() (
     }
   }
 
-  def changedMute(userId: Id[User], threadExternalId: ExternalId[MessageThread], mute: Boolean, existingContext: HeimdalContext): Unit = {
+  def changedMute(userId: Id[User], threadId: MessageThreadId, mute: Boolean, existingContext: HeimdalContext): Unit = {
     val changedAt = currentDateTime
     SafeFuture {
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       val action = if (mute) "mutedConversation" else "unmutedConversation"
       contextBuilder += ("action", action)
-      contextBuilder += ("threadId", threadExternalId.id)
-      val thread = db.readOnlyReplica { implicit session => threadRepo.get(threadExternalId) }
-      addParticipantsInfo(contextBuilder, thread.participants)
+      contextBuilder += ("threadId", MessageThreadId.toIdString(threadId))
+      val threadOpt = db.readOnlyReplica { implicit session => threadRepo.getByMessageThreadId(threadId) }
+      threadOpt.foreach(thread => addParticipantsInfo(contextBuilder, thread.participants))
       heimdal.trackEvent(UserEvent(userId, contextBuilder.build, UserEventTypes.CHANGED_SETTINGS, changedAt))
     }
   }

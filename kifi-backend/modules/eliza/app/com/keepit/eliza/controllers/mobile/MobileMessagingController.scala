@@ -2,13 +2,14 @@ package com.keepit.eliza.controllers.mobile
 
 import com.google.inject.Inject
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
-import com.keepit.common.crypto.PublicId
+import com.keepit.common.crypto.{ PublicIdConfiguration, PublicId }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.mail.BasicContact
 import com.keepit.common.net.{ URISanitizer, UserAgent }
 import com.keepit.common.time._
+import com.keepit.discussion.Message
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.{ ElizaMessage, MessageSource, MessageThread }
+import com.keepit.eliza.model.{ MessageThreadId, ElizaMessage, MessageSource, MessageThread }
 import com.keepit.heimdal._
 import com.keepit.model.{ Organization, User }
 import com.keepit.notify.model.Recipient
@@ -16,12 +17,13 @@ import com.keepit.social.BasicUserLikeEntity._
 import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import com.kifi.macros.json
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, ExecutionContext }
 
 //import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
 
 class MobileMessagingController @Inject() (
+    discussionCommander: ElizaDiscussionCommander,
     messagingCommander: MessagingCommander,
     basicMessageCommander: MessageFetchingCommander,
     notificationDeliveryCommander: NotificationDeliveryCommander,
@@ -30,6 +32,7 @@ class MobileMessagingController @Inject() (
     notificationMessagingCommander: NotificationMessagingCommander,
     heimdalContextBuilder: HeimdalContextBuilderFactory,
     messageSearchCommander: MessageSearchCommander,
+    implicit val publicIdConfig: PublicIdConfiguration,
     implicit val executionContext: ExecutionContext) extends UserActions with ElizaServiceController {
 
   private def sanitizeUrls(obj: JsObject): JsObject = { // yolo
@@ -145,12 +148,12 @@ class MobileMessagingController @Inject() (
     contextBuilder += ("source", "mobile")
 
     messagingCommander.sendMessageAction(title, text, source, validUserRecipients, validEmailRecipients, validOrgRecipients, url, request.userId, contextBuilder.build).map {
-      case (message, threadInfoOpt, messages) =>
+      case (message, threadInfo, messages) =>
         Ok(Json.obj(
-          "id" -> message.externalId.id,
-          "parentId" -> message.threadExtId.id,
+          "id" -> message.pubId,
+          "parentId" -> MessageThreadId.format.writes(threadInfo.threadId),
           "createdAt" -> message.createdAt,
-          "threadInfo" -> threadInfoOpt.map(info => info.copy(url = info.url.map(URISanitizer.sanitize), nUrl = info.nUrl.map(URISanitizer.sanitize))),
+          "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo.copy(url = threadInfo.url.map(URISanitizer.sanitize), nUrl = threadInfo.nUrl.map(URISanitizer.sanitize))),
           "messages" -> messages.reverse.map(message => message.copy(url = URISanitizer.sanitize(message.url)))))
     }.recover {
       case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
@@ -158,106 +161,119 @@ class MobileMessagingController @Inject() (
     }
   }
 
-  def sendMessageReplyAction(threadExtId: ExternalId[MessageThread]) = UserAction(parse.tolerantJson) { request =>
-    val tStart = currentDateTime
-    val o = request.body
-    val (text, source) = (
-      (o \ "text").as[String].trim,
-      (o \ "source").asOpt[MessageSource]
-    )
-    val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-    contextBuilder += ("source", "mobile")
-    val (_, message) = messagingCommander.sendMessage(request.user.id.get, threadExtId, text, source, None)(contextBuilder.build)
-    val tDiff = currentDateTime.getMillis - tStart.getMillis
-    statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
-    Ok(Json.obj("id" -> message.externalId.id, "parentId" -> message.threadExtId.id, "createdAt" -> message.createdAt))
+  def sendMessageReplyAction(threadIdStr: String) = UserAction.async(parse.tolerantJson) { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
+        val tStart = currentDateTime
+        val o = request.body
+        val (text, source) = (
+          (o \ "text").as[String].trim,
+          (o \ "source").asOpt[MessageSource]
+        )
+        val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+        contextBuilder += ("source", "mobile")
+        discussionCommander.sendMessage(request.user.id.get, text, threadId, source)(contextBuilder.build).map { message =>
+          val tDiff = currentDateTime.getMillis - tStart.getMillis
+          statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
+          Ok(Json.obj("id" -> message.pubId, "parentId" -> threadIdStr, "createdAt" -> message.sentAt))
+        }
+      case None => Future.successful(BadRequest("invalid_id"))
+    }
   }
 
   // todo(eishay, léo): the next version of this endpoint should rename the "uri" field to "url"
-  def getPagedThread(threadId: String, pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(request.userId, ExternalId[MessageThread](threadId)) map {
-      case (thread, allMsgs) =>
-        val url = URISanitizer.sanitize(thread.url)
-        val nUrl = URISanitizer.sanitize(thread.nUrl)
-        val participants: Set[BasicUserLikeEntity] = allMsgs.flatMap(_.participants).toSet
-        val page = fromMessageId match {
-          case None => allMsgs.take(pageSize)
-          case Some(idString) =>
-            val id = ExternalId[ElizaMessage](idString)
-            val afterId = allMsgs.dropWhile(_.id != id)
-            if (afterId.isEmpty) throw new IllegalStateException(s"thread of ${allMsgs.size} had no message id $id")
-            afterId.drop(1).take(pageSize)
-        }
-        Ok(Json.obj(
-          "id" -> threadId,
-          "uri" -> url,
-          "nUrl" -> nUrl,
-          "participants" -> participants,
-          "messages" -> (page map { m =>
-            val adderAndAddedOpt: Option[(String, Seq[String])] = m.auxData match {
-              case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
-                Some(adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json => (json \ "id").as[String]))
-              }
-              case _ => None
+  def getPagedThread(threadIdStr: String, pageSize: Int, fromMessageId: Option[String]) = UserAction.async { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
+        basicMessageCommander.getDiscussionAndKeep(request.userId, threadId) map {
+          case (discussion, _) =>
+            val url = URISanitizer.sanitize(discussion.url)
+            val nUrl = URISanitizer.sanitize(discussion.nUrl)
+            val participants: Set[BasicUserLikeEntity] = discussion.participants
+            val page = fromMessageId match {
+              case None => discussion.messages.take(pageSize)
+              case Some(idString) =>
+                val publicId = basicMessageCommander.getMessagePublicId(idString)
+                val afterId = discussion.messages.dropWhile(_.id != publicId)
+                if (afterId.isEmpty) throw new IllegalStateException(s"thread of ${discussion.messages.size} had no message id $publicId")
+                afterId.drop(1).take(pageSize)
             }
-            val baseJson = Json.obj(
-              "id" -> m.id.toString,
-              "time" -> m.createdAt.getMillis,
-              "text" -> m.text
-            )
-            val msgJson = baseJson ++ (m.user match {
-              case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
-              case _ => Json.obj()
-            })
+            Ok(Json.obj(
+              "id" -> threadIdStr,
+              "uri" -> url,
+              "nUrl" -> nUrl,
+              "participants" -> participants,
+              "messages" -> (page map { m =>
+                val adderAndAddedOpt: Option[(String, Seq[String])] = m.auxData match {
+                  case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
+                    Some(adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json => (json \ "id").as[String]))
+                  }
+                  case _ => None
+                }
+                val baseJson = Json.obj(
+                  "id" -> m.id,
+                  "time" -> m.createdAt.getMillis,
+                  "text" -> m.text
+                )
+                val msgJson = baseJson ++ (m.user match {
+                  case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
+                  case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
+                  case _ => Json.obj()
+                })
 
-            adderAndAddedOpt.map { adderAndAdded =>
-              msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))
-            } getOrElse {
-              msgJson
-            }
-          })
-        ))
+                adderAndAddedOpt.map { adderAndAdded =>
+                  msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))
+                } getOrElse {
+                  msgJson
+                }
+              })
+            ))
+        }
+      case None => Future.successful(BadRequest("invalid_thread_id"))
     }
   }
 
   @deprecated(message = "use getPagedThread", since = "April 23, 2014")
-  def getCompactThread(threadId: String) = UserAction.async { request =>
-    basicMessageCommander.getThreadMessagesWithBasicUser(request.userId, ExternalId[MessageThread](threadId)) map {
-      case (thread, msgs) =>
-        val url = URISanitizer.sanitize(thread.url)
-        val nUrl = URISanitizer.sanitize(thread.nUrl)
-        val participants: Set[BasicUserLikeEntity] = msgs.flatMap(_.participants).toSet
-        Ok(Json.obj(
-          "id" -> threadId,
-          "uri" -> url,
-          "nUrl" -> nUrl,
-          "participants" -> participants,
-          "messages" -> (msgs.reverse map { m =>
-            val adderAndAddedOpt: Option[(String, Seq[String])] = m.auxData match {
-              case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
-                Some(adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json => (json \ "id").as[String]))
-              }
-              case _ => None
-            }
-            val baseJson = Json.obj(
-              "id" -> m.id.toString,
-              "time" -> m.createdAt.getMillis,
-              "text" -> m.text
-            )
-            val msgJson = baseJson ++ (m.user match {
-              case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
-              case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
-              case _ => Json.obj()
-            })
+  def getCompactThread(threadIdStr: String) = UserAction.async { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
+        basicMessageCommander.getDiscussionAndKeep(request.userId, threadId) map {
+          case (discussion, _) =>
+            val url = URISanitizer.sanitize(discussion.url)
+            val nUrl = URISanitizer.sanitize(discussion.nUrl)
+            val participants: Set[BasicUserLikeEntity] = discussion.participants
+            Ok(Json.obj(
+              "id" -> threadIdStr,
+              "uri" -> url,
+              "nUrl" -> nUrl,
+              "participants" -> participants,
+              "messages" -> (discussion.messages.reverse map { m =>
+                val adderAndAddedOpt: Option[(String, Seq[String])] = m.auxData match {
+                  case Some(JsArray(Seq(JsString("add_participants"), adderBasicUser, addedBasicUsers))) => {
+                    Some(adderBasicUser.as[BasicUser].externalId.id -> addedBasicUsers.as[Seq[JsValue]].map(json => (json \ "id").as[String]))
+                  }
+                  case _ => None
+                }
+                val baseJson = Json.obj(
+                  "id" -> m.id,
+                  "time" -> m.createdAt.getMillis,
+                  "text" -> m.text
+                )
+                val msgJson = baseJson ++ (m.user match {
+                  case Some(BasicUserLikeEntity.user(bu)) => Json.obj("userId" -> bu.externalId.toString)
+                  case Some(BasicUserLikeEntity.nonUser(bnu)) if bnu.kind.name == "email" => Json.obj("userId" -> bnu.id)
+                  case _ => Json.obj()
+                })
 
-            adderAndAddedOpt.map { adderAndAdded =>
-              msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))
-            } getOrElse {
-              msgJson
-            }
-          })
-        ))
+                adderAndAddedOpt.map { adderAndAdded =>
+                  msgJson.deepMerge(Json.obj("added" -> adderAndAdded._2, "userId" -> adderAndAdded._1))
+                } getOrElse {
+                  msgJson
+                }
+              })
+            ))
+        }
+      case None => Future.successful(BadRequest("invalid_thread_id"))
     }
   }
 
@@ -301,9 +317,9 @@ class MobileMessagingController @Inject() (
 
   // users is a string because orgs come in through that field
   @json case class AddParticipants(users: Seq[String], emails: Seq[BasicContact])
-  def addParticipantsToThreadV2(threadId: ExternalId[MessageThread]) = UserAction(parse.tolerantJson) { request =>
-    request.body.asOpt[AddParticipants] match {
-      case Some(addReq) =>
+  def addParticipantsToThreadV2(threadIdStr: String) = UserAction(parse.tolerantJson) { request =>
+    (MessageThreadId.fromIdString(threadIdStr), request.body.asOpt[AddParticipants]) match {
+      case (Some(threadId), Some(addReq)) =>
         val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
         contextBuilder += ("source", "mobile")
 
@@ -313,29 +329,33 @@ class MobileMessagingController @Inject() (
             case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
           }
         }
-        messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, addReq.emails, validOrgIds)(contextBuilder.build)
+        discussionCommander.addParticipantsToThread(request.userId, threadId, validUserIds, addReq.emails, validOrgIds)(contextBuilder.build)
         Ok
-      case None => BadRequest
+      case _ => BadRequest
     }
   }
 
   // Do not use, clients have moved to addParticipantsToThreadV2 which doesn't have an insane API
-  def addParticipantsToThread(threadId: ExternalId[MessageThread], users: String, emailContacts: String) = UserAction { request =>
-    if (users.nonEmpty || emailContacts.nonEmpty) {
-      val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
-      contextBuilder += ("source", "mobile")
-      //assuming the client does the proper checks!
-      val validEmails = emailContacts.split(",").map(_.trim).filterNot(_.isEmpty).map { email => BasicContact.fromString(email).get }
-      val (validUserIds, validOrgIds) = users.split(",").map(_.trim).filterNot(_.isEmpty).foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
-        // This API is basically insane. Passing comma separated entities in URL params on a POST?
-        ExternalId.asOpt[User](id) match {
-          case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
-          case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
+  def addParticipantsToThread(threadIdStr: String, users: String, emailContacts: String) = UserAction { request =>
+    MessageThreadId.fromIdString(threadIdStr) match {
+      case Some(threadId) =>
+        if (users.nonEmpty || emailContacts.nonEmpty) {
+          val contextBuilder = heimdalContextBuilder.withRequestInfo(request)
+          contextBuilder += ("source", "mobile")
+          //assuming the client does the proper checks!
+          val validEmails = emailContacts.split(",").map(_.trim).filterNot(_.isEmpty).map { email => BasicContact.fromString(email).get }
+          val (validUserIds, validOrgIds) = users.split(",").map(_.trim).filterNot(_.isEmpty).foldRight((Seq[ExternalId[User]](), Seq[PublicId[Organization]]())) { (id, acc) =>
+            // This API is basically insane. Passing comma separated entities in URL params on a POST?
+            ExternalId.asOpt[User](id) match {
+              case Some(userId) if userId.id.length == 36 => (acc._1 :+ userId, acc._2)
+              case None if id.startsWith("o") => (acc._1, acc._2 :+ PublicId[Organization](id))
+            }
+          }
+          discussionCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)
         }
-      }
-      messagingCommander.addParticipantsToThread(request.userId, threadId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)
+        Ok("")
+      case None => BadRequest("invalid_thread_id")
     }
-    Ok("")
   }
 
   def getUnreadNotificationsCount = UserAction { request =>

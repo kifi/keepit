@@ -1,6 +1,7 @@
 package com.keepit.eliza.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.slick.{ Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent }
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.cache.CacheStatistics
@@ -119,7 +120,8 @@ case class MessageThread(
   keepId: Option[Id[Keep]] = None)
     extends ModelWithExternalId[MessageThread] {
   def participantsHash: Int = participants.hash
-  def deepLocator: DeepLocator = DeepLocator(s"/messages/$externalId")
+  def threadId: MessageThreadId = MessageThreadId(keepId, externalId)
+  def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = DeepLocator(s"/messages/${MessageThreadId.toIdString(threadId)}")
 
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
 
@@ -166,6 +168,27 @@ object MessageThread {
     (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'keep).formatNullable[Id[Keep]]
   )(MessageThread.apply, unlift(MessageThread.unapply))
+}
+
+sealed trait MessageThreadId
+case class ThreadExternalId(threadId: ExternalId[MessageThread]) extends MessageThreadId
+case class KeepId(keepId: Id[Keep]) extends MessageThreadId
+object MessageThreadId {
+  def toIdString(id: MessageThreadId)(implicit publicIdConfiguration: PublicIdConfiguration): String = id match {
+    case ThreadExternalId(threadId) => threadId.id
+    case KeepId(keepId) => Keep.publicId(keepId).id
+  }
+
+  def fromIdString(idStr: String)(implicit publicIdConfiguration: PublicIdConfiguration): Option[MessageThreadId] = {
+    ExternalId.asOpt[MessageThread](idStr).map(ThreadExternalId(_)) orElse Keep.validatePublicId(idStr).flatMap(pubId => Keep.decodePublicId(pubId).map(KeepId(_)).toOption)
+  }
+
+  implicit def format(implicit publicIdConfiguration: PublicIdConfiguration) = Format[MessageThreadId](
+    Reads(value => value.validate[String].flatMap(fromIdString(_).map(JsSuccess(_)) getOrElse JsError(s"Invalid MessageThreadId: $value"))),
+    Writes(id => JsString(toIdString(id)))
+  )
+
+  def apply(keepId: Option[Id[Keep]], externalId: ExternalId[MessageThread]): MessageThreadId = keepId.map(KeepId) getOrElse ThreadExternalId(externalId)
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {

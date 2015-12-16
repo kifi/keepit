@@ -5,7 +5,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ Id, ExternalId }
 import com.keepit.common.logging.Logging
 import com.keepit.eliza._
-import com.keepit.eliza.model.MessageThread
+import com.keepit.eliza.model.{ Notification, MessageThreadId, MessageThread }
 import com.keepit.model.{ Username, User, Library }
 import com.kifi.macros.json
 import org.joda.time.Days
@@ -19,7 +19,7 @@ sealed trait PushNotification {
   val sound: Option[NotificationSound]
 }
 
-case class MessageThreadPushNotification(id: ExternalId[MessageThread], unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
+case class MessageThreadPushNotification(id: MessageThreadId, unvisitedCount: Int, message: Option[String], sound: Option[NotificationSound]) extends PushNotification
 case class MessageCountPushNotification(unvisitedCount: Int) extends PushNotification {
   val sound = None
   val message = None

@@ -60,9 +60,9 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
           inject[WatchableExecutionContext].drain()
 
           val notif = Await.result(notificationDeliveryCommander.buildNotificationForMessageThread(user1, thread), Duration.Inf).get
-          notif.id === msg.externalId
+          notif.id === msg.pubId
           notif.time === msg.createdAt
-          notif.threadId === thread.externalId
+          notif.threadId === thread.threadId
           notif.text === "I need this to work"
           notif.url === "http://idgaf.com"
           notif.title must beNone
@@ -92,16 +92,17 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
           val sources = List(MessageSource.CHROME, MessageSource.SITE, MessageSource.FIREFOX, MessageSource.IPHONE, MessageSource.ANDROID)
           val uniqueTokens = List("asdf1nakjsdfh", "15ulskdnqrst", "tn1051d1uasn", "123jlaksjd", "1oiualksdn1oi")
           val notifs = for ((sender, source, token) <- (users, sources, uniqueTokens).zipped.toList) yield {
-            val (thread, msg) = messagingCommander.sendMessage(sender, threadId, s"Ruining Ryan's life! Yeah! $token", source = Some(source), urlOpt = None)
+            val currentThread = db.readOnlyMaster { implicit session => messageThreadRepo.get(threadId) }
+            val (thread, msg) = messagingCommander.sendMessage(sender, currentThread.threadId, currentThread, s"Ruining Ryan's life! Yeah! $token", source = Some(source), urlOpt = None)
             inject[WatchableExecutionContext].drain()
             Await.result(notificationDeliveryCommander.buildNotificationForMessageThread(user1, thread), Duration.Inf).get
           }
 
           val msg = db.readOnlyMaster { implicit s => messageRepo.all.last }
           val notif = notifs.last
-          notif.id === msg.externalId
+          notif.id === msg.pubId
           notif.time === msg.createdAt
-          notif.threadId === initThread.externalId
+          notif.threadId === initThread.threadId
           notif.text === s"Ruining Ryan's life! Yeah! ${uniqueTokens.last}"
           notif.url === "http://idgaf.com"
           notif.title must beNone
