@@ -14,7 +14,37 @@
   background-image: url('/img/svg/slack.svg')
 
 .kf-org-profile-slack-upsell-arrow
+  height: 50%
   background-image: url('/img/svg/arrow-right.svg')
+
+.kf-org-profile-slack-upsell-arrow-left
+  transform: scaleX(-1)
 
 .kf-org-profile-slack-upsell-kifi
   background-image: url('/img/svg/kifi-clover-logo.svg')
+
+.kf-org-profile-slack-upsell-learn-wrap
+  text-align: center
+
+.kf-org-profile-slack-upsell-lib
+  white-space: nowrap
+
+// Use pseudo element so the card's line of text doesn't
+// have extra head room to accommodate its height
+.kf-org-profile-slack-upsell-card
+  position: relative
+  display: inline-block
+  width: 14px
+  margin-right: 2px
+
+.kf-org-profile-slack-upsell-card:before
+  content: ''
+  position: absolute
+  top: -15px
+  display: inline-block
+  width: 14px
+  height: 18px
+  margin-right: 2px
+  border-radius: 17%
+  background-color: currentColor
+  box-shadow: 1px 1px 0px #ddd, 2px 2px 0px #aaa

@@ -3,10 +3,10 @@
 angular.module('kifi')
 
 .controller('OrgProfileLibrariesCtrl', [
-  '$rootScope', '$scope', '$stateParams', 'profile', 'profileService',
+  '$rootScope', '$scope', '$stateParams', '$q', 'profile', 'profileService',
   'libraryService', 'orgProfileService', 'modalService', 'Paginator',
   'ORG_PERMISSION',
-  function ($rootScope, $scope, $stateParams, profile, profileService,
+  function ($rootScope, $scope, $stateParams, $q, profile, profileService,
             libraryService, orgProfileService, modalService, Paginator,
             ORG_PERMISSION) {
     var organization = profile.organization;
@@ -144,19 +144,30 @@ angular.module('kifi')
     };
     $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:libraries'});
 
-    if (profileService.me && profileService.me.experiments && profileService.me.experiments.indexOf('admin') !== -1) { // if me.prefs.show_slack_upsell
-      profileService.savePrefs({ slack_int_promo: false });
-      libraryService
-      .getLibraryByHandleAndSlug(organization.handle, 'general')
-      .then(function (library) {
-        modalService.open({
-          template: 'orgProfile/orgProfileSlackUpsellModal.tpl.html',
-          modalData: {
-            library: library
-          }
-        });
+    var slackIntPromoP;
+    if (Object.keys(profileService.prefs).length === 0 ) {
+      slackIntPromoP = profileService.fetchPrefs().then(function(prefs) {
+        return prefs.slack_int_promo;
       });
+    } else {
+      slackIntPromoP = $q.when(profileService.prefs.slack_int_promo);
     }
+
+    slackIntPromoP.then(function(showPromo) {
+      if (showPromo) {
+        profileService.savePrefs({ slack_int_promo: false });
+        libraryService
+        .getLibraryByHandleAndSlug(organization.handle, 'general')
+        .then(function (library) {
+          modalService.open({
+            template: 'orgProfile/orgProfileSlackUpsellModal.tpl.html',
+            modalData: {
+              library: library
+            }
+          });
+        });
+      }
+    });
 
     if ($stateParams.openCreateLibrary) {
       $scope.openCreateLibrary();
