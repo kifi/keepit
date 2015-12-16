@@ -35,7 +35,7 @@ object MaybeOrganizationMember {
 trait OrganizationMembershipCommander {
   def getMembersAndUniqueInvitees(orgId: Id[Organization], viewerIdOpt: Option[Id[User]], offset: Offset, limit: Limit, includeInvitees: Boolean): Either[OrganizationFail, Seq[MaybeOrganizationMember]]
   def getOrganizationsForUser(userId: Id[User], limit: Limit, offset: Offset): Seq[Id[Organization]]
-  def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
+  def getFirstOrganizationForUser(userId: Id[User]): Option[Id[Organization]]
   def getAllOrganizationsForUser(userId: Id[User]): Seq[Id[Organization]]
   def getAllForUsers(userIds: Set[Id[User]]): Map[Id[User], Set[OrganizationMembership]]
   def getVisibleOrganizationsForUser(userId: Id[User], viewerIdOpt: Option[Id[User]]): Seq[Id[Organization]]
@@ -73,12 +73,10 @@ class OrganizationMembershipCommanderImpl @Inject() (
     creditRewardCommander: CreditRewardCommander,
     implicit val executionContext: ExecutionContext) extends OrganizationMembershipCommander with Logging {
 
-  def getPrimaryOrganizationForUser(userId: Id[User]): Option[Id[Organization]] = {
+  def getFirstOrganizationForUser(userId: Id[User]): Option[Id[Organization]] = {
     primaryOrgForUserCache.getOrElseOpt(PrimaryOrgForUserKey(userId)) {
       db.readOnlyReplica { implicit s =>
-        orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption.orElse {
-          orgMembershipCandidateRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption
-        }
+        orgMembershipRepo.getAllByUserId(userId).map(_.organizationId).sorted.headOption
       }
     }
   }
