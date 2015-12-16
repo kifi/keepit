@@ -57,6 +57,7 @@ class NotificationJsonFormat @Inject() (
             "url" -> info.url,
             "isSticky" -> false,
             "image" -> resolveImage(info.image),
+            "locator" -> info.locator,
             "extra" -> info.extraJson
           )))
         case info: LegacyNotificationInfo =>
