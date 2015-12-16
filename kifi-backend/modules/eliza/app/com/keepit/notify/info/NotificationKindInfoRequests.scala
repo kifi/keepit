@@ -1,15 +1,16 @@
 package com.keepit.notify.info
 
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.path.Path
-import com.keepit.eliza.model.{Notification, NotificationItem}
+import com.keepit.eliza.model.{KeepId, MessageThreadId, Notification, NotificationItem}
 import com.keepit.model.{LibraryAccess, NotificationCategory}
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
 import play.api.libs.json.Json
 
 @Singleton
-class NotificationKindInfoRequests @Inject()() {
+class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdConfiguration) {
   private def genericInfoFn[N <: NotificationEvent](
     fn: Set[N] => RequestingNotificationInfos[NotificationInfo]
   ): Set[NotificationEvent] => RequestingNotificationInfos[NotificationInfo] = {
@@ -62,6 +63,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"${inviter.firstName} ${inviter.lastName} wants to connect with you on Kifi",
         body = s"Enjoy ${inviter.firstName}’s keeps in your search results and message ${inviter.firstName} directly.",
         linkText = s"Respond to ${inviter.firstName}’s invitation",
+        locator = None,
         extraJson = Some(Json.obj(
           "friend" -> inviter
         )),
@@ -81,6 +83,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"${accepter.firstName} ${accepter.lastName} accepted your invitation to connect!",
         body = s"Now you will enjoy ${accepter.firstName}’s keeps in your search results and message ${accepter.firstName} directly.",
         linkText = s"Visit ${accepter.firstName}’s profile",
+        locator = None,
         extraJson = Some(Json.obj(
           "friend" -> accepter
         )),
@@ -103,6 +106,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"New keep in ${libraryKept.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
         linkText = "Go to page",
+        locator = Some(MessageThreadId.toLocator(KeepId(event.keepId))),
         extraJson = Some(Json.obj(
           "keeper" -> keeper,
           "library" -> Json.toJson(libraryKept),
@@ -128,6 +132,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"${accepter.firstName} is now collaborating on ${invitedLib.name}",
         body = s"You invited ${accepter.firstName} to join ${invitedLib.name}",
         linkText = s"See ${accepter.firstName}’s profile",
+        locator = None,
         extraJson = Some(Json.obj(
           "follower" -> accepter,
           "library" -> Json.toJson(invitedLib)
@@ -149,6 +154,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"${accepter.firstName} is now following ${acceptedLib.name}",
         body = s"You invited ${accepter.firstName} to join ${acceptedLib.name}",
         linkText = s"See ${accepter.firstName}’s profile",
+        locator = None,
         extraJson = Some(Json.obj(
           "follower" -> accepter,
           "library" -> Json.toJson(acceptedLib)
@@ -318,6 +324,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"${inviter.fullName} invited ${plural("someone")} to contribute to your library!",
         body = s"${inviter.fullName} invited ${plural("someone")} to contribute to your library, ${libraryInvited.name}",
         linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
+        locator = None,
         extraJson = Some(Json.obj(
           "inviter" -> inviter,
           "library" -> Json.toJson(libraryInvited)
@@ -341,6 +348,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"${inviter.fullName} invited ${plural("someone")} to follow your library!",
         body = s"${inviter.fullName} invited ${plural("some friends")} to follow your library, ${libraryInvited.name}",
         linkText = s"See ${inviter.firstName}’s profile", // todo does this make sense?
+        locator = None,
         extraJson = Some(Json.obj(
           "inviter" -> inviter,
           "library" -> Json.toJson(libraryInvited)
@@ -362,6 +370,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = "New library follower",
         body = s"${follower.fullName} is now following your library ${libraryFollowed.name}",
         linkText = s"See ${follower.firstName}’s profile",
+        locator = None,
         extraJson = Some(Json.obj(
           "follower" -> follower,
           "library" -> Json.toJson(libraryFollowed)
@@ -383,6 +392,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = "New library collaborator",
         body = s"${collaborator.fullName} is now collaborating on your library ${libraryCollaborating.name}",
         linkText = s"See ${collaborator.firstName}’s profile",
+        locator = None,
         extraJson = Some(Json.obj(
           "follower" -> collaborator, // the mobile clients read it like this
           "library" -> Json.toJson(libraryCollaborating)
@@ -403,6 +413,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"You’re connected with ${friend.fullName} on Kifi!",
         body = s"Enjoy ${friend.firstName}’s keeps in your search results and message ${friend.firstName} directly",
         linkText = s"View ${friend.firstName}’s profile",
+        locator = None,
         extraJson = Some(Json.obj(
           "friend" -> friend
         )),
@@ -422,6 +433,7 @@ class NotificationKindInfoRequests @Inject()() {
         title = s"${joiner.firstName} ${joiner.lastName} joined Kifi!",
         body = s"To discover ${joiner.firstName}’s public keeps while searching, get connected! Invite ${joiner.firstName} to connect on Kifi »",
         linkText = s"Invite ${joiner.firstName} to connect",
+        locator = None,
         extraJson = None,
         category = NotificationCategory.User.CONTACT_JOINED
       )

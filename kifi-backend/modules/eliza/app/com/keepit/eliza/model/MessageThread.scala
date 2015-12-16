@@ -121,7 +121,7 @@ case class MessageThread(
     extends ModelWithExternalId[MessageThread] {
   def participantsHash: Int = participants.hash
   def threadId: MessageThreadId = MessageThreadId(keepId, externalId)
-  def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = DeepLocator(s"/messages/${MessageThreadId.toIdString(threadId)}")
+  def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThreadId.toLocator(threadId)
 
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
 
@@ -187,6 +187,8 @@ object MessageThreadId {
     Reads(value => value.validate[String].flatMap(fromIdString(_).map(JsSuccess(_)) getOrElse JsError(s"Invalid MessageThreadId: $value"))),
     Writes(id => JsString(toIdString(id)))
   )
+
+  def toLocator(id: MessageThreadId)(implicit publicIdConfiguration: PublicIdConfiguration): DeepLocator = DeepLocator(s"/messages/${toIdString(id)}")
 
   def apply(keepId: Option[Id[Keep]], externalId: ExternalId[MessageThread]): MessageThreadId = keepId.map(KeepId) getOrElse ThreadExternalId(externalId)
 }
