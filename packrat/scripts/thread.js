@@ -31,7 +31,7 @@ k.panes.thread = k.panes.thread || function () {
     thread: function (o) {
       if ($holder && $holder.data('threadId') === o.id) {
         $holder.data('keep', o.keep);
-        updateAll(o.id, o.messages, o.keep);
+        updateAll(o.id, o.messages);
       }
     },
     message: function (o) {
@@ -158,7 +158,7 @@ k.panes.thread = k.panes.thread || function () {
     }
   }
 
-  function updateAll(threadId, messages, keep) {
+  function updateAll(threadId, messages) {
     var $msgs = $holder.find('.kifi-message-sent');
     var _renderMessage = renderMessage.bind(null, $holder.data('keep'));
 
