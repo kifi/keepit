@@ -60,7 +60,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
           inject[WatchableExecutionContext].drain()
 
           val notif = Await.result(notificationDeliveryCommander.buildNotificationForMessageThread(user1, thread), Duration.Inf).get
-          notif.id === msg.externalId
+          notif.id === msg.pubId
           notif.time === msg.createdAt
           notif.threadId === thread.externalId
           notif.text === "I need this to work"
@@ -99,7 +99,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
 
           val msg = db.readOnlyMaster { implicit s => messageRepo.all.last }
           val notif = notifs.last
-          notif.id === msg.externalId
+          notif.id === msg.pubId
           notif.time === msg.createdAt
           notif.threadId === initThread.externalId
           notif.text === s"Ruining Ryan's life! Yeah! ${uniqueTokens.last}"

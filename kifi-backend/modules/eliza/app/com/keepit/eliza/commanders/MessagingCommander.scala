@@ -481,9 +481,9 @@ class MessagingCommander @Inject() (
     db.readWrite(attempts = 2) { implicit session =>
       userThreadRepo.markRead(userId, thread.id.get, message)
     }
-    messagingAnalytics.clearedNotification(userId, message.externalId, thread.externalId, context)
+    messagingAnalytics.clearedNotification(userId, Right(thread.externalId), Right(message.pubId), context)
 
-    notificationDeliveryCommander.notifyRead(userId, thread.externalId, message.externalId, thread.nUrl, message.createdAt)
+    notificationDeliveryCommander.notifyRead(userId, thread.externalId, message.pubId, thread.nUrl, message.createdAt)
   }
 
   def setUnread(userId: Id[User], messageId: Id[ElizaMessage]): Unit = {
@@ -495,7 +495,7 @@ class MessagingCommander @Inject() (
       userThreadRepo.markUnread(userId, thread.id.get)
     }
     if (changed) {
-      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, message.externalId, thread.nUrl, message.createdAt)
+      notificationDeliveryCommander.notifyUnread(userId, thread.externalId, message.pubId, thread.nUrl, message.createdAt)
     }
   }
 

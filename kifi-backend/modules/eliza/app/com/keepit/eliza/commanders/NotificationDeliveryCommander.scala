@@ -38,7 +38,7 @@ case class UserThreadQuery(
 case class UnreadThreadCounts(total: Int, unmuted: Int)
 case class MessageNotification(
   // Info about the message
-  id: ExternalId[ElizaMessage],
+  id: PublicId[Message],
   time: DateTime,
   author: Option[BasicUserLikeEntity],
   text: String,
@@ -63,7 +63,7 @@ object MessageNotification {
   def apply(message: ElizaMessage, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser,
     unread: Boolean, originalAuthorIdx: Int, numUnseenAuthors: Int, numAuthors: Int,
     numMessages: Int, numUnread: Int, muted: Boolean)(implicit publicIdConfig: PublicIdConfiguration): MessageNotification = MessageNotification(
-    id = message.externalId,
+    id = message.pubId,
     time = message.createdAt,
     author = messageWithBasicUser.user,
     text = message.messageText,
@@ -82,7 +82,7 @@ object MessageNotification {
     numUnreadMessages = numUnread
   )
   implicit val writes: Writes[MessageNotification] = (
-    (__ \ 'id).write[ExternalId[ElizaMessage]] and
+    (__ \ 'id).write[PublicId[Message]] and
     (__ \ 'time).write[DateTime] and
     (__ \ 'author).writeNullable[BasicUserLikeEntity] and
     (__ \ 'text).write[String] and
@@ -218,13 +218,13 @@ class NotificationDeliveryCommander @Inject() (
   def notifyMessage(userId: Id[User], thread: MessageThread, message: MessageWithBasicUser): Unit =
     sendToUser(userId, Json.arr("message", thread.externalId.id, message))
 
-  def notifyRead(userId: Id[User], threadExtId: ExternalId[MessageThread], msgExtId: ExternalId[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
-    sendToUser(userId, Json.arr("message_read", nUrl, threadExtId.id, creationDate, msgExtId.id))
+  def notifyRead(userId: Id[User], threadExtId: ExternalId[MessageThread], messageId: PublicId[Message], nUrl: String, creationDate: DateTime): Unit = {
+    sendToUser(userId, Json.arr("message_read", nUrl, threadExtId.id, creationDate, messageId.id))
     notifyUnreadCount(userId, threadExtId)
   }
 
-  def notifyUnread(userId: Id[User], threadExtId: ExternalId[MessageThread], msgExtId: ExternalId[ElizaMessage], nUrl: String, creationDate: DateTime): Unit = {
-    sendToUser(userId, Json.arr("message_unread", nUrl, threadExtId.id, creationDate, msgExtId.id))
+  def notifyUnread(userId: Id[User], threadExtId: ExternalId[MessageThread], messageId: PublicId[Message], nUrl: String, creationDate: DateTime): Unit = {
+    sendToUser(userId, Json.arr("message_unread", nUrl, threadExtId.id, creationDate, messageId.id))
     notifyUnreadCount(userId, threadExtId)
   }
 
