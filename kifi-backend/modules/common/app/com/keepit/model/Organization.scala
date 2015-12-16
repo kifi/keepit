@@ -190,7 +190,7 @@ class OrganizationCache(stats: CacheStatistics, accessLog: AccessLog, innermostP
   extends JsonCacheImpl[OrganizationKey, Organization](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 
 case class PrimaryOrgForUserKey(id: Id[User]) extends Key[Id[Organization]] {
-  override val version = 1
+  override val version = 2
   val namespace = "primary_org_user"
   def toKey(): String = id.id.toString
 }

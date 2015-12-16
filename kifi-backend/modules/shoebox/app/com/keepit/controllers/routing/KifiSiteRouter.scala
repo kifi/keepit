@@ -71,14 +71,14 @@ class KifiSiteRouter @Inject() (
     request match {
       case r: NonUserRequest[_] => Redirect(fallback)
       case u: UserRequest[_] =>
-        val orgToUpgrade = db.readOnlyReplica { implicit session =>
+        val redirectToOrg = db.readOnlyReplica { implicit session =>
           (orgMembershipRepo.getAllByUserId(u.userId), subpath) match {
             case (mems, "/settings/plan") => mems.filter(_.role == OrganizationRole.ADMIN).map(_.organizationId).headOption.map(orgRepo.get)
             case (mems, "/settings/credits") => mems.sortBy(_.role).map(_.organizationId).lastOption.map(orgRepo.get)
-            case _ => None
+            case (mems, _) => mems.sortBy(_.id).map(_.organizationId).lastOption.map(orgRepo.get)
           }
         }
-        orgToUpgrade.map { org => Redirect(s"/${org.handle.value}$subpath") } getOrElse Redirect(noTeam)
+        redirectToOrg.map { org => Redirect(s"/${org.handle.value}$subpath") } getOrElse Redirect(noTeam)
     }
   }
 

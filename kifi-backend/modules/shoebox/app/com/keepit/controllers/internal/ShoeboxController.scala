@@ -121,7 +121,7 @@ class ShoeboxController @Inject() (
 
   def getPrimaryOrg(userId: Id[User]) = Action {
     val orgIdOpt = db.readOnlyReplica { implicit session =>
-      organizationMembershipCommander.getPrimaryOrganizationForUser(userId)
+      organizationMembershipCommander.getFirstOrganizationForUser(userId)
     }
     orgIdOpt match {
       case Some(orgId) => Ok(Json.toJson(orgId))
