@@ -318,7 +318,9 @@ class SharedWsMessagingController @Inject() (
         legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
           notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = true)
         } {
-          messagingCommander.muteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+          MessageThreadId.fromIdString(jsThreadId).foreach { threadId =>
+            discussionCommander.muteThread(socket.userId, threadId)
+          }
         }
     },
     "unmute_thread" -> {
@@ -328,7 +330,9 @@ class SharedWsMessagingController @Inject() (
         legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
           notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = false)
         } {
-          messagingCommander.unmuteThread(socket.userId, ExternalId[MessageThread](jsThreadId))
+          MessageThreadId.fromIdString(jsThreadId).foreach { threadId =>
+            discussionCommander.unmuteThread(socket.userId, threadId)
+          }
         }
     },
     "eip" -> {

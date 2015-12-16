@@ -27,6 +27,8 @@ trait ElizaDiscussionCommander {
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
   def sendMessage(userId: Id[User], txt: String, extThreadId: MessageThreadId, source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
   def addParticipantsToThread(adderUserId: Id[User], extThreadId: MessageThreadId, newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean]
+  def muteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean]
+  def unmuteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
@@ -170,7 +172,18 @@ class ElizaDiscussionCommanderImpl @Inject() (
 
   def addParticipantsToThread(adderUserId: Id[User], extThreadId: MessageThreadId, newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
     getOrCreateMessageThreadWithUser(extThreadId, adderUserId).flatMap { thread =>
-      messagingCommander.addParticipantsToThread(adderUserId, thread.externalId, newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])
+      messagingCommander.addParticipantsToThread(adderUserId, thread.externalId, newParticipantsExtIds, emailContacts, orgs)
+    }
+  }
+
+  def muteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean] = {
+    getOrCreateMessageThreadWithUser(extThreadId, userId).map { thread =>
+      messagingCommander.muteThread(userId, thread.externalId)
+    }
+  }
+  def unmuteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean] = {
+    getOrCreateMessageThreadWithUser(extThreadId, userId).map { thread =>
+      messagingCommander.unmuteThread(userId, thread.externalId)
     }
   }
 
