@@ -153,7 +153,7 @@ class MobileMessagingController @Inject() (
           "id" -> message.pubId,
           "parentId" -> MessageThreadId.format.writes(threadInfo.threadId),
           "createdAt" -> message.createdAt,
-          "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo.copy(url = threadInfo.url.map(URISanitizer.sanitize), nUrl = threadInfo.nUrl.map(URISanitizer.sanitize))),
+          "threadInfo" -> ElizaThreadInfo.writesThreadInfo.writes(threadInfo.copy(url = URISanitizer.sanitize(threadInfo.url), nUrl = threadInfo.nUrl.map(URISanitizer.sanitize))),
           "messages" -> messages.reverse.map(message => message.copy(url = URISanitizer.sanitize(message.url)))))
     }.recover {
       case ex: Exception if ex.getMessage == "insufficient_org_permissions" =>
@@ -280,7 +280,7 @@ class MobileMessagingController @Inject() (
   def getThreadsByUrl(url: String) = UserAction.async { request =>
     messagingCommander.getThreadInfos(request.userId, url).map {
       case (_, threadInfos) =>
-        Ok(Json.toJson(threadInfos.map(info => info.copy(url = info.url.map(URISanitizer.sanitize), nUrl = info.nUrl.map(URISanitizer.sanitize)))))
+        Ok(Json.toJson(threadInfos.map(info => info.copy(url = URISanitizer.sanitize(info.url), nUrl = info.nUrl.map(URISanitizer.sanitize)))))
     }
   }
 

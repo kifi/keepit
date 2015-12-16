@@ -61,7 +61,7 @@ class MessagingCommander @Inject() (
     implicit val executionContext: ExecutionContext,
     implicit val publicIdConfig: PublicIdConfiguration) extends Logging {
 
-  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: Option[String]): Future[Seq[ElizaThreadInfo]] = {
+  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String): Future[Seq[ElizaThreadInfo]] = {
     //get all involved users
     val allInvolvedUsers = threads.flatMap(_.participants.allUsers)
     //get all basic users
@@ -116,7 +116,7 @@ class MessagingCommander @Inject() (
           val threadIds = userThreadRepo.getThreadIds(userId, nUri.id)
           threadIds.map(threadRepo.get)
         }
-        buildThreadInfos(userId, threads, Some(url)).map { unsortedInfos =>
+        buildThreadInfos(userId, threads, url).map { unsortedInfos =>
           val infos = unsortedInfos sortWith { (a, b) =>
             a.lastCommentedAt.compareTo(b.lastCommentedAt) < 0
           }
@@ -596,7 +596,7 @@ class MessagingCommander @Inject() (
             orgParticipants <- orgParticipantsFuture
             (thread, message) <- sendNewMessage(userId, userRecipients ++ orgParticipants, nonUserRecipients, url, title, text, source)(context)
             messagesWithBasicUser <- basicMessageCommander.getThreadMessagesWithBasicUser(thread)
-            Seq(threadInfo) <- buildThreadInfos(userId, Seq(thread), Some(url))
+            Seq(threadInfo) <- buildThreadInfos(userId, Seq(thread), url)
           } yield {
             val actions = userRecipients.map(id => (Left(id), "message")) ++ nonUserRecipients.collect {
               case NonUserEmailParticipant(address) => (Right(address), "message")
