@@ -129,12 +129,8 @@ class MessagingCommander @Inject() (
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = db.readOnlyReplica { implicit session =>
     val threads = userThreadRepo.getUserThreads(userId, uriId)
-    val otherStarters = threads.filter { userThread =>
-      userThread.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) // tweak
-    }.map { userThread =>
-      threadRepo.get(userThread.threadId).startedBy
-    }.filter {
-      _ != userId
+    val otherStarters = threads.collect {
+      case ut if ut.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) && ut.startedBy != userId => ut.startedBy
     }
     log.info(s"[keepAttribution($userId,$uriId)] threads=${threads.map(_.id.get)} otherStarters=$otherStarters")
     otherStarters
