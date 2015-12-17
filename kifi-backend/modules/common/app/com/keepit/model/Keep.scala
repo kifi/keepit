@@ -4,6 +4,7 @@ import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.path.Path
 import com.keepit.common.reflection.Enumerator
+import com.keepit.discussion.Message
 import org.apache.commons.lang3.RandomStringUtils
 import play.api.http.Status._
 import play.api.mvc.PathBindable
@@ -44,7 +45,8 @@ case class Keep(
     originalKeeperId: Option[Id[User]] = None,
     organizationId: Option[Id[Organization]] = None,
     librariesHash: LibrariesHash = LibrariesHash.EMPTY,
-    participantsHash: ParticipantsHash = ParticipantsHash.EMPTY) extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
+    participantsHash: ParticipantsHash = ParticipantsHash.EMPTY,
+    messageSeq: Option[SequenceNumber[Message]] = None) extends ModelWithExternalId[Keep] with ModelWithPublicId[Keep] with ModelWithState[Keep] with ModelWithSeqNumber[Keep] {
 
   def withPrimary(newPrimary: Boolean) = this.copy(isPrimary = newPrimary)
   def sanitizeForDelete: Keep = copy(title = None, note = None, state = KeepStates.INACTIVE, isPrimary = false, librariesHash = LibrariesHash.EMPTY, participantsHash = ParticipantsHash.EMPTY)
@@ -82,6 +84,7 @@ case class Keep(
 
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(librariesHash = LibrariesHash(libraries))
   def withParticipants(users: Set[Id[User]]): Keep = this.copy(participantsHash = ParticipantsHash(users))
+  def withMessageSeq(seq: SequenceNumber[Message]): Keep = if (messageSeq.exists(_ >= seq)) this else this.copy(messageSeq = Some(seq))
 
   def isActive: Boolean = state == KeepStates.ACTIVE && isPrimary // isPrimary will be removed shortly
   def isInactive: Boolean = state == KeepStates.INACTIVE
@@ -123,13 +126,13 @@ object Keep extends PublicIdGenerator[Keep] {
 
   def applyFromDbRowTuples(firstArguments: KeepFirstArguments, restArguments: KeepRestArguments): Keep = (firstArguments, restArguments) match {
     case ((id, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (userId, state, source, seq, libraryId, visibility, keptAt, note, originalKeeperId, organizationId, librariesHash, participantsHash)) =>
+      (userId, state, source, seq, libraryId, visibility, keptAt, note, originalKeeperId, organizationId, librariesHash, participantsHash, messageSeq)) =>
       _applyFromDbRow(id, createdAt, updatedAt, externalId, title,
         uriId = uriId, isPrimary = isPrimary, url = url,
         userId = userId, state = state, source = source,
         seq = seq, libraryId = libraryId, visibility = visibility, keptAt = keptAt,
         note = note, originalKeeperId = originalKeeperId,
-        organizationId = organizationId, librariesHash = librariesHash, participantsHash = participantsHash)
+        organizationId = organizationId, librariesHash = librariesHash, participantsHash = participantsHash, messageSeq = messageSeq)
   }
 
   // is_primary: trueOrNull in db
@@ -138,9 +141,9 @@ object Keep extends PublicIdGenerator[Keep] {
     url: String, userId: Id[User],
     state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], librariesHash: LibrariesHash, participantsHash: ParticipantsHash): Keep = {
+    note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], librariesHash: LibrariesHash, participantsHash: ParticipantsHash, messageSeq: Option[SequenceNumber[Message]]): Keep = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), url,
-      visibility, userId, state, source, seq, libraryId, keptAt, note, originalKeeperId.orElse(Some(userId)), organizationId, librariesHash, participantsHash)
+      visibility, userId, state, source, seq, libraryId, keptAt, note, originalKeeperId.orElse(Some(userId)), organizationId, librariesHash, participantsHash, messageSeq)
   }
 
   def unapplyToDbRow(k: Keep) = {
@@ -149,12 +152,12 @@ object Keep extends PublicIdGenerator[Keep] {
         k.uriId, if (k.isPrimary) Some(true) else None, k.url),
       (k.userId, k.state, k.source,
         k.seq, k.libraryId, k.visibility, k.keptAt,
-        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId, k.librariesHash, k.participantsHash)
+        k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId, k.librariesHash, k.participantsHash, k.messageSeq)
     )
   }
 
   private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], String)
-  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[String], Option[Id[User]], Option[Id[Organization]], LibrariesHash, ParticipantsHash)
+  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[String], Option[Id[User]], Option[Id[Organization]], LibrariesHash, ParticipantsHash, Option[SequenceNumber[Message]])
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
       (__ \ 'id).readNullable(Id.format[Keep]) and
@@ -177,7 +180,8 @@ object Keep extends PublicIdGenerator[Keep] {
       (__ \ 'originalKeeperId).readNullable[Id[User]] and
       (__ \ 'organizationId).readNullable[Id[Organization]] and
       (__ \ 'librariesHash).read[LibrariesHash] and
-      (__ \ 'participantsHash).read[ParticipantsHash]
+      (__ \ 'participantsHash).read[ParticipantsHash] and
+      (__ \ 'messageSeq).readNullable(SequenceNumber.format[Message])
     ).tupled
 
     (fields1To10 and fields10Up).apply(applyFromDbRowTuples _)
@@ -211,7 +215,8 @@ object Keep extends PublicIdGenerator[Keep] {
         "originalKeeperId" -> k.originalKeeperId.orElse(Some(k.userId)),
         "organizationId" -> k.organizationId,
         "librariesHash" -> k.librariesHash,
-        "participantsHash" -> k.participantsHash
+        "participantsHash" -> k.participantsHash,
+        "messageSeq" -> k.messageSeq
       )
     }
   }

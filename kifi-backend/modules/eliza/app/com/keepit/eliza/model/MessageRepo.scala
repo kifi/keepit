@@ -37,12 +37,12 @@ class MessageRepoImpl @Inject() (
   val clock: Clock,
   val db: DataBaseComponent,
   val messagesForThreadIdCache: MessagesForThreadIdCache)
-    extends DbRepo[ElizaMessage] with MessageRepo with ExternalIdColumnDbFunction[ElizaMessage] with Logging with MessagingTypeMappers {
+    extends DbRepo[ElizaMessage] with MessageRepo with ExternalIdColumnDbFunction[ElizaMessage] with SeqNumberDbFunction[ElizaMessage] with Logging with MessagingTypeMappers {
   import DBSession._
   import db.Driver.simple._
 
   type RepoImpl = MessageTable
-  class MessageTable(tag: Tag) extends RepoTable[ElizaMessage](db, tag, "message") with ExternalIdColumn[ElizaMessage] {
+  class MessageTable(tag: Tag) extends RepoTable[ElizaMessage](db, tag, "message") with ExternalIdColumn[ElizaMessage] with SeqNumberColumn[ElizaMessage] {
     def from = column[Option[Id[User]]]("sender_id", O.Nullable)
     def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
     def threadExtId = column[ExternalId[MessageThread]]("thread_ext_id", O.NotNull)
@@ -55,11 +55,15 @@ class MessageRepoImpl @Inject() (
 
     def fromHuman: Column[Boolean] = from.isDefined || nonUserSender.isDefined
 
-    def * = (id.?, createdAt, updatedAt, state, externalId, from, thread, threadExtId, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
+    def * = (id.?, createdAt, updatedAt, state, seq, externalId, from, thread, threadExtId, messageText, source, auxData, sentOnUrl, sentOnUriId, nonUserSender) <> ((ElizaMessage.fromDbRow _).tupled, ElizaMessage.toDbRow)
   }
   def table(tag: Tag) = new MessageTable(tag)
 
   private def activeRows = rows.filter(_.state === ElizaMessageStates.ACTIVE)
+
+  override def save(message: ElizaMessage)(implicit session: RWSession): ElizaMessage = {
+    super.save(message.copy(seq = deferredSeqNum()))
+  }
 
   override def invalidateCache(message: ElizaMessage)(implicit session: RSession): Unit = {
     val key = MessagesForThreadIdKey(message.thread)
