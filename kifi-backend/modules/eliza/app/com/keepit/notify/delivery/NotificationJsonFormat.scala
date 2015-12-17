@@ -39,15 +39,19 @@ class NotificationJsonFormat @Inject() (
     case PublicImage(url) => url
   }
 
+  def getNotificationThreadStr(notification: Notification, item: NotificationItem): String = {
+    item.event match {
+      case newKeep: LibraryNewKeep => Keep.publicId(newKeep.keepId).id
+      case _ => notification.externalId.id
+    }
+  }
+
   def basicJson(notifWithInfo: NotificationWithInfo): Future[NotificationWithJson] = notifWithInfo match {
     case NotificationWithInfo(notif, items, info) =>
       val relevantItem = notifWithInfo.relevantItem
       notifWithInfo.info match {
         case info: StandardNotificationInfo =>
-          val thread = relevantItem.event match {
-            case newKeep: LibraryNewKeep => Keep.publicId(newKeep.keepId).id
-            case _ => notif.externalId.id
-          }
+          val thread = getNotificationThreadStr(notif, relevantItem)
           Future.successful(NotificationWithJson(notif, items, Json.obj(
             "id" -> relevantItem.externalId,
             "time" -> relevantItem.eventTime,
