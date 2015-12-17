@@ -243,9 +243,6 @@ k.panes.thread = k.panes.thread || function () {
   function renderMessage(keep, m) {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
-    m.formatKeepUrl = function () {
-      return 'https://www.kifi.com/' + (this.path || ('k/' + encodeURIComponent(this.title.slice(0, 30)) + '/'+ this.id));
-    };
     m.keep = keep;
     if (m.auxData && m.auxData.length >= 3 &&
       (m.auxData[0] === 'add_participants' || m.auxData[0] === 'start_with_emails')) {
