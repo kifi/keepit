@@ -244,7 +244,7 @@ k.panes.thread = k.panes.thread || function () {
     m.formatMessage = formatMessage.full;
     m.formatAuxData = formatAuxData;
     m.formatKeepUrl = function () {
-      return 'https://www.kifi.com/k/' + encodeURIComponent(this.title.slice(0, 30)) + '/'+ this.id;
+      return 'https://www.kifi.com/' + (this.path || ('k/' + encodeURIComponent(this.title.slice(0, 30)) + '/'+ this.id));
     };
     m.keep = keep;
     if (m.auxData && m.auxData.length >= 3 &&
