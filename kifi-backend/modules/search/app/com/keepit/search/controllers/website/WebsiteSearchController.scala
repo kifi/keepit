@@ -140,13 +140,13 @@ class WebsiteSearchController @Inject() (
     maxTagsShown: Int,
     augmentedItems: Seq[AugmentedItem]): (Future[Seq[JsObject]], Future[(Seq[BasicUser], Seq[BasicLibrary])]) = {
 
+    val allKeepIds = augmentedItems.flatMap(_.keeps.map(_.id)).toSet
+    val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(allKeepIds)
+
     val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
     val allKeepsShown = limitedAugmentationInfos.map(_.keep).flatten
     val allKeepersShown = limitedAugmentationInfos.map(_.keepers).flatten
     val allLibrariesShown = limitedAugmentationInfos.map(_.libraries).flatten
-
-    val keepIds = allKeepsShown.map(_.id).toSet
-    val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(keepIds)
 
     val userIds = ((allKeepsShown.flatMap(_.keptBy) ++ allKeepersShown.map(_._1) ++ allLibrariesShown.map(_._2)).toSet - userId).toSeq
     val userIndexById = userIds.zipWithIndex.toMap + (userId -> -1)
@@ -181,8 +181,8 @@ class WebsiteSearchController @Inject() (
       sourceAttributionByKeepId <- futureKeepSources
     } yield {
       val allBasicKeeps = augmentedItems.map(item => basicKeeps.getOrElse(item.uri, Set.empty))
-      (limitedAugmentationInfos zip allBasicKeeps).map {
-        case (limitedInfo, keeps) =>
+      (augmentedItems, limitedAugmentationInfos, allBasicKeeps).zipped.map {
+        case (augmentedItem, limitedInfo, keeps) =>
 
           def doShowKeeper(keeperId: Id[User]): Boolean = { keeperId != userId || keeps.nonEmpty } // ensuring consistency of keepers shown with the user's latest database data (race condition)
           val keepersIndices = limitedInfo.keepers.collect { case (keeperId, _) if doShowKeeper(keeperId) => userIndexById(keeperId) }
@@ -206,6 +206,7 @@ class WebsiteSearchController @Inject() (
             } getOrElse (None, None, None, None)
           }
 
+          val sources = getDistinctSources(augmentedItem, sourceAttributionByKeepId)
           val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
 
           Json.obj(
@@ -214,6 +215,7 @@ class WebsiteSearchController @Inject() (
             "createdAt" -> keptAt, // field named createdAt for legacy reason
             "note" -> note,
             "source" -> source.map(SourceAttribution.externalWrites.writes),
+            "sources" -> sources.map(SourceAttribution.externalWrites.writes),
             "keeps" -> keeps,
             "keepers" -> keepersIndices,
             "keepersOmitted" -> limitedInfo.keepersOmitted,

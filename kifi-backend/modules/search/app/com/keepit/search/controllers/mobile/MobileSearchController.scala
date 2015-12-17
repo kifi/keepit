@@ -243,12 +243,15 @@ class MobileSearchController @Inject() (
 
       val uriIds = uriSearchResult.hits.map(hit => Id[NormalizedURI](hit.id))
       val futureUriSummaries = rover.getUriSummaryByUris(uriIds.toSet)
-      val (futureKeepImages, futureKeepSources): (Future[Map[Id[Keep], BasicImages]], Future[Map[Id[Keep], SourceAttribution]]) = {
+      val futureKeepImages: Future[Map[Id[Keep], BasicImages]] = {
         val keepIds = uriSearchResult.hits.flatMap(hit => hit.keepId.map(Id[Keep](_))).toSet
-        (shoeboxClient.getKeepImages(keepIds), shoeboxClient.getSourceAttributionForKeeps(keepIds))
+        shoeboxClient.getKeepImages(keepIds)
       }
 
       getAugmentedItems(augmentationCommander)(userId, uriSearchResult).flatMap { augmentedItems =>
+        val allKeepIds = augmentedItems.flatMap(_.keeps.map(_.id)).toSet
+        val futureKeepSources = shoeboxClient.getSourceAttributionForKeeps(allKeepIds)
+
         val limitedAugmentationInfos = augmentedItems.map(_.toLimitedAugmentationInfo(maxKeepersShown, maxLibrariesShown, maxTagsShown))
         val allKeepersShown = limitedAugmentationInfos.map(_.keepers)
 
@@ -263,19 +266,20 @@ class MobileSearchController @Inject() (
           sourceAttributionByKeepId <- futureKeepSources
           users <- futureUsers
         } yield {
-          val jsHits = (uriSearchResult.hits zip limitedAugmentationInfos).map {
-            case (hit, limitedInfo) => {
+          val jsHits = (uriSearchResult.hits, limitedAugmentationInfos, augmentedItems).zipped.map {
+            case (hit, limitedInfo, augmentedItem) => {
               val uriId = Id[NormalizedURI](hit.id)
               val summary = summaries.get(uriId)
               val keepId = hit.keepId.map(Id[Keep](_))
               val image = (keepId.flatMap(keepImages.get) orElse summary.map(_.images)).flatMap(_.get(idealImageSize.getOrElse(ProcessedImageSize.Medium.idealSize)))
               val note = limitedInfo.keep.map(_.note)
+              val sources = getDistinctSources(augmentedItem, sourceAttributionByKeepId)
               val source = limitedInfo.keep.flatMap(keep => sourceAttributionByKeepId.get(keep.id))
+
               Json.obj(
                 "title" -> hit.title,
                 "url" -> URISanitizer.sanitize(hit.url),
                 "note" -> note,
-                "source" -> source.map(SourceAttribution.externalWrites.writes),
                 "score" -> hit.finalScore,
                 "summary" -> json.aggressiveMinify(Json.obj(
                   "title" -> summary.flatMap(_.article.title),
@@ -286,7 +290,9 @@ class MobileSearchController @Inject() (
                 )),
                 "keepers" -> limitedInfo.keepers.map { case (keeperId, _) => users(keeperId).externalId },
                 "keepersOmitted" -> limitedInfo.keepersOmitted,
-                "keepersTotal" -> limitedInfo.keepersTotal
+                "keepersTotal" -> limitedInfo.keepersTotal,
+                "source" -> source.map(SourceAttribution.externalWrites.writes),
+                "sources" -> sources.map(SourceAttribution.externalWrites.writes)
               )
             }
           }

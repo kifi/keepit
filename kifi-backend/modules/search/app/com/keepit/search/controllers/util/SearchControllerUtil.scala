@@ -7,6 +7,7 @@ import com.keepit.search.controllers.util.SearchControllerUtil._
 import com.keepit.model._
 import com.keepit.search.engine.uri.UriSearchResult
 import com.keepit.search.index.Searcher
+import com.keepit.search.index.graph.keep.KeepFields
 import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.RequestHeader
@@ -109,5 +110,9 @@ trait SearchControllerUtil {
       }
       case Failure(e) => Future.failed(e)
     }
+  }
+
+  def getDistinctSources(augmentedItem: AugmentedItem, sourceAttributionByKeepId: Map[Id[Keep], SourceAttribution]): Seq[SourceAttribution] = {
+    augmentedItem.keeps.flatMap(keep => sourceAttributionByKeepId.get(keep.id)).distinctBy(KeepFields.Source(_))
   }
 }

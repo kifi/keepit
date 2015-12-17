@@ -67,6 +67,7 @@ class WebsiteSearchControllerTest extends SpecificationLike with SearchTestInjec
               "createdAt":null,
               "note":null,
               "source":null,
+              "sources":[],
               "keeps":[],
               "keepers":[],
               "keepersOmitted":0,
