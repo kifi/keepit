@@ -2,7 +2,7 @@ package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.common.mail.template.helpers.discussionLink
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
@@ -245,7 +245,8 @@ class ElizaEmailCommander @Inject() (
         subject = protoEmail.pageTitle,
         htmlTemplate = htmlBodyMaker(protoEmail),
         category = category,
-        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
+        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address)),
+        templateOptions = Seq(TemplateOptions.CustomLayout).toMap
       )
       shoebox.processAndSendMail(email) map {
         case true => // all good
