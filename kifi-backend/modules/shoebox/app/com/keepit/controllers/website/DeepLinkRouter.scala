@@ -16,7 +16,7 @@ case class DeepLinkRedirect(url: String, externalLocator: Option[String] = None)
 
 @ImplementedBy(classOf[DeepLinkRouterImpl])
 trait DeepLinkRouter {
-  def generateRedirect(data: JsObject, request: MaybeUserRequest[_]): Option[DeepLinkRedirect]
+  def generateRedirect(data: JsObject, request: MaybeUserRequest[_]): Option[DeepLinkRedirect] // use when the user's state determines the redirect
   def generateRedirect(data: JsObject): Option[DeepLinkRedirect]
 }
 
