@@ -66,7 +66,7 @@ trait KeepCommander {
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
-  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[Either[KeepFail, KeepInfo]]
+  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
 
   // Creating
@@ -221,7 +221,7 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[Either[KeepFail, KeepInfo]] = {
+  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[KeepInfo] = {
     val keepTry = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
         { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
@@ -235,10 +235,10 @@ class KeepCommanderImpl @Inject() (
     }
 
     keepTry match {
-      case Failure(fail) => Future.failed(fail).map(Left(_))
+      case Failure(fail) => Future.failed(fail)
       case Success(keep) =>
         keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
-          .imap { case Seq(keepInfo) => Right(keepInfo) }
+          .imap { case Seq(keepInfo) => keepInfo }
     }
   }
 
