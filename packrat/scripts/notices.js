@@ -396,7 +396,7 @@ k.panes.notices = k.panes.notices || function () {
     var locator = this.dataset.locator;
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
 
-    if (category != 'message') {
+    if (category !== 'message') {
       markOneRead(this.dataset.createdAt, threadId, this.dataset.id);
       api.port.emit('set_message_read', {threadId: threadId, messageId: this.dataset.id, time: this.dataset.createdAt, category: category, from: 'notice'});
     }

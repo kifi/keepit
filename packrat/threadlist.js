@@ -111,7 +111,7 @@
 
   function unique(xs) {
     return xs.filter(function(x, i) {
-      return xs.indexOf(x) === i
-    })
+      return xs.indexOf(x) === i;
+    });
   }
 }.call(this.exports || this));
