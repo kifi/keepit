@@ -269,32 +269,28 @@ class PermissionCommanderImpl @Inject() (
       case (kid, k) =>
         val keepLibraries = librariesByKeep.getOrElse(kid, Set.empty)
         val keepUsers = usersByKeep.getOrElse(kid, Set.empty)
+        val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
+
         val canViewKeep = {
-          // 12/16/15: this may need to change with library-less keeps.
-          userIdOpt.contains(k.userId) || k.originalKeeperId.exists(userIdOpt.contains) || userIdOpt.exists(usersByKeep(kid).contains) ||
-            keepLibraries.exists { libId =>
-              libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
-            }
+          // TODO(ryan): remove deprecated permissions when more confident they're unnecessary
+          val deprecatedPermissions = userIdOpt.contains(k.userId) || k.originalKeeperId.exists(userIdOpt.contains)
+
+          val viewerCanSeeKeepViaLibrary = keepLibraries.exists { libId =>
+            libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
+          }
+          deprecatedPermissions || viewerIsDirectlyConnectedToKeep || viewerCanSeeKeepViaLibrary
         }
 
         val canAddMessage = {
-          val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
-          val viewerIsConnectedToKeepByALibrary = keepLibraries.exists { libId =>
+          val viewerCanAddMessageViaLibrary = keepLibraries.exists { libId =>
             libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.ADD_COMMENTS)
           }
-          viewerIsDirectlyConnectedToKeep || viewerIsConnectedToKeepByALibrary
-        }
-        val canViewMessages = {
-          val viewerIsDirectlyConnectedToKeep = userIdOpt.exists(keepUsers.contains)
-          val viewerIsConnectedToKeepByALibrary = keepLibraries.exists { libId =>
-            libPermissions.getOrElse(libId, Set.empty).contains(LibraryPermission.VIEW_LIBRARY)
-          }
-          viewerIsDirectlyConnectedToKeep || viewerIsConnectedToKeepByALibrary
+          viewerIsDirectlyConnectedToKeep || viewerCanAddMessageViaLibrary
         }
         val canDeleteOwnMessages = true
         val canDeleteOtherMessages = {
-          // This seems like a pretty strange operational definition...
           val viewerOwnsTheKeep = userIdOpt.contains(k.userId)
+          // This seems like a pretty strange operational definition...
           val viewerOwnsOneOfTheKeepLibraries = keepLibraries.flatMap(libraries.get).exists(lib => userIdOpt.contains(lib.ownerId))
           viewerOwnsTheKeep || viewerOwnsOneOfTheKeepLibraries
         }
@@ -303,8 +299,7 @@ class PermissionCommanderImpl @Inject() (
           canViewKeep -> KeepPermission.VIEW_KEEP,
           canAddMessage -> KeepPermission.ADD_MESSAGE,
           canDeleteOwnMessages -> KeepPermission.DELETE_OWN_MESSAGES,
-          canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES,
-          canViewMessages -> KeepPermission.VIEW_MESSAGES
+          canDeleteOtherMessages -> KeepPermission.DELETE_OTHER_MESSAGES
         ).collect { case (true, p) => p }.toSet[KeepPermission]
     }
   }
