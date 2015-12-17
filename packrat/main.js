@@ -376,7 +376,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   threadReadAt = {};
   arr.forEach(function (n) {
     standardizeNotification(n);
-    threadsById[n.thread] = n;
+    threadsById[n.thread] = threadsById[n.thread] || n; // If server sends dupe notifications, keep the one that came down first
     var ageMs = serverTimeDate - new Date(n.time);
     if (ageMs >= 0 && ageMs < 60000 && !staleMessageIds[n.id]) {
       handleRealTimeNotification(n);
@@ -523,14 +523,13 @@ var socketHandlers = {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
     keepData[o.id] = o.keep;
-    var linkToKeep = experiments.indexOf('admin') !== -1;
     // Do we need to update muted state and possibly participants too? or will it come in thread_info?
-    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? o.keep : undefined));
+    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, o.keep));
   },
   message: function(threadId, message) {
     log('[socket:message]', threadId, message, message.nUrl);
     forEachTabAtLocator('/messages/' + threadId, function (tab) {
-      api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: me.id }, {queue: true});
+      api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: me.id}, {queue: true});
     });
     var messages = messageData[threadId];
     if (messages) {
@@ -1080,9 +1079,8 @@ api.port.on({
     sendPageThreadCount(tab, null, true);
   },
   thread: function(id, _, tab) {
-    var linkToKeep = experiments.indexOf('admin') !== -1;
     var th = threadsById[id];
-    var keep = linkToKeep ? keepData[id] : undefined;
+    var keep = keepData[id];
     if (th) {
       emitThreadInfoToTab(th, keep, tab);
     } else {
@@ -1761,10 +1759,11 @@ function awaitDeepLink(link, tabId, retrySec) {
       } else if (loc.indexOf('#compose') >= 0) {
         api.tabs.emit(tab, 'compose', {trigger: 'deepLink'}, {queue: 1});
       } else {
+        var linkUrl = link.url || link.nUri;
         api.tabs.emit(tab, 'show_pane', {
           trigger: 'deepLink',
           locator: loc,
-          redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
+          redirected: linkUrl !== (tab.nUri || tab.url) && linkUrl !== (tab.url || tab.nUri)
         }, {queue: 1});
       }
     } else if ((retrySec = retrySec || .5) < 5) {
