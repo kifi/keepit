@@ -376,7 +376,7 @@ function gotLatestThreads(arr, numUnreadUnmuted, numUnread, serverTime) {
   threadReadAt = {};
   arr.forEach(function (n) {
     standardizeNotification(n);
-    threadsById[n.thread] = n;
+    threadsById[n.thread] = threadsById[n.thread] || n; // If server sends dupe notifications, keep the one that came down first
     var ageMs = serverTimeDate - new Date(n.time);
     if (ageMs >= 0 && ageMs < 60000 && !staleMessageIds[n.id]) {
       handleRealTimeNotification(n);
@@ -1759,10 +1759,11 @@ function awaitDeepLink(link, tabId, retrySec) {
       } else if (loc.indexOf('#compose') >= 0) {
         api.tabs.emit(tab, 'compose', {trigger: 'deepLink'}, {queue: 1});
       } else {
+        var linkUrl = link.url || link.nUri;
         api.tabs.emit(tab, 'show_pane', {
           trigger: 'deepLink',
           locator: loc,
-          redirected: (link.url || link.nUri) !== (tab.nUri || tab.url)
+          redirected: linkUrl !== (tab.nUri || tab.url) && linkUrl !== (tab.url || tab.nUri)
         }, {queue: 1});
       }
     } else if ((retrySec = retrySec || .5) < 5) {

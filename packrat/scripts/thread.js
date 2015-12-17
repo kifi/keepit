@@ -21,10 +21,12 @@
 
 k.panes.thread = k.panes.thread || function () {
   'use strict';
+
   var handlers = {
     thread_info: function (o) {
       if ($holder && $holder.data('threadId') === o.th.thread) {
-        k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, o.th.participants, o.keep);
+        var participants = o.th.participants || [o.keep.keptBy];
+        k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, participants, o.keep);
       }
     },
     thread: function (o) {
@@ -173,7 +175,9 @@ k.panes.thread = k.panes.thread || function () {
       scrollToBottomResiliently(true);
     }
 
-    emitRendered(threadId, messages[messages.length - 1]);
+    if (messages && messages.length) {
+      emitRendered(threadId, messages[messages.length - 1]);
+    }
   }
 
   function justNewMessages($msgs, messages) {
@@ -307,7 +311,9 @@ k.panes.thread = k.panes.thread || function () {
   }
 
   function emitRendered(threadId, m) {
-    api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt});
+    if (m && m.id) {
+      api.port.emit('message_rendered', {threadId: threadId, messageId: m.id, time: m.createdAt});
+    }
   }
 
   function scrollToBottomResiliently(instantly) {

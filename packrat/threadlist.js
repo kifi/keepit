@@ -8,7 +8,7 @@
   // numUnreadUnmuted and numTotal may refer to threads not yet inserted into this ThreadList
   function ThreadList(allById, recentThreadIds, numTotal, numUnreadUnmuted) {
     this.allById = allById;
-    this.ids = recentThreadIds;
+    this.ids = unique(recentThreadIds);
     this.numTotal = numTotal;
     this.numUnreadUnmuted = numUnreadUnmuted;
   };
@@ -108,4 +108,10 @@
       }
     }
   };
+
+  function unique(xs) {
+    return xs.filter(function(x, i) {
+      return xs.indexOf(x) === i
+    })
+  }
 }.call(this.exports || this));
