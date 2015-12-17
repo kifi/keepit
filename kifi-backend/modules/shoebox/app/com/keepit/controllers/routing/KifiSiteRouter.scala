@@ -95,7 +95,7 @@ class KifiSiteRouter @Inject() (
     }
 
     parseDataString(dataStr).flatMap { data =>
-      val redir = deepLinkRouter.generateRedirect(data)
+      val redir = deepLinkRouter.generateRedirect(data, request)
       redir.map(r => Ok(html.mobile.deepLinkRedirect(r, data)))
     }.getOrElse {
       airbrake.notify(s"[generalRedirect] Could not figure out how to redirect deep-link: $dataStr")

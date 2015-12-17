@@ -3,6 +3,7 @@ package com.keepit.common.mail
 import java.net.URLEncoder
 
 import com.google.common.html.HtmlEscapers
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.Id
 import com.keepit.heimdal.HeimdalContext
 import com.keepit.model._
@@ -99,9 +100,9 @@ package object template {
 
     def libraryName(id: Id[Library]) = Tag1(tags.libraryName, id).toHtml
 
-    def discussionLink(id: Id[NormalizedURI], threadExtId: String) = Tag2(tags.discussionLink, id, threadExtId).toHtml
-    def discussionLink(id: Id[NormalizedURI], threadExtId: String, trackingContent: String) = {
-      Html(appendTrackingParams(Tag2(tags.discussionLink, id, threadExtId) + "&", trackingContent, openInAppIfMobile = true))
+    def discussionLink(id: Id[NormalizedURI], threadExtId: String, keepPubId: Option[PublicId[Keep]]) = Tag3(tags.discussionLink, id, threadExtId, keepPubId).toHtml
+    def discussionLink(id: Id[NormalizedURI], threadExtId: String, keepPubId: Option[PublicId[Keep]], trackingContent: String) = {
+      Html(appendTrackingParams(Tag3(tags.discussionLink, id, threadExtId, keepPubId) + "&", trackingContent, openInAppIfMobile = true))
     }
 
     def libraryLink(id: Id[Library], authToken: Option[String], content: String, openInAppIfMobile: Boolean = true) =

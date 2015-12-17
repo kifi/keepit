@@ -2,6 +2,7 @@ package com.keepit.controllers.website
 
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.PathCommander
+import com.keepit.common.controller.{ UserRequest, MaybeUserRequest }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -9,11 +10,13 @@ import com.keepit.common.path.Path
 import com.keepit.inject.FortyTwoConfig
 import com.keepit.model._
 import play.api.libs.json.{ Json, JsObject }
+import com.keepit.common.http._
 
 case class DeepLinkRedirect(url: String, externalLocator: Option[String] = None)
 
 @ImplementedBy(classOf[DeepLinkRouterImpl])
 trait DeepLinkRouter {
+  def generateRedirect(data: JsObject, request: MaybeUserRequest[_]): Option[DeepLinkRedirect] // use when the user's state determines the redirect
   def generateRedirect(data: JsObject): Option[DeepLinkRedirect]
 }
 
@@ -24,22 +27,46 @@ class DeepLinkRouterImpl @Inject() (
     orgRepo: OrganizationRepo,
     libraryRepo: LibraryRepo,
     uriRepo: NormalizedURIRepo,
+    keepRepo: KeepRepo,
     pathCommander: PathCommander,
     implicit val publicIdConfiguration: PublicIdConfiguration) extends DeepLinkRouter {
+
+  def generateRedirect(data: JsObject, request: MaybeUserRequest[_]): Option[DeepLinkRedirect] = {
+    lazy val redirectToKeepPage = request match { // only go to keep page if user doesn't have extension (and admin exp for now)
+      case ur: UserRequest[_] => ur.experiments.contains(UserExperimentType.ADMIN) && (ur.kifiInstallationId.isEmpty || !ur.userAgentOpt.exists(_.canRunExtensionIfUpToDate))
+      case _ => false
+    }
+
+    (data \ "t").asOpt[String].flatMap {
+      case DeepLinkType.DiscussionView =>
+        generateDiscussionViewRedirect(data, redirectToKeepPage = redirectToKeepPage)
+      case _ =>
+        generateRedirectUrl(data).map(url => DeepLinkRedirect(url = url, externalLocator = None))
+    }
+  }
 
   def generateRedirect(data: JsObject): Option[DeepLinkRedirect] = {
     (data \ "t").asOpt[String].flatMap {
       case DeepLinkType.DiscussionView =>
-        val uriIdOpt = (data \ DeepLinkField.UriId).asOpt[ExternalId[NormalizedURI]]
-        val uriOpt = uriIdOpt.flatMap { uriId => db.readOnlyReplica { implicit session => uriRepo.getOpt(uriId) } }
-        val messageIdOpt = (data \ DeepLinkField.MessageThreadId).asOpt[String]
-        for {
-          uri <- uriOpt
-          messageId <- messageIdOpt
-        } yield DeepLinkRedirect(uri.url, Some(s"/messages/$messageId"))
+        generateDiscussionViewRedirect(data, redirectToKeepPage = false)
       case _ =>
         generateRedirectUrl(data).map(url => DeepLinkRedirect(url = url, externalLocator = None))
     }
+  }
+
+  def generateDiscussionViewRedirect(data: JsObject, redirectToKeepPage: Boolean): Option[DeepLinkRedirect] = {
+    val uriIdOpt = (data \ DeepLinkField.UriId).asOpt[ExternalId[NormalizedURI]]
+    val uriOpt = uriIdOpt.flatMap { uriId => db.readOnlyReplica { implicit session => uriRepo.getOpt(uriId) } }
+    val messageIdOpt = (data \ DeepLinkField.MessageThreadId).asOpt[String]
+    val keepPageOpt = (data \ DeepLinkField.KeepId).asOpt[PublicId[Keep]]
+      .filter { _ => redirectToKeepPage }
+      .flatMap { pubId =>
+        Keep.decodePublicId(pubId).toOption.flatMap(keepId => db.readOnlyReplica(implicit s => keepRepo.getOption(keepId).map(_.path.relative)))
+      }
+    for {
+      uri <- uriOpt
+      messageId <- messageIdOpt
+    } yield DeepLinkRedirect(keepPageOpt.getOrElse(uri.url), Some(s"/messages/$messageId").filter(_ => keepPageOpt.isEmpty))
   }
 
   def generateRedirectUrl(data: JsObject): Option[String] = {
@@ -100,4 +127,5 @@ object DeepLinkField {
   val AuthToken = "at"
   val MessageThreadId = "id"
   val UriId = "uri"
+  val KeepId = "kid"
 }

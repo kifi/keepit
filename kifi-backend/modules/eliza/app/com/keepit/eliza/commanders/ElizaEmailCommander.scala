@@ -1,6 +1,7 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.mail.template.EmailToSend
 import com.keepit.common.mail.template.helpers.discussionLink
 import com.keepit.rover.RoverServiceClient
@@ -50,6 +51,7 @@ class ElizaEmailCommander @Inject() (
     threadRepo: MessageThreadRepo,
     rover: RoverServiceClient,
     implicit val imageConfig: S3ImageConfig,
+    implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends Logging {
 
   import ElizaEmailUriSummaryImageSizes._
@@ -88,6 +90,7 @@ class ElizaEmailCommander @Inject() (
     ThreadEmailInfo(
       uriId = thread.uriId,
       threadId = thread.externalId,
+      keepId = thread.keepId.map(Keep.publicId),
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl).abbreviate(80),
       isInitialEmail = isInitialEmail,
@@ -280,6 +283,7 @@ object ElizaEmailCommander {
     val info = ThreadEmailInfo(
       Id[NormalizedURI](1),
       ExternalId[MessageThread](),
+      None,
       "Wikipedia",
       "The Interesting Page That Everyone Should Read",
       true,
