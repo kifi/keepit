@@ -242,7 +242,7 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 			var participantsCount = participants.filter(function (user) {
 				return user.id !== k.me.id;
 			}).length + 1; // Always treat current user as a counted participant
-			var onKeep = this.parent.keep && this.parent.keep.libraries.length > 0 || false;
+			var onKeep = !!(this.parent.keep && this.parent.keep.libraries.length > 0);
 			var other = participants.length <= 2 ? participants.filter(function (user) {
 				return user.id !== k.me.id;
 			})[0] : null;
