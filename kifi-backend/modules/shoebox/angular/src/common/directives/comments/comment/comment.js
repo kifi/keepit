@@ -17,8 +17,12 @@ angular.module('kifi')
           $scope.commentParts = messageFormattingService.trimExtraSpaces(messageFormattingService.full($scope.comment.text));
           $scope.me = profileService.me;
           var isAdmin = profileService.isAdmin();
-          $scope.canSeeCommentActions = isAdmin && $scope.me.id === $scope.comment.sentBy.id ||
-          $scope.me.id === $scope.keep.user.id || $scope.me.id === $scope.keep.library.owner.id;
+          $scope.canSeeCommentActions = (
+            isAdmin &&
+            $scope.me.id === ($scope.comment.sentBy && $scope.comment.sentBy.id) ||
+            $scope.me.id === ($scope.keep.user && $scope.keep.user.id) ||
+            $scope.me.id === ($scope.keep.library && $scope.keep.library.owner && $scope.keep.library.owner.id)
+          );
           $scope.showKeepPageLink = !$state.is('keepPage') && isAdmin;
 
           $scope.openLookHere = function(event) {
