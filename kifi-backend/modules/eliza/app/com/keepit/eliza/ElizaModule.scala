@@ -36,4 +36,5 @@ trait ElizaModule extends ConfigurationModule with CommonServiceModule {
 
   val secureSocialModule = RemoteSecureSocialModule()
   val elizaSlickModule = ElizaSlickModule()
+  val dbSequencingModule = ElizaDbSequencingModule()
 }
