@@ -254,6 +254,7 @@ trait FortyTwoGenericTypeMappers { self: { val db: DataBaseComponent } =>
   implicit val getOptLocalTimeResult = getResultOptionFromMapper[LocalTime]
   implicit val getSocialNetworkTypeResult = getResultFromMapper[SocialNetworkType]
   implicit def getSequenceNumberResult[T] = getResultFromMapper[SequenceNumber[T]]
+  implicit def getOptSequenceNumberResult[T] = getResultOptionFromMapper[SequenceNumber[T]]
   implicit def getIdResult[M <: Model[M]] = getResultFromMapper[Id[M]]
   implicit def getOptIdResult[M <: Model[M]] = getResultOptionFromMapper[Id[M]]
   implicit def getStateResult[M <: Model[M]] = getResultFromMapper[State[M]]
