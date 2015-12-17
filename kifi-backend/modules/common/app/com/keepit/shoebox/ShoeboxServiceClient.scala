@@ -867,12 +867,4 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
   }
-
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = {
-    call(Shoebox.internal.canCommentOnKeep(userId, keepId)).map { response => (response.json \ "canComment").as[Boolean] }
-  }
-
-  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = {
-    call(Shoebox.internal.canDeleteCommentOnKeep(userId, keepId)).map { response => (response.json \ "canDelete").as[Boolean] }
-  }
 }

@@ -5,6 +5,7 @@ import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
+import com.keepit.common.db.Id
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.path.Path
 import com.keepit.common.social.FakeSocialGraphModule
@@ -14,6 +15,7 @@ import com.keepit.heimdal.HeimdalContext
 import com.keepit.model.LibraryFactoryHelper._
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.{ UserFactory, _ }
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.FakeKeepImportsModule
@@ -121,6 +123,21 @@ class DeepLinkRouterTest extends Specification with ShoeboxTestInjector {
           val messageId = "1f871157-8bdc-42a9-a758-a602213fafb1"
           val deepLink = Json.obj("t" -> "m", "id" -> messageId, "uri" -> uri.externalId)
           deepLinkRouter.generateRedirect(deepLink) === Some(DeepLinkRedirect(url, Some(s"/messages/$messageId")))
+        }
+      }
+
+      "for a discussion to a keep page" in {
+        withDb(modules: _*) { implicit injector =>
+          val url = "http://www.google.com"
+          val (uri, keep) = db.readWrite { implicit session =>
+            val uri = normalizedURIInterner.internByUri(url, contentWanted = false)
+            val keep = KeepFactory.keep().withTitle("Random Keeps Popping Up").withUri(uri).saved
+            (uri, keep)
+          }
+          val messageId = "1f871157-8bdc-42a9-a758-a602213fafb1"
+          val deepLink = Json.obj("t" -> "m", "id" -> messageId, "uri" -> uri.externalId, "kid" -> Keep.publicId(keep.id.get))
+          val redirect = deepLinkRouter.generateDiscussionViewRedirect(deepLink, redirectToKeepPage = true)
+          redirect === Some(DeepLinkRedirect(keep.path.relative, None))
         }
       }
     }

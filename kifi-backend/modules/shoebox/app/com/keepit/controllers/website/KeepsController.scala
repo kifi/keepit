@@ -34,6 +34,7 @@ class KeepsController @Inject() (
   collectionCommander: CollectionCommander,
   keepsCommander: KeepCommander,
   keepExportCommander: KeepExportCommander,
+  permissionCommander: PermissionCommander,
   clock: Clock,
   heimdalContextBuilder: HeimdalContextBuilderFactory,
   airbrake: AirbrakeNotifier,
@@ -110,17 +111,11 @@ class KeepsController @Inject() (
   def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep]) = UserAction.async { request =>
     implicit val keepCompanion = Keep
     internalOrExternalId.parse match {
-      case Failure(ex) => Future.successful(BadRequest(Json.obj("error" -> "invalid_id", "details" -> ex.getMessage)))
+      case Failure(ex) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
       case Success(idOrExtId) =>
-        val keepOpt = db.readOnlyReplica { implicit s =>
-          idOrExtId.fold[Option[Keep]](
-            { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
-          )
-        }
-        keepOpt match {
-          case None => Future.successful(NotFound(Json.obj("error" -> "not_found")))
-          case Some(keep) => keepDecorator.decorateKeepsIntoKeepInfos(request.userIdOpt, false, Seq(keep), ProcessedImageSize.Large.idealSize, sanitizeUrls = false).imap { case Seq(keepInfo) => Ok(Json.toJson(keepInfo)) }
-        }
+        keepsCommander.getKeepInfo(idOrExtId, request.userIdOpt)
+          .map(keepInfo => Ok(Json.toJson(keepInfo)))
+          .recover { case fail: KeepFail => fail.asErrorResponse }
     }
   }
 

@@ -66,6 +66,7 @@ trait KeepCommander {
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
+  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
 
   // Creating
@@ -217,6 +218,27 @@ class KeepCommanderImpl @Inject() (
       } else {
         Left(FORBIDDEN, "library_access_denied")
       }
+    }
+  }
+
+  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[KeepInfo] = {
+    val keepTry = db.readOnlyReplica { implicit s =>
+      internalOrExternalId.fold[Option[Keep]](
+        { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
+      ) match {
+          case None => Failure(KeepFail.KEEP_NOT_FOUND)
+          case Some(keep) =>
+            val canView = permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
+            if (!canView) Failure(KeepFail.INSUFFICIENT_PERMISSIONS)
+            else Success(keep)
+        }
+    }
+
+    keepTry match {
+      case Failure(fail) => Future.failed(fail)
+      case Success(keep) =>
+        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
+          .imap { case Seq(keepInfo) => keepInfo }
     }
   }
 

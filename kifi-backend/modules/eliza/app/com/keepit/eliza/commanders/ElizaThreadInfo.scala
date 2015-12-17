@@ -24,7 +24,7 @@ case class ElizaThreadInfo(
     lastCommentedAt: DateTime,
     lastMessageRead: Option[DateTime],
     nUrl: Option[String],
-    url: Option[String],
+    url: String,
     muted: Boolean) {
 }
 
@@ -42,7 +42,7 @@ object ElizaThreadInfo {
     (__ \ 'lastCommentedAt).write[DateTime] and
     (__ \ 'lastMessageRead).writeNullable[DateTime] and
     (__ \ 'nUrl).writeNullable[String] and
-    (__ \ 'url).writeNullable[String] and
+    (__ \ 'url).write[String] and
     (__ \ 'muted).write[Boolean]
   )(unlift(ElizaThreadInfo.unapply))
 }

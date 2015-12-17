@@ -4,10 +4,10 @@ angular.module('kifi')
 
 .controller('OrgProfileLibrariesCtrl', [
   '$rootScope', '$scope', '$stateParams', '$q', 'profile', 'profileService',
-  'libraryService', 'orgProfileService', 'modalService', 'Paginator',
+  'libraryService', 'orgProfileService', 'modalService', 'initParams', 'Paginator',
   'ORG_PERMISSION',
   function ($rootScope, $scope, $stateParams, $q, profile, profileService,
-            libraryService, orgProfileService, modalService, Paginator,
+            libraryService, orgProfileService, modalService, initParams, Paginator,
             ORG_PERMISSION) {
     var organization = profile.organization;
     var libraryLazyLoader = new Paginator(librarySource);
@@ -145,7 +145,11 @@ angular.module('kifi')
     $rootScope.$emit('trackOrgProfileEvent', 'view', { type: 'org_profile:libraries'});
 
     var slackIntPromoP;
-    if (Object.keys(profileService.prefs).length === 0 ) {
+    // query param handling
+    var showSlackDialog = $stateParams.showSlackDialog || initParams.getAndClear('showSlackDialog');
+    if (showSlackDialog) {
+      slackIntPromoP = $q.when(true);
+    } else if (Object.keys(profileService.prefs).length === 0) {
       slackIntPromoP = profileService.fetchPrefs().then(function(prefs) {
         return prefs.slack_int_promo;
       });

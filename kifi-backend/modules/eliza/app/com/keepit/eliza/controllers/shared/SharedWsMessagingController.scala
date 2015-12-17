@@ -86,8 +86,10 @@ class SharedWsMessagingController @Inject() (
                 "thread", Json.obj(
                   "id" -> threadIdStr,
                   "uri" -> discussion.url,
-                  "keep" -> keepOpt,
-                  "messages" -> discussion.messages.reverse
+                  "nUrl" -> discussion.nUrl,
+                  "participants" -> discussion.participants,
+                  "messages" -> discussion.messages.reverse,
+                  "keep" -> keepOpt
                 )))
           }
         }

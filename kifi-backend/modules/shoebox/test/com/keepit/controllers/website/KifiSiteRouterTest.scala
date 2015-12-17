@@ -341,6 +341,13 @@ class KifiSiteRouterTest extends Specification with ShoeboxApplicationInjector {
         // Broken examples:
         status(route(FakeRequest("GET", s"/redir?data=%7B%22t%22%3A%22lv%22%2C%22lid%22%3A%22l8rlPD6Bk7A0%22%7D")).get) === 303
         status(route(FakeRequest("GET", s"/redir?data=AAABBjoibHYiLCJsaWQiOiJsOHJsUEQ2Qms3QTkifQo%3D")).get) === 303
+
+        val deepLinkKeep = keep // see keep page tests above
+        val kid = Keep.publicId(deepLinkKeep.id.get)
+        val uriExtId = db.readOnlyMaster(implicit s => uriRepo.get(keep.uriId).externalId)
+        actionsHelper.setUser(user1, Set(UserExperimentType.ADMIN))
+        val request = FakeRequest("GET", s"/redir?data=%7B%22t%22%3A%22m%22%2C%22uri%22%3A%22${uriExtId}%22%2C%22id%22%3A%224e26678a-8c20-48ca-9344-a1c75084d320%22%2C%22kid%22%3A%22${kid.id}%22%7D")
+        contentAsString(route(request).get) must contain(keep.path.relative)
       }
     }
   }

@@ -38,6 +38,7 @@ class KifiSiteRouter @Inject() (
   val userIpAddressCommander: UserIpAddressCommander,
   pageMetaTagsCommander: PageMetaTagsCommander,
   libraryInfoCommander: LibraryInfoCommander,
+  permissionCommander: PermissionCommander,
   libPathCommander: PathCommander,
   libraryMetadataCache: LibraryMetadataCache,
   userMetadataCache: UserMetadataCache,
@@ -94,7 +95,7 @@ class KifiSiteRouter @Inject() (
     }
 
     parseDataString(dataStr).flatMap { data =>
-      val redir = deepLinkRouter.generateRedirect(data)
+      val redir = deepLinkRouter.generateRedirect(data, request)
       redir.map(r => Ok(html.mobile.deepLinkRedirect(r, data)))
     }.getOrElse {
       airbrake.notify(s"[generalRedirect] Could not figure out how to redirect deep-link: $dataStr")
@@ -234,28 +235,19 @@ class KifiSiteRouter @Inject() (
       case _ => Set.empty[UserExperimentType]
     }
     if (experiments.contains(UserExperimentType.ADMIN)) {
-      Keep.decodePublicId(pubId).map(keepId => keepId -> db.readOnlyReplica(implicit s => keepRepo.get(keepId))) match {
+      Keep.decodePublicId(pubId) match {
         case Failure(ex) => notFound(request)
-        case Success((id, keep)) => {
+        case Success(keepId) => {
           val canSeeKeep = db.readOnlyReplica { implicit s =>
-            libraryRepo.getActiveByIds(keep.libraryId.toSet).values.exists { library =>
-              library.visibility match {
-                case LibraryVisibility.SECRET => request.userIdOpt.exists { userId =>
-                  keep.libraryId.exists { libraryId =>
-                    libraryMembershipRepo.getWithLibraryIdAndUserId(libraryId, userId).isDefined
-                  }
-                }
-                case LibraryVisibility.ORGANIZATION => request.userIdOpt.exists { userId =>
-                  library.organizationId.exists { orgId =>
-                    orgMembershipRepo.getByOrgIdAndUserId(orgId, userId).isDefined
-                  }
-                }
-                case _ => true
-              }
-            }
+            permissionCommander.getKeepPermissions(keepId, request.userIdOpt).contains(KeepPermission.VIEW_KEEP)
           }
-          if (!canSeeKeep) notFound(request)
-          else AngularApp.app(() => keepMetadata(keep))
+          val keepOpt = if (canSeeKeep) {
+            db.readOnlyReplica { implicit s => keepRepo.getOption(keepId) }
+          } else {
+            None
+          }
+
+          keepOpt.map(keep => AngularApp.app(() => keepMetadata(keep))).getOrElse(notFound(request))
         }
       }
     } else notFound(request)

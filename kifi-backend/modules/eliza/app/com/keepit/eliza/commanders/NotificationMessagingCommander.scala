@@ -68,7 +68,8 @@ class NotificationMessagingCommander @Inject() (
     val updated = notificationCommander.setNotificationUnreadTo(notif.id.get, unread)
     if (updated) {
       val nUrl = ""
-      webSocketRouter.sendToUser(userId, Json.arr(if (unread) "message_unread" else "message_read", nUrl, notif.externalId, item.eventTime, item.externalId))
+      val thread = notificationJsonFormat.getNotificationThreadStr(notif, item)
+      webSocketRouter.sendToUser(userId, Json.arr(if (unread) "message_unread" else "message_read", nUrl, thread, item.eventTime, item.externalId))
       if (unread) {
         messagingAnalytics.clearedNotification(userId, Left(notif.externalId), Left(item.externalId), context)
       }

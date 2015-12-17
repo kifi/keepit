@@ -49,6 +49,7 @@ case class KeepInfo(
   def asDiscussionKeep: DiscussionKeep = DiscussionKeep(
     id = pubId.get,
     url = url,
+    path = path,
     title = title,
     note = note,
     tags = hashtags.getOrElse(Set.empty),
