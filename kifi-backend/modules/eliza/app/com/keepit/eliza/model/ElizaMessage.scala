@@ -114,6 +114,7 @@ case class ElizaMessage(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   state: State[ElizaMessage] = ElizaMessageStates.ACTIVE,
+  seq: SequenceNumber[ElizaMessage] = SequenceNumber.ZERO,
   externalId: ExternalId[ElizaMessage] = ExternalId(),
   from: MessageSender,
   thread: Id[MessageThread],
@@ -123,7 +124,7 @@ case class ElizaMessage(
   auxData: Option[JsArray] = None,
   sentOnUrl: Option[String],
   sentOnUriId: Option[Id[NormalizedURI]])
-    extends ModelWithExternalId[ElizaMessage] {
+    extends ModelWithExternalId[ElizaMessage] with ModelWithSeqNumber[ElizaMessage] {
   def withId(id: Id[ElizaMessage]): ElizaMessage = this.copy(id = Some(id))
   def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt = updateTime)
   def withText(newText: String) = this.copy(messageText = newText)
@@ -141,6 +142,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format[State[ElizaMessage]] and
+    (__ \ 'seq).format[SequenceNumber[ElizaMessage]] and
     (__ \ 'externalId).format(ExternalId.format[ElizaMessage]) and
     (__ \ 'from).format[MessageSender] and
     (__ \ 'thread).format(Id.format[MessageThread]) and
@@ -157,6 +159,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     createdAt: DateTime,
     updatedAt: DateTime,
     state: State[ElizaMessage],
+    seq: SequenceNumber[ElizaMessage],
     externalId: ExternalId[ElizaMessage],
     userSender: Option[Id[User]],
     thread: Id[MessageThread],
@@ -172,6 +175,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       createdAt,
       updatedAt,
       state,
+      seq,
       externalId,
       userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[NonUserParticipant])).getOrElse(MessageSender.System)),
       thread,
@@ -184,12 +188,13 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     )
   }
 
-  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
       message.updatedAt,
       message.state,
+      message.seq,
       message.externalId,
       message.from.asUser,
       message.thread,
@@ -235,7 +240,7 @@ object MessagesForThread {
 }
 
 case class MessagesForThreadIdKey(threadId: Id[MessageThread]) extends Key[MessagesForThread] {
-  override val version = 7
+  override val version = 8
   val namespace = "messages_for_thread_id"
   def toKey(): String = threadId.id.toString
 }
