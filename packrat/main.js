@@ -523,14 +523,13 @@ var socketHandlers = {
     log('[socket:thread]', o);
     messageData[o.id] = o.messages;
     keepData[o.id] = o.keep;
-    var linkToKeep = experiments.indexOf('admin') !== -1;
     // Do we need to update muted state and possibly participants too? or will it come in thread_info?
-    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, linkToKeep ? o.keep : undefined));
+    forEachTabAtLocator('/messages/' + o.id, emitThreadToTab.bind(null, o.id, o.messages, o.keep));
   },
   message: function(threadId, message) {
     log('[socket:message]', threadId, message, message.nUrl);
     forEachTabAtLocator('/messages/' + threadId, function (tab) {
-      api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: me.id }, {queue: true});
+      api.tabs.emit(tab, 'message', {threadId: threadId, message: message, userId: me.id}, {queue: true});
     });
     var messages = messageData[threadId];
     if (messages) {
@@ -1080,9 +1079,8 @@ api.port.on({
     sendPageThreadCount(tab, null, true);
   },
   thread: function(id, _, tab) {
-    var linkToKeep = experiments.indexOf('admin') !== -1;
     var th = threadsById[id];
-    var keep = linkToKeep ? keepData[id] : undefined;
+    var keep = keepData[id];
     if (th) {
       emitThreadInfoToTab(th, keep, tab);
     } else {
