@@ -1,11 +1,14 @@
 package com.keepit.eliza.model
 
 import com.google.inject.{ Inject, Singleton, ImplementedBy }
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
+import com.keepit.common.healthcheck.AirbrakeNotifier
+import com.keepit.common.plugin.{ SequencingActor, SchedulingProperties, SequencingPlugin }
 import org.joda.time.DateTime
 import com.keepit.common.time._
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.{ DbSequenceAssigner, Id, ExternalId }
 import com.keepit.model.{ SortDirection, User, NormalizedURI }
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.CacheSizeLimitExceededException
@@ -13,7 +16,7 @@ import play.api.libs.json.{ JsArray, JsValue }
 import scala.slick.jdbc.StaticQuery
 
 @ImplementedBy(classOf[MessageRepoImpl])
-trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[ElizaMessage] {
+trait MessageRepo extends Repo[ElizaMessage] with ExternalIdColumnFunction[ElizaMessage] with SeqNumberFunction[ElizaMessage] {
   def updateUriId(message: ElizaMessage, uriId: Id[NormalizedURI])(implicit session: RWSession): Unit
   def refreshCache(thread: Id[MessageThread])(implicit session: RSession): Unit
   def get(thread: Id[MessageThread], from: Int)(implicit session: RSession): Seq[ElizaMessage]
@@ -173,3 +176,16 @@ class MessageRepoImpl @Inject() (
   def deactivate(message: ElizaMessage)(implicit session: RWSession): Unit = save(message.sanitizeForDelete)
   def deactivate(messageId: Id[ElizaMessage])(implicit session: RWSession): Unit = save(get(messageId).sanitizeForDelete)
 }
+
+trait MessageSequencingPlugin extends SequencingPlugin
+
+class MessageSequencingPluginImpl @Inject() (override val actor: ActorInstance[MessageSeqActor], override val scheduling: SchedulingProperties)
+  extends MessageSequencingPlugin
+
+@Singleton
+class MessageSeqAssigner @Inject() (db: Database, repo: MessageRepo, airbrake: AirbrakeNotifier)
+  extends DbSequenceAssigner[ElizaMessage](db, repo, airbrake)
+
+class MessageSeqActor @Inject() (assigner: MessageSeqAssigner, airbrake: AirbrakeNotifier)
+  extends SequencingActor(assigner, airbrake)
+
