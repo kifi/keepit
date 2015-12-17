@@ -222,7 +222,7 @@ class KeepCommanderImpl @Inject() (
   }
 
   def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[KeepInfo] = {
-    val keepTry = db.readOnlyReplica { implicit s =>
+    val keepTry = db.readOnlyMaster { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
         { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
       ) match {
