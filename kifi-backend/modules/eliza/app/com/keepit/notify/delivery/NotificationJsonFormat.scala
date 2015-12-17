@@ -1,15 +1,16 @@
 package com.keepit.notify.delivery
 
 import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.{ ImageSize, S3ImageConfig }
 import com.keepit.common.time._
 import com.keepit.eliza.commanders.{ MessageFetchingCommander, NotificationCommander, NotificationJsonMaker }
 import com.keepit.eliza.model._
-import com.keepit.model.{ NormalizedURI, NotificationCategory }
+import com.keepit.model.{ Keep, NormalizedURI, NotificationCategory }
 import com.keepit.notify.info._
-import com.keepit.notify.model.event.LegacyNotification
+import com.keepit.notify.model.event.{ LibraryNewKeep, LegacyNotification }
 import com.keepit.rover.RoverServiceClient
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.store.ElizaS3ExternalIdImageStore
@@ -21,6 +22,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 class NotificationJsonFormat @Inject() (
     elizaS3ExternalIdImageStore: ElizaS3ExternalIdImageStore,
     notificationJsonMaker: NotificationJsonMaker,
+    implicit val publicIdConfig: PublicIdConfiguration,
     implicit val s3ImageConfig: S3ImageConfig,
     implicit val executionContext: ExecutionContext) {
 
@@ -42,10 +44,14 @@ class NotificationJsonFormat @Inject() (
       val relevantItem = notifWithInfo.relevantItem
       notifWithInfo.info match {
         case info: StandardNotificationInfo =>
+          val thread = relevantItem.event match {
+            case newKeep: LibraryNewKeep => Keep.publicId(newKeep.keepId).id
+            case _ => notif.externalId.id
+          }
           Future.successful(NotificationWithJson(notif, items, Json.obj(
             "id" -> relevantItem.externalId,
             "time" -> relevantItem.eventTime,
-            "thread" -> notif.externalId,
+            "thread" -> thread,
             "unread" -> Json.toJson(notif.unread),
             "category" -> Json.toJson(
               NotificationCategory.User.kifiMessageFormattingCategory.getOrElse(info.category, "global")
