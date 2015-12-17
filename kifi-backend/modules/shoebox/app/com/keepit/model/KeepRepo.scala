@@ -167,7 +167,7 @@ class KeepRepoImpl @Inject() (
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
     val q = for {
-      t <- rows if (t.isPrivate || includePrivate) && !t.state.inSet(excludeStates)
+      t <- rows if (t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) || includePrivate) && !t.state.inSet(excludeStates)
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }
