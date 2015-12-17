@@ -74,7 +74,7 @@ k.messageKeepscussionHeader = k.messageKeepscussionHeader || (function ($, win) 
       var $rendered;
       var html = '';
 
-      if (keep) {
+      if (keep && keep.libraries && keep.libraries.length > 0) {
         $rendered = $(k.render('html/keeper/message_keepscussion_header', this.getView(), {  'keep_box_lib': 'keep_box_lib' }));
 
         // Change the :javascript link to be an actual link to the library.
