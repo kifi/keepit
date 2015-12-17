@@ -23,6 +23,7 @@ import com.keepit.model.cache.{ UserSessionViewExternalIdCache, UserSessionViewE
 import com.keepit.model.view.{ LibraryMembershipView, UserSessionView }
 import com.keepit.rover.model.BasicImages
 import com.keepit.search.{ ActiveExperimentsCache, ActiveExperimentsKey, SearchConfigExperiment }
+import com.keepit.shoebox.ShoeboxServiceClient.InternKeep
 import com.keepit.shoebox.model.ids.UserSessionExternalId
 import com.keepit.shoebox.model.{ IngestableUserIpAddress, KeepImagesCache, KeepImagesKey }
 import com.keepit.slack.models._
@@ -134,6 +135,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]): Future[Map[Id[Organization], Set[OrganizationPermission]]]
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations]
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]]
+
+  // TODO(ryan): kill this once clients stop trying to create discussions through Eliza
+  def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -866,5 +870,19 @@ class ShoeboxServiceClientImpl @Inject() (
         }
       }
     }.imap(_.map { case (SourceAttributionKeepIdKey(keepId), attribution) => keepId -> attribution })
+  }
+  def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
+    import InternKeep._
+    val request = Request(creator, users, uriId, url, title, note)
+    call(Shoebox.internal.internKeep(), body = Json.toJson(request)).map { response =>
+      response.json.as[CrossServiceKeep]
+    }
+  }
+}
+
+object ShoeboxServiceClient {
+  object InternKeep {
+    case class Request(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String])
+    implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 }
