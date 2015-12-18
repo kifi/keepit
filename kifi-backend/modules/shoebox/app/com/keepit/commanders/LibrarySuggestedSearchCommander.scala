@@ -8,7 +8,7 @@ import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.model._
 
 import scala.collection.mutable
-import scala.util.Try
+import scala.util.{ Failure, Try }
 
 @ImplementedBy(classOf[LibrarySuggestedSearchCommanderImpl])
 trait LibrarySuggestedSearchCommander {
@@ -56,7 +56,7 @@ class LibrarySuggestedSearchCommanderImpl @Inject() (
                 // This isn't worth the airbrake noise if it fails. Logs if anyone wants to investigate why they fail.
                 log.error(s"[saveSuggestedSearchTermsForLibrary] Could not persist $termToBePersisted; $hasBeenDeactivated || $hasNotBeenPersisted, " +
                   s"model: $toBePersisted; existing: $existingOpt. Existing set: $existingByNormalizedTerm", ex)
-                throw ex
+                Failure(ex)
             }
           }
       }
