@@ -10,6 +10,7 @@ import com.keepit.rover.model.{ RoverArticleInfo }
 import scala.concurrent.duration._
 import com.keepit.common.core._
 import com.keepit.common.time._
+import com.kifi.juggle._
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Success, Failure }

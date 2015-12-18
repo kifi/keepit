@@ -64,7 +64,8 @@ object ApplicationBuild extends Build {
   )
 
   lazy val commonDependencies = Seq(
-    "org.ocpsoft.prettytime" % "prettytime" % "3.2.7.Final"
+    "org.ocpsoft.prettytime" % "prettytime" % "3.2.7.Final",
+    "com.kifi" % "juggle_2.11" % "1.0.2"
   )
 
   lazy val commonSettings =
