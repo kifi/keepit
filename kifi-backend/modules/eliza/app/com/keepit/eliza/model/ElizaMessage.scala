@@ -130,7 +130,7 @@ case class ElizaMessage(
   def withText(newText: String) = this.copy(messageText = newText)
   def sanitizeForDelete = this.copy(state = ElizaMessageStates.INACTIVE)
 
-  def pubId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Message] = Message.publicId(ElizaMessage.toCommon(id.get))
+  def pubId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Message] = Message.publicId(ElizaMessage.toCommonId(id.get))
 
   def isActive: Boolean = state == ElizaMessageStates.ACTIVE
 }

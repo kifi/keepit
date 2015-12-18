@@ -40,7 +40,7 @@ class ElizaDiscussionController @Inject() (
     val input = request.body.as[Request]
     val crossServiceMsgs = db.readOnlyReplica { implicit s =>
       input.msgIds.map { msgId =>
-        val msg = messageRepo.get(ElizaMessage.fromCommon(msgId))
+        val msg = messageRepo.get(ElizaMessage.fromCommonId(msgId))
         val thread = threadRepo.get(msg.thread)
         msgId -> CrossServiceMessage(
           id = msgId,
@@ -58,7 +58,7 @@ class ElizaDiscussionController @Inject() (
   def getMessagesOnKeep = Action.async(parse.tolerantJson) { request =>
     import GetMessagesOnKeep._
     val input = request.body.as[Request]
-    discussionCommander.getMessagesOnKeep(input.keepId, input.fromIdOpt.map(ElizaMessage.fromCommon), input.limit).map { msgs =>
+    discussionCommander.getMessagesOnKeep(input.keepId, input.fromIdOpt.map(ElizaMessage.fromCommonId), input.limit).map { msgs =>
       val output = Response(msgs)
       Ok(Json.toJson(output))
     }
@@ -78,7 +78,7 @@ class ElizaDiscussionController @Inject() (
     import MarkKeepsAsReadForUser._
     val input = request.body.as[Request]
     val unreadMessagesByKeep = input.lastSeen.flatMap {
-      case (keepId, msgId) => discussionCommander.markAsRead(input.userId, keepId, ElizaMessage.fromCommon(msgId)).map { unreadMsgCount => keepId -> unreadMsgCount }
+      case (keepId, msgId) => discussionCommander.markAsRead(input.userId, keepId, ElizaMessage.fromCommonId(msgId)).map { unreadMsgCount => keepId -> unreadMsgCount }
     }
     val output = Response(unreadMessagesByKeep)
     Ok(Json.toJson(output))
@@ -87,7 +87,7 @@ class ElizaDiscussionController @Inject() (
   def editMessage() = Action.async(parse.tolerantJson) { request =>
     import EditMessage._
     val input = request.body.as[Request]
-    discussionCommander.editMessage(ElizaMessage.fromCommon(input.msgId), input.newText).map { msg =>
+    discussionCommander.editMessage(ElizaMessage.fromCommonId(input.msgId), input.newText).map { msg =>
       val output = Response(msg)
       Ok(Json.toJson(output))
     }
@@ -96,7 +96,7 @@ class ElizaDiscussionController @Inject() (
   def deleteMessage() = Action(parse.tolerantJson) { request =>
     import DeleteMessage._
     val input = request.body.as[Request]
-    val msgId = ElizaMessage.fromCommon(input.msgId)
+    val msgId = ElizaMessage.fromCommonId(input.msgId)
     discussionCommander.deleteMessage(msgId)
     NoContent
   }
