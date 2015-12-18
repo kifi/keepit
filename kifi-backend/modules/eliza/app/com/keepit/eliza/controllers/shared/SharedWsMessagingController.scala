@@ -6,7 +6,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.controllers._
 import com.keepit.eliza.commanders._
 import com.keepit.common.db.{ ExternalId, State }
-import com.keepit.model.{ NotificationCategory, UserExperimentType, KifiExtVersion }
+import com.keepit.model.{ Keep, NotificationCategory, UserExperimentType, KifiExtVersion }
 import com.keepit.common.controller.{ UserActions, UserActionsHelper }
 import com.keepit.notify.LegacyNotificationCheck
 import com.keepit.notify.model.Recipient
@@ -77,14 +77,14 @@ class SharedWsMessagingController @Inject() (
       socket.channel.push(Json.arr(s"id:${socket.id}", stats))
     },
     "get_thread" -> {
-      case JsString(threadIdStr) +: _ =>
-        log.info(s"[get_thread] user ${socket.userId} thread $threadIdStr")
-        MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
-          basicMessageCommander.getDiscussionAndKeep(socket.userId, threadId).map {
+      case JsString(keepIdStr) +: _ =>
+        log.info(s"[get_thread] user ${socket.userId} thread $keepIdStr")
+        Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
+          basicMessageCommander.getDiscussionAndKeep(socket.userId, keepId).map {
             case (discussion, keepOpt) =>
               socket.channel.push(Json.arr(
                 "thread", Json.obj(
-                  "id" -> threadIdStr,
+                  "id" -> keepIdStr,
                   "uri" -> discussion.url,
                   "nUrl" -> discussion.nUrl,
                   "participants" -> discussion.participants,
@@ -95,7 +95,7 @@ class SharedWsMessagingController @Inject() (
         }
     },
     "add_participants_to_thread" -> {
-      case JsString(threadIdStr) +: (data: JsValue) +: _ =>
+      case JsString(keepIdStr) +: (data: JsValue) +: _ =>
         val (users, emailContacts, orgs) = data match {
           case JsArray(participantsJson) =>
             val (users, emailContacts, orgs) = messagingCommander.parseRecipients(participantsJson)
@@ -109,8 +109,8 @@ class SharedWsMessagingController @Inject() (
 
         if (users.nonEmpty || emailContacts.nonEmpty || orgs.nonEmpty) {
           implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-          MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
-            discussionCommander.addParticipantsToThread(socket.userId, threadId, users, emailContacts, orgs)
+          Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
+            discussionCommander.addParticipantsToThread(socket.userId, keepId, users, emailContacts, orgs)
           }
         }
     },
@@ -125,10 +125,10 @@ class SharedWsMessagingController @Inject() (
     },
     // inbox notification/thread handlers
     "get_one_thread" -> {
-      case JsNumber(requestId) +: JsString(threadIdStr) +: _ =>
-        MessageThreadId.fromIdString(threadIdStr).foreach { threadId =>
+      case JsNumber(requestId) +: JsString(keepIdStr) +: _ =>
+        Keep.decodePublicIdStr(keepIdStr).foreach { keepId =>
           (for {
-            json <- notificationDeliveryCommander.getSendableNotification(socket.userId, threadId, needsPageImages(socket))
+            json <- notificationDeliveryCommander.getSendableNotification(socket.userId, keepId, needsPageImages(socket))
           } yield {
             socket.channel.push(Json.arr(requestId.toLong, json.obj))
           }).onFailure {
@@ -318,24 +318,24 @@ class SharedWsMessagingController @Inject() (
         }
     },
     "mute_thread" -> {
-      case JsString(jsThreadId) +: _ =>
+      case JsString(idStr) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
+        legacyNotificationCheck.ifNotifExists(idStr) { notif =>
           notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = true)
         } {
-          MessageThreadId.fromIdString(jsThreadId).foreach { threadId =>
-            discussionCommander.muteThread(socket.userId, threadId)
+          Keep.decodePublicIdStr(idStr).foreach { keepId =>
+            discussionCommander.muteThread(socket.userId, keepId)
           }
         }
     },
     "unmute_thread" -> {
-      case JsString(jsThreadId) +: _ =>
+      case JsString(idStr) +: _ =>
         implicit val context = authenticatedWebSocketsContextBuilder(socket).build
-        legacyNotificationCheck.ifNotifExists(jsThreadId) { notif =>
+        legacyNotificationCheck.ifNotifExists(idStr) { notif =>
           notificationMessagingCommander.changeNotificationDisabled(socket.userId, notif, disabled = false)
         } {
-          MessageThreadId.fromIdString(jsThreadId).foreach { threadId =>
-            discussionCommander.unmuteThread(socket.userId, threadId)
+          Keep.decodePublicIdStr(idStr).foreach { keepId =>
+            discussionCommander.unmuteThread(socket.userId, keepId)
           }
         }
     },

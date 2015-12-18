@@ -25,10 +25,10 @@ trait ElizaDiscussionCommander {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[ElizaMessage]], limit: Int): Future[Seq[Message]]
   def getDiscussionForKeep(keepId: Id[Keep]): Future[Discussion]
   def getDiscussionsForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], Discussion]]
-  def sendMessage(userId: Id[User], txt: String, extThreadId: MessageThreadId, source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
-  def addParticipantsToThread(adderUserId: Id[User], extThreadId: MessageThreadId, newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean]
-  def muteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean]
-  def unmuteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean]
+  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message]
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean]
+  def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
+  def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean]
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
@@ -142,11 +142,8 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  private def getOrCreateMessageThreadWithUser(extThreadId: MessageThreadId, userId: Id[User]): Future[MessageThread] = {
-    val futureMessageThread = extThreadId match {
-      case ThreadExternalId(threadId) => db.readOnlyMaster { implicit session => Future.successful(messageThreadRepo.get(threadId)) }
-      case KeepId(keepId) => getOrCreateMessageThreadForKeep(keepId)
-    }
+  private def getOrCreateMessageThreadWithUser(keepId: Id[Keep], userId: Id[User]): Future[MessageThread] = {
+    val futureMessageThread = getOrCreateMessageThreadForKeep(keepId)
     futureMessageThread.map { thread =>
       if (!thread.containsUser(userId)) {
         db.readWrite { implicit s =>
@@ -162,28 +159,28 @@ class ElizaDiscussionCommanderImpl @Inject() (
     }
   }
 
-  def sendMessage(userId: Id[User], txt: String, extThreadId: MessageThreadId, source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message] = {
-    getOrCreateMessageThreadWithUser(extThreadId, userId).flatMap { thread =>
-      val (_, message) = messagingCommander.sendMessage(userId, extThreadId, thread, txt, source, None)
+  def sendMessage(userId: Id[User], txt: String, keepId: Id[Keep], source: Option[MessageSource] = None)(implicit context: HeimdalContext): Future[Message] = {
+    getOrCreateMessageThreadWithUser(keepId, userId).flatMap { thread =>
+      val (_, message) = messagingCommander.sendMessage(userId, thread, txt, source, None)
       externalizeMessage(message)
     }
   }
 
-  def addParticipantsToThread(adderUserId: Id[User], extThreadId: MessageThreadId, newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
-    getOrCreateMessageThreadWithUser(extThreadId, adderUserId).flatMap { thread =>
-      messagingCommander.addParticipantsToThread(adderUserId, extThreadId, thread.id.get, newParticipantsExtIds, emailContacts, orgs)
+  def addParticipantsToThread(adderUserId: Id[User], keepId: Id[Keep], newParticipantsExtIds: Seq[ExternalId[User]], emailContacts: Seq[BasicContact], orgs: Seq[PublicId[Organization]])(implicit context: HeimdalContext): Future[Boolean] = {
+    getOrCreateMessageThreadWithUser(keepId, adderUserId).flatMap { thread =>
+      messagingCommander.addParticipantsToThread(adderUserId, keepId, newParticipantsExtIds, emailContacts, orgs)
     }
   }
 
-  def muteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean] = {
-    getOrCreateMessageThreadWithUser(extThreadId, userId).map { _ =>
-      messagingCommander.setUserThreadMuteState(userId, extThreadId, mute = true)
+  def muteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean] = {
+    getOrCreateMessageThreadWithUser(keepId, userId).map { _ =>
+      messagingCommander.setUserThreadMuteState(userId, keepId, mute = true)
     }
   }
 
-  def unmuteThread(userId: Id[User], extThreadId: MessageThreadId)(implicit context: HeimdalContext): Future[Boolean] = {
-    getOrCreateMessageThreadWithUser(extThreadId, userId).map { _ =>
-      messagingCommander.setUserThreadMuteState(userId, extThreadId, mute = false)
+  def unmuteThread(userId: Id[User], keepId: Id[Keep])(implicit context: HeimdalContext): Future[Boolean] = {
+    getOrCreateMessageThreadWithUser(keepId, userId).map { _ =>
+      messagingCommander.setUserThreadMuteState(userId, keepId, mute = false)
     }
   }
 

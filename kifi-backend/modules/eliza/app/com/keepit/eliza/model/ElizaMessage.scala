@@ -132,6 +132,7 @@ case class ElizaMessage(
   def sanitizeForDelete = this.copy(state = ElizaMessageStates.INACTIVE)
 
   def pubId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Message] = Message.publicId(ElizaMessage.toCommonId(id.get))
+  def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
 
   def isActive: Boolean = state == ElizaMessageStates.ACTIVE
 }
@@ -218,6 +219,17 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       from = MessageSender.toMessageSenderView(message.from),
       messageText = message.messageText,
       createdAt = message.createdAt)
+  }
+
+  def toCrossServiceMessage(message: ElizaMessage): CrossServiceMessage = {
+    CrossServiceMessage(
+      id = ElizaMessage.toCommonId(message.id.get),
+      seq = ElizaMessage.toCommonSeq(message.seq),
+      keep = Some(message.keepId),
+      sentAt = message.createdAt,
+      sentBy = message.from.asUser,
+      text = message.messageText
+    )
   }
 }
 

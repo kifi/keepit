@@ -119,15 +119,14 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
           val userThread = userThreadRepo.save(UserThread.forMessageThread(messageThread)(user))
           (messageThread, userThread)
         }
-        val uuid = messageThread.externalId.id
 
         implicit val context = new HeimdalContext(Map())
 
-        messagingCommander.sendMessage(Id[User](2), messageThread.threadId, messageThread, "So long and thanks for all the fish", None, None)
+        messagingCommander.sendMessage(Id[User](2), messageThread, "So long and thanks for all the fish", None, None)
 
         val message = socket.out
         message(0).as[String] === "message"
-        message(1).as[String] === uuid
+        message(1).as[String] === messageThread.pubKeepId.id
         val messageContent = message(2)
         (messageContent \ "text").as[String] === "So long and thanks for all the fish"
         (messageContent \ "participants").asInstanceOf[JsArray].value.length === 2

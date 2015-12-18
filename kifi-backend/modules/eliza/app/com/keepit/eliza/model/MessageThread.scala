@@ -120,8 +120,8 @@ case class MessageThread(
   keepId: Option[Id[Keep]] = None)
     extends ModelWithExternalId[MessageThread] {
   def participantsHash: Int = participants.hash
-  def threadId: MessageThreadId = MessageThreadId(keepId, externalId)
-  def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThreadId.toLocator(threadId)
+  def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId.get)
+  def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThread.locator(pubKeepId)
 
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
 
@@ -168,29 +168,8 @@ object MessageThread {
     (__ \ 'pageTitle).formatNullable[String] and
     (__ \ 'keep).formatNullable[Id[Keep]]
   )(MessageThread.apply, unlift(MessageThread.unapply))
-}
 
-sealed trait MessageThreadId
-case class ThreadExternalId(threadId: ExternalId[MessageThread]) extends MessageThreadId
-case class KeepId(keepId: Id[Keep]) extends MessageThreadId
-object MessageThreadId {
-  def toIdString(id: MessageThreadId)(implicit publicIdConfiguration: PublicIdConfiguration): String = id match {
-    case ThreadExternalId(threadId) => threadId.id
-    case KeepId(keepId) => Keep.publicId(keepId).id
-  }
-
-  def fromIdString(idStr: String)(implicit publicIdConfiguration: PublicIdConfiguration): Option[MessageThreadId] = {
-    ExternalId.asOpt[MessageThread](idStr).map(ThreadExternalId(_)) orElse Keep.validatePublicId(idStr).flatMap(pubId => Keep.decodePublicId(pubId).map(KeepId(_)).toOption)
-  }
-
-  implicit def format(implicit publicIdConfiguration: PublicIdConfiguration) = Format[MessageThreadId](
-    Reads(value => value.validate[String].flatMap(fromIdString(_).map(JsSuccess(_)) getOrElse JsError(s"Invalid MessageThreadId: $value"))),
-    Writes(id => JsString(toIdString(id)))
-  )
-
-  def toLocator(id: MessageThreadId)(implicit publicIdConfiguration: PublicIdConfiguration): DeepLocator = DeepLocator(s"/messages/${toIdString(id)}")
-
-  def apply(keepId: Option[Id[Keep]], externalId: ExternalId[MessageThread]): MessageThreadId = keepId.map(KeepId) getOrElse ThreadExternalId(externalId)
+  def locator(keepId: PublicId[Keep]): DeepLocator = DeepLocator(s"/messages/${keepId.id}")
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {

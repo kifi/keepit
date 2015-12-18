@@ -26,7 +26,6 @@ import scala.concurrent.duration.Duration
 
 class NotificationDeliveryCommanderTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with ElizaInjectionHelpers {
   implicit val context = HeimdalContext.empty
-  implicit def pubIdConfig(implicit injector: Injector): PublicIdConfiguration = inject[PublicIdConfiguration]
   val modules = Seq(
     FakeExecutionContextModule(),
     FakeShoeboxServiceModule(),
@@ -62,7 +61,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
           val notif = Await.result(notificationDeliveryCommander.buildNotificationForMessageThread(user1, thread), Duration.Inf).get
           notif.id === msg.pubId
           notif.time === msg.createdAt
-          notif.threadId === thread.threadId
+          notif.threadId === thread.pubKeepId
           notif.text === "I need this to work"
           notif.url === "http://idgaf.com"
           notif.title must beNone
@@ -93,7 +92,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
           val uniqueTokens = List("asdf1nakjsdfh", "15ulskdnqrst", "tn1051d1uasn", "123jlaksjd", "1oiualksdn1oi")
           val notifs = for ((sender, source, token) <- (users, sources, uniqueTokens).zipped.toList) yield {
             val currentThread = db.readOnlyMaster { implicit session => messageThreadRepo.get(threadId) }
-            val (thread, msg) = messagingCommander.sendMessage(sender, currentThread.threadId, currentThread, s"Ruining Ryan's life! Yeah! $token", source = Some(source), urlOpt = None)
+            val (thread, msg) = messagingCommander.sendMessage(sender, currentThread, s"Ruining Ryan's life! Yeah! $token", source = Some(source), urlOpt = None)
             inject[WatchableExecutionContext].drain()
             Await.result(notificationDeliveryCommander.buildNotificationForMessageThread(user1, thread), Duration.Inf).get
           }
@@ -102,7 +101,7 @@ class NotificationDeliveryCommanderTest extends TestKitSupport with Specificatio
           val notif = notifs.last
           notif.id === msg.pubId
           notif.time === msg.createdAt
-          notif.threadId === initThread.threadId
+          notif.threadId === initThread.pubKeepId
           notif.text === s"Ruining Ryan's life! Yeah! ${uniqueTokens.last}"
           notif.url === "http://idgaf.com"
           notif.title must beNone

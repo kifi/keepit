@@ -20,7 +20,6 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
 
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread]
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread]
-  def getByMessageThreadId(threadId: MessageThreadId)(implicit session: RSession): Option[MessageThread]
   def getThreadsWithoutKeepId(limit: Int)(implicit session: RSession): Seq[MessageThread]
 }
 
@@ -127,11 +126,6 @@ class MessageThreadRepoImpl @Inject() (
   }
   def getThreadsWithoutKeepId(limit: Int)(implicit session: RSession): Seq[MessageThread] = {
     activeRows.filter(row => row.keepId.isEmpty).take(limit).list
-  }
-
-  def getByMessageThreadId(threadId: MessageThreadId)(implicit session: RSession): Option[MessageThread] = threadId match {
-    case ThreadExternalId(extId) => Some(get(extId))
-    case KeepId(keepId) => getByKeepId(keepId)
   }
 
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit = {

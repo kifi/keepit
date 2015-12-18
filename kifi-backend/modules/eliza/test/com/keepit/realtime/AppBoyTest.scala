@@ -9,7 +9,6 @@ import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.net.{ FakeHttpClientModule }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.{ UserPushNotificationCategory, PushNotificationExperiment, LibraryPushNotificationCategory, FakeElizaServiceClientModule }
-import com.keepit.eliza.model.{ ThreadExternalId, MessageThread }
 import com.keepit.heimdal.FakeHeimdalServiceClientModule
 import com.keepit.model._
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
@@ -88,8 +87,9 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
       withDb(modules: _*) { implicit injector =>
         val (user1, deviceApple, deviceAndroid) = setupData
         appBoyClient.jsons.size === 0
+        val keepId = Keep.publicId(Id(1))
 
-        val notification = MessageThreadPushNotification(id = ThreadExternalId(ExternalId[MessageThread]("5fe6e19f-6092-49f1-b446-5d992fda0034")), unvisitedCount = 3, message = Some("pika"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
+        val notification = MessageThreadPushNotification(id = keepId, unvisitedCount = 3, message = Some("pika"), sound = Some(MobilePushNotifier.DefaultNotificationSound))
         val notifPushF = appBoy.notifyUser(user1.id.get, Seq(deviceApple, deviceAndroid), notification, false)
         Await.result(notifPushF, Duration(5, SECONDS))
         appBoyClient.jsons.size === 1
@@ -110,7 +110,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "content-available":false,
                   "extra":{
                     "unreadCount":3,
-                    "id":"5fe6e19f-6092-49f1-b446-5d992fda0034"
+                    "id":"${keepId.id}"
                   }
                 },
                 "android_push":{
@@ -121,7 +121,7 @@ class AppBoyTest extends Specification with TestInjector with ElizaTestInjector 
                   "content-available":false,
                   "extra":{
                     "unreadCount":3,
-                    "id":"5fe6e19f-6092-49f1-b446-5d992fda0034"
+                    "id":"${keepId.id}"
                   },
                   "title":"pika"
                 }

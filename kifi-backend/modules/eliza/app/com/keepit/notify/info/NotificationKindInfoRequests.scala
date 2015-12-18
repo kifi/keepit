@@ -3,8 +3,8 @@ package com.keepit.notify.info
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.path.Path
-import com.keepit.eliza.model.{KeepId, MessageThreadId, Notification, NotificationItem}
-import com.keepit.model.{LibraryAccess, NotificationCategory}
+import com.keepit.eliza.model.{MessageThread, Notification, NotificationItem}
+import com.keepit.model.{Keep, LibraryAccess, NotificationCategory}
 import com.keepit.notify.info.NotificationInfoRequest._
 import com.keepit.notify.model.event._
 import play.api.libs.json.Json
@@ -106,7 +106,7 @@ class NotificationKindInfoRequests @Inject()(implicit val pubIdConfig: PublicIdC
         title = s"New keep in ${libraryKept.name}",
         body = s"${keeper.firstName} has just kept ${newKeep.title.getOrElse("a new item")}",
         linkText = "Go to page",
-        locator = Some(MessageThreadId.toLocator(KeepId(event.keepId))),
+        locator = Some(MessageThread.locator(Keep.publicId(event.keepId))),
         extraJson = Some(Json.obj(
           "keeper" -> keeper,
           "library" -> Json.toJson(libraryKept),
