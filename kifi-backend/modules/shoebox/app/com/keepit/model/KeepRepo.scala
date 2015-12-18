@@ -8,6 +8,7 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.model.LibrariesHash
 import org.joda.time.DateTime
 
 import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
@@ -91,6 +92,7 @@ class KeepRepoImpl @Inject() (
 
   type RepoImpl = KeepTable
   class KeepTable(tag: Tag) extends RepoTable[Keep](db, tag, "bookmark") with ExternalIdColumn[Keep] with SeqNumberColumn[Keep] with NamedColumns {
+    def messageSeq = column[Option[SequenceNumber[Message]]]("message_seq", O.Nullable)
     def title = column[Option[String]]("title", O.Nullable) //indexd
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull) //indexd
     def isPrimary = column[Option[Boolean]]("is_primary", O.Nullable) // trueOrNull
@@ -103,13 +105,16 @@ class KeepRepoImpl @Inject() (
     def note = column[Option[String]]("note", O.Nullable)
     def originalKeeperId = column[Option[Id[User]]]("original_keeper_id", O.Nullable)
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
+    def connections = column[Option[KeepConnections]]("connections", O.Nullable)
+
+    // Used only within the DB to make queries on `connections` more efficient
     def librariesHash = column[LibrariesHash]("libraries_hash", O.NotNull)
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
-    def messageSeq = column[Option[SequenceNumber[Message]]]("message_seq", O.Nullable)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (userId, state, source, seq, libraryId, visibility, keptAt,
-        note, originalKeeperId, organizationId, librariesHash, participantsHash, messageSeq)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
+      (userId, state, source, seq, messageSeq, libraryId, visibility, keptAt,
+        note, originalKeeperId, organizationId,
+        connections, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
 
     def isPrivate: Column[Boolean] = {
       val privateVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.SECRET, LibraryVisibility.ORGANIZATION)

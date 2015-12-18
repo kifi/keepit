@@ -72,7 +72,7 @@ trait KeepCommander {
   // Creating
   def keepOne(rawBookmark: RawBookmarkRepresentation, userId: Id[User], libraryId: Id[Library], source: KeepSource, socialShare: SocialShare)(implicit context: HeimdalContext): (Keep, Boolean)
   def keepMultiple(rawBookmarks: Seq[RawBookmarkRepresentation], libraryId: Id[Library], userId: Id[User], source: KeepSource)(implicit context: HeimdalContext): (Seq[KeepInfo], Seq[String])
-  def persistKeep(k: Keep, users: Set[Id[User]], libraries: Set[Id[Library]])(implicit session: RWSession): Keep
+  def persistKeep(k: Keep)(implicit session: RWSession): Keep
 
   // Updating / managing
   def updateKeepTitle(keepId: ExternalId[Keep], libId: Id[Library], userId: Id[User], title: Option[String])(implicit context: HeimdalContext): Either[(Int, String), Keep]
@@ -650,24 +650,17 @@ class KeepCommanderImpl @Inject() (
   def numKeeps(userId: Id[User]): Int = db.readOnlyReplica { implicit s => keepRepo.getCountByUser(userId) }
 
   // Only use this directly if you want to skip ALL interning features. You probably want KeepInterner.
-  def persistKeep(k: Keep, userIds: Set[Id[User]], libraryIds: Set[Id[Library]])(implicit session: RWSession): Keep = {
-    require(userIds.contains(k.userId), "keep owner is not one of the connected users")
-    require(k.libraryId.toSet == libraryIds, "ktls in 2 or more libraries are not supported")
-    val keep = keepRepo.save(k.withLibraries(libraryIds).withParticipants(userIds))
+  def persistKeep(k: Keep)(implicit session: RWSession): Keep = {
+    require(k.connections.users.contains(k.userId), "keep owner is not one of the connected users")
+    require(k.libraryId.toSet == k.connections.libraries, "ktls in 2 or more libraries are not supported")
 
-    userIds.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
-    val libraries = libraryRepo.getActiveByIds(libraryIds).values
+    val keep = keepRepo.save(k)
+    keep.connections.users.foreach { userId => ktuCommander.internKeepInUser(keep, userId, keep.userId) }
+
+    val libraries = libraryRepo.getActiveByIds(keep.connections.libraries).values
     libraries.foreach { lib => ktlCommander.internKeepInLibrary(keep, lib, keep.userId) }
 
     keep
-  }
-  def refreshLibrariesHash(keep: Keep)(implicit session: RWSession): Keep = {
-    val libraries = ktlRepo.getAllByKeepId(keep.id.get).map(_.libraryId).toSet
-    keepRepo.save(keep.withLibraries(libraries))
-  }
-  def refreshParticipantsHash(keep: Keep)(implicit session: RWSession): Keep = {
-    val users = ktuRepo.getAllByKeepId(keep.id.get).map(_.userId).toSet
-    keepRepo.save(keep.withParticipants(users))
   }
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep = {
     require(keep.libraryId == library.id, "keep.libraryId does not match library id!")
@@ -679,9 +672,6 @@ class KeepCommanderImpl @Inject() (
     val updatedKeep = keepRepo.save(keep.withOwner(newOwnerId))
     ktuCommander.internKeepInUser(keep, newOwnerId, addedBy = newOwnerId)
     refreshParticipantsHash(updatedKeep)
-  }
-  private def isKeepInLibraries(keepId: Id[Keep], targetLibraries: Set[Id[Library]])(implicit session: RSession): Boolean = {
-    ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet == targetLibraries
   }
   private def getKeepsByUriAndLibraries(uriId: Id[NormalizedURI], targetLibraries: Set[Id[Library]])(implicit session: RSession): Set[Keep] = {
     // TODO(ryan): uncomment the line below, and get rid of the require
@@ -771,16 +761,17 @@ class KeepCommanderImpl @Inject() (
   }
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
     val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
-    val newKeep = k.copy(
-      id = None,
+    val newKeep = Keep(
       externalId = ExternalId(),
       userId = userId,
+      url = k.url,
       libraryId = Some(toLibrary.id.get),
       visibility = toLibrary.visibility,
       organizationId = toLibrary.organizationId,
       keptAt = currentDateTime,
       source = withSource.getOrElse(k.source),
-      originalKeeperId = k.originalKeeperId.orElse(Some(userId))
+      originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
+      connections = KeepConnections(Set(toLibrary.id.get), Set(userId))
     )
 
     currentKeepOpt match {
@@ -789,7 +780,7 @@ class KeepCommanderImpl @Inject() (
         Left(LibraryError.AlreadyExistsInDest)
 
       case inactiveKeepOpt =>
-        val persistedKeep = persistKeep(newKeep.copy(id = inactiveKeepOpt.flatMap(_.id)), Set(userId), Set(toLibrary.id.get))
+        val persistedKeep = persistKeep(newKeep.copy(id = inactiveKeepOpt.map(_.id.get)))
         combineTags(k.id.get, persistedKeep.id.get)
         Right(persistedKeep)
     }
