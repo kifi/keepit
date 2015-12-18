@@ -3,7 +3,7 @@ package com.keepit.discussion
 import javax.crypto.spec.IvParameterSpec
 
 import com.keepit.common.crypto.{ PublicIdGenerator, ModelWithPublicId, PublicId }
-import com.keepit.common.db.{ Id, ExternalId }
+import com.keepit.common.db.{ SequenceNumber, Id, ExternalId }
 import com.keepit.common.store.ImagePath
 import com.keepit.model._
 import com.keepit.social.{ BasicUser, BasicUserLikeEntity }
@@ -30,6 +30,7 @@ object Message extends PublicIdGenerator[Message] {
 
 case class CrossServiceMessage(
   id: Id[Message],
+  seq: SequenceNumber[Message],
   keep: Option[Id[Keep]],
   sentAt: DateTime,
   sentBy: Option[Id[User]],
@@ -37,6 +38,7 @@ case class CrossServiceMessage(
 object CrossServiceMessage {
   implicit val format: Format[CrossServiceMessage] = (
     (__ \ 'id).format[Id[Message]] and
+    (__ \ 'seq).format[SequenceNumber[Message]] and
     (__ \ 'keep).formatNullable[Id[Keep]] and
     (__ \ 'sentAt).format[DateTime] and
     (__ \ 'sentBy).formatNullable[Id[User]] and

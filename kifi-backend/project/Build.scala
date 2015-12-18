@@ -128,7 +128,8 @@ object ApplicationBuild extends Build {
     javaOptions in Test += "-Dconfig.resource=application-eliza.conf",
     routesImport ++= Seq(
       "com.keepit.eliza._",
-      "com.keepit.eliza.model._"
+      "com.keepit.eliza.model._",
+      "com.keepit.discussion._"
     )
   ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile")
 

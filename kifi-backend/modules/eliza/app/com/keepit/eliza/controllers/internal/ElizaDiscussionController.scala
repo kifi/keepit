@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.eliza.ElizaServiceClient._
 import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.db.Id
+import com.keepit.common.db.{ SequenceNumber, Id }
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.discussion.{ CrossServiceMessage, Message }
@@ -26,6 +26,18 @@ class ElizaDiscussionController @Inject() (
   heimdalContextBuilder: HeimdalContextBuilderFactory)
     extends ElizaServiceController with Logging {
 
+  private def makeCrossServiceMessage(thread: MessageThread, message: ElizaMessage): CrossServiceMessage = {
+    require(message.thread == thread.id.get)
+    CrossServiceMessage(
+      id = ElizaMessage.toCommonId(message.id.get),
+      seq = ElizaMessage.toCommonSeq(message.seq),
+      keep = thread.keepId, // todo(Léo): add keepId to ElizaMessage
+      sentAt = message.createdAt,
+      sentBy = message.from.asUser,
+      text = message.messageText
+    )
+  }
+
   def getDiscussionsForKeeps = Action.async(parse.tolerantJson) { request =>
     import GetDiscussionsForKeeps._
     val input = request.body.as[Request]
@@ -42,13 +54,7 @@ class ElizaDiscussionController @Inject() (
       input.msgIds.map { msgId =>
         val msg = messageRepo.get(ElizaMessage.fromCommonId(msgId))
         val thread = threadRepo.get(msg.thread)
-        msgId -> CrossServiceMessage(
-          id = msgId,
-          keep = thread.keepId,
-          sentAt = msg.createdAt,
-          sentBy = msg.from.asUser,
-          text = msg.messageText
-        )
+        msgId -> makeCrossServiceMessage(thread, msg)
       }.toMap
     }
     val output = Response(crossServiceMsgs)
@@ -99,6 +105,15 @@ class ElizaDiscussionController @Inject() (
     val msgId = ElizaMessage.fromCommonId(input.msgId)
     discussionCommander.deleteMessage(msgId)
     NoContent
+  }
+
+  def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int) = Action { request =>
+    val messages = db.readOnlyMaster { implicit session =>
+      val elizaMessages = messageRepo.getBySequenceNumber(ElizaMessage.fromCommonSeq(seqNum), fetchSize)
+      val threadsById = threadRepo.getByIds(elizaMessages.map(_.thread).toSet)
+      elizaMessages.map(message => makeCrossServiceMessage(threadsById(message.thread), message))
+    }
+    Ok(Json.toJson(messages))
   }
 
   def rpbGetThreads() = Action(parse.tolerantJson) { request =>
