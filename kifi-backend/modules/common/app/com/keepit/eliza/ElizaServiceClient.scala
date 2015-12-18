@@ -130,6 +130,7 @@ trait ElizaServiceClient extends ServiceClient {
   def getMessagesOnKeep(keepId: Id[Keep], fromIdOpt: Option[Id[Message]], limit: Int): Future[Seq[Message]]
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
+  def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
 
   def rpbGetThreads(limit: Int): Future[RPBGetThreads.Response]
   def rpbConnectKeeps(connections: Map[Long, Id[Keep]]): Future[Unit]
@@ -333,6 +334,10 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.deleteMessage(), body = Json.toJson(request)).map { response =>
       Unit
     }
+  }
+
+  def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = {
+    call(Eliza.internal.getMessagesChanged(seqNum, fetchSize)).map { _.json.as[Seq[CrossServiceMessage]] }
   }
 
   // TODO(ryan): delete this morass

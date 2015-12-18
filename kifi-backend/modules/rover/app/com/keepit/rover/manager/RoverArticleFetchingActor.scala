@@ -9,6 +9,7 @@ import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.image.ImageCommander
 import com.keepit.rover.model.{ RoverArticleInfo, ArticleInfoRepo }
 import com.kifi.franz.SQSMessage
+import com.kifi.juggle._
 import scala.concurrent.duration._
 import com.keepit.common.core._
 

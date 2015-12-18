@@ -14,6 +14,7 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
   def getByUriAndParticipants(uriId: Id[NormalizedURI], participants: MessageThreadParticipants)(implicit session: RSession): Seq[MessageThread]
   override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread
   override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread
+  def getByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread]
   def getActiveByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread]
   def updateNormalizedUris(updates: Seq[(Id[NormalizedURI], NormalizedURI)])(implicit session: RWSession): Unit
 
@@ -89,6 +90,10 @@ class MessageThreadRepoImpl @Inject() (
 
   override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread = {
     threadExternalIdCache.getOrElse(MessageThreadExternalIdKey(id))(super.get(id))
+  }
+
+  def getByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread] = {
+    rows.filter(_.id.inSet(ids)).list.map(x => x.id.get -> x).toMap
   }
 
   def getActiveByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread] = {

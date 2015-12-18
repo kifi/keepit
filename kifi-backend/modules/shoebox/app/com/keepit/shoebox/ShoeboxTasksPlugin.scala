@@ -4,11 +4,13 @@ import akka.actor.ActorSystem
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{ SchedulerPlugin, SchedulingProperties }
+import com.keepit.shoebox.eliza.ShoeboxMessageIngestionActor
 import com.keepit.shoebox.rover.ShoeboxArticleIngestionActor
 import com.keepit.slack.{ SlackCommander, LibraryToSlackChannelPusher, SlackIngestionCommander }
 import us.theatr.akka.quartz.QuartzActor
 import com.keepit.commanders.TwitterSyncCommander
 import com.keepit.payments.{ PlanRenewalCommander, PaymentProcessingCommander }
+import com.kifi.juggle.ConcurrentTaskProcessingActor.{ Close, IfYouCouldJustGoAhead }
 
 import scala.concurrent.duration._
 
@@ -18,6 +20,7 @@ class ShoeboxTasksPlugin @Inject() (
     system: ActorSystem,
     quartz: ActorInstance[QuartzActor],
     articleIngestionActor: ActorInstance[ShoeboxArticleIngestionActor],
+    messageIngestionActor: ActorInstance[ShoeboxMessageIngestionActor],
     planRenewalCommander: PlanRenewalCommander,
     paymentProcessingCommander: PaymentProcessingCommander,
     slackCommander: SlackCommander,
@@ -48,7 +51,13 @@ class ShoeboxTasksPlugin @Inject() (
       paymentProcessingCommander.processDuePayments()
     }
 
-    scheduleTaskOnOneMachine(articleIngestionActor.system, 3 minutes, 1 minute, articleIngestionActor.ref, ShoeboxArticleIngestionActor.StartIngestion, "ArticleUpdate Ingestion")
+    scheduleTaskOnLeader(articleIngestionActor.system, 3 minutes, 1 minute, articleIngestionActor.ref, ShoeboxArticleIngestionActor.StartIngestion)
+    scheduleTaskOnLeader(messageIngestionActor.system, 500 seconds, 3 minute, messageIngestionActor.ref, IfYouCouldJustGoAhead)
+  }
+
+  override def onStop() {
+    Seq(messageIngestionActor).foreach(_.ref ! Close)
+    super.onStop()
   }
 
 }

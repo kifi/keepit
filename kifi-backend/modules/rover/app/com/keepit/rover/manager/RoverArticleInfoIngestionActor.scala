@@ -12,6 +12,7 @@ import com.keepit.rover.article.ArticleCommander
 import com.keepit.rover.article.policy.ArticleFetchPolicy
 import com.keepit.rover.model.{ ArticleInfoHelper, ArticleInfoRepo }
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.kifi.juggle._
 
 import scala.concurrent.{ Future, ExecutionContext }
 import scala.util.{ Failure, Success }

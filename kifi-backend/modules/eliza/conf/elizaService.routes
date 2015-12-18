@@ -72,6 +72,7 @@ POST    /internal/eliza/sendMessageOnKeep        @com.keepit.eliza.controllers.i
 POST    /internal/eliza/getMessagesOnKeep        @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesOnKeep
 POST    /internal/eliza/editMessage              @com.keepit.eliza.controllers.internal.ElizaDiscussionController.editMessage()
 POST    /internal/eliza/deleteMessage            @com.keepit.eliza.controllers.internal.ElizaDiscussionController.deleteMessage()
+GET     /internal/eliza/getMessagesChanged       @com.keepit.eliza.controllers.internal.ElizaDiscussionController.getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int)
 POST    /internal/eliza/rpbGetThreads            @com.keepit.eliza.controllers.internal.ElizaDiscussionController.rpbGetThreads()
 POST    /internal/eliza/rpbConnectKeeps          @com.keepit.eliza.controllers.internal.ElizaDiscussionController.rpbConnectKeeps()
 
