@@ -58,11 +58,15 @@ class DeepLinkRouterImpl @Inject() (
     val uriIdOpt = (data \ DeepLinkField.UriId).asOpt[ExternalId[NormalizedURI]]
     val uriOpt = uriIdOpt.flatMap { uriId => db.readOnlyReplica { implicit session => uriRepo.getOpt(uriId) } }
     val messageIdOpt = (data \ DeepLinkField.MessageThreadId).asOpt[String]
-    val keepPageOpt = (data \ DeepLinkField.KeepId).asOpt[PublicId[Keep]]
-      .filter { _ => redirectToKeepPage }
-      .flatMap { pubId =>
-        Keep.decodePublicId(pubId).toOption.flatMap(keepId => db.readOnlyReplica(implicit s => keepRepo.getOption(keepId).map(_.path.relative)))
-      }
+    val keepPageOpt = for {
+      _ <- Some(()) if redirectToKeepPage
+      keepPubId <- (data \ DeepLinkField.KeepId).asOpt[PublicId[Keep]]
+      keepId <- Keep.decodePublicId(keepPubId).toOption
+      keep <- db.readOnlyReplica(implicit s => keepRepo.getOption(keepId))
+    } yield {
+      val accessTokenOpt = (data \ DeepLinkField.AuthToken).asOpt[String]
+      keep.path.relative + accessTokenOpt.map(token => s"?authToken=$token").getOrElse("")
+    }
     for {
       uri <- uriOpt
       messageId <- messageIdOpt

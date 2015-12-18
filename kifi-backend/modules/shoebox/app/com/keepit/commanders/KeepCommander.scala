@@ -17,6 +17,7 @@ import com.keepit.common.healthcheck.{ AirbrakeNotifier, StackTrace }
 import com.keepit.common.logging.Logging
 import com.keepit.common.performance._
 import com.keepit.common.time._
+import com.keepit.eliza.ElizaServiceClient
 import com.keepit.heimdal._
 import com.keepit.integrity.UriIntegrityHelpers
 import com.keepit.model._
@@ -66,7 +67,7 @@ trait KeepCommander {
   def getCrossServiceKeeps(ids: Set[Id[Keep]]): Map[Id[Keep], CrossServiceKeep] // for discussions
   def getKeepsCountFuture(): Future[Int]
   def getKeep(libraryId: Id[Library], keepExtId: ExternalId[Keep], userId: Id[User]): Either[(Int, String), Keep]
-  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[KeepInfo]
+  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Future[KeepInfo]
   def getKeepStream(userId: Id[User], limit: Int, beforeExtId: Option[ExternalId[Keep]], afterExtId: Option[ExternalId[Keep]], sanitizeUrls: Boolean): Future[Seq[KeepInfo]]
 
   // Creating
@@ -118,6 +119,7 @@ class KeepCommanderImpl @Inject() (
     collectionRepo: CollectionRepo,
     libraryAnalytics: LibraryAnalytics,
     heimdalClient: HeimdalServiceClient,
+    eliza: ElizaServiceClient,
     airbrake: AirbrakeNotifier,
     normalizedURIInterner: NormalizedURIInterner,
     clock: Clock,
@@ -221,24 +223,29 @@ class KeepCommanderImpl @Inject() (
     }
   }
 
-  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]]): Future[KeepInfo] = {
-    val keepTry = db.readOnlyMaster { implicit s =>
+  def getKeepInfo(internalOrExternalId: Either[Id[Keep], ExternalId[Keep]], userIdOpt: Option[Id[User]], authTokenOpt: Option[String]): Future[KeepInfo] = {
+    val keepFut = db.readOnlyReplica { implicit s =>
       internalOrExternalId.fold[Option[Keep]](
         { id: Id[Keep] => keepRepo.getOption(id) }, { extId: ExternalId[Keep] => keepRepo.getByExtId(extId) }
       ) match {
-          case None => Failure(KeepFail.KEEP_NOT_FOUND)
-          case Some(keep) =>
-            val canView = permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
-            if (!canView) Failure(KeepFail.INSUFFICIENT_PERMISSIONS)
-            else Success(keep)
+          case None => Future.failed(KeepFail.KEEP_NOT_FOUND)
+          case Some(keep) => {
+            val canViewShoebox = permissionCommander.getKeepPermissions(keep.id.get, userIdOpt).contains(KeepPermission.VIEW_KEEP)
+            val canViewFut = {
+              if (!canViewShoebox && authTokenOpt.isDefined) eliza.keepHasThreadWithAccessToken(keep.id.get, authTokenOpt.get)
+              else Future.successful(canViewShoebox)
+            }
+            canViewFut.flatMap { canView =>
+              if (canView) Future.successful(keep)
+              else Future.failed(KeepFail.INSUFFICIENT_PERMISSIONS)
+            }
+          }
         }
     }
 
-    keepTry match {
-      case Failure(fail) => Future.failed(fail)
-      case Success(keep) =>
-        keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
-          .imap { case Seq(keepInfo) => keepInfo }
+    keepFut.flatMap { keep =>
+      keepDecorator.decorateKeepsIntoKeepInfos(userIdOpt, showPublishedLibraries = false, Seq(keep), ProcessedImageSize.Large.idealSize, sanitizeUrls = false)
+        .imap { case Seq(keepInfo) => keepInfo }
     }
   }
 

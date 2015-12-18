@@ -108,12 +108,12 @@ class KeepsController @Inject() (
     }.getOrElse(Future.successful(BadRequest))
   }
 
-  def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep]) = UserAction.async { request =>
+  def getKeepInfo(internalOrExternalId: InternalOrExternalId[Keep], authTokenOpt: Option[String]) = UserAction.async { request =>
     implicit val keepCompanion = Keep
     internalOrExternalId.parse match {
       case Failure(ex) => Future.successful(KeepFail.INVALID_ID.asErrorResponse)
       case Success(idOrExtId) =>
-        keepsCommander.getKeepInfo(idOrExtId, request.userIdOpt)
+        keepsCommander.getKeepInfo(idOrExtId, request.userIdOpt, authTokenOpt)
           .map(keepInfo => Ok(Json.toJson(keepInfo)))
           .recover { case fail: KeepFail => fail.asErrorResponse }
     }

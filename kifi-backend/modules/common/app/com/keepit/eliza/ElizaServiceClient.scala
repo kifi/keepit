@@ -131,6 +131,8 @@ trait ElizaServiceClient extends ServiceClient {
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
 
+  def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean]
+
   def rpbGetThreads(limit: Int): Future[RPBGetThreads.Response]
   def rpbConnectKeeps(connections: Map[Long, Id[Keep]]): Future[Unit]
 }
@@ -332,6 +334,12 @@ class ElizaServiceClientImpl @Inject() (
     val request = Request(msgId)
     call(Eliza.internal.deleteMessage(), body = Json.toJson(request)).map { response =>
       Unit
+    }
+  }
+
+  def keepHasThreadWithAccessToken(keepId: Id[Keep], accessToken: String): Future[Boolean] = {
+    call(Eliza.internal.keepHasAccessToken(keepId, accessToken)).map { response =>
+      (response.json \ "hasToken").as[Boolean]
     }
   }
 

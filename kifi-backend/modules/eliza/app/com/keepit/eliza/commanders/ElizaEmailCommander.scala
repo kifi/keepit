@@ -3,7 +3,6 @@ package com.keepit.eliza.commanders
 import com.google.inject.Inject
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
-import com.keepit.common.mail.template.helpers.discussionLink
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
 
@@ -22,11 +21,7 @@ import com.keepit.common.concurrent.FutureHelpers
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.store.{ S3ImageConfig, ImageSize }
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.{
-  ElectronicMail,
-  SystemEmailAddress,
-  PostOffice
-}
+import com.keepit.common.mail.{ SystemEmailAddress, PostOffice }
 import com.keepit.common.time._
 import com.keepit.common.akka.SafeFuture
 import play.api.libs.json.JsString
@@ -71,9 +66,8 @@ class ElizaEmailCommander @Inject() (
     isInitialEmail: Boolean,
     allUsers: Map[Id[User], User],
     allUserImageUrls: Map[Id[User], String],
-    invitedByUser: Option[User],
     unsubUrl: Option[String] = None,
-    muteUrl: Option[String] = None): ThreadEmailInfo = {
+    nonUserThread: Option[NonUserThread]): ThreadEmailInfo = {
 
     val (nuts, starterUserId) = db.readOnlyMaster { implicit session =>
       (
@@ -85,7 +79,11 @@ class ElizaEmailCommander @Inject() (
     val starterUser = allUsers(starterUserId)
     val participants = allUsers.values.map { _.fullName } ++ nuts.map { _.participant.fullName }
 
+    val invitedByUser = nonUserThread.flatMap(nut => allUsers.get(nut.createdBy))
+
     val pageName = DomainToNameMapper.getNameFromUrl(thread.nUrl).getOrElse("")
+
+    val muteUrl = nonUserThread.map(nut => "https://www.kifi.com/extmsg/email/mute?publicId=" + nut.accessToken.token)
 
     ThreadEmailInfo(
       uriId = thread.uriId,
@@ -101,8 +99,8 @@ class ElizaEmailCommander @Inject() (
       invitedByUser = invitedByUser,
       unsubUrl = unsubUrl,
       muteUrl = muteUrl,
-      readTimeMinutes = uriSummary.flatMap(_.article.readTime.map(_.toMinutes.toInt))
-    )
+      readTimeMinutes = uriSummary.flatMap(_.article.readTime.map(_.toMinutes.toInt)),
+      nonUserAccessToken = nonUserThread.map(_.accessToken.token))
   }
 
   def getExtendedThreadItems(
@@ -110,13 +108,11 @@ class ElizaEmailCommander @Inject() (
     allUsers: Map[Id[User], User],
 
     allUserImageUrls: Map[Id[User], String],
-    fromTime: Option[DateTime],
-    toTime: Option[DateTime]): Seq[ExtendedThreadItem] = {
+    fromTime: Option[DateTime]): Seq[ExtendedThreadItem] = {
     val messages = messageFetchingCommander.getThreadMessages(thread)
 
     val relevantMessages = messages.filter { m =>
-      (fromTime.map { dt => m.createdAt.isAfter(dt.minusMillis(100)) } getOrElse (true)) &&
-        (toTime.map { dt => m.createdAt.isBefore(dt.plusMillis(100)) } getOrElse (true))
+      fromTime.map { dt => m.createdAt.isAfter(dt.minusMillis(100)) } getOrElse true
     }
 
     relevantMessages.filterNot(_.from.isSystem).map { message =>
@@ -151,15 +147,14 @@ class ElizaEmailCommander @Inject() (
     }
   }
 
-  private def assembleEmail(threadEmailData: ThreadEmailData, fromTime: Option[DateTime], toTime: Option[DateTime], invitedByUserId: Option[Id[User]], unsubUrl: Option[String], muteUrl: Option[String]): ProtoEmail = {
+  private def assembleEmail(threadEmailData: ThreadEmailData, nonUserThread: Option[NonUserThread], unsubUrl: Option[String]): ProtoEmail = {
     val ThreadEmailData(thread, _, allUsers, allUserImageUrls, uriSummary) = threadEmailData
-    val invitedByUser = invitedByUserId.flatMap(allUsers.get(_))
-    val threadInfoSmall = getThreadEmailInfo(thread, uriSummary, smallImageSize, true, allUsers, allUserImageUrls, invitedByUser, unsubUrl, muteUrl)
+    val threadInfoSmall = getThreadEmailInfo(thread, uriSummary, smallImageSize, true, allUsers, allUserImageUrls, unsubUrl, nonUserThread)
     val bigImageUrl = uriSummary.flatMap(_.images.get(bigImageSize).map(_.path.getUrl))
     val smallImageUrl = uriSummary.flatMap(_.images.get(smallImageSize).map(_.path.getUrl))
     val threadInfoBig = threadInfoSmall.copy(heroImageUrl = bigImageUrl orElse smallImageUrl)
     val threadInfoSmallDigest = threadInfoSmall.copy(isInitialEmail = false)
-    val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, fromTime, toTime)
+    val threadItems = getExtendedThreadItems(thread, allUsers, allUserImageUrls, None)
 
     ProtoEmail(
       views.html.discussionEmail(threadInfoSmallDigest, threadItems, false, false, true),
@@ -228,11 +223,8 @@ class ElizaEmailCommander @Inject() (
     val protoEmailFut = unsubUrlFut map { unsubUrl =>
       assembleEmail(
         threadEmailData,
-        None,
-        None,
-        Some(nonUserThread.createdBy),
-        Some(unsubUrl),
-        Some("https://www.kifi.com/extmsg/email/mute?publicId=" + nonUserThread.accessToken.token)
+        Some(nonUserThread),
+        Some(unsubUrl)
       )
     }
 
@@ -261,7 +253,7 @@ class ElizaEmailCommander @Inject() (
       val thread = threadRepo.get(msg.thread)
       (msg, thread)
     }
-    val protoEmailFuture = getThreadEmailData(thread) map { assembleEmail(_, None, None, None, None, None) }
+    val protoEmailFuture = getThreadEmailData(thread) map { assembleEmail(_, None, None) }
     if (msg.auxData.isDefined) {
       if (msg.auxData.get.value(0) == JsString("start_with_emails")) {
         protoEmailFuture.map(_.initialHtml)
@@ -295,7 +287,8 @@ object ElizaEmailCommander {
       None,
       Some("http://www.example.com/iwanttounsubscribe.html"),
       Some("http://www.example.com/iwanttomute.html"),
-      Some(10)
+      Some(10),
+      None
     )
     val threadItems = Seq(
       new ExtendedThreadItem("bob", "Bob Bob", Some("http:www://example.com/image1.png"), Seq(TextSegment("I say something"), TextSegment("Then something else"))),

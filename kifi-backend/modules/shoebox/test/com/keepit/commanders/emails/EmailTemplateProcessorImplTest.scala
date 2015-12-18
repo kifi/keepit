@@ -205,7 +205,7 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
           val mid = "4e26678a-8c20-48ca-9344-a1c75084d320"
 
           val deepLink = "http://dev.ezkeep.com:9000/redir?data=" + URLEncoder.encode(s"""{"t":"m","uri":"${uri.externalId}","id":"$mid","kid":"${keepPubId.id}"}""", "ascii")
-          val html = Html(s"""${discussionLink(uri.id.get, mid, Some(keepPubId))}""")
+          val html = Html(s"""${discussionLink(uri.id.get, mid, Some(keepPubId), None)}""")
           val processor = inject[EmailTemplateProcessorImpl]
           val emailToSend = EmailToSend(
             from = SystemEmailAddress.NOTIFICATIONS,

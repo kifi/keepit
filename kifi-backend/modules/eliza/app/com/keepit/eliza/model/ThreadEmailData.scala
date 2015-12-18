@@ -20,7 +20,8 @@ case class ThreadEmailInfo(
   invitedByUser: Option[User],
   unsubUrl: Option[String],
   muteUrl: Option[String],
-  readTimeMinutes: Option[Int])
+  readTimeMinutes: Option[Int],
+  nonUserAccessToken: Option[String])
 
 case class ExtendedThreadItem(senderShortName: String, senderFullName: String, imageUrl: Option[String], segments: Seq[MessageSegment])
 

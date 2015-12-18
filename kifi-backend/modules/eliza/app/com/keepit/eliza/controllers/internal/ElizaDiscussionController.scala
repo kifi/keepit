@@ -8,7 +8,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.discussion.{ CrossServiceMessage, Message }
-import com.keepit.eliza.ElizaServiceClient
 import com.keepit.eliza.commanders.ElizaDiscussionCommander
 import com.keepit.eliza.model._
 import com.keepit.heimdal._
@@ -16,6 +15,8 @@ import com.keepit.model.Keep
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc.Action
+
+import scala.util.Try
 
 class ElizaDiscussionController @Inject() (
   discussionCommander: ElizaDiscussionCommander,
@@ -99,6 +100,14 @@ class ElizaDiscussionController @Inject() (
     val msgId = ElizaMessage.fromCommon(input.msgId)
     discussionCommander.deleteMessage(msgId)
     NoContent
+  }
+
+  def keepHasAccessToken(keepId: Id[Keep], accessToken: String) = Action { request =>
+    val hasToken = Try(ThreadAccessToken(accessToken)).map { token =>
+      discussionCommander.keepHasAccessToken(keepId, token)
+    }.getOrElse(false)
+
+    Ok(Json.obj("hasToken" -> hasToken))
   }
 
   def rpbGetThreads() = Action(parse.tolerantJson) { request =>

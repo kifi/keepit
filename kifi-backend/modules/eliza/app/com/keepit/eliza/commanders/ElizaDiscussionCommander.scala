@@ -18,6 +18,7 @@ import com.keepit.social.BasicUserLikeEntity
 import play.api.libs.json.JsNull
 import com.keepit.common.core._
 
+import scala.collection.parallel.immutable.ParSeq
 import scala.concurrent.{ ExecutionContext, Future }
 
 @ImplementedBy(classOf[ElizaDiscussionCommanderImpl])
@@ -32,6 +33,7 @@ trait ElizaDiscussionCommander {
   def markAsRead(userId: Id[User], keepId: Id[Keep], msgId: Id[ElizaMessage]): Option[Int]
   def editMessage(messageId: Id[ElizaMessage], newText: String): Future[Message]
   def deleteMessage(messageId: Id[ElizaMessage]): Unit
+  def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean
 }
 
 @Singleton
@@ -39,6 +41,7 @@ class ElizaDiscussionCommanderImpl @Inject() (
   db: Database,
   messageThreadRepo: MessageThreadRepo,
   userThreadRepo: UserThreadRepo,
+  nonUserThreadRepo: NonUserThreadRepo,
   messageRepo: MessageRepo,
   messagingCommander: MessagingCommander,
   clock: Clock,
@@ -211,4 +214,14 @@ class ElizaDiscussionCommanderImpl @Inject() (
   def deleteMessage(messageId: Id[ElizaMessage]): Unit = db.readWrite { implicit s =>
     messageRepo.deactivate(messageRepo.get(messageId))
   }
+
+  def keepHasAccessToken(keepId: Id[Keep], accessToken: ThreadAccessToken): Boolean = db.readOnlyMaster { implicit s =>
+    val nutOpt = nonUserThreadRepo.getByAccessToken(accessToken)
+    val threadOpt = messageThreadRepo.getByKeepId(keepId)
+    (nutOpt, threadOpt) match {
+      case (Some(nut), Some(thread)) => thread.id.contains(nut.threadId)
+      case _ => false
+    }
+  }
+
 }
