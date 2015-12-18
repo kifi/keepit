@@ -11,7 +11,7 @@ import com.keepit.notify.model.Recipient
 import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.db._
-import com.keepit.model.{ User, NormalizedURI }
+import com.keepit.model.{ Keep, User, NormalizedURI }
 import MessagingTypeMappers._
 import com.keepit.common.logging.Logging
 import com.keepit.common.cache.{ CacheSizeLimitExceededException, JsonCacheImpl, FortyTwoCachePlugin, Key }
@@ -115,6 +115,7 @@ case class ElizaMessage(
   updatedAt: DateTime = currentDateTime,
   state: State[ElizaMessage] = ElizaMessageStates.ACTIVE,
   seq: SequenceNumber[ElizaMessage] = SequenceNumber.ZERO,
+  keepId: Id[Keep],
   externalId: ExternalId[ElizaMessage] = ExternalId(),
   from: MessageSender,
   thread: Id[MessageThread],
@@ -143,6 +144,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format[State[ElizaMessage]] and
     (__ \ 'seq).format[SequenceNumber[ElizaMessage]] and
+    (__ \ 'keepId).format[Id[Keep]] and
     (__ \ 'externalId).format(ExternalId.format[ElizaMessage]) and
     (__ \ 'from).format[MessageSender] and
     (__ \ 'thread).format(Id.format[MessageThread]) and
@@ -160,6 +162,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     updatedAt: DateTime,
     state: State[ElizaMessage],
     seq: SequenceNumber[ElizaMessage],
+    keepId: Id[Keep],
     externalId: ExternalId[ElizaMessage],
     userSender: Option[Id[User]],
     thread: Id[MessageThread],
@@ -176,6 +179,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
       updatedAt,
       state,
       seq,
+      keepId,
       externalId,
       userSender.map(MessageSender.User(_)).getOrElse(nonUserSender.map(json => MessageSender.NonUser(json.as[NonUserParticipant])).getOrElse(MessageSender.System)),
       thread,
@@ -188,13 +192,14 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     )
   }
 
-  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
+  def toDbRow(message: ElizaMessage): Option[(Option[Id[ElizaMessage]], DateTime, DateTime, State[ElizaMessage], SequenceNumber[ElizaMessage], Id[Keep], ExternalId[ElizaMessage], Option[Id[User]], Id[MessageThread], ExternalId[MessageThread], String, Option[MessageSource], Option[JsArray], Option[String], Option[Id[NormalizedURI]], Option[JsValue])] = {
     Some((
       message.id,
       message.createdAt,
       message.updatedAt,
       message.state,
       message.seq,
+      message.keepId,
       message.externalId,
       message.from.asUser,
       message.thread,

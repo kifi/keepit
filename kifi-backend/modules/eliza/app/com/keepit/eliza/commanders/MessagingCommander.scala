@@ -212,6 +212,7 @@ class MessagingCommander @Inject() (
         if (nonUserRecipients.nonEmpty) {
           db.readWrite { implicit session =>
             messageRepo.save(ElizaMessage(
+              keepId = thread.keepId.get,
               from = MessageSender.System,
               thread = thread.id.get,
               threadExtId = thread.externalId,
@@ -260,6 +261,7 @@ class MessagingCommander @Inject() (
     log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite { implicit session =>
       messageRepo.save(ElizaMessage(
+        keepId = thread.keepId.get,
         from = from,
         thread = thread.id.get,
         threadExtId = thread.externalId,
@@ -430,6 +432,7 @@ class MessagingCommander @Inject() (
         } else {
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
           val message = messageRepo.save(ElizaMessage(
+            keepId = thread.keepId.get,
             from = MessageSender.System,
             thread = thread.id.get,
             threadExtId = thread.externalId,
