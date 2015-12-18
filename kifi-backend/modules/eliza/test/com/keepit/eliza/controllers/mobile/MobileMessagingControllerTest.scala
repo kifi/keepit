@@ -8,6 +8,7 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecu
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.slick._
+import com.keepit.common.json.TestHelper
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
@@ -15,7 +16,7 @@ import com.keepit.discussion.Message
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ UserFactory, User }
+import com.keepit.model.{ Keep, UserFactory, User }
 import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -27,7 +28,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
-
+  implicit def publicIdConfig(implicit injector: Injector): PublicIdConfiguration = inject[PublicIdConfiguration]
   implicit val context = HeimdalContext.empty
 
   def initUsers()(implicit injector: Injector): Seq[User] = {
@@ -203,10 +204,10 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val expected = Json.parse(s"""
           {
             "id": "${toMessageIdStr(message)}",
-            "parentId": "${thread.externalId.id}",
+            "parentId": "${Keep.publicId(thread.keepId.get).id}",
             "createdAt": "${message.createdAt.toStandardTimeString}",
             "threadInfo":{
-              "id": "${thread.externalId.id}",
+              "id": "${Keep.publicId(thread.keepId.get).id}",
               "participants":
               [
                 {
@@ -252,7 +253,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               }]
           }
           """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        val actual = contentAsJson(result)
+        TestHelper.deepCompare(actual, expected) must beNone
 
       }
     }

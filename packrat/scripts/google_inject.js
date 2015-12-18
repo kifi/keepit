@@ -995,8 +995,35 @@ if (searchUrlRe.test(document.URL)) !function () {
       } else if (tagEls.length) {
         // shorten only tag name to fit
         var tagEl = tagEls[0];
-        elStylesToSet.push([tagEl, 'maxWidth', tagEl.offsetWidth - pxToGo + 'px']);
-        pxToGo = 0;
+        var difference = tagEl.offsetWidth - pxToGo;
+        if (difference > 20) {
+          elStylesToSet.push([tagEl, 'maxWidth', tagEl.offsetWidth - pxToGo + 'px']);
+        } else {
+          if (!nTagsEl) {
+            var nTagsEl = this.getElementsByClassName('kifi-res-tags-n')[0];
+            var nTags = +nTagsEl.textContent || 0;
+            if (nTags === 0) {
+              pxToGo += 24;  // plus and space and 1
+            }
+          }
+          elsToRemove.push(tagEls.pop());
+          nTags++;
+          pxToGo -= tagEl.offsetWidth;
+        }
+        break;
+      }
+    }
+
+    while (pxToGo > 0) {
+      var userEls = userEls || Array.prototype.slice.call(this.getElementsByClassName('kifi-res-user'));
+      var userEl;
+
+      if (userEls.length > 2) {
+        userEl = userEls.pop();
+        elsToRemove.push(userEl);
+        pxToGo -= userEl.offsetWidth;
+        nUsers++;
+      } else {
         break;
       }
     }

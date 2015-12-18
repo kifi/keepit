@@ -46,9 +46,9 @@ class DiscussionCommanderImpl @Inject() (
   }
   def getMessagesOnKeep(userId: Id[User], keepId: Id[Keep], limit: Int, fromIdOpt: Option[Id[Message]]): Future[Seq[Message]] = {
     val errs = db.readOnlyReplica { implicit s =>
-      val userCanViewMessages = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.VIEW_MESSAGES)
+      val userCanViewKeep = permissionCommander.getKeepPermissions(keepId, Some(userId)).contains(KeepPermission.VIEW_KEEP)
       Stream[Option[DiscussionFail]](
-        Some(DiscussionFail.INSUFFICIENT_PERMISSIONS).filter(_ => !userCanViewMessages)
+        Some(DiscussionFail.INSUFFICIENT_PERMISSIONS).filter(_ => !userCanViewKeep)
       ).flatten
     }
 

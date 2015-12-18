@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
-  def getOrCreate(starter: Id[User], participants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], url: String, uriId: Id[NormalizedURI], nUrl: String, pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean)
+  def getByUriAndParticipants(uriId: Id[NormalizedURI], participants: MessageThreadParticipants)(implicit session: RSession): Seq[MessageThread]
   override def get(id: ExternalId[MessageThread])(implicit session: RSession): MessageThread
   override def get(id: Id[MessageThread])(implicit session: RSession): MessageThread
   def getActiveByIds(ids: Set[Id[MessageThread]])(implicit session: RSession): Map[Id[MessageThread], MessageThread]
@@ -81,28 +81,9 @@ class MessageThreadRepoImpl @Inject() (
 
   override def save(messageThread: MessageThread)(implicit session: RWSession) = super.save(messageThread.clean())
 
-  def getOrCreate(starter: Id[User], userParticipants: Seq[Id[User]], nonUserParticipants: Seq[NonUserParticipant], url: String, uriId: Id[NormalizedURI], nUrl: String, pageTitleOpt: Option[String])(implicit session: RWSession): (MessageThread, Boolean) = {
-    airbrake.verify(userParticipants.contains(starter), s"Called getOrCreate with starter $starter and users $userParticipants")
-    val mtps = MessageThreadParticipants(userParticipants.toSet, nonUserParticipants.toSet)
-
-    // This will find any thread with the same participants set (on the correct page). It does not check who owns the thread
-    // Passing in a starter is only to indicate who will own the thread if a NEW one must be created
-    val candidates: Seq[MessageThread] = activeRows.filter(row => row.participantsHash === mtps.hash && row.uriId === uriId).list.filter { thread =>
-      thread.participants == mtps
-    }
-    candidates.headOption match {
-      case Some(cand) => (cand, false)
-      case None =>
-        val thread = MessageThread(
-          uriId = uriId,
-          url = url,
-          nUrl = nUrl,
-          pageTitle = pageTitleOpt,
-          startedBy = starter,
-          participants = mtps,
-          keepId = None
-        )
-        (save(thread), true)
+  def getByUriAndParticipants(uriId: Id[NormalizedURI], participants: MessageThreadParticipants)(implicit session: RSession): Seq[MessageThread] = {
+    activeRows.filter(row => row.participantsHash === participants.hash && row.uriId === uriId).list.filter { thread =>
+      thread.participants == participants
     }
   }
 
@@ -125,7 +106,7 @@ class MessageThreadRepoImpl @Inject() (
   }
 
   def getByMessageThreadId(threadId: MessageThreadId)(implicit session: RSession): Option[MessageThread] = threadId match {
-    case ThreadExternalId(extId) => Some(get(extId))
+    case ThreadExternalId(extId) => getOpt(extId)
     case KeepId(keepId) => getByKeepId(keepId)
   }
 

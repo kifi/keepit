@@ -25,7 +25,8 @@ k.panes.thread = k.panes.thread || function () {
     thread_info: function (o) {
       if ($holder && $holder.data('threadId') === o.th.thread) {
         $holder.data('keep', o.keep);
-        k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, o.th.participants, o.keep);
+        var participants = o.th.participants || o.keep && [o.keep.keptBy] || [];
+        k.messageHeader.init($who.find('.kifi-message-header'), o.th.thread, participants, o.keep);
       }
     },
     thread: function (o) {
@@ -178,7 +179,9 @@ k.panes.thread = k.panes.thread || function () {
       scrollToBottomResiliently(true);
     }
 
-    emitRendered(threadId, messages[messages.length - 1]);
+    if (messages && messages.length) {
+      emitRendered(threadId, messages[messages.length - 1]);
+    }
   }
 
   function justNewMessages($msgs, messages) {

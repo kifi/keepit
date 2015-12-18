@@ -177,7 +177,7 @@ class NotificationDeliveryCommander @Inject() (
         "title" -> theTitle,
         "author" -> basicUsers(adderUserId),
         "participants" -> participants,
-        "locator" -> ("/messages/" + thread.threadId),
+        "locator" -> thread.deepLocator,
         "unread" -> true,
         "category" -> NotificationCategory.User.MESSAGE.category
       )

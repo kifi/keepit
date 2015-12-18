@@ -393,18 +393,20 @@ k.panes.notices = k.panes.notices || function () {
     var uri = this.dataset.uri;
     var category = this.dataset.category;
     var threadId = this.dataset.thread;
+    var locator = this.dataset.locator;
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
-    switch (category) {
-    case 'message':
-      api.port.emit('open_deep_link', {nUri: uri, locator: '/messages/' + threadId, inThisTab: inThisTab, from: 'notice'});
+
+    if (category !== 'message') {
+      markOneRead(this.dataset.createdAt, threadId, this.dataset.id);
+      api.port.emit('set_message_read', {threadId: threadId, messageId: this.dataset.id, time: this.dataset.createdAt, category: category, from: 'notice'});
+    }
+
+    if (locator) { // Notification has extension behavior
+      api.port.emit('open_deep_link', {nUri: uri, locator: locator, inThisTab: inThisTab, from: 'notice'});
       if (inThisTab && uri !== document.URL) {
         window.location = uri;
       }
-      break;
-    case 'triggered':
-    case 'global':
-      markOneRead(this.dataset.createdAt, threadId, this.dataset.id);
-      api.port.emit('set_message_read', {threadId: threadId, messageId: this.dataset.id, time: this.dataset.createdAt, category: category, from: 'notice'});
+    } else {
       if (uri && uri !== document.URL) {
         if (inThisTab) {
           window.location = uri;
@@ -412,7 +414,6 @@ k.panes.notices = k.panes.notices || function () {
           window.open(uri, '_blank').focus();
         }
       }
-      break;
     }
     e.preventDefault();
   }

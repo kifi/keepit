@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import scala.collection.mutable
+import com.keepit.discussion.Message
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.commanders.{ LibraryMetadataCache, LibraryMetadataKey }
 import com.keepit.common.db._
@@ -105,10 +105,11 @@ class KeepRepoImpl @Inject() (
     def organizationId = column[Option[Id[Organization]]]("organization_id", O.Nullable)
     def librariesHash = column[LibrariesHash]("libraries_hash", O.NotNull)
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
+    def messageSeq = column[Option[SequenceNumber[Message]]]("message_seq", O.Nullable)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
       (userId, state, source, seq, libraryId, visibility, keptAt,
-        note, originalKeeperId, organizationId, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
+        note, originalKeeperId, organizationId, librariesHash, participantsHash, messageSeq)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
 
     def isPrivate: Column[Boolean] = {
       val privateVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.SECRET, LibraryVisibility.ORGANIZATION)
@@ -146,7 +147,8 @@ class KeepRepoImpl @Inject() (
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],
       librariesHash = r.<<[LibrariesHash],
-      participantsHash = r.<<[ParticipantsHash]
+      participantsHash = r.<<[ParticipantsHash],
+      messageSeq = r.<<[Option[SequenceNumber[Message]]]
     )
   }
   private val bookmarkColumnOrder: String = _taggedTable.columnStrings("bm")
@@ -167,7 +169,7 @@ class KeepRepoImpl @Inject() (
 
   def page(page: Int, size: Int, includePrivate: Boolean, excludeStates: Set[State[Keep]])(implicit session: RSession): Seq[Keep] = {
     val q = for {
-      t <- rows if (t.isPrivate || includePrivate) && !t.state.inSet(excludeStates)
+      t <- rows if (t.visibility === (LibraryVisibility.PUBLISHED: LibraryVisibility) || includePrivate) && !t.state.inSet(excludeStates)
     } yield t
     q.sortBy(_.id desc).drop(page * size).take(size).list
   }

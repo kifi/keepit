@@ -1026,6 +1026,8 @@ GET      /internal/shoebox/database/getLibraryMembershipView       @com.keepit.c
 POST     /internal/shoebox/database/getIntegrationsBySlackChannel      @com.keepit.controllers.internal.ShoeboxController.getIntegrationsBySlackChannel()
 POST     /internal/shoebox/database/getSourceAttributionForKeeps       @com.keepit.controllers.internal.ShoeboxController.getSourceAttributionForKeeps()
 
+POST     /internal/shoebox/database/internKeep       @com.keepit.controllers.internal.ShoeboxController.internKeep()
+
 GET      /internal/shoebox/email/getUnsubscribeUrlForEmail @com.keepit.controllers.website.EmailOptOutController.getUnsubscribeUrlForEmail(email: EmailAddress)
 
 GET     /internal/shoebox/database/getUsersByExperiment     @com.keepit.controllers.internal.ShoeboxController.getUsersByExperiment(experiment: UserExperimentType)
