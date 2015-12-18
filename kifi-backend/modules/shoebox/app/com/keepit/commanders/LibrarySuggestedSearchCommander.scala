@@ -3,6 +3,7 @@ package com.keepit.commanders
 import com.google.inject.{ ImplementedBy, Inject, Singleton }
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.queue.messages.SuggestedSearchTerms
 import com.keepit.model._
 
@@ -21,7 +22,7 @@ trait LibrarySuggestedSearchCommander {
 class LibrarySuggestedSearchCommanderImpl @Inject() (
     val db: Database,
     val keepRepo: KeepRepo,
-    val suggestedSearchRepo: LibrarySuggestedSearchRepo) extends LibrarySuggestedSearchCommander {
+    val suggestedSearchRepo: LibrarySuggestedSearchRepo) extends LibrarySuggestedSearchCommander with Logging {
 
   def getSuggestedTermsForLibrary(libId: Id[Library], limit: Int, kind: SuggestedSearchTermKind): SuggestedSearchTerms = {
     db.readOnlyReplica { implicit s => suggestedSearchRepo.getSuggestedTermsByLibrary(libId, limit, kind) }
@@ -50,10 +51,11 @@ class LibrarySuggestedSearchCommanderImpl @Inject() (
           val hasNotBeenPersisted = !existingOpt.exists(m => m.term == termToBePersisted && m.weight == weight && m.termKind == kind)
           if (hasBeenDeactivated || hasNotBeenPersisted) {
             val toBePersisted = LibrarySuggestedSearch(id = existingOpt.flatMap(_.id), term = termToBePersisted, weight = weight, libraryId = libId, termKind = kind)
-            Try(suggestedSearchRepo.save(toBePersisted)).recoverWith { case ex: Throwable =>
-              // This isn't worth the airbrake noise if it fails. Logs if anyone wants to investigate why they fail.
-              log.error(s"[saveSuggestedSearchTermsForLibrary] Could not persist $termToBePersisted; $hasBeenDeactivated || $hasNotBeenPersisted, " +
-                s"model: $toBePersisted; existing: $existingOpt. Existing set: $existingByNormalizedTerm", ex)
+            Try(suggestedSearchRepo.save(toBePersisted)).recoverWith {
+              case ex: Throwable =>
+                // This isn't worth the airbrake noise if it fails. Logs if anyone wants to investigate why they fail.
+                log.error(s"[saveSuggestedSearchTermsForLibrary] Could not persist $termToBePersisted; $hasBeenDeactivated || $hasNotBeenPersisted, " +
+                  s"model: $toBePersisted; existing: $existingOpt. Existing set: $existingByNormalizedTerm", ex)
             }
           }
       }
