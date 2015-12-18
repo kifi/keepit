@@ -63,7 +63,7 @@ function clearDataCache() {
       notice.context.userAgent = api.browser.userAgent;
       notice.context.userId = me && me.id;
       sendXhr('POST', 'https://api.airbrake.io/api/v3/projects/' + opts.projectId + '/notices?key=' + opts.projectKey, notice, {}, function (o) {
-        log('[airbrake]', o.url);
+        log('[airbrake]', o && o.url);
       });
     }
   });
