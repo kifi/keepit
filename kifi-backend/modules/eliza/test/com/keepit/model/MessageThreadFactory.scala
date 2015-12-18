@@ -21,12 +21,12 @@ object MessageThreadFactory {
       pageTitle = Some(RandomStringUtils.randomAlphabetic(5).toUpperCase),
       startedBy = starter,
       participants = MessageThreadParticipants(Set(starter)),
-      keepId = None
+      keepId = Id(idx.incrementAndGet())
     ))
   }
 
   case class PartialMessageThread(th: MessageThread) {
-    def withKeep(keepId: Id[Keep]) = this.copy(th = th.copy(keepId = Some(keepId)))
+    def withKeep(keepId: Id[Keep]) = this.copy(th = th.copy(keepId = keepId))
     def withTitle(newTitle: String) = this.copy(th = th.copy(pageTitle = Some(newTitle)))
     def withUri(uriId: Id[NormalizedURI]) = this.copy(th = th.copy(uriId = uriId))
     def withOnlyStarter(startedBy: Id[User]) = this.copy(th = th.copy(startedBy = startedBy, participants = MessageThreadParticipants(Set(startedBy))))

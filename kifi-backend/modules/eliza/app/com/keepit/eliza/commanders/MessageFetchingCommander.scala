@@ -86,7 +86,7 @@ class MessageFetchingCommander @Inject() (
     db.readOnlyMaster(threadRepo.getByMessageThreadId(threadExtId)(_)) match {
       case Some(thread) =>
         val futureMessages = getThreadMessagesWithBasicUser(thread)
-        val futureKeep = thread.keepId.map(keepId => shoebox.getDiscussionKeepsByIds(userId, Set(keepId)).imap(_.get(keepId))) getOrElse Future.successful(None)
+        val futureKeep = shoebox.getDiscussionKeepsByIds(userId, Set(thread.keepId)).imap(_.get(thread.keepId))
         for {
           messages <- futureMessages
           discussionKeepOpt <- futureKeep

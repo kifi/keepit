@@ -21,7 +21,6 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread]
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread]
   def getByMessageThreadId(threadId: MessageThreadId)(implicit session: RSession): Option[MessageThread]
-  def getThreadsWithoutKeepId(limit: Int)(implicit session: RSession): Seq[MessageThread]
 }
 
 @Singleton
@@ -47,7 +46,7 @@ class MessageThreadRepoImpl @Inject() (
     participants: MessageThreadParticipants,
     participantsHash: Int, // exists only in the db, will not be put into the model
     pageTitle: Option[String],
-    keepId: Option[Id[Keep]]): MessageThread = {
+    keepId: Id[Keep]): MessageThread = {
     MessageThread(id, createdAt, updatedAt, state, externalId, uriId, url, nUrl, startedBy, participants, pageTitle, keepId)
   }
   private def messageThreadToDbRow(mt: MessageThread) = {
@@ -65,7 +64,7 @@ class MessageThreadRepoImpl @Inject() (
     def participants = column[MessageThreadParticipants]("participants", O.NotNull)
     def participantsHash = column[Int]("participants_hash", O.NotNull)
     def pageTitle = column[Option[String]]("page_title", O.Nullable)
-    def keepId = column[Option[Id[Keep]]]("keep_id", O.Nullable)
+    def keepId = column[Id[Keep]]("keep_id", O.NotNull)
     def * = (id.?, createdAt, updatedAt, state, externalId, uriId, url, nUrl, startedBy, participants, participantsHash, pageTitle, keepId) <> ((messageThreadFromDbRow _).tupled, messageThreadToDbRow _)
   }
   def table(tag: Tag) = new MessageThreadTable(tag)
@@ -101,15 +100,11 @@ class MessageThreadRepoImpl @Inject() (
   }
 
   def getByKeepIds(keepIds: Set[Id[Keep]])(implicit session: RSession): Map[Id[Keep], MessageThread] = {
-    activeRows.filter(_.keepId.inSet(keepIds)).list.groupBy(_.keepId).collect { case (Some(kid), Seq(thread)) => kid -> thread }
+    activeRows.filter(_.keepId.inSet(keepIds)).list.groupBy(_.keepId).collect { case (kid, Seq(thread)) => kid -> thread }
   }
   def getByKeepId(keepId: Id[Keep])(implicit session: RSession): Option[MessageThread] = {
     getByKeepIds(Set(keepId)).get(keepId)
   }
-  def getThreadsWithoutKeepId(limit: Int)(implicit session: RSession): Seq[MessageThread] = {
-    activeRows.filter(row => row.keepId.isEmpty).take(limit).list
-  }
-
   def getByMessageThreadId(threadId: MessageThreadId)(implicit session: RSession): Option[MessageThread] = threadId match {
     case ThreadExternalId(extId) => getOpt(extId)
     case KeepId(keepId) => getByKeepId(keepId)

@@ -131,9 +131,6 @@ trait ElizaServiceClient extends ServiceClient {
   def editMessage(msgId: Id[Message], newText: String): Future[Message]
   def deleteMessage(msgId: Id[Message]): Future[Unit]
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]]
-
-  def rpbGetThreads(limit: Int): Future[RPBGetThreads.Response]
-  def rpbConnectKeeps(connections: Map[Long, Id[Keep]]): Future[Unit]
 }
 
 class ElizaServiceClientImpl @Inject() (
@@ -339,22 +336,6 @@ class ElizaServiceClientImpl @Inject() (
   def getMessagesChanged(seqNum: SequenceNumber[Message], fetchSize: Int): Future[Seq[CrossServiceMessage]] = {
     call(Eliza.internal.getMessagesChanged(seqNum, fetchSize)).map { _.json.as[Seq[CrossServiceMessage]] }
   }
-
-  // TODO(ryan): delete this morass
-  def rpbGetThreads(limit: Int): Future[RPBGetThreads.Response] = {
-    import RPBGetThreads._
-    val request = Request(limit)
-    call(Eliza.internal.rpbGetThreads, body = Json.toJson(request)).map { response =>
-      response.json.as[Response]
-    }
-  }
-  def rpbConnectKeeps(connections: Map[Long, Id[Keep]]): Future[Unit] = {
-    import RPBConnectKeeps._
-    val request = Request(connections)
-    call(Eliza.internal.rpbConnectKeeps(), body = Json.toJson(request)).map { response =>
-      Unit
-    }
-  }
 }
 
 object ElizaServiceClient {
@@ -400,21 +381,5 @@ object ElizaServiceClient {
       Reads { j => j.validate[Long].map(n => Request(Id(n))) },
       Writes { o => JsNumber(o.msgId.id) }
     )
-  }
-
-  // TODO(ryan): delete this grossness
-  object RPBGetThreads {
-    case class Request(limit: Int)
-    case class Response(threads: Map[Long, ThreadObject])
-    case class ThreadObject(startedBy: Id[User], userAddedAt: Map[Id[User], DateTime], title: Option[String], url: String, startedAt: DateTime)
-    implicit val threadObjectFormat = Json.format[ThreadObject]
-    implicit val mapFormat = TraversableFormat.mapFormat[Long, ThreadObject](_.toString, s => Try(s.toLong).toOption)
-    implicit val requestFormat: Format[Request] = Json.format[Request]
-    implicit val responseFormat: Format[Response] = Json.format[Response]
-  }
-  object RPBConnectKeeps {
-    case class Request(connections: Map[Long, Id[Keep]])
-    implicit val mapFormat = TraversableFormat.mapFormat[Long, Id[Keep]](_.toString, s => Try(s.toLong).toOption)
-    implicit val requestFormat: Format[Request] = Json.format[Request]
   }
 }

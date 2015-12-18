@@ -172,7 +172,7 @@ class MessagingCommander @Inject() (
     matches.headOption match {
       case Some(mt) => Future.successful(mt, false)
       case None =>
-        shoebox.internKeep(from, userParticipants.toSet, nUriId, url, titleOpt, None).map { csKeep => Some(csKeep.id) }.recover { case f => None }.map { keepIdOpt =>
+        shoebox.internKeep(from, userParticipants.toSet, nUriId, url, titleOpt, None).map { csKeep =>
           db.readWrite { implicit s =>
             val thread = threadRepo.save(MessageThread(
               uriId = nUriId,
@@ -181,9 +181,8 @@ class MessagingCommander @Inject() (
               pageTitle = titleOpt,
               startedBy = from,
               participants = mtParticipants,
-              keepId = keepIdOpt
+              keepId = csKeep.id
             ))
-            if (keepIdOpt.isEmpty) airbrake.notify(s"Shoebox failed to intern a keep for thread ${thread.id.get}")
             (thread, true)
           }
         }
