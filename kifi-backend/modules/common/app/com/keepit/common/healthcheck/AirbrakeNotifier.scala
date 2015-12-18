@@ -129,7 +129,7 @@ class AirbrakeSender @Inject() (
 
     futureResult.onFailure {
       case exception =>
-        log.error(s"error sending airbrake json: $json", exception)
+        log.error(s"error sending airbrake json: ${json.toString.take(500)}", exception)
     }
   }
 }
@@ -192,7 +192,7 @@ class AirbrakeNotifierImpl(actor: ActorInstance[AirbrakeNotifierActor], isCanary
     if (!isCanary) { // can filter out panic later
       actor.ref ! AirbrakeErrorNotice(error.cleanError)
     }
-    log.error(error.toString())
+    log.error(error.toString().take(2048))
     error
   }
 }
