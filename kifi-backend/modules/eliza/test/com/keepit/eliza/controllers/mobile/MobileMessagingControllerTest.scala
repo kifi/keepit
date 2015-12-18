@@ -302,6 +302,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "id": "${thread.externalId.id}",
             "uri": "https://admin.kifi.com/admin/searchExperiments",
             "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+            "keep":null,
             "participants": [
               {
                 "id": "${shanee.externalId.id}",
@@ -396,6 +397,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               "id": "${thread.externalId.id}",
               "uri": "https://admin.kifi.com/admin/searchExperiments",
               "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+              "keep":null,
               "participants": [
                 {
                   "id": "${shanee.externalId.id}",
@@ -447,6 +449,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               "id": "${thread.externalId.id}",
               "uri": "https://admin.kifi.com/admin/searchExperiments",
               "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+              "keep":null,
               "participants": [
                 {
                   "id": "${shanee.externalId.id}",
@@ -485,6 +488,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               "id": "${thread.externalId.id}",
               "uri": "https://admin.kifi.com/admin/searchExperiments",
               "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+              "keep":null,
               "participants": [
                 {
                   "id": "${shanee.externalId.id}",
@@ -582,6 +586,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
             "id": "${thread.externalId.id}",
             "uri": "https://admin.kifi.com/admin/searchExperiments",
             "nUrl": "https://admin.kifi.com/admin/searchExperiments",
+            "keep":null,
             "participants": [
               {
                 "id": "${shanee.externalId.id}",
