@@ -1320,7 +1320,13 @@ api.port.on({
     });
   },
   open_tab: function (data) {
-    api.tabs.open(webBaseUri() + data.path);
+    var url = webBaseUri() + data.path;
+    var existingTab = api.tabs.anyAt(url);
+    if (existingTab && existingTab.id) {
+      api.tabs.select(existingTab.id);
+    } else {
+      api.tabs.open(url, function () {});
+    }
     if (data.source === 'keeper') {
       tracker.track('user_clicked_pane', {type: 'keeper', action: 'visitKifiSite'});
     }

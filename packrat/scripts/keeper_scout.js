@@ -173,7 +173,7 @@ k.tile = k.tile || function () {  // idempotent for Chrome
   }
 
   function openLoginWindow() {
-    window.open('https://www.kifi.com/login', '_blank').focus();
+    api.port.emit('open_tab', {path: '/login'});
   }
 
   function loadAndDo(name, methodName) {  // gateway to keeper.js or pane.js
