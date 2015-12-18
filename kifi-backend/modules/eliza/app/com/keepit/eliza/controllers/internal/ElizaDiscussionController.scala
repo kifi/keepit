@@ -115,27 +115,4 @@ class ElizaDiscussionController @Inject() (
     }
     Ok(Json.toJson(messages))
   }
-
-  def rpbGetThreads() = Action(parse.tolerantJson) { request =>
-    import RPBGetThreads._
-    val input = request.body.as[Request]
-    db.readOnlyMaster { implicit s =>
-      val threads = threadRepo.getThreadsWithoutKeepId(limit = input.limit)
-      val output = Response(threads.map { th => th.id.get.id -> ThreadObject(th.startedBy, th.participants.userParticipants, th.pageTitle, th.url, th.createdAt) }.toMap)
-      Ok(Json.toJson(output))
-    }
-  }
-  def rpbConnectKeeps() = Action(parse.tolerantJson) { request =>
-    import RPBConnectKeeps._
-    val input = request.body.as[Request]
-    db.readWrite { implicit s =>
-      input.connections.foreach {
-        case (threadId, keepId) =>
-          val thread = threadRepo.get(Id[MessageThread](threadId))
-          assert(thread.keepId.isEmpty)
-          threadRepo.save(thread.withKeepId(keepId))
-      }
-      NoContent
-    }
-  }
 }

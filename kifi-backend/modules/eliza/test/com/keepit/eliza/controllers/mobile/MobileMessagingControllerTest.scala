@@ -204,10 +204,10 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         val expected = Json.parse(s"""
           {
             "id": "${toMessageIdStr(message)}",
-            "parentId": "${Keep.publicId(thread.keepId.get).id}",
+            "parentId": "${Keep.publicId(thread.keepId).id}",
             "createdAt": "${message.createdAt.toStandardTimeString}",
             "threadInfo":{
-              "id": "${Keep.publicId(thread.keepId.get).id}",
+              "id": "${Keep.publicId(thread.keepId).id}",
               "participants":
               [
                 {

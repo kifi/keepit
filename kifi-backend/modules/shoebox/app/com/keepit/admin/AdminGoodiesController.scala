@@ -85,43 +85,4 @@ class AdminGoodiesController @Inject() (
         (companion, a, b)
     }
   }
-
-  // TODO(ryan): erase this garbage from the face of the earth, what were you thinking?
-  def backfillMessageThread() = AdminUserAction(parse.tolerantJson) { request =>
-    val source = KeepSource.discussion
-    val n = (request.body \ "n").as[Int]
-    val limit = (request.body \ "limit").as[Int]
-    implicit val context = HeimdalContext.empty
-    FutureHelpers.sequentialExec(1 to n) { _ =>
-      for {
-        res <- eliza.rpbGetThreads(limit)
-        keepsByThreadId = res.threads.map {
-          case (threadId, threadObject) =>
-            val rawBookmark = RawBookmarkRepresentation(title = threadObject.title, url = threadObject.url, keptAt = Some(threadObject.startedAt))
-            val keepTemplate = keepInterner.internRawBookmarksWithStatus(Seq(rawBookmark), threadObject.startedBy, None, source).newKeeps.head
-            val keep = db.readWrite { implicit s =>
-              val k = keepCommander.persistKeep(keepTemplate, users = threadObject.userAddedAt.keySet, libraries = Set.empty)
-              // Manually hack in all the keep-to-users
-              threadObject.userAddedAt.foreach {
-                case (uid, addedAt) =>
-                  val ktu = ktuCommander.internKeepInUser(k, uid, k.userId)
-                  ktuRepo.save(ktu.withAddedAt(addedAt))
-              }
-              k
-            }
-            threadId -> keep.id.get
-        }
-        _ <- eliza.rpbConnectKeeps(keepsByThreadId)
-      } yield {
-        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Interned (thread, keep) pairs: $keepsByThreadId"))
-        Thread.sleep(5000)
-      }
-    }.andThen {
-      case Success(_) =>
-        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Done!"))
-      case Failure(fail) =>
-        inhouseSlackClient.sendToSlack(InhouseSlackChannel.TEST_RYAN, SlackMessageRequest.fromKifi(s"Crap, we broke because $fail"))
-    }
-    Ok(JsString("started, check #test-ryan"))
-  }
 }
