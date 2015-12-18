@@ -982,7 +982,10 @@ api.port.on({
     if (data.to) {
       respond(drafts[tab.nUri] || drafts[tab.url]);
     } else {
-      respond(drafts[currentThreadId(tab)]);
+      var threadId = currentThreadId(tab);
+      if (threadId) {
+        respond(drafts[threadId]);
+      }
     }
   },
   save_draft: function (data, _, tab) {
@@ -1825,7 +1828,7 @@ function forEachTabAtThreadList(f) {
   }
 }
 
-var threadLocatorRe = /^\/messages\/[a-z0-9-]+$/;
+var threadLocatorRe = /^\/messages\/[A-Za-z0-9-]+$/;
 function forEachThreadOpenInPane(f) {
   for (var loc in tabsByLocator) {
     if (threadLocatorRe.test(loc)) {
@@ -2387,6 +2390,7 @@ function storeDrafts(drafts) {
 
 function saveDraft(key, draft) {
   log('[saveDraft]', key);
+  if (!key) return;
   var now = draft.saved = Date.now();
   var drafts = loadDrafts();
   for (var k in drafts) {
