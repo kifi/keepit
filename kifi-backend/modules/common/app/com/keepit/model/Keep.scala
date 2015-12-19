@@ -61,7 +61,7 @@ case class Keep(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withNote(newNote: Option[String]) = this.copy(note = newNote)
   def withVisibility(newVisibility: LibraryVisibility) = this.copy(visibility = newVisibility)
-  def withOwner(newOwner: Id[User]) = this.copy(userId = newOwner)
+  def withOwner(newOwner: Id[User]) = this.copy(userId = newOwner, connections = connections.withUsers(Set(newOwner)))
 
   def withActive(isActive: Boolean) = copy(state = isActive match {
     case true => KeepStates.ACTIVE
@@ -79,7 +79,8 @@ case class Keep(
   def withLibrary(lib: Library) = this.copy(
     libraryId = Some(lib.id.get),
     visibility = lib.visibility,
-    organizationId = lib.organizationId
+    organizationId = lib.organizationId,
+    connections = connections.withLibraries(Set(lib.id.get))
   )
 
   def withLibraries(libraries: Set[Id[Library]]): Keep = this.copy(connections = connections.withLibraries(libraries))
@@ -143,9 +144,11 @@ object Keep extends PublicIdGenerator[Keep] {
     url: String, userId: Id[User],
     state: State[Keep], source: KeepSource,
     seq: SequenceNumber[Keep], libraryId: Option[Id[Library]], visibility: LibraryVisibility, keptAt: DateTime,
-    note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]], connections: KeepConnections, lh: LibrariesHash, ph: ParticipantsHash, messageSeq: Option[SequenceNumber[Message]]): Keep = {
+    note: Option[String], originalKeeperId: Option[Id[User]], organizationId: Option[Id[Organization]],
+    connections: Option[KeepConnections], lh: LibrariesHash, ph: ParticipantsHash, messageSeq: Option[SequenceNumber[Message]]): Keep = {
     Keep(id, createdAt, updatedAt, externalId, title, uriId, isPrimary.exists(b => b), url,
-      visibility, userId, state, source, seq, libraryId, keptAt, note, originalKeeperId.orElse(Some(userId)), organizationId, connections, messageSeq)
+      visibility, userId, state, source, seq, libraryId, keptAt, note, originalKeeperId.orElse(Some(userId)),
+      organizationId, connections.getOrElse(KeepConnections(libraryId.toSet, Set(userId))), messageSeq)
   }
 
   def unapplyToDbRow(k: Keep) = {
@@ -155,12 +158,12 @@ object Keep extends PublicIdGenerator[Keep] {
       (k.userId, k.state, k.source,
         k.seq, k.libraryId, k.visibility, k.keptAt,
         k.note, k.originalKeeperId.orElse(Some(k.userId)), k.organizationId,
-        k.connections, k.connections.librariesHash, k.connections.participantsHash, k.messageSeq)
+        Some(k.connections), k.connections.librariesHash, k.connections.participantsHash, k.messageSeq)
     )
   }
 
   private type KeepFirstArguments = (Option[Id[Keep]], DateTime, DateTime, ExternalId[Keep], Option[String], Id[NormalizedURI], Option[Boolean], String)
-  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[String], Option[Id[User]], Option[Id[Organization]], KeepConnections, LibrariesHash, ParticipantsHash, Option[SequenceNumber[Message]])
+  private type KeepRestArguments = (Id[User], State[Keep], KeepSource, SequenceNumber[Keep], Option[Id[Library]], LibraryVisibility, DateTime, Option[String], Option[Id[User]], Option[Id[Organization]], Option[KeepConnections], LibrariesHash, ParticipantsHash, Option[SequenceNumber[Message]])
   def _bookmarkFormat = {
     val fields1To10: Reads[KeepFirstArguments] = (
       (__ \ 'id).readNullable(Id.format[Keep]) and
@@ -182,7 +185,7 @@ object Keep extends PublicIdGenerator[Keep] {
       (__ \ 'note).readNullable[String] and
       (__ \ 'originalKeeperId).readNullable[Id[User]] and
       (__ \ 'organizationId).readNullable[Id[Organization]] and
-      (__ \ 'connections).read[KeepConnections] and
+      (__ \ 'connections).readNullable[KeepConnections] and
       (__ \ 'librariesHash).read[LibrariesHash] and
       (__ \ 'participantsHash).read[ParticipantsHash] and
       (__ \ 'messageSeq).readNullable(SequenceNumber.format[Message])

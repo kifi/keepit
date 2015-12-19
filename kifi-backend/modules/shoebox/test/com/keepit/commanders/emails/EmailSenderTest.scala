@@ -29,6 +29,7 @@ import org.specs2.mutable.Specification
 import scala.concurrent.duration.Duration
 import scala.concurrent.Await
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.UserFactory._
 
 class EmailSenderTest extends Specification with ShoeboxTestInjector {
@@ -420,7 +421,7 @@ class EmailSenderTest extends Specification with ShoeboxTestInjector {
         val uri = uriRepo.save(NormalizedURI(url = "http://www.kifi.com", urlHash = UrlHash("abc")))
         // todo(andrew) jared compiler bug if url_ var is named url
         val url_ = urlRepo.save(URL(url = "http://www.kifi.com", domain = None, normalizedUriId = uri.id.get))
-        val keep = keepRepo.save(Keep(url = url_.url, libraryId = lib1.id, uriId = uri.id.get, visibility = LibraryVisibility.SECRET, userId = user1.id.get, source = KeepSource.keeper))
+        val keep = KeepFactory.keep().withLibrary(lib1).withUri(uri).withUser(user1).saved
 
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 

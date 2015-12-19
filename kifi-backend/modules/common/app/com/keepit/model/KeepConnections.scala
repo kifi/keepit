@@ -15,6 +15,9 @@ case class KeepConnections(
 
   def withLibraries(libraries: Set[Id[Library]]) = this.copy(libraries = libraries)
   def withUsers(users: Set[Id[User]]) = this.copy(users = users)
+
+  def plusUser(user: Id[User]) = this.withUsers(users + user)
+  def plusLibrary(lib: Id[Library]) = this.withLibraries(libraries + lib)
 }
 object KeepConnections {
   val EMPTY: KeepConnections = KeepConnections(libraries = Set.empty, users = Set.empty)

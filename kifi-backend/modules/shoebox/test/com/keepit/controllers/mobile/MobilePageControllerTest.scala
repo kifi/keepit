@@ -3,31 +3,28 @@ package com.keepit.controllers.mobile
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import com.keepit.abook.FakeABookServiceClientModule
-
-import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.cortex.FakeCortexServiceClientModule
-import org.specs2.mutable.{ SpecificationLike }
-
-import org.joda.time.DateTime
-import com.keepit.common.time._
-
-import com.keepit.search._
+import com.keepit.common.actor.FakeActorSystemModule
+import com.keepit.common.analytics.FakeAnalyticsModule
 import com.keepit.common.controller._
 import com.keepit.common.db._
+import com.keepit.common.healthcheck.FakeAirbrakeModule
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.FakeSocialGraphModule
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.time._
+import com.keepit.cortex.FakeCortexServiceClientModule
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
 import com.keepit.model._
-import com.keepit.test.{ ShoeboxTestInjector, DbInjectionHelper }
-
-import play.api.libs.json.{ Json }
+import com.keepit.search._
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.test.{ DbInjectionHelper, ShoeboxTestInjector }
+import org.joda.time.DateTime
+import org.specs2.mutable.SpecificationLike
+import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.analytics.FakeAnalyticsModule
-import com.keepit.common.store.FakeShoeboxStoreModule
-import com.keepit.common.actor.FakeActorSystemModule
-import com.keepit.common.healthcheck.FakeAirbrakeModule
-import com.keepit.model.UserFactoryHelper._
 
 class MobilePageControllerTest extends TestKit(ActorSystem()) with SpecificationLike with ShoeboxTestInjector with DbInjectionHelper {
 
@@ -66,16 +63,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
 
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
-          val keep1 = keepRepo.save(Keep(
-            title = Some("G1"), userId = user1.id.get, url = url.url,
-            uriId = uri.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
-            externalId = ExternalId("cccccccc-286e-4386-8336-da255120b273")))
-          val keep2 = keepRepo.save(Keep(
-            title = None, userId = user2.id.get, url = url.url,
-            uriId = uri.id.get, source = KeepSource.bookmarkImport, createdAt = t2.plusDays(1),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
-            externalId = ExternalId("dddddddd-286e-4386-8336-da255120b273")))
+          val keep1 = KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri).withLibrary(lib1).saved
+          val keep2 = KeepFactory.keep().withUser(user2).withUri(uri).withLibrary(lib1).saved
 
           val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Cooking"), createdAt = t1, externalId = ExternalId("eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672")))
           val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Baking"), createdAt = t2, externalId = ExternalId("ffffffff-51ad-4c7d-a88e-d4e6e3c9a673")))
@@ -134,16 +123,8 @@ class MobilePageControllerTest extends TestKit(ActorSystem()) with Specification
 
           val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
 
-          val keep1 = keepRepo.save(Keep(
-            title = Some("G1"), userId = user1.id.get, url = url.url,
-            uriId = uri.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
-            externalId = ExternalId("cccccccc-286e-4386-8336-da255120b273")))
-          val keep2 = keepRepo.save(Keep(
-            title = None, userId = user2.id.get, url = url.url,
-            uriId = uri.id.get, source = KeepSource.bookmarkImport, createdAt = t2.plusDays(1),
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get),
-            externalId = ExternalId("dddddddd-286e-4386-8336-da255120b273")))
+          val keep1 = KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri).withLibrary(lib1).saved
+          val keep2 = KeepFactory.keep().withUser(user2).withUri(uri).withLibrary(lib1).saved
 
           val coll1 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Cooking"), createdAt = t1, externalId = ExternalId("eeeeeeee-51ad-4c7d-a88e-d4e6e3c9a672")))
           val coll2 = collectionRepo.save(Collection(userId = user1.id.get, name = Hashtag("Baking"), createdAt = t2, externalId = ExternalId("ffffffff-51ad-4c7d-a88e-d4e6e3c9a673")))

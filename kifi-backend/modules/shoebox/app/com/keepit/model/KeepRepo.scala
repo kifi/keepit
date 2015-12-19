@@ -8,7 +8,6 @@ import com.keepit.common.db.slick.DBSession.{ RSession, RWSession }
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.model.LibrariesHash
 import org.joda.time.DateTime
 
 import scala.slick.jdbc.{ GetResult, PositionedResult, StaticQuery }
@@ -112,9 +111,9 @@ class KeepRepoImpl @Inject() (
     def participantsHash = column[ParticipantsHash]("participants_hash", O.NotNull)
 
     def * = ((id.?, createdAt, updatedAt, externalId, title, uriId, isPrimary, url),
-      (userId, state, source, seq, messageSeq, libraryId, visibility, keptAt,
+      (userId, state, source, seq, libraryId, visibility, keptAt,
         note, originalKeeperId, organizationId,
-        connections, librariesHash, participantsHash)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
+        connections, librariesHash, participantsHash, messageSeq)).shaped <> ({ case (first10, rest) => Keep.applyFromDbRowTuples(first10, rest) }, Keep.unapplyToDbRow)
 
     def isPrivate: Column[Boolean] = {
       val privateVisibilities: Set[LibraryVisibility] = Set(LibraryVisibility.SECRET, LibraryVisibility.ORGANIZATION)
@@ -128,6 +127,7 @@ class KeepRepoImpl @Inject() (
   implicit val getBookmarkSourceResult = getResultFromMapper[KeepSource]
   implicit val setBookmarkSourceParameter = setParameterFromMapper[KeepSource]
 
+  implicit val getConnectionsResult = getResultOptionFromMapper[KeepConnections]
   implicit val getLibrariesHashResult = getResultFromMapper[LibrariesHash]
   implicit val getParticipantsHashResult = getResultFromMapper[ParticipantsHash]
 
@@ -151,8 +151,9 @@ class KeepRepoImpl @Inject() (
       note = r.<<[Option[String]],
       originalKeeperId = r.<<[Option[Id[User]]],
       organizationId = r.<<[Option[Id[Organization]]],
-      librariesHash = r.<<[LibrariesHash],
-      participantsHash = r.<<[ParticipantsHash],
+      connections = r.<<[Option[KeepConnections]],
+      lh = r.<<[LibrariesHash],
+      ph = r.<<[ParticipantsHash],
       messageSeq = r.<<[Option[SequenceNumber[Message]]]
     )
   }

@@ -92,8 +92,8 @@ trait KeepCommander {
   def deactivateKeep(keep: Keep)(implicit session: RWSession): Unit
 
   // Data integrity
-  def refreshLibrariesHash(keep: Keep)(implicit session: RWSession): Keep
-  def refreshParticipantsHash(keep: Keep)(implicit session: RWSession): Keep
+  def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep
+  def refreshParticipants(keepId: Id[Keep])(implicit session: RWSession): Keep
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep
   def changeUri(keep: Keep, newUri: NormalizedURI)(implicit session: RWSession): Unit
 
@@ -662,16 +662,26 @@ class KeepCommanderImpl @Inject() (
 
     keep
   }
+  def refreshLibraries(keepId: Id[Keep])(implicit session: RWSession): Keep = {
+    val keep = keepRepo.getNoCache(keepId)
+    val claimedLibraries = keep.connections.libraries
+    val actualLibraries = ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet
+    if (claimedLibraries != actualLibraries) {
+      keepRepo.save(keep.withLibraries(actualLibraries))
+    } else keep
+  }
+  def refreshParticipants(keepId: Id[Keep])(implicit session: RWSession): Keep = {
+    val keep = keepRepo.getNoCache(keepId)
+    val claimedUsers = keep.connections.users
+    val actualUsers = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
+    if (claimedUsers != actualUsers) {
+      keepRepo.save(keep.withParticipants(actualUsers))
+    } else keep
+  }
   def syncWithLibrary(keep: Keep, library: Library)(implicit session: RWSession): Keep = {
     require(keep.libraryId == library.id, "keep.libraryId does not match library id!")
     ktlRepo.getByKeepIdAndLibraryId(keep.id.get, library.id.get).foreach { ktl => ktlCommander.syncWithLibrary(ktl, library) }
     keepRepo.save(keep.withLibrary(library))
-  }
-  def changeOwner(keep: Keep, newOwnerId: Id[User])(implicit session: RWSession): Keep = {
-    ktuCommander.removeKeepFromUser(keep.id.get, keep.userId)
-    val updatedKeep = keepRepo.save(keep.withOwner(newOwnerId))
-    ktuCommander.internKeepInUser(keep, newOwnerId, addedBy = newOwnerId)
-    refreshParticipantsHash(updatedKeep)
   }
   private def getKeepsByUriAndLibraries(uriId: Id[NormalizedURI], targetLibraries: Set[Id[Library]])(implicit session: RSession): Set[Keep] = {
     // TODO(ryan): uncomment the line below, and get rid of the require
@@ -736,7 +746,7 @@ class KeepCommanderImpl @Inject() (
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary))
         ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
         ktlCommander.internKeepInLibrary(k, toLibrary, userId)
-        Right(refreshLibrariesHash(movedKeep))
+        Right(movedKeep)
       case Some(existingKeep) if existingKeep.isInactive =>
         combineTags(k.id.get, existingKeep.id.get)
 
@@ -746,14 +756,12 @@ class KeepCommanderImpl @Inject() (
         val movedKeep = keepRepo.save(k.withLibrary(toLibrary).withId(existingKeep.id.get)) // overwrite the old keep
         ktlCommander.internKeepInLibrary(movedKeep, toLibrary, userId)
 
-        Right(refreshLibrariesHash(movedKeep))
+        Right(movedKeep)
       case Some(existingKeep) =>
         if (toLibrary.id.get == k.libraryId.get) {
           Left(LibraryError.AlreadyExistsInDest)
         } else {
-          ktlCommander.removeKeepFromLibrary(k.id.get, k.libraryId.get)
-          refreshLibrariesHash(k)
-          keepRepo.deactivate(k)
+          deactivateKeep(k)
           combineTags(k.id.get, existingKeep.id.get)
           Left(LibraryError.AlreadyExistsInDest)
         }
@@ -762,13 +770,13 @@ class KeepCommanderImpl @Inject() (
   def copyKeep(k: Keep, toLibrary: Library, userId: Id[User], withSource: Option[KeepSource] = None)(implicit session: RWSession): Either[LibraryError, Keep] = {
     val currentKeepOpt = keepRepo.getPrimaryByUriAndLibrary(k.uriId, toLibrary.id.get)
     val newKeep = Keep(
-      externalId = ExternalId(),
       userId = userId,
       url = k.url,
+      uriId = k.uriId,
       libraryId = Some(toLibrary.id.get),
       visibility = toLibrary.visibility,
       organizationId = toLibrary.organizationId,
-      keptAt = currentDateTime,
+      keptAt = clock.now,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
       connections = KeepConnections(Set(toLibrary.id.get), Set(userId))
