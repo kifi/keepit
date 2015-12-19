@@ -1,8 +1,9 @@
 package com.keepit.search.index.message
 
+import com.keepit.common.crypto.PublicId
 import com.keepit.common.db.{ Id, SequenceNumber }
 import com.keepit.social.{ BasicUserLikeEntity }
-import com.keepit.model.User
+import com.keepit.model.{ Keep, User }
 
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -38,7 +39,7 @@ case class ThreadContent(
   participants: Seq[BasicUserLikeEntity],
   updatedAt: DateTime,
   url: String,
-  threadExternalId: String,
+  keepId: PublicId[Keep],
   pageTitleOpt: Option[String],
   digest: String,
   content: Seq[String],
@@ -55,7 +56,7 @@ object ThreadContent {
     (__ \ 'participants).format[Seq[BasicUserLikeEntity]] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'url).format[String] and
-    (__ \ 'threadExternalId).format[String] and
+    (__ \ 'keepId).format[PublicId[Keep]] and
     (__ \ 'pageTitleOpt).formatNullable[String] and
     (__ \ 'digest).format[String] and
     (__ \ 'content).format[Seq[String]] and

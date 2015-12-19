@@ -129,9 +129,10 @@ class KeepDecoratorImpl @Inject() (
           airbrake.notify(s"[KEEP-DECORATOR] Failed to get discussions for keeps $keepIds", fail)
           Map.empty[Id[Keep], Discussion]
       }
-      val discussionsWithStrictTimeout = TimeoutFuture(discussionsByKeepFut)(executionContext, 2.seconds).recover { case _ =>
-        log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
-        Map.empty[Id[Keep], Discussion]
+      val discussionsWithStrictTimeout = TimeoutFuture(discussionsByKeepFut)(executionContext, 2.seconds).recover {
+        case _ =>
+          log.warn(s"[KEEP-DECORATOR] Timed out fetching discussions for keeps $keepIds")
+          Map.empty[Id[Keep], Discussion]
       }
 
       for {
