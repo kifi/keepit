@@ -19,7 +19,6 @@ import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.test.{ ShoeboxTestFactory, ShoeboxTestInjector }
 import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.OrganizationFactoryHelper._
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -54,7 +53,9 @@ class EmailTemplateProcessorImplTest extends Specification with ShoeboxTestInjec
               visibility = LibraryVisibility.SECRET, ownerId = user1.id.get, createdAt = t1, memberCount = 1))
             val uri = uriRepo.save(NormalizedURI.withHash("http://www.avengers.org/", Some("Avengers")))
             val url = urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))
-            val keep = KeepFactory.keep().withTitle("Avengers$1.org").withUser(user1).withUri(uri).withLibrary(library).saved
+            val keep = keepRepo.save(Keep(title = Some("Avengers$1.org"), userId = user1.id.get, url = url.url,
+              uriId = uri.id.get, source = KeepSource.default, createdAt = t1, keptAt = t1, visibility = LibraryVisibility.PUBLISHED,
+              libraryId = Some(library.id.get)))
             (library, keep)
           }
 

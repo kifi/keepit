@@ -1,5 +1,17 @@
 package com.keepit.commanders
 
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.util.Paginator
+import com.keepit.model.OrganizationPermission.FORCE_EDIT_LIBRARIES
+import com.keepit.model.UserFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.KeepFactory._
+import com.keepit.model.LibraryMembershipFactory._
+import com.keepit.model.LibraryMembershipFactoryHelper._
+import com.keepit.model.LibraryInviteFactory._
+import com.keepit.model.LibraryInviteFactoryHelper._
 import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.abook.model.RichContact
@@ -7,21 +19,14 @@ import com.keepit.common.actor.TestKitSupport
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.crypto.{ FakeCryptoModule, PublicIdConfiguration }
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.mail.{ ElectronicMailRepo, EmailAddress, FakeMailModule }
 import com.keepit.common.social.FakeSocialGraphModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.{ ImageSize, FakeShoeboxStoreModule }
 import com.keepit.common.time._
 import com.keepit.eliza.{ ElizaServiceClient, FakeElizaServiceClientImpl, FakeElizaServiceClientModule }
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.LibraryMembershipFactory._
-import com.keepit.model.LibraryMembershipFactoryHelper._
-import com.keepit.model.OrganizationFactoryHelper._
-import com.keepit.model.UserFactory._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.OrganizationFactoryHelper._
 import com.keepit.model._
 import com.keepit.search.FakeSearchServiceClientModule
 import com.keepit.social.BasicUser
@@ -185,9 +190,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
       val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
-      val keep1 = KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1).withLibrary(libMurica).withKeptAt(t1.plusMinutes(3)).saved
-      val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).withKeptAt(t1.plusMinutes(15)).saved
-      val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).withKeptAt(t1.plusMinutes(30)).saved
+      val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url,
+        uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
+      val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url,
+        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(15), keptAt = t1.plusMinutes(15),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
+      val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url,
+        uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(30), keptAt = t1.plusMinutes(30),
+        visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get)))
 
       val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("USA")))
       val tag2 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("food")))
@@ -1203,7 +1214,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val user = UserFactory.user().saved
             val emptyLib = LibraryFactory.library().withOwner(user).saved
             val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
+            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib)).saved
             (user, sourceLib, emptyLib, keeps)
           }
 
@@ -1230,11 +1241,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val (user, sourceLib, targetLib, keeps, obstacleKeeps) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
+            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib)).saved
 
             val targetLib = LibraryFactory.library().withOwner(user).saved
             val obstacleKeeps = for (uriId <- Random.shuffle(keeps).take(keeps.length / 2).map(_.uriId)) yield {
-              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).withRandomTitle().saved
+              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).saved
             }
 
             (user, sourceLib, targetLib, keeps, obstacleKeeps)
@@ -1252,7 +1263,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val newKeeps = inject[KeepRepo].getByLibrary(targetLib.id.get, 0, 1000)
             val expectedKeeps = (obstacleKeeps ++ yay).sortBy(k => (k.keptAt, k.id.get)).reverse // they come out in reverse chronological order
             newKeeps.length === keeps.length
-            newKeeps.map(_.title) === expectedKeeps.map(_.title)
+            newKeeps.map(_.title.get) === expectedKeeps.map(_.title.get)
             newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
             newKeeps.map(_.note) === expectedKeeps.map(_.note)
           }
@@ -1268,7 +1279,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val user = UserFactory.user().saved
             val emptyLib = LibraryFactory.library().withOwner(user).saved
             val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
+            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib)).saved
             (user, sourceLib, emptyLib, keeps)
           }
 
@@ -1285,7 +1296,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val expectedKeeps = keeps.reverse
             newKeeps.length === keeps.length
             newKeeps.map(_.id.get) === expectedKeeps.map(_.id.get)
-            newKeeps.map(_.title) === expectedKeeps.map(_.title)
+            newKeeps.map(_.title.get) === expectedKeeps.map(_.title.get)
             newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
             newKeeps.map(_.note) === expectedKeeps.map(_.note)
           }
@@ -1297,11 +1308,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val (user, sourceLib, targetLib, keeps, obstacleKeeps) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
+            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib)).saved
 
             val targetLib = LibraryFactory.library().withOwner(user).saved
             val obstacleKeeps = for (uriId <- Random.shuffle(keeps).take(keeps.length / 2).map(_.uriId)) yield {
-              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).withRandomTitle().saved
+              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).saved
             }
 
             (user, sourceLib, targetLib, keeps, obstacleKeeps)
@@ -1351,9 +1362,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
           // libMurica has 3 keeps
-          val keep1 = KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1).withLibrary(libMurica).saved
-          val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).saved
-          val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).saved
+          val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
+          val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
+          val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url,
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
 
           val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
@@ -1427,9 +1444,15 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
           // libMurica has 3 keeps
-          val keep1 = KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1).withLibrary(libMurica).saved
-          val keep2 = KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2).withLibrary(libMurica).saved
-          val keep3 = KeepFactory.keep().withTitle("McDonalds").withUser(userCaptain).withUri(uri3).withLibrary(libMurica).saved
+          val keep1 = keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url,
+            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
+          val keep2 = keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url,
+            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
+          val keep3 = keepRepo.save(Keep(title = Some("McDonalds"), userId = userCaptain.id.get, url = url3.url,
+            uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
+            visibility = libMurica.visibility, libraryId = Some(libMurica.id.get)))
 
           val tag1 = collectionRepo.save(Collection(userId = userCaptain.id.get, name = Hashtag("tag1")))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tag1.id.get))
