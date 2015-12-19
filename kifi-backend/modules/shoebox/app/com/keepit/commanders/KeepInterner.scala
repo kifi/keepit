@@ -187,7 +187,6 @@ class KeepInternerImpl @Inject() (
     sourceAttribution: Option[SourceAttribution], note: Option[String])(implicit session: RWSession) = {
 
     val keepOpt = libraryOpt.flatMap { lib => keepRepo.getPrimaryByUriAndLibrary(uri.id.get, lib.id.get) }
-
     val trimmedTitle = title.map(_.trim).filter(_.nonEmpty)
 
     val (isNewKeep, wasInactiveKeep, internedKeep) = keepOpt match {
@@ -205,14 +204,15 @@ class KeepInternerImpl @Inject() (
           keptAt = keptAt,
           note = kNote,
           url = url,
-          organizationId = libraryOpt.flatMap(_.organizationId)
+          organizationId = libraryOpt.flatMap(_.organizationId),
+          connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], Set(userId))
         ) |> { keep =>
             if (wasInactiveKeep) {
               keep.copy(createdAt = clock.now)
             } else keep
           } |> { keep =>
             try {
-              keepCommander.persistKeep(keep, Set(userId), libraryOpt.map(_.id.get).toSet)
+              keepCommander.persistKeep(keep)
             } catch {
               case ex: UndeclaredThrowableException =>
                 log.warn(s"[keepinterner] Persisting keep failed of ${keep.url} (${keep.id.get})", ex)
@@ -232,10 +232,11 @@ class KeepInternerImpl @Inject() (
           keptAt = keptAt,
           note = note,
           originalKeeperId = Some(userId),
-          organizationId = libraryOpt.flatMap(_.organizationId)
+          organizationId = libraryOpt.flatMap(_.organizationId),
+          connections = KeepConnections(libraryOpt.map(_.id.get).toSet[Id[Library]], Set(userId))
         )
         val improvedKeep = try {
-          keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep), Set(userId), libraryOpt.map(_.id.get).toSet) tap { improvedKeep =>
+          keepCommander.persistKeep(integrityHelpers.improveKeepSafely(uri, keep)) tap { improvedKeep =>
             sourceAttribution.map { attr => sourceAttrRepo.save(improvedKeep.id.get, attr) }
           }
         } catch {

@@ -6,6 +6,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -25,7 +26,7 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
   "Feed Commander" should {
     "create feed for library" in {
       withDb(modules: _*) { implicit injector =>
-        val (library) = db.readWrite { implicit s =>
+        val library = db.readWrite { implicit s =>
           val t1 = new DateTime(2014, 7, 4, 21, 59, 0, 0, DEFAULT_DATE_TIME_ZONE)
           val user = UserFactory.user().withName("Colin", "Lane").withUsername("colin-lane").saved
           val library = libraryRepo.save(Library(name = "test", ownerId = user.id.get, visibility = LibraryVisibility.PUBLISHED, slug = LibrarySlug("test"), memberCount = 1))
@@ -36,13 +37,9 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, note = Some("Google Note"),
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(1),
-            visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
-          val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, note = None,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-            visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
-          (library)
+          val keep1 = KeepFactory.keep().withTitle("Google").withUser(user).withUri(uri1).withNote("Google Note").withLibrary(library).saved
+          val keep2 = KeepFactory.keep().withTitle("Amazon").withUser(user).withUri(uri2).withNote("Amazon Note").withLibrary(library).saved
+          library
         }
         val commander = inject[FeedCommander]
         val resultTry = Await.ready(commander.libraryFeed(library), Duration.Inf).value.get
@@ -75,13 +72,9 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
             val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
             val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-            val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, note = Some("Google Note"),
-              uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(1),
-              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
-            val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, note = None,
-              uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
-            (library)
+            val keep1 = KeepFactory.keep().withTitle("Google").withUser(user).withUri(uri1).withNote("Google Note").withLibrary(library).saved
+            val keep2 = KeepFactory.keep().withTitle("Amazon").withUser(user).withUri(uri1).withLibrary(library).saved
+            library
           }
           val commander = inject[FeedCommander]
           val resultTry = Await.ready(commander.libraryFeed(library, keepCountToDisplay = 1, offset = 0), Duration.Inf).value.get
@@ -111,12 +104,8 @@ class FeedCommanderTest extends Specification with ShoeboxTestInjector {
             val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
             val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-            val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, note = Some("Google Note"),
-              uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(1),
-              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
-            val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, note = None,
-              uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-              visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
+            val keep1 = KeepFactory.keep().withTitle("Google").withUser(user).withUri(uri1).withNote("Google Note").withLibrary(library).saved
+            val keep2 = KeepFactory.keep().withTitle("Amazon").withUser(user).withUri(uri1).withLibrary(library).saved
             (library)
           }
           val commander = inject[FeedCommander]
