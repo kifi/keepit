@@ -43,7 +43,7 @@ class MessagingAnalytics @Inject() (
       contextBuilder += ("global", false)
       contextBuilder += ("muted", muted)
       contextBuilder += ("messageId", message.pubId.id)
-      contextBuilder += ("threadId", thread.externalId.id)
+      contextBuilder += ("threadId", thread.pubKeepId.id)
       message.from match {
         case MessageSender.User(senderId) => contextBuilder += ("senderId", senderId.id)
         case MessageSender.NonUser(nup) => contextBuilder += ("senderId", nup.kind + "::" + nup.identifier)
@@ -189,7 +189,7 @@ class MessagingAnalytics @Inject() (
       val contextBuilder = new HeimdalContextBuilder
       contextBuilder.data ++= existingContext.data
       contextBuilder += ("action", "addedParticipants")
-      contextBuilder += ("threadId", thread.externalId.id)
+      contextBuilder += ("threadId", thread.pubKeepId.id)
       if (newUserParticipants.nonEmpty) { contextBuilder += ("newUserParticipants", newUserParticipants.map(_.id)) }
       if (newNonUserParticipants.nonEmpty) { contextBuilder += ("newNonUserParticipants", newNonUserParticipants.map(_.identifier)) }
       contextBuilder += ("newParticipantKinds", newUserParticipants.map(_ => "user") ++ newNonUserParticipants.map(_.kind.name))
@@ -213,7 +213,7 @@ class MessagingAnalytics @Inject() (
         case None => contextBuilder += ("action", "replied")
       }
 
-      contextBuilder += ("threadId", thread.externalId.id)
+      contextBuilder += ("threadId", thread.pubKeepId.id)
       contextBuilder += ("messageId", message.pubId.id)
       message.source.foreach { source => contextBuilder += ("source", source.value) }
       contextBuilder += ("uriId", thread.uriId.toString)

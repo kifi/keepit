@@ -106,19 +106,17 @@ object MessageThreadParticipants {
 }
 
 case class MessageThread(
-  id: Option[Id[MessageThread]] = None,
-  createdAt: DateTime = currentDateTime,
-  updatedAt: DateTime = currentDateTime,
-  state: State[MessageThread] = MessageThreadStates.ACTIVE,
-  externalId: ExternalId[MessageThread] = ExternalId(),
-  uriId: Id[NormalizedURI],
-  url: String,
-  nUrl: String,
-  startedBy: Id[User],
-  participants: MessageThreadParticipants,
-  pageTitle: Option[String],
-  keepId: Id[Keep])
-    extends ModelWithExternalId[MessageThread] {
+    id: Option[Id[MessageThread]] = None,
+    createdAt: DateTime = currentDateTime,
+    updatedAt: DateTime = currentDateTime,
+    state: State[MessageThread] = MessageThreadStates.ACTIVE,
+    uriId: Id[NormalizedURI],
+    url: String,
+    nUrl: String,
+    startedBy: Id[User],
+    participants: MessageThreadParticipants,
+    pageTitle: Option[String],
+    keepId: Id[Keep]) extends Model[MessageThread] {
   def participantsHash: Int = participants.hash
   def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
   def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThread.locator(pubKeepId)
@@ -159,7 +157,6 @@ object MessageThread {
     (__ \ 'createdAt).format[DateTime] and
     (__ \ 'updatedAt).format[DateTime] and
     (__ \ 'state).format[State[MessageThread]] and
-    (__ \ 'externalId).format[ExternalId[MessageThread]] and
     (__ \ 'uriId).format[Id[NormalizedURI]] and
     (__ \ 'url).format[String] and
     (__ \ 'nUrl).format[String] and
@@ -172,12 +169,12 @@ object MessageThread {
   def locator(keepId: PublicId[Keep]): DeepLocator = DeepLocator(s"/messages/${keepId.id}")
 }
 
-case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 9
-  val namespace = "message_thread_by_external_id"
-  def toKey(): String = externalId.id
+case class MessageThreadKeepIdKey(keepId: Id[Keep]) extends Key[MessageThread] {
+  override val version = 1
+  val namespace = "message_thread_by_keep_id"
+  def toKey(): String = keepId.id.toString
 }
 
-class MessageThreadExternalIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[MessageThreadExternalIdKey, MessageThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
+class MessageThreadKeepIdCache(stats: CacheStatistics, accessLog: AccessLog, innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[MessageThreadKeepIdKey, MessageThread](stats, accessLog, innermostPluginSettings, innerToOuterPluginSettings: _*)
 

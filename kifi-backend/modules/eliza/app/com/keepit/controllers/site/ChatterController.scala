@@ -1,6 +1,7 @@
 package com.keepit.controllers.site
 
 import com.keepit.common.controller.{ ElizaServiceController, UserActions, UserActionsHelper }
+import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.db.slick.Database
@@ -19,6 +20,7 @@ import com.keepit.eliza.commanders.MessagingCommander
 class ChatterController @Inject() (
     messagingCommander: MessagingCommander,
     val userActionsHelper: UserActionsHelper,
+    implicit val publicIdConfig: PublicIdConfiguration,
     threadRepo: MessageThreadRepo,
     db: Database) extends UserActions with ElizaServiceController {
 
@@ -28,7 +30,7 @@ class ChatterController @Inject() (
       Ok(res.get(url).map {
         case Seq(threadId) =>
           db.readOnlyReplica { implicit session =>
-            Json.obj("threads" -> 1, "threadId" -> threadRepo.get(threadId).externalId)
+            Json.obj("threads" -> 1, "threadId" -> threadRepo.get(threadId).pubKeepId)
           }
         case threadIds =>
           Json.obj("threads" -> threadIds.size)
