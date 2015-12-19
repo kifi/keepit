@@ -51,6 +51,7 @@ trait KeepInterner {
       case KeepInternResponse(Seq(newKeep), _, _) => Success((newKeep, true))
       case KeepInternResponse(_, Seq(existingKeep), _) => Success((existingKeep, false))
       case KeepInternResponse(_, _, Seq(failedKeep)) => Failure(new Exception(s"could not intern $failedKeep"))
+      case kir: KeepInternResponse => Failure(new Exception(s"no valid URL processed $rawBookmark"))
     }
   }
 }

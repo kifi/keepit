@@ -44,7 +44,7 @@ class ShoeboxMessageIngestionActor @Inject() (
 
   protected def processBatch(messages: Seq[CrossServiceMessage]): Future[Unit] = SafeFuture {
     messages.map(_.seq).maxOpt.foreach { maxSeq =>
-      val messageSeqByKeepId = messages.groupBy(_.keep).collect { case (Some(keepId), keepMessages) => keepId -> keepMessages.map(_.seq).max }
+      val messageSeqByKeepId = messages.groupBy(_.keep).collect { case (keepId, keepMessages) => keepId -> keepMessages.map(_.seq).max }
       db.readWrite { implicit session =>
         keepRepo.getByIds(messageSeqByKeepId.keySet).values.foreach { keep =>
           messageSeqByKeepId.get(keep.id.get).foreach { seq =>

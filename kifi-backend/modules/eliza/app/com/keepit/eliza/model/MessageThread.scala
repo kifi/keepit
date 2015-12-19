@@ -117,10 +117,10 @@ case class MessageThread(
   startedBy: Id[User],
   participants: MessageThreadParticipants,
   pageTitle: Option[String],
-  keepId: Option[Id[Keep]] = None)
+  keepId: Id[Keep])
     extends ModelWithExternalId[MessageThread] {
   def participantsHash: Int = participants.hash
-  def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId.get)
+  def pubKeepId(implicit publicIdConfig: PublicIdConfiguration): PublicId[Keep] = Keep.publicId(keepId)
   def deepLocator(implicit publicIdConfig: PublicIdConfiguration): DeepLocator = MessageThread.locator(pubKeepId)
 
   def clean(): MessageThread = copy(pageTitle = pageTitle.map(_.trimAndRemoveLineBreaks()))
@@ -132,7 +132,7 @@ case class MessageThread(
   } else {
     this.withParticipants(currentDateTime, Set(owner)).copy(startedBy = owner)
   }
-  def withKeepId(keepId: Id[Keep]): MessageThread = this.copy(keepId = Some(keepId))
+  def withKeepId(newKeepId: Id[Keep]): MessageThread = this.copy(keepId = newKeepId)
 
   def withParticipants(when: DateTime, userIds: Set[Id[User]], nonUsers: Set[NonUserParticipant] = Set.empty) = {
     val newUsers = userIds.map(_ -> when).toMap
@@ -166,14 +166,14 @@ object MessageThread {
     (__ \ 'startedBy).format[Id[User]] and
     (__ \ 'participants).format[MessageThreadParticipants] and
     (__ \ 'pageTitle).formatNullable[String] and
-    (__ \ 'keep).formatNullable[Id[Keep]]
+    (__ \ 'keep).format[Id[Keep]]
   )(MessageThread.apply, unlift(MessageThread.unapply))
 
   def locator(keepId: PublicId[Keep]): DeepLocator = DeepLocator(s"/messages/${keepId.id}")
 }
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 8
+  override val version = 9
   val namespace = "message_thread_by_external_id"
   def toKey(): String = externalId.id
 }

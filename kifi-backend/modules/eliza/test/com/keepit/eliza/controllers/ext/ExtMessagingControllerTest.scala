@@ -4,7 +4,7 @@ import com.google.inject.Injector
 import com.keepit.abook.FakeABookServiceClientModule
 import com.keepit.common.actor.{ FakeActorSystemModule, TestKitSupport }
 import com.keepit.common.cache.ElizaCacheModule
-import com.keepit.common.concurrent.FakeExecutionContextModule
+import com.keepit.common.concurrent.{ WatchableExecutionContext, FakeExecutionContextModule }
 import com.keepit.common.controller.{ FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.{ PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.net.FakeHttpClientModule
@@ -14,7 +14,7 @@ import com.keepit.discussion.Message
 import com.keepit.eliza.FakeElizaServiceClientModule
 import com.keepit.eliza.model._
 import com.keepit.heimdal.{ FakeHeimdalServiceClientModule, HeimdalContext }
-import com.keepit.model.{ UserFactory, User }
+import com.keepit.model.{ Keep, UserFactory, User }
 import com.keepit.realtime.{ FakeAppBoyModule }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.search.FakeSearchServiceClientModule
@@ -26,7 +26,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike with ElizaTestInjector with DbInjectionHelper {
-
   implicit val context = HeimdalContext.empty
 
   def initUsers()(implicit injector: Injector): Seq[User] = {
@@ -150,8 +149,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
               }]
           }
           """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
-
+        inject[WatchableExecutionContext].drain()
+        contentAsJson(result) === expected
       }
     }
 
@@ -209,8 +208,8 @@ class ExtMessagingControllerTest extends TestKitSupport with SpecificationLike w
             "createdAt":"${reply.createdAt.toStandardTimeString}"
           }
           """)
-        Json.parse(contentAsString(result2)) must equalTo(expected)
-
+        inject[WatchableExecutionContext].drain()
+        contentAsJson(result2) === expected
       }
     }
 

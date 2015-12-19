@@ -129,12 +129,8 @@ class MessagingCommander @Inject() (
 
   def keepAttribution(userId: Id[User], uriId: Id[NormalizedURI]): Seq[Id[User]] = db.readOnlyReplica { implicit session =>
     val threads = userThreadRepo.getUserThreads(userId, uriId)
-    val otherStarters = threads.filter { userThread =>
-      userThread.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) // tweak
-    }.map { userThread =>
-      threadRepo.get(userThread.threadId).startedBy
-    }.filter {
-      _ != userId
+    val otherStarters = threads.collect {
+      case ut if ut.lastSeen.exists(dt => dt.plusDays(3).isAfterNow) && ut.startedBy != userId => ut.startedBy
     }
     log.info(s"[keepAttribution($userId,$uriId)] threads=${threads.map(_.id.get)} otherStarters=$otherStarters")
     otherStarters
@@ -168,6 +164,30 @@ class MessagingCommander @Inject() (
     }
   }
 
+  private def getOrCreateThread(from: Id[User], userParticipants: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, nUriId: Id[NormalizedURI], nUrl: String, titleOpt: Option[String]): Future[(MessageThread, Boolean)] = {
+    val mtParticipants = MessageThreadParticipants(userParticipants.toSet, nonUserRecipients.toSet)
+    val matches = db.readOnlyMaster { implicit s =>
+      threadRepo.getByUriAndParticipants(nUriId, mtParticipants)
+    }
+    matches.headOption match {
+      case Some(mt) => Future.successful(mt, false)
+      case None =>
+        shoebox.internKeep(from, userParticipants.toSet, nUriId, url, titleOpt, None).map { csKeep =>
+          db.readWrite { implicit s =>
+            val thread = threadRepo.save(MessageThread(
+              uriId = nUriId,
+              url = url,
+              nUrl = nUrl,
+              pageTitle = titleOpt,
+              startedBy = from,
+              participants = mtParticipants,
+              keepId = csKeep.id
+            ))
+            (thread, true)
+          }
+        }
+    }
+  }
   def sendNewMessage(from: Id[User], userRecipients: Seq[Id[User]], nonUserRecipients: Seq[NonUserParticipant], url: String, titleOpt: Option[String], messageText: String, source: Option[MessageSource])(implicit context: HeimdalContext): Future[(MessageThread, ElizaMessage)] = {
     updateMessageSearchHistoryWithEmailAddresses(from, nonUserRecipients)
     val userParticipants = (from +: userRecipients).distinct
@@ -179,57 +199,53 @@ class MessagingCommander @Inject() (
       case Failure(e) => throw new Exception(s"can't send message for bad URL: [$url] from $from with title $titleOpt and source $source")
     }
 
-    uriFetch.map {
-      case ((uri, nUriId, nUrl, nTitleOpt)) =>
-        statsd.timing(s"messaging.internNormalizedURI", currentDateTime.getMillis - tStart.getMillis, ONE_IN_THOUSAND)
-
-        val (thread, isNew) = db.readWrite { implicit session =>
-          val (thread, isNew) = threadRepo.getOrCreate(from, userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt))
-          if (isNew) {
-            checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
-            nonUserRecipients.foreach { nonUser =>
-              nonUserThreadRepo.save(NonUserThread(
-                createdBy = from,
-                participant = nonUser,
-                threadId = thread.id.get,
-                uriId = Some(nUriId),
-                notifiedCount = 0,
-                lastNotifiedAt = None,
-                threadUpdatedByOtherAt = Some(thread.createdAt),
-                muted = false
-              ))
-            }
-            userParticipants.foreach { userId =>
-              userThreadRepo.save(UserThread.forMessageThread(thread)(userId))
-            }
-          } else {
-            log.info(s"Not actually a new thread. Merging.")
-          }
-          (thread, isNew)
-        }
-
-        //this is code for a special status message used in the client to do the email preview
-        if (nonUserRecipients.nonEmpty) {
-          db.readWrite { implicit session =>
-            messageRepo.save(ElizaMessage(
-              keepId = thread.keepId.get,
-              from = MessageSender.System,
-              thread = thread.id.get,
-              threadExtId = thread.externalId,
-              messageText = "",
-              source = source,
-              auxData = Some(Json.arr("start_with_emails", from.id.toString,
-                userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_))
-              )),
-              sentOnUrl = None,
-              sentOnUriId = None
+    for {
+      ((uri, nUriId, nUrl, nTitleOpt)) <- uriFetch
+      (thread, isNew) <- getOrCreateThread(from, userParticipants, nonUserRecipients, url, nUriId, nUrl, titleOpt.orElse(nTitleOpt))
+    } yield {
+      if (isNew) {
+        db.readWrite { implicit s =>
+          checkEmailParticipantRateLimits(from, thread, nonUserRecipients)
+          nonUserRecipients.foreach { nonUser =>
+            nonUserThreadRepo.save(NonUserThread(
+              createdBy = from,
+              participant = nonUser,
+              threadId = thread.id.get,
+              uriId = Some(nUriId),
+              notifiedCount = 0,
+              lastNotifiedAt = None,
+              threadUpdatedByOtherAt = Some(thread.createdAt),
+              muted = false
             ))
           }
+          userParticipants.foreach { userId =>
+            userThreadRepo.save(UserThread.forMessageThread(thread)(userId))
+          }
         }
+      } else {
+        log.info(s"Not actually a new thread. Merging.")
+      }
 
-        sendMessage(MessageSender.User(from), thread, messageText, source, Some(uri), Some(nUriId), Some(isNew))
+      //this is code for a special status message used in the client to do the email preview
+      if (nonUserRecipients.nonEmpty) {
+        db.readWrite { implicit session =>
+          messageRepo.save(ElizaMessage(
+            keepId = thread.keepId,
+            from = MessageSender.System,
+            thread = thread.id.get,
+            threadExtId = thread.externalId,
+            messageText = "",
+            source = source,
+            auxData = Some(Json.arr("start_with_emails", from.id.toString,
+              userRecipients.map(u => Json.toJson(u.id)) ++ nonUserRecipients.map(Json.toJson(_))
+            )),
+            sentOnUrl = None,
+            sentOnUriId = None
+          ))
+        }
+      }
+      sendMessage(MessageSender.User(from), thread, messageText, source, Some(uri), Some(nUriId), Some(isNew))
     }
-
   }
 
   def sendMessageWithNonUserThread(nut: NonUserThread, messageText: String, source: Option[MessageSource], urlOpt: Option[URI])(implicit context: HeimdalContext): (MessageThread, ElizaMessage) = {
@@ -261,7 +277,7 @@ class MessagingCommander @Inject() (
     log.info(s"Sending message from $from to ${thread.participants}")
     val message = db.readWrite { implicit session =>
       messageRepo.save(ElizaMessage(
-        keepId = thread.keepId.get,
+        keepId = thread.keepId,
         from = from,
         thread = thread.id.get,
         threadExtId = thread.externalId,
@@ -432,7 +448,7 @@ class MessagingCommander @Inject() (
         } else {
           val thread = threadRepo.save(oldThread.withParticipants(clock.now, actuallyNewUsers.toSet, actuallyNewNonUsers.toSet))
           val message = messageRepo.save(ElizaMessage(
-            keepId = thread.keepId.get,
+            keepId = thread.keepId,
             from = MessageSender.System,
             thread = thread.id.get,
             threadExtId = thread.externalId,

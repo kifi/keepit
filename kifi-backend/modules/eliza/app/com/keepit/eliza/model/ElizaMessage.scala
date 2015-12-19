@@ -225,7 +225,7 @@ object ElizaMessage extends CommonClassLinker[ElizaMessage, Message] {
     CrossServiceMessage(
       id = ElizaMessage.toCommonId(message.id.get),
       seq = ElizaMessage.toCommonSeq(message.seq),
-      keep = Some(message.keepId),
+      keep = message.keepId,
       sentAt = message.createdAt,
       sentBy = message.from.asUser,
       text = message.messageText

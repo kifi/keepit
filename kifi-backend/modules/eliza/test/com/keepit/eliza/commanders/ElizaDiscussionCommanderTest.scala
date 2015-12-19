@@ -110,6 +110,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
           }
 
           val ans = Await.result(discussionCommander.getDiscussionsForKeeps(Set(keep)), Duration.Inf).get(keep)
+          inject[WatchableExecutionContext].drain()
           ans must beSome
           ans.get.numMessages === 2
         }
@@ -148,6 +149,7 @@ class ElizaDiscussionCommanderTest extends TestKitSupport with SpecificationLike
             val mtId = messageThreadRepo.getByKeepId(keep).get.id.get
             userThreadRepo.getUserThread(user1, mtId).map(_.unread) must beSome(false)
           }
+          inject[WatchableExecutionContext].drain()
           1 === 1
         }
       }

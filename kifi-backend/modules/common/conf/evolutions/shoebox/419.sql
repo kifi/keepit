@@ -2,7 +2,7 @@
 
 # --- !Ups
 
-ALTER TABLE message ADD COLUMN keep_id bigint(20) NOT NULL AFTER seq;
-CREATE INDEX message_i_keep_id ON message(keep_id);
+ALTER TABLE message_thread MODIFY COLUMN keep_id BIGINT(20) NOT NULL;
+insert into evolutions(name, description) values('419.sql', 'make message_thread.keep_id NOT NULL');
 
 # --- !Downs

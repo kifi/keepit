@@ -17,7 +17,7 @@ import play.api.libs.json.{ Json, JsValue }
 import com.google.inject.Inject
 import com.keepit.common.logging.AccessLog
 import scala.concurrent.Future
-import scala.util.Success
+import scala.util.{ Failure, Success }
 
 class ExtMessagingController @Inject() (
     discussionCommander: ElizaDiscussionCommander,
@@ -84,7 +84,10 @@ class ExtMessagingController @Inject() (
           statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
           Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
         }
-      case _ => Future.successful(BadRequest("invalid_keep_id"))
+      case Failure(error) => {
+        log.error(error.getMessage)
+        Future.successful(BadRequest("invalid_keep_id"))
+      }
     }
   }
 

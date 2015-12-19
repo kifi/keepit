@@ -8,6 +8,7 @@ import com.keepit.common.concurrent.{ FakeExecutionContextModule, WatchableExecu
 import com.keepit.common.controller.{ FakeSecureSocialClientIdModule, FakeUserActionsHelper, FakeUserActionsModule }
 import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration, FakeCryptoModule }
 import com.keepit.common.db.slick._
+import com.keepit.common.json.TestHelper
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.common.time._
@@ -27,7 +28,6 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 
 class MobileMessagingControllerTest extends Specification with ElizaTestInjector {
-
   implicit val context = HeimdalContext.empty
 
   def initUsers()(implicit injector: Injector): Seq[User] = {
@@ -105,7 +105,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         }
 
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.pubKeepId, users = eishay.externalId.toString, emailContacts = "joe@smith.com,jack@smith.com").toString
-        path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts=joe%40smith.com%2Cjack%40smith.com"
+        path === s"/m/1/eliza/thread/${thread.pubKeepId.id}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts=joe%40smith.com%2Cjack%40smith.com"
 
         inject[FakeUserActionsHelper].setUser(shanee)
 
@@ -148,7 +148,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         }
 
         val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.addParticipantsToThread(thread.pubKeepId, users = eishay.externalId.toString, emailContacts = "").toString
-        path === s"/m/1/eliza/thread/${thread.externalId}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts="
+        path === s"/m/1/eliza/thread/${thread.pubKeepId.id}/addParticipantsToThread?users=2be9e0e7-212e-4081-a2b0-bfcaf3e61483&emailContacts="
 
         inject[FakeUserActionsHelper].setUser(shanee)
 
@@ -247,7 +247,8 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
               }]
           }
           """)
-        Json.parse(contentAsString(result)) must equalTo(expected)
+        val actual = contentAsJson(result)
+        TestHelper.deepCompare(actual, expected) must beNone
 
       }
     }
@@ -369,7 +370,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
 
         {
           val path = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.pubKeepId, 1000, None).toString
-          path === s"/m/2/eliza/thread/${thread.pubKeepId}"
+          path === s"/m/2/eliza/thread/${thread.pubKeepId.id}"
 
           val action = controller.getPagedThread(thread.pubKeepId, 1000, None)
           val result = action(FakeRequest("GET", path))
@@ -426,7 +427,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         }
         {
           val path2 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.pubKeepId, 3, None).toString
-          path2 === s"/m/2/eliza/thread/${thread.pubKeepId}?pageSize=3"
+          path2 === s"/m/2/eliza/thread/${thread.pubKeepId.id}?pageSize=3"
 
           val action2 = controller.getPagedThread(thread.pubKeepId, 3, None)
           val res2 = Json.parse(contentAsString(action2(FakeRequest("GET", path2))))
@@ -466,9 +467,9 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         }
         {
           val path3 = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getPagedThread(thread.pubKeepId, 3, Some(messages(2).pubId.id)).toString
-          path3 === s"/m/2/eliza/thread/${thread.pubKeepId}?pageSize=3&fromMessageId=${messages(2).externalId.toString}"
+          path3 === s"/m/2/eliza/thread/${thread.pubKeepId.id}?pageSize=3&fromMessageId=${messages(2).pubId.id}"
 
-          val action3 = controller.getPagedThread(thread.pubKeepId, 3, Some(messages(2).externalId.toString))
+          val action3 = controller.getPagedThread(thread.pubKeepId, 3, Some(messages(2).pubId.id))
           val res3 = Json.parse(contentAsString(action3(FakeRequest())))
 
           val expectedMessages3 = s"""[
@@ -500,7 +501,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
           """)
 
           (res3 \ "messages").as[JsArray].value.size === 2
-          (messages.reverse.drop(3) map (_.pubKeepId)) === ((res3 \ "messages").as[JsArray].value map { m => (m \ "id").as[PublicId[Keep]] })
+          (messages.reverse.drop(3) map (_.pubId)) === ((res3 \ "messages").as[JsArray].value map { m => (m \ "id").as[PublicId[Message]] })
           res3 must equalTo(expected3)
         }
       }
@@ -555,7 +556,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         reply.messageText === "cool man!"
         val expected = Json.parse(s"""
           {
-            "id":"${reply.pubKeepId.id}",
+            "id":"${reply.pubId.id}",
             "parentId":"${reply.pubKeepId.id}",
             "createdAt":"${reply.createdAt.toStandardTimeString}"
           }
@@ -565,7 +566,7 @@ class MobileMessagingControllerTest extends Specification with ElizaTestInjector
         //checking result with another call
 
         val pathThread = com.keepit.eliza.controllers.mobile.routes.MobileMessagingController.getCompactThread(thread.pubKeepId).toString
-        pathThread === s"/m/1/eliza/thread/${thread.pubKeepId}"
+        pathThread === s"/m/1/eliza/thread/${thread.pubKeepId.id}"
 
         val action2 = controller.getCompactThread(thread.pubKeepId)
         val request2 = FakeRequest("GET", pathThread)

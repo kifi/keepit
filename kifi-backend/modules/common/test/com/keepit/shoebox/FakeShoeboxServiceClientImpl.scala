@@ -35,6 +35,8 @@ import scala.collection.mutable.{ Map => MutableMap }
 import scala.concurrent.Future
 import com.keepit.common.crypto.PublicIdConfiguration
 
+import scala.util.Random
+
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, implicit val publicIdConfig: PublicIdConfiguration) extends ShoeboxServiceClient {
   val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE, Providers.of(airbrakeNotifier), new FakeScheduler(), () => {})
@@ -679,20 +681,24 @@ class FakeShoeboxServiceClientImpl(val airbrakeNotifier: AirbrakeNotifier, impli
   }
 
   def getDiscussionKeepsByIds(viewerId: Id[User], keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], DiscussionKeep]] = Future.successful(Map.empty)
-
   def getBasicOrganizationsByIds(ids: Set[Id[Organization]]): Future[Map[Id[Organization], BasicOrganization]] = Future.successful(Map.empty)
-
   def getLibraryMembershipView(libraryId: Id[Library], userId: Id[User]) = Future.successful(None)
-
   def getOrganizationUserRelationship(orgId: Id[Organization], userId: Id[User]) = Future.successful(OrganizationUserRelationship(orgId = Id[Organization](1), userId = Id[User](1), role = None, permissions = None, isInvited = false, isCandidate = false))
-
   def getUserPermissionsByOrgId(orgIds: Set[Id[Organization]], userId: Id[User]) = Future.successful(Map.empty)
-
   def getIntegrationsBySlackChannel(teamId: SlackTeamId, channelId: SlackChannelId): Future[SlackChannelIntegrations] = Future.successful(SlackChannelIntegrations.none(teamId, channelId))
-
   def getSourceAttributionForKeeps(keepIds: Set[Id[Keep]]): Future[Map[Id[Keep], SourceAttribution]] = Future.successful(Map.empty)
 
-  def canCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = Future.successful(true)
-
-  def canDeleteCommentOnKeep(userId: Id[User], keepId: Id[Keep]): Future[Boolean] = Future.successful(true)
+  def internKeep(creator: Id[User], users: Set[Id[User]], uriId: Id[NormalizedURI], url: String, title: Option[String], note: Option[String]): Future[CrossServiceKeep] = {
+    Future.successful(CrossServiceKeep(
+      id = nextBookmarkId(),
+      owner = creator,
+      users = users,
+      libraries = Set.empty,
+      url = url,
+      uriId = uriId,
+      keptAt = currentDateTime,
+      title = title,
+      note = note
+    ))
+  }
 }

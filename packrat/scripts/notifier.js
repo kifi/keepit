@@ -37,13 +37,19 @@ var notifier = function () {
              imgTag(k.cdnBase + '/users/' + o.author.id + '/pics/100/' + o.author.pictureName),
           sticky: false,
           showForMs: o.showForMs || 12000,
-          onClick: $.proxy(onClickMessage, null, o.url, o.locator),
+          onClick: $.proxy(onClickWithLocator, null, o.thread, o.id, o.url, o.locator, false),
           threadId: o.thread
         });
         break;
       case 'global':
       case 'triggered':
         this.hide(o.thread);
+        var clickAction;
+        if (o.locator) {
+          clickAction = $.proxy(onClickWithLocator, null, o.thread, o.id, o.url, o.locator, true);
+        } else {
+          clickAction = $.proxy(onClickNoLocator, null, o.thread, o.id, o.url);
+        }
         add(o.id, o.category, {
           title: o.title,
           subtitle: o.subtitle,
@@ -52,7 +58,7 @@ var notifier = function () {
           imageHtml: imgTag(o.image),
           sticky: o.isSticky,
           showForMs: o.showForMs || 12000,
-          onClick: $.proxy(onClickNotMessage, null, o.thread, o.id, o.url),
+          onClick: clickAction,
           threadId: o.thread
         });
         break;
@@ -117,7 +123,10 @@ var notifier = function () {
     return false;
   }
 
-  function onClickMessage(url, locator, e) {
+  function onClickWithLocator(threadId, messageId, url, locator, markAsReadImmediately, e) {
+    if (markAsReadImmediately) { // If the locator likely won't trigger a mark-as-read call
+      api.port.emit('set_message_read', {threadId: threadId, messageId: messageId, from: 'notifier'});
+    }
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
     api.port.emit('open_deep_link', {nUri: url, locator: locator, inThisTab: inThisTab});
     if (inThisTab && url !== document.URL) {
@@ -125,7 +134,7 @@ var notifier = function () {
     }
   }
 
-  function onClickNotMessage(threadId, messageId, url, e) {
+  function onClickNoLocator(threadId, messageId, url, e) {
     api.port.emit('set_message_read', {threadId: threadId, messageId: messageId, from: 'notifier'});
     var inThisTab = e.metaKey || e.altKey || e.ctrlKey;
     if (url && url !== document.URL) {

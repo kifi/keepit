@@ -239,13 +239,18 @@ k.messageParticipants = k.messageParticipants || (function ($, win) {
 		 */
 		getView: function () {
 			var participants = this.getParticipants();
-			var other = participants.length === 2 ? participants.filter(function (user) {
+			var participantsCount = participants.filter(function (user) {
+				return user.id !== k.me.id;
+			}).length + 1; // Always treat current user as a counted participant
+			var onKeep = !!(this.parent.keep && this.parent.keep.libraries.length > 0);
+			var other = participants.length <= 2 ? participants.filter(function (user) {
 				return user.id !== k.me.id;
 			})[0] : null;
 			return {
+				onKeep: onKeep,
 				participantName: other ? this.getFullName(other) : null,
 				isOverflowed: this.isOverflowed(),
-				participantCount: participants.length,
+				participantCount: participantsCount,
 				avatars: this.renderAvatars(),
 				participants: this.renderParticipants()
 			};

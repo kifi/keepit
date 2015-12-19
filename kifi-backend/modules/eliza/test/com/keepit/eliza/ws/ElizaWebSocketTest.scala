@@ -6,6 +6,7 @@ import com.google.inject.Injector
 import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.concurrent.FakeExecutionContextModule
 import com.keepit.common.controller.FakeUserActionsModule
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.db.{ ExternalId, Id }
 import com.keepit.common.store.FakeElizaStoreModule
 import com.keepit.eliza.commanders.MessagingCommander
@@ -14,7 +15,7 @@ import com.keepit.eliza.model._
 import com.keepit.eliza.notify.WsTestBehavior
 import com.keepit.eliza.social.{ FakeSecureSocial, FakeSecureSocialUserPluginModule, FakeSecureSocialAuthenticatorPluginModule }
 import com.keepit.heimdal.{ HeimdalContext, FakeHeimdalServiceClientModule }
-import com.keepit.model.{ MessageThreadFactory, User, SocialUserInfo }
+import com.keepit.model.{ Keep, MessageThreadFactory, User, SocialUserInfo }
 import com.keepit.rover.FakeRoverServiceClientModule
 import com.keepit.shoebox.{ FakeShoeboxServiceClientImpl, ShoeboxServiceClient, FakeShoeboxServiceModule }
 import com.keepit.test.{ ElizaApplication, ElizaApplicationInjector }
@@ -75,26 +76,22 @@ class ElizaWebSocketTest extends Specification with ElizaApplicationInjector wit
 
         socket.out(0).as[String] must startWith("id:")
 
-        val messageThreadRepo = inject[MessageThreadRepo]
-        val uuid = UUID.randomUUID().toString
-
         db.readWrite { implicit s => MessageThreadFactory.thread().saved }
 
         socket.in {
-          Json.arr("get_thread", uuid)
+          Json.arr("get_thread", UUID.randomUUID().toString)
         }
 
         val thread2 = db.readWrite { implicit session => MessageThreadFactory.thread().withUsers(Id(1)).saved }
-        val uuid2 = thread2.externalId.id
 
         socket.in {
-          Json.arr("get_thread", uuid2)
+          Json.arr("get_thread", thread2.pubKeepId)
         }
 
         val threadResponse = socket.out
         threadResponse(0).as[String] === "thread"
         val thread = threadResponse(1)
-        (thread \ "id").as[String] === uuid2
+        (thread \ "id").as[PublicId[Keep]] === thread2.pubKeepId
         (thread \ "messages") === JsArray()
 
         socket.close

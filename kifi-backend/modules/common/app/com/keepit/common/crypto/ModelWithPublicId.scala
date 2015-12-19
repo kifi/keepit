@@ -88,7 +88,7 @@ trait PublicIdGenerator[T] {
   }
 
   def validatePublicId(idStr: String): Try[PublicId[T]] = if (idStr.startsWith(publicIdPrefix)) Success(PublicId(idStr)) else Failure(new IllegalArgumentException(s"Expected $idStr to start with $publicIdPrefix"))
-  implicit val readsPublicId: Reads[PublicId[T]] = Reads { j => j.validate[String].flatMap(idStr => validatePublicId(idStr).map(JsSuccess(_)) getOrElse JsError(s"Invalid PublicId: $idStr")) }
+  implicit val readsPublicId: Reads[PublicId[T]] = Reads { j => j.validate[String].flatMap(idStr => validatePublicId(idStr).map(JsSuccess(_)) recover { case error => JsError(s"Invalid PublicId: ${error.getMessage}") } get) }
   implicit val formatPublicId: Format[PublicId[T]] = Format(readsPublicId, PublicId.writes)
 
   def publicId(id: Id[T])(implicit config: PublicIdConfiguration): PublicId[T] = {

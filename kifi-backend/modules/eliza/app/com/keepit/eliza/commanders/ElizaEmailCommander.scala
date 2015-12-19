@@ -1,8 +1,8 @@
 package com.keepit.eliza.commanders
 
 import com.google.inject.Inject
-import com.keepit.common.crypto.PublicIdConfiguration
-import com.keepit.common.mail.template.EmailToSend
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
+import com.keepit.common.mail.template.{ TemplateOptions, EmailToSend }
 import com.keepit.common.mail.template.helpers.discussionLink
 import com.keepit.rover.RoverServiceClient
 import com.keepit.rover.model.RoverUriSummary
@@ -90,7 +90,7 @@ class ElizaEmailCommander @Inject() (
     ThreadEmailInfo(
       uriId = thread.uriId,
       threadId = thread.externalId,
-      keepId = thread.keepId.map(Keep.publicId),
+      keepId = Keep.publicId(thread.keepId),
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl).abbreviate(80),
       isInitialEmail = isInitialEmail,
@@ -245,7 +245,8 @@ class ElizaEmailCommander @Inject() (
         subject = protoEmail.pageTitle,
         htmlTemplate = htmlBodyMaker(protoEmail),
         category = category,
-        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address))
+        extraHeaders = Some(Map(PostOffice.Headers.REPLY_TO -> magicAddress.address)),
+        templateOptions = Seq(TemplateOptions.CustomLayout).toMap
       )
       shoebox.processAndSendMail(email) map {
         case true => // all good
@@ -283,7 +284,7 @@ object ElizaEmailCommander {
     val info = ThreadEmailInfo(
       Id[NormalizedURI](1),
       ExternalId[MessageThread](),
-      None,
+      PublicId[Keep]("kASDF1234"),
       "Wikipedia",
       "The Interesting Page That Everyone Should Read",
       true,

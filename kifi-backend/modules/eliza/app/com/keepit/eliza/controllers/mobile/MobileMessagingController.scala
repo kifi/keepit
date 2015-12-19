@@ -18,7 +18,7 @@ import com.keepit.social.{ BasicNonUser, BasicUser, BasicUserLikeEntity }
 import com.kifi.macros.json
 
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.util.Success
+import scala.util.{ Failure, Success }
 
 //import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{ JsArray, JsObject, JsString, _ }
@@ -178,7 +178,7 @@ class MobileMessagingController @Inject() (
           statsd.timing(s"messaging.replyMessage", tDiff, ONE_IN_HUNDRED)
           Ok(Json.obj("id" -> message.pubId, "parentId" -> pubKeepId, "createdAt" -> message.sentAt))
         }
-      case _ => Future.successful(BadRequest("invalid_id"))
+      case Failure(_) => Future.successful(BadRequest("invalid_id"))
     }
   }
 
@@ -231,7 +231,7 @@ class MobileMessagingController @Inject() (
               })
             ))
         }
-      case _ => Future.successful(BadRequest("invalid_keep_id"))
+      case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }
   }
 
@@ -276,7 +276,7 @@ class MobileMessagingController @Inject() (
               })
             ))
         }
-      case _ => Future.successful(BadRequest("invalid_keep_id"))
+      case Failure(_) => Future.successful(BadRequest("invalid_keep_id"))
     }
   }
 
@@ -357,7 +357,7 @@ class MobileMessagingController @Inject() (
           discussionCommander.addParticipantsToThread(request.userId, keepId, validUserIds, validEmails, validOrgIds)(contextBuilder.build)
         }
         Ok("")
-      case _ => BadRequest("invalid_keep_id")
+      case Failure(_) => BadRequest("invalid_keep_id")
     }
   }
 

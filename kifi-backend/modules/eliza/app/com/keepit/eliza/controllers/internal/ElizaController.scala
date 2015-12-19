@@ -1,6 +1,7 @@
 package com.keepit.eliza.controllers.internal
 
 import com.keepit.common.akka.SafeFuture
+import com.keepit.common.crypto.{ PublicId, PublicIdConfiguration }
 import com.keepit.common.time.Clock
 import com.keepit.discussion.{ Discussion, Message }
 import com.keepit.eliza._
@@ -20,16 +21,18 @@ import play.api.libs.json.{ JsNumber, Json, JsObject, JsArray }
 
 import com.google.inject.Inject
 import com.keepit.eliza.commanders._
-import com.keepit.eliza.model.{ MessageRepo, MessageThreadRepo, MessageThread, UserThreadStats }
+import com.keepit.eliza.model._
 import com.keepit.common.db.slick._
 
 class ElizaController @Inject() (
     notificationRouter: WebSocketRouter,
     notificationDeliveryCommander: NotificationDeliveryCommander,
     deviceRepo: DeviceRepo,
+    messageThreadRepo: MessageThreadRepo,
     db: Database,
     discussionCommander: ElizaDiscussionCommander,
     elizaStatsCommander: ElizaStatsCommander,
+    implicit val publicIdConfig: PublicIdConfiguration,
     clock: Clock) extends ElizaServiceController with Logging {
 
   def disableDevice(id: Id[Device]) = Action { request =>
@@ -140,8 +143,12 @@ class ElizaController @Inject() (
     Ok(Json.toJson(threadStats))
   }
 
-  def getParticipantsByThreadExtId(threadId: ExternalId[MessageThread]) = Action { request =>
-    val participants = elizaStatsCommander.getThreadByExtId(threadId).participants.allUsers
+  def getParticipantsByThreadExtId(pubKeepId: PublicId[Keep]) = Action { request =>
+    val participants = Keep.decodePublicId(pubKeepId).toOption.flatMap { keepId =>
+      db.readOnlyReplica { implicit s =>
+        messageThreadRepo.getByKeepId(keepId).map(_.participants.allUsers)
+      }
+    }.getOrElse(Set.empty)
     Ok(Json.toJson(participants))
   }
 
