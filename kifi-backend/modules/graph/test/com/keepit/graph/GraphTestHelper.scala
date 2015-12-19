@@ -50,16 +50,16 @@ trait GraphTestHelper {
 
   val userUpdate = UserGraphUpdate(UserFactory.user().withId(u42).withName("Tan", "Lin").withUsername("test").withSeq(1).get)
 
-  val keepGraphUpdate1 = KeepGraphUpdate(Keep(id = Some(keepid1), uriId = uriid1, url = "url1", userId = u43,
-    source = KeepSource("site"), seq = SequenceNumber(3), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
-  val keepGraphUpdate2 = KeepGraphUpdate(Keep(id = Some(keepid2), uriId = uriid2, url = "url2", userId = u43,
-    source = KeepSource("site"), seq = SequenceNumber(4), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
-  val keepGraphUpdate3 = KeepGraphUpdate(Keep(id = Some(keepid3), uriId = uriid3, url = "url3", userId = u43,
-    source = KeepSource("site"), seq = SequenceNumber(5), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
-  val keepGraphUpdate4 = KeepGraphUpdate(Keep(id = Some(keepid4), uriId = uriid4, url = "url4", userId = u43,
-    source = KeepSource("site"), seq = SequenceNumber(6), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
-  val keepGraphUpdate5 = KeepGraphUpdate(Keep(id = Some(keepid5), uriId = uriid5, url = "url5", userId = u42,
-    source = KeepSource("site"), seq = SequenceNumber(7), visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(Id[Library](1))))
+  val keepGraphUpdate1 = KeepGraphUpdate(KeepFactory.keep().withId(keepid1).withURIId(uriid1).withUrl("url1").withUser(u43)
+    .withSource(KeepSource("site")).withSeq(SequenceNumber(3)).withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(Id[Library](1)).get)
+  val keepGraphUpdate2 = KeepGraphUpdate(KeepFactory.keep().withId(keepid2).withURIId(uriid2).withUrl("url2").withUser(u43)
+    .withSource(KeepSource("site")).withSeq(SequenceNumber(4)).withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(Id[Library](1)).get)
+  val keepGraphUpdate3 = KeepGraphUpdate(KeepFactory.keep().withId(keepid3).withURIId(uriid3).withUrl("url3").withUser(u43)
+    .withSource(KeepSource("site")).withSeq(SequenceNumber(5)).withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(Id[Library](1)).get)
+  val keepGraphUpdate4 = KeepGraphUpdate(KeepFactory.keep().withId(keepid4).withURIId(uriid4).withUrl("url4").withUser(u43)
+    .withSource(KeepSource("site")).withSeq(SequenceNumber(6)).withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(Id[Library](1)).get)
+  val keepGraphUpdate5 = KeepGraphUpdate(KeepFactory.keep().withId(keepid5).withURIId(uriid5).withUrl("url5").withUser(u42)
+    .withSource(KeepSource("site")).withSeq(SequenceNumber(7)).withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(Id[Library](1)).get)
   val keepUpdates = List(keepGraphUpdate1, keepGraphUpdate2, keepGraphUpdate3, keepGraphUpdate4, keepGraphUpdate5)
 
   val userConnectionGraphUpdate0 = UserConnectionGraphUpdate(UserConnection(user1 = u42, user2 = u43, seq = SequenceNumber(2)))

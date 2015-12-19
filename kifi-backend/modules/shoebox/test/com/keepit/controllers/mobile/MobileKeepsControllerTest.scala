@@ -7,23 +7,21 @@ import com.keepit.common.actor.FakeActorSystemModule
 import com.keepit.common.controller._
 import com.keepit.common.crypto.PublicIdConfiguration
 import com.keepit.common.db.{ ExternalId, Id }
-import com.keepit.model.LibraryFactory._
-import com.keepit.model.LibraryFactoryHelper._
-import com.keepit.model.KeepFactoryHelper._
-import com.keepit.model.UserFactoryHelper._
-import com.keepit.model.UserFactory
-
 import com.keepit.common.healthcheck.FakeAirbrakeModule
 import com.keepit.common.helprank.HelpRankTestHelper
+import com.keepit.common.json.TestHelper
 import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.store.FakeShoeboxStoreModule
 import com.keepit.common.time._
 import com.keepit.cortex.FakeCortexServiceClientModule
 import com.keepit.heimdal._
-import com.keepit.model.{ KeepToCollection, _ }
+import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryFactory._
+import com.keepit.model.LibraryFactoryHelper._
+import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.{ KeepToCollection, UserFactory, _ }
 import com.keepit.search.{ FakeSearchServiceClientModule, _ }
 import com.keepit.shoebox.FakeShoeboxServiceModule
-import com.keepit.social.BasicUser
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
@@ -88,24 +86,15 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val uri1 = uriRepo.save(NormalizedURI.withHash("http://www.google.com/", Some("Google")))
         val uri2 = uriRepo.save(NormalizedURI.withHash("http://www.amazon.com/", Some("Amazon")))
 
-        val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
-        val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
-
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user2.id.get, access = LibraryAccess.READ_WRITE))
 
-        val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-        val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-        val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
-          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+        val keep1 = KeepFactory.keep().withTitle("G1").withUri(uri1).withUser(user1).withLibrary(lib1).withKeptAt(t1 plusHours 3).saved
+        val keep2 = KeepFactory.keep().withTitle("A1").withUri(uri2).withUser(user1).withLibrary(lib1).withKeptAt(t1 plusHours 5).saved
+        val keep3 = KeepFactory.keep().withUri(uri1).withUser(user2).withLibrary(lib1).withKeptAt(t1 plusHours 7).saved
 
-        (user1, user2, bookmark1, bookmark2, bookmark3, lib1)
+        (user1, user2, keep1, keep2, keep3, lib1)
       }
       val pubLibId1 = Library.publicId(lib1.id.get)
       val keeps = db.readWrite { implicit s =>
@@ -189,7 +178,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             }
         ]}
       """)
-      Json.parse(contentAsString(result)) must equalTo(expected)
+      val actual = contentAsJson(result)
+      TestHelper.deepCompare(actual, expected) must beNone
     }
   }
 
@@ -337,17 +327,11 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
         val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.DISCOVERABLE, slug = LibrarySlug("asdf"), memberCount = 1))
         libraryMembershipRepo.save(LibraryMembership(libraryId = lib1.id.get, userId = user1.id.get, access = LibraryAccess.OWNER))
 
-        val bookmark1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
-          uriId = uri1.id.get, source = keeper, createdAt = t1.plusMinutes(3), keptAt = t1.plusMinutes(3), state = KeepStates.ACTIVE,
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-        val bookmark2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
-          uriId = uri2.id.get, source = keeper, createdAt = t1.plusHours(50), keptAt = t1.plusHours(50), state = KeepStates.ACTIVE,
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
-        val bookmark3 = keepRepo.save(Keep(title = None, userId = user2.id.get, url = url1.url,
-          uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1), keptAt = t2.plusDays(1), state = KeepStates.ACTIVE,
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(lib1.id.get)))
+        val keep1 = KeepFactory.keep().withTitle("G1").withUri(uri1).withUser(user1).withLibrary(lib1).saved
+        val keep2 = KeepFactory.keep().withTitle("A1").withUri(uri2).withUser(user1).withLibrary(lib1).saved
+        val keep3 = KeepFactory.keep().withUri(uri1).withUser(user2).withLibrary(lib1).saved
 
-        (user1, bookmark1, bookmark2, bookmark3, lib1)
+        (user1, keep1, keep2, keep3, lib1)
       }
 
       val pubLibId1 = Library.publicId(lib1.id.get)
@@ -385,7 +369,7 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
                 "url":"http://www.amazon.com",
                 "path":"${bookmark2.path.relative}",
                 "isPrivate":false,
-                "createdAt":"2013-02-16T23:59:00.000Z",
+                "createdAt": "${bookmark2.keptAt}",
                 "user":{"id":"${user.externalId}","firstName":"Andrew","lastName":"C","pictureName":"0.jpg","username":"test1"},
                 "keeps":[{"id":"${bookmark2.externalId}", "mine":true, "removable":true, "visibility":"${bookmark2.visibility.value}","libraryId":"${pubLibId1.id}"}],
                 "keepers":[],
@@ -405,7 +389,8 @@ class MobileKeepsControllerTest extends Specification with ShoeboxTestInjector w
             ]
           }
         """)
-      Json.parse(contentAsString(result)) must equalTo(expected)
+      val actual = contentAsJson(result)
+      TestHelper.deepCompare(actual, expected) must beNone
     }
   }
 

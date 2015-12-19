@@ -29,6 +29,7 @@ import play.api.libs.json._
 import play.api.test.Helpers._
 import play.api.test._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.model.UserFactory
 
 class KeepsControllerTest extends Specification with ShoeboxTestInjector with HelpRankTestHelper {
@@ -103,13 +104,9 @@ class KeepsControllerTest extends Specification with ShoeboxTestInjector with He
           val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-          val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main"))
-          val keep1 = keepRepo.save(Keep(title = Some("G1"), userId = user1.id.get, url = url1.url,
-            uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
-          val keep2 = keepRepo.save(Keep(title = Some("A1"), userId = user1.id.get, url = url2.url,
-            uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1, keptAt = t1, state = KeepStates.ACTIVE,
-            visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(mainLib.get.id.get)))
+          val mainLib = libraryRepo.getBySpaceAndSlug(LibrarySpace.fromUserId(user1.id.get), LibrarySlug("main")).get
+          val keep1 = KeepFactory.keep().withTitle("G1").withUri(uri1).withUser(user1).withLibrary(mainLib).saved
+          val keep2 = KeepFactory.keep().withTitle("A1").withUri(uri2).withUser(user1).withLibrary(mainLib).saved
 
           keepToCollectionRepo.save(KeepToCollection(keepId = keep1.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(1)))
           keepToCollectionRepo.save(KeepToCollection(keepId = keep2.id.get, collectionId = tagA.id.get, createdAt = t1.plusMinutes(3)))
