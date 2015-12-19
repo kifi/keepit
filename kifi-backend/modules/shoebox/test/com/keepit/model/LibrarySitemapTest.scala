@@ -73,7 +73,7 @@ class LibrarySitemapTest extends Specification with ShoeboxTestInjector {
       KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(lib1).saved
       KeepFactory.keep().withTitle("A2").withUser(user1).withUri(uri3).withLibrary(lib1).saved
       KeepFactory.keep().withUser(user2).withUri(uri1).withLibrary(lib1).saved
-      lib1
+      libraryRepo.get(lib1.id.get)
     }
   }
 

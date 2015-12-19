@@ -16,8 +16,8 @@ object KeepFactory {
     new PartialKeep(Keep(id = Some(Id[Keep](-1 * idx.incrementAndGet())),
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
-      visibility = LibraryVisibility.PUBLISHED,
-      title = Some(RandomStringUtils.randomAlphabetic(20)),
+      visibility = LibraryVisibility.SECRET,
+      title = None,
       keptAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
       userId = userId,
       source = KeepSource.keeper,
@@ -40,6 +40,7 @@ object KeepFactory {
     def withId(id: ExternalId[Keep]) = this.copy(keep = keep.copy(externalId = id))
     def withId(id: String) = this.copy(keep = keep.copy(externalId = ExternalId[Keep](id)))
     def withTitle(title: String) = this.copy(keep = keep.copy(title = Some(title)))
+    def withRandomTitle() = this.copy(keep = keep.copy(title = Some(RandomStringUtils.randomAlphabetic(25))))
     def withSource(ks: KeepSource) = this.copy(keep = keep.copy(source = ks))
     def withSeq(seq: SequenceNumber[Keep]) = this.copy(keep = keep.copy(seq = seq))
     def withVisibility(visibility: LibraryVisibility) = this.copy(keep = keep.copy(visibility = visibility))

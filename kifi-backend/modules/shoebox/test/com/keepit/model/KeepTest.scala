@@ -11,6 +11,7 @@ import com.google.inject.Injector
 import com.keepit.common.db.{ Id }
 import com.keepit.model.UserFactoryHelper._
 import com.keepit.model.KeepFactoryHelper._
+import com.keepit.model.LibraryFactoryHelper._
 
 class KeepTest extends Specification with ShoeboxTestInjector {
 
@@ -33,14 +34,14 @@ class KeepTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-      val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user1.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+      val libPublic = LibraryFactory.library().withOwner(user1).withVisibility(LibraryVisibility.PUBLISHED).saved
 
-      KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri1).withLibrary(lib1).saved
-      KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(lib1).saved
-      KeepFactory.keep().withTitle("A2").withUser(user1).withUri(uri3).withLibrary(lib1).saved
-      KeepFactory.keep().withUser(user1).withUri(uri1).withLibrary(lib1).saved
+      KeepFactory.keep().withTitle("G1").withUser(user1).withUri(uri1).withLibrary(libPublic).withKeptAt(t1 plusHours 3).withSource(KeepSource.keeper).saved
+      KeepFactory.keep().withTitle("A1").withUser(user1).withUri(uri2).withLibrary(libPublic).withKeptAt(t1 plusHours 5).withSource(KeepSource.keeper).saved
+      KeepFactory.keep().withTitle("A2").withUser(user1).withUri(uri3).withKeptAt(t1 plusHours 7).withSource(KeepSource.keeper).saved
+      KeepFactory.keep().withUser(user2).withUri(uri1).withLibrary(libPublic).withKeptAt(t2 plusDays 1).withSource(KeepSource.bookmarkImport).saved
 
-      (user1, user2, uri1, uri2, uri3, url1, url2, lib1)
+      (user1, user2, uri1, uri2, uri3, url1, url2, libPublic)
     }
   }
 
@@ -180,11 +181,11 @@ class KeepTest extends Specification with ShoeboxTestInjector {
           val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
           val url3 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri3.id.get))
 
-          val lib1 = libraryRepo.save(Library(name = "Lib", ownerId = user.id.get, visibility = LibraryVisibility.SECRET, slug = LibrarySlug("asdf"), memberCount = 1))
+          val libDiscoverable = LibraryFactory.library().withVisibility(LibraryVisibility.DISCOVERABLE).withOwner(user).saved
 
-          KeepFactory.keep().withUser(user).withUri(uri1).saved
-          KeepFactory.keep().withUser(user).withUri(uri2).saved
-          KeepFactory.keep().withUser(user).withUri(uri3).saved
+          KeepFactory.keep().withUser(user).withLibrary(libDiscoverable).withUri(uri1).withKeptAt(t1 plusMinutes 3).saved
+          KeepFactory.keep().withUser(user).withLibrary(libDiscoverable).withUri(uri2).withKeptAt(t1 plusMinutes 9).saved
+          KeepFactory.keep().withUser(user).withUri(uri3).withKeptAt(t1 plusMinutes 6).saved
         }
 
         db.readOnlyMaster { implicit s =>

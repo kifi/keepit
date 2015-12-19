@@ -1203,7 +1203,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val user = UserFactory.user().saved
             val emptyLib = LibraryFactory.library().withOwner(user).saved
             val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib)).saved
+            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
             (user, sourceLib, emptyLib, keeps)
           }
 
@@ -1230,11 +1230,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val (user, sourceLib, targetLib, keeps, obstacleKeeps) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib)).saved
+            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
 
             val targetLib = LibraryFactory.library().withOwner(user).saved
             val obstacleKeeps = for (uriId <- Random.shuffle(keeps).take(keeps.length / 2).map(_.uriId)) yield {
-              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).saved
+              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).withRandomTitle().saved
             }
 
             (user, sourceLib, targetLib, keeps, obstacleKeeps)
@@ -1252,7 +1252,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val newKeeps = inject[KeepRepo].getByLibrary(targetLib.id.get, 0, 1000)
             val expectedKeeps = (obstacleKeeps ++ yay).sortBy(k => (k.keptAt, k.id.get)).reverse // they come out in reverse chronological order
             newKeeps.length === keeps.length
-            newKeeps.map(_.title.get) === expectedKeeps.map(_.title.get)
+            newKeeps.map(_.title) === expectedKeeps.map(_.title)
             newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
             newKeeps.map(_.note) === expectedKeeps.map(_.note)
           }
@@ -1268,7 +1268,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val user = UserFactory.user().saved
             val emptyLib = LibraryFactory.library().withOwner(user).saved
             val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib)).saved
+            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
             (user, sourceLib, emptyLib, keeps)
           }
 
@@ -1285,7 +1285,7 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
             val expectedKeeps = keeps.reverse
             newKeeps.length === keeps.length
             newKeeps.map(_.id.get) === expectedKeeps.map(_.id.get)
-            newKeeps.map(_.title.get) === expectedKeeps.map(_.title.get)
+            newKeeps.map(_.title) === expectedKeeps.map(_.title)
             newKeeps.map(_.keptAt) === expectedKeeps.map(_.keptAt)
             newKeeps.map(_.note) === expectedKeeps.map(_.note)
           }
@@ -1297,11 +1297,11 @@ class LibraryCommanderTest extends TestKitSupport with SpecificationLike with Sh
           val (user, sourceLib, targetLib, keeps, obstacleKeeps) = db.readWrite { implicit session =>
             val user = UserFactory.user().saved
             val sourceLib = LibraryFactory.library().withOwner(user).saved
-            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib)).saved
+            val keeps = KeepFactory.keeps(50).map(_.withUser(user).withLibrary(sourceLib).withRandomTitle()).saved
 
             val targetLib = LibraryFactory.library().withOwner(user).saved
             val obstacleKeeps = for (uriId <- Random.shuffle(keeps).take(keeps.length / 2).map(_.uriId)) yield {
-              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).saved
+              KeepFactory.keep().withUser(user).withLibrary(targetLib).withURIId(uriId).withRandomTitle().saved
             }
 
             (user, sourceLib, targetLib, keeps, obstacleKeeps)
