@@ -89,7 +89,6 @@ class ElizaEmailCommander @Inject() (
 
     ThreadEmailInfo(
       uriId = thread.uriId,
-      threadId = thread.externalId,
       keepId = Keep.publicId(thread.keepId),
       pageName = pageName,
       pageTitle = thread.pageTitle.orElse(uriSummary.flatMap(_.article.title)).getOrElse(thread.nUrl).abbreviate(80),
@@ -283,7 +282,6 @@ object ElizaEmailCommander {
   def makeDummyEmail(isUser: Boolean, isAdded: Boolean, isSmall: Boolean): String = {
     val info = ThreadEmailInfo(
       Id[NormalizedURI](1),
-      ExternalId[MessageThread](),
       PublicId[Keep]("kASDF1234"),
       "Wikipedia",
       "The Interesting Page That Everyone Should Read",
