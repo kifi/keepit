@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import org.joda.time.DateTime
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 
 @Singleton
 class ShoeboxTestFactory @Inject() (
@@ -91,30 +92,31 @@ class ShoeboxTestFactory @Inject() (
       val url8 = urlRepo.save(URLFactory(url = uri3.url, normalizedUriId = uri8.id.get))
 
       Seq(
-        keepRepo.save(Keep(title = Some("Reddit"), userId = userCaptain.id.get, url = url1.url,
-          uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(20), keptAt = t1.plusMinutes(20),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libShield.id.get))),
-        keepRepo.save(Keep(title = Some("Freedom"), userId = userCaptain.id.get, url = url2.url,
-          uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(100), keptAt = t1.plusMinutes(100),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libShield.id.get))),
-        keepRepo.save(Keep(title = Some("McDonalds"), userId = userIron.id.get, url = url3.url,
-          uriId = uri3.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(15), keptAt = t1.plusMinutes(15),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get))),
-        keepRepo.save(Keep(title = Some("McDonalds1"), userId = userIron.id.get, url = url4.url,
-          uriId = uri4.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(25), keptAt = t1.plusMinutes(25),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get))),
-        keepRepo.save(Keep(title = Some("McDonalds2"), userId = userIron.id.get, url = url5.url,
-          uriId = uri5.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(35), keptAt = t1.plusMinutes(35),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get))),
-        keepRepo.save(Keep(title = Some("McDonalds3"), userId = userIron.id.get, url = url6.url,
-          uriId = uri6.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(45), keptAt = t1.plusMinutes(45),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get))),
-        keepRepo.save(Keep(title = Some("McDonalds4"), userId = userIron.id.get, url = url7.url,
-          uriId = uri7.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(55), keptAt = t1.plusMinutes(55),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get))),
-        keepRepo.save(Keep(title = Some("McDonalds5"), userId = userIron.id.get, url = url8.url,
-          uriId = uri8.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(65), keptAt = t1.plusMinutes(65),
-          visibility = LibraryVisibility.DISCOVERABLE, libraryId = Some(libMurica.id.get))))
+        KeepFactory.keep().withTitle("Reddit").withUser(userCaptain).withUri(uri1)
+          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(20)).withKeptAt(t1.plusMinutes(20))
+          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libShield).saved,
+        KeepFactory.keep().withTitle("Freedom").withUser(userCaptain).withUri(uri2)
+          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(100)).withKeptAt(t1.plusMinutes(100))
+          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libShield).saved,
+        KeepFactory.keep().withTitle("McDonalds").withUser(userIron).withUri(uri3)
+          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(15)).withKeptAt(t1.plusMinutes(15))
+          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+        KeepFactory.keep().withTitle("McDonalds1").withUser(userIron).withUri(uri4)
+          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(25)).withKeptAt(t1.plusMinutes(25))
+          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+        KeepFactory.keep().withTitle("McDonalds2").withUser(userIron).withUri(uri5)
+          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(35)).withKeptAt(t1.plusMinutes(35))
+          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+        KeepFactory.keep().withTitle("McDonalds3").withUser(userIron).withUri(uri6)
+          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(45)).withKeptAt(t1.plusMinutes(45))
+          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+        KeepFactory.keep().withTitle("McDonalds4").withUser(userIron).withUri(uri7)
+          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(55)).withKeptAt(t1.plusMinutes(55))
+          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved,
+        KeepFactory.keep().withTitle("McDonalds5").withUser(userIron).withUri(uri8)
+          .withSource(KeepSource.keeper).withCreatedAt(t1.plusMinutes(65)).withKeptAt(t1.plusMinutes(65))
+          .withVisibility(LibraryVisibility.DISCOVERABLE).withLibrary(libMurica).saved
+      )
     }
     (userIron, userCaptain, userAgent, userHulk, libShield, libMurica, libScience, keeps)
   }

@@ -172,7 +172,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
-    "reactivate inactive bookmarks for the same url" in {
+    "properly intern keeps for the same url" in {
       withDb(modules: _*) { implicit injector =>
         val user = db.readWrite { implicit s =>
           UserFactory.user().withName("Greg", "Smith").withUsername("test").saved
@@ -184,9 +184,7 @@ class KeepInternerTest extends Specification with ShoeboxTestInjector {
           "isPrivate" -> true
         ))), user.id.get, library, KeepSource.keeper)
         initialBookmarks.size === 1
-        db.readWrite { implicit s =>
-          keepRepo.save(keepRepo.getByUser(user.id.get).head.withActive(false))
-        }
+
         val (bookmarks, _) = bookmarkInterner.internRawBookmarks(inject[RawBookmarkFactory].toRawBookmarks(Json.arr(Json.obj(
           "url" -> "http://42go.com/",
           "isPrivate" -> true

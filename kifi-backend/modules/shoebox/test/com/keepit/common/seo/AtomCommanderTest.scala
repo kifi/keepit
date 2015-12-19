@@ -6,6 +6,7 @@ import com.keepit.common.social.FakeSocialGraphModule
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.model.UserFactoryHelper._
+import com.keepit.model.KeepFactoryHelper._
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.test.ShoeboxTestInjector
 import org.joda.time.DateTime
@@ -37,15 +38,9 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-      val keep1 = keepRepo.save(Keep(title = Some("Google"), userId = user.id.get, url = url1.url, note = Some("Google Note"),
-        uriId = uri1.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(2),
-        visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
-      val keep2 = keepRepo.save(Keep(title = Some("Amazon"), userId = user.id.get, url = url2.url, note = None,
-        uriId = uri2.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(3),
-        visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
-      val keep0 = keepRepo.save(Keep(title = Some("Kifi"), userId = user.id.get, url = url0.url, note = Some("Kifiii!"),
-        uriId = uri0.id.get, source = KeepSource.keeper, createdAt = t1.plusMinutes(1),
-        visibility = LibraryVisibility.PUBLISHED, libraryId = Some(library.id.get)))
+      KeepFactory.keep().withTitle("Kifi").withUri(uri0).withUser(user).withLibrary(library).withKeptAt(t1 plusMinutes 5).saved
+      KeepFactory.keep().withTitle("Google").withUri(uri1).withUser(user).withLibrary(library).withKeptAt(t1 plusMinutes 10).saved
+      KeepFactory.keep().withTitle("Amazon").withUri(uri2).withUser(user).withLibrary(library).withKeptAt(t1 plusMinutes 15).saved
       library
     }
   }
@@ -75,14 +70,10 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
         ((result \ "link")(0) \ "@href") === "http://dev.ezkeep.com:9000/colin-lane/test/atom"
         ((result \ "link")(0) \ "@rel") === "self"
 
-        val kifi = (result \ "entry")(0)
-        kifi \ "title" === "Kifi"
+        (result \ "entry")(0) \ "title" === "Amazon"
+        (result \ "entry")(1) \ "title" === "Google"
+        (result \ "entry")(2) \ "title" === "Kifi"
 
-        val amazon = (result \ "entry")(1)
-        amazon \ "title" === "Amazon"
-
-        val google = (result \ "entry")(2)
-        google \ "title" === "Google"
       }
     }
 
@@ -94,14 +85,11 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
           val resultTry = Await.ready(commander.libraryFeed(library, offset = 1), Duration.Inf).value.get
           resultTry.isSuccess must equalTo(true)
           val result = resultTry.get
-          // Offset is 1, we aren't showing Kifi
           (result \ "entry").size must equalTo(2)
 
-          val amazon = (result \ "entry")(0)
-          amazon \ "title" === "Amazon"
+          (result \ "entry")(0) \ "title" === "Google"
+          (result \ "entry")(1) \ "title" === "Kifi"
 
-          val google = (result \ "entry")(1)
-          google \ "title" === "Google"
         }
       }
 
@@ -112,11 +100,9 @@ class AtomCommanderTest extends Specification with ShoeboxTestInjector {
           val resultTry = Await.ready(commander.libraryFeed(library, keepCountToDisplay = 1, offset = 1), Duration.Inf).value.get
           resultTry.isSuccess must equalTo(true)
           val result = resultTry.get
-          // Results would be "Kifi", "Amazon", "Google", but offset 1 and count 1 make only Amazon show.
           (result \ "entry").size must equalTo(1)
 
-          val amazon = (result \ "entry")(0)
-          amazon \ "title" === "Amazon"
+          (result \ "entry")(0) \ "title" === "Google"
         }
       }
     }
