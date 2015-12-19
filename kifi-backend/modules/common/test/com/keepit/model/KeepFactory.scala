@@ -2,7 +2,7 @@ package com.keepit.model
 
 import java.util.concurrent.atomic.AtomicLong
 
-import com.keepit.common.db.{ SequenceNumber, ExternalId, Id, State }
+import com.keepit.common.db.{ ExternalId, Id, State }
 import com.keepit.common.time._
 import org.apache.commons.lang3.RandomStringUtils
 import org.apache.commons.lang3.RandomStringUtils.random
@@ -16,46 +16,41 @@ object KeepFactory {
     new PartialKeep(Keep(id = Some(Id[Keep](-1 * idx.incrementAndGet())),
       uriId = Id[NormalizedURI](-1 * idx.incrementAndGet()),
       url = s"http://${random(5, "abcdefghijklmnopqrstuvwxyz")}.com/${random(5, "abcdefghijklmnopqrstuvwxyz")}",
-      visibility = LibraryVisibility.SECRET,
-      title = None,
+      visibility = LibraryVisibility.PUBLISHED,
+      title = Some(RandomStringUtils.randomAlphabetic(20)),
       keptAt = currentDateTime.minusYears(10).plusMinutes(idx.incrementAndGet().toInt),
       userId = userId,
       source = KeepSource.keeper,
       libraryId = None,
       note = None,
-      connections = KeepConnections(Set.empty, Set(userId)),
       originalKeeperId = Some(userId)
     ))
   }
 
   def keeps(count: Int): Seq[PartialKeep] = List.fill(count)(keep())
 
-  case class PartialKeep private[KeepFactory] (keep: Keep) {
-    def withUser(id: Id[User]) = this.copy(keep = keep.copy(userId = id, connections = keep.connections.withUsers(Set(id))))
-    def withUser(user: User) = this.copy(keep = keep.copy(userId = user.id.get, connections = keep.connections.withUsers(Set(user.id.get))))
-    def withCreatedAt(time: DateTime) = this.copy(keep = keep.copy(createdAt = time))
-    def withKeptAt(time: DateTime) = this.copy(keep = keep.copy(keptAt = time))
-    def withId(id: Id[Keep]) = this.copy(keep = keep.copy(id = Some(id)))
-    def withId(id: Int) = this.copy(keep = keep.copy(id = Some(Id[Keep](id))))
-    def withId(id: ExternalId[Keep]) = this.copy(keep = keep.copy(externalId = id))
-    def withId(id: String) = this.copy(keep = keep.copy(externalId = ExternalId[Keep](id)))
-    def withTitle(title: String) = this.copy(keep = keep.copy(title = Some(title)))
-    def withRandomTitle() = this.copy(keep = keep.copy(title = Some(RandomStringUtils.randomAlphabetic(25))))
-    def withSource(ks: KeepSource) = this.copy(keep = keep.copy(source = ks))
-    def withSeq(seq: SequenceNumber[Keep]) = this.copy(keep = keep.copy(seq = seq))
-    def withVisibility(visibility: LibraryVisibility) = this.copy(keep = keep.copy(visibility = visibility))
-    def discoverable() = this.copy(keep = keep.copy(visibility = LibraryVisibility.DISCOVERABLE))
-    def published() = this.copy(keep = keep.copy(visibility = LibraryVisibility.PUBLISHED))
-    def secret() = this.copy(keep = keep.copy(visibility = LibraryVisibility.SECRET))
-    def withLibrary(library: Library) = this.copy(keep = keep.withLibrary(library))
-    def withLibrary(library: Id[Library]) = this.copy(keep = keep.copy(libraryId = Some(library)))
-    def withNote(note: String) = this.copy(keep = keep.copy(note = Some(note)))
-    def withState(state: State[Keep]) = this.copy(keep = keep.copy(state = state))
-    def withOrganizationId(orgId: Option[Id[Organization]]) = this.copy(keep = keep.copy(organizationId = orgId))
-    def withURIId(id: Id[NormalizedURI]) = this.copy(keep = keep.copy(uriId = id))
-    def withUri(uri: NormalizedURI) = this.copy(keep = keep.copy(uriId = uri.id.get, url = uri.url))
-    def withUrl(url: String) = this.copy(keep = keep.copy(url = url))
-    def nonPrimary() = this.copy(keep = keep.copy(isPrimary = false))
+  class PartialKeep private[KeepFactory] (keep: Keep) {
+    def withUser(id: Id[User]) = new PartialKeep(keep.copy(userId = id))
+    def withUser(user: User) = new PartialKeep(keep.copy(userId = user.id.get))
+    def withKeptAt(keptAt: DateTime) = new PartialKeep(keep.copy(keptAt = keptAt))
+    def withId(id: Id[Keep]) = new PartialKeep(keep.copy(id = Some(id)))
+    def withId(id: Int) = new PartialKeep(keep.copy(id = Some(Id[Keep](id))))
+    def withId(id: ExternalId[Keep]) = new PartialKeep(keep.copy(externalId = id))
+    def withId(id: String) = new PartialKeep(keep.copy(externalId = ExternalId[Keep](id)))
+    def withTitle(title: String) = new PartialKeep(keep.copy(title = Some(title)))
+    def withVisibility(visibility: LibraryVisibility) = new PartialKeep(keep.copy(visibility = visibility))
+    def discoverable() = new PartialKeep(keep.copy(visibility = LibraryVisibility.DISCOVERABLE))
+    def published() = new PartialKeep(keep.copy(visibility = LibraryVisibility.PUBLISHED))
+    def secret() = new PartialKeep(keep.copy(visibility = LibraryVisibility.SECRET))
+    def withLibrary(library: Library) = new PartialKeep(keep.withLibrary(library))
+    def withLibrary(library: Id[Library]) = new PartialKeep(keep.copy(libraryId = Some(library)))
+    def withNote(note: String) = new PartialKeep(keep.copy(note = Some(note)))
+    def withState(state: State[Keep]) = new PartialKeep(keep.copy(state = state))
+    def withOrganizationId(orgId: Option[Id[Organization]]) = new PartialKeep(keep.copy(organizationId = orgId))
+    def withURIId(id: Id[NormalizedURI]) = new PartialKeep(keep.copy(uriId = id))
+    def withUri(uri: NormalizedURI) = new PartialKeep(keep.copy(uriId = uri.id.get, url = uri.url))
+    def withUrl(url: String) = new PartialKeep(keep.copy(url = url))
+    def nonPrimary() = new PartialKeep(keep.copy(isPrimary = false))
     def get: Keep = keep
   }
 

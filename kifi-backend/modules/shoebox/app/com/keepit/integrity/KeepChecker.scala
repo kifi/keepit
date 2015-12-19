@@ -95,18 +95,20 @@ class KeepChecker @Inject() (
   private def ensureLibrariesHashIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.getNoCache(keepId)
     val libraries = ktlRepo.getAllByKeepId(keepId).map(_.libraryId).toSet
-    if (keep.connections.libraries != libraries) {
-      airbrake.notify(s"[KTL-LIB-MATCH] Keep $keepId's libraries don't match: ${keep.connections.libraries} != $libraries")
-      keepCommander.refreshLibraries(keepId)
+    val expectedHash = LibrariesHash(libraries)
+    if (keep.librariesHash != expectedHash) {
+      airbrake.notify(s"[KTL-HASH-MATCH] Keep $keepId's library hash (${keep.librariesHash}) != $libraries ($expectedHash)")
+      keepCommander.refreshLibrariesHash(keep)
     }
   }
 
   private def ensureParticipantsHashIntegrity(keepId: Id[Keep])(implicit session: RWSession) = {
     val keep = keepRepo.getNoCache(keepId)
     val users = ktuRepo.getAllByKeepId(keepId).map(_.userId).toSet
-    if (keep.connections.users != users) {
-      airbrake.notify(s"[KTU-HASH-MATCH] Keep $keepId's participants don't match: ${keep.connections.users} != $users")
-      keepCommander.refreshParticipants(keepId)
+    val expectedHash = ParticipantsHash(users)
+    if (keep.participantsHash != expectedHash) {
+      airbrake.notify(s"[KTU-HASH-MATCH] Keep $keepId's participants hash (${keep.participantsHash}) != $users ($expectedHash)")
+      keepCommander.refreshParticipantsHash(keep)
     }
   }
 

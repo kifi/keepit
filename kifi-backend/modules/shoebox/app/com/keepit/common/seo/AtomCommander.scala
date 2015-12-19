@@ -73,7 +73,7 @@ class AtomCommander @Inject() (
   def libraryFeed(library: Library, keepCountToDisplay: Int = 20, offset: Int = 0)(implicit ec: ExecutionContext): Future[Elem] = {
     val (libImage, keeps, libraryCreator) = db.readOnlyMaster { implicit session =>
       val image = libraryImageCommander.getBestImageForLibrary(library.id.get, ImageSize(64, 64))
-      val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = offset, limit = keepCountToDisplay)
+      val keeps = keepRepo.getByLibrary(libraryId = library.id.get, offset = offset, limit = keepCountToDisplay, excludeSet = Set(KeepStates.INACTIVE))
       val libraryCreator = userRepo.get(library.ownerId)
       (image.map(i => s"https:${i.imagePath.getUrl(s3ImageConfig)}"), keeps, libraryCreator)
     }
