@@ -779,7 +779,9 @@ class KeepCommanderImpl @Inject() (
       keptAt = clock.now,
       source = withSource.getOrElse(k.source),
       originalKeeperId = k.originalKeeperId.orElse(Some(userId)),
-      connections = KeepConnections(Set(toLibrary.id.get), Set(userId))
+      connections = KeepConnections(Set(toLibrary.id.get), Set(userId)),
+      title = k.title,
+      note = k.note
     )
 
     currentKeepOpt match {
